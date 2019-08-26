@@ -76,3 +76,15 @@ All contributions are welcome!
 - We'd like to unify this so there's just a single package on npm.
 - Migrate to Typescript
 - Deprecate all the storybook options in favour of a sane `--config` flag
+
+## Publishing
+
+We publish with a script:
+
+```sh
+./scripts/publish.js
+```
+
+You can pass any flags to this you'd normally be able to pass to `npm publish`, such as `--dry-run` or `--tag="alpha"`.
+
+Before publishing we check if the current user has permissions and if the version isn't already on npm

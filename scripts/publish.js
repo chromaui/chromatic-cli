@@ -6,6 +6,8 @@ import { readFile, writeFile } from 'jsonfile';
 import { stripIndents } from 'common-tags';
 import chalk from 'chalk';
 
+const remainingFlags = process.argv.slice(2);
+
 const targets = ['chromatic-cli', 'storybook-chromatic', 'storybook-chroma'];
 
 const exec = (args, { pipe } = {}) => {
@@ -49,7 +51,7 @@ const publishAs = async name => {
   try {
     const temp = { ...initial, name };
     await packageJson.write(temp);
-    await exec(['publish', '--dry-run'], { pipe: true });
+    await exec(['publish', ...remainingFlags], { pipe: true });
   } catch (e) {
     //
   } finally {
