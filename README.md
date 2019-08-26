@@ -88,3 +88,18 @@ We publish with a script:
 You can pass any flags to this you'd normally be able to pass to `npm publish`, such as `--dry-run` or `--tag="alpha"`.
 
 Before publishing we check if the current user has permissions and if the version isn't already on npm
+
+## Compatibility & versioning
+
+Compatibility is guaranteed between this package and chromatic like so:
+
+- Production chromatic ensures it’s compatible with what’s on NPM
+- What's on the master branch is equal to what's published on npm
+- This package ensures it’s compatible with production chromatic
+
+To facilitate upgrading in the future, removing and adding features, this is the process:
+
+- Any new features will have to be on chromatic production before they could be used in this package
+- We can feature flags to be able to test new functionality
+- Chromatic production can not remove any features this package depends on until after the usage has been removed from this package.
+  Plus a grace period so users have upgraded
