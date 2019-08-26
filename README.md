@@ -67,7 +67,7 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 
 ## Contributing
 
-Because of the nature of this package: it being a connector between storybook and a commercial service, you may need an app_code to test this locally. Just send us a message at opensource@hichroma.com!
+Because of the nature of this package: it being a connector between storybook and a web service, you may need an app_code to test this locally. Just send us a message at opensource@hichroma.com or sign up for an account!
 
 All contributions are welcome!
 
