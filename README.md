@@ -23,14 +23,12 @@ You can use this package normally, which means installing it and adding a script
 
 But alternatively (and this is useful for testing) you can use npx:
 
-Use a git branch:
-
+**Use a git branch**:
 ```sh
 npx -p chromaui/extracted-storybook-chromatic#master chromatic
 ```
 
-Use a debug version on npm:
-
+**Use a debug version on npm**:
 ```sh
 npx -p storybook-chromatic@1.0.0-debug.1 chromatic
 ```
