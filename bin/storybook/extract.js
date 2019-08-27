@@ -1,3 +1,12 @@
+const CHROMATIC_PARAMETERS = [
+  'viewports',
+  'delay',
+  'disable',
+  'noScroll',
+  'diffThreshold',
+  'pauseAnimationAtEnd',
+];
+
 function specFromStory({ id, kind, name, parameters: { chromatic } = {} }) {
   const param = value => (typeof value === 'function' ? value({ id, kind, name }) : value);
   return {
@@ -9,7 +18,7 @@ function specFromStory({ id, kind, name, parameters: { chromatic } = {} }) {
     },
     parameters:
       chromatic &&
-      ['viewports', 'delay', 'disable', 'noScroll', 'diffThreshold'].reduce(
+      CHROMATIC_PARAMETERS.reduce(
         (acc, key) => (chromatic[key] ? { ...acc, [key]: param(chromatic[key]) } : acc),
         {}
       ),
