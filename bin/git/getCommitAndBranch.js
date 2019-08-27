@@ -10,7 +10,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
   let branch = await getBranch();
-  const isTravisPrBuild = process.env.TRAVIS_EVENT_TYPE === 'pull_request';
+
   const {
     TRAVIS_EVENT_TYPE,
     TRAVIS_PULL_REQUEST_SLUG,
@@ -18,7 +18,8 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     TRAVIS_PULL_REQUEST_SHA,
     TRAVIS_PULL_REQUEST_BRANCH,
   } = process.env;
-  if (TRAVIS_EVENT_TYPE === 'pull_request' && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
+  const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
+  if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
     log.warn(stripIndents`
         WARNING: Running Chromatic on a Travis PR build from an internal branch.
 
