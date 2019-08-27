@@ -2,9 +2,8 @@
 
 A CLI for uploading/connecting your storybook to chromatic/chroma.
 
-<center>
-  <img src="https://user-images.githubusercontent.com/3070389/63762571-5adb2500-c8c3-11e9-9e5f-ec19c40a27e0.gif" alt="">
-</center>
+
+<img width="100%" src="https://user-images.githubusercontent.com/3070389/63762571-5adb2500-c8c3-11e9-9e5f-ec19c40a27e0.gif" alt="">
 
 ## Install
 
