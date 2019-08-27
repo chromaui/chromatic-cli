@@ -2,6 +2,10 @@
 
 A CLI for uploading/connecting your storybook to chromatic/chroma.
 
+<center>
+  <img src="https://user-images.githubusercontent.com/3070389/63762571-5adb2500-c8c3-11e9-9e5f-ec19c40a27e0.gif" alt="">
+</center>
+
 ## Install
 
 ```sh
@@ -34,10 +38,9 @@ npx -p storybook-chromatic@1.0.0-debug.1 chromatic
 
 Using npx has pros and cons:
 
-- You'll never be out of date, you'll use the latest version every time, never have to worry about upgrading this.
-- You don't need this package as a dependency, and don't need to install it during local development
-
-- This will add a delay when you actually do want to run this, like in your CI, delaying feedback.
+- 👍 You'll never be out of date, you'll use the latest version every time, never have to worry about upgrading this.
+- 👍 You don't need this package as a dependency, and don't need to install it during local development
+- 👎 This will add a delay when you actually do want to run this, like in your CI, delaying feedback.
 
 ### Main options
 
