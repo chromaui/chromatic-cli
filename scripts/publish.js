@@ -70,7 +70,7 @@ const check = {
   },
 
   async allowed(name) {
-    const user = await exec(['whoami']);
+    const user = (await exec(['whoami'])).trim();
     const owners = JSON.parse(await exec(['access', 'ls-collaborators', name, '--json']));
 
     return !!Object.entries(owners).find(
@@ -107,7 +107,7 @@ const run = async list => {
     }, Promise.resolve());
   } else {
     console.log(stripIndents`
-      ${chalk.red('These packages cannot be publishable')}
+      ${chalk.red('These packages cannot be published:')}
       
       ${unpublishable
         .map(
