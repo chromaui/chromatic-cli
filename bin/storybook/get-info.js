@@ -1,4 +1,3 @@
-/* eslint-disable import/no-dynamic-require, global-require */
 // Figure out the Storybook version and view layer
 
 import fs from 'fs-extra';

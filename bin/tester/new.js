@@ -191,7 +191,7 @@ const dealWith = {
     };
   },
   async command(source, client) {
-    //
+    // eslint-disable-next-line no-console
     console.log('not yet implemented');
   },
 };
@@ -298,7 +298,6 @@ export async function run(appCode, source, options) {
 
   const { out: sourceLocation, cleanup } = await prepareSource(source, client);
 
+  // eslint-disable-next-line no-console
   console.log({ sourceLocation, cleanup });
-
-  //
 }

@@ -117,6 +117,7 @@ export async function run(argv) {
     const errors = [].concat(error);
 
     if (errors.length) {
+      // eslint-disable-next-line no-console
       console.log('');
       log.error('Problems encountered:');
       errors.forEach(e => log.error(e));
@@ -125,6 +126,7 @@ export async function run(argv) {
     // Not sure what exit code to use but this can mean error.
     process.exitCode = process.exitCode || 255;
   } finally {
+    // eslint-disable-next-line no-console
     console.log('');
     log.warn(`uploading debug logs...`);
   }

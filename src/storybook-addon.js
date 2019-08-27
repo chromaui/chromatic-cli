@@ -33,7 +33,6 @@ const extract = global => {
     );
   }
 
-  // eslint-disable-next-line no-underscore-dangle
   const storyStore = __STORYBOOK_CLIENT_API__._storyStore;
 
   // Storybook 5+ API
@@ -64,7 +63,7 @@ deprecate(
       async ({ storyId, name: story, component: { name: kind } }) => {
         const { __STORYBOOK_CLIENT_API__, __STORYBOOK_ADDONS_CHANNEL__ } = global;
 
-        if (!__STORYBOOK_CLIENT_API__ || !__STORYBOOK_ADDONS_CHANNEL__) {
+        if (!__STORYBOOK_CLIENT_API__ && !__STORYBOOK_ADDONS_CHANNEL__) {
           throw new Error(
             `Chromatic requires Storybook version at least 3.4. Please update your Storybook!`
           );
