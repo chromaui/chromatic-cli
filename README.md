@@ -12,11 +12,32 @@ yarn add storybook-chroma
 
 ## Usage
 
-Add a npm script called `chromatic` to your `package.json`
+You can use this package normally, which means installing it and adding a script called `chromatic` to your `package.json`
 
 ```
   "chromatic": "chromatic",
 ```
+
+But alternatively (and this is useful for testing) you can use npx:
+
+Use a git branch:
+
+```sh
+npx -p chromaui/extracted-storybook-chromatic#master chromatic
+```
+
+Use a debug version on npm:
+
+```sh
+npx -p storybook-chromatic@1.0.0-debug.1 chromatic
+```
+
+Using npx has pros and cons:
+
+- You'll never be out of date, you'll use the latest version every time, never have to worry about upgrading this.
+- You don't need this package as a dependency, and don't need to install it during local development
+
+- This will add a delay when you actually do want to run this, like in your CI, delaying feedback.
 
 ### Main options
 
