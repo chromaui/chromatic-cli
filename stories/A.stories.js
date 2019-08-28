@@ -6,7 +6,7 @@ import isChromatic from '../src/isChromatic';
 
 import AComponent from './A';
 
-storiesOf('basics/A', module)
+storiesOf(isChromatic() ? 'Chromatic/A' : 'basics/A', module)
   .addParameters({ chromatic: { viewports: [600, 1200] } })
   .add(
     'simple',
@@ -29,7 +29,7 @@ storiesOf('basics/A', module)
   )
   .add(
     'second',
-    () => <AComponent thing={() => {}}>Second {isChromatic() ? '(Chromatic)' : ''}</AComponent>,
+    () => <AComponent thing={() => {}}>{isChromatic() ? 'Chromatic' : 'Second'}</AComponent>,
     {
       chromatic: { delay: 1000 },
     }

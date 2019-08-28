@@ -1,5 +1,5 @@
 /* eslint-disable no-useless-catch, no-console, no-underscore-dangle */
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole, ResourceLoader } from 'jsdom';
 import { stripIndents } from 'common-tags';
 import { extract } from '../storybook/extract';
 
@@ -26,11 +26,14 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     virtualConsole.sendTo(log);
   }
 
+  const resourceLoader = new ResourceLoader({
+    userAgent: "Chromatic",
+  });
   const dom = await JSDOM.fromURL(url, {
     userAgent: 'Chromatic',
     runScripts: 'dangerously', // We need to execute the scripts on the page
-    resources: 'usable', // We need to load scripts that are loaded via script tags
     virtualConsole,
+    resources: resourceLoader,
     pretendToBeVisual: true, // Add a requestAnimationFrame polyfill, react@16 warns about it
     beforeParse(window) {
       addShimsToJSDOM(window);

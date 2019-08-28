@@ -26,5 +26,8 @@ jobs:
       # unit test
       - run: yarn test
 
+      # test if dist is correctly generated from src
+      - run: yarn build && git status --porcelain
+
       # e2e test
       - run: yarn chromatic
