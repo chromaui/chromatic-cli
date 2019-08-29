@@ -245,7 +245,7 @@ export async function runTest({
 }) {
   const names = await getProductVariables();
 
-  debug(`Creating build with session id: ${sessionId}`);
+  debug(`Creating build with session id: ${sessionId} - version: ${packageVersion}`);
   debug(
     `Connecting to index:${indexUrl} and ${
       createTunnel ? `using tunnel:${tunnelUrl}` : 'not creating a tunnel'
@@ -254,7 +254,7 @@ export async function runTest({
 
   const client = new GraphQLClient({
     uri: `${indexUrl}/graphql`,
-    headers: { 'x-chromatic-session-id': sessionId },
+    headers: { 'x-chromatic-session-id': sessionId, 'x-chromatic-cli-version': packageVersion },
     retries: 3,
   });
 
