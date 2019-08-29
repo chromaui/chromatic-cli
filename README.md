@@ -3,14 +3,12 @@
 A CLI for uploading/connecting your storybook to chromatic/chroma.
 
 
-<img width="100%" src="https://user-images.githubusercontent.com/3070389/63762571-5adb2500-c8c3-11e9-9e5f-ec19c40a27e0.gif" alt="">
+<img width="100%" src="https://user-images.githubusercontent.com/3070389/63930825-5abe5f00-ca54-11e9-8320-7ee949823458.gif" alt="">
 
 ## Install
 
 ```sh
 yarn add storybook-chromatic
-# or
-yarn add storybook-chroma
 ```
 
 ## Usage
@@ -25,12 +23,12 @@ But alternatively (and this is useful for testing) you can use npx:
 
 **Use a git branch**:
 ```sh
-npx -p chromaui/extracted-storybook-chromatic#master chromatic
+npx -p chromaui/chromatic-cli#master chromatic
 ```
 
 **Use a debug version on npm**:
 ```sh
-npx -p storybook-chromatic@1.0.0-debug.1 chromatic
+npx -p storybook-chromatic chromatic
 ```
 
 Using npx has pros and cons:

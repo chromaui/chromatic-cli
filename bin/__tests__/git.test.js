@@ -5,14 +5,14 @@ import { promisify } from 'util';
 
 import { getBaselineCommits } from '../git/git';
 
-import generateGitRepository from '../git/create-repository';
-import createMockIndex from '../git/mocks/mock-index';
+import simpleLoopDescription from '../__utils__/mocks/simple-loop';
+import longLineDescription from '../__utils__/mocks/long-line';
+import longLoopDescription from '../__utils__/mocks/long-loop';
+import threeParentsDescription from '../__utils__/mocks/three-parents';
+import twoRootsDescription from '../__utils__/mocks/two-roots';
+import createMockIndex from '../__utils__/mocks/mock-index';
 
-import simpleLoopDescription from '../git/mocks/simple-loop';
-import longLineDescription from '../git/mocks/long-line';
-import longLoopDescription from '../git/mocks/long-loop';
-import threeParentsDescription from '../git/mocks/three-parents';
-import twoRootsDescription from '../git/mocks/two-roots';
+import generateGitRepository from '../__utils__/create-repository';
 
 // Bumping up the Jest timeout for this file because it is timing out sometimes
 // I think this just a bit of a slow file due to git stuff, takes ~2-3s on my computer.

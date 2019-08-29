@@ -1,6 +1,6 @@
 {
   "name": "chromatic-cli",
-  "version": "1.0.0-debug.1",
+  "version": "1.0.0-debug.2",
   "description": "Visual Testing for Storybook",
   "main": "./storybook-addon.js",
   "module": "./src/storybook-addon.js",

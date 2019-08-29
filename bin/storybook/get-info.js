@@ -6,15 +6,45 @@ import { CHROMATIC_STORYBOOK_VERSION } from '../constants';
 
 const viewLayers = [
   'react',
-  'angular',
   'vue',
-  'polymer',
-  'mithril',
-  'marko',
+  'angular',
   'html',
-  'svelte',
-  'riot',
+  'polymer',
   'ember',
+  'marko',
+  'mithril',
+  'riot',
+  'svelte',
+  'preact',
+  'rax',
+];
+
+const supportedAddons = [
+  'a11y',
+  'actions',
+  'backgrounds',
+  'centered',
+  'contexts',
+  'cssresources',
+  'design-assets',
+  'docs',
+  'events',
+  'google-analytics',
+  'graphql',
+  'info',
+  'jest',
+  'knobs',
+  'links',
+  'notes',
+  'ondevice-actions',
+  'ondevice-backgrounds',
+  'ondevice-knobs',
+  'ondevice-notes',
+  'options',
+  'queryparams',
+  'storyshots',
+  'storysource',
+  'viewport',
 ];
 
 const find = name =>
@@ -42,7 +72,7 @@ const timeout = count =>
 const disregard = () => neverResolve;
 const neverResolve = new Promise(() => {});
 
-export default async function getStorybookInfo() {
+const findViewlayer = async () => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='react@4.0-alpha.8' for unusual cases
   if (CHROMATIC_STORYBOOK_VERSION) {
     const [viewLayer, storybookVersion] = CHROMATIC_STORYBOOK_VERSION.split('@');
@@ -71,4 +101,26 @@ export default async function getStorybookInfo() {
     allFailed,
     timeout(10000),
   ]);
+};
+
+const findAddons = async () => {
+  const result = await Promise.all(
+    supportedAddons.map(name =>
+      find(`addon-${name}`)
+        .then(l => read(l).then(r => ({ name, packageName: r.name, packageVersion: r.version })))
+        .catch(e => false)
+    )
+  );
+
+  return { addons: result.filter(Boolean) };
+};
+
+export default async function getStorybookInfo() {
+  const storybookInfo = await findViewlayer();
+  const addonInfo = await findAddons();
+
+  return {
+    ...storybookInfo,
+    ...addonInfo,
+  };
 }

@@ -80,9 +80,6 @@ export async function parseArgv(argv) {
         interactive: { type: 'boolean', default: true },
         ci: { type: 'boolean' },
         debug: { type: 'boolean' },
-
-        // feature toggle to use new version (WIP)
-        new: { type: 'boolean' },
       },
     }
   );

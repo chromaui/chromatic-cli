@@ -1,5 +1,2 @@
-TRUE-README.md
 *.stories.*
 *.test.*
-webpack.config.babel.js
-.*
