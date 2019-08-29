@@ -27,7 +27,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
   }
 
   const resourceLoader = new ResourceLoader({
-    userAgent: "Chromatic",
+    userAgent: 'Chromatic',
   });
   const dom = await JSDOM.fromURL(url, {
     userAgent: 'Chromatic',
@@ -44,7 +44,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     dom.window.addEventListener('DOMContentLoaded', () => resolve());
     setTimeout(() => {
       reject(new Error('ContentLoadEvent timed out'));
-    }, 10000);
+    }, 60000);
   });
 
   // If the app logged something to console.error, it's probably, but not definitely an issue.
