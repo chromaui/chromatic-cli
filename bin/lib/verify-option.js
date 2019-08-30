@@ -13,7 +13,9 @@ import log from './log';
 
 export async function verifyOptions(cli, argv) {
   const cliOptions = {
-    appCode: cli.appCode || CHROMATIC_APP_CODE,
+    appCode: Array.isArray(cli.appCode)
+      ? cli.appCode[cli.appCode.length - 1]
+      : cli.appCode || CHROMATIC_APP_CODE,
     config: cli.config,
 
     only: cli.only,
