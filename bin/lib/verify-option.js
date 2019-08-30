@@ -44,7 +44,6 @@ export async function verifyOptions(cli, argv) {
     storybookUrl: cli.storybookUrl === '' ? true : cli.storybookUrl,
     storybookBuildDir: cli.storybookBuildDir,
     createTunnel: !cli.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
-    newer: cli.new,
   };
   const names = await getProductVariables();
 

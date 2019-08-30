@@ -6,7 +6,6 @@ import { verifyOptions } from './lib/verify-option';
 import sendDebugToLoggly from './lib/sendDebugToLoggly';
 
 import { runTest } from './tester/index';
-import { run as runNewTest } from './tester/new';
 
 export async function parseArgv(argv) {
   const cli = meow(
@@ -93,12 +92,7 @@ export async function run(argv) {
   sendDebugToLoggly(options);
 
   try {
-    let exitCode;
-    if (options.newer) {
-      exitCode = await runNewTest(options.appCode, options.config, options);
-    } else {
-      exitCode = await runTest(options);
-    }
+    const exitCode = await runTest(options);
 
     process.exitCode = exitCode;
   } catch (error) {
