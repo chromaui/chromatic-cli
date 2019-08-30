@@ -79,9 +79,10 @@ deprecate(
         }
 
         const channel = __STORYBOOK_ADDONS_CHANNEL__;
+        const storyStore = __STORYBOOK_CLIENT_API__._storyStore;
 
         // In Storybook 5+ we can be sure of the emitting, and we need to use a storyId API
-        if (__STORYBOOK_CLIENT_API__) {
+        if (storyStore.extract) {
           return new Promise((resolve, reject) => {
             channel.on('storyRendered', () => resolve(document.getElementById('root')));
             channel.on('storyUnchanged', () => resolve(document.getElementById('root')));
@@ -123,7 +124,7 @@ deprecate(
     });
   },
   stripIndents`
-    You're importing 'chromatic-cli' in your config.js
+    You're importing 'storybook-chromatic' in your config.js
     This is no longer necessary!
 
     If you're importing { isChromatic } in your stories, please change that to:
