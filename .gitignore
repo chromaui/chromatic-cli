@@ -2,3 +2,5 @@ node_modules
 .cache
 .env
 *.log
+
+# the dist folder IS included so we can test every version in the CI without publishing
