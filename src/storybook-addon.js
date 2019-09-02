@@ -128,7 +128,7 @@ deprecate(
     This is no longer necessary!
 
     If you're importing { isChromatic } in your stories, please change that to:
-    "import isChromatic from "chromatic-cli/isChromatic";"
+    "import isChromatic from "storybook-chromatic/isChromatic";"
   `
 )();
 
