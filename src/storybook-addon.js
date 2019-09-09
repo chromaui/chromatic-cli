@@ -1,6 +1,5 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-env browser */
-import { toId } from '@storybook/router/utils';
 import deprecate from 'util-deprecate';
 import { stripIndents } from 'common-tags';
 
@@ -77,6 +76,28 @@ deprecate(
             `Chromatic requires Storybook version at least 3.4. Please update your Storybook!`
           );
         }
+
+        const sanitize = string => {
+          return (
+            string
+              .toLowerCase()
+              // eslint-disable-next-line no-useless-escape
+              .replace(/[ ’–—―′¿'`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-+/, '')
+              .replace(/-+$/, '')
+          );
+        };
+
+        const sanitizeSafe = (string, part) => {
+          const sanitized = sanitize(string);
+          if (sanitized === '') {
+            throw new Error(`Invalid ${part} '${string}', must include alphanumeric characters`);
+          }
+          return sanitized;
+        };
+
+        const toId = (k, n) => `${sanitizeSafe(k, 'kind')}--${sanitizeSafe(n, 'name')}`;
 
         const channel = __STORYBOOK_ADDONS_CHANNEL__;
         const storyStore = __STORYBOOK_CLIENT_API__._storyStore;
