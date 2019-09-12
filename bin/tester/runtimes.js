@@ -103,7 +103,13 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
         ? await dom.window.__chromaticRuntimeSpecs__()
         : await extract(dom.window);
 
-    return specs;
+    // FIXME -- do as part of the above?
+    const { options } = Object.values(
+      dom.window.__STORYBOOK_CLIENT_API__._storyStore.extract()
+    )[0].parameters;
+
+    console.log(options);
+    return { specs, options };
   } catch (err) {
     throw err;
   } finally {

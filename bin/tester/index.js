@@ -338,7 +338,7 @@ export async function runTest({
   );
 
   try {
-    const runtimeSpecs = await getStories({
+    const { runtimeSpecs, storybookOptions } = await getStories({
       only,
       list,
       isolatorUrl,
@@ -370,6 +370,7 @@ export async function runTest({
         committedAt,
         baselineCommits,
         runtimeSpecs,
+        storybookOptions: JSON.stringify(storybookOptions),
         fromCI,
         isTravisPrBuild,
         packageVersion,
