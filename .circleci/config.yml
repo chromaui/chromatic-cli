@@ -33,6 +33,6 @@ jobs:
       - run: ./scripts/rename.js storybook-chromatic
       - run: yarn chromatic
 
-      # e2e test as storybook-chromatic
+      # e2e test as storybook-chroma
       - run: ./scripts/rename.js storybook-chroma
       - run: yarn chromatic
