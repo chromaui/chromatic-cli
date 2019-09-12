@@ -45,7 +45,7 @@ export async function verifyOptions(cli, argv) {
     storybookBuildDir: cli.storybookBuildDir,
     createTunnel: !cli.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
   };
-  const names = await getProductVariables();
+  const names = getProductVariables();
 
   if (!cliOptions.appCode) {
     throw new Error(stripIndents`
