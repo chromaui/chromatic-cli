@@ -29,5 +29,10 @@ jobs:
       # test if dist is correctly generated from src
       - run: yarn build && git status --porcelain
 
-      # e2e test
+      # e2e test as storybook-chromatic
+      - run: ./scripts/rename.js storybook-chromatic
+      - run: yarn chromatic
+
+      # e2e test as storybook-chromatic
+      - run: ./scripts/rename.js storybook-chroma
       - run: yarn chromatic
