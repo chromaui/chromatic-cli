@@ -840,10 +840,10 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@chromaui/localtunnel@2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@chromaui/localtunnel/-/localtunnel-2.0.0.tgz#cd37b0ec31943ab610ff4818fbd0e24911e9ca14"
-  integrity sha512-cyjZj7yq54omJ8Iy22Q6LTTk5m69mJpK3caqG1ZbFYwvE1VCB4B6kgnr5qHOveIjthbkyY1v7HNmeobDh/UGDQ==
+"@chromaui/localtunnel@2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chromaui/localtunnel/-/localtunnel-2.0.1.tgz#2d4cef4efa189a2a2f015d639e754956c54cacd1"
+  integrity sha512-QvO1J9drc7K2SeBrHuO5/8nQ1QTks/OOG+vwva4lM7T28pPgf556snMpPE/3KE6uD2UJky8I4A5dNRNbqAXiDw==
   dependencies:
     axios "0.19.0"
     debug "^3.0.1"
