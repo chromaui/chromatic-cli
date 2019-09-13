@@ -115,10 +115,6 @@ export async function run(argv) {
     }
 
     // Not sure what exit code to use but this can mean error.
-    process.exitCode = process.exitCode || 255;
-  } finally {
-    // eslint-disable-next-line no-console
-    console.log('');
-    log.info(`uploading debug logs...`);
+    process.exit(process.exitCode || 255);
   }
 }
