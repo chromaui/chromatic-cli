@@ -74,7 +74,7 @@ async function prepareAppOrBuild({
   createTunnel,
   storybookVersion,
 }) {
-  const names = await getProductVariables();
+  const names = getProductVariables();
 
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
@@ -243,7 +243,7 @@ export async function runTest({
   originalArgv = false,
   sessionId,
 }) {
-  const names = await getProductVariables();
+  const names = getProductVariables();
 
   debug(`Creating build with session id: ${sessionId} - version: ${packageVersion}`);
   debug(

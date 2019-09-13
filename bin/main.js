@@ -119,6 +119,6 @@ export async function run(argv) {
   } finally {
     // eslint-disable-next-line no-console
     console.log('');
-    log.warn(`uploading debug logs...`);
+    log.info(`uploading debug logs...`);
   }
 }
