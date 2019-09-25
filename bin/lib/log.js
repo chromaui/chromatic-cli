@@ -1,7 +1,7 @@
 import log from 'npmlog';
 import { getProductVariables } from './cli';
 
-log.level = process.env.DISABLE_LOGGING === 'true' ? 'silent' : process.env.LOG_LEVEL || 'error';
+log.level = process.env.DISABLE_LOGGING === 'true' ? 'silent' : process.env.LOG_LEVEL || 'info';
 
 export function createLogger(prefix) {
   log.heading = prefix;
