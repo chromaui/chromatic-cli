@@ -113,8 +113,7 @@ export async function run(argv) {
       log.error('Problems encountered:');
       errors.forEach(e => log.error(e));
     }
-
-    // Not sure what exit code to use but this can mean error.
-    process.exit(process.exitCode || 255);
   }
+  // Not sure what exit code to use but this can mean error.
+  process.exit(process.exitCode || 255);
 }
