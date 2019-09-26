@@ -73,7 +73,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    if (warnings.length && !log.level.match(/silent|error/)) {
+    if (warnings.length && log.level.match(/verbose/)) {
       console.log(
         warnings.reduce(
           (acc, i) => stripIndents`
