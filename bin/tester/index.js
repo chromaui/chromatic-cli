@@ -476,8 +476,7 @@ export async function runTest({
         NOTE: I wrote your app code to the \`${names.envVar}\` environment variable. 
         
         The app code cannot be used to read story data, it can only be used to create new builds.
-        If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.`,
-        { noPrefix: true }
+        If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.`
       );
     } else {
       log.info(
@@ -487,8 +486,7 @@ export async function runTest({
           "scripts": {
             "${names.script}": "${scriptCommand}"
           }
-        }`,
-        { noPrefix: true }
+        }`
       );
     }
   }
