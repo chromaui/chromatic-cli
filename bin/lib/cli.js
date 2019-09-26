@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import pkgUp from 'pkg-up';
 
 const createPackageInfo = () => {
-  const location = pkgUp.sync(__dirname);
+  const location = pkgUp.sync({ cwd: __dirname });
   const content = fs.readFileSync(location, 'utf8');
   const data = JSON.parse(content);
 
