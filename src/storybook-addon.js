@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-env browser */
 import deprecate from 'util-deprecate';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 
 import isChromatic from './isChromatic';
 
@@ -144,7 +144,7 @@ deprecate(
       isDeprecated: true,
     });
   },
-  stripIndents`
+  dedent`
     You're importing 'storybook-chromatic' in your config.js
     This is no longer necessary!
 

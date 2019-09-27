@@ -1,5 +1,5 @@
 import meow from 'meow';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 
 import log from './lib/log';
 import { verifyOptions } from './lib/verify-option';
@@ -97,7 +97,7 @@ export async function run(argv) {
     process.exitCode = exitCode;
   } catch (error) {
     log.error(
-      stripIndents`
+      dedent`
         ** Chromatic build failed. **
         Please note the session id: '${options.sessionId}'
         contact support@hichroma.com -or- open a support ticket at https://chromaticqa.com
