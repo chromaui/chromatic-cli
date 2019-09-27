@@ -3,7 +3,7 @@
 import { spawn } from 'child_process';
 import pkgUp from 'pkg-up';
 import { readFile, writeFile } from 'jsonfile';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 import chalk from 'chalk';
 
 const remainingFlags = process.argv.slice(2);
@@ -106,7 +106,7 @@ const run = async list => {
       await publishAs(item);
     }, Promise.resolve());
   } else {
-    console.log(stripIndents`
+    console.log(dedent`
       ${chalk.red('These packages cannot be published:')}
       
       ${unpublishable

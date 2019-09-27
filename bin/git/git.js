@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import setupDebug from 'debug';
 import gql from 'fake-tag';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 
 const debug = setupDebug('chromatic-cli:git');
 
@@ -14,7 +14,7 @@ async function execGitCommand(command) {
     const { message = '' } = error;
 
     if (message.match('Not a git repository')) {
-      throw new Error(stripIndents`
+      throw new Error(dedent`
         Unable to execute git command '${command}'.
 
         Chromatic only works in git projects.

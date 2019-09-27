@@ -1,7 +1,7 @@
 import { readFileSync } from 'jsonfile';
 import path from 'path';
 import paramCase from 'param-case';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 import { parse } from 'url';
 import { v4 as uuid } from 'uuid';
 import { CHROMATIC_CREATE_TUNNEL, CHROMATIC_APP_CODE } from '../constants';
@@ -48,7 +48,7 @@ export async function verifyOptions(cli, argv) {
   const names = getProductVariables();
 
   if (!cliOptions.appCode) {
-    throw new Error(stripIndents`
+    throw new Error(dedent`
       You must provide an app code.
 
       If you don't have a project yet login to ${names.url} and create a new project.
@@ -95,7 +95,7 @@ export async function verifyOptions(cli, argv) {
     if (packageJson.scripts && packageJson.scripts[buildScriptName]) {
       return { ...cliOptions, noStart: true, buildScriptName };
     }
-    throw new Error(stripIndents`
+    throw new Error(dedent`
       Didn't find a script called '${buildScriptName}' in your \`package.json\`.
       Make sure you set the \`--build-script-name\` option to the value of the npm script that builds your Storybook.
     `);
@@ -113,7 +113,7 @@ export async function verifyOptions(cli, argv) {
       const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
 
       if (!storybookScript) {
-        throw new Error(stripIndents`
+        throw new Error(dedent`
           Didn't find a script called '${scriptName}' in your \`package.json\`.
           Make sure you set the \`--script-name\` option to the value of the npm script that starts your Storybook.
         `);
@@ -136,7 +136,7 @@ export async function verifyOptions(cli, argv) {
 
       log.log(
         '',
-        stripIndents`
+        dedent`
           Detected '${scriptName}' script, running with inferred options:
           --script-name=${scriptName} --storybook-port=${port}
           Override any of the above if they were inferred incorrectly.

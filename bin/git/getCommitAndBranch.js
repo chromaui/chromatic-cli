@@ -1,5 +1,5 @@
 import envCi from 'env-ci';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 import setupDebug from 'debug';
 import { getCommit, getBranch } from './git';
 import log from '../lib/log';
@@ -20,7 +20,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
   } = process.env;
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
   if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
-    log.warn(stripIndents`
+    log.warn(dedent`
         WARNING: Running Chromatic on a Travis PR build from an internal branch.
 
         It is recommended to run Chromatic on the push builds from Travis where possible.
@@ -35,7 +35,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     commit = TRAVIS_PULL_REQUEST_SHA;
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     if (!commit || !branch) {
-      throw new Error(stripIndents`
+      throw new Error(dedent`
         \`TRAVIS_EVENT_TYPE\` environment variable set to 'pull_request', 
         but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
 
