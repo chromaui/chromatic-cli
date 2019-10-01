@@ -50,8 +50,8 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
   // If the app logged something to console.error, it's probably, but not definitely an issue.
   // See https://github.com/hichroma/chromatic/issues/757
   if (
-    (!log.level.match(/silent/) && errors.length) ||
-    (!log.level.match(/silent|error/) && warnings.length)
+    (errors.length && !log.level.match(/silent/)) ||
+    (warnings.length && log.level.match(/verbose/))
   ) {
     log[errors.length ? 'error' : 'warn'](
       'The following problems were reported from your storybook:'
