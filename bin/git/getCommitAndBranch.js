@@ -52,7 +52,12 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
       // $GERRIT_BRANCH is for Gerrit/Jenkins: https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
       // $CI_BRANCH is a general setting that lots of systems use
       branch =
-        process.env.HEAD || process.env.GERRIT_BRANCH || process.env.CI_BRANCH || branch || 'HEAD';
+        process.env.HEAD ||
+        process.env.GERRIT_BRANCH ||
+        process.env.CI_BRANCH ||
+        process.env.GITHUB_REF ||
+        branch ||
+        'HEAD';
     }
   }
   // REPOSITORY_URL is for netlify: https://www.netlify.com/docs/continuous-deployment/
