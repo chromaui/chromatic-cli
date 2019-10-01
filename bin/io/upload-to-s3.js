@@ -4,8 +4,8 @@ import { join } from 'path';
 import { URL } from 'url';
 import progress from 'progress-stream';
 import ProgressBar from 'progress';
-
-import HTTPClient from './HTTPClient';
+import retry from 'async-retry';
+import fetch from 'node-fetch';
 
 import { CHROMATIC_RETRIES } from '../constants';
 
@@ -60,29 +60,40 @@ export async function uploadToS3(source, client) {
     const pathWithDirname = join(source, path);
     debug(`uploading '${pathWithDirname}' to '${url}' with content type '${contentType}'`);
 
-    const progressStream = progress();
-    progressStream.on('progress', ({ delta }) => bar.tick(delta / 1000));
+    let urlProgress = 0; // The bytes uploaded for this this particular URL
     const { contentLength } = pathAndLengths.find(({ pathname }) => pathname === path);
     uploads.push(
-      (async () => {
-        const res = await HTTPClient.fetch(
-          url,
-          {
+      retry(
+        async () => {
+          const progressStream = progress();
+          progressStream.on('progress', ({ delta }) => {
+            urlProgress += delta / 1000;
+            bar.tick(delta / 1000);
+          });
+
+          const res = await fetch(url, {
             method: 'PUT',
             body: createReadStream(pathWithDirname).pipe(progressStream),
             headers: {
               'content-type': contentType,
               'content-length': contentLength,
             },
-          },
-          { retries: CHROMATIC_RETRIES }
-        );
+          });
 
-        if (!res.ok) {
-          debug(`Uploading '${path}' failed: %O`, res);
-          throw new Error(`Failed to upload ${path}`);
+          if (!res.ok) {
+            debug(`Uploading '${path}' failed: %O`, res);
+            throw new Error(`Failed to upload ${path}`);
+          }
+        },
+        {
+          retries: CHROMATIC_RETRIES,
+          onRetry: err => {
+            bar.tick(-1 * urlProgress);
+            urlProgress = 0;
+            debug('Retrying upload %s, %O', url, err);
+          },
         }
-      })()
+      )
     );
   });
 
