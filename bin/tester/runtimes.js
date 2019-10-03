@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-catch, no-console, no-underscore-dangle */
 import { JSDOM, VirtualConsole, ResourceLoader } from 'jsdom';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 import { extract } from '../storybook/extract';
 
 import log, { separator } from '../lib/log';
@@ -50,8 +50,8 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
   // If the app logged something to console.error, it's probably, but not definitely an issue.
   // See https://github.com/hichroma/chromatic/issues/757
   if (
-    (!log.level.match(/silent/) && errors.length) ||
-    (!log.level.match(/silent|error/) && warnings.length)
+    (errors.length && !log.level.match(/silent/)) ||
+    (warnings.length && log.level.match(/verbose/))
   ) {
     log[errors.length ? 'error' : 'warn'](
       'The following problems were reported from your storybook:'
@@ -60,12 +60,12 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     if (errors.length && !log.level.match(/silent/)) {
       console.log(
         errors.reduce(
-          (acc, i) => stripIndents`
+          (acc, i) => dedent`
               ${acc}
               ${i}
               ${separator}
             `,
-          stripIndents`
+          dedent`
               Errors:
               ${separator}
             `
@@ -73,15 +73,15 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    if (warnings.length && !log.level.match(/silent|error/)) {
+    if (warnings.length && log.level.match(/verbose/)) {
       console.log(
         warnings.reduce(
-          (acc, i) => stripIndents`
+          (acc, i) => dedent`
               ${acc}
               ${i}
               ${separator}
             `,
-          stripIndents`
+          dedent`
               Warnings:
               ${separator}
             `
@@ -89,7 +89,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    console.log(stripIndents`
+    console.log(dedent`
         This may lead to some stories not working right or getting detected by Chromatic
         We suggest you fix the errors, but we will continue anyway..
         ${separator}

@@ -6,7 +6,7 @@ import isChromatic from '../src/isChromatic';
 
 import AComponent from './A';
 
-storiesOf(isChromatic() ? 'Chromatic/A' : 'basics/A', module)
+storiesOf('basics/A', module)
   .addParameters({ chromatic: { viewports: [600, 1200] } })
   .add(
     'simple',

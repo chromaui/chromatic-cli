@@ -5,7 +5,7 @@ import kill from 'tree-kill';
 import { parse, format } from 'url';
 import { dirSync } from 'tmp';
 import { gte } from 'semver';
-import { stripIndents } from 'common-tags';
+import dedent from 'ts-dedent';
 
 import getStorybookInfo from '../storybook/get-info';
 import startApp, { checkResponse } from '../storybook/start-app';
@@ -74,7 +74,7 @@ async function prepareAppOrBuild({
   createTunnel,
   storybookVersion,
 }) {
-  const names = await getProductVariables();
+  const names = getProductVariables();
 
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
@@ -243,7 +243,7 @@ export async function runTest({
   originalArgv = false,
   sessionId,
 }) {
-  const names = await getProductVariables();
+  const names = getProductVariables();
 
   debug(`Creating build with session id: ${sessionId} - version: ${packageVersion}`);
   debug(
@@ -265,7 +265,7 @@ export async function runTest({
     client.headers = { ...client.headers, Authorization: `Bearer ${jwtToken}` };
   } catch (errors) {
     if (errors[0] && errors[0].message && errors[0].message.match('No app with code')) {
-      throw new Error(stripIndents`
+      throw new Error(dedent`
         Incorrect app code '${appCode}'.
       
         If you don't have a project yet login to ${names.url} and create a new project.
@@ -383,7 +383,7 @@ export async function runTest({
     });
 
     const onlineHint = `View it online at ${webUrl}`;
-    log.info(stripIndents`
+    log.info(dedent`
       Started Build ${number} (${pluralize(componentCount, 'component')}, ${pluralize(
       specCount,
       'story'
@@ -415,7 +415,7 @@ export async function runTest({
         log.info(`Build ${number} has ${pluralize(changeCount, 'change')}. ${onlineHint}.`);
         exitCode = doExitZeroOnChanges || buildAutoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
-          log.info(stripIndents`
+          log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
             Alternatively, pass --auto-accept-changes if you want changed builds to pass on this branch.
             Read more: https://docs.chromaticqa.com/test
@@ -470,25 +470,23 @@ export async function runTest({
     if (confirmed) {
       addScriptToPackageJson(names.script, scriptCommand);
       log.info(
-        stripIndents`
+        dedent`
         Added script \`${names.script}\`. You can now run it here or in CI with \`npm run ${names.script}\` (or \`yarn ${names.script}\`)
 
         NOTE: I wrote your app code to the \`${names.envVar}\` environment variable. 
         
         The app code cannot be used to read story data, it can only be used to create new builds.
-        If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.`,
-        { noPrefix: true }
+        If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.`
       );
     } else {
       log.info(
-        stripIndents`
+        dedent`
         No problem. You can add it later with:
         {
           "scripts": {
             "${names.script}": "${scriptCommand}"
           }
-        }`,
-        { noPrefix: true }
+        }`
       );
     }
   }

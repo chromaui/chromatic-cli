@@ -28,7 +28,7 @@ export default async function openTunnel({ port, https, host = 'localhost', ...r
 
   tunnel.on('url', url => debug(`Got tunnel url: %s`, url));
   tunnel.on('request', request => debug(`Got request: %O`, request));
-  tunnel.tunnel_cluster.on('error', error => debug(`Got tunnel cluster error: %O`, error));
+  tunnel.tunnelCluster.on('error', error => debug(`Got tunnel cluster error: %O`, error));
 
   return tunnel;
 }

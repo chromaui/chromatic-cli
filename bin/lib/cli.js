@@ -1,16 +1,18 @@
 import fs from 'fs-extra';
 import pkgUp from 'pkg-up';
 
-const createPackageInfo = async () => {
-  return pkgUp(__dirname)
-    .then(l => fs.readFile(l, 'utf8'))
-    .then(s => JSON.parse(s));
+const createPackageInfo = () => {
+  const location = pkgUp.sync({ cwd: __dirname });
+  const content = fs.readFileSync(location, 'utf8');
+  const data = JSON.parse(content);
+
+  return data;
 };
 
 const chroma = {
-  product: 'Chroma',
+  product: 'chroma',
   script: 'chroma',
-  command: 'chroma publish',
+  command: 'chroma',
   envVar: 'CHROMA_APP_CODE',
   url: 'https://www.chromaui.com',
 };
@@ -18,11 +20,13 @@ const chroma = {
 const chromatic = {
   product: 'chromatic',
   script: 'chromatic',
-  command: 'chromatic test',
+  command: 'chromatic',
   envVar: 'CHROMATIC_APP_CODE',
   url: 'https://www.chromaticqa.com',
 };
 
-export const getProductVariables = async () => {
-  return (await createPackageInfo()).name.includes('chromatic') ? chromatic : chroma;
+export const getProductVariables = () => {
+  const { name } = createPackageInfo();
+
+  return name.includes('chromatic') ? chromatic : chroma;
 };

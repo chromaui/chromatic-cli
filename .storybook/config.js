@@ -1,6 +1,6 @@
 import { configure } from '@storybook/react';
 
-import '../src/storybook-addon';
+// import '../src/storybook-addon';
 
 function loadStories() {
   const req = require.context('../stories/', true, /\.stories\.js$/);
