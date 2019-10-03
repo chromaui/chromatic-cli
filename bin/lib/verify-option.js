@@ -42,7 +42,11 @@ export async function verifyOptions(cli, argv) {
     ca: cli.storybookCa,
     port: cli.storybookPort,
     storybookUrl: cli.storybookUrl === '' ? true : cli.storybookUrl,
-    storybookBuildDir: cli.storybookBuildDir,
+    storybookBuildDir: cli.storybookBuildDir
+      ? path.resolve(
+          Array.isArray(cli.storybookBuildDir) ? cli.storybookBuildDir[0] : cli.storybookBuildDir
+        )
+      : undefined,
     createTunnel: !cli.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
   };
   const names = getProductVariables();
