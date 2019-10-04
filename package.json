@@ -7,6 +7,13 @@
     "chromatic-cli": "./bin/register.js",
     "chromatic": "./bin/register.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chromaui/chromatic-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chromaui/chromatic-cli/issues"
+  },
   "license": "MIT",
   "scripts": {
     "prebuild": "rm -rf ./dist",
