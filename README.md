@@ -87,6 +87,10 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 
 This package will load any variables from a `.env` file if present
 
+## Issues
+
+If you encounter issues with the CLI please report them via the in-app chat (Intercom widget) or at https://github.com/chromaui/chromatic-cli/issues. Thanks!
+
 ## Contributing
 
 Because of the nature of this package: it being a connector between Storybook and a web service, you may need an app code to test this locally. Just send us a message at opensource@hichroma.com or sign up for an account!
