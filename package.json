@@ -5,7 +5,8 @@
   "main": "./storybook-addon.js",
   "bin": {
     "chromatic-cli": "./bin/register.js",
-    "chromatic": "./bin/register.js"
+    "chromatic": "./bin/register.js",
+    "chroma": "./bin/register.js"
   },
   "repository": {
     "type": "git",
