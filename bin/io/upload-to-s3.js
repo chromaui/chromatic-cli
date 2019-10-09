@@ -84,6 +84,7 @@ export async function uploadToS3(source, client) {
             debug(`Uploading '${path}' failed: %O`, res);
             throw new Error(`Failed to upload ${path}`);
           }
+          debug(`Uploaded '${path}'.`);
         },
         {
           retries: CHROMATIC_RETRIES,
