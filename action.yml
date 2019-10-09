@@ -1,0 +1,32 @@
+name: 'Chromatic'
+description: 'Publish & test your storybook with chromatic'
+author: 'Chroma'
+inputs:
+  appCode:
+    description: 'Your chromatic/chroma app_code'
+  buildScriptName:
+    description: 'The npm script that builds your Storybook [build-storybook]'
+  scriptName:
+    description: 'The npm script that starts your Storybook [storybook]'
+  exec:
+    description: 'Alternatively, a full command to run to start your storybook'
+  doNotStart:
+    description: 'Don't attempt to start or build; use if your Storybook is already running'
+  storybookPort:
+    description: 'What port is your Storybook running on (auto detected from -s, if set)'
+  storybookUrl:
+    description: 'Storybook is already running at (external) url (implies -S)'
+  storybookBuildDir:
+    description: 'Provide a directory with your built storybook; use if you've already built your storybook'
+  storybookHttps:
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+  storybookCert:
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+  storybookKey:
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+  storybookCa:
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+
+runs:
+  using: 'node12'
+  main: 'lib/main.js'
