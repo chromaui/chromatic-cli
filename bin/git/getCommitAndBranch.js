@@ -23,7 +23,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
   } = process.env;
 
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
-  const isGitHubPrBuild = GITHUB_WORKFLOW !== '';
+  const isGitHubPrBuild = GITHUB_WORKFLOW;
 
   if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
     log.warn(dedent`
