@@ -1,0 +1,21 @@
+name: Chromatic on push
+
+on: 
+  push
+
+jobs:
+  latest-cra:
+    name: Latest CRA
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '10.x'
+    - uses: actions/checkout@v1
+    - name: install
+      run: |
+        yarn && git status --porcelain
+    - name: prep package
+      run: ./scripts/rename.js storybook-chromatic
+    - name: run chromatic
+      run: yarn chromatic
