@@ -4,7 +4,6 @@ const {
   CHROMATIC_INDEX_URL = 'https://index.chromaticqa.com',
   CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com',
   CHROMATIC_CREATE_TUNNEL = 'true',
-  CHROMATIC_APP_CODE,
   CHROMATIC_RETRIES = 5,
   CHROMATIC_POLL_INTERVAL = 1000,
   CHROMATIC_TIMEOUT = 5 * 60 * 1000,
@@ -18,6 +17,8 @@ const STORYBOOK_CLI_FLAGS_BY_VERSION = {
   '--ci': '4.0.0',
   '--loglevel': '5.1.0',
 };
+
+const CHROMATIC_APP_CODE = process.env.CHROMATIC_APP_CODE || process.env.CHROMA_APP_CODE;
 
 export {
   CHROMATIC_SERVER_PORT,
