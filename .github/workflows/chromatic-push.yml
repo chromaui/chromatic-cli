@@ -19,3 +19,5 @@ jobs:
       run: ./scripts/rename.js storybook-chromatic
     - name: run chromatic
       run: yarn chromatic
+      env: # Or as an environment variable
+        super_secret: ${{ secrets.CHROMATIC_APP_CODE }}
