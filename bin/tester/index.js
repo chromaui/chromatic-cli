@@ -313,9 +313,11 @@ export async function runTest({
   });
   debug(`Found baselineCommits: ${baselineCommits}`);
 
-  const { version: storybookVersion, viewLayer } = await getStorybookInfo();
+  const { version: storybookVersion, viewLayer, addons } = await getStorybookInfo();
   debug(
-    `Detected package version:${packageVersion}, storybook version:${storybookVersion}, view layer: ${viewLayer}`
+    `Detected package version: ${packageVersion}, storybook version: ${storybookVersion}, view layer: ${viewLayer}, addons: ${
+      addons.length ? addons.map(addon => addon.name).join(', ') : 'none'
+    }`
   );
 
   let exitCode = 5;
@@ -362,22 +364,23 @@ export async function runTest({
       },
     } = await client.runQuery(TesterCreateBuildMutation, {
       input: {
-        cachedUrl,
+        addons,
         autoAcceptChanges: doAutoAcceptChanges,
-        preserveMissingSpecs,
+        baselineCommits,
         branch,
+        cachedUrl,
         commit,
         committedAt,
-        baselineCommits,
-        runtimeSpecs,
-        fromCI,
-        isTravisPrBuild,
-        packageVersion,
-        storybookVersion,
-        viewLayer,
         committerEmail,
         committerName,
         environment,
+        fromCI,
+        isTravisPrBuild,
+        packageVersion,
+        preserveMissingSpecs,
+        runtimeSpecs,
+        storybookVersion,
+        viewLayer,
       },
       isolatorUrl,
     });

@@ -69,6 +69,7 @@ jest.mock('../storybook/start-app');
 jest.mock('../storybook/get-info', () => () => ({
   version: '5.1.0',
   viewLayer: 'viewLayer',
+  addons: [],
 }));
 jest.mock('../lib/tunnel');
 jest.mock('../lib/log', () =>
