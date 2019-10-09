@@ -17,8 +17,14 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     TRAVIS_REPO_SLUG,
     TRAVIS_PULL_REQUEST_SHA,
     TRAVIS_PULL_REQUEST_BRANCH,
+    GITHUB_WORKFLOW,
+    GITHUB_SHA,
+    GITHUB_REF,
   } = process.env;
+
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
+  const isGitHubPrBuild = GITHUB_WORKFLOW !== '';
+
   if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
     log.warn(dedent`
         WARNING: Running Chromatic on a Travis PR build from an internal branch.
@@ -36,10 +42,23 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     if (!commit || !branch) {
       throw new Error(dedent`
-        \`TRAVIS_EVENT_TYPE\` environment variable set to 'pull_request', 
-        but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
+      \`TRAVIS_EVENT_TYPE\` environment variable set to '${TRAVIS_EVENT_TYPE}', 
+      but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
+      
+      Read more here: https://docs.chromaticqa.com/setup_ci#travis
+      `);
+    }
+  }
 
-        Read more here: https://docs.chromaticqa.com/setup_ci#travis
+  if (isGitHubPrBuild) {
+    commit = GITHUB_SHA;
+    branch = GITHUB_REF;
+    if (!commit || !branch) {
+      throw new Error(dedent`
+        \`GITHUB_WORKFLOW\` environment variable set to '${GITHUB_WORKFLOW}', 
+        but \`GITHUB_SHA\` and \`GITHUB_REF\` are not both set.
+
+        Read more here: https://docs.chromaticqa.com/setup_ci#github
       `);
     }
   }

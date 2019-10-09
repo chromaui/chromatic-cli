@@ -16,6 +16,7 @@ jobs:
     - name: prep package
       run: ./scripts/rename.js storybook-chromatic
     - name: run chromatic
-      run: yarn chromatic
+      run: yarn chromatic --debug
       env: # Or as an environment variable
+        DEBUG: chromatic-cli
         CHROMATIC_APP_CODE: ${{ secrets.CHROMATIC_APP_CODE }}
