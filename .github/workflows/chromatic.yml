@@ -1,11 +1,9 @@
-name: Chromatic on push
+name: Chromatic
 
-on: 
-  push
+on: [push, pull_request]
 
 jobs:
-  latest-cra:
-    name: Latest CRA
+  chromatic:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-node@v1
