@@ -1,4 +1,4 @@
-import { getInput, debug, setFailed, setOutput } from '@actions/core';
+import { getInput, info, setFailed, setOutput } from '@actions/core';
 import {GitHub, context} from "@actions/github";
 
 
@@ -21,13 +21,16 @@ async function run() {
     const storybookKey = getInput('storybookKey');
     const storybookCa = getInput('storybookCa');
   
-    debug((new Date()).toTimeString())
+    info((new Date()).toTimeString())
 
     const { data: { id }} = await github.repos.createDeployment({
       ...context.repo,
       ref: context.sha,
       environment: 'staging',
+      required_contexts: [],
     });
+
+    info('id: ' + id);
 
     
     github.repos.createDeploymentStatus({
@@ -36,7 +39,7 @@ async function run() {
       state: "inactive"
     });
 
-    
+
     // const newIssue = await github.issues.create({
     //   ...context.repo,
     //   title: 'New issue!',
