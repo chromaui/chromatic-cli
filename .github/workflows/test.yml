@@ -1,4 +1,4 @@
-name: "Test typescript-action"
+name: "Chromatic action self test"
 on:
   pull_request:
   push:
@@ -12,9 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - run: npm ci
-    - run: npm run build
-    - run: npm test
+    - run: yarn
+    - run: yarn build
+    - run: yarn test
     - uses: ./
       with: 
         appCode: ${{ secrets.CHROMATIC_APP_CODE }}
