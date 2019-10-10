@@ -28,7 +28,19 @@ async function run() {
       required_contexts: [],
     });
 
-    info('deployment_id: ' + id);
+    info('options: ' + JSON.stringify({
+        buildScriptName,
+        scriptName,
+        exec,
+        doNotStart,
+        storybookPort,
+        storybookUrl,
+        storybookBuildDir,
+        storybookHttps,
+        storybookCert,
+        storybookKey,
+        storybookCa,
+      }, null, 2));
     
     github.repos.createDeploymentStatus({
       ...context.repo,
