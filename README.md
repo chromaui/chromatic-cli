@@ -1,6 +1,6 @@
 # Chromatic Github Action
 
-We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/README.md#packages) & [JasonEtco's awesome toolkit](https://github.com/JasonEtco/actions-toolkit#readme)
+We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/README.md#packages)
 
 ## Usage
 

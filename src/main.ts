@@ -1,11 +1,13 @@
 import { getInput, debug, setFailed, setOutput } from '@actions/core';
-import { Toolkit } from "actions-toolkit";
+import {GitHub, context} from "@actions/github";
 
 
 async function run() {
   try {
-    const {github, context, log} = new Toolkit();
     
+    const myToken = getInput('myToken');
+    const github = new GitHub(myToken);
+
     const appCode = getInput('appCode');
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
@@ -27,7 +29,7 @@ async function run() {
       body: 'Hello Universe!'
     });
 
-    log.info(newIssue)
+    // log.info(newIssue)
 
     setOutput('time', JSON.stringify({
       appCode,
