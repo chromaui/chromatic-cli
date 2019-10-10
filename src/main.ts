@@ -5,8 +5,8 @@ import {GitHub, context} from "@actions/github";
 async function run() {
   try {
     
-    const myToken = getInput('myToken');
-    const github = new GitHub(myToken);
+    const token = getInput('token');
+    const github = new GitHub(token);
 
     const appCode = getInput('appCode');
     const buildScriptName = getInput('buildScriptName');

@@ -16,3 +16,4 @@ jobs:
     - uses: ./
       with: 
         appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+        token: ${{ secrets.GITHUB_TOKEN }}
