@@ -48,19 +48,31 @@ async function run() {
       state: "in_progress",
     });
 
+    const maybe = (a) => {
+      if(!a) {
+        return undefined;
+      }
+
+      try {
+        return JSON.parse(a);
+      } catch(e){
+        return a;
+      }
+    }
+
     const exitCode = await runTest(verifyOptions({
       appCode,
-      buildScriptName,
-      scriptName,
-      exec,
-      doNotStart,
-      storybookPort,
-      storybookUrl,
-      storybookBuildDir,
-      storybookHttps,
-      storybookCert,
-      storybookKey,
-      storybookCa,
+      buildScriptName: maybe(buildScriptName),
+      scriptName: maybe(scriptName),
+      exec: maybe(exec),
+      doNotStart: maybe(doNotStart),
+      storybookPort: maybe(storybookPort),
+      storybookUrl: maybe(storybookUrl),
+      storybookBuildDir: maybe(storybookBuildDir),
+      storybookHttps: maybe(storybookHttps),
+      storybookCert: maybe(storybookCert),
+      storybookKey: maybe(storybookKey),
+      storybookCa: maybe(storybookCa),
     }));
     const url = 'https://example.com?real'
     const status = exitCode === 0 ? 'success' : 'failure';
