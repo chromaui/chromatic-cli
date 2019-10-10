@@ -23,11 +23,25 @@ async function run() {
   
     debug((new Date()).toTimeString())
 
-    const newIssue = await github.issues.create({
+    const { data: { id }} = await github.repos.createDeployment({
       ...context.repo,
-      title: 'New issue!',
-      body: 'Hello Universe!'
+      ref: context.sha,
+      environment: 'staging',
     });
+
+    
+    github.repos.createDeploymentStatus({
+      ...context.repo,
+      deployment_id: id,
+      state: "inactive"
+    });
+
+    
+    // const newIssue = await github.issues.create({
+    //   ...context.repo,
+    //   title: 'New issue!',
+    //   body: 'Hello Universe!'
+    // });
 
     // log.info(newIssue)
 
