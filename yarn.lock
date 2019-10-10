@@ -907,11 +907,6 @@ chownr@^1.1.1:
   resolved "https://registry.yarnpkg.com/chownr/-/chownr-1.1.3.tgz#42d837d5239688d55f303003a508230fa6727142"
   integrity sha512-i70fVHhmV3DtTl6nqvZOnIjbY0Pe4kAUjwHj8z0zAdgBtYrJyYwLKCCuRBQ5ppkyL0AkN7HKRnETdmdp1zqNXw==
 
-chromatic-cli@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/chromatic-cli/-/chromatic-cli-1.0.0.tgz#0d72d2900738a23e3e6a4b5cd0b26c64d51fe074"
-  integrity sha512-IoDpLGcQdsK17aut5lEHW/B917bjaW2gLztXajlvHS/cjeIH6Ir4tpPJpJxDPnPGtFvJAZchZ0KsUdN1BeMn7A==
-
 ci-info@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/ci-info/-/ci-info-2.0.0.tgz#67a9e964be31a51e15e5010d58e6f12834002f46"

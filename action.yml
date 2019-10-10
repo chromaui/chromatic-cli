@@ -29,5 +29,5 @@ inputs:
     description: "Storybook is already running at (external) url (implies -S)"
 
 runs: 
-  main: lib/main.js
+  main: main.js
   using: node12
