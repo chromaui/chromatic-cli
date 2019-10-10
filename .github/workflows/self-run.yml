@@ -17,3 +17,7 @@ jobs:
       with: 
         appCode: ${{ secrets.CHROMATIC_APP_CODE }}
         token: ${{ secrets.GITHUB_TOKEN }}
+        scriptName: true
+        storybookCert: 1
+        storybookBuildDir: undefined
+        exec: ''
