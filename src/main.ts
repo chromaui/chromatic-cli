@@ -4,30 +4,36 @@ import { runTest } from 'storybook-chromatic/bin/tester/index';
 import { verifyOptions } from 'storybook-chromatic/bin/lib/verify-option';
 
 async function run() {
-  try {
-    const token = getInput('token');
-    const github = new GitHub(token);
+  const token = getInput('token');
+  const github = new GitHub(token);
 
-    const appCode = getInput('appCode');
-    const buildScriptName = getInput('buildScriptName');
-    const scriptName = getInput('scriptName');
-    const exec = getInput('exec');
-    const doNotStart = getInput('doNotStart');
-    const storybookPort = getInput('storybookPort');
-    const storybookUrl = getInput('storybookUrl');
-    const storybookBuildDir = getInput('storybookBuildDir');
-    const storybookHttps = getInput('storybookHttps');
-    const storybookCert = getInput('storybookCert');
-    const storybookKey = getInput('storybookKey');
-    const storybookCa = getInput('storybookCa');
+  const appCode = getInput('appCode');
+  const buildScriptName = getInput('buildScriptName');
+  const scriptName = getInput('scriptName');
+  const exec = getInput('exec');
+  const doNotStart = getInput('doNotStart');
+  const storybookPort = getInput('storybookPort');
+  const storybookUrl = getInput('storybookUrl');
+  const storybookBuildDir = getInput('storybookBuildDir');
+  const storybookHttps = getInput('storybookHttps');
+  const storybookCert = getInput('storybookCert');
+  const storybookKey = getInput('storybookKey');
+  const storybookCa = getInput('storybookCa');
+
+  const { data: { id }} = await github.repos.createDeployment({
+    ...context.repo,
+    ref: context.sha,
+    environment: 'staging',
+    required_contexts: [],
+  });
   
-    const { data: { id }} = await github.repos.createDeployment({
-      ...context.repo,
-      ref: context.sha,
-      environment: 'staging',
-      required_contexts: [],
-    });
+  github.repos.createDeploymentStatus({
+    ...context.repo,
+    deployment_id: id,
+    state: "in_progress",
+  });
 
+  try {
     info('options: ' + JSON.stringify({
         buildScriptName,
         scriptName,
@@ -42,11 +48,6 @@ async function run() {
         storybookCa,
       }, null, 2));
     
-    github.repos.createDeploymentStatus({
-      ...context.repo,
-      deployment_id: id,
-      state: "in_progress",
-    });
 
     const maybe = (a) => {
       if(!a) {
@@ -90,6 +91,12 @@ async function run() {
     e.message && error(e.message);
     e.stack && error(e.stack);
     e.description && error(e.description);
+
+    github.repos.createDeploymentStatus({
+      ...context.repo,
+      deployment_id: id,
+      state: 'failure',
+    });
 
     setFailed(e.message);
   }
