@@ -62,6 +62,11 @@ async function run() {
         }
       }
 
+      info('!!appCode' + JSON.stringify(!!appCode))
+      info('!appCode' + JSON.stringify(!appCode))
+      info('appCode.length' + JSON.stringify(appCode.length))
+      info('appCode[0]' + JSON.stringify(appCode[0]))
+
       const exitCode = await runTest(verifyOptions({
         appCode,
         buildScriptName: maybe(buildScriptName),
