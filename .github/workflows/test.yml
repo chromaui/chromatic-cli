@@ -17,4 +17,4 @@ jobs:
     - run: npm test
     - uses: ./
       with: 
-        milliseconds: 1000
+        appCode: ${{ secrets.CHROMATIC_APP_CODE }}
