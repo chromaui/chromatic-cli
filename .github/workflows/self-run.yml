@@ -11,10 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-
-    - run: yarn
-    - run: yarn build
-    - run: yarn test
+    - run: |
+      yarn && yarn build
     - uses: ./
       with: 
         appCode: ${{ secrets.CHROMATIC_APP_CODE }}
