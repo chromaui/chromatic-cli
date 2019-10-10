@@ -23,20 +23,28 @@ async function run() {
   
     info((new Date()).toTimeString())
 
-    const { data: { id }} = await github.repos.createDeployment({
-      ...context.repo,
-      ref: context.sha,
-      environment: 'staging',
-      required_contexts: [],
-    });
+    // const { data: { id }} = await github.repos.createDeployment({
+    //   ...context.repo,
+    //   ref: context.sha,
+    //   environment: 'staging',
+    //   required_contexts: [],
+    // });
 
-    info('id: ' + id);
+    // info('id: ' + id);
 
     
+    // github.repos.createDeploymentStatus({
+    //   ...context.repo,
+    //   deployment_id: id,
+    //   state: "inactive",
+    // });
+
     github.repos.createDeploymentStatus({
       ...context.repo,
-      deployment_id: id,
-      state: "inactive"
+      deployment_id: 174461623,
+      state: "success",
+      environment_url: 'https://example.com?real',
+      log_url: 'https://example.com?log'
     });
 
 
