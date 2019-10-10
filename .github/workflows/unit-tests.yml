@@ -1,4 +1,4 @@
-name: "Chromatic action self test"
+name: "unit test"
 on:
   pull_request:
   push:

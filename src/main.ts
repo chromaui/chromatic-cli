@@ -1,23 +1,35 @@
-import * as core from '@actions/core';
+import { getInput, debug, setFailed, setOutput } from '@actions/core';
+import { Toolkit } from "actions-toolkit";
+
 
 async function run() {
   try {
-    const appCode = core.getInput('appCode');
-    const buildScriptName = core.getInput('buildScriptName');
-    const scriptName = core.getInput('scriptName');
-    const exec = core.getInput('exec');
-    const doNotStart = core.getInput('doNotStart');
-    const storybookPort = core.getInput('storybookPort');
-    const storybookUrl = core.getInput('storybookUrl');
-    const storybookBuildDir = core.getInput('storybookBuildDir');
-    const storybookHttps = core.getInput('storybookHttps');
-    const storybookCert = core.getInput('storybookCert');
-    const storybookKey = core.getInput('storybookKey');
-    const storybookCa = core.getInput('storybookCa');
+    const {github, context, log} = new Toolkit();
+    
+    const appCode = getInput('appCode');
+    const buildScriptName = getInput('buildScriptName');
+    const scriptName = getInput('scriptName');
+    const exec = getInput('exec');
+    const doNotStart = getInput('doNotStart');
+    const storybookPort = getInput('storybookPort');
+    const storybookUrl = getInput('storybookUrl');
+    const storybookBuildDir = getInput('storybookBuildDir');
+    const storybookHttps = getInput('storybookHttps');
+    const storybookCert = getInput('storybookCert');
+    const storybookKey = getInput('storybookKey');
+    const storybookCa = getInput('storybookCa');
   
-    core.debug((new Date()).toTimeString())
+    debug((new Date()).toTimeString())
 
-    core.setOutput('time', JSON.stringify({
+    const newIssue = await github.issues.create({
+      ...context.repo,
+      title: 'New issue!',
+      body: 'Hello Universe!'
+    });
+
+    log.info(newIssue)
+
+    setOutput('time', JSON.stringify({
       appCode,
       buildScriptName,
       scriptName,
@@ -32,7 +44,7 @@ async function run() {
       storybookCa,
     }));
   } catch (error) {
-    core.setFailed(error.message);
+    setFailed(error.message);
   }
 }
 
