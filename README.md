@@ -44,15 +44,15 @@ Comment out node_modules in `.gitignore` and create a releases/v1 branch
 ```
 
 ```sh
-$ git checkout -b releases/v1
-$ git commit -a -m "prod dependencies"
+git checkout -b releases/v1
+git commit -a -m "prod dependencies"
 ```
 
 ```sh
-$ npm prune --production
-$ git add node_modules
-$ git commit -a -m "prod dependencies"
-$ git push origin releases/v1
+npm prune --production
+git add node_modules
+git commit -a -m "prod dependencies"
+git push origin releases/v1
 ```
 
 See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
@@ -64,7 +64,7 @@ You can now validate the action by referencing the releases/v1 branch
 ```yaml
 uses: chromaui/action@releases/v1
 with:
-  milliseconds: 1000
+  appCode: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
 
 See the [actions tab](https://github.com/chromaui/action/actions) for runs of this action! :rocket:
@@ -76,5 +76,5 @@ After testing you can [create a v1 tag](https://github.com/actions/toolkit/blob/
 ```yaml
 uses: chromaui/action@v1
 with:
-  milliseconds: 1000
+  appCode: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
