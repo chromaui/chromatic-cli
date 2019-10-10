@@ -1,6 +1,7 @@
-import { getInput, info, setFailed, setOutput } from '@actions/core';
+import { getInput, info, error, setFailed, setOutput } from '@actions/core';
 import { GitHub, context } from "@actions/github";
-
+import { runTest } from 'storybook-chromatic/bin/tester/index';
+import { verifyOptions } from 'storybook-chromatic/bin/lib/verify-option';
 
 async function run() {
   try {
@@ -32,20 +33,10 @@ async function run() {
     github.repos.createDeploymentStatus({
       ...context.repo,
       deployment_id: id,
-      state: "inactive",
+      state: "in_progress",
     });
 
-    // let's do some chromatic-cli stuff!
-
-    github.repos.createDeploymentStatus({
-      ...context.repo,
-      deployment_id: id,
-      state: "success",
-      environment_url: 'https://example.com?real',
-      log_url: 'https://example.com?log'
-    });
-
-    setOutput('time', JSON.stringify({
+    const exitCode = await runTest(verifyOptions({
       appCode,
       buildScriptName,
       scriptName,
@@ -59,8 +50,24 @@ async function run() {
       storybookKey,
       storybookCa,
     }));
-  } catch (error) {
-    setFailed(error.message);
+    const url = 'https://example.com?real'
+    const status = exitCode === 0 ? 'success' : 'failure';
+
+    github.repos.createDeploymentStatus({
+      ...context.repo,
+      deployment_id: id,
+      state: status,
+      environment_url: url,
+      log_url: 'https://example.com?log'
+    });
+
+    setOutput('url', url);
+  } catch (e) {
+    e.message && error(e.message);
+    e.stack && error(e.stack);
+    e.description && error(e.description);
+
+    setFailed(e.message);
   }
 }
 
