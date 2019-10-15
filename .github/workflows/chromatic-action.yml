@@ -2,7 +2,7 @@ name: "Chromatic via action"
 on: [push, pull_request]
 
 jobs:
-  test:
+  chromatic:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1

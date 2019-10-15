@@ -8,7 +8,7 @@ const style = {
   justifyContent: 'center',
   width: '50px',
   height: '50px',
-  backgroundColor: 'orangered',
+  backgroundColor: 'darkkhaki',
 };
 
 export default function A({ thing, backgroundColor, ...props }) {
