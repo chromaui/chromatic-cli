@@ -20,8 +20,11 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     GITHUB_WORKFLOW,
     GITHUB_SHA,
     GITHUB_REF,
+    CHROMATIC_SHA,
+    CHROMATIC_BRANCH,
   } = process.env;
 
+  const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH;
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
   const isGitHubPrBuild = GITHUB_WORKFLOW;
 
@@ -34,6 +37,12 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
         Read more: https://docs.chromaticqa.com/setup_ci#travis
       `);
   }
+
+  if (isFromEnvVariable) {
+    commit = CHROMATIC_SHA;
+    branch = CHROMATIC_BRANCH;
+  }
+
   // Travis PR builds are weird, we want to ensure we mark build against the commit that was
   // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
   // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
@@ -50,9 +59,11 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     }
   }
 
+  // GitHub PR builds are weird. push events are fine, but PR in events, the sha will point to a not-yet-committed sha of a final merge.
+  // This trips up chromatic, also the GITHUB_REF will be prefixed with 'refs/heads/' for some reason.
   if (isGitHubPrBuild) {
     commit = GITHUB_SHA;
-    branch = GITHUB_REF;
+    branch = GITHUB_REF.replace('refs/heads/', '');
     if (!commit || !branch) {
       throw new Error(dedent`
         \`GITHUB_WORKFLOW\` environment variable set to '${GITHUB_WORKFLOW}', 
