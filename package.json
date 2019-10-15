@@ -36,6 +36,7 @@
     "@chromaui/localtunnel": "2.0.1",
     "async-retry": "^1.1.4",
     "babel-plugin-require-context-hook": "^1.0.0",
+    "cross-spawn": "^7.0.1",
     "debug": "^4.1.1",
     "denodeify": "^1.2.1",
     "dotenv": "^8.1.0",

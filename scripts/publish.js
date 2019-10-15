@@ -1,6 +1,6 @@
 #!/usr/bin/env node -r esm
 
-import { spawn } from 'child_process';
+import { spawn } from 'cross-spawn';
 import pkgUp from 'pkg-up';
 import { readFile, writeFile } from 'jsonfile';
 import dedent from 'ts-dedent';
