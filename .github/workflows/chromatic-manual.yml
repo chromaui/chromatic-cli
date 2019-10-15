@@ -1,6 +1,6 @@
-name: Chromatic
-
-on: [push, pull_request]
+name: "Chromatic via manual"
+on: [push]
+# do not use pull_request here, it report the wrong commit_sha and commit_ref
 
 jobs:
   chromatic:
@@ -17,5 +17,5 @@ jobs:
       run: ./scripts/rename.js storybook-chromatic
     - name: run chromatic
       run: yarn chromatic
-      env: # Or as an environment variable
+      env: 
         CHROMATIC_APP_CODE: ${{ secrets.CHROMATIC_APP_CODE }}

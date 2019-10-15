@@ -115,8 +115,7 @@ const defaultOptions = {
 
 it('runs in simple situations', async () => {
   // Returns 1 because there is a change
-  expect(await runTest(defaultOptions)).toBe(1);
-
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(lastBuild).toMatchObject({
     input: {
       autoAcceptChanges: false,
@@ -145,7 +144,7 @@ it('properly deals with updating the isolatorUrl/cachedUrl in complex situations
       ...defaultOptions,
       url: 'http://localhost:1337/iframe.html?foo=bar#hash',
     })
-  ).toBe(1);
+  ).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
 
   expect(lastBuild).toMatchObject({
     input: {
@@ -163,13 +162,13 @@ it('returns 0 when changes if option passed', async () => {
       ...defaultOptions,
       exitZeroOnChanges: true,
     })
-  ).toBe(0);
+  ).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
 });
 
 it('detects CI environments successfully', async () => {
   // Standard CI
   process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
-  expect(await runTest(defaultOptions)).toBe(1);
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(lastBuild).toMatchObject({
     input: {
       fromCI: true,
@@ -179,7 +178,10 @@ it('detects CI environments successfully', async () => {
 
   // CI passed as option
   process.env = { DISABLE_LOGGING: 'true' };
-  expect(await runTest({ ...defaultOptions, fromCI: true })).toBe(1);
+  expect(await runTest({ ...defaultOptions, fromCI: true })).toEqual({
+    exitCode: 1,
+    exitUrl: 'http://test.com',
+  });
   expect(lastBuild).toMatchObject({
     input: {
       fromCI: true,
@@ -189,7 +191,7 @@ it('detects CI environments successfully', async () => {
 
   // Netlify CI
   process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
-  expect(await runTest(defaultOptions)).toBe(1);
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(lastBuild).toMatchObject({
     input: {
       fromCI: true,
@@ -207,7 +209,7 @@ it('detects CI environments successfully', async () => {
     TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
     DISABLE_LOGGING: 'true',
   };
-  expect(await runTest(defaultOptions)).toBe(1);
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(lastBuild).toMatchObject({
     input: {
       commit: 'travis-commit',
@@ -227,7 +229,7 @@ it('detects CI environments successfully', async () => {
     TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
     DISABLE_LOGGING: 'true',
   };
-  expect(await runTest(defaultOptions)).toBe(1);
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(lastBuild).toMatchObject({
     input: {
       commit: 'travis-commit',
@@ -239,13 +241,13 @@ it('detects CI environments successfully', async () => {
 });
 
 it('prompts you to a script to your package.json', async () => {
-  expect(await runTest(defaultOptions)).toBe(1);
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(confirm).toHaveBeenCalled();
 });
 
 it('does not run interactively on CI', async () => {
   process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
-  expect(await runTest(defaultOptions)).toBe(1);
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(confirm).not.toHaveBeenCalled();
 });
 
@@ -255,7 +257,7 @@ it('does not run interactively if you pass interactive:false', async () => {
       ...defaultOptions,
       interactive: false,
     })
-  ).toBe(1);
+  ).toEqual({ exitCode: 1, exitUrl: 'http://test.com' });
   expect(confirm).not.toHaveBeenCalled();
 });
 

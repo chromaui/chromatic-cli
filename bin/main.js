@@ -92,7 +92,7 @@ export async function run(argv) {
   sendDebugToLoggly(options);
 
   try {
-    const exitCode = await runTest(options);
+    const { exitCode } = await runTest(options);
 
     process.exitCode = exitCode;
   } catch (error) {

@@ -17,8 +17,17 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
     TRAVIS_REPO_SLUG,
     TRAVIS_PULL_REQUEST_SHA,
     TRAVIS_PULL_REQUEST_BRANCH,
+    GITHUB_WORKFLOW,
+    GITHUB_SHA,
+    GITHUB_REF,
+    CHROMATIC_SHA,
+    CHROMATIC_BRANCH,
   } = process.env;
+
+  const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH;
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
+  const isGitHubPrBuild = GITHUB_WORKFLOW;
+
   if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
     log.warn(dedent`
         WARNING: Running Chromatic on a Travis PR build from an internal branch.
@@ -28,21 +37,39 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
         Read more: https://docs.chromaticqa.com/setup_ci#travis
       `);
   }
-  // Travis PR builds are weird, we want to ensure we mark build against the commit that was
-  // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
-  // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
-  if (isTravisPrBuild) {
+
+  if (isFromEnvVariable) {
+    commit = CHROMATIC_SHA;
+    branch = CHROMATIC_BRANCH;
+  } else if (isTravisPrBuild) {
+    // Travis PR builds are weird, we want to ensure we mark build against the commit that was
+    // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
+    // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
     commit = TRAVIS_PULL_REQUEST_SHA;
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     if (!commit || !branch) {
       throw new Error(dedent`
-        \`TRAVIS_EVENT_TYPE\` environment variable set to 'pull_request', 
-        but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
+      \`TRAVIS_EVENT_TYPE\` environment variable set to '${TRAVIS_EVENT_TYPE}', 
+      but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
+      
+      Read more here: https://docs.chromaticqa.com/setup_ci#travis
+      `);
+    }
+  } else if (isGitHubPrBuild) {
+    // GitHub PR builds are weird. push events are fine, but PR in events, the sha will point to a not-yet-committed sha of a final merge.
+    // This trips up chromatic, also the GITHUB_REF will be prefixed with 'refs/heads/' for some reason.
+    commit = GITHUB_SHA;
+    branch = GITHUB_REF.replace('refs/heads/', '');
+    if (!commit || !branch) {
+      throw new Error(dedent`
+        \`GITHUB_WORKFLOW\` environment variable set to '${GITHUB_WORKFLOW}', 
+        but \`GITHUB_SHA\` and \`GITHUB_REF\` are not both set.
 
-        Read more here: https://docs.chromaticqa.com/setup_ci#travis
+        Read more here: https://docs.chromaticqa.com/setup_ci#github
       `);
     }
   }
+
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (branch === 'HEAD' || !branch) {
