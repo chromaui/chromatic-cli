@@ -36,6 +36,12 @@ Using npx has pros and cons:
 - 👍 You don't need this package as a dependency, and don't need to install it during local development
 - 👎 This will add a delay when you actually do want to run this, like in your CI, delaying feedback.
 
+### Usage in a github action
+
+There are examples here: [/.github/workflows](/.github/workflows).
+
+Do not run this based on a github pull_request event. If you do, the commit and branch will get reported wrong, use [https://github.com/chromaui/action](https://github.com/chromaui/action) instead.
+
 ### Main options
 
 ```
