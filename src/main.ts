@@ -105,7 +105,7 @@ async function run() {
     const deployment = await api.repos.createDeployment({
       repo,
       owner,
-      ref: sha,
+      ref: branch,
       environment: 'chromatic',
       required_contexts: [],
     });
