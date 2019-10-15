@@ -1,0 +1,8 @@
+ {
+    "token": "your-loggly-token",
+    "subdomain": "your-subdomain",
+    "auth": {
+      "username": "your-username",
+      "password": "your-password"
+    }
+  }

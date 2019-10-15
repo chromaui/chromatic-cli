@@ -1,0 +1,26 @@
+{
+  "name": "babel-plugin-require-context-hook",
+  "version": "1.0.0",
+  "description": "Babel plugin to replicate Webpack require.context",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/run.js"
+  },
+  "keywords": [
+    "babel",
+    "webpack"
+  ],
+  "author": "Greg Smith <smr.kyu@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smrq/babel-plugin-require-context-hook"
+  },
+  "bugs": {
+    "url": "https://github.com/smrq/babel-plugin-require-context-hook/issues"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-register": "^6.26.0"
+  }
+}

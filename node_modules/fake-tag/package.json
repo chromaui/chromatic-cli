@@ -1,0 +1,76 @@
+{
+  "name": "fake-tag",
+  "version": "1.0.0",
+  "description": "A fake template literal tag to trick linters and formatters into action.",
+  "license": "MIT",
+  "author": {
+    "name": "Jayden Seric",
+    "email": "me@jaydenseric.com",
+    "url": "https://jaydenseric.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaydenseric/fake-tag.git"
+  },
+  "homepage": "https://github.com/jaydenseric/fake-tag#readme",
+  "bugs": "https://github.com/jaydenseric/fake-tag/issues",
+  "keywords": [
+    "es6",
+    "dummy",
+    "fake",
+    "template",
+    "literal",
+    "string",
+    "tag"
+  ],
+  "files": [
+    "index.js"
+  ],
+  "devDependencies": {
+    "ava": "^1.0.0-beta.4",
+    "eslint": "^4.19.1",
+    "eslint-plugin-ava": "^4.5.1",
+    "eslint-plugin-prettier": "^2.5.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.0.4",
+    "prettier": "^1.12.1"
+  },
+  "scripts": {
+    "lint": "eslint . --fix && prettier '**/*.{json,md}' --write",
+    "test": "ava",
+    "watch": "ava -w",
+    "precommit": "lint-staged",
+    "prepublishOnly": "npm run lint && npm test"
+  },
+  "lint-staged": {
+    "*.js": "eslint",
+    "*.{json,md}": "prettier -l"
+  },
+  "eslintConfig": {
+    "env": {
+      "es6": true,
+      "node": true,
+      "browser": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:ava/recommended"
+    ],
+    "plugins": [
+      "ava",
+      "prettier"
+    ],
+    "rules": {
+      "curly": [
+        "error",
+        "multi"
+      ],
+      "prettier/prettier": "error"
+    }
+  },
+  "prettier": {
+    "proseWrap": "never",
+    "singleQuote": true,
+    "semi": false
+  }
+}

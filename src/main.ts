@@ -56,10 +56,10 @@ interface Output {
   code: number;
 }
 async function chromatic(options): Promise<Output> {
-  const { exitCode, url } = await runTest(await verifyOptions(options));  
+  const { exitCode, exitUrl } = await runTest(await verifyOptions(options));  
 
   return {
-    url,
+    url: exitUrl,
     code: exitCode,
   };
 }
@@ -105,7 +105,7 @@ async function run() {
     const deployment = await api.repos.createDeployment({
       repo,
       owner,
-      ref: sha,
+      ref: branch,
       environment: 'chromatic',
       required_contexts: [],
     });
@@ -124,6 +124,8 @@ async function run() {
 
     const { url, code } = await chromatic({
       appCode,
+      fromCI: true,
+      interactive: false,
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),
