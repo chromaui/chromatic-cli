@@ -1,5 +1,4 @@
 name: "Chromatic via manual"
-
 on: [push, pull_request]
 
 jobs:
