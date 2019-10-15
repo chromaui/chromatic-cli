@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn } from 'cross-spawn';
 import https from 'https';
 import fetch from 'node-fetch';
 import path from 'path';
