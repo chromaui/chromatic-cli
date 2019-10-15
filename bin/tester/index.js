@@ -321,6 +321,8 @@ export async function runTest({
   );
 
   let exitCode = 5;
+  let exitUrl = '';
+
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
     client,
@@ -334,7 +336,9 @@ export async function runTest({
     createTunnel,
     tunnelUrl,
   });
+
   debug(`Connecting to ${isolatorUrl} (cachedUrl ${cachedUrl})`);
+
   log.info(
     `Uploading and verifying build (this may take a few minutes depending on your connection)`
   );
@@ -384,6 +388,8 @@ export async function runTest({
       },
       isolatorUrl,
     });
+
+    exitUrl = webUrl;
 
     const onlineHint = `View it online at ${webUrl}`;
     log.info(dedent`
@@ -494,5 +500,5 @@ export async function runTest({
     }
   }
 
-  return exitCode;
+  return { exitCode, exitUrl };
 }
