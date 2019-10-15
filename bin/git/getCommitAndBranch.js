@@ -41,12 +41,10 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
   if (isFromEnvVariable) {
     commit = CHROMATIC_SHA;
     branch = CHROMATIC_BRANCH;
-  }
-
-  // Travis PR builds are weird, we want to ensure we mark build against the commit that was
-  // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
-  // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
-  if (isTravisPrBuild) {
+  } else if (isTravisPrBuild) {
+    // Travis PR builds are weird, we want to ensure we mark build against the commit that was
+    // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
+    // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
     commit = TRAVIS_PULL_REQUEST_SHA;
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     if (!commit || !branch) {
@@ -57,11 +55,9 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
       Read more here: https://docs.chromaticqa.com/setup_ci#travis
       `);
     }
-  }
-
-  // GitHub PR builds are weird. push events are fine, but PR in events, the sha will point to a not-yet-committed sha of a final merge.
-  // This trips up chromatic, also the GITHUB_REF will be prefixed with 'refs/heads/' for some reason.
-  if (isGitHubPrBuild) {
+  } else if (isGitHubPrBuild) {
+    // GitHub PR builds are weird. push events are fine, but PR in events, the sha will point to a not-yet-committed sha of a final merge.
+    // This trips up chromatic, also the GITHUB_REF will be prefixed with 'refs/heads/' for some reason.
     commit = GITHUB_SHA;
     branch = GITHUB_REF.replace('refs/heads/', '');
     if (!commit || !branch) {
@@ -73,6 +69,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
       `);
     }
   }
+
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (branch === 'HEAD' || !branch) {
