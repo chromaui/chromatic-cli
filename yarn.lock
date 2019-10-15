@@ -3888,10 +3888,10 @@ stealthy-require@^1.1.1:
   resolved "https://registry.yarnpkg.com/stealthy-require/-/stealthy-require-1.1.1.tgz#35b09875b4ff49f26a777e509b3090a3226bf24b"
   integrity sha1-NbCYdbT/SfJqd35QmzCQoyJr8ks=
 
-storybook-chromatic@^3.0.3-debug.0:
-  version "3.0.3-debug.0"
-  resolved "https://registry.yarnpkg.com/storybook-chromatic/-/storybook-chromatic-3.0.3-debug.0.tgz#7ae24a8cf74c8c72e6093de7974dd057e9958827"
-  integrity sha512-l07xC+M/ueGF7izKhSPL793DaHAEDWzvUEH2mYTcA4cUm7MOr/0oLWkeJHTtoVvmtA0UCCgWJnqEKMvMjW5gNg==
+storybook-chromatic@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/storybook-chromatic/-/storybook-chromatic-3.0.3.tgz#abebb31218f46db28592787753322813054a57ba"
+  integrity sha512-/JY0asvRD8V1jrc/3e+gIpPWOeYHpT0MbKXYiZ3LwR8GAD2sI0V+p7U6wG1n50/4UTrz08j2nFG44KHZjeK5nw==
   dependencies:
     "@babel/preset-react" "^7.0.0"
     "@babel/runtime" "^7.6.2"
