@@ -126,6 +126,7 @@ async function run() {
       appCode,
       fromCI: true,
       interactive: false,
+      exitZeroOnChanges: true,
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),
