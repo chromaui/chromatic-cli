@@ -124,6 +124,8 @@ async function run() {
 
     const { url, code } = await chromatic({
       appCode,
+      fromCI: true,
+      interactive: false,
       exitZeroOnChanges: true,
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
