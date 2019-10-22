@@ -55,7 +55,7 @@ interface Output {
   url: string;
   code: number;
 }
-async function chromatic(options): Promise<Output> {
+async function runChromatic(options): Promise<Output> {
   const { exitCode, url } = await runTest(await verifyOptions(options));  
 
   return {
@@ -86,8 +86,6 @@ async function run() {
 
   const { branch, repo, owner, sha } = commit;
 
-  info(JSON.stringify({ commit }, null, 2));
-
   try {
     const appCode = getInput('appCode');
     const buildScriptName = getInput('buildScriptName');
@@ -102,27 +100,30 @@ async function run() {
     const storybookKey = getInput('storybookKey');
     const storybookCa = getInput('storybookCa');
 
-    const deployment = await api.repos.createDeployment({
+    process.env.CHROMATIC_SHA = sha;
+    process.env.CHROMATIC_BRANCH = branch;
+
+    const deployment = api.repos.createDeployment({
       repo,
       owner,
       ref: branch,
       environment: 'chromatic',
       required_contexts: [],
+    }).then(deployment => {
+      deployment_id = deployment.data.id;
+
+      return api.repos.createDeploymentStatus({
+        repo,
+        owner,
+        deployment_id,
+        state: 'pending',
+      });
+    }).catch(e => {
+      deployment_id = NaN;
+      console.log('adding deployment to GitHub failed, You are likely on a forked repo and do not have write access.');
     });
 
-    deployment_id = deployment.data.id;
-    
-    await api.repos.createDeploymentStatus({
-      repo,
-      owner,
-      deployment_id,
-      state: 'pending',
-    });
-
-    process.env.CHROMATIC_SHA = sha;
-    process.env.CHROMATIC_BRANCH = branch;
-
-    const { url, code } = await chromatic({
+    const chromatic = runChromatic({
       appCode,
       fromCI: true,
       interactive: false,
@@ -139,21 +140,28 @@ async function run() {
       storybookKey: maybe(storybookKey),
       storybookCa: maybe(storybookCa),
     });
-    
-    await api.repos.createDeploymentStatus({
-      repo,
-      owner,
-      deployment_id,
-      state: 'success',
-      environment_url: url
-    });
-      
+
+    const [{ url, code }] = await Promise.all([
+      chromatic,
+      deployment,
+    ]);
+
+    if (typeof deployment_id === 'number' && !isNaN(deployment_id)) {
+      try {
+        await api.repos.createDeploymentStatus({
+          repo,
+          owner,
+          deployment_id,
+          state: 'success',
+          environment_url: url
+        });
+      } catch (e){
+        //
+      }
+    }
+
     setOutput('url', url);
     setOutput('code', code.toString());
-
-    if(code !== 0) {
-      setFailed('go to '+ url + ' to view the failed|rejected|pending snapshots');
-    }
   } catch (e) {
     e.message && error(e.message);
     e.stack && error(e.stack);
@@ -165,7 +173,7 @@ async function run() {
           repo,
           owner,
           deployment_id,
-          state: 'success',
+          state: 'failure',
         });
       } catch (e){
         //
