@@ -22,6 +22,7 @@ We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/
     storybookCa: 'Use if Storybook is running on https (auto detected from -s, if set)'
 ```
 
+
 We suggest you use secret:
 
 ```yaml
@@ -31,7 +32,16 @@ We suggest you use secret:
     appCode: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
 
-You have to configure secrets in the settings tab (https://github.com/<org>/<repo>/settings/secrets)
+You have to configure secrets in the settings tab (`https://github.com/{org}/{repo}/settings/secrets`)
+
+However if you need to be able to run this action on forked PRs you can't make it a secret, it has to be public:
+
+```yaml
+- uses: chromaui/action@v1
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    appCode: appcodehere
+```
 
 ## Development
 
