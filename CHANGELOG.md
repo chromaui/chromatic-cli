@@ -2,7 +2,7 @@
 
 #### 🚀  Version 1
 
-- Add compatibility to run on forked PRs
+- Add compatibility to run on forked PRs (needs public appCode)
 - Performance improvement: Run GitHub deployment APIs and Chromatic in parallel
 
 # v1 (Sat Oct 19 2019)
