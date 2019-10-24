@@ -5,6 +5,8 @@ import { pluralize } from '../lib/pluralize';
 
 export async function getStories({ only, list, isolatorUrl, verbose }) {
   let predicate = () => true;
+  let listStory = story => story;
+
   if (only) {
     const match = only.match(/(.*):([^:]*)/);
     if (!match) {
@@ -14,7 +16,7 @@ export async function getStories({ only, list, isolatorUrl, verbose }) {
     predicate = ({ name, component: { name: componentName } }) =>
       minimatch(name, match[2]) && minimatch(componentName, match[1]);
   }
-  let listStory = story => story;
+
   if (list) {
     log.info('Listing available stories:');
     listStory = story => {
@@ -26,14 +28,15 @@ export async function getStories({ only, list, isolatorUrl, verbose }) {
       return story;
     };
   }
-  const runtimeSpecs = (await getRuntimeSpecs(isolatorUrl, { verbose }))
-    .map(listStory)
-    .filter(predicate);
+
+  const { specs, options } = await getRuntimeSpecs(isolatorUrl, { verbose });
+
+  const runtimeSpecs = specs.map(listStory).filter(predicate);
 
   if (runtimeSpecs.length === 0) {
     throw new Error('Cannot run a build with no stories. Please add some stories!');
   }
 
   log.info(`Found ${pluralize(runtimeSpecs.length, 'story')}`);
-  return runtimeSpecs;
+  return { runtimeSpecs, options };
 }

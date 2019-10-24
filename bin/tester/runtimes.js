@@ -1,7 +1,9 @@
 /* eslint-disable no-useless-catch, no-console, no-underscore-dangle */
 import { JSDOM, VirtualConsole, ResourceLoader } from 'jsdom';
 import dedent from 'ts-dedent';
+
 import { extract } from '../storybook/extract';
+import { toSpec } from './toSpec';
 
 import log, { separator } from '../lib/log';
 
@@ -97,13 +99,16 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
   }
 
   try {
-    const specs =
+    const stories =
       typeof dom.window.__chromaticRuntimeSpecs__ === 'function' &&
       !dom.window.__chromaticRuntimeSpecs__.isDeprecated
         ? await dom.window.__chromaticRuntimeSpecs__()
         : await extract(dom.window);
 
-    return specs;
+    return {
+      specs: stories.map(toSpec),
+      options: stories.length ? getOptions(stories[0].parameters) : {},
+    };
   } catch (err) {
     throw err;
   } finally {
@@ -111,3 +116,9 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     dom.window.close();
   }
 }
+
+const getOptions = ({ options }) => ({
+  hierarchyRootSeparator: options.hierarchyRootSeparator,
+  hierarchySeparator: options.hierarchySeparator,
+  storySort: options.storySort.toString(),
+});

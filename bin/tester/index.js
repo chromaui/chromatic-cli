@@ -344,7 +344,7 @@ export async function runTest({
   );
 
   try {
-    const runtimeSpecs = await getStories({
+    const { runtimeSpecs, options } = await getStories({
       only,
       list,
       isolatorUrl,
@@ -383,6 +383,7 @@ export async function runTest({
         packageVersion,
         preserveMissingSpecs,
         runtimeSpecs,
+        storybookOptions: options,
         storybookVersion,
         viewLayer,
       },
