@@ -3,7 +3,7 @@
 // issue: https://github.com/chromaui/chromatic-cli/issues/14
 // docs for polyfill: https://github.com/developit/unfetch
 // not included in jsdom yet: https://github.com/jsdom/jsdom/issues/1724
-import 'unfetch/polyfill';
+import 'isomorphic-unfetch';
 
 // TODO: some of these shims may not be needed anymore because of updates to jsdom
 
