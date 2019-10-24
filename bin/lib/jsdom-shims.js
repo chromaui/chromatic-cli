@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function, max-classes-per-file, no-param-reassign */
 
+// issue: https://github.com/chromaui/chromatic-cli/issues/14
+// docs for polyfill: https://github.com/developit/unfetch
+// not included in jsdom yet: https://github.com/jsdom/jsdom/issues/1724
+import 'unfetch/polyfill';
+
 // TODO: some of these shims may not be needed anymore because of updates to jsdom
 
 // Add canvas mock based on this comment: https://github.com/jsdom/jsdom/issues/1782#issuecomment-337656878
