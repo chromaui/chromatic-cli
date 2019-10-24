@@ -240,8 +240,8 @@ export function addShimsToJSDOM(window) {
 
   svgElements.forEach(e => {
     if (!window[e]) {
-      const Value = class extends window.HTMLElement {};
-      Value.name = e;
+      // eslint-disable-next-line no-eval
+      const Value = eval(`(class ${e} extends window.HTMLElement {})`);
 
       Object.defineProperty(window, e, {
         value: Value,
