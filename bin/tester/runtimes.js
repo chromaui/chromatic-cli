@@ -120,5 +120,5 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
 const getOptions = ({ options }) => ({
   hierarchyRootSeparator: options.hierarchyRootSeparator,
   hierarchySeparator: options.hierarchySeparator,
-  storySort: options.storySort.toString(),
+  storySort: options.storySort ? options.storySort.toString() : undefined,
 });
