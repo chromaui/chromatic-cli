@@ -99,7 +99,13 @@ beforeEach(() => {
     cachedUrl: 'http://cached.tunnel.com',
     close: jest.fn,
   });
-  getRuntimeSpecs.mockReset().mockReturnValue(['story']);
+  getRuntimeSpecs.mockReset().mockReturnValue({
+    specs: ['story'],
+    options: {
+      hierarchyRootSeparator: '|',
+      hierarchySeparator: '/',
+    },
+  });
   kill.mockReset().mockImplementation((pid, sig, cb) => cb());
 });
 afterEach(() => {
