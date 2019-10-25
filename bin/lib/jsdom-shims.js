@@ -34,6 +34,127 @@ function mockCanvas(window) {
   window.HTMLCanvasElement.prototype.toDataURL = () => '';
 }
 
+// issue: https://github.com/chromaui/chromatic-cli/issues/27
+// solution found here: https://github.com/facebook/jest/issues/5379#issuecomment-360044161
+// not incuded in jsdom yet: https://github.com/jsdom/jsdom/issues/2128
+const svgElements = [
+  'SVGAElement',
+  'SVGAltGlyphElement',
+  'SVGAngle',
+  'SVGAnimateColorElement',
+  'SVGAnimateElement',
+  'SVGAnimateMotionElement',
+  'SVGAnimateTransformElement',
+  'SVGAnimatedAngle',
+  'SVGAnimatedBoolean',
+  'SVGAnimatedEnumeration',
+  'SVGAnimatedInteger',
+  'SVGAnimatedLength',
+  'SVGAnimatedLengthList',
+  'SVGAnimatedNumber',
+  'SVGAnimatedNumberList',
+  'SVGAnimatedPoints',
+  'SVGAnimatedPreserveAspectRatio',
+  'SVGAnimatedRect',
+  'SVGAnimatedString',
+  'SVGAnimatedTransformList',
+  'SVGAnimationElement',
+  'SVGCircleElement',
+  'SVGClipPathElement',
+  'SVGComponentTransferFunctionElement',
+  'SVGCursorElement',
+  'SVGDefsElement',
+  'SVGDescElement',
+  'SVGDocument',
+  'SVGElement',
+  'SVGEllipseElement',
+  'SVGFEBlendElement',
+  'SVGFEColorMatrixElement',
+  'SVGFEComponentTransferElement',
+  'SVGFECompositeElement',
+  'SVGFEConvolveMatrixElement',
+  'SVGFEDiffuseLightingElement',
+  'SVGFEDisplacementMapElement',
+  'SVGFEDistantLightElement',
+  'SVGFEDropShadowElement',
+  'SVGFEFloodElement',
+  'SVGFEFuncAElement',
+  'SVGFEFuncBElement',
+  'SVGFEFuncGElement',
+  'SVGFEFuncRElement',
+  'SVGFEGaussianBlurElement',
+  'SVGFEImageElement',
+  'SVGFEMergeElement',
+  'SVGFEMergeNodeElement',
+  'SVGFEMorphologyElement',
+  'SVGFEOffsetElement',
+  'SVGFEPointLightElement',
+  'SVGFESpecularLightingElement',
+  'SVGFESpotLightElement',
+  'SVGFETileElement',
+  'SVGFETurbulenceElement',
+  'SVGFilterElement',
+  'SVGFilterPrimitiveStandardAttributes',
+  'SVGFontElement',
+  'SVGFontFaceElement',
+  'SVGFontFaceFormatElement',
+  'SVGFontFaceNameElement',
+  'SVGFontFaceSrcElement',
+  'SVGFontFaceUriElement',
+  'SVGForeignObjectElement',
+  'SVGGElement',
+  'SVGGlyphElement',
+  'SVGGradientElement',
+  'SVGGraphicsElement',
+  'SVGHKernElement',
+  'SVGImageElement',
+  'SVGLength',
+  'SVGLengthList',
+  'SVGLineElement',
+  'SVGLinearGradientElement',
+  'SVGMPathElement',
+  'SVGMaskElement',
+  'SVGMatrix',
+  'SVGMetadataElement',
+  'SVGMissingGlyphElement',
+  'SVGNumber',
+  'SVGNumberList',
+  'SVGPathElement',
+  'SVGPatternElement',
+  'SVGPoint',
+  'SVGPolylineElement',
+  'SVGPreserveAspectRatio',
+  'SVGRadialGradientElement',
+  'SVGRect',
+  'SVGRectElement',
+  'SVGSVGElement',
+  'SVGScriptElement',
+  'SVGSetElement',
+  'SVGStopElement',
+  'SVGStringList',
+  'SVGStylable',
+  'SVGStyleElement',
+  'SVGSwitchElement',
+  'SVGSymbolElement',
+  'SVGTRefElement',
+  'SVGTSpanElement',
+  'SVGTests',
+  'SVGTextContentElement',
+  'SVGTextElement',
+  'SVGTextPathElement',
+  'SVGTextPositioningElement',
+  'SVGTitleElement',
+  'SVGTransform',
+  'SVGTransformList',
+  'SVGTransformable',
+  'SVGURIReference',
+  'SVGUnitTypes',
+  'SVGUseElement',
+  'SVGVKernElement',
+  'SVGViewElement',
+  'SVGZoomAndPan',
+];
+
 export function addShimsToJSDOM(window) {
   Object.defineProperty(window, 'matchMedia', {
     value: () => ({
@@ -111,9 +232,22 @@ export function addShimsToJSDOM(window) {
     },
     disconnect() {},
   };
+
   Object.defineProperty(window, 'MutationObserver', {
     value: MutationObserverMock,
     writable: true,
+  });
+
+  svgElements.forEach(e => {
+    if (!window[e]) {
+      // eslint-disable-next-line no-eval
+      const Value = eval(`(class ${e} extends window.HTMLElement {})`);
+
+      Object.defineProperty(window, e, {
+        value: Value,
+        writable: true,
+      });
+    }
   });
 
   class IntlMock {
