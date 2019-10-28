@@ -278,18 +278,25 @@ export function addShimsToJSDOM(window) {
       return '';
     }
   }
+
+  const alwaysFn = C =>
+    // eslint-disable-next-line func-names
+    function() {
+      return new C();
+    };
+
   class IntlDateTimeFormatMock extends IntlFormatMock {}
-  class IntlListFormatMock extends IntlFormatMock {}
   class IntlNumberFormatMock extends IntlFormatMock {}
+  class IntlListFormatMock extends IntlFormatMock {}
   class IntlRelativeTimeFormatMock extends IntlFormatMock {}
   Object.defineProperty(window, 'Intl', {
     value: {
-      Collator: IntlCollatorMock,
-      DateTimeFormat: IntlDateTimeFormatMock,
-      ListFormat: IntlListFormatMock,
-      NumberFormat: IntlNumberFormatMock,
-      PluralRules: IntlPluralRulesMock,
-      RelativeTimeFormat: IntlRelativeTimeFormatMock,
+      Collator: alwaysFn(IntlCollatorMock),
+      DateTimeFormat: alwaysFn(IntlDateTimeFormatMock),
+      ListFormat: alwaysFn(IntlListFormatMock),
+      NumberFormat: alwaysFn(IntlNumberFormatMock),
+      PluralRules: alwaysFn(IntlPluralRulesMock),
+      RelativeTimeFormat: alwaysFn(IntlRelativeTimeFormatMock),
     },
     writable: true,
   });
