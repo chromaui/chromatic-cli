@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function, max-classes-per-file, no-param-reassign */
 
-// TODO: some of these shims may not be needed anymore because of updates to jsdom
-
 // Add canvas mock based on this comment: https://github.com/jsdom/jsdom/issues/1782#issuecomment-337656878
 function mockCanvas(window) {
   window.HTMLCanvasElement.prototype.getContext = () => ({
@@ -214,6 +212,15 @@ export function addShimsToJSDOM(window) {
 
   Object.defineProperty(window.navigator, 'mimeTypes', {
     value: () => [],
+    writable: true,
+  });
+
+  // issue: https://github.com/chromaui/chromatic-cli/issues/14
+  Object.defineProperty(window, 'fetch', {
+    value: () =>
+      new Promise((res, rej) => {
+        // we just let this never resolve
+      }),
     writable: true,
   });
 
