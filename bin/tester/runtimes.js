@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-catch, no-console, no-underscore-dangle */
 import { JSDOM, VirtualConsole, ResourceLoader } from 'jsdom';
 import dedent from 'ts-dedent';
+import { stringify } from 'telejson';
 
 import { extract } from '../storybook/extract';
 import { toSpec } from './toSpec';
@@ -118,7 +119,6 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
 }
 
 const getOptions = ({ options }) => ({
-  hierarchyRootSeparator: options.hierarchyRootSeparator,
-  hierarchySeparator: options.hierarchySeparator,
-  storySort: options.storySort ? options.storySort.toString() : undefined,
+  hierarchyRootSeparator: stringify(options.hierarchyRootSeparator),
+  hierarchySeparator: stringify(options.hierarchySeparator),
 });
