@@ -3,9 +3,9 @@ import { GitHub, context } from "@actions/github";
 import { runTest } from 'storybook-chromatic/bin/tester/index';
 import { verifyOptions } from 'storybook-chromatic/bin/lib/verify-option';
 
-const maybe = (a) => {
+const maybe = (a: string, b: any = undefined) => {
   if(!a) {
-    return undefined;
+    return b;
   }
 
   try {
@@ -99,6 +99,9 @@ async function run() {
     const storybookCert = getInput('storybookCert');
     const storybookKey = getInput('storybookKey');
     const storybookCa = getInput('storybookCa');
+    const autoAcceptChanges = getInput('autoAcceptChanges');
+    const exitZeroOnChanges = getInput('exitZeroOnChanges');
+    const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
@@ -125,9 +128,6 @@ async function run() {
 
     const chromatic = runChromatic({
       appCode,
-      fromCI: true,
-      interactive: false,
-      exitZeroOnChanges: true,
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),
@@ -139,6 +139,11 @@ async function run() {
       storybookCert: maybe(storybookCert),
       storybookKey: maybe(storybookKey),
       storybookCa: maybe(storybookCa),
+      fromCI: true,
+      interactive: false,
+      autoAcceptChanges: maybe(autoAcceptChanges),
+      exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+      ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 
     const [{ url, code }] = await Promise.all([
