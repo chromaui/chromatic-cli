@@ -20,6 +20,8 @@ We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/
     storybookCert: 'Use if Storybook is running on https (auto detected from -s, if set)'
     storybookKey: 'Use if Storybook is running on https (auto detected from -s, if set)'
     storybookCa: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    autoAcceptChanges: 'automatically accept all changes in chromatic: boolean or branchname'
+    exitZeroOnChanges: 'positive exit of action even when there are changes: boolean or branchname'
 ```
 
 
