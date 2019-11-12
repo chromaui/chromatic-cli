@@ -111,7 +111,18 @@ export async function run(argv) {
       // eslint-disable-next-line no-console
       console.log('');
       log.error('Problems encountered:');
-      errors.forEach(e => log.error(e));
+      console.log('');
+      errors.forEach((e, i, l) => {
+        log.error(e.toString());
+        if (options.debug) {
+          log.error(e.stack);
+        }
+
+        if (i === l.length - 1) {
+          // empty line in between errors
+          console.log(' ');
+        }
+      });
     }
 
     // Not sure what exit code to use but this can mean error.
