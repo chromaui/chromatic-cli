@@ -113,9 +113,9 @@ export async function run(argv) {
       log.error('Problems encountered:');
       console.log('');
       errors.forEach((e, i, l) => {
-        log.error(e.toString());
-        if (options.debug) {
-          log.error(e.stack);
+        log.error(e.message ? e.message.toString() : e.toString());
+        if (options.verbose) {
+          console.log(e);
         }
 
         if (i === l.length - 1) {
