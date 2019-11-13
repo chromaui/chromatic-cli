@@ -20,7 +20,7 @@
     "prebuild": "rm -rf ./dist",
     "build": "npm-run-all --serial -l build:**",
     "build-storybook": "build-storybook",
-    "build:bin": "BABEL_ENV=build babel -s -d ./dist ./src -D",
+    "build:bin": "cross-env BABEL_ENV=build babel -s -d ./dist ./src -D",
     "chromatic": "./bin/register.js",
     "dev": "npm-run-all --parallel -l 'build:** -- --watch'",
     "lint": "yarn lint:js src .storybook bin stories",
