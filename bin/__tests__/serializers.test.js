@@ -7,7 +7,6 @@ it('strips off envPairs', () => {
     execSync('some hot garbage');
   } catch (err) {
     expect(errSerializer(err).envPairs).toBeUndefined();
-    expect(errSerializer(err).options.envPairs).toBeUndefined();
   }
 });
 
