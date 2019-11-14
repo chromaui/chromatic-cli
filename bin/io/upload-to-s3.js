@@ -45,10 +45,14 @@ export async function uploadToS3(source, client) {
 
   const pathAndLengths = getPathsInDir(source);
 
+  const paths = pathAndLengths.map(({ pathname }) => posix.normalize(pathname));
+
+  console.log({ paths });
+
   const {
     getUploadUrls: { domain, urls },
   } = await client.runQuery(TesterGetUploadUrlsMutation, {
-    paths: pathAndLengths.map(({ pathname }) => posix.normalize(pathname)),
+    paths,
   });
 
   const total =
