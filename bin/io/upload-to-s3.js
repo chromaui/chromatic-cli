@@ -1,6 +1,6 @@
 import setupDebug from 'debug';
 import { readdirSync, statSync, createReadStream } from 'fs';
-import { join } from 'path';
+import { join, posix } from 'path';
 import { URL } from 'url';
 import progress from 'progress-stream';
 import ProgressBar from 'progress';
@@ -48,7 +48,7 @@ export async function uploadToS3(source, client) {
   const {
     getUploadUrls: { domain, urls },
   } = await client.runQuery(TesterGetUploadUrlsMutation, {
-    paths: pathAndLengths.map(p => p.posix.pathname),
+    paths: pathAndLengths.map(({ pathname }) => posix.normalize(pathname)),
   });
 
   const total =
