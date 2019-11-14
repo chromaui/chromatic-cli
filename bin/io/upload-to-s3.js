@@ -1,7 +1,8 @@
 import setupDebug from 'debug';
 import { readdirSync, statSync, createReadStream } from 'fs';
-import { join, posix } from 'path';
+import { join } from 'path';
 import { URL } from 'url';
+import slash from 'slash';
 import progress from 'progress-stream';
 import ProgressBar from 'progress';
 import retry from 'async-retry';
@@ -45,15 +46,11 @@ export async function uploadToS3(source, client) {
 
   const pathAndLengths = getPathsInDir(source);
 
-  const paths = pathAndLengths.map(({ pathname }) => posix.normalize(pathname));
-
-  console.log({ paths });
+  const paths = pathAndLengths.map(({ pathname }) => slash(pathname));
 
   const {
     getUploadUrls: { domain, urls },
-  } = await client.runQuery(TesterGetUploadUrlsMutation, {
-    paths,
-  });
+  } = await client.runQuery(TesterGetUploadUrlsMutation, { paths });
 
   const total =
     pathAndLengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0) / 1000;
