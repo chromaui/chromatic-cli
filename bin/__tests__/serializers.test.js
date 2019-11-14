@@ -1,3 +1,4 @@
+/* eslint-disable jest/no-try-expect */
 import { execSync } from 'child_process';
 
 import { errSerializer } from '../io/serializers';
