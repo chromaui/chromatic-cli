@@ -21,7 +21,7 @@
     "build": "npm-run-all --serial -l build:**",
     "build-storybook": "build-storybook -s static",
     "build:bin": "cross-env BABEL_ENV=build babel -s -d ./dist ./src -D",
-    "chromatic": "node ./bin/register.js",
+    "chromatic": "cross-env DEBUG=\"chromatic-cli:*\" node ./bin/register.js",
     "dev": "npm-run-all --parallel -l 'build:** -- --watch'",
     "lint": "yarn lint:js src .storybook bin stories",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --ext .js,.json,.mjs --report-unused-disable-directives",
