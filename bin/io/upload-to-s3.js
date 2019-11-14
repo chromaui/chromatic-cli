@@ -44,9 +44,9 @@ function getPathsInDir(rootDir, dirname = '.') {
 export async function uploadToS3(source, client) {
   debug(`uploading '${source}' to s3`);
 
-  const pathAndLengths = getPathsInDir(source);
+  const pathAndLengths = getPathsInDir(source).map(o => ({ ...o, knownAs: slash(o.pathname) }));
 
-  const paths = pathAndLengths.map(({ pathname }) => slash(pathname));
+  const paths = pathAndLengths.map(({ knownAs }) => knownAs);
 
   const {
     getUploadUrls: { domain, urls },
@@ -62,7 +62,7 @@ export async function uploadToS3(source, client) {
     debug(`uploading '${pathWithDirname}' to '${url}' with content type '${contentType}'`);
 
     let urlProgress = 0; // The bytes uploaded for this this particular URL
-    const { contentLength } = pathAndLengths.find(({ pathname }) => pathname === path);
+    const { contentLength } = pathAndLengths.find(({ knownAs }) => knownAs === path);
     uploads.push(
       retry(
         async () => {
