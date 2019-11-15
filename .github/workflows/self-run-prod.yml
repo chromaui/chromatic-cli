@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: yarn add @storybook/react
     - uses: ./
       with: 
         appCode: ${{ secrets.CHROMATIC_APP_CODE }}
         token: ${{ secrets.GITHUB_TOKEN }}
         storybookBuildDir: storybook-static
+      env:
+        CHROMATIC_STORYBOOK_VERSION: react@5.3.0
