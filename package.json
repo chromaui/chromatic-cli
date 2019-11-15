@@ -22,11 +22,11 @@
   "dependencies": {
     "@actions/core": "^1.2.0",
     "@actions/github": "^1.1.0",
-    "@storybook/react": "^5.2.6",
     "esm": "^3.2.25",
     "storybook-chromatic": "^3.1.0"
   },
   "devDependencies": {
+    "@storybook/react": "^5.2.6",
     "@types/jest": "^24.0.23",
     "@types/node": "^12.12.7",
     "jest": "^24.8.0",
