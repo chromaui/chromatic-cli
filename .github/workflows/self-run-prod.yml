@@ -1,17 +1,15 @@
-name: "self test development-like"
+name: "self test production-like"
 on:
   pull_request:
   push:
     branches:
-      - master
+      - 'release/*'
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: |
-        yarn && yarn build
     - uses: ./
       with: 
         appCode: ${{ secrets.CHROMATIC_APP_CODE }}
