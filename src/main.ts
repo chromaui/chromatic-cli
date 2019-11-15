@@ -32,7 +32,6 @@ const getCommit = (event: typeof context) => {
       };
     }
     case 'push': {
-      info(JSON.stringify(event, null, 2))
       return {
         // @ts-ignore
         owner: event.payload.repository.owner.login, 
@@ -112,6 +111,7 @@ async function run() {
       ref: branch,
       environment: 'chromatic',
       required_contexts: [],
+      auto_merge: false,
     }).then(deployment => {
       deployment_id = deployment.data.id;
 
