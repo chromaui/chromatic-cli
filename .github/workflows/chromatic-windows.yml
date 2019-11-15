@@ -1,0 +1,20 @@
+name: "Chromatic via windows"
+on: [push]
+# do not use pull_request here, it report the wrong commit_sha and commit_ref
+
+jobs:
+  chromatic:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '10.x'
+    - uses: actions/checkout@v1
+    - name: install
+      run: yarn
+    - name: prep package
+      run: node ./scripts/rename.js storybook-chromatic
+    - name: run chromatic
+      run: yarn chromatic
+      env: 
+        CHROMATIC_APP_CODE: ${{ secrets.CHROMATIC_APP_CODE }}
