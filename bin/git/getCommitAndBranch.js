@@ -73,19 +73,20 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (branch === 'HEAD' || !branch) {
-    ({ branch } = envCi());
-    if (branch === 'HEAD' || !branch) {
-      // $HEAD is for netlify: https://www.netlify.com/docs/continuous-deployment/
-      // $GERRIT_BRANCH is for Gerrit/Jenkins: https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
-      // $CI_BRANCH is a general setting that lots of systems use
-      branch =
-        process.env.HEAD ||
-        process.env.GERRIT_BRANCH ||
-        process.env.CI_BRANCH ||
-        process.env.GITHUB_REF ||
-        branch ||
-        'HEAD';
-    }
+    const { prBranch: prBranchFromEnvCi, branch: branchFromEnvCi } = envCi();
+
+    // $HEAD is for netlify: https://www.netlify.com/docs/continuous-deployment/
+    // $GERRIT_BRANCH is for Gerrit/Jenkins: https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
+    // $CI_BRANCH is a general setting that lots of systems use
+    branch =
+      prBranchFromEnvCi ||
+      process.env.HEAD ||
+      process.env.GERRIT_BRANCH ||
+      process.env.CI_BRANCH ||
+      process.env.GITHUB_REF ||
+      branchFromEnvCi ||
+      branch ||
+      'HEAD';
   }
   // REPOSITORY_URL is for netlify: https://www.netlify.com/docs/continuous-deployment/
   const fromCI = inputFromCI || !!process.env.CI || !!process.env.REPOSITORY_URL;
