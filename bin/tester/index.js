@@ -79,7 +79,7 @@ async function prepareAppOrBuild({
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
     if (buildScriptName) {
-      log.info(`Building your Storybook`);
+      log.info(dedent`Building your Storybook`);
       ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `${names.script}-` }));
       debug(`Building Storybook to ${buildDirName}`);
 
@@ -110,17 +110,17 @@ async function prepareAppOrBuild({
       });
     }
 
-    log.info(`Uploading your built Storybook...`);
+    log.info(dedent`Uploading your built Storybook...`);
     const isolatorUrl = await uploadToS3(buildDirName, client);
     debug(`uploading to s3, got ${isolatorUrl}`);
-    log.info(`Uploaded your build, verifying`);
+    log.info(dedent`Uploaded your build, verifying`);
 
     return { isolatorUrl };
   }
 
   let cleanup;
   if (!noStart) {
-    log.info(`Starting Storybook`);
+    log.info(dedent`Starting Storybook`);
     const child = await startApp({
       scriptName,
       commandName,
@@ -130,12 +130,12 @@ async function prepareAppOrBuild({
         gte(storybookVersion, STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && ['--', '--ci'],
     });
     cleanup = child && (async () => denodeify(kill)(child.pid, 'SIGHUP'));
-    log.info(`Started Storybook at ${url}`);
+    log.info(dedent`Started Storybook at ${url}`);
   } else if (url) {
     if (!(await checkResponse(url))) {
       throw new Error(`No server responding at ${url} -- make sure you've started it.`);
     }
-    log.info(`Detected Storybook at ${url}`);
+    log.info(dedent`Detected Storybook at ${url}`);
   }
 
   const { port, pathname, query, hash } = parse(url, true);
@@ -146,7 +146,7 @@ async function prepareAppOrBuild({
     };
   }
 
-  log.info(`Opening tunnel to Chromatic capture servers`);
+  log.info(dedent`Opening tunnel to Chromatic capture servers`);
   let tunnel;
   let cleanupTunnel;
   try {
@@ -287,7 +287,7 @@ export async function runTest({
 
   if (skip) {
     if (await client.runQuery(TesterSkipBuildMutation, { commit })) {
-      log.info(`Build skipped for commit ${commit}.`);
+      log.info(dedent`Build skipped for commit ${commit}.`);
       return 0;
     }
     throw new Error('Failed to skip build.');
@@ -421,7 +421,12 @@ export async function runTest({
       case 'BUILD_ACCEPTED':
       case 'BUILD_PENDING':
       case 'BUILD_DENIED':
-        log.info(`Build ${number} has ${pluralize(changeCount, 'change')}. ${onlineHint}.`);
+        log.info(dedent`
+          Build ${number} has ${pluralize(changeCount, 'change')}.
+
+          ${onlineHint}.
+        `);
+        console.log('');
         exitCode = doExitZeroOnChanges || buildAutoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
           log.info(dedent`
@@ -434,14 +439,24 @@ export async function runTest({
       case 'BUILD_FAILED':
         log.info(
           diffs
-            ? `Build ${number} has ${pluralize(errorCount, 'error')}. ${onlineHint}.`
-            : `Build ${number} was published but we found errors. ${onlineHint}.`
+            ? dedent`
+                Build ${number} has ${pluralize(errorCount, 'error')}.
+              
+                ${onlineHint}.
+              `
+            : dedent`
+                Build ${number} was published but we found errors.
+              
+                ${onlineHint}.
+              `
         );
         exitCode = 2;
         break;
       case 'BUILD_TIMED_OUT':
       case 'BUILD_ERROR':
-        log.info(`Build ${number} has failed to run. Our apologies. Please try again.`);
+        log.info(dedent`
+          Build ${number} has failed to run. Our apologies. Please try again.
+        `);
         exitCode = 3;
         break;
       default:
@@ -480,22 +495,24 @@ export async function runTest({
       addScriptToPackageJson(names.script, scriptCommand);
       log.info(
         dedent`
-        Added script \`${names.script}\`. You can now run it here or in CI with \`npm run ${names.script}\` (or \`yarn ${names.script}\`)
+          Added script \`${names.script}\`. You can now run it here or in CI with \`npm run ${names.script}\` (or \`yarn ${names.script}\`)
 
-        NOTE: I wrote your app code to the \`${names.envVar}\` environment variable. 
-        
-        The app code cannot be used to read story data, it can only be used to create new builds.
-        If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.`
+          NOTE: I wrote your app code to the \`${names.envVar}\` environment variable. 
+          
+          The app code cannot be used to read story data, it can only be used to create new builds.
+          If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.
+        `
       );
     } else {
       log.info(
         dedent`
-        No problem. You can add it later with:
-        {
-          "scripts": {
-            "${names.script}": "${scriptCommand}"
+          No problem. You can add it later with:
+          {
+            "scripts": {
+              "${names.script}": "${scriptCommand}"
+            }
           }
-        }`
+        `
       );
     }
   }
