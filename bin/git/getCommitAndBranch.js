@@ -6,6 +6,13 @@ import log from '../lib/log';
 
 export const debug = setupDebug('chromatic-cli:tester');
 
+const notHead = b => {
+  if (!b || b === 'HEAD') {
+    return false;
+  }
+  return b;
+};
+
 export async function getCommitAndBranch({ inputFromCI } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
@@ -72,20 +79,20 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
 
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
-  if (branch === 'HEAD' || !branch) {
+  if (!notHead(branch)) {
     const { prBranch: prBranchFromEnvCi, branch: branchFromEnvCi } = envCi();
 
     // $HEAD is for netlify: https://www.netlify.com/docs/continuous-deployment/
     // $GERRIT_BRANCH is for Gerrit/Jenkins: https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
     // $CI_BRANCH is a general setting that lots of systems use
     branch =
-      prBranchFromEnvCi ||
-      process.env.HEAD ||
-      process.env.GERRIT_BRANCH ||
-      process.env.CI_BRANCH ||
-      process.env.GITHUB_REF ||
-      branchFromEnvCi ||
-      branch ||
+      notHead(prBranchFromEnvCi) ||
+      notHead(branchFromEnvCi) ||
+      notHead(process.env.HEAD) ||
+      notHead(process.env.GERRIT_BRANCH) ||
+      notHead(process.env.CI_BRANCH) ||
+      notHead(process.env.GITHUB_REF) ||
+      notHead(branch) ||
       'HEAD';
   }
   // REPOSITORY_URL is for netlify: https://www.netlify.com/docs/continuous-deployment/
