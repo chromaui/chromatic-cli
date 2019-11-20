@@ -74,6 +74,7 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 ```
 --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
 --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
+--exit-once-sent-to-chromatic [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
 --ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]'
 --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline'
 --no-interactive  Do not prompt for package.json changes

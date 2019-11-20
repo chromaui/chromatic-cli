@@ -28,6 +28,8 @@ export async function verifyOptions(cli, argv) {
 
     autoAcceptChanges: cli.autoAcceptChanges === '' ? true : cli.autoAcceptChanges,
     exitZeroOnChanges: cli.exitZeroOnChanges === '' ? true : cli.exitZeroOnChanges,
+    exitOnceSentToChromatic:
+      cli.exitOnceSentToChromatic === '' ? true : cli.exitOnceSentToChromatic,
     ignoreLastBuildOnBranch: cli.ignoreLastBuildOnBranch,
     preserveMissingSpecs: cli.preserveMissing,
     originalArgv: argv,

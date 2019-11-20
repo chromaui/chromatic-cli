@@ -233,6 +233,7 @@ export async function runTest({
   fromCI: inputFromCI = false,
   autoAcceptChanges = false,
   exitZeroOnChanges = false,
+  exitOnceSentToChromatic = false,
   ignoreLastBuildOnBranch = false,
   preserveMissingSpecs = false,
   verbose = false,
@@ -302,6 +303,10 @@ export async function runTest({
     typeof autoAcceptChanges === 'string' ? autoAcceptChanges === branch : autoAcceptChanges;
   const doExitZeroOnChanges =
     typeof exitZeroOnChanges === 'string' ? exitZeroOnChanges === branch : exitZeroOnChanges;
+  const doExitOnceSentToChromatic =
+    typeof exitOnceSentToChromatic === 'string'
+      ? exitOnceSentToChromatic === branch
+      : exitOnceSentToChromatic;
   const doIgnoreLastBuildOnBranch =
     typeof ignoreLastBuildOnBranch === 'string'
       ? ignoreLastBuildOnBranch === branch
@@ -400,6 +405,8 @@ export async function runTest({
 
       ${onlineHint}.
     `);
+
+    if (doExitOnceSentToChromatic) return { exitCode: 0, exitUrl };
 
     const {
       status,
