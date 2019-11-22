@@ -13,10 +13,12 @@ async function execGitCommand(command) {
       .toString()
       .trim();
   } catch (error) {
-    const { message = '' } = error;
+    const { output } = error;
 
-    if (message.match('Not a git repository')) {
-      log.error(dedent`
+    const message = output.toString();
+
+    if (message.includes('Not a git repository')) {
+      throw new Error(dedent`
         Unable to execute git command '${command}'.
 
         Chromatic only works in git projects.
@@ -24,16 +26,16 @@ async function execGitCommand(command) {
       `);
     }
 
-    if (message.match('git not found')) {
-      log.error(dedent`
+    if (message.includes('git not found')) {
+      throw new Error(dedent`
         Unable to execute git command '${command}'.
 
         Chromatic only works in with git installed.
       `);
     }
 
-    if (message.match('does not have any commits yet')) {
-      log.error(dedent`
+    if (message.includes('does not have any commits yet')) {
+      throw new Error(dedent`
         Unable to execute git command '${command}'.
 
         Chromatic requires that you have created a commit before it can be run.
