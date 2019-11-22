@@ -233,7 +233,7 @@ export async function runTest({
   fromCI: inputFromCI = false,
   autoAcceptChanges = false,
   exitZeroOnChanges = false,
-  exitOnceSentToChromatic = false,
+  exitOnceUploaded = false,
   ignoreLastBuildOnBranch = false,
   preserveMissingSpecs = false,
   verbose = false,
@@ -304,9 +304,7 @@ export async function runTest({
   const doExitZeroOnChanges =
     typeof exitZeroOnChanges === 'string' ? exitZeroOnChanges === branch : exitZeroOnChanges;
   const doExitOnceSentToChromatic =
-    typeof exitOnceSentToChromatic === 'string'
-      ? exitOnceSentToChromatic === branch
-      : exitOnceSentToChromatic;
+    typeof exitOnceUploaded === 'string' ? exitOnceUploaded === branch : exitOnceUploaded;
   const doIgnoreLastBuildOnBranch =
     typeof ignoreLastBuildOnBranch === 'string'
       ? ignoreLastBuildOnBranch === branch

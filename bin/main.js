@@ -33,7 +33,7 @@ export async function parseArgv(argv) {
     Chromatic options
       --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
       --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
-      --exit-once-sent-to-chromatic [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
+      --exit-once-uploaded [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
       --ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]'
       --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline'
       --no-interactive  Do not prompt for package.json changes')
@@ -70,7 +70,7 @@ export async function parseArgv(argv) {
         // chromatic options
         'auto-accept-changes': { type: 'string' },
         'exit-zero-on-changes': { type: 'string' },
-        'exit-once-sent-to-chromatic': { type: 'string' },
+        'exit-once-uploaded': { type: 'string' },
         'ignore-last-build-on-branch': { type: 'string' },
         'preserve-missing': { type: 'boolean' },
         only: { type: 'string' },

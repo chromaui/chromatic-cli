@@ -169,7 +169,7 @@ it('returns 0 when stopped after the build has been sent to chromatic', async ()
   expect(
     await runTest({
       ...defaultOptions,
-      exitOnceSentToChromatic: true,
+      exitOnceUploaded: true,
     })
   ).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
 });
