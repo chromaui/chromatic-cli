@@ -47,7 +47,6 @@ describe('await parseArgv', () => {
     expect(
       await parseArgv([
         '--ci',
-        '--do-not-start',
         '--auto-accept-changes',
         '--exit-zero-on-changes',
         '--exit-once-uploaded',
@@ -56,7 +55,6 @@ describe('await parseArgv', () => {
         '--no-interactive',
       ])
     ).toMatchObject({
-      noStart: true,
       skip: true,
       fromCI: true,
       autoAcceptChanges: true,
