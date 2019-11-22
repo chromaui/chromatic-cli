@@ -494,18 +494,18 @@ export async function runTest({
       .trim();
 
     const confirmed = await confirm(
-      `\nYou have not added the \`${names.script}\` script to your \`package.json\`. Would you like me to do it for you?`
+      `\nYou have not added the '${names.script}' script to your 'package.json'. Would you like me to do it for you?`
     );
     if (confirmed) {
       addScriptToPackageJson(names.script, scriptCommand);
       log.info(
         dedent`
-          Added script \`${names.script}\`. You can now run it here or in CI with \`npm run ${names.script}\` (or \`yarn ${names.script}\`)
+          Added script '${names.script}'. You can now run it here or in CI with 'npm run ${names.script}' (or 'yarn ${names.script}')
 
-          NOTE: I wrote your app code to the \`${names.envVar}\` environment variable. 
+          NOTE: I wrote your app code to the '${names.envVar}' environment variable. 
           
           The app code cannot be used to read story data, it can only be used to create new builds.
-          If you would still prefer not to check it into source control, you can remove it from \`package.json\` and set it via an environment variable instead.
+          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via an environment variable instead.
         `
       );
     } else {
