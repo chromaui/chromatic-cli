@@ -28,8 +28,7 @@ export async function verifyOptions(cli, argv) {
 
     autoAcceptChanges: cli.autoAcceptChanges === '' ? true : cli.autoAcceptChanges,
     exitZeroOnChanges: cli.exitZeroOnChanges === '' ? true : cli.exitZeroOnChanges,
-    exitOnceUploaded:
-      cli.exitOnceUploaded === '' ? true : cli.exitOnceUploaded,
+    exitOnceUploaded: cli.exitOnceUploaded === '' ? true : cli.exitOnceUploaded,
     ignoreLastBuildOnBranch: cli.ignoreLastBuildOnBranch,
     preserveMissingSpecs: cli.preserveMissing,
     originalArgv: argv,
@@ -90,6 +89,12 @@ export async function verifyOptions(cli, argv) {
   // No need to start or build Storybook if we're going to fetch from a URL
   if (storybookUrl) {
     noStart = true;
+  }
+
+  if (noStart && cliOptions.exitOnceUploaded) {
+    throw new Error(dedent`
+      --exit-once-uploaded is only supported when you use build-storybook
+    `);
   }
 
   // Build Storybook instead of starting it
