@@ -156,11 +156,20 @@ it('properly deals with updating the isolatorUrl/cachedUrl in complex situations
   });
 });
 
-it('returns 0 when changes if option passed', async () => {
+it('returns 0 when test have been completed', async () => {
   expect(
     await runTest({
       ...defaultOptions,
       exitZeroOnChanges: true,
+    })
+  ).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
+});
+
+it('returns 0 when stopped after the build has been sent to chromatic', async () => {
+  expect(
+    await runTest({
+      ...defaultOptions,
+      exitOnceUploaded: true,
     })
   ).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
 });
