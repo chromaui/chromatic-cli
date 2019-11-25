@@ -17,7 +17,7 @@ async function execGitCommand(command) {
 
     const message = output.toString();
 
-    if (message.includes('Not a git repository')) {
+    if (message.includes('not a git repository')) {
       throw new Error(dedent`
         Unable to execute git command '${command}'.
 
