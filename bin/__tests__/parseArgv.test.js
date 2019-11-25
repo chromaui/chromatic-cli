@@ -29,6 +29,7 @@ describe('await parseArgv', () => {
       fromCI: false,
       autoAcceptChanges: undefined,
       exitZeroOnChanges: undefined,
+      exitOnceUploaded: undefined,
       interactive: true,
       verbose: false,
       createTunnel: true,
@@ -46,19 +47,19 @@ describe('await parseArgv', () => {
     expect(
       await parseArgv([
         '--ci',
-        '--do-not-start',
         '--auto-accept-changes',
         '--exit-zero-on-changes',
+        '--exit-once-uploaded',
         '--skip',
         '--debug',
         '--no-interactive',
       ])
     ).toMatchObject({
-      noStart: true,
       skip: true,
       fromCI: true,
       autoAcceptChanges: true,
       exitZeroOnChanges: true,
+      exitOnceUploaded: true,
       verbose: true,
       interactive: false,
       createTunnel: true,

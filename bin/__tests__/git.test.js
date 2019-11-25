@@ -1,3 +1,4 @@
+/* eslint-disable jest/expect-expect */
 import { dirSync } from 'tmp';
 import process from 'process';
 import { exec } from 'child_process';
@@ -95,7 +96,10 @@ describe('getBaselineCommits', () => {
   it(`returns both of the current commit's parents (in correct order) when they already have a build`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('F', 'master', repository);
-    const client = createClient(repository, [['D', 'master'], ['E', 'master']]);
+    const client = createClient(repository, [
+      ['D', 'master'],
+      ['E', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['E', 'D'], repository);
@@ -104,7 +108,11 @@ describe('getBaselineCommits', () => {
   it(`returns the all of the commit's parents (in correct order) when they all have a build`, async () => {
     const repository = repositories.threeParents;
     await checkoutCommit('E', 'master', repository);
-    const client = createClient(repository, [['B', 'master'], ['C', 'master'], ['D', 'master']]);
+    const client = createClient(repository, [
+      ['B', 'master'],
+      ['C', 'master'],
+      ['D', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['D', 'C', 'B'], repository);
@@ -113,7 +121,10 @@ describe('getBaselineCommits', () => {
   it(`returns the all of the commit's ancestors (in correct order) when the parents don't have a build`, async () => {
     const repository = repositories.longLoop;
     await checkoutCommit('H', 'master', repository);
-    const client = createClient(repository, [['B', 'master'], ['C', 'master']]);
+    const client = createClient(repository, [
+      ['B', 'master'],
+      ['C', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['C', 'B'], repository);
@@ -122,7 +133,10 @@ describe('getBaselineCommits', () => {
   it(`occludes commits that have a more recent build, simple line`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('C', 'master', repository);
-    const client = createClient(repository, [['A', 'master'], ['B', 'master']]);
+    const client = createClient(repository, [
+      ['A', 'master'],
+      ['B', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['B'], repository);
@@ -131,7 +145,11 @@ describe('getBaselineCommits', () => {
   it(`occludes commits that have a more recent build, both descendents on ancestor paths`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('F', 'master', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'master'], ['E', 'master']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'master'],
+      ['E', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['E', 'D'], repository);
@@ -149,7 +167,10 @@ describe('getBaselineCommits', () => {
   it(`returns a commit on one ancestor path when the other has no builds before rejoining mainline`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('F', 'master', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'master']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
@@ -158,7 +179,10 @@ describe('getBaselineCommits', () => {
   it(`ignores irrelevant builds ahead of the current commit`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'master', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'branch']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'branch'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
@@ -259,7 +283,10 @@ describe('getBaselineCommits', () => {
   it(`also includes rebased commits that were on the same branch`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'branch', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'branch']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'branch'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
@@ -268,7 +295,10 @@ describe('getBaselineCommits', () => {
   it(`also includes rebased commits that were on the same branch, even if the branch is not checked out`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'HEAD', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'branch']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'branch'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
@@ -277,7 +307,10 @@ describe('getBaselineCommits', () => {
   it(`ignores rebased commits if they are *newer* than the current commit`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('D', 'branch', repository);
-    const client = createClient(repository, [['C', 'master'], ['E', 'branch']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['E', 'branch'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
@@ -286,7 +319,10 @@ describe('getBaselineCommits', () => {
   it(`ignores rebased commits if the ignoreLastBuildOnBranch option is passed`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'branch', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'branch']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'branch'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, {
       branch: 'branch',
@@ -307,7 +343,10 @@ describe('getBaselineCommits', () => {
           Z: { hash: Zhash, committedAt: repository.commitMap.A.committedAt },
         },
       },
-      [['C', 'master'], ['Z', 'branch']]
+      [
+        ['C', 'master'],
+        ['Z', 'branch'],
+      ]
     );
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
@@ -318,7 +357,10 @@ describe('getBaselineCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('C', 'branch', repository);
     // A is the latest commit on this branch, but B is newer
-    const client = createClient(repository, [['A', 'branch'], ['B', 'master']]);
+    const client = createClient(repository, [
+      ['A', 'branch'],
+      ['B', 'master'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['B'], repository);
@@ -327,7 +369,10 @@ describe('getBaselineCommits', () => {
   it(`doesn't include rebased commits if the current commit has a build`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'branch', repository);
-    const client = createClient(repository, [['D', 'master'], ['E', 'branch']]);
+    const client = createClient(repository, [
+      ['D', 'master'],
+      ['E', 'branch'],
+    ]);
 
     const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['E'], repository);
@@ -336,7 +381,10 @@ describe('getBaselineCommits', () => {
   it(`doesn't include rebased commits if the current branch is HEAD`, async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'HEAD', repository);
-    const client = createClient(repository, [['C', 'master'], ['D', 'HEAD']]);
+    const client = createClient(repository, [
+      ['C', 'master'],
+      ['D', 'HEAD'],
+    ]);
 
     // We can pass 'HEAD' as the branch if we fail to find any other branch info from another source
     const baselineCommits = await getBaselineCommits(client, { branch: 'HEAD' });

@@ -3,6 +3,8 @@ import setupDebug from 'debug';
 import gql from 'fake-tag';
 import dedent from 'ts-dedent';
 
+import log from '../lib/log';
+
 const debug = setupDebug('chromatic-cli:git');
 
 async function execGitCommand(command) {
@@ -11,9 +13,11 @@ async function execGitCommand(command) {
       .toString()
       .trim();
   } catch (error) {
-    const { message = '' } = error;
+    const { output } = error;
 
-    if (message.match('Not a git repository')) {
+    const message = output.toString();
+
+    if (message.includes('not a git repository')) {
       throw new Error(dedent`
         Unable to execute git command '${command}'.
 
@@ -22,13 +26,20 @@ async function execGitCommand(command) {
       `);
     }
 
-    if (message.match('does not have any commits yet')) {
-      throw new Error(
-        `Unable to execute git command '${command}'.
+    if (message.includes('git not found')) {
+      throw new Error(dedent`
+        Unable to execute git command '${command}'.
 
-Chromatic requires that you have created a commit before it can be run.
-`
-      );
+        Chromatic only works in with git installed.
+      `);
+    }
+
+    if (message.includes('does not have any commits yet')) {
+      throw new Error(dedent`
+        Unable to execute git command '${command}'.
+
+        Chromatic requires that you have created a commit before it can be run.
+      `);
     }
 
     throw error;
@@ -65,9 +76,9 @@ const TesterHasBuildsWithCommitsQuery = gql`
 
 // We could cache this, but it's probably pretty quick
 export async function getCommit() {
-  const [commit, committedAtSeconds, committerEmail, committerName] = (await execGitCommand(
-    `git log -n 1 --format="%H,%ct,%ce,%cn"`
-  )).split(',');
+  const [commit, committedAtSeconds, committerEmail, committerName] = (
+    await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
+  ).split(',');
 
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
