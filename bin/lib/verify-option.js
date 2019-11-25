@@ -97,6 +97,12 @@ export async function verifyOptions(cli, argv) {
     `);
   }
 
+  if (scriptName && cliOptions.exitOnceUploaded) {
+    throw new Error(dedent`
+      --exit-once-uploaded is only supported when you use build-storybook
+    `);
+  }
+
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
