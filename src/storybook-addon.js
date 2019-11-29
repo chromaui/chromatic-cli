@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 /* eslint-env browser */
 import deprecate from 'util-deprecate';
 import dedent from 'ts-dedent';
