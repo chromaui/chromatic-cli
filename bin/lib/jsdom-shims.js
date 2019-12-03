@@ -224,8 +224,8 @@ export function addShimsToJSDOM(window) {
     writable: true,
   });
 
-  Object.defineProperty(window.URL, 'createObjectURL', { value: () => {} });
-  Object.defineProperty(window.URL, 'revokeObjectURL', { value: () => {} });
+  Object.defineProperty(window.URL, 'createObjectURL', { value: () => {}, writable: true });
+  Object.defineProperty(window.URL, 'revokeObjectURL', { value: () => {}, writable: true });
 
   // We have to do this in this screwy way because Angular does some monkey patching
   // expects an non-es2015 class here.
