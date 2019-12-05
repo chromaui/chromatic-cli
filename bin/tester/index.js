@@ -324,6 +324,11 @@ export async function runTest({
   );
 
   let exitCode = 5;
+  let errorCount = 0;
+  let specCount = 0;
+  let componentCount = 0;
+  let changeCount = 0;
+  let buildNumber = 0;
   let exitUrl = '';
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
@@ -360,8 +365,8 @@ export async function runTest({
       createBuild: {
         number,
         snapshotCount,
-        specCount,
-        componentCount,
+        specCount: specs,
+        componentCount: components,
         webUrl,
         app: {
           account: {
@@ -392,11 +397,14 @@ export async function runTest({
       isolatorUrl,
     });
 
+    buildNumber = number;
     exitUrl = webUrl;
+    componentCount = components;
+    specCount = specs;
 
     const onlineHint = `View it online at ${webUrl}`;
     log.info(dedent`
-      Started Build ${number} (${pluralize(componentCount, 'component')}, ${pluralize(
+      Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
       specCount,
       'story'
     )}, ${pluralize(snapshotCount, 'snapshot')}).
@@ -406,19 +414,21 @@ export async function runTest({
 
     if (doExitOnceSentToChromatic) return { exitCode: 0, exitUrl };
 
+    const buildOutput = await waitForBuild(client, { buildNumber }, { diffs });
     const {
-      status,
+      status: buildStatus,
       autoAcceptChanges: buildAutoAcceptChanges, // if it is the first build, this may have been set
-      changeCount,
-      errorCount,
-    } = await waitForBuild(client, { buildNumber: number }, { diffs });
+    } = buildOutput;
 
-    switch (status) {
+    changeCount = buildOutput.changeCount;
+    errorCount = buildOutput.errorCount;
+
+    switch (buildStatus) {
       case 'BUILD_PASSED':
         log.info(
           diffs
-            ? `Build ${number} passed! ${onlineHint}.`
-            : `Build ${number} published! ${onlineHint}.`
+            ? `Build ${buildNumber} passed! ${onlineHint}.`
+            : `Build ${buildNumber} published! ${onlineHint}.`
         );
         exitCode = 0;
         break;
@@ -427,7 +437,7 @@ export async function runTest({
       case 'BUILD_PENDING':
       case 'BUILD_DENIED':
         log.info(dedent`
-          Build ${number} has ${pluralize(changeCount, 'change')}.
+          Build ${buildNumber} has ${pluralize(changeCount, 'change')}.
 
           ${onlineHint}.
         `);
@@ -445,12 +455,12 @@ export async function runTest({
         log.info(
           diffs
             ? dedent`
-                Build ${number} has ${pluralize(errorCount, 'error')}.
+                Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
               
                 ${onlineHint}.
               `
             : dedent`
-                Build ${number} was published but we found errors.
+                Build ${buildNumber} was published but we found errors.
               
                 ${onlineHint}.
               `
@@ -460,12 +470,12 @@ export async function runTest({
       case 'BUILD_TIMED_OUT':
       case 'BUILD_ERROR':
         log.info(dedent`
-          Build ${number} has failed to run. Our apologies. Please try again.
+          Build ${buildNumber} has failed to run. Our apologies. Please try again.
         `);
         exitCode = 3;
         break;
       default:
-        throw new Error(`Unexpected build status: ${status}`);
+        throw new Error(`Unexpected build status: ${buildStatus}`);
     }
   } catch (e) {
     if (
@@ -522,5 +532,5 @@ export async function runTest({
     }
   }
 
-  return { exitCode, exitUrl };
+  return { exitCode, exitUrl, buildNumber, errorCount, changeCount, specCount, componentCount };
 }
