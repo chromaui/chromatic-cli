@@ -1,8 +1,27 @@
 # Chromatic Github Action
 
+## How to add an GitHub action
+
+- Create a file in your repo: `.github/workflows/chromatic.yml`
+- set it's content to:
+  ```yml
+  name: "Chromatic"
+  on: push
+
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v1
+      - uses: chromaui/action@v1
+        with: 
+          appCode: <insert the chromatic appToken here>
+          token: ${{ secrets.GITHUB_TOKEN }}
+  ```
+
 We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/README.md#packages)
 
-## Usage
+## Usage (all options)
 
 ```yaml
 - uses: chromaui/action@v1
@@ -25,7 +44,7 @@ We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/
 ```
 
 
-We suggest you use secret:
+We suggest you use a secret to hide to app-code:
 
 ```yaml
 - uses: chromaui/action@v1
@@ -34,7 +53,7 @@ We suggest you use secret:
     appCode: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
 
-You have to configure secrets in the settings tab (`https://github.com/{org}/{repo}/settings/secrets`)
+You have to configure secrets in the settings tab (`https://github.com/{YOUR_ORGANSATION}/{YOUR_REPOSITORY}/settings/secrets`)
 
 However if you need to be able to run this action on forked PRs you can't make it a secret, it has to be public:
 
@@ -49,7 +68,7 @@ However if you need to be able to run this action on forked PRs you can't make i
 
 ### Publish to a distribution branch
 
-Actions are run from GitHub repos. We will create a releases branch and only checkin production modules. 
+Actions are run from GitHub repos. We will create a releases branch and only commit production modules. 
 
 Comment out node_modules in `.gitignore` and create a releases/v1 branch
 ```plaintext
