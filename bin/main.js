@@ -18,17 +18,7 @@ export async function parseArgv(argv) {
       
     Storybook options
       --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
-      --script-name [name], -s  The npm script that starts your Storybook [storybook]
-      --exec <command>, -e  Alternatively, a full command to run to start your storybook
-      --do-not-start, -S  Don't attempt to start or build; use if your Storybook is already running
-      
-      --storybook-port <port>, -p  What port is your Storybook running on (auto detected from -s, if set)?'
-      --storybook-url <url>, -u  Storybook is already running at (external) url (implies -S)'
-      --storybook-build-dir, -d     <dirname>  Provide a directory with your built storybook; use if you've already built your storybook
-      --storybook-https  Use if Storybook is running on https (auto detected from -s, if set)?'
-      --storybook-cert <path>  Use if Storybook is running on https (auto detected from -s, if set)?'
-      --storybook-key <path>  Use if Storybook is running on https (auto detected from -s, if set)?'
-      --storybook-ca <ca>  Use if Storybook is running on https (auto detected from -s, if set)?'    
+      --storybook-build-dir, -d  <dirname>  Provide a directory with your built storybook; use if you've already built your storybook
       
     Chromatic options
       --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
