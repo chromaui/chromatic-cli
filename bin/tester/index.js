@@ -324,7 +324,15 @@ export async function runTest({
   );
 
   let exitCode = 5;
+  let errorCount = 0;
+  let specCount = 0;
+  let componentCount = 0;
+  let changeCount = 0;
+  let buildNumber = 0;
+  let snapshotCount = 0;
   let exitUrl = '';
+  let diffs;
+  let buildStatus;
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
@@ -356,13 +364,13 @@ export async function runTest({
 
     const environment = await getEnvironment();
 
-    const {
+    ({
       createBuild: {
-        number,
+        number: buildNumber,
         snapshotCount,
         specCount,
         componentCount,
-        webUrl,
+        webUrl: exitUrl,
         app: {
           account: {
             features: { diffs },
@@ -390,13 +398,11 @@ export async function runTest({
         viewLayer,
       },
       isolatorUrl,
-    });
+    }));
 
-    exitUrl = webUrl;
-
-    const onlineHint = `View it online at ${webUrl}`;
+    const onlineHint = `View it online at ${exitUrl}`;
     log.info(dedent`
-      Started Build ${number} (${pluralize(componentCount, 'component')}, ${pluralize(
+      Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
       specCount,
       'story'
     )}, ${pluralize(snapshotCount, 'snapshot')}).
@@ -406,19 +412,16 @@ export async function runTest({
 
     if (doExitOnceSentToChromatic) return { exitCode: 0, exitUrl };
 
-    const {
-      status,
-      autoAcceptChanges: buildAutoAcceptChanges, // if it is the first build, this may have been set
-      changeCount,
-      errorCount,
-    } = await waitForBuild(client, { buildNumber: number }, { diffs });
+    const buildOutput = await waitForBuild(client, { buildNumber }, { diffs });
 
-    switch (status) {
+    ({ changeCount, errorCount, status: buildStatus } = buildOutput);
+
+    switch (buildStatus) {
       case 'BUILD_PASSED':
         log.info(
           diffs
-            ? `Build ${number} passed! ${onlineHint}.`
-            : `Build ${number} published! ${onlineHint}.`
+            ? `Build ${buildNumber} passed! ${onlineHint}.`
+            : `Build ${buildNumber} published! ${onlineHint}.`
         );
         exitCode = 0;
         break;
@@ -427,12 +430,12 @@ export async function runTest({
       case 'BUILD_PENDING':
       case 'BUILD_DENIED':
         log.info(dedent`
-          Build ${number} has ${pluralize(changeCount, 'change')}.
+          Build ${buildNumber} has ${pluralize(changeCount, 'change')}.
 
           ${onlineHint}.
         `);
         console.log('');
-        exitCode = doExitZeroOnChanges || buildAutoAcceptChanges ? 0 : 1;
+        exitCode = doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
           log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
@@ -445,12 +448,12 @@ export async function runTest({
         log.info(
           diffs
             ? dedent`
-                Build ${number} has ${pluralize(errorCount, 'error')}.
+                Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
               
                 ${onlineHint}.
               `
             : dedent`
-                Build ${number} was published but we found errors.
+                Build ${buildNumber} was published but we found errors.
               
                 ${onlineHint}.
               `
@@ -460,12 +463,12 @@ export async function runTest({
       case 'BUILD_TIMED_OUT':
       case 'BUILD_ERROR':
         log.info(dedent`
-          Build ${number} has failed to run. Our apologies. Please try again.
+          Build ${buildNumber} has failed to run. Our apologies. Please try again.
         `);
         exitCode = 3;
         break;
       default:
-        throw new Error(`Unexpected build status: ${status}`);
+        throw new Error(`Unexpected build status: ${buildStatus}`);
     }
   } catch (e) {
     if (
@@ -522,5 +525,5 @@ export async function runTest({
     }
   }
 
-  return { exitCode, exitUrl };
+  return { exitCode, exitUrl, buildNumber, errorCount, changeCount, specCount, componentCount };
 }
