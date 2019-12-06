@@ -329,7 +329,10 @@ export async function runTest({
   let componentCount = 0;
   let changeCount = 0;
   let buildNumber = 0;
+  let snapshotCount = 0;
   let exitUrl = '';
+  let diffs;
+  let buildStatus;
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
@@ -361,13 +364,13 @@ export async function runTest({
 
     const environment = await getEnvironment();
 
-    const {
+    ({
       createBuild: {
-        number,
+        number: buildNumber,
         snapshotCount,
-        specCount: specs,
-        componentCount: components,
-        webUrl,
+        specCount,
+        componentCount,
+        webUrl: exitUrl,
         app: {
           account: {
             features: { diffs },
@@ -395,14 +398,9 @@ export async function runTest({
         viewLayer,
       },
       isolatorUrl,
-    });
+    }));
 
-    buildNumber = number;
-    exitUrl = webUrl;
-    componentCount = components;
-    specCount = specs;
-
-    const onlineHint = `View it online at ${webUrl}`;
+    const onlineHint = `View it online at ${exitUrl}`;
     log.info(dedent`
       Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
       specCount,
@@ -415,13 +413,8 @@ export async function runTest({
     if (doExitOnceSentToChromatic) return { exitCode: 0, exitUrl };
 
     const buildOutput = await waitForBuild(client, { buildNumber }, { diffs });
-    const {
-      status: buildStatus,
-      autoAcceptChanges: buildAutoAcceptChanges, // if it is the first build, this may have been set
-    } = buildOutput;
 
-    changeCount = buildOutput.changeCount;
-    errorCount = buildOutput.errorCount;
+    ({ changeCount, errorCount, status: buildStatus } = buildOutput);
 
     switch (buildStatus) {
       case 'BUILD_PASSED':
@@ -442,7 +435,7 @@ export async function runTest({
           ${onlineHint}.
         `);
         console.log('');
-        exitCode = doExitZeroOnChanges || buildAutoAcceptChanges ? 0 : 1;
+        exitCode = doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
           log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
