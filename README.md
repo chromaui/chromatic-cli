@@ -19,8 +19,6 @@
           token: ${{ secrets.GITHUB_TOKEN }}
   ```
 
-We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/README.md#packages)
-
 ## Usage (all options)
 
 ```yaml
@@ -63,6 +61,12 @@ However if you need to be able to run this action on forked PRs you can't make i
     token: ${{ secrets.GITHUB_TOKEN }}
     appCode: appcodehere
 ```
+
+## Checkout depth
+
+In the v2 version of the `actions/checkout` action, there's no git history. Chromatic needs the git history in order to find the base-build.
+
+Add `fetch-depth: 0` to add full history, see: https://github.com/actions/checkout#whats-new
 
 ## Development
 
