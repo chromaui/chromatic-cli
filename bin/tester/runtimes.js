@@ -89,11 +89,20 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    console.log(dedent`
-        This may lead to some stories not working right or getting detected by Chromatic
-        We suggest you fix the errors, but we will continue anyway..
-        ${separator}
-      `);
+    if (errors.length && !log.level.match(/silent/)) {
+      console.log(dedent`
+          This very likely caused some stories not working right or getting detected by Chromatic
+          Please fix the errors, we can't continue..
+          ${separator}
+        `);
+      throw new Error('Errors detected in storybook runtime');
+    } else if (warnings.length && log.level.match(/verbose/)) {
+      console.log(dedent`
+          This may lead to some stories not working right or getting detected by Chromatic
+          We suggest you fix the warnings, but we will continue anyway..
+          ${separator}
+        `);
+    }
   }
 
   try {
