@@ -57,11 +57,7 @@ async function waitForResponse(child, url) {
 }
 
 export default async function startApp({ scriptName, commandName, args, url, inheritStdio }) {
-  const env = {
-    ...process.env,
-    NODE_ENV: 'development',
-    BROWSER: 'none',
-  };
+  const { env } = process;
 
   let child;
   if (scriptName) {
