@@ -61,7 +61,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
         errors.reduce(
           (acc, i) => dedent`
               ${acc}
-              ${i}
+              ${i.stack || i}
               ${separator}
             `,
           dedent`
@@ -77,7 +77,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
         warnings.reduce(
           (acc, i) => dedent`
               ${acc}
-              ${i}
+              ${i.stack || i}
               ${separator}
             `,
           dedent`
