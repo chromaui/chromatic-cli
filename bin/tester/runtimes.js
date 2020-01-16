@@ -47,17 +47,16 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     }, 60000);
   });
 
-  // If the app logged something to console.error, it's probably, but not definitely an issue.
-  // See https://github.com/hichroma/chromatic/issues/757
-  if (
-    (errors.length && !log.level.match(/silent/)) ||
-    (warnings.length && log.level.match(/verbose/))
-  ) {
+  const hasErrors = errors.length;
+  const hasVisibileErrors = hasErrors && log.level.match(/verbose/);
+  const hasVisibileWarnings = warnings.length && log.level.match(/verbose/);
+
+  if (hasVisibileErrors || hasVisibileWarnings) {
     log[errors.length ? 'error' : 'warn'](
       'The following problems were reported from your storybook:'
     );
 
-    if (errors.length && !log.level.match(/silent/)) {
+    if (hasVisibileErrors) {
       console.log(
         errors.reduce(
           (acc, i) => dedent`
@@ -73,7 +72,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    if (warnings.length && log.level.match(/verbose/)) {
+    if (hasVisibileWarnings) {
       console.log(
         warnings.reduce(
           (acc, i) => dedent`
@@ -89,7 +88,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    if (errors.length && !log.level.match(/silent/)) {
+    if (hasErrors) {
       console.log(dedent`
           This very likely caused some stories not working right or getting detected by Chromatic
           Please fix the errors, we can't continue..
