@@ -105,7 +105,10 @@ export async function run(argv) {
       log.error('Problems encountered:');
       console.log('');
       errors.forEach((e, i, l) => {
-        log.error(e.stack ? e.stack.toString() : e.toString());
+        log.error(e.message ? e.message.toString() : e.toString());
+        if (options.verbose) {
+          console.log(e);
+        }
 
         if (i === l.length - 1) {
           // empty line in between errors
