@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import denodeify from 'denodeify';
 import { confirm } from 'node-ask';
 import setupDebug from 'debug';
@@ -349,6 +350,18 @@ export async function runTest({
   });
 
   debug(`Connecting to ${isolatorUrl} (cachedUrl ${cachedUrl})`);
+
+  if (
+    await fetch(url)
+      .then(_ => true)
+      .catch(e => {
+        throw new Error(
+          `Storybook was not build succesfully, or provided url (${url}) wasn't reachable, there are likely errors above`
+        );
+      })
+  ) {
+    debug(`connected to ${url} success`);
+  }
 
   log.info(
     `Uploading and verifying build (this may take a few minutes depending on your connection)`
