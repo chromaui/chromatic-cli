@@ -48,15 +48,15 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
   });
 
   const hasErrors = errors.length;
-  const hasVisibileErrors = hasErrors && log.level.match(/verbose/);
+  const hasVisibleErrors = hasErrors && log.level.match(/verbose/);
   const hasVisibileWarnings = warnings.length && log.level.match(/verbose/);
 
-  if (hasVisibileErrors || hasVisibileWarnings) {
+  if (hasVisibleErrors || hasVisibileWarnings) {
     log[errors.length ? 'error' : 'warn'](
       'The following problems were reported from your storybook:'
     );
 
-    if (hasVisibileErrors) {
+    if (hasVisibleErrors) {
       console.log(
         errors.reduce(
           (acc, i) => dedent`
