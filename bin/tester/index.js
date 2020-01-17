@@ -364,15 +364,15 @@ export async function runTest({
   debug(`Connecting to ${isolatorUrl} (cachedUrl ${cachedUrl})`);
 
   if (
-    await fetch(url)
+    await fetch(isolatorUrl)
       .then(_ => true)
       .catch(e => {
         throw new Error(
-          `Storybook was not build succesfully, or provided url (${url}) wasn't reachable, there are likely errors above`
+          `Storybook was not build succesfully, or provided url (${isolatorUrl}) wasn't reachable, there are likely errors above`
         );
       })
   ) {
-    debug(`connected to ${url} success`);
+    debug(`connected to ${isolatorUrl} success`);
   }
 
   log.info(
