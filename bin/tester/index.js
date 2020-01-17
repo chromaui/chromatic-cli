@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import fs from 'fs-extra';
+import { pathExists } from 'fs-extra';
 import path from 'path';
 import denodeify from 'denodeify';
 import { confirm } from 'node-ask';
@@ -113,7 +113,7 @@ async function prepareAppOrBuild({
       });
     }
 
-    const exists = await fs.pathExists(path.join(buildDirName, 'iframe.html'));
+    const exists = await pathExists(path.join(buildDirName, 'iframe.html'));
 
     if (!exists) {
       if (buildScriptName) {
