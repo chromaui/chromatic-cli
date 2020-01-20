@@ -1,3 +1,6 @@
+import fetch from 'node-fetch';
+import { pathExists } from 'fs-extra';
+import path from 'path';
 import denodeify from 'denodeify';
 import { confirm } from 'node-ask';
 import setupDebug from 'debug';
@@ -102,12 +105,22 @@ async function prepareAppOrBuild({
       await new Promise((res, rej) => {
         child.on('error', rej);
         child.on('close', code => {
-          if (code > 0) {
+          if (code !== 0) {
             rej(new Error(`${buildScriptName} script exited with code ${code}`));
           }
           res();
         });
       });
+    }
+
+    const exists = await pathExists(path.join(buildDirName, 'iframe.html'));
+
+    if (!exists) {
+      if (buildScriptName) {
+        throw new Error(`Storybook was not build succesfully, there are likely errors above`);
+      } else {
+        throw new Error(`The folder you specified (${buildDirName}) doesn't exist`);
+      }
     }
 
     log.info(dedent`Uploading your built Storybook...`);
@@ -349,6 +362,18 @@ export async function runTest({
   });
 
   debug(`Connecting to ${isolatorUrl} (cachedUrl ${cachedUrl})`);
+
+  if (
+    await fetch(isolatorUrl)
+      .then(_ => true)
+      .catch(e => {
+        throw new Error(
+          `Storybook was not build succesfully, or provided url (${isolatorUrl}) wasn't reachable, there are likely errors above`
+        );
+      })
+  ) {
+    debug(`connected to ${isolatorUrl} success`);
+  }
 
   log.info(
     `Uploading and verifying build (this may take a few minutes depending on your connection)`

@@ -18,7 +18,7 @@ const defaultOutput = {
   specCount: 1,
 };
 
-jest.mock('node-fetch', () => (url, { body }) => ({
+jest.mock('node-fetch', () => async (url, { body } = {}) => ({
   ok: true,
   json: async () => {
     const { query, variables } = JSON.parse(body);
@@ -60,6 +60,10 @@ jest.mock('node-fetch', () => (url, { body }) => ({
   },
 }));
 jest.mock('tree-kill');
+jest.mock('fs-extra', () => ({
+  pathExists: async () => true,
+  readFileSync: require.requireActual('fs-extra').readFileSync,
+}));
 jest.mock('node-ask');
 
 jest.mock('../git/git', () => ({
