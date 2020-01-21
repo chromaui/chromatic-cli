@@ -47,22 +47,21 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     }, 60000);
   });
 
-  // If the app logged something to console.error, it's probably, but not definitely an issue.
-  // See https://github.com/hichroma/chromatic/issues/757
-  if (
-    (errors.length && !log.level.match(/silent/)) ||
-    (warnings.length && log.level.match(/verbose/))
-  ) {
+  const hasErrors = errors.length;
+  const hasVisibleErrors = hasErrors && log.level.match(/verbose/);
+  const hasVisibileWarnings = warnings.length && log.level.match(/verbose/);
+
+  if (hasVisibleErrors || hasVisibileWarnings) {
     log[errors.length ? 'error' : 'warn'](
       'The following problems were reported from your storybook:'
     );
 
-    if (errors.length && !log.level.match(/silent/)) {
+    if (hasVisibleErrors) {
       console.log(
         errors.reduce(
           (acc, i) => dedent`
               ${acc}
-              ${i}
+              ${i.stack || i}
               ${separator}
             `,
           dedent`
@@ -73,12 +72,12 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    if (warnings.length && log.level.match(/verbose/)) {
+    if (hasVisibileWarnings) {
       console.log(
         warnings.reduce(
           (acc, i) => dedent`
               ${acc}
-              ${i}
+              ${i.stack || i}
               ${separator}
             `,
           dedent`
@@ -89,11 +88,20 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
       );
     }
 
-    console.log(dedent`
-        This may lead to some stories not working right or getting detected by Chromatic
-        We suggest you fix the errors, but we will continue anyway..
-        ${separator}
-      `);
+    if (hasErrors) {
+      console.log(dedent`
+          This very likely caused some stories not working right or getting detected by Chromatic
+          Please fix the errors, we can't continue..
+          ${separator}
+        `);
+      throw new Error('Errors detected in storybook runtime');
+    } else if (warnings.length && log.level.match(/verbose/)) {
+      console.log(dedent`
+          This may lead to some stories not working right or getting detected by Chromatic
+          We suggest you fix the warnings, but we will continue anyway..
+          ${separator}
+        `);
+    }
   }
 
   try {

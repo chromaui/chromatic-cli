@@ -9,6 +9,7 @@ const viewLayers = [
   'vue',
   'angular',
   'html',
+  'web-components',
   'polymer',
   'ember',
   'marko',
