@@ -119,7 +119,9 @@ async function prepareAppOrBuild({
       if (buildScriptName) {
         throw new Error(`Storybook was not build succesfully, there are likely errors above`);
       } else {
-        throw new Error(`The folder you specified (${buildDirName}) doesn't exist`);
+        throw new Error(dedent`
+          It looks like your storybook build (to directory: ${buildDirName}) failed, as that directory is empty. Perhaps something failed above?
+        `);
       }
     }
 
