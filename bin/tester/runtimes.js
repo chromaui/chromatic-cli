@@ -94,7 +94,7 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
           Please fix the errors, we can't continue..
           ${separator}
         `);
-      throw new Error('Errors detected in storybook runtime');
+      throw new Error('Errors detected in Storybook runtime');
     } else if (warnings.length && log.level.match(/verbose/)) {
       console.log(dedent`
           This may lead to some stories not working right or getting detected by Chromatic
