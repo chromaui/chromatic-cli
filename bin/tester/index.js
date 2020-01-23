@@ -95,7 +95,7 @@ async function prepareAppOrBuild({
           buildDirName,
           ...(storybookVersion &&
           gte(storybookVersion, STORYBOOK_CLI_FLAGS_BY_VERSION['--loglevel'])
-            ? ['--loglevel', 'error']
+            ? ['--loglevel', log.level === 'verbose' ? 'verbose' : 'error']
             : []),
         ],
         inheritStdio: true,
