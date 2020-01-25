@@ -28,8 +28,9 @@ export async function parseArgv(argv) {
       --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline'
       --no-interactive  Do not prompt for package.json changes')
       --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)'
-      
-    Debug options
+      --allow-console-errors  continue, even when encountering runtime errors
+
+      Debug options
       --skip  Skip chromatic tests (mark as passing)')
       --list  List available stories (for debugging purposes)')
       --ci  This build is running on CI, non-interactively (alternatively, pass CI=true)')
@@ -63,6 +64,7 @@ export async function parseArgv(argv) {
         'exit-once-uploaded': { type: 'string' },
         'ignore-last-build-on-branch': { type: 'string' },
         'preserve-missing': { type: 'boolean' },
+        'allow-console-errors': { type: 'boolean' },
         only: { type: 'string' },
         skip: { type: 'string' },
 

@@ -3,7 +3,7 @@ import getRuntimeSpecs from '../tester/runtimes';
 import log from '../lib/log';
 import { pluralize } from '../lib/pluralize';
 
-export async function getStories({ only, list, isolatorUrl, verbose }) {
+export async function getStories({ only, list, isolatorUrl, verbose, allowConsoleErrors }) {
   let predicate = () => true;
   if (only) {
     const match = only.match(/(.*):([^:]*)/);
@@ -26,7 +26,7 @@ export async function getStories({ only, list, isolatorUrl, verbose }) {
       return story;
     };
   }
-  const runtimeSpecs = (await getRuntimeSpecs(isolatorUrl, { verbose }))
+  const runtimeSpecs = (await getRuntimeSpecs(isolatorUrl, { verbose, allowConsoleErrors }))
     .map(listStory)
     .filter(predicate);
 

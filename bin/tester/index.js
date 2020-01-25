@@ -258,6 +258,7 @@ export async function runTest({
   createTunnel = true,
   originalArgv = false,
   sessionId,
+  allowConsoleErrors,
 }) {
   const names = getProductVariables();
 
@@ -387,6 +388,7 @@ export async function runTest({
       list,
       isolatorUrl,
       verbose,
+      allowConsoleErrors,
     });
 
     const environment = await getEnvironment();

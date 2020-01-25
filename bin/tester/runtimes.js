@@ -7,7 +7,10 @@ import log, { separator } from '../lib/log';
 
 import { addShimsToJSDOM } from '../lib/jsdom-shims';
 
-export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
+export default async function getRuntimeSpecs(
+  url,
+  { verbose = false, allowConsoleErrors = false } = {}
+) {
   const warnings = [];
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -89,12 +92,21 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     }
 
     if (hasErrors) {
-      console.log(dedent`
+      if (!allowConsoleErrors) {
+        console.log(dedent`
           This very likely caused some stories not working right or getting detected by Chromatic
           Please fix the errors, we can't continue..
           ${separator}
         `);
-      throw new Error('Errors detected in storybook runtime');
+
+        throw new Error('Errors detected in storybook runtime');
+      } else {
+        console.log(dedent`
+          This very likely caused some stories not working right or getting detected by Chromatic
+          Please fix the errors, continuing because you passed in --allow-console-errors, this is not recommended
+          ${separator}
+      `);
+      }
     } else if (warnings.length && log.level.match(/verbose/)) {
       console.log(dedent`
           This may lead to some stories not working right or getting detected by Chromatic
