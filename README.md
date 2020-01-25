@@ -108,7 +108,7 @@ All contributions are welcome!
 
 - We'd like to unify this so there's just a single package on npm.
 - Migrate to Typescript
-- Deprecate all the storybook options in favor of a sane `--config` flag
+- Deprecate all the Storybook options in favor of a sane `--config` flag
 
 ## Publishing
 

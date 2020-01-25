@@ -88,7 +88,7 @@ async function prepareAppOrBuild({
 
       const child = await startApp({
         scriptName: buildScriptName,
-        // Make storybook build as quiet as possible
+        // Make Storybook build as quiet as possible
         args: [
           '--',
           '-o',
@@ -334,7 +334,7 @@ export async function runTest({
 
   const { version: storybookVersion, viewLayer, addons } = await getStorybookInfo();
   debug(
-    `Detected package version: ${packageVersion}, storybook version: ${storybookVersion}, view layer: ${viewLayer}, addons: ${
+    `Detected package version: ${packageVersion}, Storybook version: ${storybookVersion}, view layer: ${viewLayer}, addons: ${
       addons.length ? addons.map(addon => addon.name).join(', ') : 'none'
     }`
   );

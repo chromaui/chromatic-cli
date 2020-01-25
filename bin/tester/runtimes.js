@@ -99,7 +99,7 @@ export default async function getRuntimeSpecs(
           ${separator}
         `);
 
-        throw new Error('Errors detected in storybook runtime');
+        throw new Error('Errors detected in Storybook runtime');
       } else {
         console.log(dedent`
           This very likely caused some stories not working right or getting detected by Chromatic
