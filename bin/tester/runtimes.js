@@ -47,9 +47,9 @@ export default async function getRuntimeSpecs(url, { verbose = false } = {}) {
     }, 60000);
   });
 
-  const hasErrors = errors.length;
-  const hasVisibleErrors = hasErrors && log.level.match(/verbose/);
-  const hasVisibileWarnings = warnings.length && log.level.match(/verbose/);
+  const hasErrors = !!errors.length;
+  const hasVisibleErrors = hasErrors;
+  const hasVisibileWarnings = !!warnings.length && log.level.match(/verbose/);
 
   if (hasVisibleErrors || hasVisibileWarnings) {
     log[errors.length ? 'error' : 'warn'](
