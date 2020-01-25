@@ -18,7 +18,7 @@ export async function parseArgv(argv) {
       
     Storybook options
       --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
-      --storybook-build-dir, -d  <dirname>  Provide a directory with your built storybook; use if you've already built your storybook
+      --storybook-build-dir, -d  <dirname>  Provide a directory with your built Storybook; use if you've already built your Storybook
       
     Chromatic options
       --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'

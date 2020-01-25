@@ -56,7 +56,7 @@ export default async function getRuntimeSpecs(
 
   if (hasVisibleErrors || hasVisibileWarnings) {
     log[errors.length ? 'error' : 'warn'](
-      'The following problems were reported from your storybook:'
+      'The following problems were reported from your Storybook:'
     );
 
     if (hasVisibleErrors) {

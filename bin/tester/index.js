@@ -120,7 +120,7 @@ async function prepareAppOrBuild({
         throw new Error(`Storybook was not build succesfully, there are likely errors above`);
       } else {
         throw new Error(dedent`
-          It looks like your storybook build (to directory: ${buildDirName}) failed, as that directory is empty. Perhaps something failed above?
+          It looks like your Storybook build (to directory: ${buildDirName}) failed, as that directory is empty. Perhaps something failed above?
         `);
       }
     }
