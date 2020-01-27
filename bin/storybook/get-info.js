@@ -67,7 +67,7 @@ const read = async l => {
 
 const timeout = count =>
   new Promise((_, rej) => {
-    setTimeout(() => rej(new Error('The attempt to find the storybook version timed out')), count);
+    setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
   });
 
 const disregard = () => neverResolve;

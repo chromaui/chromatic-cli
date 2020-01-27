@@ -34,6 +34,7 @@ export async function verifyOptions(cli, argv) {
     originalArgv: argv,
 
     buildScriptName: cli.buildScriptName,
+    allowConsoleErrors: cli.allowConsoleErrors,
     scriptName: cli.scriptName === '' ? true : cli.scriptName,
     exec: cli.exec,
     noStart: !!cli.doNotStart,
