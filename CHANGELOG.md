@@ -1,4 +1,4 @@
-# 3.2.0 - 2020-01-28
+# 3.5.0 - 2020-01-28
 
 - CHANGE so the CLI stop on storybook runtime errors https://github.com/chromaui/chromatic-cli/issues/75
 - ADD a flag (`--allow-console-errors`) to continue on storybook runtime errors https://github.com/chromaui/chromatic-cli/issues/75
