@@ -76,6 +76,7 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 ### Chromatic options
 
 ```
+--allow-console-errors  Continue running chromatic even if some stories throw an error
 --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
 --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
 --exit-once-uploaded [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
@@ -112,7 +113,7 @@ All contributions are welcome!
 
 - We'd like to unify this so there's just a single package on npm.
 - Migrate to Typescript
-- Deprecate all the storybook options in favor of a sane `--config` flag
+- Deprecate all the Storybook options in favor of a sane `--config` flag
 
 ## Publishing
 

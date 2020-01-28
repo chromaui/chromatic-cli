@@ -1,3 +1,12 @@
+# 3.2.0 - 2020-01-28
+
+- CHANGE so the CLI stop on storybook runtime errors https://github.com/chromaui/chromatic-cli/issues/75
+- ADD a flag (`--allow-console-errors`) to continue on storybook runtime errors https://github.com/chromaui/chromatic-cli/issues/75
+- ADD early warning system for if the storybook output folder is empty https://github.com/chromaui/chromatic-cli/issues/78
+- IMPROVE readability of the error when build-storybook fails https://github.com/chromaui/chromatic-cli/issues/73
+- IMPROVE readability of the error when storybook runtime throws an error https://github.com/chromaui/chromatic-cli/issues/73
+- FIX `Intl.PluralRules.supportedLocalesOf is not a function` error https://github.com/chromaui/chromatic-cli/issues/76
+
 # 3.1.0 - 2019-11-04
 
 - ADD jsdom shim for SVG elements
