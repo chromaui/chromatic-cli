@@ -1,3 +1,6 @@
+import fetch from 'node-fetch';
+import { pathExists } from 'fs-extra';
+import path from 'path';
 import denodeify from 'denodeify';
 import { confirm } from 'node-ask';
 import setupDebug from 'debug';
@@ -85,14 +88,14 @@ async function prepareAppOrBuild({
 
       const child = await startApp({
         scriptName: buildScriptName,
-        // Make storybook build as quiet as possible
+        // Make Storybook build as quiet as possible
         args: [
           '--',
           '-o',
           buildDirName,
           ...(storybookVersion &&
           gte(storybookVersion, STORYBOOK_CLI_FLAGS_BY_VERSION['--loglevel'])
-            ? ['--loglevel', 'error']
+            ? ['--loglevel', log.level === 'verbose' ? 'verbose' : 'error']
             : []),
         ],
         inheritStdio: true,
@@ -102,12 +105,24 @@ async function prepareAppOrBuild({
       await new Promise((res, rej) => {
         child.on('error', rej);
         child.on('close', code => {
-          if (code > 0) {
+          if (code !== 0) {
             rej(new Error(`${buildScriptName} script exited with code ${code}`));
           }
           res();
         });
       });
+    }
+
+    const exists = await pathExists(path.join(buildDirName, 'iframe.html'));
+
+    if (!exists) {
+      if (buildScriptName) {
+        throw new Error(`Storybook was not build succesfully, there are likely errors above`);
+      } else {
+        throw new Error(dedent`
+          It looks like your Storybook build (to directory: ${buildDirName}) failed, as that directory is empty. Perhaps something failed above?
+        `);
+      }
     }
 
     log.info(dedent`Uploading your built Storybook...`);
@@ -243,6 +258,7 @@ export async function runTest({
   createTunnel = true,
   originalArgv = false,
   sessionId,
+  allowConsoleErrors,
 }) {
   const names = getProductVariables();
 
@@ -318,7 +334,7 @@ export async function runTest({
 
   const { version: storybookVersion, viewLayer, addons } = await getStorybookInfo();
   debug(
-    `Detected package version: ${packageVersion}, storybook version: ${storybookVersion}, view layer: ${viewLayer}, addons: ${
+    `Detected package version: ${packageVersion}, Storybook version: ${storybookVersion}, view layer: ${viewLayer}, addons: ${
       addons.length ? addons.map(addon => addon.name).join(', ') : 'none'
     }`
   );
@@ -350,6 +366,18 @@ export async function runTest({
 
   debug(`Connecting to ${isolatorUrl} (cachedUrl ${cachedUrl})`);
 
+  if (
+    await fetch(isolatorUrl)
+      .then(_ => true)
+      .catch(e => {
+        throw new Error(
+          `Storybook was not build succesfully, or provided url (${isolatorUrl}) wasn't reachable, there are likely errors above`
+        );
+      })
+  ) {
+    debug(`connected to ${isolatorUrl} success`);
+  }
+
   log.info(
     `Uploading and verifying build (this may take a few minutes depending on your connection)`
   );
@@ -360,6 +388,7 @@ export async function runTest({
       list,
       isolatorUrl,
       verbose,
+      allowConsoleErrors,
     });
 
     const environment = await getEnvironment();
