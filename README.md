@@ -54,13 +54,17 @@ You can also use the environment variable: `CHROMATIC_APP_CODE`
 
 ```
 --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
+--storybook-build-dir, -d <dirname>  Provide a directory with your built storybook; use if you've already built your storybook
+```
+
+Deprecated options (for tunneled builds):
+```
 --script-name [name], -s  The npm script that starts your Storybook [storybook]
 --exec <command>, -e  Alternatively, a full command to run to start your storybook
 --do-not-start, -S  Don't attempt to start or build; use if your Storybook is already running
 
 --storybook-port <port>, -p  What port is your Storybook running on (auto detected from -s, if set)
 --storybook-url <url>, -u  Storybook is already running at (external) url (implies -S)'
---storybook-build-dir, -d     <dirname>  Provide a directory with your built storybook; use if you've already built your storybook
 --storybook-https  Use if Storybook is running on https (auto detected from -s, if set)
 --storybook-cert <path>  Use if Storybook is running on https (auto detected from -s, if set)
 --storybook-key <path>  Use if Storybook is running on https (auto detected from -s, if set)
@@ -72,6 +76,7 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 ### Chromatic options
 
 ```
+--allow-console-errors  Continue running chromatic even if some stories throw an error
 --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
 --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
 --exit-once-uploaded [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
@@ -108,7 +113,7 @@ All contributions are welcome!
 
 - We'd like to unify this so there's just a single package on npm.
 - Migrate to Typescript
-- Deprecate all the storybook options in favor of a sane `--config` flag
+- Deprecate all the Storybook options in favor of a sane `--config` flag
 
 ## Publishing
 

@@ -288,9 +288,9 @@ export function addShimsToJSDOM(window) {
 
   const alwaysFn = C =>
     // eslint-disable-next-line func-names
-    function() {
+    Object.assign(function() {
       return new C();
-    };
+    }, C);
 
   class IntlDateTimeFormatMock extends IntlFormatMock {}
   class IntlNumberFormatMock extends IntlFormatMock {}
