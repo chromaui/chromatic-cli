@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 // Figure out the Storybook version and view layer
 
 import fs from 'fs-extra';
