@@ -1,3 +1,10 @@
+# v1 (Fri Jan 31 2020)
+
+#### 🚀  Version 1
+
+- Add allowConsoleErrors & autoAcceptChanges flags
+- Update to latest version of chromatic-cli
+
 # v1 (Sat Oct 19 2019)
 
 #### 🚀  Version 1

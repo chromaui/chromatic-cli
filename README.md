@@ -1,8 +1,25 @@
 # Chromatic Github Action
 
-We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/README.md#packages)
+## How to add an GitHub action
 
-## Usage
+- Create a file in your repo: `.github/workflows/chromatic.yml`
+- set it's content to:
+  ```yml
+  name: "Chromatic"
+  on: push
+
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v1
+      - uses: chromaui/action@v1
+        with: 
+          appCode: <insert the chromatic appToken here>
+          token: ${{ secrets.GITHUB_TOKEN }}
+  ```
+
+## Usage (all options)
 
 ```yaml
 - uses: chromaui/action@v1
@@ -10,22 +27,15 @@ We use [GitHub's action toolkit](https://github.com/actions/toolkit/blob/master/
     token: ${{ secrets.GITHUB_TOKEN }}
     appCode: 'Your chromatic/chroma app_code'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
-    scriptName: 'The npm script that starts your Storybook [storybook]'
-    exec: 'Alternatively, a full command to run to start your storybook'
-    doNotStart: 'Don't attempt to start or build; use if your Storybook is already running'
-    storybookPort: 'What port is your Storybook running on (auto detected from -s, if set)'
-    storybookUrl: 'Storybook is already running at (external) url (implies -S)'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
-    storybookHttps: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    storybookCert: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    storybookKey: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    storybookCa: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    allowConsoleErrors: 'do not exit when runtime errors occur in storybook'
     autoAcceptChanges: 'automatically accept all changes in chromatic: boolean or branchname'
     exitZeroOnChanges: 'positive exit of action even when there are changes: boolean or branchname'
+    exitOnceUploaded: 'exit with 0 once the built version has been sent to chromatic: boolean or branchname'
 ```
 
 
-We suggest you use secret:
+We suggest you use a secret to hide to app-code:
 
 ```yaml
 - uses: chromaui/action@v1
@@ -34,7 +44,7 @@ We suggest you use secret:
     appCode: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
 
-You have to configure secrets in the settings tab (`https://github.com/{org}/{repo}/settings/secrets`)
+You have to configure secrets in the settings tab (`https://github.com/{YOUR_ORGANSATION}/{YOUR_REPOSITORY}/settings/secrets`)
 
 However if you need to be able to run this action on forked PRs you can't make it a secret, it has to be public:
 
@@ -45,11 +55,17 @@ However if you need to be able to run this action on forked PRs you can't make i
     appCode: appcodehere
 ```
 
+## Checkout depth
+
+In the v2 version of the `actions/checkout` action, there's no git history. Chromatic needs the git history in order to find the base-build.
+
+Add `fetch-depth: 0` to add full history, see: https://github.com/actions/checkout#whats-new
+
 ## Development
 
 ### Publish to a distribution branch
 
-Actions are run from GitHub repos. We will create a releases branch and only checkin production modules. 
+Actions are run from GitHub repos. We will create a releases branch and only commit production modules. 
 
 Comment out node_modules in `.gitignore` and create a releases/v1 branch
 ```plaintext
