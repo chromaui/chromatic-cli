@@ -61,7 +61,8 @@ const publishAs = async name => {
 
 const check = {
   async publishable(name, version) {
-    const text = await exec(['info', name, '--json']);
+    const text = await exec(['info', name, '--json', '--silent']);
+
     const json = JSON.parse(text);
 
     const { versions } = json.data ? json.data : json;
@@ -70,8 +71,10 @@ const check = {
   },
 
   async allowed(name) {
-    const user = (await exec(['whoami'])).trim();
-    const owners = JSON.parse(await exec(['access', 'ls-collaborators', name, '--json']));
+    const user = (await exec(['whoami', '--silent'])).trim();
+    const owners = JSON.parse(
+      await exec(['access', 'ls-collaborators', name, '--json', '--silent'])
+    );
 
     return !!Object.entries(owners).find(
       ([useName, permissions]) => useName.match(user) && permissions.includes('write')
@@ -82,18 +85,20 @@ const check = {
 const getUnpublishable = async list => {
   const { version } = await packageJson.read();
 
-  return (await Promise.all(
-    list.map(async name => {
-      const versionOk = await check.publishable(name, version);
-      const ownershipOk = await check.allowed(name);
+  return (
+    await Promise.all(
+      list.map(async name => {
+        const versionOk = await check.publishable(name, version);
+        const ownershipOk = await check.allowed(name);
 
-      if (versionOk && ownershipOk) {
-        return false;
-      }
+        if (versionOk && ownershipOk) {
+          return false;
+        }
 
-      return { name, reason: versionOk ? 'ownership' : 'version' };
-    })
-  )).reduce((acc, item) => acc.concat(item || []), []);
+        return { name, reason: versionOk ? 'ownership' : 'version' };
+      })
+    )
+  ).reduce((acc, item) => acc.concat(item || []), []);
 };
 
 const run = async list => {

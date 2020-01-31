@@ -1,6 +1,6 @@
 {
   "name": "aws4",
-  "version": "1.8.0",
+  "version": "1.9.1",
   "description": "Signs and prepares requests using AWS Signature Version 4",
   "author": "Michael Hart <michael.hart.au@gmail.com> (http://github.com/mhart)",
   "main": "aws4.js",
@@ -66,6 +66,7 @@
     "should": "^8.2.2"
   },
   "scripts": {
-    "test": "mocha ./test/fast.js ./test/slow.js -b -t 100s -R list"
+    "test": "mocha ./test/fast.js -b -t 100s -R list",
+    "integration": "node ./test/slow.js"
   }
 }

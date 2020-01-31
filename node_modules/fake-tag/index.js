@@ -1,3 +1,5 @@
+'use strict'
+
 module.exports = function() {
   var tagArgs = arguments
   return tagArgs[0].reduce(function(accumulator, string, index) {

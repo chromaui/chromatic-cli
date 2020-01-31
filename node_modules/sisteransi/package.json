@@ -1,6 +1,6 @@
 {
   "name": "sisteransi",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "ANSI escape codes for some terminal swag",
   "main": "src/index.js",
   "license": "MIT",

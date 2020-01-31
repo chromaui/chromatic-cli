@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 // Figure out the Storybook version and view layer
 
 import fs from 'fs-extra';
@@ -9,6 +10,7 @@ const viewLayers = [
   'vue',
   'angular',
   'html',
+  'web-components',
   'polymer',
   'ember',
   'marko',
@@ -66,7 +68,7 @@ const read = async l => {
 
 const timeout = count =>
   new Promise((_, rej) => {
-    setTimeout(() => rej(new Error('The attempt to find the storybook version timed out')), count);
+    setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
   });
 
 const disregard = () => neverResolve;
