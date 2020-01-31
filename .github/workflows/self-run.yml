@@ -14,6 +14,6 @@ jobs:
         yarn && yarn build
     - uses: ./
       with: 
-        appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+        appCode: 5oy3iw6rkio
         token: ${{ secrets.GITHUB_TOKEN }}
         storybookBuildDir: storybook-static
