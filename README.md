@@ -27,18 +27,11 @@
     token: ${{ secrets.GITHUB_TOKEN }}
     appCode: 'Your chromatic/chroma app_code'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
-    scriptName: 'The npm script that starts your Storybook [storybook]'
-    exec: 'Alternatively, a full command to run to start your storybook'
-    doNotStart: 'Don't attempt to start or build; use if your Storybook is already running'
-    storybookPort: 'What port is your Storybook running on (auto detected from -s, if set)'
-    storybookUrl: 'Storybook is already running at (external) url (implies -S)'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
-    storybookHttps: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    storybookCert: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    storybookKey: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    storybookCa: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    allowConsoleErrors: 'do not exit when runtime errors occur in storybook'
     autoAcceptChanges: 'automatically accept all changes in chromatic: boolean or branchname'
     exitZeroOnChanges: 'positive exit of action even when there are changes: boolean or branchname'
+    exitOnceUploaded: 'exit with 0 once the built version has been sent to chromatic: boolean or branchname'
 ```
 
 

@@ -99,7 +99,9 @@ async function run() {
     const storybookKey = getInput('storybookKey');
     const storybookCa = getInput('storybookCa');
     const autoAcceptChanges = getInput('autoAcceptChanges');
+    const allowConsoleErrors = getInput('allowConsoleErrors');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
+    const exitOnceUploaded = getInput('exitOnceUploaded');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
 
     process.env.CHROMATIC_SHA = sha;
@@ -143,6 +145,8 @@ async function run() {
       interactive: false,
       autoAcceptChanges: maybe(autoAcceptChanges),
       exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+      exitOnceUploaded: maybe(exitOnceUploaded, false),
+      allowConsoleErrors: maybe(allowConsoleErrors, false),
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 
