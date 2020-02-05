@@ -96,7 +96,11 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
       'HEAD';
   }
   // REPOSITORY_URL is for netlify: https://www.netlify.com/docs/continuous-deployment/
-  const fromCI = inputFromCI || !!process.env.CI || !!process.env.REPOSITORY_URL;
+  const fromCI =
+    !!inputFromCI ||
+    !!process.env.CI ||
+    !!process.env.REPOSITORY_URL ||
+    !!process.env.GITHUB_REPOSITORY;
   debug(
     `git info: ${JSON.stringify({
       commit,
