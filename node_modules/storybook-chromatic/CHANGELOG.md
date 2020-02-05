@@ -7,6 +7,19 @@
 - IMPROVE readability of the error when storybook runtime throws an error https://github.com/chromaui/chromatic-cli/issues/73
 - FIX `Intl.PluralRules.supportedLocalesOf is not a function` error https://github.com/chromaui/chromatic-cli/issues/76
 
+# 3.4.0 - 2019-12-25
+
+- FIX pubish script
+
+# 3.3.0 - 2019-12-25
+
+- IMPROVE logging when git fails
+- FIX script for windows
+- ADD `--exit-once-uploaded` flag
+- FIX escape chararacters in error messages
+
+# 3.2.0 failed upload to npm
+
 # 3.1.0 - 2019-11-04
 
 - ADD jsdom shim for SVG elements
