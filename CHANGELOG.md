@@ -1,3 +1,11 @@
+# 3.5.2 - 2020-02-18
+
+- FIX version of JSDOM to 16.1 as 16.2 includes a conflicting custom element support https://github.com/chromaui/chromatic-cli/issues/95
+
+# 3.5.1 - 2020-02-06
+
+- FIX setting the `fromCI` flag from our github action https://github.com/chromaui/action/issues/14
+
 # 3.5.0 - 2020-01-28
 
 - CHANGE so the CLI stop on storybook runtime errors https://github.com/chromaui/chromatic-cli/issues/75
