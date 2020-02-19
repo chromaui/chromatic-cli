@@ -1,3 +1,9 @@
+# v1 (Wed Feb 5 2020)
+
+#### 🚀  Version 1
+
+- Update to latest version of chromatic-cli
+
 # v1 (Fri Jan 31 2020)
 
 #### 🚀  Version 1

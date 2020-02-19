@@ -54,6 +54,7 @@ interface Output {
   url: string;
   code: number;
 }
+
 async function runChromatic(options): Promise<Output> {
   const { exitCode, exitUrl } = await runTest(await verifyOptions(options));  
 
