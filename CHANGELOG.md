@@ -1,3 +1,9 @@
+# v1 (Wed Feb 20 2020)
+
+#### 🚀  Version 1
+
+- REMOVE the github deployment
+
 # v1 (Wed Feb 5 2020)
 
 #### 🚀  Version 1
