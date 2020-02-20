@@ -76,7 +76,6 @@ const getApi = () => {
 }
 
 async function run() {
-  let deployment_id: number = NaN;
   const api = getApi();
   const commit = getCommit(context);
   
@@ -84,7 +83,7 @@ async function run() {
     return;
   }
 
-  const { branch, repo, owner, sha } = commit;
+  const { branch, sha } = commit;
 
   try {
     const appCode = getInput('appCode');
@@ -107,27 +106,6 @@ async function run() {
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
-
-    const deployment = api.repos.createDeployment({
-      repo,
-      owner,
-      ref: branch,
-      environment: 'chromatic',
-      required_contexts: [],
-      auto_merge: false,
-    }).then(deployment => {
-      deployment_id = deployment.data.id;
-
-      return api.repos.createDeploymentStatus({
-        repo,
-        owner,
-        deployment_id,
-        state: 'pending',
-      });
-    }).catch(e => {
-      deployment_id = NaN;
-      console.log('adding deployment to GitHub failed, You are likely on a forked repo and do not have write access.');
-    });
 
     const chromatic = runChromatic({
       appCode,
@@ -153,22 +131,7 @@ async function run() {
 
     const [{ url, code }] = await Promise.all([
       chromatic,
-      deployment,
     ]);
-
-    if (typeof deployment_id === 'number' && !isNaN(deployment_id)) {
-      try {
-        await api.repos.createDeploymentStatus({
-          repo,
-          owner,
-          deployment_id,
-          state: 'success',
-          environment_url: url
-        });
-      } catch (e){
-        //
-      }
-    }
 
     setOutput('url', url);
     setOutput('code', code.toString());
@@ -176,19 +139,6 @@ async function run() {
     e.message && error(e.message);
     e.stack && error(e.stack);
     e.description && error(e.description);
-
-    if (typeof deployment_id === 'number' && !isNaN(deployment_id)) {
-      try {
-        await api.repos.createDeploymentStatus({
-          repo,
-          owner,
-          deployment_id,
-          state: 'failure',
-        });
-      } catch (e){
-        //
-      }
-    }
 
     setFailed(e.message);
   }
