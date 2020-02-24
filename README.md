@@ -1,5 +1,17 @@
 # Chromatic Github Action
 
+This action takes care of uploading your storybook to chromatic.
+
+It's a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli).
+
+It can:
+  - build your storybook
+  - upload the storybook to chromatic
+  - report snapshot diffs to log
+
+it does NOT:
+  - install dependencies
+
 ## How to add an GitHub action
 
 - Create a file in your repo: `.github/workflows/chromatic.yml`
@@ -13,6 +25,8 @@
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@v1
+      - run: |
+          yarn && yarn build
       - uses: chromaui/action@v1
         with: 
           appCode: <insert the chromatic appToken here>
