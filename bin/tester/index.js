@@ -117,7 +117,7 @@ async function prepareAppOrBuild({
 
     if (!exists) {
       if (buildScriptName) {
-        throw new Error(`Storybook was not build succesfully, there are likely errors above`);
+        throw new Error(`Storybook did not build succesfully, there are likely errors above`);
       } else {
         throw new Error(dedent`
           It looks like your Storybook build (to directory: ${buildDirName}) failed, as that directory is empty. Perhaps something failed above?
@@ -371,7 +371,7 @@ export async function runTest({
       .then(_ => true)
       .catch(e => {
         throw new Error(
-          `Storybook was not build succesfully, or provided url (${isolatorUrl}) wasn't reachable, there are likely errors above`
+          `Storybook did not build succesfully, or provided url (${isolatorUrl}) wasn't reachable, there are likely errors above`
         );
       })
   ) {
