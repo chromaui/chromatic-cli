@@ -1,4 +1,5 @@
 import path from 'path';
+import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'jsonfile';
 
 export function checkPackageJson({ command, script, appDir = process.cwd() } = {}) {
@@ -21,5 +22,14 @@ export function addScriptToPackageJson(scriptName, scriptCommand, { appDir = pro
     packageJson.scripts = {};
   }
   packageJson.scripts[scriptName] = scriptCommand;
+
+  if (!packageJson.dependencies) {
+    packageJson.dependencies = {};
+  }
+  if (!packageJson.dependencies['cross-env']) {
+    packageJson.dependencies['cross-env'] = `^${execSync('npm show cross-env version')
+      .toString()
+      .trim()}`;
+  }
   writeFileSync(filename, packageJson, { spaces: 2 });
 }

@@ -519,9 +519,9 @@ export async function runTest({
   }
 
   if (!checkPackageJson(names) && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `${names.envVar}=${appCode} ${names.command} ${originalArgv
-      .slice(2)
-      .join(' ')}`
+    const scriptCommand = `cross-env ${names.envVar}=${appCode} ${
+      names.command
+    } ${originalArgv.slice(2).join(' ')}`
       .replace(/--app-code[= ]\S+/, '')
       .trim();
 
