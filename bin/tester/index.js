@@ -43,7 +43,7 @@ export const debug = setupDebug('chromatic-cli:tester');
 let lastInProgressCount;
 async function waitForBuild(client, variables, { diffs }) {
   const {
-    app: { build },
+    app: { build, repository },
   } = await client.runQuery(TesterBuildQuery, variables);
 
   debug(`build:${JSON.stringify(build)}`);
@@ -62,7 +62,7 @@ async function waitForBuild(client, variables, { diffs }) {
     return waitForBuild(client, variables, { diffs });
   }
 
-  return build;
+  return { build, repository };
 }
 
 async function prepareAppOrBuild({
@@ -439,9 +439,22 @@ export async function runTest({
       ${onlineHint}.
     `);
 
-    if (doExitOnceSentToChromatic) return { exitCode: 0, exitUrl };
+    if (doExitOnceSentToChromatic) {
+      return { exitCode: 0, exitUrl };
+    }
 
-    const buildOutput = await waitForBuild(client, { buildNumber }, { diffs });
+    const { build: buildOutput, repository } = await waitForBuild(
+      client,
+      { buildNumber },
+      { diffs }
+    );
+
+    if (repository && repository.provider) {
+      log.info(dedent`
+        To speed up your CI, as your application is linked to a ${repository.provider} repository and Chromatic will report results there, pass the "--exit-with-uploaded" flag to skip waiting on results. 
+        Read more here: https://github.com/chromaui/chromatic-cli/#chromatic-options
+      `);
+    }
 
     ({ changeCount, errorCount, status: buildStatus } = buildOutput);
 
