@@ -1,3 +1,4 @@
+import { spawn } from 'cross-spawn';
 import fetch from 'node-fetch';
 import { pathExists } from 'fs-extra';
 import path from 'path';
@@ -540,6 +541,19 @@ export async function runTest({
           If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via an environment variable instead.
         `
       );
+
+      // now actually install cross-env
+      const npmPath = process.env.npm_execpath;
+      const npmPathIsJs = typeof npmPath === 'string' && /\.m?js/.test(path.extname(npmPath));
+      const execPath = npmPathIsJs ? process.execPath : npmPath || 'npm';
+
+      // Run either:
+      //   npm/yarn install (depending on npm_execpath)
+      //   node path/to/npm.js install (if npm run via node)
+      spawn(execPath, [...(npmPathIsJs ? [npmPath] : []), 'install'], {
+        cwd: process.cwd(),
+        ...{ stdio: 'inherit' },
+      });
     } else {
       log.info(
         dedent`
