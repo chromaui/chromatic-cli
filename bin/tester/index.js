@@ -451,7 +451,7 @@ export async function runTest({
 
     if (repository && repository.provider) {
       log.info(dedent`
-        To speed up your CI, as your application is linked to a ${repository.provider} repository and Chromatic will report results there, pass the "--exit-with-uploaded" flag to skip waiting on results. 
+        To speed up your CI, as your application is linked to a ${repository.provider} repository and Chromatic will report results there, pass the "--exit-once-uploaded" flag to skip waiting on results. 
         Read more here: https://github.com/chromaui/chromatic-cli/#chromatic-options
       `);
     }
