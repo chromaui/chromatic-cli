@@ -26,10 +26,6 @@ export function addScriptToPackageJson(scriptName, scriptCommand, { appDir = pro
   if (!packageJson.dependencies) {
     packageJson.dependencies = {};
   }
-  if (!packageJson.dependencies['cross-env']) {
-    packageJson.dependencies['cross-env'] = `^${execSync('npm show cross-env version')
-      .toString()
-      .trim()}`;
-  }
+
   writeFileSync(filename, packageJson, { spaces: 2 });
 }

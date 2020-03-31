@@ -533,10 +533,8 @@ export async function runTest({
   }
 
   if (!checkPackageJson(names) && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `cross-env ${names.envVar}=${appCode} ${
-      names.command
-    } ${originalArgv.slice(2).join(' ')}`
-      .replace(/--app-code[= ]\S+/, '')
+    const scriptCommand = `${names.command} ${originalArgv.slice(2).join(' ')}`
+      .replace(/--app-code[= ]\S+/, `--app-code="${appCode}"`)
       .trim();
 
     const confirmed = await confirm(
@@ -554,19 +552,6 @@ export async function runTest({
           If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via an environment variable instead.
         `
       );
-
-      // now actually install cross-env
-      const npmPath = process.env.npm_execpath;
-      const npmPathIsJs = typeof npmPath === 'string' && /\.m?js/.test(path.extname(npmPath));
-      const execPath = npmPathIsJs ? process.execPath : npmPath || 'npm';
-
-      // Run either:
-      //   npm/yarn install (depending on npm_execpath)
-      //   node path/to/npm.js install (if npm run via node)
-      spawn(execPath, [...(npmPathIsJs ? [npmPath] : []), 'install'], {
-        cwd: process.cwd(),
-        ...{ stdio: 'inherit' },
-      });
     } else {
       log.info(
         dedent`
