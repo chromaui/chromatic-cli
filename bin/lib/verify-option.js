@@ -50,6 +50,8 @@ export async function verifyOptions(cli, argv) {
         )
       : undefined,
     createTunnel: !cli.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
+
+    patchBuild: cli.patchBuild && cli.patchBuild.split('...').filter(Boolean),
   };
   const names = getProductVariables();
 
@@ -62,6 +64,17 @@ export async function verifyOptions(cli, argv) {
 
       Pass your app code with the \`${names.envVar}\` environment variable or the \`--app-code\` flag.
     `);
+  }
+
+  if (cliOptions.patchBuild) {
+    if (cliOptions.patchBuild.length !== 2) {
+      throw new Error(
+        'Invalid value to --patch-build, expecting two branch names like `headbranch...basebranch`.'
+      );
+    }
+    if (cliOptions.patchBuild[0] === cliOptions.patchBuild[1]) {
+      throw new Error('The two branches passed to --patch-build cannot be identical.');
+    }
   }
 
   const packageJson = readFileSync(path.resolve('./package.json'));

@@ -29,6 +29,7 @@ export async function parseArgv(argv) {
       --no-interactive  Do not prompt for package.json changes
       --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
       --allow-console-errors  Continue, even when encountering runtime errors
+      --patch-build <headbranch...basebranch>  Create a patch build to fix a missing PR comparison
 
     Debug options
       --skip  Skip chromatic tests (mark as passing)
@@ -67,6 +68,7 @@ export async function parseArgv(argv) {
         'allow-console-errors': { type: 'boolean' },
         only: { type: 'string' },
         skip: { type: 'string' },
+        'patch-build': { type: 'string' },
 
         // debug options
         list: { type: 'string' },
