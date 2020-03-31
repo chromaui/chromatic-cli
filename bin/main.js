@@ -14,7 +14,7 @@ export async function parseArgv(argv) {
       $ chromatic
 
     Main options
-      --app-code <code>, -a  The code for your app, get from chromatic.com
+      --project-token <token>, -t  The code for your app, get from chromatic.com
       
     Storybook options
       --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
@@ -41,6 +41,7 @@ export async function parseArgv(argv) {
       booleanDefault: undefined,
       flags: {
         'app-code': { type: 'string', alias: 'a' },
+        'project-token': { type: 'string', alias: 't' },
 
         // main config option in the future
         config: { type: 'string' },

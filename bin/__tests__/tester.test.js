@@ -119,10 +119,10 @@ afterEach(() => {
 });
 
 const defaultOptions = {
-  appCode: 'code',
+  projectToken: 'code',
   scriptName: 'storybook',
   url: 'http://localhost:1337/iframe.html',
-  originalArgv: ['node', 'chromatic', 'test', '--appCode', 'code'],
+  originalArgv: ['node', 'chromatic', '--project-token', 'code'],
 };
 
 it('runs in simple situations', async () => {

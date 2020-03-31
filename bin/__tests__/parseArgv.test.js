@@ -22,8 +22,8 @@ process.env.CHROMATIC_APP_CODE = 'test';
 
 describe('await parseArgv', () => {
   it('sets reasonable defaults', async () => {
-    expect(await parseArgv(['--app-code', 'cli-code'])).toMatchObject({
-      appCode: 'cli-code',
+    expect(await parseArgv(['--project-token', 'cli-code'])).toMatchObject({
+      projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
       noStart: true,
       fromCI: false,
@@ -33,13 +33,13 @@ describe('await parseArgv', () => {
       interactive: true,
       verbose: false,
       createTunnel: true,
-      originalArgv: ['--app-code', 'cli-code'],
+      originalArgv: ['--project-token', 'cli-code'],
     });
   });
 
-  it('picks up app-code from environment', async () => {
+  it('picks up project-token from environment', async () => {
     expect(await parseArgv([])).toMatchObject({
-      appCode: 'env-code',
+      projectToken: 'env-code',
     });
   });
 

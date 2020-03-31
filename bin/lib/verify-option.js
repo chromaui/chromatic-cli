@@ -12,10 +12,12 @@ import { getProductVariables } from './cli';
 import log from './log';
 
 export async function verifyOptions(cli, argv) {
+  const projectTokenInput = cli.projectToken || cli.appCode; // backwards compatibility
+
   const cliOptions = {
-    appCode: Array.isArray(cli.appCode)
-      ? cli.appCode[cli.appCode.length - 1]
-      : cli.appCode || CHROMATIC_APP_CODE,
+    projectToken: Array.isArray(projectTokenInput)
+      ? projectTokenInput[projectTokenInput.length - 1]
+      : projectTokenInput || CHROMATIC_APP_CODE,
     config: cli.config,
 
     only: cli.only,
@@ -53,14 +55,14 @@ export async function verifyOptions(cli, argv) {
   };
   const names = getProductVariables();
 
-  if (!cliOptions.appCode) {
+  if (!cliOptions.projectToken) {
     throw new Error(dedent`
-      You must provide an app code.
+      You must provide an project token.
 
       If you don't have a project yet login to ${names.url} and create a new project.
       Or find your code on the manage page of an existing project.
 
-      Pass your app code with the \`${names.envVar}\` environment variable or the \`--app-code\` flag.
+      Pass your project token with the \`${names.envVar}\` environment variable or the \`--project-token\` flag.
     `);
   }
 

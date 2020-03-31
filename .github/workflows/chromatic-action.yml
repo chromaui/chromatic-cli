@@ -12,5 +12,5 @@ jobs:
       env:
         DEBUG: chromatic-cli
       with:
-        appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+        projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
         token: ${{ secrets.GITHUB_TOKEN }}
