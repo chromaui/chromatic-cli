@@ -3,7 +3,7 @@ author: Chroma
 description: "Publish & test your storybook with chromatic"
 
 inputs: 
-  appCode: 
+  projectToken: 
     description: "Your chromatic/chroma app_code"
   buildScriptName: 
     description: "The npm script that builds your Storybook [build-storybook]"

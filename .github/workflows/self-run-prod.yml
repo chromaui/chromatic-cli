@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: ./
       with: 
-        appCode: 5oy3iw6rkio
+        projectToken: 5oy3iw6rkio
         token: ${{ secrets.GITHUB_TOKEN }}
         storybookBuildDir: storybook-static
       env:

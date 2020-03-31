@@ -29,7 +29,7 @@ it does NOT:
           yarn && yarn build
       - uses: chromaui/action@v1
         with: 
-          appCode: <insert the chromatic appToken here>
+          projectToken: <insert the chromatic appToken here>
           token: ${{ secrets.GITHUB_TOKEN }}
   ```
 
@@ -39,7 +39,7 @@ it does NOT:
 - uses: chromaui/action@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    appCode: 'Your chromatic/chroma app_code'
+    projectToken: 'Your chromatic/chroma app_code'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
     allowConsoleErrors: 'do not exit when runtime errors occur in storybook'
@@ -55,7 +55,7 @@ We suggest you use a secret to hide to app-code:
 - uses: chromaui/action@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+    projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
 
 You have to configure secrets in the settings tab (`https://github.com/{YOUR_ORGANSATION}/{YOUR_REPOSITORY}/settings/secrets`)
@@ -66,7 +66,7 @@ However if you need to be able to run this action on forked PRs you can't make i
 - uses: chromaui/action@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    appCode: appcodehere
+    projectToken: projectTokenhere
 ```
 
 ## Checkout depth
@@ -108,7 +108,7 @@ You can now validate the action by referencing the releases/v1 branch
 ```yaml
 - uses: chromaui/action@releases/v1
   with:
-    appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+    projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
 
 See the [actions tab](https://github.com/chromaui/action/actions) for runs of this action! :rocket:
@@ -120,5 +120,5 @@ After testing you can [create a v1 tag](https://github.com/actions/toolkit/blob/
 ```yaml
 - uses: chromaui/action@v1
   with:
-    appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+    projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
 ```
