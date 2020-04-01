@@ -2,8 +2,7 @@ import { execSync } from 'child_process';
 import setupDebug from 'debug';
 import gql from 'fake-tag';
 import dedent from 'ts-dedent';
-
-import log from '../lib/log';
+import { EOL } from 'os';
 
 const debug = setupDebug('chromatic-cli:git');
 
@@ -251,4 +250,53 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
 
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
   return [...extraBaselineCommits, ...(await maximallyDescendentCommits(commitsWithBuilds))];
+}
+
+export async function isUpToDate() {
+  execGitCommand(`git remote update`);
+  const localCommit = await execGitCommand('git rev-parse HEAD');
+  const remoteCommit = await execGitCommand('git rev-parse @{u}');
+  if (!localCommit) {
+    throw new Error('Failed to retrieve last local commit hash');
+  }
+  if (!remoteCommit) {
+    throw new Error('Failed to retrieve last remote commit hash');
+  }
+  return localCommit === remoteCommit;
+}
+
+export async function isClean() {
+  const status = await execGitCommand('git status --porcelain');
+  return status === '';
+}
+
+export async function getUpdateMessage() {
+  const status = await execGitCommand('git status');
+  return status
+    .split(EOL + EOL)[0] // drop the 'nothing to commit' part
+    .split(EOL)
+    .filter(line => !line.startsWith('On branch')) // drop the 'On branch x' part
+    .join(EOL);
+}
+
+export async function findMergeBase(headBranch, baseBranch) {
+  const result = await execGitCommand(`git merge-base ${headBranch} ${baseBranch}`);
+  const mergeBases = result.split(EOL).filter(Boolean);
+  if (mergeBases.length === 1) return mergeBases[0];
+
+  const branchNames = await Promise.all(
+    mergeBases.map(async sha => {
+      const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
+      return name.replace(/~[0-9]+$/, ''); // Drop the potential suffix
+    })
+  );
+  return mergeBases[branchNames.findIndex(branchName => branchName === baseBranch)];
+}
+
+export async function checkout(ref) {
+  return execGitCommand(`git checkout ${ref}`);
+}
+
+export async function checkoutPrevious() {
+  return execGitCommand(`git checkout -`);
 }
