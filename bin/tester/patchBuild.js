@@ -40,10 +40,12 @@ export async function runPatchBuild(options) {
   }
 
   checkout(mergeBase);
-  installDependencies();
 
-  await runTest({ ...options }); // TODO set branch
-
-  checkoutPrevious();
-  installDependencies();
+  try {
+    installDependencies();
+    await runTest({ ...options }); // TODO set branch
+  } finally {
+    checkoutPrevious();
+    installDependencies();
+  }
 }
