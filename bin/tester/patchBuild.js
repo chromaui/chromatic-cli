@@ -30,7 +30,7 @@ export async function runPatchBuild(options) {
   }
 
   // Get the merge base commit hash.
-  const mergeBase = await findMergeBase();
+  const mergeBase = await findMergeBase(headRef, baseRef);
   if (!mergeBase) {
     throw new Error(dedent`
       Failed to retrieve the merge-base. You may have specified an invalid base branch.

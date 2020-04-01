@@ -282,8 +282,6 @@ export async function getUpdateMessage() {
 export async function findMergeBase(headBranch, baseBranch) {
   const result = await execGitCommand(`git merge-base ${headBranch} ${baseBranch}`);
   const mergeBases = result.split(EOL).filter(Boolean);
-  if (mergeBases.length === 1) return mergeBases[0];
-
   const branchNames = await Promise.all(
     mergeBases.map(async sha => {
       const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
