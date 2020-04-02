@@ -33,9 +33,9 @@ export async function runPatchBuild(options) {
   const mergeBase = await findMergeBase(headRef, baseRef);
   if (!mergeBase) {
     throw new Error(dedent`
-      Failed to retrieve the merge-base. You may have specified an invalid base branch.
+      Failed to retrieve the merge base. You may have specified an invalid base branch.
       Are you sure the head branch is a descendant (i.e. fork) of the base branch?
-        (try running this command yourself: "git merge-base ${headRef} ${baseRef}")
+        (try running this command yourself: "git merge-base --all ${headRef} ${baseRef}")
     `);
   }
 
