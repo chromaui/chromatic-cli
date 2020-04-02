@@ -29,7 +29,7 @@ it does NOT:
           yarn && yarn build
       - uses: chromaui/action@v1
         with: 
-          projectToken: <insert the chromatic appToken here>
+          projectToken: <insert the chromatic projectToken here>
           token: ${{ secrets.GITHUB_TOKEN }}
   ```
 
