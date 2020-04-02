@@ -51,6 +51,8 @@ export async function runPatchBuild(options) {
     log.info('Starting patch build...');
     await runTest({ ...options, forceBranchName: baseRef });
     log.info('Patch build completed.');
+  } catch (e) {
+    log.error(e);
   } finally {
     log.info('Restoring workspace...');
     await discardChanges(); // we need a clean state before checkout
