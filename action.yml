@@ -4,7 +4,7 @@ description: "Publish & test your storybook with chromatic"
 
 inputs: 
   projectToken: 
-    description: "Your chromatic/chroma app_code"
+    description: "Your chromatic/chroma project token”
   buildScriptName: 
     description: "The npm script that builds your Storybook [build-storybook]"
   doNotStart: 
