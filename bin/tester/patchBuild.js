@@ -41,14 +41,14 @@ export async function runPatchBuild(options) {
     `);
   }
 
-  log.info(`Checking out merge base commit: ${mergeBase}`);
+  log.info(`Checking out merge base commit ${mergeBase}`);
   await checkout(mergeBase);
 
   try {
     log.info('Installing dependencies...');
     installDependencies(); // this might modify a lockfile
 
-    log.info('Starting patch build...');
+    log.info(`Starting patch build for ${baseRef}...`);
     return await runTest({ ...options, patchBranchName: baseRef }); // await here is necessary
   } finally {
     log.info('Restoring workspace...');
