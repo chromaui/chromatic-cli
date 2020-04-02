@@ -39,16 +39,13 @@
   },
   "lint-staged": {
     "*.js": [
-      "yarn lint:js --fix",
-      "git add"
+      "yarn lint:js --fix"
     ],
     "*.json": [
-      "yarn lint:js --fix",
-      "git add"
+      "yarn lint:js --fix"
     ],
     "package.json": [
-      "yarn lint:package",
-      "git add"
+      "yarn lint:package"
     ]
   },
   "dependencies": {
