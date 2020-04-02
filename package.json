@@ -2,20 +2,20 @@
   "name": "storybook-chromatic",
   "version": "3.5.1",
   "description": "Visual Testing for Storybook",
-  "main": "./storybook-addon.js",
-  "bin": {
-    "chromatic-cli": "./bin/register.js",
-    "chromatic": "./bin/register.js",
-    "chroma": "./bin/register.js"
+  "bugs": {
+    "url": "https://github.com/chromaui/chromatic-cli/issues"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/chromaui/chromatic-cli.git"
   },
-  "bugs": {
-    "url": "https://github.com/chromaui/chromatic-cli/issues"
-  },
   "license": "MIT",
+  "main": "./storybook-addon.js",
+  "bin": {
+    "chroma": "./bin/register.js",
+    "chromatic": "./bin/register.js",
+    "chromatic-cli": "./bin/register.js"
+  },
   "scripts": {
     "prebuild": "rm -rf ./dist",
     "build": "npm-run-all --serial -l build:**",
@@ -31,6 +31,22 @@
     "prepare": "npm run build",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "yarn lint:js --fix"
+    ],
+    "*.json": [
+      "yarn lint:js --fix"
+    ],
+    "package.json": [
+      "yarn lint:package"
+    ]
   },
   "dependencies": {
     "@babel/preset-react": "^7.8.3",
@@ -72,27 +88,6 @@
     "util-deprecate": "^1.0.2",
     "uuid": "^3.4.0",
     "yarn-or-npm": "^3.0.1"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "yarn lint-staged"
-    }
-  },
-  "lint-staged": {
-    "linters": {
-      "*.js": [
-        "yarn lint:js --fix",
-        "git add"
-      ],
-      "*.json": [
-        "yarn lint:js --fix",
-        "git add"
-      ],
-      "package.json": [
-        "yarn lint:package",
-        "git add"
-      ]
-    }
   },
   "devDependencies": {
     "@babel/cli": "^7.8.3",
