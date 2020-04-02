@@ -10,6 +10,7 @@ import {
   checkoutPrevious,
   discardChanges,
 } from '../git/git';
+import log from '../lib/log';
 import { runTest } from './index';
 
 const installDependencies = () => spawn.sync(['install'], { stdio: 'inherit' });
@@ -40,12 +41,17 @@ export async function runPatchBuild(options) {
     `);
   }
 
+  log.info(`Checking out merge base commit: ${mergeBase}`);
   checkout(mergeBase);
 
   try {
+    log.info('Installing dependencies...');
     await installDependencies(); // this might modify a lockfile
+
+    log.info('Starting patch build...');
     await runTest({ ...options, forceBranchName: baseRef });
   } finally {
+    log.info('Restoring workspace...');
     await discardChanges(); // we need a clean state before checkout
     await checkoutPrevious();
     await installDependencies();
