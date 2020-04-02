@@ -49,7 +49,7 @@ export async function runPatchBuild(options) {
     installDependencies(); // this might modify a lockfile
 
     log.info('Starting patch build...');
-    return await runTest({ ...options, forceBranchName: baseRef }); // await here is necessary
+    return await runTest({ ...options, patchBranchName: baseRef }); // await here is necessary
   } finally {
     log.info('Restoring workspace...');
     await discardChanges(); // we need a clean state before checkout
