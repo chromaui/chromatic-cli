@@ -42,7 +42,7 @@ export async function runPatchBuild(options) {
   }
 
   log.info(`Checking out merge base commit: ${mergeBase}`);
-  checkout(mergeBase);
+  await checkout(mergeBase);
 
   try {
     log.info('Installing dependencies...');
@@ -50,6 +50,7 @@ export async function runPatchBuild(options) {
 
     log.info('Starting patch build...');
     await runTest({ ...options, forceBranchName: baseRef });
+    log.info('Patch build completed.');
   } finally {
     log.info('Restoring workspace...');
     await discardChanges(); // we need a clean state before checkout
