@@ -245,6 +245,7 @@ export async function runTest({
   only,
   skip,
   list,
+  forceBranchName,
   fromCI: inputFromCI = false,
   autoAcceptChanges = false,
   exitZeroOnChanges = false,
@@ -300,7 +301,7 @@ export async function runTest({
     branch,
     isTravisPrBuild,
     fromCI,
-  } = await getCommitAndBranch({ inputFromCI });
+  } = await getCommitAndBranch({ forceBranchName, inputFromCI });
 
   if (skip) {
     if (await client.runQuery(TesterSkipBuildMutation, { commit })) {

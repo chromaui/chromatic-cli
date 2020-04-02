@@ -13,10 +13,10 @@ const notHead = b => {
   return b;
 };
 
-export async function getCommitAndBranch({ inputFromCI } = {}) {
+export async function getCommitAndBranch({ forceBranchName, inputFromCI } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
-  let branch = await getBranch();
+  let branch = forceBranchName || (await getBranch());
 
   const {
     TRAVIS_EVENT_TYPE,

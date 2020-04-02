@@ -346,3 +346,7 @@ export async function checkout(ref) {
 export async function checkoutPrevious() {
   return execGitCommand(`git checkout -`);
 }
+
+export async function discardChanges() {
+  return execGitCommand(`git reset --hard`);
+}

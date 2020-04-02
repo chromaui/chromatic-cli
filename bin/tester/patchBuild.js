@@ -8,6 +8,7 @@ import {
   findMergeBase,
   checkout,
   checkoutPrevious,
+  discardChanges,
 } from '../git/git';
 import { runTest } from './index';
 
@@ -42,10 +43,12 @@ export async function runPatchBuild(options) {
   checkout(mergeBase);
 
   try {
-    installDependencies();
-    await runTest({ ...options }); // TODO set branch
+    await installDependencies(); // this might modify a lockfile
+    await runTest({ ...options, forceBranchName: baseRef });
   } finally {
-    checkoutPrevious();
-    installDependencies();
+    await discardChanges(); // we need a clean state before checkout
+    await checkoutPrevious();
+    await installDependencies();
+    await discardChanges(); // drop lockfile changes
   }
 }
