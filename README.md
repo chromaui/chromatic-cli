@@ -39,7 +39,7 @@ it does NOT:
 - uses: chromaui/action@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    projectToken: 'Your chromatic/chroma app_code'
+    projectToken: 'Your chromatic/chroma project token'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
     allowConsoleErrors: 'do not exit when runtime errors occur in storybook'
