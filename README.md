@@ -48,7 +48,7 @@ Do not run this based on a github pull_request event. If you do, the commit and 
 --project-token="<your token>"
 ```
 
-You can also use the environment variable: `CHROMATIC_APP_CODE`
+You can also use the environment variable: `CHROMATIC_PROJECT_CODE`
 
 ### Storybook options
 

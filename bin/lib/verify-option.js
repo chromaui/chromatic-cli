@@ -4,7 +4,7 @@ import { paramCase } from 'param-case';
 import dedent from 'ts-dedent';
 import { parse } from 'url';
 import { v4 as uuid } from 'uuid';
-import { CHROMATIC_CREATE_TUNNEL, CHROMATIC_APP_CODE } from '../constants';
+import { CHROMATIC_CREATE_TUNNEL, CHROMATIC_PROJECT_CODE } from '../constants';
 import { getStorybookConfiguration } from '../storybook/get-configuration';
 import { resolveHomeDir } from './resolveHomeDir';
 import { getProductVariables } from './cli';
@@ -17,7 +17,7 @@ export async function verifyOptions(cli, argv) {
   const cliOptions = {
     projectToken: Array.isArray(projectTokenInput)
       ? projectTokenInput[projectTokenInput.length - 1]
-      : projectTokenInput || CHROMATIC_APP_CODE,
+      : projectTokenInput || CHROMATIC_PROJECT_CODE,
     config: cli.config,
 
     only: cli.only,

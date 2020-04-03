@@ -13,7 +13,7 @@ const chroma = {
   product: 'chroma',
   script: 'chroma',
   command: 'chroma',
-  envVar: 'CHROMA_APP_CODE',
+  envVar: 'CHROMA_PROJECT_CODE',
   url: 'https://www.chromaui.com',
 };
 
@@ -21,7 +21,7 @@ const chromatic = {
   product: 'chromatic',
   script: 'chromatic',
   command: 'chromatic',
-  envVar: 'CHROMATIC_APP_CODE',
+  envVar: 'CHROMATIC_PROJECT_CODE',
   url: 'https://www.chromaticqa.com',
 };
 
