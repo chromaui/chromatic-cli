@@ -55,7 +55,7 @@ We suggest you use a secret to hide to app-code:
 - uses: chromaui/action@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
+    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
 
 You have to configure secrets in the settings tab (`https://github.com/{YOUR_ORGANSATION}/{YOUR_REPOSITORY}/settings/secrets`)
@@ -108,7 +108,7 @@ You can now validate the action by referencing the releases/v1 branch
 ```yaml
 - uses: chromaui/action@releases/v1
   with:
-    projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
+    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
 
 See the [actions tab](https://github.com/chromaui/action/actions) for runs of this action! :rocket:
@@ -120,5 +120,5 @@ After testing you can [create a v1 tag](https://github.com/actions/toolkit/blob/
 ```yaml
 - uses: chromaui/action@v1
   with:
-    projectToken: ${{ secrets.CHROMATIC_APP_CODE }}
+    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
