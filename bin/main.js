@@ -14,27 +14,27 @@ export async function parseArgv(argv) {
       $ chromatic
 
     Main options
-      --project-token <token>, -t  The code for your app, get from chromatic.com
-      
+      --project-token <token>, -t  The code for your app, get from chromatic.com (alternatively, set CHROMATIC_PROJECT_CODE)
+
     Storybook options
       --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
-      --storybook-build-dir, -d  <dirname>  Provide a directory with your built Storybook; use if you've already built your Storybook
-      
+      --storybook-build-dir, -d <dirname>  Provide a directory with your built Storybook; use if you've already built your Storybook
+
     Chromatic options
-      --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
+      --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]
       --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
       --exit-once-uploaded [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
-      --ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]'
-      --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline'
-      --no-interactive  Do not prompt for package.json changes')
-      --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)'
-      --allow-console-errors  continue, even when encountering runtime errors
+      --ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]
+      --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline
+      --no-interactive  Do not prompt for package.json changes
+      --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
+      --allow-console-errors  Continue, even when encountering runtime errors
 
-      Debug options
-      --skip  Skip chromatic tests (mark as passing)')
-      --list  List available stories (for debugging purposes)')
-      --ci  This build is running on CI, non-interactively (alternatively, pass CI=true)')
-      --debug  Output more debugging information')
+    Debug options
+      --skip  Skip chromatic tests (mark as passing)
+      --list  List available stories (for debugging purposes)
+      --ci  This build is running in continuous integration, non-interactively (alternatively, set CI=true)
+      --debug  Output more debugging information
     `,
     {
       argv,
