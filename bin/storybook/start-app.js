@@ -56,7 +56,13 @@ async function waitForResponse(child, url) {
   });
 }
 
-export default async function startApp({ scriptName, commandName, args, url, inheritStdio }) {
+export default async function startApp({
+  scriptName,
+  commandName,
+  args,
+  url,
+  options = { stdio: 'inherit' },
+}) {
   const env = {
     ...process.env,
     NODE_ENV: 'development',
@@ -81,7 +87,7 @@ export default async function startApp({ scriptName, commandName, args, url, inh
     child = spawn(execPath, [...(npmPathIsJs ? [npmPath] : []), 'run', scriptName, ...args], {
       env,
       cwd: process.cwd(),
-      ...(inheritStdio && { stdio: 'inherit' }),
+      ...options,
     });
   } else {
     if (!commandName) {

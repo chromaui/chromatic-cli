@@ -1,7 +1,7 @@
-import { spawn } from 'cross-spawn';
 import fetch from 'node-fetch';
 import { pathExists } from 'fs-extra';
 import path from 'path';
+import readline from 'readline';
 import denodeify from 'denodeify';
 import { confirm } from 'node-ask';
 import setupDebug from 'debug';
@@ -87,29 +87,51 @@ async function prepareAppOrBuild({
       ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `${names.script}-` }));
       debug(`Building Storybook to ${buildDirName}`);
 
+      const args = [
+        '--',
+        '-o',
+        buildDirName,
+        // Make Storybook build as quiet as possible
+        ...(storybookVersion && gte(storybookVersion, STORYBOOK_CLI_FLAGS_BY_VERSION['--loglevel'])
+          ? ['--loglevel', log.level === 'verbose' ? 'verbose' : 'error']
+          : []),
+      ];
+
       const child = await startApp({
         scriptName: buildScriptName,
-        // Make Storybook build as quiet as possible
-        args: [
-          '--',
-          '-o',
-          buildDirName,
-          ...(storybookVersion &&
-          gte(storybookVersion, STORYBOOK_CLI_FLAGS_BY_VERSION['--loglevel'])
-            ? ['--loglevel', log.level === 'verbose' ? 'verbose' : 'error']
-            : []),
-        ],
-        inheritStdio: true,
+        args,
+        options: { stdio: ['pipe', 'pipe', 'pipe'] },
       });
 
       // Wait for the process to exit
       await new Promise((res, rej) => {
-        child.on('error', rej);
+        const lines = [];
+        const rl = readline.createInterface({ input: child.stderr });
+
         child.on('close', code => {
           if (code !== 0) {
-            rej(new Error(`${buildScriptName} script exited with code ${code}`));
+            console.log('');
+            console.log('');
+            log.error('We tried building storybook for you, but it failed.');
+            log.error('This is the command we ran:');
+            console.log(`${buildScriptName} ${args.join(' ')}`);
+            console.log('');
+            log.info('Perhaps you could try running the above command yourself?');
+            log.info(
+              'or check the documentation for exporting storybook here: https://storybook.js.org/docs/basics/exporting-storybook'
+            );
+            console.log('');
+
+            rej(new Error(lines.join('\n')));
+            return;
           }
           res();
+        });
+
+        rl.on('line', l => {
+          if (l.match(/^ERR!/)) {
+            lines.push(l.toString().replace('ERR!', ''));
+          }
         });
       });
     }
@@ -118,7 +140,7 @@ async function prepareAppOrBuild({
 
     if (!exists) {
       if (buildScriptName) {
-        throw new Error(`Storybook did not build succesfully, there are likely errors above`);
+        throw new Error(`Storybook did not build successfully, there are likely errors above`);
       } else {
         throw new Error(dedent`
           It looks like your Storybook build (to directory: ${buildDirName}) failed, as that directory is empty. Perhaps something failed above?
