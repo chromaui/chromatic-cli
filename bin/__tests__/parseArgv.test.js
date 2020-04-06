@@ -3,7 +3,7 @@ import { parseArgv } from '../main';
 
 jest.mock('../constants', () => ({
   CHROMATIC_CREATE_TUNNEL: true,
-  CHROMATIC_PROJECT_CODE: 'env-code',
+  CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
 jest.mock('jsonfile', () => ({
@@ -18,7 +18,7 @@ jest.mock('jsonfile', () => ({
   }),
 }));
 
-process.env.CHROMATIC_PROJECT_CODE = 'test';
+process.env.CHROMATIC_PROJECT_TOKEN = 'test';
 
 describe('await parseArgv', () => {
   it('sets reasonable defaults', async () => {

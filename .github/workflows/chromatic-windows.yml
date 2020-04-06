@@ -17,4 +17,4 @@ jobs:
     - name: run chromatic
       run: yarn chromatic
       env: 
-        CHROMATIC_PROJECT_CODE: gcaw1ai2dgo
+        CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo

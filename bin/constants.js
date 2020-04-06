@@ -18,10 +18,9 @@ const STORYBOOK_CLI_FLAGS_BY_VERSION = {
   '--loglevel': '5.1.0',
 };
 
-const CHROMATIC_PROJECT_CODE =
-  process.env.CHROMATIC_PROJECT_CODE ||
+const CHROMATIC_PROJECT_TOKEN =
+  process.env.CHROMATIC_PROJECT_TOKEN ||
   process.env.CHROMATIC_APP_CODE || // backwards compatibility
-  process.env.CHROMA_PROJECT_CODE ||
   process.env.CHROMA_APP_CODE; // backwards compatibility
 
 export {
@@ -29,7 +28,7 @@ export {
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
   CHROMATIC_CREATE_TUNNEL,
-  CHROMATIC_PROJECT_CODE,
+  CHROMATIC_PROJECT_TOKEN,
   CHROMATIC_RETRIES,
   CHROMATIC_POLL_INTERVAL,
   CHROMATIC_TIMEOUT,

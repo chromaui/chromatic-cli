@@ -14,7 +14,7 @@ export async function parseArgv(argv) {
       $ chromatic
 
     Main options
-      --project-token <token>, -t  The code for your app, get from chromatic.com (alternatively, set CHROMATIC_PROJECT_CODE)
+      --project-token <token>, -t  The code for your app, get from chromatic.com (alternatively, set CHROMATIC_PROJECT_TOKEN)
 
     Storybook options
       --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
