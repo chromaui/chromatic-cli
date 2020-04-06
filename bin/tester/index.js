@@ -561,10 +561,10 @@ export async function runTest({
         dedent`
           Added script 'chromatic'. You can now run it here or in CI with 'npm run chromatic' (or 'yarn chromatic')
 
-          NOTE: I wrote your app code to the 'CHROMATIC_APP_CODE' environment variable. 
+          NOTE: I wrote your project token to the script via the \`--projectToken\` flag. 
           
-          The app code cannot be used to read story data, it can only be used to create new builds.
-          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via an environment variable instead.
+          The project token cannot be used to read story data, it can only be used to create new builds.
+          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via the \`CHROMATIC_PROJECT_TOKEN\` environment variable instead in your CI environment.
         `
       );
     } else {
