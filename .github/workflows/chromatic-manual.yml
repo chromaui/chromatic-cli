@@ -18,4 +18,4 @@ jobs:
     - name: run chromatic
       run: yarn chromatic
       env: 
-        CHROMATIC_APP_CODE: ${{ secrets.CHROMATIC_APP_CODE }}
+        CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo

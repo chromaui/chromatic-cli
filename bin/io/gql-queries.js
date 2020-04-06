@@ -1,6 +1,6 @@
 export const TesterCreateAppTokenMutation = `
-  mutation TesterCreateAppTokenMutation($appCode: String!) {
-    createAppToken(code: $appCode)
+  mutation TesterCreateAppTokenMutation($projectToken: String!) {
+    createAppToken(code: $projectToken)
   }
 `;
 

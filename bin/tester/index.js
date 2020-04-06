@@ -1,3 +1,4 @@
+import { spawn } from 'cross-spawn';
 import fetch from 'node-fetch';
 import { pathExists } from 'fs-extra';
 import path from 'path';
@@ -235,6 +236,7 @@ async function getEnvironment() {
 
 export async function runTest({
   appCode,
+  projectToken = appCode, // backwards compatibility
   buildScriptName,
   scriptName,
   exec: commandName,
@@ -279,13 +281,13 @@ export async function runTest({
 
   try {
     const { createAppToken: jwtToken } = await client.runQuery(TesterCreateAppTokenMutation, {
-      appCode,
+      projectToken,
     });
     client.headers = { ...client.headers, Authorization: `Bearer ${jwtToken}` };
   } catch (errors) {
     if (errors[0] && errors[0].message && errors[0].message.match('No app with code')) {
       throw new Error(dedent`
-        Incorrect app code '${appCode}'.
+        Incorrect project-token '${projectToken}'.
       
         If you don't have a project yet login to ${names.url} and create a new project.
         Or find your code on the manage page of an existing project.
@@ -536,10 +538,9 @@ export async function runTest({
   }
 
   if (!checkPackageJson(names) && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `${names.envVar}=${appCode} ${names.command} ${originalArgv
-      .slice(2)
-      .join(' ')}`
-      .replace(/--app-code[= ]\S+/, '')
+    const scriptCommand = `${names.command} ${originalArgv.slice(2).join(' ')}`
+      .replace(/--project-token[= ]\S+/, `--project-token="${projectToken}"`)
+      .replace(/--app-code[= ]\S+/, `--project-token="${projectToken}"`)
       .trim();
 
     const confirmed = await confirm(
