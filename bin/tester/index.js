@@ -432,15 +432,8 @@ export async function runTest({
     }));
 
     const onlineHint = `View it online at ${exitUrl}`;
-    log.info(dedent`
-      Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
-      specCount,
-      'story'
-    )}, ${pluralize(snapshotCount, 'snapshot')}).
 
-      ${onlineHint}.
-    `);
-
+    const publishOnly = !uiReview && !uiTests;
     if (wasLimited) {
       if (exceededThreshold) {
         log.warn(dedent`
@@ -464,7 +457,19 @@ export async function runTest({
       }
     }
 
-    const publishOnly = !uiReview && !uiTests;
+    if (!publishOnly) {
+      log.info(dedent`
+      Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
+        specCount,
+        'story'
+      )}, ${pluralize(snapshotCount, 'snapshot')}).
+
+      ${onlineHint}.
+    `);
+    } else {
+      log.info(`Published your Storybook. ${onlineHint}`);
+    }
+
     if (publishOnly || doExitOnceSentToChromatic) {
       return { exitCode: 0, exitUrl };
     }
