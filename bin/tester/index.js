@@ -1,3 +1,4 @@
+import { spawn } from 'cross-spawn';
 import fetch from 'node-fetch';
 import { pathExists } from 'fs-extra';
 import path from 'path';
@@ -532,10 +533,8 @@ export async function runTest({
   }
 
   if (!checkPackageJson(names) && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `${names.envVar}=${appCode} ${names.command} ${originalArgv
-      .slice(2)
-      .join(' ')}`
-      .replace(/--app-code[= ]\S+/, '')
+    const scriptCommand = `${names.command} ${originalArgv.slice(2).join(' ')}`
+      .replace(/--app-code[= ]\S+/, `--app-code="${appCode}"`)
       .trim();
 
     const confirmed = await confirm(
