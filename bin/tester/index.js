@@ -41,7 +41,7 @@ import { getStories } from '../storybook/getStories';
 export const debug = setupDebug('chromatic-cli:tester');
 
 let lastInProgressCount;
-async function waitForBuild(client, variables, { diffs }) {
+async function waitForBuild(client, variables) {
   const {
     app: { build, repository },
   } = await client.runQuery(TesterBuildQuery, variables);
@@ -51,15 +51,15 @@ async function waitForBuild(client, variables, { diffs }) {
   if (status === 'BUILD_IN_PROGRESS') {
     if (inProgressCount !== lastInProgressCount) {
       lastInProgressCount = inProgressCount;
+
       log.info(
-        diffs
-          ? `${inProgressCount}/${pluralize(snapshotCount, 'snapshot')} remain to test. ` +
-              `(${pluralize(changeCount, 'change')}, ${pluralize(errorCount, 'error')})`
-          : `${inProgressCount}/${pluralize(snapshotCount, 'story')} remain to publish. `
+        `Taking snapshots ${inProgressCount}/${snapshotCount}${
+          errorCount > 0 ? ` (${pluralize(errorCount, 'error')})` : ''
+        }`
       );
     }
     await new Promise(resolve => setTimeout(resolve, CHROMATIC_POLL_INTERVAL));
-    return waitForBuild(client, variables, { diffs });
+    return waitForBuild(client, variables);
   }
 
   return { build, repository };
@@ -442,18 +442,26 @@ export async function runTest({
     `);
 
     if (wasLimited) {
-      if (exceededThreshold)
+      if (exceededThreshold) {
         log.warn(dedent`
           Your build has been limited as your account is out of snapshots for the month.
           
           Visit ${billingUrl} to upgrade your plan.
         `);
-      if (paymentRequired)
+      } else if (paymentRequired) {
         log.warn(dedent`
           Your build has been limited as your account has a payment past due.
           
           Visit ${billingUrl} to upgrade your billing details.
         `);
+      } else {
+        // Future proofing for reasons we aren't aware of
+        log.warn(dedent`
+          Your build has been limited.
+          
+          Visit ${billingUrl} to upgrade your plan.
+        `);
+      }
     }
 
     const publishOnly = !uiReview && !uiTests;
@@ -461,13 +469,7 @@ export async function runTest({
       return { exitCode: 0, exitUrl };
     }
 
-    // FIXME:
-    const diffs = true;
-    const { build: buildOutput, repository } = await waitForBuild(
-      client,
-      { buildNumber },
-      { diffs }
-    );
+    const { build: buildOutput, repository } = await waitForBuild(client, { buildNumber });
 
     if (repository && repository.provider) {
       log.info(dedent`
@@ -481,7 +483,7 @@ export async function runTest({
     switch (buildStatus) {
       case 'BUILD_PASSED':
         log.info(
-          diffs
+          uiTests
             ? `Build ${buildNumber} passed! ${onlineHint}.`
             : `Build ${buildNumber} published! ${onlineHint}.`
         );
@@ -508,17 +510,10 @@ export async function runTest({
         break;
       case 'BUILD_FAILED':
         log.info(
-          diffs
-            ? dedent`
-                Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
+          dedent`
+            Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
               
-                ${onlineHint}.
-              `
-            : dedent`
-                Build ${buildNumber} was published but we found errors.
-              
-                ${onlineHint}.
-              `
+            ${onlineHint}.`
         );
         exitCode = 2;
         break;
