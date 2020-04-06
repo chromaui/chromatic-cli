@@ -245,7 +245,8 @@ export async function runTest({
   only,
   skip,
   list,
-  patchBranchName,
+  patchBaseRef,
+  patchHeadRef,
   fromCI: inputFromCI = false,
   autoAcceptChanges = false,
   exitZeroOnChanges = false,
@@ -301,7 +302,7 @@ export async function runTest({
     branch,
     isTravisPrBuild,
     fromCI,
-  } = await getCommitAndBranch({ patchBranchName, inputFromCI });
+  } = await getCommitAndBranch({ patchBaseRef, inputFromCI });
 
   if (skip) {
     if (await client.runQuery(TesterSkipBuildMutation, { commit })) {
@@ -421,6 +422,8 @@ export async function runTest({
         environment,
         fromCI,
         isTravisPrBuild,
+        patchBaseRef,
+        patchHeadRef,
         packageVersion,
         preserveMissingSpecs,
         runtimeSpecs,
