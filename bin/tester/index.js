@@ -18,7 +18,6 @@ import { checkPackageJson, addScriptToPackageJson } from '../lib/package-json';
 import GraphQLClient from '../io/GraphQLClient';
 import { getBaselineCommits } from '../git/git';
 import { version as packageVersion } from '../../package.json';
-import { getProductVariables } from '../lib/cli';
 import {
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
@@ -78,13 +77,11 @@ async function prepareAppOrBuild({
   createTunnel,
   storybookVersion,
 }) {
-  const names = getProductVariables();
-
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
     if (buildScriptName) {
       log.info(dedent`Building your Storybook`);
-      ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `${names.script}-` }));
+      ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `chromatic-` }));
       debug(`Building Storybook to ${buildDirName}`);
 
       const child = await startApp({
@@ -262,8 +259,6 @@ export async function runTest({
   sessionId,
   allowConsoleErrors,
 }) {
-  const names = getProductVariables();
-
   debug(`Creating build with session id: ${sessionId} - version: ${packageVersion}`);
   debug(
     `Connecting to index:${indexUrl} and ${
@@ -287,7 +282,7 @@ export async function runTest({
       throw new Error(dedent`
         Incorrect project-token '${projectToken}'.
       
-        If you don't have a project yet login to ${names.url} and create a new project.
+        If you don't have a project yet login to https://www.chromatic.com and create a new project.
         Or find your code on the manage page of an existing project.
       `);
     }
@@ -533,22 +528,22 @@ export async function runTest({
     }
   }
 
-  if (!checkPackageJson(names) && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `${names.command} ${originalArgv.slice(2).join(' ')}`
+  if (!checkPackageJson() && originalArgv && !fromCI && interactive) {
+    const scriptCommand = `chromatic ${originalArgv.slice(2).join(' ')}`
       .replace(/--project-token[= ]\S+/, `--project-token="${projectToken}"`)
       .replace(/--app-code[= ]\S+/, `--project-token="${projectToken}"`)
       .trim();
 
     const confirmed = await confirm(
-      `\nYou have not added the '${names.script}' script to your 'package.json'. Would you like me to do it for you?`
+      `\nYou have not added the 'chromatic' script to your 'package.json'. Would you like me to do it for you?`
     );
     if (confirmed) {
-      addScriptToPackageJson(names.script, scriptCommand);
+      addScriptToPackageJson('chromatic', scriptCommand);
       log.info(
         dedent`
-          Added script '${names.script}'. You can now run it here or in CI with 'npm run ${names.script}' (or 'yarn ${names.script}')
+          Added script 'chromatic'. You can now run it here or in CI with 'npm run chromatic' (or 'yarn chromatic')
 
-          NOTE: I wrote your app code to the '${names.envVar}' environment variable. 
+          NOTE: I wrote your app code to the 'CHROMATIC_APP_CODE' environment variable. 
           
           The app code cannot be used to read story data, it can only be used to create new builds.
           If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via an environment variable instead.
@@ -560,7 +555,7 @@ export async function runTest({
           No problem. You can add it later with:
           {
             "scripts": {
-              "${names.script}": "${scriptCommand}"
+              "chromatic": "${scriptCommand}"
             }
           }
         `
