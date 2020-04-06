@@ -344,8 +344,13 @@ export async function runTest({
   let buildNumber = 0;
   let snapshotCount = 0;
   let exitUrl = '';
-  let diffs;
   let buildStatus;
+  let uiTests;
+  let uiReview;
+  let wasLimited;
+  let billingUrl;
+  let exceededThreshold;
+  let paymentRequired;
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
@@ -397,10 +402,10 @@ export async function runTest({
         specCount,
         componentCount,
         webUrl: exitUrl,
+        features: { uiTests, uiReview },
+        wasLimited,
         app: {
-          account: {
-            features: { diffs },
-          },
+          account: { billingUrl, exceededThreshold, paymentRequired },
         },
       },
     } = await client.runQuery(TesterCreateBuildMutation, {
@@ -436,10 +441,28 @@ export async function runTest({
       ${onlineHint}.
     `);
 
-    if (doExitOnceSentToChromatic) {
+    if (wasLimited) {
+      if (exceededThreshold)
+        log.warn(dedent`
+          Your build has been limited as your account is out of snapshots for the month.
+          
+          Visit ${billingUrl} to upgrade your plan.
+        `);
+      if (paymentRequired)
+        log.warn(dedent`
+          Your build has been limited as your account has a payment past due.
+          
+          Visit ${billingUrl} to upgrade your billing details.
+        `);
+    }
+
+    const publishOnly = !uiReview && !uiTests;
+    if (publishOnly || doExitOnceSentToChromatic) {
       return { exitCode: 0, exitUrl };
     }
 
+    // FIXME:
+    const diffs = true;
     const { build: buildOutput, repository } = await waitForBuild(
       client,
       { buildNumber },
