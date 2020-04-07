@@ -2,7 +2,10 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'jsonfile';
 
-export function checkPackageJson({ command, script, appDir = process.cwd() } = {}) {
+const command = 'chromatic';
+const script = 'chromatic';
+
+export function checkPackageJson({ appDir = process.cwd() } = {}) {
   const packageJson = readFileSync(path.resolve(appDir, './package.json'));
 
   return Object.entries(packageJson.scripts || {}).find(
