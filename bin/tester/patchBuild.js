@@ -32,6 +32,7 @@ export async function runPatchBuild(options) {
   }
 
   // Get the merge base commit hash.
+  log.info(`Looking up the merge base for ${headRef} ${baseRef}...`);
   const mergeBase = await findMergeBase(headRef, baseRef);
   if (!mergeBase) {
     throw new Error(dedent`
