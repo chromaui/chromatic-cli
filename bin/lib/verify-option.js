@@ -7,7 +7,6 @@ import { v4 as uuid } from 'uuid';
 import { CHROMATIC_CREATE_TUNNEL, CHROMATIC_PROJECT_TOKEN } from '../constants';
 import { getStorybookConfiguration } from '../storybook/get-configuration';
 import { resolveHomeDir } from './resolveHomeDir';
-import { getProductVariables } from './cli';
 
 import log from './log';
 
@@ -55,16 +54,15 @@ export async function verifyOptions(cli, argv) {
 
     patchBuild: cli.patchBuild && cli.patchBuild.split('...').filter(Boolean),
   };
-  const names = getProductVariables();
 
   if (!cliOptions.projectToken) {
     throw new Error(dedent`
       You must provide an project token.
 
-      If you don't have a project yet login to ${names.url} and create a new project.
+      If you don't have a project yet login to https://www.chromatic.com and create a new project.
       Or find your code on the manage page of an existing project.
 
-      Pass your project token with the \`${names.envVar}\` environment variable or the \`--project-token\` flag.
+      Pass your project token with the \CHROMATIC_PROJECT_TOKEN\` environment variable or the \`--project-token\` flag.
     `);
   }
 
