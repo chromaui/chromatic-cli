@@ -23,7 +23,7 @@ function specFromStory({
     },
     parameters: {
       docsOnly,
-      fileName,
+      fileName: fileName && fileName.toString(),
       framework,
       ...(chromatic
         ? CHROMATIC_PARAMETERS.reduce(
