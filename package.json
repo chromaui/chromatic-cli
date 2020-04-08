@@ -1,5 +1,5 @@
 {
-  "name": "storybook-chromatic",
+  "name": "chromatic",
   "version": "3.5.2",
   "description": "Visual Testing for Storybook",
   "bugs": {

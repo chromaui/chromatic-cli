@@ -8,7 +8,7 @@ import chalk from 'chalk';
 
 const remainingFlags = process.argv.slice(2);
 
-const targets = ['storybook-chromatic', 'storybook-chroma'];
+const targets = ['chromatic'];
 
 const exec = (args, { pipe } = {}) => {
   return new Promise((res, rej) => {
