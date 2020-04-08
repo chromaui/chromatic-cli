@@ -13,11 +13,16 @@ export const TesterCreateBuildMutation = `
       snapshotCount
       componentCount
       webUrl
+      features {
+        uiTests
+        uiReview
+      }
+      wasLimited
       app {
         account {
-          features { 
-            diffs
-          }
+          exceededThreshold
+          paymentRequired
+          billingUrl
         }
       }
     }
