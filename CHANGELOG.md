@@ -1,3 +1,11 @@
+# 3.5.2 - 2020-02-18
+
+- FIX version of JSDOM to 16.1 as 16.2 includes a conflicting custom element support https://github.com/chromaui/chromatic-cli/issues/95
+
+# 3.5.1 - 2020-02-06
+
+- FIX setting the `fromCI` flag from our github action https://github.com/chromaui/action/issues/14
+
 # 3.5.0 - 2020-01-28
 
 - CHANGE so the CLI stop on storybook runtime errors https://github.com/chromaui/chromatic-cli/issues/75
@@ -6,6 +14,19 @@
 - IMPROVE readability of the error when build-storybook fails https://github.com/chromaui/chromatic-cli/issues/73
 - IMPROVE readability of the error when storybook runtime throws an error https://github.com/chromaui/chromatic-cli/issues/73
 - FIX `Intl.PluralRules.supportedLocalesOf is not a function` error https://github.com/chromaui/chromatic-cli/issues/76
+
+# 3.4.0 - 2019-12-25
+
+- FIX pubish script
+
+# 3.3.0 - 2019-12-25
+
+- IMPROVE logging when git fails
+- FIX script for windows
+- ADD `--exit-once-uploaded` flag
+- FIX escape chararacters in error messages
+
+# 3.2.0 failed upload to npm
 
 # 3.1.0 - 2019-11-04
 

@@ -128,4 +128,4 @@ const run = async list => {
   }
 };
 
-run(targets);
+run(targets).catch(e => process.exit(process.exitCode || 1));
