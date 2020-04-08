@@ -1,3 +1,4 @@
+import { spawn } from 'cross-spawn';
 import fetch from 'node-fetch';
 import { pathExists } from 'fs-extra';
 import path from 'path';
@@ -17,7 +18,6 @@ import { checkPackageJson, addScriptToPackageJson } from '../lib/package-json';
 import GraphQLClient from '../io/GraphQLClient';
 import { getBaselineCommits } from '../git/git';
 import { version as packageVersion } from '../../package.json';
-import { getProductVariables } from '../lib/cli';
 import {
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
@@ -41,9 +41,9 @@ import { getStories } from '../storybook/getStories';
 export const debug = setupDebug('chromatic-cli:tester');
 
 let lastInProgressCount;
-async function waitForBuild(client, variables, { diffs }) {
+async function waitForBuild(client, variables) {
   const {
-    app: { build },
+    app: { build, repository },
   } = await client.runQuery(TesterBuildQuery, variables);
 
   debug(`build:${JSON.stringify(build)}`);
@@ -51,18 +51,18 @@ async function waitForBuild(client, variables, { diffs }) {
   if (status === 'BUILD_IN_PROGRESS') {
     if (inProgressCount !== lastInProgressCount) {
       lastInProgressCount = inProgressCount;
+
       log.info(
-        diffs
-          ? `${inProgressCount}/${pluralize(snapshotCount, 'snapshot')} remain to test. ` +
-              `(${pluralize(changeCount, 'change')}, ${pluralize(errorCount, 'error')})`
-          : `${inProgressCount}/${pluralize(snapshotCount, 'story')} remain to publish. `
+        `Taking snapshots ${inProgressCount}/${snapshotCount}${
+          errorCount > 0 ? ` (${pluralize(errorCount, 'error')})` : ''
+        }`
       );
     }
     await new Promise(resolve => setTimeout(resolve, CHROMATIC_POLL_INTERVAL));
-    return waitForBuild(client, variables, { diffs });
+    return waitForBuild(client, variables);
   }
 
-  return build;
+  return { build, repository };
 }
 
 async function prepareAppOrBuild({
@@ -77,13 +77,11 @@ async function prepareAppOrBuild({
   createTunnel,
   storybookVersion,
 }) {
-  const names = getProductVariables();
-
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
     if (buildScriptName) {
       log.info(dedent`Building your Storybook`);
-      ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `${names.script}-` }));
+      ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `chromatic-` }));
       debug(`Building Storybook to ${buildDirName}`);
 
       const child = await startApp({
@@ -235,6 +233,7 @@ async function getEnvironment() {
 
 export async function runTest({
   appCode,
+  projectToken = appCode, // backwards compatibility
   buildScriptName,
   scriptName,
   exec: commandName,
@@ -245,6 +244,8 @@ export async function runTest({
   only,
   skip,
   list,
+  patchBaseRef,
+  patchHeadRef,
   fromCI: inputFromCI = false,
   autoAcceptChanges = false,
   exitZeroOnChanges = false,
@@ -260,8 +261,6 @@ export async function runTest({
   sessionId,
   allowConsoleErrors,
 }) {
-  const names = getProductVariables();
-
   debug(`Creating build with session id: ${sessionId} - version: ${packageVersion}`);
   debug(
     `Connecting to index:${indexUrl} and ${
@@ -277,15 +276,15 @@ export async function runTest({
 
   try {
     const { createAppToken: jwtToken } = await client.runQuery(TesterCreateAppTokenMutation, {
-      appCode,
+      projectToken,
     });
     client.headers = { ...client.headers, Authorization: `Bearer ${jwtToken}` };
   } catch (errors) {
     if (errors[0] && errors[0].message && errors[0].message.match('No app with code')) {
       throw new Error(dedent`
-        Incorrect app code '${appCode}'.
+        Incorrect project-token '${projectToken}'.
       
-        If you don't have a project yet login to ${names.url} and create a new project.
+        If you don't have a project yet login to https://www.chromatic.com and create a new project.
         Or find your code on the manage page of an existing project.
       `);
     }
@@ -300,7 +299,7 @@ export async function runTest({
     branch,
     isTravisPrBuild,
     fromCI,
-  } = await getCommitAndBranch({ inputFromCI });
+  } = await getCommitAndBranch({ patchBaseRef, inputFromCI });
 
   if (skip) {
     if (await client.runQuery(TesterSkipBuildMutation, { commit })) {
@@ -347,8 +346,13 @@ export async function runTest({
   let buildNumber = 0;
   let snapshotCount = 0;
   let exitUrl = '';
-  let diffs;
   let buildStatus;
+  let uiTests;
+  let uiReview;
+  let wasLimited;
+  let billingUrl;
+  let exceededThreshold;
+  let paymentRequired;
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
@@ -400,10 +404,10 @@ export async function runTest({
         specCount,
         componentCount,
         webUrl: exitUrl,
+        features: { uiTests, uiReview },
+        wasLimited,
         app: {
-          account: {
-            features: { diffs },
-          },
+          account: { billingUrl, exceededThreshold, paymentRequired },
         },
       },
     } = await client.runQuery(TesterCreateBuildMutation, {
@@ -420,6 +424,8 @@ export async function runTest({
         environment,
         fromCI,
         isTravisPrBuild,
+        patchBaseRef,
+        patchHeadRef,
         packageVersion,
         preserveMissingSpecs,
         runtimeSpecs,
@@ -430,25 +436,63 @@ export async function runTest({
     }));
 
     const onlineHint = `View it online at ${exitUrl}`;
-    log.info(dedent`
+
+    const publishOnly = !uiReview && !uiTests;
+    if (wasLimited) {
+      if (exceededThreshold) {
+        log.warn(dedent`
+          Your build has been limited as your account is out of snapshots for the month.
+          
+          Visit ${billingUrl} to upgrade your plan.
+        `);
+      } else if (paymentRequired) {
+        log.warn(dedent`
+          Your build has been limited as your account has a payment past due.
+          
+          Visit ${billingUrl} to upgrade your billing details.
+        `);
+      } else {
+        // Future proofing for reasons we aren't aware of
+        log.warn(dedent`
+          Your build has been limited.
+          
+          Visit ${billingUrl} to upgrade your plan.
+        `);
+      }
+    }
+
+    if (!publishOnly) {
+      log.info(dedent`
       Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
-      specCount,
-      'story'
-    )}, ${pluralize(snapshotCount, 'snapshot')}).
+        specCount,
+        'story'
+      )}, ${pluralize(snapshotCount, 'snapshot')}).
 
       ${onlineHint}.
     `);
+    } else {
+      log.info(`Published your Storybook. ${onlineHint}`);
+    }
 
-    if (doExitOnceSentToChromatic) return { exitCode: 0, exitUrl };
+    if (publishOnly || doExitOnceSentToChromatic) {
+      return { exitCode: 0, exitUrl };
+    }
 
-    const buildOutput = await waitForBuild(client, { buildNumber }, { diffs });
+    const { build: buildOutput, repository } = await waitForBuild(client, { buildNumber });
+
+    if (repository && repository.provider) {
+      log.info(dedent`
+        To speed up your CI, as your application is linked to a ${repository.provider} repository and Chromatic will report results there, pass the "--exit-once-uploaded" flag to skip waiting on results. 
+        Read more here: https://github.com/chromaui/chromatic-cli/#chromatic-options
+      `);
+    }
 
     ({ changeCount, errorCount, status: buildStatus } = buildOutput);
 
     switch (buildStatus) {
       case 'BUILD_PASSED':
         log.info(
-          diffs
+          uiTests
             ? `Build ${buildNumber} passed! ${onlineHint}.`
             : `Build ${buildNumber} published! ${onlineHint}.`
         );
@@ -475,17 +519,10 @@ export async function runTest({
         break;
       case 'BUILD_FAILED':
         log.info(
-          diffs
-            ? dedent`
-                Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
+          dedent`
+            Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
               
-                ${onlineHint}.
-              `
-            : dedent`
-                Build ${buildNumber} was published but we found errors.
-              
-                ${onlineHint}.
-              `
+            ${onlineHint}.`
         );
         exitCode = 2;
         break;
@@ -518,26 +555,25 @@ export async function runTest({
     }
   }
 
-  if (!checkPackageJson(names) && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `${names.envVar}=${appCode} ${names.command} ${originalArgv
-      .slice(2)
-      .join(' ')}`
-      .replace(/--app-code[= ]\S+/, '')
+  if (!checkPackageJson() && originalArgv && !fromCI && interactive) {
+    const scriptCommand = `chromatic ${originalArgv.slice(2).join(' ')}`
+      .replace(/--project-token[= ]\S+/, `--project-token="${projectToken}"`)
+      .replace(/--app-code[= ]\S+/, `--project-token="${projectToken}"`)
       .trim();
 
     const confirmed = await confirm(
-      `\nYou have not added the '${names.script}' script to your 'package.json'. Would you like me to do it for you?`
+      `\nYou have not added the 'chromatic' script to your 'package.json'. Would you like me to do it for you?`
     );
     if (confirmed) {
-      addScriptToPackageJson(names.script, scriptCommand);
+      addScriptToPackageJson('chromatic', scriptCommand);
       log.info(
         dedent`
-          Added script '${names.script}'. You can now run it here or in CI with 'npm run ${names.script}' (or 'yarn ${names.script}')
+          Added script 'chromatic'. You can now run it here or in CI with 'npm run chromatic' (or 'yarn chromatic')
 
-          NOTE: I wrote your app code to the '${names.envVar}' environment variable. 
+          NOTE: I wrote your project token to the script via the \`--projectToken\` flag. 
           
-          The app code cannot be used to read story data, it can only be used to create new builds.
-          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via an environment variable instead.
+          The project token cannot be used to read story data, it can only be used to create new builds.
+          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via the \`CHROMATIC_PROJECT_TOKEN\` environment variable instead in your CI environment.
         `
       );
     } else {
@@ -546,7 +582,7 @@ export async function runTest({
           No problem. You can add it later with:
           {
             "scripts": {
-              "${names.script}": "${scriptCommand}"
+              "chromatic": "${scriptCommand}"
             }
           }
         `
