@@ -1,6 +1,6 @@
 import { readFileSync } from 'jsonfile';
 import path from 'path';
-import paramCase from 'param-case';
+import { paramCase } from 'param-case';
 import dedent from 'ts-dedent';
 import { parse } from 'url';
 import { v4 as uuid } from 'uuid';
