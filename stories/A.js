@@ -17,6 +17,8 @@ export default function A({ thing, backgroundColor, ...props }) {
     computedStyle = { ...style, backgroundColor };
   }
 
+  console.log(Intl.DateTimeFormat.supportedLocalesOf(['ban']));
+
   return <div {...props} style={computedStyle} />;
 }
 
