@@ -286,11 +286,23 @@ export function addShimsToJSDOM(window) {
     }
   }
 
-  const alwaysFn = C =>
-    // eslint-disable-next-line func-names
-    Object.assign(function() {
-      return new C();
-    }, C);
+  const alwaysFn = C => {
+    const statics = Object.getOwnPropertyNames(C)
+      .filter(n => typeof C[n] === 'function')
+      .reduce((acc, name) => {
+        acc[name] = C[name];
+        return acc;
+      }, {});
+
+    return Object.assign(
+      // eslint-disable-next-line func-names
+      function() {
+        return new C();
+      },
+      C,
+      statics
+    );
+  };
 
   class IntlDateTimeFormatMock extends IntlFormatMock {}
   class IntlNumberFormatMock extends IntlFormatMock {}
