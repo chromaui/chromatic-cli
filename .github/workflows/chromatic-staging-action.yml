@@ -1,4 +1,4 @@
-name: "Chromatic via action - staging"
+name: "[Staging] Chromatic via action"
 on: [push, pull_request]
 
 jobs:
