@@ -17,5 +17,5 @@ jobs:
     - name: run chromatic
       run: yarn chromatic
       env: 
-        CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+        CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
         CHROMATIC_INDEX_URL: https://staging-www.chromaticqa.com
