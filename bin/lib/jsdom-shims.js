@@ -296,7 +296,7 @@ export function addShimsToJSDOM(window) {
     // Get all static methods defined on any ancestor
     const statics = classHierarchy
       .map(klass => Object.getOwnPropertyNames(klass))
-      .flat()
+      .reduce((a, b) => [...a, ...b], []) // flatten
       .filter(n => typeof C[n] === 'function')
       .reduce((acc, name) => {
         acc[name] = C[name];
