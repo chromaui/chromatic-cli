@@ -1,0 +1,17 @@
+name: "Chromatic via action - staging"
+on: [push, pull_request]
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: |
+        yarn
+    - uses: chromaui/action@v1
+      env:
+        DEBUG: chromatic-cli
+        CHROMATIC_INDEX_URL: https://staging-www.chromaticqa.com
+      with:
+        projectToken: gcaw1ai2dgo
+        token: ${{ secrets.GITHUB_TOKEN }}
