@@ -330,3 +330,5 @@ export function addShimsToJSDOM(window) {
 
   mockCanvas(window);
 }
+
+// test
