@@ -11,6 +11,8 @@ jobs:
     - uses: chromaui/action@v1
       env:
         DEBUG: chromatic-cli
+        CHROMATIC_APP_CODE: mpm7osoy9sa
+        CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
         CHROMATIC_INDEX_URL: https://staging-www.chromaticqa.com
       with:
         appCode: mpm7osoy9sa
