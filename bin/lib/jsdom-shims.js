@@ -287,7 +287,16 @@ export function addShimsToJSDOM(window) {
   }
 
   const alwaysFn = C => {
-    const statics = Object.getOwnPropertyNames(C)
+    // Search up the prototype chain until we hit base. The base class of Class has no name I guess.
+    const classHierarchy = [];
+    for (let curr = C; curr.name; curr = Object.getPrototypeOf(curr)) {
+      classHierarchy.push(curr);
+    }
+
+    // Get all static methods defined on any ancestor
+    const statics = classHierarchy
+      .map(klass => Object.getOwnPropertyNames(klass))
+      .flat()
       .filter(n => typeof C[n] === 'function')
       .reduce((acc, name) => {
         acc[name] = C[name];
