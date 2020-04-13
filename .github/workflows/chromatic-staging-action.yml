@@ -13,5 +13,6 @@ jobs:
         DEBUG: chromatic-cli
         CHROMATIC_INDEX_URL: https://staging-www.chromaticqa.com
       with:
+        appCode: mpm7osoy9sa
         projectToken: mpm7osoy9sa
         token: ${{ secrets.GITHUB_TOKEN }}
