@@ -115,7 +115,11 @@ beforeEach(() => {
   processEnv = process.env;
   process.env = { DISABLE_LOGGING: true };
   confirm.mockReset();
-  startApp.mockReset().mockReturnValue({ on: jest.fn() });
+  startApp.mockReset().mockReturnValue({
+    on: jest.fn(),
+    stderr: { on: jest.fn(), resume: jest.fn() },
+    stdout: { on: jest.fn(), resume: jest.fn() },
+  });
   checkResponse.mockReset();
   openTunnel.mockReset().mockReturnValue({
     url: 'http://tunnel.com/?clientId=foo',
@@ -346,6 +350,8 @@ it('calls out to npm build script passed and uploads to s3', async () => {
         cb(0);
       }
     }),
+    stderr: { on: jest.fn(), resume: jest.fn() },
+    stdout: { on: jest.fn(), resume: jest.fn() },
   });
   await runTest({
     ...defaultOptions,
