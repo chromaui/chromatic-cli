@@ -1,5 +1,32 @@
 /* eslint-disable @typescript-eslint/no-empty-function, max-classes-per-file, no-param-reassign */
 
+const alwaysFn = C => {
+  // Search up the prototype chain until we hit base. The base class of Class has no name I guess.
+  const classHierarchy = [];
+  for (let curr = C; curr.name; curr = Object.getPrototypeOf(curr)) {
+    classHierarchy.push(curr);
+  }
+
+  // Get all static methods defined on any ancestor
+  const statics = classHierarchy
+    .map(klass => Object.getOwnPropertyNames(klass))
+    .reduce((a, b) => [...a, ...b], []) // flatten
+    .filter(n => typeof C[n] === 'function')
+    .reduce((acc, name) => {
+      acc[name] = C[name];
+      return acc;
+    }, {});
+
+  return Object.assign(
+    // eslint-disable-next-line func-names
+    function() {
+      return new C();
+    },
+    C,
+    statics
+  );
+};
+
 // Add canvas mock based on this comment: https://github.com/jsdom/jsdom/issues/1782#issuecomment-337656878
 function mockCanvas(window) {
   window.HTMLCanvasElement.prototype.getContext = () => ({
@@ -62,12 +89,6 @@ function mockIntl(window) {
         return '';
       }
     }
-
-    const alwaysFn = C =>
-      // eslint-disable-next-line func-names
-      Object.assign(function() {
-        return new C();
-      }, C);
 
     class IntlDateTimeFormatMock extends IntlFormatMock {}
     class IntlNumberFormatMock extends IntlFormatMock {}
