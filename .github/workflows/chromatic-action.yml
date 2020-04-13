@@ -8,9 +8,9 @@ jobs:
     - uses: actions/checkout@v1
     - run: |
         yarn
-    - uses: chromaui/action@releases/v1
+    - uses: chromaui/action@v1
       env:
         DEBUG: chromatic-cli
       with:
-        appCode: ${{ secrets.CHROMATIC_APP_CODE }}
+        projectToken: gcaw1ai2dgo
         token: ${{ secrets.GITHUB_TOKEN }}

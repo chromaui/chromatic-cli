@@ -94,7 +94,7 @@ export default async function getRuntimeSpecs(
     if (hasErrors) {
       if (!allowConsoleErrors) {
         console.log(dedent`
-          This very likely caused some stories not working right or getting detected by Chromatic
+          This is very likely caused by some stories either not working right or not getting detected by Chromatic
           Please fix the errors, we can't continue..
           ${separator}
         `);
@@ -102,7 +102,7 @@ export default async function getRuntimeSpecs(
         throw new Error('Errors detected in Storybook runtime');
       } else {
         console.log(dedent`
-          This very likely caused some stories not working right or getting detected by Chromatic
+          This is very likely caused by some stories either not working right or not getting detected by Chromatic
           Please fix the errors, continuing because you passed in --allow-console-errors, this is not recommended
           ${separator}
       `);
