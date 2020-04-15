@@ -457,8 +457,6 @@ export async function runTest({
       isolatorUrl,
     }));
 
-    const onlineHint = `View it online at ${exitUrl}`;
-
     const publishOnly = !uiReview && !uiTests;
     if (wasLimited) {
       if (exceededThreshold) {
@@ -483,17 +481,21 @@ export async function runTest({
       }
     }
 
-    if (!publishOnly) {
-      log.info(dedent`
-      Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
-        specCount,
-        'story'
-      )}, ${pluralize(snapshotCount, 'snapshot')}).
+    const onlineHint =
+      buildNumber === 1
+        ? `Continue setup at ${exitUrl.replace('/build', '/setup').replace('&number=1', '')}`
+        : `View it online at ${exitUrl}`;
 
-      ${onlineHint}.
-    `);
-    } else {
+    if (publishOnly) {
       log.info(`Published your Storybook. ${onlineHint}`);
+    } else {
+      const components = pluralize(componentCount, 'component');
+      const specs = pluralize(specCount, 'story');
+      const snapshots = pluralize(snapshotCount, 'snapshot');
+      log.info(`Started build ${buildNumber} (${components}, ${specs}, ${snapshots}).`);
+      if (buildNumber > 1) {
+        log.info(onlineHint);
+      }
     }
 
     if (publishOnly || doExitOnceSentToChromatic) {
@@ -515,8 +517,8 @@ export async function runTest({
       case 'BUILD_PASSED':
         log.info(
           uiTests
-            ? `Build ${buildNumber} passed! ${onlineHint}.`
-            : `Build ${buildNumber} published! ${onlineHint}.`
+            ? `Build ${buildNumber} passed! ${onlineHint}`
+            : `Build ${buildNumber} published! ${onlineHint}`
         );
         exitCode = 0;
         break;
@@ -527,7 +529,7 @@ export async function runTest({
         log.info(dedent`
           Build ${buildNumber} has ${pluralize(changeCount, 'change')}.
 
-          ${onlineHint}.
+          ${onlineHint}
         `);
         console.log('');
         exitCode = doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
@@ -544,7 +546,7 @@ export async function runTest({
           dedent`
             Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
               
-            ${onlineHint}.`
+            ${onlineHint}`
         );
         exitCode = 2;
         break;
