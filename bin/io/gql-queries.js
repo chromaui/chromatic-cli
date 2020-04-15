@@ -24,6 +24,7 @@ export const TesterCreateBuildMutation = `
           paymentRequired
           billingUrl
         }
+        setupUrl
       }
     }
   }

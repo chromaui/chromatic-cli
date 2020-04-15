@@ -373,6 +373,7 @@ export async function runTest({
   let uiReview;
   let wasLimited;
   let billingUrl;
+  let setupUrl;
   let exceededThreshold;
   let paymentRequired;
 
@@ -430,6 +431,7 @@ export async function runTest({
         wasLimited,
         app: {
           account: { billingUrl, exceededThreshold, paymentRequired },
+          setupUrl,
         },
       },
     } = await client.runQuery(TesterCreateBuildMutation, {
@@ -482,9 +484,7 @@ export async function runTest({
     }
 
     const onlineHint =
-      buildNumber === 1
-        ? `Continue setup at ${exitUrl.replace('/build', '/setup').replace('&number=1', '')}`
-        : `View it online at ${exitUrl}`;
+      buildNumber === 1 ? `Continue setup at ${setupUrl}` : `View it online at ${exitUrl}`;
 
     if (publishOnly) {
       log.info(`Published your Storybook. ${onlineHint}`);
