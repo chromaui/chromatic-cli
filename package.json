@@ -73,7 +73,6 @@
     "node-fetch": "^2.6.0",
     "node-loggly-bulk": "^2.2.4",
     "npmlog": "^4.1.2",
-    "param-case": "^3.0.3",
     "pino": "5.17.0",
     "pkg-up": "^3.1.0",
     "progress": "^2.0.3",
