@@ -540,7 +540,7 @@ export async function runTest({
           ${onlineHint}
         `);
         console.log('');
-        exitCode = isOnboarding || doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
+        exitCode = doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
           log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
