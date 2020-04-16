@@ -51,9 +51,10 @@ async function waitForBuild(client, variables) {
   if (status === 'BUILD_IN_PROGRESS') {
     if (inProgressCount !== lastInProgressCount) {
       lastInProgressCount = inProgressCount;
+      const progress = snapshotCount - inProgressCount + 1;
 
       log.info(
-        `Taking snapshots ${inProgressCount}/${snapshotCount}${
+        `Taking snapshots ${progress}/${snapshotCount}${
           errorCount > 0 ? ` (${pluralize(errorCount, 'error')})` : ''
         }`
       );
