@@ -376,6 +376,7 @@ export async function runTest({
   let setupUrl;
   let exceededThreshold;
   let paymentRequired;
+  let didAutoAcceptChanges;
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
@@ -429,6 +430,7 @@ export async function runTest({
         webUrl: exitUrl,
         features: { uiTests, uiReview },
         wasLimited,
+        autoAcceptChanges: didAutoAcceptChanges,
         app: {
           account: { billingUrl, exceededThreshold, paymentRequired },
           setupUrl,
@@ -483,8 +485,10 @@ export async function runTest({
       }
     }
 
-    const onlineHint =
-      buildNumber === 1 ? `Continue setup at ${setupUrl}` : `View it online at ${exitUrl}`;
+    const isOnboarding = buildNumber === 1 || (didAutoAcceptChanges && !doAutoAcceptChanges);
+    const onlineHint = isOnboarding
+      ? `Continue setup at ${setupUrl}`
+      : `View it online at ${exitUrl}`;
 
     if (publishOnly) {
       log.info(`Published your Storybook. ${onlineHint}`);
@@ -526,13 +530,15 @@ export async function runTest({
       case 'BUILD_ACCEPTED':
       case 'BUILD_PENDING':
       case 'BUILD_DENIED':
-        log.info(dedent`
+        if (!isOnboarding) {
+          log.info(dedent`
           Build ${buildNumber} has ${pluralize(changeCount, 'change')}.
 
           ${onlineHint}
         `);
-        console.log('');
-        exitCode = doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
+          console.log('');
+        }
+        exitCode = isOnboarding || doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
           log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
