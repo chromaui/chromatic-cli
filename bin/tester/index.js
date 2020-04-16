@@ -530,15 +530,16 @@ export async function runTest({
       // They may have sneakily looked at the build while we were waiting
       case 'BUILD_ACCEPTED':
       case 'BUILD_PENDING':
-      case 'BUILD_DENIED':
-        if (!isOnboarding) {
-          log.info(dedent`
-          Build ${buildNumber} has ${pluralize(changeCount, 'change')}.
+      case 'BUILD_DENIED': {
+        const statusText = isOnboarding
+          ? 'Build complete.'
+          : `Build ${buildNumber} has ${pluralize(changeCount, 'change')}.`;
+        log.info(dedent`
+          ${statusText}
 
           ${onlineHint}
         `);
-          console.log('');
-        }
+        console.log('');
         exitCode = isOnboarding || doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
         if (exitCode !== 0) {
           log.info(dedent`
@@ -548,6 +549,7 @@ export async function runTest({
           `);
         }
         break;
+      }
       case 'BUILD_FAILED':
         log.info(
           dedent`
