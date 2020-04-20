@@ -149,7 +149,6 @@ async function prepareAppOrBuild({
     log.info(dedent`Uploading your built Storybook...`);
     const isolatorUrl = await uploadToS3(buildDirName, client);
     debug(`uploading to s3, got ${isolatorUrl}`);
-    log.info(dedent`Uploaded your build, verifying`);
 
     return { isolatorUrl };
   }
@@ -407,9 +406,7 @@ export async function runTest({
     debug(`connected to ${isolatorUrl} success`);
   }
 
-  log.info(
-    `Uploading and verifying build (this may take a few minutes depending on your connection)`
-  );
+  log.info(`Verifying build (this may take a few minutes depending on your connection)`);
 
   try {
     const runtimeSpecs = await getStories({
@@ -603,7 +600,7 @@ export async function runTest({
         dedent`
           Added script 'chromatic'. You can now run it here or in CI with 'npm run chromatic' (or 'yarn chromatic')
 
-          NOTE: I wrote your project token to the script via the \`--projectToken\` flag. 
+          NOTE: I wrote your project token to the script via the \`--project-token\` flag. 
           
           The project token cannot be used to read story data, it can only be used to create new builds.
           If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via the \`CHROMATIC_PROJECT_TOKEN\` environment variable instead in your CI environment.
