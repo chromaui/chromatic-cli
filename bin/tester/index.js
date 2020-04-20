@@ -612,7 +612,7 @@ export async function runTest({
           No problem. You can add it later with:
           {
             "scripts": {
-              "chromatic": "${scriptCommand}"
+              "chromatic": "${scriptCommand} --project-token=${projectToken}"
             }
           }
         `
