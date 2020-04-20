@@ -81,7 +81,9 @@ async function prepareAppOrBuild({
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
     if (buildScriptName) {
-      log.info(dedent`Building your Storybook`);
+      log.info(
+        dedent`Building your Storybook (this can take a minute depending on how many stories you have)`
+      );
       ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `chromatic-` }));
       debug(`Building Storybook to ${buildDirName}`);
 
