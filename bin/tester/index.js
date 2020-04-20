@@ -603,7 +603,7 @@ export async function runTest({
           NOTE: Your project token was added to the script via the \`--project-token\` flag. 
           
           The project token cannot be used to read story data, it can only be used to create new builds.
-          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via the \`CHROMATIC_PROJECT_TOKEN\` environment variable instead in your CI environment.
+          If you're running Chromatic via continuous integration, we recommend setting \`CHROMATIC_PROJECT_TOKEN\` environment variable in your CI environment. You can then remove the --project-token from your 'package.json'.
         `
       );
     } else {
