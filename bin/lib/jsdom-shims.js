@@ -205,7 +205,7 @@ export function addShimsToJSDOM(window) {
 
   Object.defineProperty(window, 'crypto', {
     value: {
-      getRandomValues: () => 0,
+      getRandomValues: (arr) => arr.fill(0),
     },
     writable: true,
   });
