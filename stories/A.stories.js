@@ -43,19 +43,19 @@ storiesOf('basics/A', module)
       <div>
         <img
           alt=""
-          src="http://fpoimg.com/100x100?text=foobar"
+          src="http://fpoimg.com/100x100?text=foozbar"
           data-chromatic="ignore"
           style={{ border: '2px solid orangered' }}
         />
         <img
           alt=""
-          src="http://fpoimg.com/100x100?text=foobar"
+          src="http://fpoimg.com/100x100?text=foozbar"
           className="chromatic-ignore"
           style={{ border: '2px solid orangered' }}
         />
         <img
           alt=""
-          src="http://fpoimg.com/100x100?text=foobar"
+          src="http://fpoimg.com/100x100?text=foozbar"
           style={{ border: '2px solid green' }}
         />
       </div>
