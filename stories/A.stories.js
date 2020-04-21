@@ -37,4 +37,27 @@ storiesOf('basics/A', module)
   )
   .add('disabled', () => <AComponent thing={() => {}}>Disabled</AComponent>, {
     chromatic: { disable: true },
+  })
+  .add('with ignored', () => {
+    return (
+      <div>
+        <img
+          alt=""
+          src="http://fpoimg.com/100x100?text=foobar"
+          data-chromatic="ignore"
+          style={{ border: '2px solid orangered' }}
+        />
+        <img
+          alt=""
+          src="http://fpoimg.com/100x100?text=foobar"
+          className="chromatic-ignore"
+          style={{ border: '2px solid orangered' }}
+        />
+        <img
+          alt=""
+          src="http://fpoimg.com/100x100?text=foobar"
+          style={{ border: '2px solid green' }}
+        />
+      </div>
+    );
   });
