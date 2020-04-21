@@ -78,6 +78,7 @@ export async function uploadToS3(source, client) {
             headers: {
               'content-type': contentType,
               'content-length': contentLength,
+              'cache-control': 'max-age=31536000',
             },
           });
 

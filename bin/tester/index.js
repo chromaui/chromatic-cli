@@ -51,9 +51,10 @@ async function waitForBuild(client, variables) {
   if (status === 'BUILD_IN_PROGRESS') {
     if (inProgressCount !== lastInProgressCount) {
       lastInProgressCount = inProgressCount;
+      const progress = snapshotCount - inProgressCount + 1;
 
       log.info(
-        `Taking snapshots ${inProgressCount}/${snapshotCount}${
+        `Taking snapshots ${progress}/${snapshotCount}${
           errorCount > 0 ? ` (${pluralize(errorCount, 'error')})` : ''
         }`
       );
@@ -373,8 +374,10 @@ export async function runTest({
   let uiReview;
   let wasLimited;
   let billingUrl;
+  let setupUrl;
   let exceededThreshold;
   let paymentRequired;
+  let didAutoAcceptChanges;
 
   const { cleanup, isolatorUrl, cachedUrl } = await prepareAppOrBuild({
     storybookVersion,
@@ -428,8 +431,10 @@ export async function runTest({
         webUrl: exitUrl,
         features: { uiTests, uiReview },
         wasLimited,
+        autoAcceptChanges: didAutoAcceptChanges,
         app: {
           account: { billingUrl, exceededThreshold, paymentRequired },
+          setupUrl,
         },
       },
     } = await client.runQuery(TesterCreateBuildMutation, {
@@ -457,8 +462,6 @@ export async function runTest({
       isolatorUrl,
     }));
 
-    const onlineHint = `View it online at ${exitUrl}`;
-
     const publishOnly = !uiReview && !uiTests;
     if (wasLimited) {
       if (exceededThreshold) {
@@ -483,17 +486,21 @@ export async function runTest({
       }
     }
 
-    if (!publishOnly) {
-      log.info(dedent`
-      Started Build ${buildNumber} (${pluralize(componentCount, 'component')}, ${pluralize(
-        specCount,
-        'story'
-      )}, ${pluralize(snapshotCount, 'snapshot')}).
+    const isOnboarding = buildNumber === 1 || (didAutoAcceptChanges && !doAutoAcceptChanges);
+    const onlineHint = isOnboarding
+      ? `Continue setup at ${setupUrl}`
+      : `View it online at ${exitUrl}`;
 
-      ${onlineHint}.
-    `);
-    } else {
+    if (publishOnly) {
       log.info(`Published your Storybook. ${onlineHint}`);
+    } else {
+      const components = pluralize(componentCount, 'component');
+      const specs = pluralize(specCount, 'story');
+      const snapshots = pluralize(snapshotCount, 'snapshot');
+      log.info(`Started build ${buildNumber} (${components}, ${specs}, ${snapshots}).`);
+      if (buildNumber > 1) {
+        log.info(onlineHint);
+      }
     }
 
     if (publishOnly || doExitOnceSentToChromatic) {
@@ -515,19 +522,22 @@ export async function runTest({
       case 'BUILD_PASSED':
         log.info(
           uiTests
-            ? `Build ${buildNumber} passed! ${onlineHint}.`
-            : `Build ${buildNumber} published! ${onlineHint}.`
+            ? `Build ${buildNumber} passed! ${onlineHint}`
+            : `Build ${buildNumber} published! ${onlineHint}`
         );
         exitCode = 0;
         break;
       // They may have sneakily looked at the build while we were waiting
       case 'BUILD_ACCEPTED':
       case 'BUILD_PENDING':
-      case 'BUILD_DENIED':
+      case 'BUILD_DENIED': {
+        const statusText = isOnboarding
+          ? 'Build complete.'
+          : `Build ${buildNumber} has ${pluralize(changeCount, 'change')}.`;
         log.info(dedent`
-          Build ${buildNumber} has ${pluralize(changeCount, 'change')}.
+          ${statusText}
 
-          ${onlineHint}.
+          ${onlineHint}
         `);
         console.log('');
         exitCode = doExitZeroOnChanges || buildOutput.autoAcceptChanges ? 0 : 1;
@@ -539,12 +549,13 @@ export async function runTest({
           `);
         }
         break;
+      }
       case 'BUILD_FAILED':
         log.info(
           dedent`
             Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
               
-            ${onlineHint}.`
+            ${onlineHint}`
         );
         exitCode = 2;
         break;

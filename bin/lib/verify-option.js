@@ -1,6 +1,5 @@
 import { readFileSync } from 'jsonfile';
 import path from 'path';
-import { paramCase } from 'param-case';
 import dedent from 'ts-dedent';
 import { parse } from 'url';
 import { v4 as uuid } from 'uuid';
@@ -87,16 +86,18 @@ export async function verifyOptions(cli, argv) {
   };
 
   // We can only have one of these arguments
-  const singularCommands = [
-    'buildScriptName',
-    'scriptName',
-    'exec',
-    'storybookUrl',
-    'storybookBuildDir',
-  ].filter(name => !!cliOptions[name]);
-  if (singularCommands.length > 1) {
+  const singularOpts = {
+    buildScriptName: '--build-script-name',
+    scriptName: '--script-name',
+    exec: '--exec',
+    storybookUrl: '--storybook-url',
+    storybookBuildDir: '--storybook-build-dir',
+  };
+  const foundSingularOpts = Object.keys(singularOpts).filter(name => !!cliOptions[name]);
+
+  if (foundSingularOpts.length > 1) {
     throw new Error(
-      `Can only use one of ${singularCommands.map(n => `--${paramCase(n)}`).join(', ')}.`
+      `Can only use one of ${foundSingularOpts.map(key => singularOpts[key]).join(', ')}.`
     );
   }
 
