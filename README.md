@@ -1,18 +1,18 @@
-# Chromatic Github Action
+# Chromatic GitHub Action
 
-This action takes care of uploading your storybook to chromatic.
+This action takes care of publishing your Storybook to Chromatic and kicking off tests if they're enabled.
 
 It's a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli).
 
 It can:
-  - build your storybook
-  - upload the storybook to chromatic
-  - report snapshot diffs to log
+  - build your Storybook
+  - publish the Storybook to Chromatic
+  - report test results to log
 
 it does NOT:
   - install dependencies
 
-## How to add an GitHub action
+## How to add a GitHub action
 
 - Create a file in your repo: `.github/workflows/chromatic.yml`
 - set it's content to:
@@ -39,7 +39,7 @@ it does NOT:
 - uses: chromaui/action@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    projectToken: 'Your chromatic/chroma project token'
+    projectToken: 'Your chromatic project token'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
     allowConsoleErrors: 'do not exit when runtime errors occur in storybook'
@@ -49,7 +49,7 @@ it does NOT:
 ```
 
 
-We suggest you use a secret to hide to app-code:
+We suggest you use a secret to hide the project token:
 
 ```yaml
 - uses: chromaui/action@v1

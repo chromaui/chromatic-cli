@@ -1,6 +1,6 @@
 name: Chromatic Action
 author: Chroma
-description: "Publish & test your storybook with chromatic"
+description: "Publishes your Storybook to Chromatic and runs visual tests"
 
 inputs: 
   projectToken: 
