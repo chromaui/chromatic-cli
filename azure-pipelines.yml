@@ -20,5 +20,5 @@ steps:
     node ./scripts/rename.js storybook-chromatic
   displayName: 'yarn install and build'
 - script: |
-    yarn chromatic --appCode="gcaw1ai2dgo"
+    yarn chromatic --project-token="gcaw1ai2dgo"
   displayName: 'run chromatic'

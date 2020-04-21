@@ -7,7 +7,12 @@ const CHROMATIC_PARAMETERS = [
   'pauseAnimationAtEnd',
 ];
 
-function specFromStory({ id, kind, name, parameters: { chromatic } = {} }) {
+function specFromStory({
+  id,
+  kind,
+  name,
+  parameters: { chromatic, docsOnly, fileName, framework } = {},
+}) {
   const param = value => (typeof value === 'function' ? value({ id, kind, name }) : value);
   return {
     storyId: id,
@@ -16,12 +21,17 @@ function specFromStory({ id, kind, name, parameters: { chromatic } = {} }) {
       name: kind,
       displayName: kind.split(/\||\/|\./).slice(-1)[0],
     },
-    parameters:
-      chromatic &&
-      CHROMATIC_PARAMETERS.reduce(
-        (acc, key) => (chromatic[key] ? { ...acc, [key]: param(chromatic[key]) } : acc),
-        {}
-      ),
+    parameters: {
+      docsOnly,
+      fileName: fileName && fileName.toString(),
+      framework,
+      ...(chromatic
+        ? CHROMATIC_PARAMETERS.reduce(
+            (acc, key) => (chromatic[key] ? { ...acc, [key]: param(chromatic[key]) } : acc),
+            {}
+          )
+        : {}),
+    },
   };
 }
 

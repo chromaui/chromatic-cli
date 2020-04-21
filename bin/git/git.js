@@ -2,8 +2,7 @@ import { execSync } from 'child_process';
 import setupDebug from 'debug';
 import gql from 'fake-tag';
 import dedent from 'ts-dedent';
-
-import log from '../lib/log';
+import { EOL } from 'os';
 
 const debug = setupDebug('chromatic-cli:git');
 
@@ -251,4 +250,103 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
 
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
   return [...extraBaselineCommits, ...(await maximallyDescendentCommits(commitsWithBuilds))];
+}
+
+/**
+ * Returns a boolean indicating whether the workspace is up-to-date (neither ahead nor behind) with
+ * the remote.
+ */
+export async function isUpToDate() {
+  execGitCommand(`git remote update`);
+  const localCommit = await execGitCommand('git rev-parse HEAD');
+  const remoteCommit = await execGitCommand('git rev-parse @{u}');
+  if (!localCommit) {
+    throw new Error('Failed to retrieve last local commit hash');
+  }
+  if (!remoteCommit) {
+    throw new Error('Failed to retrieve last remote commit hash');
+  }
+  return localCommit === remoteCommit;
+}
+
+/**
+ * Returns a boolean indicating whether the workspace is clean (no changes, no untracked files).
+ */
+export async function isClean() {
+  const status = await execGitCommand('git status --porcelain');
+  return status === '';
+}
+
+/**
+ * Returns the "Your branch is behind by n commits (pull to update)" part of the git status message,
+ * omitting any of the other stuff that may be in there. Note we expect the workspace to be clean.
+ */
+export async function getUpdateMessage() {
+  const status = await execGitCommand('git status');
+  return status
+    .split(EOL + EOL)[0] // drop the 'nothing to commit' part
+    .split(EOL)
+    .filter(line => !line.startsWith('On branch')) // drop the 'On branch x' part
+    .join(EOL)
+    .trim();
+}
+
+/**
+ * Returns the git merge base between two branches, which is the best common ancestor between the
+ * last commit on either branch. The "best" is defined by not having any descendants which are a
+ * common ancestor themselves. Consider this example:
+ *
+ *   - A - M  <= master
+ *      \ /
+ *       B    <= develop
+ *        \
+ *         C  <= feature
+ *
+ * The merge base between master and feature is B, because it's the best common ancestor of C and M.
+ * A is a common ancestor too, but it isn't the "best" one because it's an ancestor of B.
+ *
+ * It's also possible to have a situation with two merge bases, where there isn't one "best" option:
+ *
+ *   - A - M  <= master
+ *      \ /
+ *       x    (not a commit)
+ *      / \
+ *   - B - N  <= develop
+ *
+ * Here, both A and B are the best common ancestor between master and develop. Neither one is the
+ * single "best" option because they aren't ancestors of each other. In this case we try to pick the
+ * one on the base branch, but if that fails we just pick the first one and hope it works out.
+ * Luckily this is an uncommon scenario.
+ *
+ * @param {string} headRef Name of the head branch
+ * @param {string} baseRef Name of the base branch
+ */
+export async function findMergeBase(headRef, baseRef) {
+  const result = await execGitCommand(`git merge-base --all ${headRef} ${baseRef}`);
+  const mergeBases = result.split(EOL).filter(Boolean);
+  if (mergeBases.length === 0) return undefined;
+  if (mergeBases.length === 1) return mergeBases[0];
+
+  // If we find multiple merge bases, look for one on the base branch.
+  // If we don't find a merge base on the base branch, just return the first one.
+  const branchNames = await Promise.all(
+    mergeBases.map(async sha => {
+      const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
+      return name.replace(/~[0-9]+$/, ''); // Drop the potential suffix
+    })
+  );
+  const baseRefIndex = branchNames.findIndex(branch => branch === baseRef);
+  return mergeBases[baseRefIndex] || mergeBases[0];
+}
+
+export async function checkout(ref) {
+  return execGitCommand(`git checkout ${ref}`);
+}
+
+export async function checkoutPrevious() {
+  return execGitCommand(`git checkout -`);
+}
+
+export async function discardChanges() {
+  return execGitCommand(`git reset --hard`);
 }
