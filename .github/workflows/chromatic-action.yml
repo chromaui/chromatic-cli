@@ -13,4 +13,5 @@ jobs:
         DEBUG: chromatic-cli
       with:
         projectToken: gcaw1ai2dgo
+        appCode: gcaw1ai2dgo
         token: ${{ secrets.GITHUB_TOKEN }}
