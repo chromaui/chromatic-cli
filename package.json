@@ -1,6 +1,6 @@
 {
   "name": "storybook-chromatic",
-  "version": "3.5.1",
+  "version": "3.5.5",
   "description": "Visual Testing for Storybook",
   "main": "./storybook-addon.js",
   "bin": {
@@ -79,20 +79,15 @@
     }
   },
   "lint-staged": {
-    "linters": {
-      "*.js": [
-        "yarn lint:js --fix",
-        "git add"
-      ],
-      "*.json": [
-        "yarn lint:js --fix",
-        "git add"
-      ],
-      "package.json": [
-        "yarn lint:package",
-        "git add"
-      ]
-    }
+    "*.js": [
+      "yarn lint:js --fix"
+    ],
+    "*.json": [
+      "yarn lint:js --fix"
+    ],
+    "package.json": [
+      "yarn lint:package"
+    ]
   },
   "devDependencies": {
     "@babel/cli": "^7.8.3",
