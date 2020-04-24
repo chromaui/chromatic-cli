@@ -173,7 +173,7 @@ function mockCrypto(window) {
   if (!window.crypto) {
     Object.defineProperty(window, 'crypto', {
       value: {
-        getRandomValues: () => 0,
+        getRandomValues: (arr) => arr.fill(0),
       },
       writable: true,
     });
