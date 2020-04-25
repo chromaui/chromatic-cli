@@ -81,7 +81,9 @@ async function prepareAppOrBuild({
   if (dirname || buildScriptName) {
     let buildDirName = dirname;
     if (buildScriptName) {
-      log.info(dedent`Building your Storybook`);
+      log.info(
+        dedent`Building your Storybook (this can take a minute depending on how many stories you have)`
+      );
       ({ name: buildDirName } = dirSync({ unsafeCleanup: true, prefix: `chromatic-` }));
       debug(`Building Storybook to ${buildDirName}`);
 
@@ -149,7 +151,6 @@ async function prepareAppOrBuild({
     log.info(dedent`Uploading your built Storybook...`);
     const isolatorUrl = await uploadToS3(buildDirName, client);
     debug(`uploading to s3, got ${isolatorUrl}`);
-    log.info(dedent`Uploaded your build, verifying`);
 
     return { isolatorUrl };
   }
@@ -407,9 +408,7 @@ export async function runTest({
     debug(`connected to ${isolatorUrl} success`);
   }
 
-  log.info(
-    `Uploading and verifying build (this may take a few minutes depending on your connection)`
-  );
+  log.info(`Verifying build (this may take a few minutes depending on your connection)`);
 
   try {
     const runtimeSpecs = await getStories({
@@ -545,7 +544,7 @@ export async function runTest({
           log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
             Alternatively, pass --auto-accept-changes if you want changed builds to pass on this branch.
-            Read more: https://docs.chromaticqa.com/test
+            Read more: https://www.chromatic.com/docs/test
           `);
         }
         break;
@@ -603,10 +602,10 @@ export async function runTest({
         dedent`
           Added script 'chromatic'. You can now run it here or in CI with 'npm run chromatic' (or 'yarn chromatic')
 
-          NOTE: I wrote your project token to the script via the \`--projectToken\` flag. 
+          NOTE: Your project token was added to the script via the \`--project-token\` flag. 
           
           The project token cannot be used to read story data, it can only be used to create new builds.
-          If you would still prefer not to check it into source control, you can remove it from 'package.json' and set it via the \`CHROMATIC_PROJECT_TOKEN\` environment variable instead in your CI environment.
+          If you're running Chromatic via continuous integration, we recommend setting \`CHROMATIC_PROJECT_TOKEN\` environment variable in your CI environment. You can then remove the --project-token from your 'package.json'.
         `
       );
     } else {
@@ -615,7 +614,7 @@ export async function runTest({
           No problem. You can add it later with:
           {
             "scripts": {
-              "chromatic": "${scriptCommand}"
+              "chromatic": "${scriptCommand} --project-token=${projectToken}"
             }
           }
         `

@@ -19,3 +19,4 @@ jobs:
       run: yarn chromatic
       env: 
         CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+        CHROMATIC_APP_CODE: gcaw1ai2dgo
