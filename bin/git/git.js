@@ -21,7 +21,7 @@ async function execGitCommand(command) {
         Unable to execute git command '${command}'.
 
         Chromatic only works in git projects.
-        Contact us at support@hichroma.com if you need to use Chromatic outside of one.
+        Contact us at support@chromatic.com if you need to use Chromatic outside of one.
       `);
     }
 
