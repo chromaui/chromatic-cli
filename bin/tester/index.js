@@ -544,7 +544,7 @@ export async function runTest({
           log.info(dedent`
             Pass --exit-zero-on-changes if you want this command to exit successfully in this case.
             Alternatively, pass --auto-accept-changes if you want changed builds to pass on this branch.
-            Read more: https://docs.chromatic.com/test
+            Read more: https://www.chromatic.com/docs/test
           `);
         }
         break;
