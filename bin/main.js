@@ -98,7 +98,7 @@ export async function run(argv) {
       dedent`
         ** Chromatic build failed. **
         Please note the session id: '${options.sessionId}'
-        contact support@chromatic.com -or- open a support ticket at https://chromatic.com
+        contact support@chromatic.com -or- open a support ticket at https://www.chromatic.com
 
       `
     );
