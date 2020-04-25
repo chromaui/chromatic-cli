@@ -20,26 +20,29 @@ export async function runPatchBuild(options) {
 
   // Make sure the git repo is in a clean state (no changes / untracked files).
   if (!(await isClean())) {
-    throw new Error(dedent`
+    log.error(dedent`
       The git working directory must be clean before running a patch build.
         (use "git stash --include-untracked --keep-index" to stash changes before you continue)
     `);
+    return { exitCode: 255 };
   }
 
   // Make sure both the head and base branches are up-to-date with the remote.
   if (!(await isUpToDate())) {
-    throw new Error(await getUpdateMessage());
+    log.error(await getUpdateMessage());
+    return { exitCode: 255 };
   }
 
   // Get the merge base commit hash.
   log.info(`Looking up the merge base for ${headRef} ${baseRef}...`);
   const mergeBase = await findMergeBase(headRef, baseRef);
   if (!mergeBase) {
-    throw new Error(dedent`
+    log.error(dedent`
       Failed to retrieve the merge base. You may have specified an invalid base branch.
       Are you sure the head branch is a descendant (i.e. fork) of the base branch?
         (try running this command yourself: "git merge-base --all ${headRef} ${baseRef}")
     `);
+    return { exitCode: 255 };
   }
 
   log.info(`Checking out merge base commit ${mergeBase}`);
