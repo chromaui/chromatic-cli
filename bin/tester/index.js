@@ -588,10 +588,10 @@ export async function runTest({
   }
 
   if (!checkPackageJson() && originalArgv && !fromCI && interactive) {
-    const scriptCommand = `chromatic ${originalArgv.slice(2).join(' ')}`
-      .replace(/--project-token[= ]\S+/, `--project-token="${projectToken}"`)
-      .replace(/--app-code[= ]\S+/, `--project-token="${projectToken}"`)
-      .trim();
+    const scriptCommand = `${`chromatic ${originalArgv.slice(2).join(' ')}`
+      .replace(/--project-token[= ]\S+/)
+      .replace(/--app-code[= ]\S+/)
+      .trim()} --project-token=\${projectToken}`;
 
     const confirmed = await confirm(
       `\nYou have not added the 'chromatic' script to your 'package.json'. Would you like me to do it for you?`
@@ -614,7 +614,7 @@ export async function runTest({
           No problem. You can add it later with:
           {
             "scripts": {
-              "chromatic": "${scriptCommand} --project-token=${projectToken}"
+              "chromatic": "${scriptCommand}"
             }
           }
         `
