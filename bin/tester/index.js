@@ -591,7 +591,7 @@ export async function runTest({
     const scriptCommand = `${`chromatic ${originalArgv.slice(2).join(' ')}`
       .replace(/--project-token[= ]\S+/)
       .replace(/--app-code[= ]\S+/)
-      .trim()} --project-token=\${projectToken}`;
+      .trim()} --project-token=${projectToken}`;
 
     const confirmed = await confirm(
       `\nYou have not added the 'chromatic' script to your 'package.json'. Would you like me to do it for you?`
