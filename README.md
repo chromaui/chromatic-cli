@@ -1,13 +1,13 @@
-# Storybook Chromatic & Storybook Chroma
+# Chromatic CLI
 
-A CLI to connect your Storybook with Chromatic or Chroma.
+Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 <img width="100%" src="https://user-images.githubusercontent.com/3070389/63930825-5abe5f00-ca54-11e9-8320-7ee949823458.gif" alt="">
 
 ## Install
 
 ```sh
-yarn add storybook-chromatic
+yarn add chromatic
 ```
 
 ## Usage
@@ -27,7 +27,7 @@ npx -p chromaui/chromatic-cli#master chromatic --dev
 
 **Use a debug version on npm**:
 ```sh
-npx -p storybook-chromatic chromatic
+npx -p chromatic chromatic
 ```
 
 Using npx has pros and cons:
@@ -45,10 +45,10 @@ Do not run this based on a github pull_request event. If you do, the commit and 
 ### Main options
 
 ```
---app-code="<your app code>"
+--project-token="<your token>"
 ```
 
-You can also use the environment variable: `CHROMATIC_APP_CODE`
+You can also use the environment variable: `CHROMATIC_PROJECT_TOKEN`
 
 ### Storybook options
 
@@ -105,7 +105,7 @@ If you encounter issues with the CLI please report them via the in-app chat (Int
 
 ## Contributing
 
-Because of the nature of this package: it being a connector between Storybook and a web service, you may need an app code to test this locally. Just send us a message at opensource@hichroma.com or sign up for an account!
+Because of the nature of this package: it being a connector between Storybook and a web service, you may need a project token to test this locally. Just send us a message at `opensource@hichroma.com` or sign up for an account!
 
 All contributions are welcome!
 
@@ -115,7 +115,7 @@ All contributions are welcome!
 - Migrate to Typescript
 - Deprecate all the Storybook options in favor of a sane `--config` flag
 
-## Publishing
+## Publishing to npm
 
 We publish with a script:
 
@@ -131,13 +131,12 @@ Before publishing we check if the current user has permissions and if the versio
 
 Compatibility is guaranteed between this package and Chromatic like so:
 
-- Production Chromatic ensures it’s compatible with what’s on NPM
-- What's on the master branch is equal to what's published on NPM
+- Production Chromatic ensures it’s compatible with what’s on npm
+- What's on the master branch is equal to what's published on npm
 - This package ensures it’s compatible with production Chromatic
 
 To facilitate upgrading in the future, removing and adding features, this is the process:
 
 - Any new features will have to be on Chromatic production before they could be used in this package
-- We can feature flags to be able to test new functionality
-- Chromatic production can not remove any features this package depends on until after the usage has been removed from this package.
-  Plus a grace period so users have upgraded
+- We can add feature flags to be able to test new functionality
+- Chromatic production can not remove any features this package depends on until after the usage has been removed from this package in addition to a grace period to allow users to upgrade

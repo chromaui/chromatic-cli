@@ -1,22 +1,22 @@
-name: "Chromatic via manual"
+name: "[Staging] Chromatic via windows"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 
 jobs:
   chromatic:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
     - uses: actions/setup-node@v1
       with:
         node-version: '10.x'
     - uses: actions/checkout@v1
     - name: install
-      run: |
-        yarn && git status --porcelain
+      run: yarn
     - name: prep package
-      run: ./scripts/rename.js storybook-chromatic
+      run: node ./scripts/rename.js storybook-chromatic
     - name: run chromatic
       run: yarn chromatic
       env: 
-        CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
-        CHROMATIC_APP_CODE: gcaw1ai2dgo
+        CHROMATIC_APP_CODE: mpm7osoy9sa
+        CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
+        CHROMATIC_INDEX_URL: https://staging-www.chromaticqa.com

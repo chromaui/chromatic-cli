@@ -18,6 +18,14 @@ const defaultOutput = {
   specCount: 1,
 };
 
+let mockBuildFeatures;
+beforeEach(() => {
+  mockBuildFeatures = {
+    features: { uiTests: true, uiReview: true },
+    wasLimited: false,
+  };
+});
+
 jest.mock('node-fetch', () => async (url, { body } = {}) => ({
   ok: true,
   json: async () => {
@@ -38,9 +46,12 @@ jest.mock('node-fetch', () => async (url, { body } = {}) => ({
             specCount: 1,
             componentCount: 1,
             webUrl: 'http://test.com',
+            ...mockBuildFeatures,
             app: {
               account: {
-                features: { diffs: true },
+                billingUrl: 'https://foo.bar',
+                exceededThreshold: false,
+                paymentRequired: false,
               },
             },
           },
@@ -104,7 +115,11 @@ beforeEach(() => {
   processEnv = process.env;
   process.env = { DISABLE_LOGGING: true };
   confirm.mockReset();
-  startApp.mockReset().mockReturnValue({ on: jest.fn() });
+  startApp.mockReset().mockReturnValue({
+    on: jest.fn(),
+    stderr: { on: jest.fn(), resume: jest.fn() },
+    stdout: { on: jest.fn(), resume: jest.fn() },
+  });
   checkResponse.mockReset();
   openTunnel.mockReset().mockReturnValue({
     url: 'http://tunnel.com/?clientId=foo',
@@ -119,10 +134,10 @@ afterEach(() => {
 });
 
 const defaultOptions = {
-  appCode: 'code',
+  projectToken: 'code',
   scriptName: 'storybook',
   url: 'http://localhost:1337/iframe.html',
-  originalArgv: ['node', 'chromatic', 'test', '--appCode', 'code'],
+  originalArgv: ['node', 'chromatic', '--project-token', 'code'],
 };
 
 it('runs in simple situations', async () => {
@@ -188,6 +203,14 @@ it('returns 0 when stopped after the build has been sent to chromatic', async ()
       exitOnceUploaded: true,
     })
   ).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
+});
+
+it('returns 0 when the build is publish only', async () => {
+  mockBuildFeatures = {
+    features: { uiTests: false, uiReview: false },
+    wasLimited: false,
+  };
+  expect(await runTest(defaultOptions)).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
 });
 
 it('detects CI environments successfully', async () => {
@@ -327,6 +350,8 @@ it('calls out to npm build script passed and uploads to s3', async () => {
         cb(0);
       }
     }),
+    stderr: { on: jest.fn(), resume: jest.fn() },
+    stdout: { on: jest.fn(), resume: jest.fn() },
   });
   await runTest({
     ...defaultOptions,

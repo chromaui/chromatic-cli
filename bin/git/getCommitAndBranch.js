@@ -13,10 +13,10 @@ const notHead = b => {
   return b;
 };
 
-export async function getCommitAndBranch({ inputFromCI } = {}) {
+export async function getCommitAndBranch({ patchBaseRef, inputFromCI } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
-  let branch = await getBranch();
+  let branch = patchBaseRef || (await getBranch());
 
   const {
     TRAVIS_EVENT_TYPE,
@@ -41,7 +41,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
 
         It is recommended to run Chromatic on the push builds from Travis where possible.
         We advise turning on push builds and disabling Chromatic for internal PR builds.
-        Read more: https://docs.chromaticqa.com/setup_ci#travis
+        Read more: https://www.chromatic.com/docs/ci#travis
       `);
   }
 
@@ -59,7 +59,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
       \`TRAVIS_EVENT_TYPE\` environment variable set to '${TRAVIS_EVENT_TYPE}', 
       but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
       
-      Read more here: https://docs.chromaticqa.com/setup_ci#travis
+      Read more here: https://www.chromatic.com/docs/ci#travis
       `);
     }
   } else if (isGitHubPrBuild) {
@@ -72,7 +72,7 @@ export async function getCommitAndBranch({ inputFromCI } = {}) {
         \`GITHUB_WORKFLOW\` environment variable set to '${GITHUB_WORKFLOW}', 
         but \`GITHUB_SHA\` and \`GITHUB_REF\` are not both set.
 
-        Read more here: https://docs.chromaticqa.com/setup_ci#github
+        Read more here: https://www.chromatic.com/docs/ci#github
       `);
     }
   }
