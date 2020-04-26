@@ -1,3 +1,13 @@
+# 4.0.0 - 2020-??-??
+
+- REMOVE node_env development https://github.com/chromaui/chromatic-cli/pull/81
+- ADD ability to create a patch build for pull requests
+- ADD extra parameters to upload https://github.com/chromaui/chromatic-cli/pull/107
+- IMPROVE readability of error message from build-storybook https://github.com/chromaui/chromatic-cli/pull/112
+- IMPROVE user experience during onboarding
+- RENAME appCode to projectToken https://github.com/chromaui/chromatic-cli/pull/109
+- REMOVE adding a environment variable when adding script, use cli flag instead https://github.com/chromaui/chromatic-cli/pull/105
+
 # 3.5.2 - 2020-02-18
 
 - FIX version of JSDOM to 16.1 as 16.2 includes a conflicting custom element support https://github.com/chromaui/chromatic-cli/issues/95
