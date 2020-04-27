@@ -1,4 +1,4 @@
-# 4.0.0 - 2020-??-??
+# 4.0.2 - 2020-04-26
 
 - REMOVE node_env development https://github.com/chromaui/chromatic-cli/pull/81
 - ADD ability to create a patch build for pull requests
