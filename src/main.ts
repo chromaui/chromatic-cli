@@ -1,7 +1,7 @@
 import { getInput, error, setFailed, setOutput } from '@actions/core';
 import { GitHub, context } from "@actions/github";
-import { runTest } from 'storybook-chromatic/bin/tester/index';
-import { verifyOptions } from 'storybook-chromatic/bin/lib/verify-option';
+import { runTest } from 'chromatic/bin/tester/index';
+import { verifyOptions } from 'chromatic/bin/lib/verify-option';
 
 const maybe = (a: string, b: any = undefined) => {
   if(!a) {

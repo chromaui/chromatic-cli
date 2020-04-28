@@ -22,8 +22,8 @@
   "dependencies": {
     "@actions/core": "^1.2.2",
     "@actions/github": "^2.1.0",
-    "esm": "^3.2.25",
-    "storybook-chromatic": "^3.5.1"
+    "chromatic": "^4.0.2",
+    "esm": "^3.2.25"
   },
   "devDependencies": {
     "@storybook/react": "^5.3.9",
