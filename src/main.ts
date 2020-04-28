@@ -1,4 +1,4 @@
-import { getInput, error, setFailed, setOutput, info } from '@actions/core';
+import { getInput, error, setFailed, setOutput } from '@actions/core';
 import { GitHub, context } from "@actions/github";
 import { runTest } from 'storybook-chromatic/bin/tester/index';
 import { verifyOptions } from 'storybook-chromatic/bin/lib/verify-option';
@@ -86,7 +86,7 @@ async function run() {
   const { branch, sha } = commit;
 
   try {
-    const appCode = getInput('appCode');
+    const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
@@ -108,7 +108,7 @@ async function run() {
     process.env.CHROMATIC_BRANCH = branch;
 
     const chromatic = runChromatic({
-      appCode,
+      projectToken,
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),

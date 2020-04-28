@@ -3,8 +3,8 @@ author: Chroma
 description: "Publishes your Storybook to Chromatic and runs visual tests"
 
 inputs: 
-  appCode: 
-    description: "Your chromatic/chroma app_code"
+  projectToken: 
+    description: "Your chromatic/chroma project token”
   buildScriptName: 
     description: "The npm script that builds your Storybook [build-storybook]"
   doNotStart: 
