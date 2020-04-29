@@ -83,7 +83,7 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 --ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]'
 --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline'
 --no-interactive  Do not prompt for package.json changes
---only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes
+--only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
 ```
 
 ### Debug options
