@@ -1,88 +1,95 @@
 import { readFileSync } from 'jsonfile';
 import path from 'path';
-import dedent from 'ts-dedent';
 import { parse } from 'url';
-import { v4 as uuid } from 'uuid';
-import { CHROMATIC_CREATE_TUNNEL, CHROMATIC_PROJECT_TOKEN } from '../constants';
+import {
+  CHROMATIC_CREATE_TUNNEL,
+  CHROMATIC_PROJECT_TOKEN,
+  CHROMATIC_INDEX_URL,
+  CHROMATIC_TUNNEL_URL,
+  CHROMATIC_POLL_INTERVAL,
+  ENVIRONMENT_WHITELIST,
+  STORYBOOK_CLI_FLAGS_BY_VERSION,
+} from '../constants';
 import { getStorybookConfiguration } from '../storybook/get-configuration';
 import { resolveHomeDir } from './resolveHomeDir';
 
-import log from './log';
+import inferredOptions from '../ui/inferredOptions';
+import duplicatePatchBuild from '../ui/errors/duplicatePatchBuild';
+import invalidExitOnceUploaded from '../ui/errors/invalidExitOnceUploaded';
+import invalidPatchBuild from '../ui/errors/invalidPatchBuild';
+import invalidSingularOptions from '../ui/errors/invalidSingularOptions';
+import missingBuildScriptName from '../ui/errors/missingBuildScriptName';
+import missingProjectToken from '../ui/errors/missingProjectToken';
+import missingScriptName from '../ui/errors/missingScriptName';
+import missingStorybookPort from '../ui/errors/missingStorybookPort';
+import unknownStorybookPort from '../ui/errors/unknownStorybookPort';
 
-export async function verifyOptions(cli, argv) {
-  const projectTokenInput = cli.projectToken || cli.appCode; // backwards compatibility
+const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : input);
 
-  const cliOptions = {
-    projectToken: Array.isArray(projectTokenInput)
-      ? projectTokenInput[projectTokenInput.length - 1]
-      : projectTokenInput || CHROMATIC_PROJECT_TOKEN,
-    config: cli.config,
+export async function verifyOptions(flags, argv, log) {
+  const options = {
+    projectToken: takeLast(flags.projectToken || flags.appCode) || CHROMATIC_PROJECT_TOKEN, // backwards compatibility
+    config: flags.config,
 
-    only: cli.only,
-    list: cli.list,
-    fromCI: !!cli.ci,
-    skip: cli.skip === '' ? true : cli.skip,
-    verbose: !!cli.debug,
-    sessionId: uuid(),
-    interactive: !cli.ci && !!cli.interactive,
+    only: flags.only,
+    list: flags.list,
+    fromCI: !!flags.ci,
+    skip: flags.skip === '' ? true : flags.skip,
+    verbose: !!flags.debug,
+    interactive: !flags.ci && !!flags.interactive,
 
-    autoAcceptChanges: cli.autoAcceptChanges === '' ? true : cli.autoAcceptChanges,
-    exitZeroOnChanges: cli.exitZeroOnChanges === '' ? true : cli.exitZeroOnChanges,
-    exitOnceUploaded: cli.exitOnceUploaded === '' ? true : cli.exitOnceUploaded,
-    ignoreLastBuildOnBranch: cli.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: cli.preserveMissing,
+    autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
+    exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
+    exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
+    ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
+    preserveMissingSpecs: flags.preserveMissing,
     originalArgv: argv,
 
-    buildScriptName: cli.buildScriptName,
-    allowConsoleErrors: cli.allowConsoleErrors,
-    scriptName: cli.scriptName === '' ? true : cli.scriptName,
-    exec: cli.exec,
-    noStart: !!cli.doNotStart,
-    https: cli.storybookHttps,
-    cert: cli.storybookCert,
-    key: cli.storybookKey,
-    ca: cli.storybookCa,
-    port: cli.storybookPort,
-    storybookUrl: cli.storybookUrl === '' ? true : cli.storybookUrl,
-    storybookBuildDir: cli.storybookBuildDir
+    buildScriptName: flags.buildScriptName,
+    allowConsoleErrors: flags.allowConsoleErrors,
+    scriptName: flags.scriptName === '' ? true : flags.scriptName,
+    exec: flags.exec,
+    noStart: !!flags.doNotStart,
+    https: flags.storybookHttps,
+    cert: flags.storybookCert,
+    key: flags.storybookKey,
+    ca: flags.storybookCa,
+    port: flags.storybookPort,
+    storybookUrl: flags.storybookUrl === '' ? true : flags.storybookUrl,
+    storybookBuildDir: flags.storybookBuildDir
       ? path.resolve(
-          Array.isArray(cli.storybookBuildDir) ? cli.storybookBuildDir[0] : cli.storybookBuildDir
+          Array.isArray(flags.storybookBuildDir)
+            ? flags.storybookBuildDir[0]
+            : flags.storybookBuildDir
         )
       : undefined,
-    createTunnel: !cli.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
+    createTunnel: !flags.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
+    indexUrl: CHROMATIC_INDEX_URL,
+    tunnelUrl: CHROMATIC_TUNNEL_URL,
 
-    patchBuild: cli.patchBuild && cli.patchBuild.split('...').filter(Boolean),
+    patchBuild: flags.patchBuild && flags.patchBuild.split('...').filter(Boolean),
   };
 
-  if (!cliOptions.projectToken) {
-    throw new Error(dedent`
-      You must provide an project token.
-
-      If you don't have a project yet login to https://www.chromatic.com and create a new project.
-      Or find your code on the manage page of an existing project.
-
-      Pass your project token with the \CHROMATIC_PROJECT_TOKEN\` environment variable or the \`--project-token\` flag.
-    `);
+  if (!options.projectToken) {
+    throw new Error(missingProjectToken());
   }
 
-  if (cliOptions.patchBuild) {
-    if (cliOptions.patchBuild.length !== 2) {
-      throw new Error(
-        'Invalid value to --patch-build, expecting two branch names like `headbranch...basebranch`.'
-      );
+  if (options.patchBuild) {
+    if (options.patchBuild.length !== 2) {
+      throw new Error(invalidPatchBuild());
     }
-    if (cliOptions.patchBuild[0] === cliOptions.patchBuild[1]) {
-      throw new Error('The two branches passed to --patch-build cannot be identical.');
+    if (options.patchBuild[0] === options.patchBuild[1]) {
+      throw new Error(duplicatePatchBuild());
     }
   }
 
   const packageJson = readFileSync(path.resolve('./package.json'));
-  const { storybookBuildDir, exec } = cliOptions;
-  let { port, storybookUrl, noStart, scriptName, buildScriptName } = cliOptions;
-  let https = cliOptions.https && {
-    cert: cliOptions.cert,
-    key: cliOptions.key,
-    ca: cliOptions.ca,
+  const { storybookBuildDir, exec } = options;
+  let { port, storybookUrl, noStart, scriptName, buildScriptName } = options;
+  let https = options.https && {
+    cert: options.cert,
+    key: options.key,
+    ca: options.ca,
   };
 
   // We can only have one of these arguments
@@ -93,12 +100,10 @@ export async function verifyOptions(cli, argv) {
     storybookUrl: '--storybook-url',
     storybookBuildDir: '--storybook-build-dir',
   };
-  const foundSingularOpts = Object.keys(singularOpts).filter(name => !!cliOptions[name]);
+  const foundSingularOpts = Object.keys(singularOpts).filter(name => !!options[name]);
 
   if (foundSingularOpts.length > 1) {
-    throw new Error(
-      `Can only use one of ${foundSingularOpts.map(key => singularOpts[key]).join(', ')}.`
-    );
+    throw new Error(invalidSingularOptions(foundSingularOpts.map(key => singularOpts[key])));
   }
 
   // No need to start or build Storybook if we're going to fetch from a URL
@@ -106,37 +111,30 @@ export async function verifyOptions(cli, argv) {
     noStart = true;
   }
 
-  if (noStart && cliOptions.exitOnceUploaded) {
-    throw new Error(dedent`
-      --exit-once-uploaded is only supported when you use build-storybook
-    `);
+  if (noStart && options.exitOnceUploaded) {
+    throw new Error(invalidExitOnceUploaded());
   }
 
-  if (scriptName && cliOptions.exitOnceUploaded) {
-    throw new Error(dedent`
-      --exit-once-uploaded is only supported when you use build-storybook
-    `);
+  if (scriptName && options.exitOnceUploaded) {
+    throw new Error(invalidExitOnceUploaded());
   }
 
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
-      return { ...cliOptions, noStart: true };
+      return { ...options, noStart: true };
     }
     buildScriptName = typeof buildScriptName === 'string' ? buildScriptName : 'build-storybook';
     if (packageJson.scripts && packageJson.scripts[buildScriptName]) {
-      return { ...cliOptions, noStart: true, buildScriptName };
+      return { ...options, noStart: true, buildScriptName };
     }
-    throw new Error(dedent`
-      Didn't find a script called '${buildScriptName}' in your \`package.json\`.
-      Make sure you set the \`--build-script-name\` option to the value of the npm script that builds your Storybook.
-    `);
+    throw new Error(missingBuildScriptName(buildScriptName));
   }
 
   // Start Storybook on localhost and generate the URL to it
   if (!storybookUrl) {
     if (exec && !port) {
-      throw new Error(`You must pass a port with the --storybook-port option when using --exec.`);
+      throw new Error(missingStorybookPort());
     }
 
     if (!exec && (!port || !noStart)) {
@@ -145,10 +143,7 @@ export async function verifyOptions(cli, argv) {
       const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
 
       if (!storybookScript) {
-        throw new Error(dedent`
-          Didn't find a script called '${scriptName}' in your \`package.json\`.
-          Make sure you set the \`--script-name\` option to the value of the npm script that starts your Storybook.
-        `);
+        throw new Error(missingScriptName(scriptName));
       }
 
       https =
@@ -161,19 +156,10 @@ export async function verifyOptions(cli, argv) {
 
       port = port || getStorybookConfiguration(storybookScript, '-p', '--port');
       if (!port) {
-        throw new Error(
-          `Didn't detect a port in your '${scriptName}' script. You must pass a port with the --storybook-port option.`
-        );
+        throw new Error(unknownStorybookPort(scriptName));
       }
 
-      log.log(
-        '',
-        dedent`
-          Detected '${scriptName}' script, running with inferred options:
-          --script-name=${scriptName} --storybook-port=${port}
-          Override any of the above if they were inferred incorrectly.
-        `
-      );
+      log.info('', inferredOptions({ scriptName, port }));
     }
 
     storybookUrl = `${https ? 'https' : 'http'}://localhost:${port}`;
@@ -189,7 +175,7 @@ export async function verifyOptions(cli, argv) {
   }
 
   return {
-    ...cliOptions,
+    ...options,
     noStart,
     https,
     url: parsedUrl.format(),

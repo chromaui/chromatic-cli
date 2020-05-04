@@ -5,7 +5,7 @@ import { CHROMATIC_TUNNEL_URL } from '../constants';
 
 const debug = setupDebug('chromatic-cli:tunnel');
 
-export default async function openTunnel({ port, https, host = 'localhost', ...rest }) {
+export default async function openTunnel({ log, port, https, host = 'localhost', ...rest }) {
   if (!port) {
     throw new Error('Need to pass a port into `openTunnel`');
   }
@@ -24,11 +24,14 @@ export default async function openTunnel({ port, https, host = 'localhost', ...r
     cert: https && https.cert,
     key: https && https.key,
     ca: https && https.ca,
-  });
 
-  tunnel.on('url', url => debug(`Got tunnel url: %s`, url));
-  tunnel.on('request', request => debug(`Got request: %O`, request));
-  tunnel.tunnelCluster.on('error', error => debug(`Got tunnel cluster error: %O`, error));
+    log,
+  });
+  log.debug(tunnel);
+
+  tunnel.on('url', url => log.debug(`Got tunnel url: %s`, url));
+  tunnel.on('request', request => log.debug(`Got request: %O`, request));
+  tunnel.tunnelCluster.on('error', error => log.debug(`Got tunnel cluster error: %O`, error));
 
   return tunnel;
 }

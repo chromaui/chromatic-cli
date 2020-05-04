@@ -69,6 +69,11 @@ const TesterHasBuildsWithCommitsQuery = gql`
   }
 `;
 
+export async function getVersion() {
+  const result = await execGitCommand(`git --version`);
+  return result.replace('git version ', '');
+}
+
 // NOTE: At some point we should check that the commit has been pushed to the
 // remote and the branch matches with origin/REF, but for now we are naive about
 // adhoc builds.

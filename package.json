@@ -2,8 +2,10 @@
   "name": "chromatic",
   "version": "4.0.0-alpha.2",
   "description": "Visual Testing for Storybook",
+  "homepage": "https://www.chromatic.com",
   "bugs": {
-    "url": "https://github.com/chromaui/chromatic-cli/issues"
+    "url": "https://github.com/chromaui/chromatic-cli/issues",
+    "email": "support@chromatic.com"
   },
   "repository": {
     "type": "git",
@@ -62,6 +64,7 @@
     "enhanced-resolve": "^4.1.1",
     "env-ci": "^5.0.2",
     "esm": "^3.2.25",
+    "execa": "4.0.0",
     "fake-tag": "^2.0.0",
     "fs-extra": "^9.0.0",
     "is-url": "^1.2.4",
@@ -76,8 +79,10 @@
     "node-fetch": "^2.6.0",
     "node-loggly-bulk": "^2.2.4",
     "npmlog": "^4.1.2",
+    "p-limit": "2.3.0",
     "pino": "5.17.0",
     "pkg-up": "^3.1.0",
+    "pluralize": "^8.0.0",
     "progress": "^2.0.3",
     "progress-stream": "^2.0.0",
     "rotating-file-stream": "^2.0.2",
@@ -86,6 +91,7 @@
     "strip-ansi": "6.0.0",
     "strip-color": "^0.1.0",
     "tmp": "^0.1.0",
+    "tmp-promise": "2.1.1",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^1.1.1",
     "util-deprecate": "^1.0.2",
@@ -123,5 +129,6 @@
     "react": "^16.13.1",
     "sort-package-json": "1.40.0",
     "why-is-node-running": "^2.1.2"
-  }
+  },
+  "docs": "https://www.chromatic.com/docs/"
 }

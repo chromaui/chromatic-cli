@@ -11,6 +11,7 @@ import { dirSync } from 'tmp';
 import { gte } from 'semver';
 import dedent from 'ts-dedent';
 
+import pluralize from 'pluralize';
 import getStorybookInfo from '../storybook/get-info';
 import startApp, { checkResponse } from '../storybook/start-app';
 import openTunnel from '../lib/tunnel';
@@ -33,7 +34,6 @@ import {
   TesterSkipBuildMutation,
   TesterCreateBuildMutation,
 } from '../io/gql-queries';
-import { pluralize } from '../lib/pluralize';
 
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
 import { getStories } from '../storybook/getStories';
@@ -55,7 +55,7 @@ async function waitForBuild(client, variables) {
 
       log.info(
         `Taking snapshots ${progress}/${snapshotCount}${
-          errorCount > 0 ? ` (${pluralize(errorCount, 'error')})` : ''
+          errorCount > 0 ? ` (${pluralize('error', errorCount, true)})` : ''
         }`
       );
     }
@@ -334,7 +334,7 @@ export async function runTest({
   }
 
   if (!(buildScriptName || scriptName || commandName || noStart)) {
-    throw new Error('Either buildScriptName, scriptName, commandName or noStart is required');
+    throw new Error('Either buildScriptName, scriptName, exec or noStart is required');
   }
 
   // These three options can be branch specific
@@ -411,7 +411,7 @@ export async function runTest({
   log.info(`Verifying build (this may take a few minutes depending on your connection)`);
 
   try {
-    const runtimeSpecs = await getStories({
+    const runtimeSpecs = await getStories(log, {
       only,
       list,
       isolatorUrl,
@@ -486,16 +486,14 @@ export async function runTest({
     }
 
     const isOnboarding = buildNumber === 1 || (didAutoAcceptChanges && !doAutoAcceptChanges);
-    const onlineHint = isOnboarding
-      ? `Continue setup at ${setupUrl}`
-      : `View it online at ${exitUrl}`;
+    const onlineHint = isOnboarding ? `Continue setup at ${setupUrl}` : `View it at ${exitUrl}`;
 
     if (publishOnly) {
       log.info(`Published your Storybook. ${onlineHint}`);
     } else {
-      const components = pluralize(componentCount, 'component');
-      const specs = pluralize(specCount, 'story');
-      const snapshots = pluralize(snapshotCount, 'snapshot');
+      const components = pluralize('component', componentCount, true);
+      const specs = pluralize('story', specCount, true);
+      const snapshots = pluralize('snapshot', snapshotCount, true);
       log.info(`Started build ${buildNumber} (${components}, ${specs}, ${snapshots}).`);
       if (buildNumber > 1) {
         log.info(onlineHint);
@@ -532,7 +530,7 @@ export async function runTest({
       case 'BUILD_DENIED': {
         const statusText = isOnboarding
           ? 'Build complete.'
-          : `Build ${buildNumber} has ${pluralize(changeCount, 'change')}.`;
+          : `Build ${buildNumber} has ${pluralize('change', changeCount, true)}.`;
         log.info(dedent`
           ${statusText}
 
@@ -552,7 +550,7 @@ export async function runTest({
       case 'BUILD_FAILED':
         log.info(
           dedent`
-            Build ${buildNumber} has ${pluralize(errorCount, 'error')}.
+            Build ${buildNumber} has ${pluralize('error', errorCount, true)}.
               
             ${onlineHint}`
         );

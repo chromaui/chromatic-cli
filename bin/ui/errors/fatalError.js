@@ -6,12 +6,16 @@ import { error } from '../icons';
 
 const lcfirst = str => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
-export default function fatalError({ sessionId, pkg, flags, title }, { name, message, stack }) {
+export default function fatalError(
+  { sessionId, git = {}, pkg, flags, title },
+  { name, message, stack }
+) {
   const email = link(pkg.bugs.email);
-  const website = link(pkg.homepage);
+  const website = link(pkg.docs);
   const debugInfo = {
     timestamp: new Date().toISOString(),
     sessionId,
+    gitVersion: git.version,
     nodePlatform: process.platform,
     nodeVersion: process.versions.node,
     packageName: pkg.name,

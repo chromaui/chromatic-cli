@@ -1,7 +1,7 @@
 // Note this file differs from our usual convention because it is packaged
 const {
   CHROMATIC_SERVER_PORT = 3004,
-  CHROMATIC_INDEX_URL = 'https://index.chromaticqa.com',
+  CHROMATIC_INDEX_URL = 'https://index.chromatic.com',
   CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com',
   CHROMATIC_CREATE_TUNNEL = 'true',
   CHROMATIC_RETRIES = 5,

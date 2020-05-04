@@ -13,6 +13,15 @@ export const TesterCreateBuildMutation = `
       snapshotCount
       componentCount
       webUrl
+      cachedUrl
+      snapshots {
+        spec {
+          name
+          component {
+            displayName
+          }
+        }
+      }
       features {
         uiTests
         uiReview
@@ -23,6 +32,9 @@ export const TesterCreateBuildMutation = `
           exceededThreshold
           paymentRequired
           billingUrl
+        }
+        repository {
+          provider
         }
         setupUrl
       }

@@ -72,24 +72,21 @@ export default async function startApp({
       return null;
     }
 
+    // Run either:
+    //   npm/yarn run scriptName (depending on npm_execpath)
+    //   node path/to/npm.js run scriptName (if npm run via node)
     // This technique lifted from https://github.com/mysticatea/npm-run-all/blob/52eaf86242ba408dedd015f53ca7ca368f25a026/lib/run-task.js#L156-L174
     const npmPath = process.env.npm_execpath;
     const npmPathIsJs = typeof npmPath === 'string' && /\.m?js/.test(path.extname(npmPath));
     const execPath = npmPathIsJs ? process.execPath : npmPath || 'npm';
+    const spawnArgs = npmPathIsJs ? [npmPath] : [];
 
-    // Run either:
-    //   npm/yarn run scriptName (depending on npm_execpath)
-    //   node path/to/npm.js run scriptName (if npm run via node)
-    child = spawn(execPath, [...(npmPathIsJs ? [npmPath] : []), 'run', scriptName, ...args], {
-      env,
-      cwd: process.cwd(),
-      ...options,
-    });
-  } else {
-    if (!commandName) {
-      throw new Error('You must pass commandName or scriptName');
-    }
+    spawnArgs.push('run', scriptName, ...args);
+    child = spawn(execPath, spawnArgs, { cwd: process.cwd(), env, ...options });
+  } else if (commandName) {
     child = spawn(commandName, { env, shell: true });
+  } else {
+    throw new Error('You must pass --script-name or --exec');
   }
 
   if (url) {

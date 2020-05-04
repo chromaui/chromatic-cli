@@ -3,12 +3,13 @@ import { JSDOM, VirtualConsole, ResourceLoader } from 'jsdom';
 import dedent from 'ts-dedent';
 import { extract } from '../storybook/extract';
 
-import log, { separator } from '../lib/log';
+import { separator } from '../lib/log';
 
 import { addShimsToJSDOM } from '../lib/jsdom-shims';
 
 export default async function getRuntimeSpecs(
   url,
+  log,
   { verbose = false, allowConsoleErrors = false } = {}
 ) {
   const warnings = [];

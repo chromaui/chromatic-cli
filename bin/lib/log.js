@@ -1,12 +1,40 @@
-import log from 'npmlog';
+import stripAnsi from 'strip-ansi';
 
-log.level = process.env.DISABLE_LOGGING === 'true' ? 'silent' : process.env.LOG_LEVEL || 'info';
+const { DISABLE_LOGGING, LOG_LEVEL } = process.env;
 
-export function createLogger(prefix) {
-  log.heading = prefix;
-  return log;
-}
+const logLevel = DISABLE_LOGGING === 'true' ? 'silent' : LOG_LEVEL || 'info';
+const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
+const level = levels[logLevel];
 
 export const separator = '=========================';
 
-export default createLogger('chromatic');
+/* eslint-disable no-console */
+export const createLogger = ({ interactive = false } = {}) => {
+  let enqueue = false;
+  const queue = [];
+
+  const format = (prefix, args) => (interactive ? args : [prefix, ...args.map(stripAnsi)]);
+  const log = type => (...args) => {
+    if (level < levels[type]) return;
+    const messages = format(type.toUpperCase(), args);
+    if (enqueue) queue.push({ type, messages });
+    else console[type](...messages);
+  };
+
+  return {
+    level: logLevel,
+    error: log('error'),
+    warn: log('warn'),
+    info: log('info'),
+    debug: log('debug'),
+    queue: () => {
+      enqueue = true;
+    },
+    flush: () => {
+      queue.forEach(({ type, messages }) => console[type](...messages));
+      enqueue = false;
+    },
+  };
+};
+
+export default createLogger();
