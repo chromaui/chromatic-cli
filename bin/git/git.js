@@ -8,11 +8,11 @@ const debug = setupDebug('chromatic-cli:git');
 
 async function execGitCommand(command) {
   try {
-    const { stdout } = await execa.command(command, {
+    const { stderr, stdout } = await execa.command(command, {
       env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
       timeout: 10000, // 10 seconds
     });
-    return stdout;
+    return stderr || stdout;
   } catch (error) {
     const { message } = error;
 
