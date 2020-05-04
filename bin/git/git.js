@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import execa from 'execa';
 import setupDebug from 'debug';
 import gql from 'fake-tag';
 import dedent from 'ts-dedent';
@@ -8,13 +8,13 @@ const debug = setupDebug('chromatic-cli:git');
 
 async function execGitCommand(command) {
   try {
-    return execSync(`${command} 2>&1`)
-      .toString()
-      .trim();
+    const { stdout } = await execa.command(command, {
+      env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
+      timeout: 10000, // 10 seconds
+    });
+    return stdout;
   } catch (error) {
-    const { output } = error;
-
-    const message = output.toString();
+    const { message } = error;
 
     if (message.includes('not a git repository')) {
       throw new Error(dedent`
