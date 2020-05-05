@@ -260,7 +260,7 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
 export async function isUpToDate() {
   execGitCommand(`git remote update`);
   const localCommit = await execGitCommand('git rev-parse HEAD');
-  const remoteCommit = await execGitCommand('git rev-parse @{u}');
+  const remoteCommit = await execGitCommand("git rev-parse '@{upstream}'");
   if (!localCommit) {
     throw new Error('Failed to retrieve last local commit hash');
   }
