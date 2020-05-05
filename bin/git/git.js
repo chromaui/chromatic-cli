@@ -12,6 +12,7 @@ async function execGitCommand(command) {
       env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
       timeout: 10000, // 10 seconds
       all: true, // interleave stdout and stderr
+      shell: true, // we'll deal with escaping ourselves (for now)
     });
     return all;
   } catch (error) {
@@ -148,7 +149,7 @@ async function maximallyDescendentCommits(commits) {
   }
 
   // <commit>^@ expands to all parents of commit
-  const parentCommits = commits.map(c => `${c}^@`);
+  const parentCommits = commits.map(c => `"${c}^@"`);
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
@@ -260,7 +261,7 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
 export async function isUpToDate() {
   execGitCommand(`git remote update`);
   const localCommit = await execGitCommand('git rev-parse HEAD');
-  const remoteCommit = await execGitCommand("git rev-parse '@{upstream}'");
+  const remoteCommit = await execGitCommand('git rev-parse "@{upstream}"');
   if (!localCommit) {
     throw new Error('Failed to retrieve last local commit hash');
   }
