@@ -148,7 +148,7 @@ async function maximallyDescendentCommits(commits) {
   }
 
   // <commit>^@ expands to all parents of commit
-  const parentCommits = commits.map(c => `"${c}^@"`);
+  const parentCommits = commits.map(c => `'${c}^@'`);
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
