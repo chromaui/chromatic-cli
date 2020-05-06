@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "4.0.0-alpha.2",
+  "version": "4.0.2",
   "description": "Visual Testing for Storybook",
   "bugs": {
     "url": "https://github.com/chromaui/chromatic-cli/issues"
