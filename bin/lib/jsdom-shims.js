@@ -121,6 +121,15 @@ function mockMatchMedia(window) {
   }
 }
 
+function mockExecCommand(window) {
+  if (!window.execCommand) {
+    Object.defineProperty(window, 'execCommand', {
+      value: () => {},
+      writable: true,
+    });
+  }
+}
+
 function mockLocalStorage(window) {
   if (!window.localStorage) {
     class LocalStorageMock {
@@ -379,4 +388,5 @@ export function addShimsToJSDOM(window) {
   mockMatchMedia(window);
   mockIntl(window);
   mockCanvas(window);
+  mockExecCommand(window);
 }
