@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "4.0.0-alpha.2",
+  "version": "4.0.2",
   "description": "Visual Testing for Storybook",
   "homepage": "https://www.chromatic.com",
   "bugs": {
@@ -64,7 +64,7 @@
     "enhanced-resolve": "^4.1.1",
     "env-ci": "^5.0.2",
     "esm": "^3.2.25",
-    "execa": "4.0.0",
+    "execa": "^4.0.0",
     "fake-tag": "^2.0.0",
     "fs-extra": "^9.0.0",
     "is-url": "^1.2.4",

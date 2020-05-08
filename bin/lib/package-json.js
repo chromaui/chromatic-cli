@@ -1,5 +1,4 @@
 import path from 'path';
-import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'jsonfile';
 
 const command = 'chromatic';

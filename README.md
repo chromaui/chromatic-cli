@@ -27,7 +27,7 @@ npx -p chromaui/chromatic-cli#master chromatic --dev
 
 **Use a debug version on npm**:
 ```sh
-npx -p chromatic chromatic
+npx -p chromatic#next chromatic
 ```
 
 Using npx has pros and cons:
@@ -76,14 +76,14 @@ These options are not required, this CLI is 0-config if you have a `build-storyb
 ### Chromatic options
 
 ```
---allow-console-errors  Continue running chromatic even if some stories throw an error
---auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]'
+--allow-console-errors  Continue running chromatic even if some there are errors logged during Storybook initialization
+--auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]
 --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
 --exit-once-uploaded [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
---ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]'
---preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline'
+--ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]
+--preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline
 --no-interactive  Do not prompt for package.json changes
---only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes
+--only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
 ```
 
 ### Debug options
@@ -111,7 +111,6 @@ All contributions are welcome!
 
 ## Future plans:
 
-- We'd like to unify this so there's just a single package on npm.
 - Migrate to Typescript
 - Deprecate all the Storybook options in favor of a sane `--config` flag
 

@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import execa from 'execa';
 import setupDebug from 'debug';
 import gql from 'fake-tag';
 import dedent from 'ts-dedent';
@@ -8,13 +8,15 @@ const debug = setupDebug('chromatic-cli:git');
 
 async function execGitCommand(command) {
   try {
-    return execSync(`${command} 2>&1`)
-      .toString()
-      .trim();
+    const { all } = await execa.command(command, {
+      env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
+      timeout: 10000, // 10 seconds
+      all: true, // interleave stdout and stderr
+      shell: true, // we'll deal with escaping ourselves (for now)
+    });
+    return all;
   } catch (error) {
-    const { output } = error;
-
-    const message = output.toString();
+    const { message } = error;
 
     if (message.includes('not a git repository')) {
       throw new Error(dedent`
@@ -264,7 +266,7 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
 export async function isUpToDate() {
   execGitCommand(`git remote update`);
   const localCommit = await execGitCommand('git rev-parse HEAD');
-  const remoteCommit = await execGitCommand('git rev-parse @{u}');
+  const remoteCommit = await execGitCommand('git rev-parse "@{upstream}"');
   if (!localCommit) {
     throw new Error('Failed to retrieve last local commit hash');
   }
