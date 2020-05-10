@@ -50,18 +50,16 @@ const buildStorybook = async ctx => {
 
 export default createTask({
   title: 'Build Storybook',
-  skip: async ({ client, git, options }) => {
-    if (options.skip) {
-      if (await client.runQuery(TesterSkipBuildMutation, { commit: git.commit })) {
-        return `Skipped for commit ${git.commit.substr(0, 7)} due to --skip`;
+  skip: async ctx => {
+    if (ctx.options.skip) {
+      if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit: ctx.git.commit })) {
+        return `Skipped for commit ${ctx.git.commit.substr(0, 7)} due to --skip`;
       }
       throw new Error('Failed to skip build.');
     }
-    if (options.storybookUrl) {
-      return `Using hosted Storybook at ${options.storybookUrl}`;
-    }
-    if (options.storybookBuildDir) {
-      return `Using prebuilt Storybook at ${options.storybookBuildDir}`;
+    if (ctx.options.storybookBuildDir) {
+      ctx.sourceDir = ctx.options.storybookBuildDir;
+      return `Using prebuilt Storybook at ${ctx.options.storybookBuildDir}`;
     }
     return false;
   },

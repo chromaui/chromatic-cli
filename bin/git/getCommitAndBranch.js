@@ -2,7 +2,6 @@ import envCi from 'env-ci';
 import dedent from 'ts-dedent';
 import setupDebug from 'debug';
 import { getCommit, getBranch } from './git';
-import log from '../lib/log';
 
 export const debug = setupDebug('chromatic-cli:tester');
 
@@ -13,7 +12,7 @@ const notHead = b => {
   return b;
 };
 
-export async function getCommitAndBranch({ patchBaseRef, inputFromCI } = {}) {
+export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
   let branch = patchBaseRef || (await getBranch());

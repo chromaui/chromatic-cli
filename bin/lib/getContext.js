@@ -2,7 +2,7 @@ import meow from 'meow';
 import { v4 as uuid } from 'uuid';
 
 import { createLogger } from './log';
-import { verifyOptions } from './verify-option';
+import verifyOptions from './verifyOptions';
 
 export default async function getContext(argv) {
   const { flags, pkg } = meow(

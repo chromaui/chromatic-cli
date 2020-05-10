@@ -7,7 +7,7 @@ import speedUpCI from '../ui/info/speedUpCI';
 import { CHROMATIC_POLL_INTERVAL } from '../constants';
 
 const takeSnapshots = async (ctx, task) => {
-  const { client, git, log, options } = ctx;
+  const { client, git, log, options, runtimeSpecs } = ctx;
   const { number: buildNumber } = ctx.build;
 
   if (ctx.build.app.repository && ctx.uploadedBytes) {
@@ -15,24 +15,33 @@ const takeSnapshots = async (ctx, task) => {
     log.info(speedUpCI(ctx.build.app.repository.provider));
   }
 
+  const snapshotLabels = runtimeSpecs.reduce((acc, { name, component, parameters = {} }) => {
+    const { viewports } = parameters;
+    for (let i = 0; i < (viewports ? viewports.length : 1); i += 1) {
+      const suffix = viewports ? ` [${viewports[i]}px]` : '';
+      const label = `${component.displayName} › ${name}${suffix}`;
+      acc.push(label);
+    }
+    return acc;
+  }, []);
+
   const waitForBuild = async () => {
     const { app } = await client.runQuery(TesterBuildQuery, { buildNumber });
     ctx.build = { ...ctx.build, ...app.build };
 
     if (app.build.status !== 'BUILD_IN_PROGRESS') {
-      if (app.build.changeCount) process.exitCode = 1;
+      if (app.build.changeCount) ctx.exitCode = 1;
       return ctx.build;
     }
 
-    const { errorCount, inProgressCount, snapshotCount, snapshots } = ctx.build;
+    const { errorCount, inProgressCount, snapshotCount } = ctx.build;
     const cursor = snapshotCount - inProgressCount + 1;
-    const snapshot = snapshots[cursor - 1];
+    const label = snapshotLabels[cursor - 1] || '';
 
     const bar = `[${progress(Math.round((cursor / snapshotCount) * 100))}]`;
     const counts = `${cursor}/${snapshotCount}`;
     const errors = errorCount ? `(${pluralize('error', errorCount, true)}) ` : '';
-    const story = `${snapshot.spec.component.displayName} › ${snapshot.spec.name}`;
-    task.output = `${bar} ${counts} ${errors} ${story}`;
+    task.output = `${bar} ${counts} ${errors} ${label}`;
 
     await delay(CHROMATIC_POLL_INTERVAL);
     return waitForBuild();

@@ -26,7 +26,20 @@ export default class GraphQLClient {
 
     const { data, errors } = await response.json();
 
-    if (errors) throw errors;
+    if (errors) {
+      if (Array.isArray(errors)) {
+        errors.forEach(err => {
+          // eslint-disable-next-line no-param-reassign
+          err.name = err.name || 'GraphQLError';
+          // eslint-disable-next-line no-param-reassign
+          err.at = `${err.path.join('.')} ${err.locations
+            .map(l => `${l.line}:${l.column}`)
+            .join(', ')}`;
+        });
+        throw errors.length === 1 ? errors[0] : errors;
+      }
+      throw errors;
+    }
 
     return data;
   }

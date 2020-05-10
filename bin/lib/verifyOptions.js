@@ -6,9 +6,6 @@ import {
   CHROMATIC_PROJECT_TOKEN,
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
-  CHROMATIC_POLL_INTERVAL,
-  ENVIRONMENT_WHITELIST,
-  STORYBOOK_CLI_FLAGS_BY_VERSION,
 } from '../constants';
 import { getStorybookConfiguration } from '../storybook/get-configuration';
 import { resolveHomeDir } from './resolveHomeDir';
@@ -26,7 +23,7 @@ import unknownStorybookPort from '../ui/errors/unknownStorybookPort';
 
 const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : input);
 
-export async function verifyOptions(flags, argv, log) {
+export default async function verifyOptions(flags, argv, log) {
   const options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || CHROMATIC_PROJECT_TOKEN, // backwards compatibility
     config: flags.config,

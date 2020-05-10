@@ -9,10 +9,11 @@ const level = levels[logLevel];
 export const separator = '=========================';
 
 /* eslint-disable no-console */
-export const createLogger = ({ interactive = false } = {}) => {
+export const createLogger = () => {
   let enqueue = false;
   const queue = [];
 
+  const interactive = !process.argv.slice(2).includes('--no-interactive');
   const format = (prefix, args) => (interactive ? args : [prefix, ...args.map(stripAnsi)]);
   const log = type => (...args) => {
     if (level < levels[type]) return;
@@ -26,12 +27,16 @@ export const createLogger = ({ interactive = false } = {}) => {
     error: log('error'),
     warn: log('warn'),
     info: log('info'),
+    log: log('info'),
     debug: log('debug'),
     queue: () => {
       enqueue = true;
     },
     flush: () => {
-      queue.forEach(({ type, messages }) => console[type](...messages));
+      if (queue.length) {
+        console.log('');
+        queue.forEach(({ type, messages }) => console[type](...messages));
+      }
       enqueue = false;
     },
   };

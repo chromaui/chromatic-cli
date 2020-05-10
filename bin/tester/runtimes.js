@@ -1,4 +1,4 @@
-/* eslint-disable no-useless-catch, no-console, no-underscore-dangle */
+/* eslint-disable no-console, no-underscore-dangle */
 import { JSDOM, VirtualConsole, ResourceLoader } from 'jsdom';
 import dedent from 'ts-dedent';
 import { extract } from '../storybook/extract';
@@ -125,8 +125,6 @@ export default async function getRuntimeSpecs(
         : await extract(dom.window);
 
     return specs;
-  } catch (err) {
-    throw err;
   } finally {
     // cleanup
     dom.window.close();

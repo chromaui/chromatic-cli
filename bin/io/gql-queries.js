@@ -14,14 +14,6 @@ export const TesterCreateBuildMutation = `
       componentCount
       webUrl
       cachedUrl
-      snapshots {
-        spec {
-          name
-          component {
-            displayName
-          }
-        }
-      }
       features {
         uiTests
         uiReview

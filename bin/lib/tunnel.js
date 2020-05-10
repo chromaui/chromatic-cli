@@ -1,9 +1,6 @@
 import localtunnel from '@chromaui/localtunnel';
-import setupDebug from 'debug';
 
 import { CHROMATIC_TUNNEL_URL } from '../constants';
-
-const debug = setupDebug('chromatic-cli:tunnel');
 
 export default async function openTunnel({ log, port, https, host = 'localhost', ...rest }) {
   if (!port) {
@@ -24,9 +21,8 @@ export default async function openTunnel({ log, port, https, host = 'localhost',
     cert: https && https.cert,
     key: https && https.key,
     ca: https && https.ca,
-
-    log,
   });
+
   log.debug(tunnel);
 
   tunnel.on('url', url => log.debug(`Got tunnel url: %s`, url));
