@@ -4,12 +4,21 @@ import { VirtualConsole } from 'jsdom';
 import { TesterCreateBuildMutation } from '../io/gql-queries';
 
 import getRuntimeSpecs from '../lib/getRuntimeSpecs';
-import { createTask, setTitle, setOutput } from '../lib/tasks';
+import { createTask, transitionTo } from '../lib/tasks';
 import { matchesBranch } from '../lib/utils';
-import buildLimited from '../ui/warnings/buildLimited';
-import paymentRequired from '../ui/warnings/paymentRequired';
-import snapshotQuotaReached from '../ui/warnings/snapshotQuotaReached';
+import buildLimited from '../ui/messages/warnings/buildLimited';
+import paymentRequired from '../ui/messages/warnings/paymentRequired';
+import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
 import { ENVIRONMENT_WHITELIST } from '../constants';
+import {
+  initial,
+  pending,
+  listing,
+  runOnly,
+  invalidOnly,
+  success,
+  failed,
+} from '../ui/tasks/verify';
 
 const setEnvironment = async ctx => {
   // We send up all environment variables provided by these complicated systems.
@@ -27,13 +36,13 @@ const setEnvironment = async ctx => {
   ctx.log.debug(`Got environment ${ctx.environment}`);
 };
 
-const setRuntimeSpecs = async ctx => {
+const setRuntimeSpecs = async (ctx, task) => {
   const { isolatorUrl, log, options } = ctx;
   const { only, list } = options;
 
   const [match, componentName, storyName] = (only && only.match(/(.*):([^:]*)/)) || [];
   if (only && !match) {
-    throw new Error(`--only argument must provided in the form "componentName:storyName"`);
+    throw new Error(invalidOnly(ctx).output);
   }
 
   const virtualConsole = new VirtualConsole();
@@ -49,26 +58,19 @@ const setRuntimeSpecs = async ctx => {
   ctx.runtimeSpecs = await getRuntimeSpecs(isolatorUrl, virtualConsole);
 
   if (list) {
-    log.debug('Listing available stories:');
-    ctx.runtimeSpecs.forEach(story => {
-      const { name, component } = story;
-      log.debug(`→ ${component.name}:${name}`);
-    });
+    log.info(listing(ctx).title);
+    ctx.runtimeSpecs.forEach(story => log.info(listing(story).output));
   }
 
   if (only) {
-    log.debug(`Running only story '${storyName}' of component '${componentName}'`);
+    transitionTo(runOnly)({ componentName, storyName }, task);
     ctx.runtimeSpecs = ctx.runtimeSpecs.filter(
       spec => minimatch(spec.name, storyName) && minimatch(spec.component.name, componentName)
     );
   }
 
   if (!ctx.runtimeSpecs.length) {
-    throw new Error(
-      only
-        ? 'Cannot run a build with no stories. Change or omit the --only predicate.'
-        : 'Cannot run a build with no stories. Please add some stories!'
-    );
+    throw new Error(failed(ctx).output);
   }
 
   log.debug(`Found ${pluralize('story', ctx.runtimeSpecs.length, true)}`);
@@ -117,12 +119,7 @@ const createBuild = async (ctx, task) => {
   const isPublishOnly = !build.features.uiReview && !build.features.uiTests;
   const isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
 
-  setTitle(
-    isPublishOnly ? `Published your Storybook` : `Started build ${build.number}`,
-    isOnboarding
-      ? `Continue setup at ${build.app.setupUrl}`
-      : `View build details at ${build.webUrl}`
-  )(ctx, task);
+  transitionTo(success, true)({ ...ctx, isPublishOnly, isOnboarding }, task);
 
   if (isPublishOnly || matchesBranch(options.exitOnceUploaded, git.branch)) {
     ctx.exitCode = 0;
@@ -131,12 +128,6 @@ const createBuild = async (ctx, task) => {
 };
 
 export default createTask({
-  title: 'Verify the uploaded Storybook',
-  steps: [
-    setTitle('Verifying upload'),
-    setOutput('This may take a few minutes'),
-    setEnvironment,
-    setRuntimeSpecs,
-    createBuild,
-  ],
+  title: initial.title,
+  steps: [transitionTo(pending), setEnvironment, setRuntimeSpecs, createBuild],
 });

@@ -1,19 +1,20 @@
 import auth from './auth';
 import build from './build';
-import git from './git';
+import gitInfo from './gitInfo';
 import snapshot from './snapshot';
 import start from './start';
-import storybook from './storybook';
+import storybookInfo from './storybookInfo';
 import tunnel from './tunnel';
 import upload from './upload';
 import verify from './verify';
+import prepareWorkspace from './prepareWorkspace';
+import restoreWorkspace from './restoreWorkspace';
 
-export const runUploadBuild = [auth, git, storybook, build, upload, verify, snapshot];
-export const runTunnelBuild = [auth, git, storybook, start, tunnel, verify, snapshot];
-export const runPatchBuild = [];
+export const runUploadBuild = [auth, gitInfo, storybookInfo, build, upload, verify, snapshot];
+export const runTunnelBuild = [auth, gitInfo, storybookInfo, start, tunnel, verify, snapshot];
+export const runPatchBuild = runBuild => [prepareWorkspace, ...runBuild, restoreWorkspace];
 
 export default options => {
-  if (options.patchBuild) return runPatchBuild;
-  if (options.scriptName || options.exec) return runTunnelBuild;
-  return runUploadBuild;
+  const runBuild = options.scriptName || options.exec ? runTunnelBuild : runUploadBuild;
+  return options.patchHeadRef && options.patchBaseRef ? runPatchBuild(runBuild) : runBuild;
 };

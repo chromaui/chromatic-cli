@@ -16,7 +16,7 @@ import { runTest } from './index';
 const installDependencies = () => spawn.sync(['install'], { stdio: 'inherit' });
 
 export async function runPatchBuild(options) {
-  const [headRef, baseRef] = options.patchBuild;
+  const { patchBaseRef, patchHeadRef } = options;
 
   // Make sure the git repo is in a clean state (no changes / untracked files).
   if (!(await isClean())) {
@@ -34,13 +34,13 @@ export async function runPatchBuild(options) {
   }
 
   // Get the merge base commit hash.
-  log.info(`Looking up the merge base for ${headRef} ${baseRef}...`);
-  const mergeBase = await findMergeBase(headRef, baseRef);
+  log.info(`Looking up the merge base for ${patchHeadRef} ${patchBaseRef}...`);
+  const mergeBase = await findMergeBase(patchHeadRef, patchBaseRef);
   if (!mergeBase) {
     log.error(dedent`
       Failed to retrieve the merge base. You may have specified an invalid base branch.
       Are you sure the head branch is a descendant (i.e. fork) of the base branch?
-        (try running this command yourself: "git merge-base --all ${headRef} ${baseRef}")
+        (try running this command yourself: "git merge-base --all ${patchHeadRef} ${patchBaseRef}")
     `);
     return { exitCode: 255 };
   }
@@ -52,8 +52,8 @@ export async function runPatchBuild(options) {
     log.info('Installing dependencies...');
     installDependencies(); // this might modify a lockfile
 
-    log.info(`Starting patch build for ${baseRef}...`);
-    return await runTest({ ...options, patchBaseRef: baseRef, patchHeadRef: headRef }); // await here is necessary
+    log.info(`Starting patch build for ${patchBaseRef}...`);
+    return await runTest(options); // await here is necessary
   } finally {
     log.info('Restoring workspace...');
     await discardChanges(); // we need a clean state before checkout

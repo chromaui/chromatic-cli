@@ -33,9 +33,12 @@ export const createLogger = () => {
       enqueue = true;
     },
     flush: () => {
-      if (queue.length) {
-        console.log('');
-        queue.forEach(({ type, messages }) => console[type](...messages));
+      if (queue.length > 0) {
+        queue.forEach(({ type, messages }) => {
+          console.log('');
+          console[type](...messages);
+        });
+        queue.length = 0;
       }
       enqueue = false;
     },

@@ -26,4 +26,10 @@ export const setOutput = output => (ctx, task) => {
   task.output = typeof output === 'function' ? output(ctx, task) : output;
 };
 
+export const transitionTo = (stateFn, last) => (ctx, task) => {
+  const { title, output } = stateFn(ctx);
+  setTitle(title, last ? output : undefined)(ctx, task);
+  if (!last && output) setOutput(output)(ctx, task);
+};
+
 export const getDuration = ctx => `${((new Date() - ctx.startedAt) / 1000).toFixed(1)}s`;

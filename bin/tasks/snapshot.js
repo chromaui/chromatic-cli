@@ -1,9 +1,19 @@
 /* eslint-disable no-param-reassign */
 import pluralize from 'pluralize';
 import { TesterBuildQuery } from '../io/gql-queries';
-import { createTask, setTitle } from '../lib/tasks';
+import { createTask, transitionTo } from '../lib/tasks';
 import { delay, matchesBranch, progress } from '../lib/utils';
-import speedUpCI from '../ui/info/speedUpCI';
+import buildHasChanges from '../ui/messages/errors/buildHasChanges';
+import buildHasErrors from '../ui/messages/errors/buildHasErrors';
+import speedUpCI from '../ui/messages/info/speedUpCI';
+import {
+  initial,
+  pending,
+  buildPassed,
+  buildComplete,
+  buildFailed,
+  buildError,
+} from '../ui/tasks/snapshot';
 import { CHROMATIC_POLL_INTERVAL } from '../constants';
 
 const takeSnapshots = async (ctx, task) => {
@@ -48,54 +58,36 @@ const takeSnapshots = async (ctx, task) => {
   };
 
   const build = await waitForBuild();
-  const changes = pluralize('change', build.changeCount, true);
-  const snapshots = pluralize('snapshot', build.snapshotCount, true);
-  const components = pluralize('component', build.componentCount, true);
-  const specs = pluralize('story', build.specCount, true);
-  const errors = pluralize('error', build.errorCount, true);
 
   switch (build.status) {
     case 'BUILD_PASSED':
       ctx.exitCode = 0;
-
-      setTitle(
-        build.features.uiTests
-          ? `Build ${build.number} passed!`
-          : `Build ${build.number} published!`,
-        `Took ${snapshots} (${components}, ${specs}); no changes found`
-      )(ctx, task);
+      transitionTo(buildPassed, true)(ctx, task);
       break;
 
     // They may have sneakily looked at the build while we were waiting
     case 'BUILD_ACCEPTED':
     case 'BUILD_PENDING':
     case 'BUILD_DENIED': {
-      ctx.exitCode =
-        build.autoAcceptChanges || matchesBranch(options.exitZeroOnChanges, git.branch) ? 0 : 1;
-      setTitle(
-        `Build ${build.number} complete`,
-        build.autoAcceptChanges
-          ? `Auto-accepted ${changes} (${snapshots}, ${components}, ${specs})`
-          : `Found ${changes} (${snapshots}, ${components}, ${specs}); exiting with status code ${ctx.exitCode}`
-      )(ctx, task);
+      ctx.exitCode = 0;
+      if (!build.autoAcceptChanges && !matchesBranch(options.exitZeroOnChanges, git.branch)) {
+        ctx.exitCode = 1;
+        ctx.log.error(buildHasChanges(ctx));
+      }
+      transitionTo(buildComplete, true)(ctx, task);
       break;
     }
 
     case 'BUILD_FAILED':
       ctx.exitCode = 2;
-      setTitle(
-        `Build ${build.number} failed`,
-        `Found ${errors} (${snapshots}, ${components}, ${specs}); exiting with status code ${ctx.exitCode}`
-      )(ctx, task);
+      ctx.log.error(buildHasErrors(ctx));
+      transitionTo(buildFailed, true)(ctx, task);
       break;
 
     case 'BUILD_TIMED_OUT':
     case 'BUILD_ERROR':
       ctx.exitCode = 3;
-      setTitle(
-        `Oops. Build ${build.number} failed to run. Please try again.`,
-        `Exiting with status code ${ctx.exitCode}`
-      )(ctx, task);
+      transitionTo(buildError, true)(ctx, task);
       break;
 
     default:
@@ -104,15 +96,7 @@ const takeSnapshots = async (ctx, task) => {
 };
 
 export default createTask({
-  title: 'Take snapshots of your stories',
+  title: initial.title,
   skip: ctx => ctx.skipSnapshots,
-  steps: [
-    setTitle(ctx => {
-      const snapshots = pluralize('snapshot', ctx.build.snapshotCount, true);
-      const components = pluralize('component', ctx.build.componentCount, true);
-      const specs = pluralize('story', ctx.build.specCount, true);
-      return `Taking ${snapshots} (${components}, ${specs})`;
-    }),
-    takeSnapshots,
-  ],
+  steps: [transitionTo(pending), takeSnapshots],
 });

@@ -2,9 +2,9 @@ import { gte } from 'semver';
 import treeKill from 'tree-kill';
 
 import { STORYBOOK_CLI_FLAGS_BY_VERSION } from '../constants';
-import { createTask, setTitle, setOutput } from '../lib/tasks';
-import { baseStorybookUrl } from '../lib/utils';
+import { createTask, transitionTo } from '../lib/tasks';
 import startApp, { checkResponse } from '../storybook/start-app';
+import { initial, pending, success, skipped, skipFailed } from '../ui/tasks/start';
 
 const startStorybook = async ctx => {
   const { exec: commandName, scriptName, url } = ctx.options;
@@ -28,27 +28,16 @@ const startStorybook = async ctx => {
 };
 
 export default createTask({
-  title: 'Start Storybook',
+  title: initial.title,
   skip: async ctx => {
     if (await checkResponse(ctx.options.url)) {
       ctx.isolatorUrl = ctx.options.url;
-      return ctx.options.noStart
-        ? `Skipped due to --do-not-start; using ${baseStorybookUrl(ctx.isolatorUrl)}`
-        : `Storybook already running at ${baseStorybookUrl(ctx.isolatorUrl)}`;
+      return skipped.output;
     }
     if (ctx.options.noStart) {
-      throw new Error(
-        `No server responding at ${baseStorybookUrl(
-          ctx.options.url
-        )} -- make sure you've started it`
-      );
+      throw new Error(skipFailed(ctx).output);
     }
     return false;
   },
-  steps: [
-    setTitle('Starting your Storybook'),
-    setOutput(ctx => `Running '${ctx.options.scriptName || ctx.options.commandName}'`),
-    startStorybook,
-    setTitle('Storybook started', ctx => `Running at ${baseStorybookUrl(ctx.isolatorUrl)}`),
-  ],
+  steps: [transitionTo(pending), startStorybook, transitionTo(success, true)],
 });

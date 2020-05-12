@@ -1,7 +1,7 @@
 import debug from 'debug';
 import loggly from 'node-loggly-bulk';
 import { format } from 'util';
-import strip from 'strip-color';
+import stripAnsi from 'strip-ansi';
 
 import { LOGGLY_CUSTOMER_TOKEN } from '../constants';
 
@@ -23,7 +23,7 @@ export default function sendDebugToLoggly({ sessionId }) {
 
   debug.log = (...args) => {
     const msg = format(...args);
-    client.log({ sessionId, msg: strip(msg) });
+    client.log({ sessionId, msg: stripAnsi(msg) });
 
     // Is the user debugging already? If so they will get what we want to debug :shrug:
     if (isDebugging) {

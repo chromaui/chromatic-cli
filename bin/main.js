@@ -1,62 +1,83 @@
-import logUpdate from 'log-update';
 import Listr from 'listr';
+import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
-import getContext from './lib/getContext';
+import getOptions from './lib/getOptions';
+import parseArgs from './lib/parseArgs';
+import { createLogger } from './lib/log';
 import sendDebugToLoggly from './lib/sendDebugToLoggly';
+import checkForUpdates from './lib/checkForUpdates';
 import getTasks from './tasks';
 
-import intro from './ui/intro';
-import fatalError from './ui/errors/fatalError';
-import runtimeError from './ui/errors/runtimeError';
+import intro from './ui/messages/info/intro';
+import fatalError from './ui/messages/errors/fatalError';
+import taskError from './ui/messages/errors/taskError';
+import runtimeError from './ui/messages/errors/runtimeError';
 
 export async function main(argv) {
-  const context = await getContext(argv);
+  const sessionId = uuid();
+  const log = createLogger();
+  const context = { sessionId, log, ...(await parseArgs(argv)) };
   sendDebugToLoggly(context);
-  return run(context);
-}
 
-export async function run(context) {
-  const { log, options, pkg, sessionId } = context;
+  // Run these two in parallel; checkForUpdates never fails
+  await Promise.all([run(context), checkForUpdates(context)]);
 
   log.info('');
-  log.info(intro(context));
+  process.exit(context.exitCode);
+}
+
+export async function run(ctx) {
+  ctx.log.info('');
+  ctx.log.info(intro(ctx));
 
   try {
-    // eslint-disable-next-line no-param-reassign
-    context.client = new GraphQLClient({
-      uri: `${options.indexUrl}/graphql`,
-      headers: { 'x-chromatic-session-id': sessionId, 'x-chromatic-cli-version': pkg.version },
+    ctx.options = await getOptions(ctx);
+  } catch (e) {
+    ctx.log.info('');
+    ctx.log.error(e.message);
+    ctx.exitCode = 254;
+    return;
+  }
+
+  try {
+    ctx.client = new GraphQLClient({
+      uri: `${ctx.options.indexUrl}/graphql`,
+      headers: {
+        'x-chromatic-session-id': ctx.sessionId,
+        'x-chromatic-cli-version': ctx.pkg.version,
+      },
       retries: 3,
     });
 
-    log.queue(); // queue up any log messages while Listr is running
-    await new Listr(getTasks(options)).run(context);
-    log.flush();
-  } catch (error) {
-    log.flush();
+    try {
+      ctx.log.info('');
+      ctx.log.queue(); // queue up any log messages while Listr is running
+      await new Listr(getTasks(ctx.options)).run(ctx);
+    } catch (e) {
+      e.message = taskError(ctx, e);
+      throw e;
+    } finally {
+      // Handle potential runtime errors from JSDOM
+      const { runtimeErrors, runtimeWarnings } = ctx;
+      if ((runtimeErrors && runtimeErrors.length) || (runtimeWarnings && runtimeWarnings.length)) {
+        ctx.log.info('');
+        ctx.log.error(runtimeError(ctx));
+      }
 
+      ctx.log.flush();
+      if (ctx.stopApp) ctx.stopApp();
+      if (ctx.closeTunnel) ctx.closeTunnel();
+    }
+  } catch (error) {
     const errors = [].concat(error); // GraphQLClient might throw an array of errors
 
-    if (errors.length) {
-      log.info('');
-      log.error(fatalError(context, errors));
+    if (errors.length && !ctx.userError) {
+      ctx.log.info('');
+      ctx.log.error(fatalError(ctx, errors));
     }
 
     // Not sure what exit code to use but this can mean error.
-    // eslint-disable-next-line no-param-reassign
-    if (!context.exitCode) context.exitCode = 255;
-  } finally {
-    const { exitCode, runtimeErrors, runtimeWarnings, stopApp, closeTunnel } = context;
-
-    if ((runtimeErrors && runtimeErrors.length) || (runtimeWarnings && runtimeWarnings.length)) {
-      log.info('');
-      log.error(runtimeError(context));
-    }
-
-    log.info('');
-    if (stopApp) stopApp();
-    if (closeTunnel) closeTunnel();
-    process.exit(exitCode);
+    if (!ctx.exitCode) ctx.exitCode = 255;
   }
 }

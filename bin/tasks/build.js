@@ -3,8 +3,16 @@ import path from 'path';
 import tmp from 'tmp-promise';
 import fs from 'fs';
 
-import { createTask, getDuration, setTitle, setOutput } from '../lib/tasks';
+import { createTask, transitionTo } from '../lib/tasks';
 import { TesterSkipBuildMutation } from '../io/gql-queries';
+import {
+  initial,
+  pending,
+  success,
+  skipped,
+  skippedForCommit,
+  skipFailed,
+} from '../ui/tasks/build';
 
 const setSourceDir = async ctx => {
   const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
@@ -49,29 +57,25 @@ const buildStorybook = async ctx => {
 };
 
 export default createTask({
-  title: 'Build Storybook',
+  title: initial.title,
   skip: async ctx => {
     if (ctx.options.skip) {
       if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit: ctx.git.commit })) {
-        return `Skipped for commit ${ctx.git.commit.substr(0, 7)} due to --skip`;
+        return skippedForCommit(ctx).output;
       }
-      throw new Error('Failed to skip build.');
+      throw new Error(skipFailed(ctx).output);
     }
     if (ctx.options.storybookBuildDir) {
       ctx.sourceDir = ctx.options.storybookBuildDir;
-      return `Using prebuilt Storybook at ${ctx.options.storybookBuildDir}`;
+      return skipped(ctx).output;
     }
     return false;
   },
   steps: [
     setSourceDir,
     setSpawnParams,
-    setTitle('Building your Storybook'),
-    setOutput(ctx => `Running command: ${ctx.spawnParams.scriptArgs.join(' ')}`),
+    transitionTo(pending),
     buildStorybook,
-    setTitle(
-      ctx => `Storybook built in ${getDuration(ctx)}`,
-      ctx => `View build log at ${ctx.buildLogFile}`
-    ),
+    transitionTo(success, true),
   ],
 });

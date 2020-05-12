@@ -8,9 +8,18 @@ import retry from 'async-retry';
 import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 
-import { createTask, setTitle, getDuration } from '../lib/tasks';
-import { baseStorybookUrl, progress as progressBar } from '../lib/utils';
+import { createTask, transitionTo } from '../lib/tasks';
+
 import { CHROMATIC_RETRIES } from '../constants';
+import {
+  initial,
+  preparing,
+  starting,
+  uploading,
+  success,
+  skipped,
+  failed,
+} from '../ui/tasks/upload';
 
 const TesterGetUploadUrlsMutation = `
   mutation TesterGetUploadUrlsMutation($paths: [String!]!) {
@@ -52,12 +61,12 @@ const uploadFiles = async (ctx, task) => {
   const total = pathAndLengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   let totalProgress = 0;
 
-  task.output = `Retrieving target location`;
+  task.output = preparing(ctx).output;
 
   const { getUploadUrls } = await client.runQuery(TesterGetUploadUrlsMutation, { paths });
   const { domain, urls } = getUploadUrls;
 
-  task.output = `Starting upload`;
+  task.output = starting(ctx).output;
 
   const limitConcurrency = pLimit(10);
   await Promise.all(
@@ -76,7 +85,7 @@ const uploadFiles = async (ctx, task) => {
               urlProgress += delta; // We upload multiple files so we only care about the delta
               totalProgress += delta;
               const percentage = Math.round((totalProgress / total) * 100);
-              task.output = `[${progressBar(percentage)}] ${percentage}%`;
+              task.output = uploading({ percentage }).output;
             });
 
             const res = await fetch(url, {
@@ -91,7 +100,7 @@ const uploadFiles = async (ctx, task) => {
 
             if (!res.ok) {
               log.debug(`Uploading '${path}' failed: %O`, res);
-              throw new Error(`Failed to upload ${path}`);
+              throw new Error(failed({ path }).output);
             }
             log.debug(`Uploaded '${path}'.`);
           },
@@ -102,7 +111,7 @@ const uploadFiles = async (ctx, task) => {
               urlProgress = 0;
               log.debug('Retrying upload %s, %O', url, err);
               const percentage = Math.round((totalProgress / total) * 100);
-              task.output = `[${progressBar(percentage)}] ${percentage}%`;
+              task.output = uploading({ percentage }).output;
             },
           }
         )
@@ -115,17 +124,10 @@ const uploadFiles = async (ctx, task) => {
 };
 
 export default createTask({
-  title: 'Upload your built Storybook',
+  title: initial.title,
   skip: ctx => {
-    if (ctx.options.storybookUrl) return `Using hosted Storybook at ${ctx.options.storybookUrl}`;
+    if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },
-  steps: [
-    setTitle('Uploading your built Storybook'),
-    uploadFiles,
-    setTitle(
-      ctx => `Upload complete in ${getDuration(ctx)}`,
-      ctx => `View your Storybook at ${baseStorybookUrl(ctx.isolatorUrl)}`
-    ),
-  ],
+  steps: [transitionTo(preparing), uploadFiles, transitionTo(success, true)],
 });

@@ -1,11 +1,9 @@
 import fetch from 'node-fetch';
 import { format, parse } from 'url';
 
-import { CHROMATIC_TUNNEL_URL } from '../constants';
-
-import { createTask, setTitle, setOutput } from '../lib/tasks';
+import { createTask, transitionTo } from '../lib/tasks';
 import openTunnel from '../lib/tunnel';
-import { baseStorybookUrl } from '../lib/utils';
+import { initial, pending, success, failed } from '../ui/tasks/tunnel';
 
 const createTunnel = async (ctx, task) => {
   const { log, options } = ctx;
@@ -15,8 +13,6 @@ const createTunnel = async (ctx, task) => {
   try {
     tunnel = await openTunnel({ log, port, https: options.https });
     ctx.closeTunnel = () => tunnel.close();
-    // eslint-disable-next-line no-param-reassign
-    task.output = `Opened tunnel to ${tunnel.url}`;
   } catch (err) {
     if (ctx.stopApp) ctx.stopApp();
     throw err;
@@ -56,25 +52,14 @@ const createTunnel = async (ctx, task) => {
 const testConnection = async (ctx, task) => {
   try {
     await fetch(ctx.isolatorUrl);
-    // eslint-disable-next-line no-param-reassign
-    task.output = `Connected to ${baseStorybookUrl(ctx.isolatorUrl)}`;
   } catch (err) {
     ctx.log.debug(err);
-    throw new Error(`Could not reach ${baseStorybookUrl(ctx.isolatorUrl)}`);
+    throw new Error(failed(ctx).output);
   }
 };
 
 export default createTask({
-  title: 'Create tunnel',
+  title: initial.title,
   skip: ctx => !ctx.options.createTunnel,
-  steps: [
-    setTitle('Opening tunnel to Chromatic capture servers'),
-    setOutput(`Connecting to ${CHROMATIC_TUNNEL_URL}`),
-    createTunnel,
-    testConnection,
-    setTitle(
-      `Opened tunnel to Chromatic capture servers`,
-      ctx => `Connected to ${baseStorybookUrl(ctx.cachedUrl || ctx.isolatorUrl)}`
-    ),
-  ],
+  steps: [transitionTo(pending), createTunnel, testConnection, transitionTo(success, true)],
 });

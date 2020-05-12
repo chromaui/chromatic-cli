@@ -1,6 +1,7 @@
-import { createTask, setTitle, setOutput } from '../lib/tasks';
+import { initial, authenticating, authenticated } from '../ui/tasks/auth';
+import { createTask, transitionTo } from '../lib/tasks';
 import { TesterCreateAppTokenMutation } from '../io/gql-queries';
-import invalidProjectToken from '../ui/errors/invalidProjectToken';
+import invalidProjectToken from '../ui/messages/errors/invalidProjectToken';
 
 const authenticate = async ctx => {
   const { client, options } = ctx;
@@ -18,11 +19,6 @@ const authenticate = async ctx => {
 };
 
 export default createTask({
-  title: 'Authenticate',
-  steps: [
-    setTitle('Authenticating with Chromatic'),
-    setOutput(ctx => `Connecting to ${ctx.options.indexUrl}`),
-    authenticate,
-    setTitle('Authenticated', ctx => `Using project token ${ctx.options.projectToken}`),
-  ],
+  title: initial.title,
+  steps: [transitionTo(authenticating), authenticate, transitionTo(authenticated, true)],
 });

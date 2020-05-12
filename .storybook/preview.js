@@ -18,7 +18,7 @@ chalk.enabled = true;
 chalk.level = 3;
 
 const style = {
-  display: 'block',
+  display: 'inline-block',
   margin: 0,
   padding: '1rem',
   background: '#16242c',
