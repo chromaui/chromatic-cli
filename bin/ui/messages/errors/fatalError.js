@@ -35,6 +35,7 @@ export default function fatalError(
 
     If you need help, please chat with us at ${website} for the fastest response.
     You can also email the team at ${email} if chat is not an option.
+
     Please provide us with the following info:
     {bold ${JSON.stringify(debugInfo, null, 2)}}
     ${stacktraces.length ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : ''}
