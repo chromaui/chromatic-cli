@@ -24,5 +24,5 @@ export const BuildPublished = () =>
 export const BuildComplete = () => buildComplete({ build, exitCode: 1 });
 export const BuildAutoAccepted = () =>
   buildComplete({ build: { ...build, autoAcceptChanges: true } });
-export const BuildFailed = () => buildFailed({ build });
-export const BuildError = () => buildError({ build });
+export const BuildFailed = () => buildFailed({ build, exitCode: 2 });
+export const BuildError = () => buildError({ build, exitCode: 3 });
