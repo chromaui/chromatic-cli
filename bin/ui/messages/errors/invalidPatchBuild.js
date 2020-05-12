@@ -6,5 +6,5 @@ import { error } from '../../components/icons';
 export default () =>
   dedent(chalk`
     ${error} Invalid value for {bold --patch-build}
-    Expecting two branch names like {bold headbranch...basebranch}
+    This option expects two branch names like {bold headbranch...basebranch}
   `);

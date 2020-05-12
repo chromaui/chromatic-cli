@@ -5,5 +5,5 @@ import { error } from '../../components/icons';
 
 export default singularOptions =>
   dedent(chalk`
-    ${error} Can only use one of {bold ${singularOptions.join(', ')}}
+    ${error} You can only use one of {bold ${singularOptions.join(', ')}}
   `);
