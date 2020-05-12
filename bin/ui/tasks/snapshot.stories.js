@@ -17,7 +17,7 @@ const build = {
 };
 
 export const Initial = () => initial;
-export const Pending = () => pending({ build });
+export const Pending = () => pending({ build, cursor: 6 });
 export const BuildPassed = () => buildPassed({ build });
 export const BuildPublished = () =>
   buildPassed({ build: { ...build, features: { uiTests: false } } });

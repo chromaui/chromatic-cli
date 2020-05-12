@@ -1,4 +1,5 @@
 import pluralize from 'pluralize';
+import { progress as progressBar } from '../../lib/utils';
 
 export const initial = {
   status: 'initial',
@@ -15,9 +16,12 @@ const stats = ctx => ({
 
 export const pending = ctx => {
   const { snapshots, components, specs } = stats(ctx);
+  const percentage = Math.round((ctx.cursor / ctx.build.snapshotCount) * 100);
+  const counts = `${ctx.cursor}/${ctx.build.snapshotCount}`;
   return {
     status: 'pending',
     title: `Taking ${snapshots} (${components}, ${specs})`,
+    output: `[${progressBar(percentage)}] ${counts}  Component › Story [600px]`,
   };
 };
 
