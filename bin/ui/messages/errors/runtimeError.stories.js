@@ -35,7 +35,7 @@ export const RuntimeWarning = () => {
 };
 
 export const AllowRuntimeError = () => {
-  const runtimeErrors = [new Error('Oh no!')];
+  const runtimeErrors = [{ message: 'Oh no!', stack }];
   const context = {
     title: 'Verify the published Storybook',
     runtimeErrors,
