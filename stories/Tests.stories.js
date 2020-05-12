@@ -25,11 +25,12 @@ export const WithViewports = () => {
     </AComponent>
   );
 };
+
 WithViewports.story = {
   parameters: { chromatic: { viewports: [320, 600, 1200] } },
 };
 
-const WithDelay = () => (
+export const WithDelay = () => (
   <AComponent thing={() => {}}>{isChromatic() ? 'Chromatic' : 'Second'}</AComponent>
 );
 
@@ -37,7 +38,7 @@ WithDelay.story = {
   parameters: { chromatic: { delay: 1000 } },
 };
 
-const DisabledStory = () => <AComponent thing={() => {}}>Disabled story</AComponent>;
+export const DisabledStory = () => <AComponent thing={() => {}}>Disabled story</AComponent>;
 
 DisabledStory.story = {
   parameters: { chromatic: { disable: true } },
