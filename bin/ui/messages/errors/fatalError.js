@@ -5,12 +5,16 @@ import stripAnsi from 'strip-ansi';
 
 import link from '../../components/link';
 
-export default function fatalError({ sessionId, git = {}, pkg, flags, exitCode }, error) {
+export default function fatalError(
+  { sessionId, git = {}, pkg, flags, exitCode },
+  error,
+  timestamp = new Date().toISOString()
+) {
   const errors = [].concat(error);
   const email = link(pkg.bugs.email);
   const website = link(pkg.docs);
   const debugInfo = {
-    timestamp: new Date().toISOString(),
+    timestamp,
     sessionId,
     gitVersion: git.version,
     nodePlatform: process.platform,
