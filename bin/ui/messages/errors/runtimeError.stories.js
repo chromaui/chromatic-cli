@@ -18,26 +18,26 @@ const stack = `Error: Oh no!
 
 export const RuntimeError = () => {
   const runtimeErrors = [{ message: 'Oh no!', stack }];
-  const context = { title: 'Verify the uploaded Storybook', runtimeErrors };
+  const context = { title: 'Verify the published Storybook', runtimeErrors };
   return runtimeError(context);
 };
 
 export const RuntimeErrorSimple = () => {
   const runtimeErrors = [{ message: 'Oh no!' }];
-  const context = { title: 'Verify the uploaded Storybook', runtimeErrors };
+  const context = { title: 'Verify the published Storybook', runtimeErrors };
   return runtimeError(context);
 };
 
 export const RuntimeWarning = () => {
   const runtimeWarnings = [{ message: 'Oops!', stack }];
-  const context = { title: 'Verify the uploaded Storybook', runtimeWarnings };
+  const context = { title: 'Verify the published Storybook', runtimeWarnings };
   return runtimeError(context);
 };
 
 export const AllowRuntimeError = () => {
   const runtimeErrors = [new Error('Oh no!')];
   const context = {
-    title: 'Verify the uploaded Storybook',
+    title: 'Verify the published Storybook',
     runtimeErrors,
     options: { allowConsoleErrors: true },
   };

@@ -1,14 +1,11 @@
-import { getDuration } from '../../lib/tasks';
-import { baseStorybookUrl, progress as progressBar } from '../../lib/utils';
-
 export const initial = {
   status: 'initial',
-  title: 'Verify the uploaded Storybook',
+  title: 'Verify the published Storybook',
 };
 
 export const pending = ctx => ({
   status: 'pending',
-  title: 'Verifying upload',
+  title: 'Verifying publish',
   output: 'This may take a few minutes',
 });
 
@@ -25,7 +22,7 @@ export const runOnly = ctx => ({
 
 export const invalidOnly = ctx => ({
   status: 'error',
-  title: 'Verifying upload',
+  title: 'Verifying publish',
   output: `Invalid --only argument: must provided in the form "componentName:storyName"`,
 });
 
@@ -39,7 +36,7 @@ export const success = ctx => ({
 
 export const failed = ctx => ({
   status: 'error',
-  title: 'Verifying upload',
+  title: 'Verifying publish',
   output: ctx.options.only
     ? 'Cannot run a build with no stories. Change or omit the --only predicate.'
     : 'Cannot run a build with no stories. Please add some stories!',
