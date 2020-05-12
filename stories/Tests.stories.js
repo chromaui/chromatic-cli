@@ -1,0 +1,66 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-env browser */
+
+import React from 'react';
+
+import isChromatic from '../src/isChromatic';
+
+import AComponent from './A';
+
+export default {
+  title: 'Tests',
+  parameters: { chromatic: { viewports: [600, 1200] } },
+};
+
+export const WithViewports = () => {
+  let bg = null;
+  if (window.matchMedia('(max-width: 400px)').matches) {
+    bg = 'cyan';
+  } else if (window.matchMedia('(max-width: 800px)').matches) {
+    bg = 'orange';
+  }
+  return (
+    <AComponent backgroundColor={bg} thing={() => {}}>
+      Contents
+    </AComponent>
+  );
+};
+WithViewports.story = {
+  parameters: { chromatic: { viewports: [320, 600, 1200] } },
+};
+
+const WithDelay = () => (
+  <AComponent thing={() => {}}>{isChromatic() ? 'Chromatic' : 'Second'}</AComponent>
+);
+
+WithDelay.story = {
+  parameters: { chromatic: { delay: 1000 } },
+};
+
+const DisabledStory = () => <AComponent thing={() => {}}>Disabled story</AComponent>;
+
+DisabledStory.story = {
+  parameters: { chromatic: { disable: true } },
+};
+
+export const IgnoredElements = () => (
+  <div>
+    <img
+      alt=""
+      src="http://fpoimg.com/100x100?text=foozbar"
+      data-chromatic="ignore"
+      style={{ border: '2px solid orangered' }}
+    />
+    <img
+      alt=""
+      src="http://fpoimg.com/100x100?text=foozbar"
+      className="chromatic-ignore"
+      style={{ border: '2px solid orangered' }}
+    />
+    <img
+      alt=""
+      src="http://fpoimg.com/100x100?text=foozbar"
+      style={{ border: '2px solid green' }}
+    />
+  </div>
+);
