@@ -1,17 +1,17 @@
 /* eslint-disable jest/no-try-expect */
 import { execSync } from 'child_process';
 
-import { errSerializer } from '../io/serializers';
+import { errorSerializer } from './logSerializers';
 
 it('strips off envPairs', () => {
   try {
     execSync('some hot garbage');
   } catch (err) {
-    expect(errSerializer(err).envPairs).toBeUndefined();
+    expect(errorSerializer(err).envPairs).toBeUndefined();
   }
 });
 
 it('does not add random things to the error', () => {
   const err = new Error('error');
-  expect(errSerializer(err).options).toBeUndefined();
+  expect(errorSerializer(err).options).toBeUndefined();
 });

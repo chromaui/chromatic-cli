@@ -1,7 +1,7 @@
 import meow from 'meow';
 
-export default async function parseArgs(argv) {
-  return meow(
+export default function parseArgs(argv) {
+  const { input, flags, help, pkg } = meow(
     `
     Usage
       $ chromatic
@@ -74,4 +74,5 @@ export default async function parseArgs(argv) {
       },
     }
   );
+  return { argv, input, flags, help, pkg };
 }

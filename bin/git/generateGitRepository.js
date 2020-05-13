@@ -1,3 +1,7 @@
+/**
+ * This file is for testing purposes only
+ */
+
 // global "date"
 let date = Date.now() - 100 * 1000;
 function nextDate() {
@@ -41,7 +45,7 @@ async function generateCommit(runGit, [name, parentNames], commitMap) {
 // following the structure above. Note commit times are assumed to be increasing down the list.
 //
 // Returns a map: name => commitHash
-async function generateGitRepository(runGit, description) {
+export default async function generateGitRepository(runGit, description) {
   await runGit(`git init`);
   await runGit(`git config user.email test@test.com`);
   await runGit(`git config user.name Test McTestface`);
@@ -59,5 +63,3 @@ async function generateGitRepository(runGit, description) {
   await runLines(description);
   return commitMap;
 }
-
-export default generateGitRepository;

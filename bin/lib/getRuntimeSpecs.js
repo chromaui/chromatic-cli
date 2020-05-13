@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 import { JSDOM, ResourceLoader } from 'jsdom';
-import { addShimsToJSDOM } from './jsdom-shims';
-import { extract } from '../storybook/extract';
+import { addShimsToJSDOM } from './jsdomShims';
+import { extractStoryData } from './extractStoryData';
 
 export default async function getRuntimeSpecs(isolatorUrl, virtualConsole) {
   const userAgent = 'Chromatic';
@@ -29,7 +29,7 @@ export default async function getRuntimeSpecs(isolatorUrl, virtualConsole) {
       typeof jsdom.window.__chromaticRuntimeSpecs__ === 'function' &&
       !jsdom.window.__chromaticRuntimeSpecs__.isDeprecated
         ? await jsdom.window.__chromaticRuntimeSpecs__()
-        : await extract(jsdom.window);
+        : await extractStoryData(jsdom.window);
 
     return runtimeSpecs;
   } finally {

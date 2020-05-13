@@ -7,8 +7,7 @@ import {
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
 } from '../constants';
-import { getStorybookConfiguration } from '../storybook/get-configuration';
-import { resolveHomeDir } from './resolveHomeDir';
+import getStorybookConfiguration from './getStorybookConfiguration';
 
 import inferredOptions from '../ui/messages/info/inferredOptions';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
@@ -22,6 +21,9 @@ import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
 import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 
 const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : input);
+
+const resolveHomeDir = filepath =>
+  filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 export default async function getOptions({ flags, argv, log }) {
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
@@ -159,7 +161,7 @@ export default async function getOptions({ flags, argv, log }) {
         throw new Error(unknownStorybookPort(scriptName));
       }
 
-      log.info('', inferredOptions({ scriptName, port }));
+      if (log) log.info('', inferredOptions({ scriptName, port }));
     }
 
     storybookUrl = `${https ? 'https' : 'http'}://localhost:${port}`;

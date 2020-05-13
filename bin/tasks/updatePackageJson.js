@@ -1,6 +1,40 @@
+import path from 'path';
+import { readFileSync, writeFileSync } from 'jsonfile';
+
 import { createTask } from '../lib/tasks';
 
-const checkPackageJson = async ctx => {
+const command = 'chromatic';
+const script = 'chromatic';
+
+export function checkPackageJson({ appDir = process.cwd() } = {}) {
+  const packageJson = readFileSync(path.resolve(appDir, './package.json'));
+
+  return Object.entries(packageJson.scripts || {}).find(
+    ([key, value]) => value.match(command) || key === script
+  );
+}
+
+export function addScriptToPackageJson(scriptName, scriptCommand, { appDir = process.cwd() } = {}) {
+  const filename = path.resolve(appDir, './package.json');
+  const packageJson = readFileSync(filename);
+
+  if (packageJson[scriptName]) {
+    throw new Error(`Script named '${scriptName}' already exists in package.json`);
+  }
+
+  if (!packageJson.scripts) {
+    packageJson.scripts = {};
+  }
+  packageJson.scripts[scriptName] = scriptCommand;
+
+  if (!packageJson.dependencies) {
+    packageJson.dependencies = {};
+  }
+
+  writeFileSync(filename, packageJson, { spaces: 2 });
+}
+
+const updatePackageJson = async ctx => {
   // if (!checkPackageJson() && originalArgv && !fromCI && interactive) {
   //   const scriptCommand = `${`chromatic ${originalArgv.slice(2).join(' ')}`
   //     .replace(/--project-token[= ]\S+/)
@@ -36,5 +70,5 @@ const checkPackageJson = async ctx => {
 
 export default createTask({
   title: 'Check package.json',
-  steps: [checkPackageJson],
+  steps: [updatePackageJson],
 });

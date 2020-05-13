@@ -1,28 +1,23 @@
 import HTTPClient from './HTTPClient';
 
 export default class GraphQLClient {
-  constructor({ uri, headers, retries }) {
+  constructor({ uri, ...httpClientOptions }) {
     if (!uri) throw new Error('Option `uri` required.');
-
     this.uri = uri;
-    this.headers = headers;
-    this.retries = retries;
-    this.client = new HTTPClient();
+    this.client = new HTTPClient(httpClientOptions);
+    this.headers = { 'Content-Type': 'application/json' };
+  }
+
+  setAuthorization(token) {
+    this.headers.Authorization = `Bearer ${token}`;
   }
 
   async runQuery(query, variables) {
-    const response = await this.client.fetch(
-      this.uri,
-      {
-        headers: {
-          ...this.headers,
-          'Content-Type': 'application/json',
-        },
-        method: 'post',
-        body: JSON.stringify({ query, variables }),
-      },
-      { retries: this.retries }
-    );
+    const response = await this.client.fetch(this.uri, {
+      body: JSON.stringify({ query, variables }),
+      headers: this.headers,
+      method: 'post',
+    });
 
     const { data, errors } = await response.json();
 

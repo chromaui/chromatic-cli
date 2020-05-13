@@ -12,7 +12,7 @@ export const tick = async (times, interval, fn) => {
 export const repeat = (n, char) => [...new Array(Math.round(n))].map(() => char);
 export const progress = (percentage, size = 20) => {
   const track = repeat(size, ' ');
-  const completed = repeat((percentage / 100) * size, '=');
+  const completed = repeat((percentage / 100) * size || 0, '=');
   return `${completed.join('')}${track.join('')}`.substr(0, 20);
 };
 

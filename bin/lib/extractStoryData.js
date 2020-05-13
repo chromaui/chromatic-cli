@@ -35,7 +35,7 @@ function specFromStory({
   };
 }
 
-export const extract = global => {
+export const extractStoryData = global => {
   const { __STORYBOOK_CLIENT_API__ } = global;
 
   if (!__STORYBOOK_CLIENT_API__) {

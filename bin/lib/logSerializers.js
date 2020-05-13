@@ -1,6 +1,4 @@
-import pino from 'pino';
-
-export function responseSerializer({ status, statusText, headers, url, _raw }) {
+function responseSerializer({ status, statusText, headers, url, _raw }) {
   return {
     status,
     statusText,
@@ -18,19 +16,8 @@ function stripEnvPairs(err) {
   return { sanitizedErr, ...(err.options && { options }) };
 }
 
-export const errSerializer = err => {
-  const serializedErr = pino.stdSerializers.err(err);
-
-  return {
-    ...stripEnvPairs(serializedErr),
-    // Serialize the response part of err with the response serializer
-    ...(err.response && { response: responseSerializer(err.response) }),
-  };
-};
-
-const serializers = {
-  ...pino.stdSerializers,
-  err: errSerializer,
-};
-
-export { serializers as default };
+export const errorSerializer = err => ({
+  ...stripEnvPairs(err),
+  // Serialize the response part of err with the response serializer
+  ...(err.response && { response: responseSerializer(err.response) }),
+});

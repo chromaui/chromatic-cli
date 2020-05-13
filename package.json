@@ -78,7 +78,6 @@
     "node-fetch": "^2.6.0",
     "node-loggly-bulk": "^2.2.4",
     "p-limit": "2.3.0",
-    "pino": "5.17.0",
     "pkg-up": "^3.1.0",
     "pluralize": "^8.0.0",
     "progress": "^2.0.3",

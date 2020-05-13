@@ -1,5 +1,13 @@
-import { getStorybookConfiguration } from '../storybook/get-configuration';
-import { parseArgv } from '../main';
+import chalk from 'chalk';
+import getStorybookConfiguration from './getStorybookConfiguration';
+import getOptions from './getOptions';
+import parseArgs from './parseArgs';
+
+// Make sure we don't print any colors so we can match against plain strings
+chalk.enabled = false;
+chalk.level = 0;
+
+const getContext = argv => parseArgs(argv);
 
 jest.mock('../constants', () => ({
   CHROMATIC_CREATE_TUNNEL: true,
@@ -20,9 +28,9 @@ jest.mock('jsonfile', () => ({
 
 process.env.CHROMATIC_PROJECT_TOKEN = 'test';
 
-describe('await parseArgv', () => {
+describe('await getOptions', () => {
   it('sets reasonable defaults', async () => {
-    expect(await parseArgv(['--project-token', 'cli-code'])).toMatchObject({
+    expect(await getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
       noStart: true,
@@ -38,22 +46,24 @@ describe('await parseArgv', () => {
   });
 
   it('picks up project-token from environment', async () => {
-    expect(await parseArgv([])).toMatchObject({
+    expect(await getOptions(getContext([]))).toMatchObject({
       projectToken: 'env-code',
     });
   });
 
   it('allows you to override defaults for boolean options', async () => {
     expect(
-      await parseArgv([
-        '--ci',
-        '--auto-accept-changes',
-        '--exit-zero-on-changes',
-        '--exit-once-uploaded',
-        '--skip',
-        '--debug',
-        '--no-interactive',
-      ])
+      await getOptions(
+        getContext([
+          '--ci',
+          '--auto-accept-changes',
+          '--exit-zero-on-changes',
+          '--exit-once-uploaded',
+          '--skip',
+          '--debug',
+          '--no-interactive',
+        ])
+      )
     ).toMatchObject({
       skip: true,
       fromCI: true,
@@ -67,7 +77,7 @@ describe('await parseArgv', () => {
   });
 
   it('picks up default start script', async () => {
-    expect(await parseArgv(['-s'])).toMatchObject({
+    expect(await getOptions(getContext(['-s']))).toMatchObject({
       scriptName: 'storybook',
       url: 'http://localhost:1337/iframe.html',
       noStart: false,
@@ -75,13 +85,15 @@ describe('await parseArgv', () => {
   });
 
   it('allows you to specify alternate build script', async () => {
-    expect(await parseArgv(['--build-script-name', 'otherBuildStorybook'])).toMatchObject({
+    expect(
+      await getOptions(getContext(['--build-script-name', 'otherBuildStorybook']))
+    ).toMatchObject({
       buildScriptName: 'otherBuildStorybook',
     });
   });
 
   it('allows you to specify alternate script, still picks up port', async () => {
-    expect(await parseArgv(['--script-name', 'otherStorybook'])).toMatchObject({
+    expect(await getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
       scriptName: 'otherStorybook',
       url: 'http://localhost:7070/iframe.html',
       noStart: false,
@@ -90,7 +102,7 @@ describe('await parseArgv', () => {
 
   it('allows you to specify alternate script, that does not start Storybook, if you set port', async () => {
     expect(
-      await parseArgv(['--script-name', 'notStorybook', '--storybook-port', '6060'])
+      await getOptions(getContext(['--script-name', 'notStorybook', '--storybook-port', '6060']))
     ).toMatchObject({
       scriptName: 'notStorybook',
       url: 'http://localhost:6060/iframe.html',
@@ -98,12 +110,14 @@ describe('await parseArgv', () => {
   });
 
   it('throws if you try to specify a script name that is not a Storybook, if you do NOT set port', async () => {
-    await expect(parseArgv(['--script-name', 'notStorybook'])).rejects.toThrow(/must pass a port/);
+    await expect(getOptions(getContext(['--script-name', 'notStorybook']))).rejects.toThrow(
+      /must pass a port/
+    );
   });
 
   it('allows you to specify alternate command if you set port', async () => {
     expect(
-      await parseArgv(['--exec', 'storybook-command', '--storybook-port', '6060'])
+      await getOptions(getContext(['--exec', 'storybook-command', '--storybook-port', '6060']))
     ).toMatchObject({
       exec: 'storybook-command',
       url: 'http://localhost:6060/iframe.html',
@@ -111,47 +125,49 @@ describe('await parseArgv', () => {
   });
 
   it('throws if you try to specify a command name, if you do NOT set port', async () => {
-    await expect(parseArgv(['--exec', 'storybook-command'])).rejects.toThrow(/must pass a port/);
+    await expect(getOptions(getContext(['--exec', 'storybook-command']))).rejects.toThrow(
+      /must pass a port/
+    );
   });
 
   it('throws if you try to pass a script or command name and a url', async () => {
     await expect(
-      parseArgv(['--exec', 'storybook-command', '--storybook-url', 'http://foo.bar'])
-    ).rejects.toThrow(/Can only use one of --exec, --storybook-url/);
+      getOptions(getContext(['--exec', 'storybook-command', '--storybook-url', 'http://foo.bar']))
+    ).rejects.toThrow(/You can only use one of --exec, --storybook-url/);
 
     await expect(
-      parseArgv(['--script-name', 'storybook', '--storybook-url', 'http://foo.bar'])
-    ).rejects.toThrow(/Can only use one of --script-name, --storybook-url/);
+      getOptions(getContext(['--script-name', 'storybook', '--storybook-url', 'http://foo.bar']))
+    ).rejects.toThrow(/You can only use one of --script-name, --storybook-url/);
   });
 
   it('throws if you try to pass a script or command name and a build script', async () => {
-    await expect(parseArgv(['--exec', 'storybook-command', '-b', 'build-command'])).rejects.toThrow(
-      /Can only use one of --build-script-name, --exec/
-    );
+    await expect(
+      getOptions(getContext(['--exec', 'storybook-command', '-b', 'build-command']))
+    ).rejects.toThrow(/You can only use one of --build-script-name, --exec/);
 
-    await expect(parseArgv(['--script-name', 'storybook', '-b', 'build-command'])).rejects.toThrow(
-      /Can only use one of --build-script-name, --script-name/
-    );
+    await expect(
+      getOptions(getContext(['--script-name', 'storybook', '-b', 'build-command']))
+    ).rejects.toThrow(/You can only use one of --build-script-name, --script-name/);
   });
 
   it('throws if you try to pass a script or command name and a directory', async () => {
     await expect(
-      parseArgv(['--exec', 'storybook-command', '--storybook-build-dir', '/tmp/dir'])
-    ).rejects.toThrow(/Can only use one of --exec, --storybook-build-dir/);
+      getOptions(getContext(['--exec', 'storybook-command', '--storybook-build-dir', '/tmp/dir']))
+    ).rejects.toThrow(/You can only use one of --exec, --storybook-build-dir/);
 
     await expect(
-      parseArgv(['--script-name', 'storybook', '--storybook-build-dir', '/tmp/dir'])
-    ).rejects.toThrow(/Can only use one of --script-name, --storybook-build-dir/);
+      getOptions(getContext(['--script-name', 'storybook', '--storybook-build-dir', '/tmp/dir']))
+    ).rejects.toThrow(/You can only use one of --script-name, --storybook-build-dir/);
   });
 
   it('throws if you try to pass a build script and a directory', async () => {
     await expect(
-      parseArgv(['-b', '/tmp/dir', '--storybook-build-dir', '/tmp/dir'])
-    ).rejects.toThrow(/Can only use one of --build-script-name, --storybook-build-dir/);
+      getOptions(getContext(['-b', '/tmp/dir', '--storybook-build-dir', '/tmp/dir']))
+    ).rejects.toThrow(/You can only use one of --build-script-name, --storybook-build-dir/);
   });
 
   it('allows you to set a URL without path', async () => {
-    expect(await parseArgv(['--storybook-url', 'https://google.com'])).toMatchObject({
+    expect(await getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
       noStart: true,
       url: 'https://google.com/iframe.html',
       createTunnel: false,
@@ -159,7 +175,9 @@ describe('await parseArgv', () => {
   });
 
   it('allows you to set a URL with a path', async () => {
-    expect(await parseArgv(['--storybook-url', 'https://google.com/foo'])).toMatchObject({
+    expect(
+      await getOptions(getContext(['--storybook-url', 'https://google.com/foo']))
+    ).toMatchObject({
       noStart: true,
       url: 'https://google.com/foo/iframe.html',
       createTunnel: false,
@@ -168,7 +186,7 @@ describe('await parseArgv', () => {
 
   it('allows you to set a URL with iframe.html already set', async () => {
     expect(
-      await parseArgv(['--storybook-url', 'https://google.com/iframe.html?param=foo'])
+      await getOptions(getContext(['--storybook-url', 'https://google.com/iframe.html?param=foo']))
     ).toMatchObject({
       noStart: true,
       url: 'https://google.com/iframe.html?param=foo',

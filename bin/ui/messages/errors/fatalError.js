@@ -23,6 +23,7 @@ export default function fatalError(
     packageVersion: pkg.version,
     flags,
     exitCode,
+    errorType: errors.map(err => err.name).join('\n'),
     errorMessage: stripAnsi(errors.map(err => err.message).join('\n')),
   };
   const stacktraces = errors.map(err => err.stack).filter(Boolean);

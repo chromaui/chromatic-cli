@@ -2,8 +2,8 @@ import { gte } from 'semver';
 import treeKill from 'tree-kill';
 
 import { STORYBOOK_CLI_FLAGS_BY_VERSION } from '../constants';
+import startApp, { checkResponse } from '../lib/startStorybook';
 import { createTask, transitionTo } from '../lib/tasks';
-import startApp, { checkResponse } from '../storybook/start-app';
 import { initial, pending, success, skipped, skipFailed } from '../ui/tasks/start';
 
 const startStorybook = async ctx => {

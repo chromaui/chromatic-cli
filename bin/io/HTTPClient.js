@@ -1,8 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import fetch from 'node-fetch';
-import pino from 'pino';
 import retry from 'async-retry';
-import serializers from './serializers';
 
 export class HTTPClientError extends Error {
   constructor(fetchResponse, message, ...params) {
@@ -22,11 +20,10 @@ export class HTTPClientError extends Error {
 
 // A basic wrapper class for fetch with the ability to retry fetches
 export default class HTTPClient {
-  constructor(options = {}) {
-    const { log = pino({ name: 'HTTPClient', serializers }), retries = 0, headers = {} } = options;
+  constructor({ log, headers = {}, retries = 0 }) {
     this.log = log;
-    this.retries = retries;
     this.headers = headers;
+    this.retries = retries;
   }
 
   async fetch(url, options = {}, { retries, noLogErrorBody = false } = {}) {

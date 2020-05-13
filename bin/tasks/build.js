@@ -4,7 +4,6 @@ import tmp from 'tmp-promise';
 import fs from 'fs';
 
 import { createTask, transitionTo } from '../lib/tasks';
-import { TesterSkipBuildMutation } from '../io/gql-queries';
 import {
   initial,
   pending,
@@ -13,6 +12,12 @@ import {
   skippedForCommit,
   skipFailed,
 } from '../ui/tasks/build';
+
+const TesterSkipBuildMutation = `
+  mutation TesterSkipBuildMutation($appId: ObjID, $commit: String!) {
+    skipBuild(appId: $appId, commit: $commit)
+  }
+`;
 
 const setSourceDir = async ctx => {
   const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });

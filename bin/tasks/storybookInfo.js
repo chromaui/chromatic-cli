@@ -1,9 +1,9 @@
+import getStorybookInfo from '../lib/getStorybookInfo';
 import { createTask, transitionTo } from '../lib/tasks';
-import getInfo from '../storybook/get-info';
 import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
 const setStorybookInfo = async ctx => {
-  const { version, viewLayer, addons } = await getInfo();
+  const { version, viewLayer, addons } = await getStorybookInfo();
   ctx.storybook = { version, viewLayer, addons };
 };
 

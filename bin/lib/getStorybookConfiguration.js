@@ -1,7 +1,7 @@
 /* This is not exactly clever but it works most of the time
  * we receive the full text of the npm script, and we look if we can find the cli flag
  */
-export function getStorybookConfiguration(storybookScript, shortName, longName) {
+export default function getStorybookConfiguration(storybookScript, shortName, longName) {
   const parts = storybookScript.split(/[\s='"]+/);
   let index = parts.indexOf(longName);
   if (index === -1) {

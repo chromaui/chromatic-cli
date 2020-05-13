@@ -1,6 +1,5 @@
 /* eslint-disable no-param-reassign */
 import pluralize from 'pluralize';
-import { TesterBuildQuery } from '../io/gql-queries';
 import { createTask, transitionTo } from '../lib/tasks';
 import { delay, matchesBranch, progress } from '../lib/utils';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
@@ -15,6 +14,22 @@ import {
   buildError,
 } from '../ui/tasks/snapshot';
 import { CHROMATIC_POLL_INTERVAL } from '../constants';
+
+const TesterBuildQuery = `
+  query TesterBuildQuery($buildNumber: Int!) {
+    app {
+      build(number: $buildNumber) {
+        id
+        status
+        autoAcceptChanges
+        inProgressCount: snapshotCount(statuses: [SNAPSHOT_IN_PROGRESS])
+        snapshotCount
+        changeCount
+        errorCount: snapshotCount(statuses: [SNAPSHOT_CAPTURE_ERROR])
+      }
+    }
+  }
+`;
 
 const takeSnapshots = async (ctx, task) => {
   const { client, git, log, options, runtimeSpecs } = ctx;

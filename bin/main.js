@@ -5,7 +5,6 @@ import GraphQLClient from './io/GraphQLClient';
 import getOptions from './lib/getOptions';
 import parseArgs from './lib/parseArgs';
 import { createLogger } from './lib/log';
-import sendDebugToLoggly from './lib/sendDebugToLoggly';
 import checkForUpdates from './lib/checkForUpdates';
 import getTasks from './tasks';
 
@@ -16,9 +15,8 @@ import runtimeError from './ui/messages/errors/runtimeError';
 
 export async function main(argv) {
   const sessionId = uuid();
-  const log = createLogger();
-  const context = { sessionId, log, ...(await parseArgs(argv)) };
-  sendDebugToLoggly(context);
+  const log = createLogger(sessionId);
+  const context = { sessionId, log, ...parseArgs(argv) };
 
   // Run these two in parallel; checkForUpdates never fails
   await Promise.all([run(context), checkForUpdates(context)]);
@@ -54,9 +52,16 @@ export async function run(ctx) {
       ctx.log.info('');
       ctx.log.queue(); // queue up any log messages while Listr is running
       await new Listr(getTasks(ctx.options)).run(ctx);
-    } catch (e) {
-      e.message = taskError(ctx, e);
-      throw e;
+    } catch (err) {
+      try {
+        // DOMException doesn't allow setting the message, so this might fail
+        err.message = taskError(ctx, err);
+      } catch (ex) {
+        const error = new Error(taskError(ctx, err));
+        error.stack = err.stack; // try to preserve the original stack
+        throw error;
+      }
+      throw err;
     } finally {
       // Handle potential runtime errors from JSDOM
       const { runtimeErrors, runtimeWarnings } = ctx;

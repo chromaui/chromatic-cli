@@ -1,7 +1,6 @@
 import minimatch from 'minimatch';
 import pluralize from 'pluralize';
 import { VirtualConsole } from 'jsdom';
-import { TesterCreateBuildMutation } from '../io/gql-queries';
 
 import getRuntimeSpecs from '../lib/getRuntimeSpecs';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -19,6 +18,36 @@ import {
   success,
   failed,
 } from '../ui/tasks/verify';
+
+const TesterCreateBuildMutation = `
+  mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
+    createBuild(input: $input, isolatorUrl: $isolatorUrl) {
+      id
+      number
+      specCount
+      snapshotCount
+      componentCount
+      webUrl
+      cachedUrl
+      features {
+        uiTests
+        uiReview
+      }
+      wasLimited
+      app {
+        account {
+          exceededThreshold
+          paymentRequired
+          billingUrl
+        }
+        repository {
+          provider
+        }
+        setupUrl
+      }
+    }
+  }
+`;
 
 const setEnvironment = async ctx => {
   // We send up all environment variables provided by these complicated systems.
