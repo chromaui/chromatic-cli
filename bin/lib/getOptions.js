@@ -37,7 +37,7 @@ export default async function getOptions({ flags, argv, log }) {
     fromCI: !!flags.ci,
     skip: flags.skip === '' ? true : flags.skip,
     verbose: !!flags.debug,
-    interactive: !flags.ci && !!flags.interactive,
+    interactive: !flags.ci && !!flags.interactive && process.stdout.isTTY,
 
     autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
