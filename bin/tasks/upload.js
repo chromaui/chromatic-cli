@@ -84,8 +84,10 @@ const uploadFiles = async (ctx, task) => {
             progressStream.on('progress', ({ delta }) => {
               urlProgress += delta; // We upload multiple files so we only care about the delta
               totalProgress += delta;
-              const percentage = Math.round((totalProgress / total) * 100);
-              task.output = uploading({ percentage }).output;
+              if (ctx.options.interactive) {
+                const percentage = Math.round((totalProgress / total) * 100);
+                task.output = uploading({ percentage }).output;
+              }
             });
 
             const res = await fetch(url, {
@@ -110,8 +112,10 @@ const uploadFiles = async (ctx, task) => {
               totalProgress -= urlProgress;
               urlProgress = 0;
               log.debug('Retrying upload %s, %O', url, err);
-              const percentage = Math.round((totalProgress / total) * 100);
-              task.output = uploading({ percentage }).output;
+              if (ctx.options.interactive) {
+                const percentage = Math.round((totalProgress / total) * 100);
+                task.output = uploading({ percentage }).output;
+              }
             },
           }
         )
