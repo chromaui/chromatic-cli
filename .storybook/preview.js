@@ -21,13 +21,11 @@ const style = {
   display: 'inline-block',
   margin: 0,
   padding: '1rem',
-  borderRadius: 3,
-  boxShadow: '0 0 5px #16242c',
-  color: '#c0c4cd',
   fontSize: 12,
   fontFamily: '"Source Code Pro", monospace',
   whiteSpace: 'pre-wrap',
   lineHeight: '1rem',
+  color: '#c0c4cd',
 };
 
 addDecorator((storyFn, { kind }) => {
