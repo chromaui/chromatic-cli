@@ -59,14 +59,10 @@ const takeSnapshots = async (ctx, task) => {
       return ctx.build;
     }
 
-    const { errorCount, inProgressCount, snapshotCount } = ctx.build;
+    const { inProgressCount, snapshotCount } = ctx.build;
     const cursor = snapshotCount - inProgressCount + 1;
     const label = snapshotLabels[cursor - 1] || '';
-
-    const bar = `[${progress(Math.round((cursor / snapshotCount) * 100))}]`;
-    const counts = `${cursor}/${snapshotCount}`;
-    const errors = errorCount ? `(${pluralize('error', errorCount, true)}) ` : '';
-    task.output = `${bar} ${counts} ${errors} ${label}`;
+    task.output = pending({ ...ctx, cursor, label }).output;
 
     await delay(CHROMATIC_POLL_INTERVAL);
     return waitForBuild();

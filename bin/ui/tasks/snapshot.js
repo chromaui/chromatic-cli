@@ -15,13 +15,15 @@ const stats = ctx => ({
 });
 
 export const pending = ctx => {
-  const { snapshots, components, specs } = stats(ctx);
-  const percentage = Math.round((ctx.cursor / ctx.build.snapshotCount) * 100);
-  const counts = `${ctx.cursor}/${ctx.build.snapshotCount}`;
+  const { cursor = 0, label = '' } = ctx;
+  const { errors, snapshots, components, specs } = stats(ctx);
+  const percentage = Math.round((cursor / ctx.build.snapshotCount) * 100);
+  const counts = `${cursor}/${ctx.build.snapshotCount}`;
+  const errs = ctx.build.errorCount ? `(${errors}) ` : '';
   return {
     status: 'pending',
     title: `Taking ${snapshots} (${components}, ${specs})`,
-    output: `[${progressBar(percentage)}] ${counts}  Component › Story [600px]`,
+    output: cursor ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}` : undefined,
   };
 };
 

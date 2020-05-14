@@ -66,7 +66,7 @@ const setEnvironment = async ctx => {
 };
 
 const setRuntimeSpecs = async (ctx, task) => {
-  const { isolatorUrl, log, options } = ctx;
+  const { log, options } = ctx;
   const { only, list } = options;
 
   const [match, componentName, storyName] = (only && only.match(/(.*):([^:]*)/)) || [];
@@ -84,7 +84,7 @@ const setRuntimeSpecs = async (ctx, task) => {
   virtualConsole.on('error', line => ctx.runtimeErrors.push(line));
   virtualConsole.on('warn', line => ctx.runtimeWarnings.push(line));
 
-  ctx.runtimeSpecs = await getRuntimeSpecs(isolatorUrl, virtualConsole);
+  ctx.runtimeSpecs = await getRuntimeSpecs(ctx, virtualConsole);
 
   if (list) {
     log.info(listing(ctx).title);
