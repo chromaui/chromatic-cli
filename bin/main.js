@@ -10,8 +10,35 @@ import getTasks from './tasks';
 
 import intro from './ui/messages/info/intro';
 import fatalError from './ui/messages/errors/fatalError';
+import fetchError from './ui/messages/errors/fetchError';
 import taskError from './ui/messages/errors/taskError';
 import runtimeError from './ui/messages/errors/runtimeError';
+
+class NonTTYRenderer {
+  constructor(tasks, options) {
+    this.tasks = tasks;
+    this.options = { ...options };
+  }
+
+  static get nonTTY() {
+    return true;
+  }
+
+  render() {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const task of this.tasks) {
+      task.subscribe(event => {
+        if (['STATE', 'DATA'].includes(event.type) && task.isPending()) {
+          console.log(`${task.title}`);
+        }
+      });
+    }
+  }
+
+  end() {
+    //
+  }
+}
 
 export async function main(argv) {
   const sessionId = uuid();
@@ -46,13 +73,19 @@ export async function run(ctx) {
         'x-chromatic-cli-version': ctx.pkg.version,
       },
       retries: 3,
+      log: ctx.log,
     });
 
     try {
       ctx.log.info('');
       ctx.log.queue(); // queue up any log messages while Listr is running
-      await new Listr(getTasks(ctx.options)).run(ctx);
+      const renderer = ctx.options.interactive ? 'default' : NonTTYRenderer;
+      await new Listr(getTasks(ctx.options), { renderer }).run(ctx);
     } catch (err) {
+      if (err.code === 'ECONNREFUSED') {
+        ctx.log.error(fetchError(ctx));
+        return;
+      }
       try {
         // DOMException doesn't allow setting the message, so this might fail
         err.message = taskError(ctx, err);

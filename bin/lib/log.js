@@ -13,22 +13,14 @@ const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const level = levels[logLevel];
 const interactive = !process.argv.slice(2).includes('--no-interactive');
 
-const addPrefix = prefix => arg =>
-  arg
-    .split('\n')
-    .map(line => `${prefix} ${line}`)
-    .join('\n');
-
 // Omits any JSON metadata, returning only the message string
 const logInteractive = args =>
   args.map(arg => (arg && arg.message) || arg).filter(arg => typeof arg === 'string');
 
-// Strips ANSI codes from messages, stringifies metadata to JSON and adds a prefix
+// Strips ANSI codes from messages and stringifies metadata to JSON
 const logVerbose = (type, args) => {
   const stringify = type === 'error' ? e => JSON.stringify(errorSerializer(e)) : JSON.stringify;
-  return args
-    .map(arg => (typeof arg === 'string' ? stripAnsi(arg) : stringify(arg)))
-    .map(addPrefix(type.toUpperCase()));
+  return args.map(arg => (typeof arg === 'string' ? stripAnsi(arg) : stringify(arg)));
 };
 
 export const createLogger = sessionId => {
