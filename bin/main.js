@@ -6,6 +6,7 @@ import getOptions from './lib/getOptions';
 import parseArgs from './lib/parseArgs';
 import { createLogger } from './lib/log';
 import checkForUpdates from './lib/checkForUpdates';
+import NonTTYRenderer from './lib/NonTTYRenderer';
 import getTasks from './tasks';
 
 import intro from './ui/messages/info/intro';
@@ -13,35 +14,6 @@ import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import taskError from './ui/messages/errors/taskError';
 import runtimeError from './ui/messages/errors/runtimeError';
-
-class NonTTYRenderer {
-  constructor(tasks, options) {
-    this.tasks = tasks;
-    this.options = options;
-  }
-
-  static get nonTTY() {
-    return true;
-  }
-
-  render() {
-    // eslint-disable-next-line no-restricted-syntax
-    for (const task of this.tasks) {
-      let lastData;
-      task.subscribe(event => {
-        if (event.type === 'STATE') this.options.log.info(`${task.title}`);
-        if (event.type === 'DATA' && lastData !== event.data) {
-          lastData = event.data;
-          this.options.log.info(`    → ${event.data}`);
-        }
-      });
-    }
-  }
-
-  end() {
-    //
-  }
-}
 
 export async function main(argv) {
   const sessionId = uuid();

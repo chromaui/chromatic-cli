@@ -21,7 +21,6 @@ const style = {
   display: 'inline-block',
   margin: 0,
   padding: '1rem',
-  background: '#16242c',
   borderRadius: 3,
   boxShadow: '0 0 5px #16242c',
   color: '#c0c4cd',
@@ -33,7 +32,9 @@ const style = {
 
 addDecorator((storyFn, { kind }) => {
   if (kind.startsWith('CLI/')) {
+    document.body.style.backgroundColor = '#16242c';
     return <code style={style} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
   }
+  document.body.style.backgroundColor = 'paleturquoise';
   return storyFn();
 });

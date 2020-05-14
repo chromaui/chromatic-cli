@@ -40,15 +40,17 @@ const takeSnapshots = async (ctx, task) => {
     log.info(speedUpCI(ctx.build.app.repository.provider));
   }
 
-  const snapshotLabels = runtimeSpecs.reduce((acc, { name, component, parameters = {} }) => {
-    const { viewports } = parameters;
-    for (let i = 0; i < (viewports ? viewports.length : 1); i += 1) {
-      const suffix = viewports ? ` [${viewports[i]}px]` : '';
-      const label = `${component.displayName} › ${name}${suffix}`;
-      acc.push(label);
-    }
-    return acc;
-  }, []);
+  const snapshotLabels =
+    options.interactive &&
+    runtimeSpecs.reduce((acc, { name, component, parameters = {} }) => {
+      const { viewports } = parameters;
+      for (let i = 0; i < (viewports ? viewports.length : 1); i += 1) {
+        const suffix = viewports ? ` [${viewports[i]}px]` : '';
+        const label = `${component.displayName} › ${name}${suffix}`;
+        acc.push(label);
+      }
+      return acc;
+    }, []);
 
   const waitForBuild = async () => {
     const { app } = await client.runQuery(TesterBuildQuery, { buildNumber });
@@ -59,10 +61,12 @@ const takeSnapshots = async (ctx, task) => {
       return ctx.build;
     }
 
-    const { inProgressCount, snapshotCount } = ctx.build;
-    const cursor = snapshotCount - inProgressCount + 1;
-    const label = snapshotLabels[cursor - 1] || '';
-    task.output = pending({ ...ctx, cursor, label }).output;
+    if (options.interactive) {
+      const { inProgressCount, snapshotCount } = ctx.build;
+      const cursor = snapshotCount - inProgressCount + 1;
+      const label = snapshotLabels[cursor - 1] || '';
+      task.output = pending({ ...ctx, cursor, label }).output;
+    }
 
     await delay(CHROMATIC_POLL_INTERVAL);
     return waitForBuild();

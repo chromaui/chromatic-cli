@@ -23,7 +23,9 @@ export const pending = ctx => {
   return {
     status: 'pending',
     title: `Taking ${snapshots} (${components}, ${specs})`,
-    output: cursor ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}` : undefined,
+    output: cursor
+      ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}`
+      : 'This may take a few minutes',
   };
 };
 
