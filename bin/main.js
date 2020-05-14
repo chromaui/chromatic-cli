@@ -17,7 +17,7 @@ import runtimeError from './ui/messages/errors/runtimeError';
 class NonTTYRenderer {
   constructor(tasks, options) {
     this.tasks = tasks;
-    this.options = { ...options };
+    this.options = options;
   }
 
   static get nonTTY() {
@@ -27,9 +27,12 @@ class NonTTYRenderer {
   render() {
     // eslint-disable-next-line no-restricted-syntax
     for (const task of this.tasks) {
+      let lastData;
       task.subscribe(event => {
-        if (['STATE', 'DATA'].includes(event.type) && task.isPending()) {
-          console.log(`${task.title}`);
+        if (event.type === 'STATE') this.options.log.info(`${task.title}`);
+        if (event.type === 'DATA' && lastData !== event.data) {
+          lastData = event.data;
+          this.options.log.info(`    → ${event.data}`);
         }
       });
     }
@@ -78,12 +81,13 @@ export async function run(ctx) {
 
     try {
       ctx.log.info('');
-      ctx.log.queue(); // queue up any log messages while Listr is running
-      const renderer = ctx.options.interactive ? 'default' : NonTTYRenderer;
-      await new Listr(getTasks(ctx.options), { renderer }).run(ctx);
+      if (ctx.options.interactive) ctx.log.queue(); // queue up any log messages while Listr is running
+      const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
+      await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
-      if (err.code === 'ECONNREFUSED') {
-        ctx.log.error(fetchError(ctx));
+      if (!ctx.options.interactive) ctx.log.info('');
+      if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
+        ctx.log.error(fetchError(ctx, err));
         return;
       }
       try {

@@ -27,35 +27,28 @@ export default class HTTPClient {
     this.retries = retries;
   }
 
-  async fetch(url, options = {}, { retries, noLogErrorBody = false } = {}) {
+  async fetch(url, options = {}, opts = {}) {
+    // The user can override retries and set it to 0
+    const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
+    const onRetry = (err, n) =>
+      this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
+
     return retry(
       async () => {
-        const res = await fetch(url, {
-          ...options,
-          headers: {
-            ...this.headers,
-            ...options.headers,
-          },
-        });
-
+        const headers = { ...this.headers, ...options.headers };
+        const res = await fetch(url, { ...options, headers });
         if (!res.ok) {
           const error = new HTTPClientError(res);
           // You can only call text() or json() once, so if we are going to handle it outside of here..
-          if (!noLogErrorBody) {
+          if (!opts.noLogErrorBody) {
             const body = await res.text();
-            this.log.warn({ body }, error.message);
+            this.log.debug({ body }, error.message);
           }
-
           throw error;
         }
-
         return res;
       },
-      {
-        // The user can override retries and set it to 0
-        retries: typeof retries !== 'undefined' ? retries : this.retries,
-        onRetry: err => this.log.warn({ url, err }, 'Retrying fetch'),
-      }
+      { retries, onRetry }
     );
   }
 
