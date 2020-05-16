@@ -1,3 +1,4 @@
+/* eslint-env browser */
 import { addDecorator } from '@storybook/react';
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';
