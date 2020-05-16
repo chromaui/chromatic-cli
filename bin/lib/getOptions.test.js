@@ -38,7 +38,7 @@ describe('await getOptions', () => {
       autoAcceptChanges: undefined,
       exitZeroOnChanges: undefined,
       exitOnceUploaded: undefined,
-      interactive: true,
+      interactive: false,
       verbose: false,
       createTunnel: true,
       originalArgv: ['--project-token', 'cli-code'],

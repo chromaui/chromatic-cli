@@ -1,7 +1,6 @@
 /* eslint-disable no-param-reassign */
-import pluralize from 'pluralize';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay, matchesBranch, progress } from '../lib/utils';
+import { delay, matchesBranch } from '../lib/utils';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import speedUpCI from '../ui/messages/info/speedUpCI';
@@ -13,7 +12,6 @@ import {
   buildFailed,
   buildError,
 } from '../ui/tasks/snapshot';
-import { CHROMATIC_POLL_INTERVAL } from '../constants';
 
 const TesterBuildQuery = `
   query TesterBuildQuery($buildNumber: Int!) {
@@ -31,7 +29,7 @@ const TesterBuildQuery = `
   }
 `;
 
-const takeSnapshots = async (ctx, task) => {
+export const takeSnapshots = async (ctx, task) => {
   const { client, git, log, options, runtimeSpecs } = ctx;
   const { number: buildNumber } = ctx.build;
 
@@ -57,7 +55,6 @@ const takeSnapshots = async (ctx, task) => {
     ctx.build = { ...ctx.build, ...app.build };
 
     if (app.build.status !== 'BUILD_IN_PROGRESS') {
-      if (app.build.changeCount) ctx.exitCode = 1;
       return ctx.build;
     }
 
@@ -68,7 +65,7 @@ const takeSnapshots = async (ctx, task) => {
       task.output = pending({ ...ctx, cursor, label }).output;
     }
 
-    await delay(CHROMATIC_POLL_INTERVAL);
+    await delay(options.pollInterval);
     return waitForBuild();
   };
 

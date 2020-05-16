@@ -1,7 +1,3 @@
-it('true', () => {
-  expect(true).toBe(true);
-});
-
 // import { confirm } from 'node-ask';
 // import kill from 'tree-kill';
 
@@ -9,76 +5,68 @@ it('true', () => {
 // import getRuntimeSpecs from './lib/getRuntimeSpecs';
 // import startApp, { checkResponse } from './lib/startStorybook';
 // import openTunnel from './lib/tunnel';
-// import { run as runTest } from './main';
+import { run } from './main';
+import { createLogger } from './lib/log';
+import parseArgs from './lib/parseArgs';
 
-// let lastBuild;
+let lastBuild;
+let mockBuildFeatures;
+beforeEach(() => {
+  mockBuildFeatures = {
+    features: { uiTests: true, uiReview: true },
+    wasLimited: false,
+  };
+});
 
-// const defaultOutput = {
-//   buildNumber: 1,
-//   changeCount: 1,
-//   componentCount: 1,
-//   errorCount: undefined,
-//   specCount: 1,
-// };
+jest.mock('node-fetch', () => async (url, { body } = {}) => ({
+  ok: true,
+  json: async () => {
+    const { query, variables } = JSON.parse(body);
 
-// let mockBuildFeatures;
-// beforeEach(() => {
-//   mockBuildFeatures = {
-//     features: { uiTests: true, uiReview: true },
-//     wasLimited: false,
-//   };
-// });
+    // Authenticate
+    if (query.match('TesterCreateAppTokenMutation')) {
+      return { data: { createAppToken: 'token' } };
+    }
 
-// jest.mock('node-fetch', () => async (url, { body } = {}) => ({
-//   ok: true,
-//   json: async () => {
-//     const { query, variables } = JSON.parse(body);
+    if (query.match('TesterCreateBuildMutation')) {
+      lastBuild = variables;
+      return {
+        data: {
+          createBuild: {
+            number: 1,
+            specCount: 1,
+            componentCount: 1,
+            webUrl: 'http://test.com',
+            ...mockBuildFeatures,
+            app: {
+              account: {
+                billingUrl: 'https://foo.bar',
+                exceededThreshold: false,
+                paymentRequired: false,
+              },
+            },
+          },
+        },
+      };
+    }
 
-//     if (query.match('TesterCreateAppTokenMutation')) {
-//       return {
-//         data: { createAppToken: 'token' },
-//       };
-//     }
+    if (query.match('TesterBuildQuery')) {
+      return {
+        data: {
+          app: { build: { status: 'BUILD_PENDING', changeCount: 1 } },
+        },
+      };
+    }
 
-//     if (query.match('TesterCreateBuildMutation')) {
-//       lastBuild = variables;
-//       return {
-//         data: {
-//           createBuild: {
-//             number: 1,
-//             specCount: 1,
-//             componentCount: 1,
-//             webUrl: 'http://test.com',
-//             ...mockBuildFeatures,
-//             app: {
-//               account: {
-//                 billingUrl: 'https://foo.bar',
-//                 exceededThreshold: false,
-//                 paymentRequired: false,
-//               },
-//             },
-//           },
-//         },
-//       };
-//     }
-
-//     if (query.match('TesterBuildQuery')) {
-//       return {
-//         data: {
-//           app: { build: { status: 'BUILD_PENDING', changeCount: 1 } },
-//         },
-//       };
-//     }
-
-//     throw new Error('Unknown Query');
-//   },
-// }));
-// jest.mock('tree-kill');
-// jest.mock('fs-extra', () => ({
-//   pathExists: async () => true,
-//   readFileSync: require.requireActual('fs-extra').readFileSync,
-// }));
-// jest.mock('node-ask');
+    throw new Error('Unknown Query');
+  },
+}));
+jest.mock('tree-kill');
+jest.mock('fs-extra', () => ({
+  pathExists: async () => true,
+  readFileSync: require.requireActual('fs-extra').readFileSync,
+}));
+jest.mock('node-ask');
 
 // jest.mock('../git/git', () => ({
 //   getCommit: () => ({
@@ -136,39 +124,86 @@ it('true', () => {
 //   process.env = processEnv;
 // });
 
-// const defaultOptions = {
-//   projectToken: 'code',
-//   scriptName: 'storybook',
-//   url: 'http://localhost:1337/iframe.html',
-//   originalArgv: ['node', 'chromatic', '--project-token', 'code'],
-// };
+const defaultOutput = {
+  buildNumber: 1,
+  changeCount: 1,
+  componentCount: 1,
+  errorCount: undefined,
+  specCount: 1,
+};
+
+class TestLogger {
+  constructor() {
+    this.errors = [];
+    this.warnings = [];
+  }
+
+  error(...args) {
+    this.errors.push(...args);
+  }
+
+  warn(...args) {
+    this.warnings.push(...args);
+  }
+
+  info() {
+    // do nothing
+  }
+
+  log() {
+    // do nothing
+  }
+
+  debug() {
+    // do nothing
+  }
+
+  queue() {
+    // do nothing
+  }
+
+  flush() {
+    // do nothing
+  }
+}
+
+const getContext = (argv = []) => {
+  const log = new TestLogger();
+  return { sessionId: ':sessionId', log, ...parseArgs(argv) };
+};
+
+it('fails on missing project token', async () => {
+  const ctx = getContext();
+  await run(ctx);
+  expect(ctx.exitCode).toBe(254);
+  expect(ctx.log.errors[0]).toMatch(/Missing project token/);
+});
 
 // it('runs in simple situations', async () => {
-//   // Returns 1 because there is a change
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
+//   const ctx = getContext(['--project-token=123']);
+//   await run(ctx);
+//   expect(ctx.log).toMatchObject({
 //     exitCode: 1,
-//     exitUrl: 'http://test.com',
 //   });
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       autoAcceptChanges: false,
-//       branch: 'branch',
-//       commit: 'commit',
-//       committedAt: 1234,
-//       baselineCommits: ['baseline'],
-//       runtimeSpecs: ['story'],
-//       fromCI: false,
-//       isTravisPrBuild: false,
-//       packageVersion,
-//       storybookVersion: '5.1.0',
-//       viewLayer: 'viewLayer',
-//       committerEmail: 'test@test.com',
-//       committerName: 'tester',
-//       cachedUrl: 'http://cached.tunnel.com/iframe.html',
-//     },
-//     isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
-//   });
+//   // expect(lastBuild).toMatchObject({
+//   //   input: {
+//   //     autoAcceptChanges: false,
+//   //     branch: 'branch',
+//   //     commit: 'commit',
+//   //     committedAt: 1234,
+//   //     baselineCommits: ['baseline'],
+//   //     runtimeSpecs: ['story'],
+//   //     fromCI: false,
+//   //     isTravisPrBuild: false,
+//   //     packageVersion: '1.0.0',
+//   //     storybookVersion: '5.1.0',
+//   //     viewLayer: 'viewLayer',
+//   //     committerEmail: 'test@test.com',
+//   //     committerName: 'tester',
+//   //     cachedUrl: 'http://cached.tunnel.com/iframe.html',
+//   //   },
+//   //   isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
+//   // });
 // });
 
 // it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {

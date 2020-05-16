@@ -8,7 +8,7 @@ const TesterCreateAppTokenMutation = `
   }
 `;
 
-const authenticate = async ctx => {
+export const setAuthorizationToken = async ctx => {
   const { client, options } = ctx;
   const variables = { projectToken: options.projectToken };
 
@@ -25,5 +25,5 @@ const authenticate = async ctx => {
 
 export default createTask({
   title: initial.title,
-  steps: [transitionTo(authenticating), authenticate, transitionTo(authenticated, true)],
+  steps: [transitionTo(authenticating), setAuthorizationToken, transitionTo(authenticated, true)],
 });

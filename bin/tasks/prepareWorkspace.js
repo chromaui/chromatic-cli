@@ -14,7 +14,7 @@ import workspaceNotClean from '../ui/messages/errors/workspaceNotClean';
 import workspaceNotUpToDate from '../ui/messages/errors/workspaceNotUpToDate';
 import { runRestoreWorkspace } from './restoreWorkspace';
 
-const prepareWorkspace = async (ctx, task) => {
+export const runPrepareWorkspace = async (ctx, task) => {
   const { patchHeadRef, patchBaseRef } = ctx.options;
 
   // Make sure the git repo is in a clean state (no changes / untracked files).
@@ -51,6 +51,7 @@ const prepareWorkspace = async (ctx, task) => {
     transitionTo(installingDependencies)(ctx, task);
     await installDependencies(); // this might modify a lockfile
   } catch (err) {
+    ctx.mergeBase = undefined;
     ctx.exitCode = 104;
     ctx.log.error(err);
     await runRestoreWorkspace(); // make sure we clean up even when something breaks
@@ -60,5 +61,5 @@ const prepareWorkspace = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  steps: [transitionTo(pending), prepareWorkspace, transitionTo(success, true)],
+  steps: [transitionTo(pending), runPrepareWorkspace, transitionTo(success, true)],
 });

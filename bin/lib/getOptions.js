@@ -6,6 +6,7 @@ import {
   CHROMATIC_PROJECT_TOKEN,
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
+  CHROMATIC_POLL_INTERVAL,
 } from '../constants';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
@@ -37,7 +38,7 @@ export default async function getOptions({ flags, argv, log }) {
     fromCI: !!flags.ci,
     skip: flags.skip === '' ? true : flags.skip,
     verbose: !!flags.debug,
-    interactive: !flags.ci && !!flags.interactive && process.stdout.isTTY,
+    interactive: !flags.ci && !!flags.interactive && !!process.stdout.isTTY,
 
     autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
@@ -67,6 +68,7 @@ export default async function getOptions({ flags, argv, log }) {
     createTunnel: !flags.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
     indexUrl: CHROMATIC_INDEX_URL,
     tunnelUrl: CHROMATIC_TUNNEL_URL,
+    pollInterval: CHROMATIC_POLL_INTERVAL,
 
     patchHeadRef,
     patchBaseRef,

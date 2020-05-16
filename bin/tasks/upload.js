@@ -50,13 +50,10 @@ function getPathsInDir(rootDir, dirname = '.') {
     .reduce((a, b) => [...a, ...b], []); // flatten
 }
 
-const uploadFiles = async (ctx, task) => {
+export const uploadFiles = async (ctx, task) => {
   const { client, log, sourceDir } = ctx;
 
-  const pathAndLengths = getPathsInDir(sourceDir).map(o => ({
-    ...o,
-    knownAs: slash(o.pathname),
-  }));
+  const pathAndLengths = getPathsInDir(sourceDir).map(o => ({ ...o, knownAs: slash(o.pathname) }));
   const paths = pathAndLengths.map(({ knownAs }) => knownAs);
   const total = pathAndLengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   let totalProgress = 0;

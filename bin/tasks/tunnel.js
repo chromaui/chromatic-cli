@@ -5,7 +5,7 @@ import { createTask, transitionTo } from '../lib/tasks';
 import openTunnel from '../lib/tunnel';
 import { initial, pending, success, failed } from '../ui/tasks/tunnel';
 
-const createTunnel = async (ctx, task) => {
+export const createTunnel = async ctx => {
   const { log, options } = ctx;
   const { port, pathname, query, hash } = parse(ctx.isolatorUrl, true);
 
@@ -49,7 +49,7 @@ const createTunnel = async (ctx, task) => {
   }
 };
 
-const testConnection = async (ctx, task) => {
+export const testConnection = async ctx => {
   try {
     await fetch(ctx.isolatorUrl);
   } catch (err) {

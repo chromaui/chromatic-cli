@@ -49,7 +49,7 @@ const TesterCreateBuildMutation = `
   }
 `;
 
-const setEnvironment = async ctx => {
+export const setEnvironment = async ctx => {
   // We send up all environment variables provided by these complicated systems.
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
@@ -65,7 +65,7 @@ const setEnvironment = async ctx => {
   ctx.log.debug(`Got environment ${ctx.environment}`);
 };
 
-const setRuntimeSpecs = async (ctx, task) => {
+export const setRuntimeSpecs = async (ctx, task) => {
   const { log, options } = ctx;
   const { only, list } = options;
 
@@ -105,7 +105,7 @@ const setRuntimeSpecs = async (ctx, task) => {
   log.debug(`Found ${pluralize('story', ctx.runtimeSpecs.length, true)}`);
 };
 
-const createBuild = async (ctx, task) => {
+export const createBuild = async (ctx, task) => {
   const { client, environment, git, log, pkg, cachedUrl, isolatorUrl, options, runtimeSpecs } = ctx;
   const { patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
   const { version, ...commitInfo } = git; // omit version
@@ -130,8 +130,8 @@ const createBuild = async (ctx, task) => {
   });
   ctx.build = build;
 
-  const { account } = build.app;
   if (build.wasLimited) {
+    const { account } = build.app;
     if (account.exceededThreshold) {
       log.warn(snapshotQuotaReached(account));
       ctx.exitCode = 101;

@@ -50,6 +50,7 @@ export default async function getRuntimeSpecs(ctx, virtualConsole) {
     if (e.name === 'StatusCodeError') {
       e.message = `Connection to Storybook via JSDOM failed - status code ${e.statusCode}`;
     }
+    console.log(e);
     throw e;
   }
 }

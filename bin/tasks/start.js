@@ -6,7 +6,7 @@ import startApp, { checkResponse } from '../lib/startStorybook';
 import { createTask, transitionTo } from '../lib/tasks';
 import { initial, pending, success, skipped, skipFailed } from '../ui/tasks/start';
 
-const startStorybook = async ctx => {
+export const startStorybook = async ctx => {
   const { exec: commandName, scriptName, url } = ctx.options;
 
   const child = await startApp({

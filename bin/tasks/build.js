@@ -19,12 +19,12 @@ const TesterSkipBuildMutation = `
   }
 `;
 
-const setSourceDir = async ctx => {
+export const setSourceDir = async ctx => {
   const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
   ctx.sourceDir = tmpDir.path;
 };
 
-const setSpawnParams = ctx => {
+export const setSpawnParams = ctx => {
   // Run either:
   //   npm/yarn run scriptName (depending on npm_execpath)
   //   node path/to/npm.js run scriptName (if npm run via node)
@@ -45,7 +45,7 @@ const setSpawnParams = ctx => {
   };
 };
 
-const buildStorybook = async ctx => {
+export const buildStorybook = async ctx => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
   const logFile = fs.createWriteStream(ctx.buildLogFile);
   await new Promise((resolve, reject) => {

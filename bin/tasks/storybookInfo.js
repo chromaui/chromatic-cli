@@ -2,7 +2,7 @@ import getStorybookInfo from '../lib/getStorybookInfo';
 import { createTask, transitionTo } from '../lib/tasks';
 import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
-const setStorybookInfo = async ctx => {
+export const setStorybookInfo = async ctx => {
   const { version, viewLayer, addons } = await getStorybookInfo();
   ctx.storybook = { version, viewLayer, addons };
 };
