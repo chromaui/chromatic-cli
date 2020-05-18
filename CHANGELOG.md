@@ -1,3 +1,8 @@
+# 4.0.3 - 2020-05-18
+
+- Replace child_process.execSync with execa
+- ADD mock for execCommand in JSDOM
+
 # 4.0.2 - 2020-04-26
 
 - REMOVE node_env development https://github.com/chromaui/chromatic-cli/pull/81

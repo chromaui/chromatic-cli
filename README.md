@@ -21,11 +21,13 @@ You can use this package normally, which means installing it and adding a script
 But alternatively (and this is useful for testing) you can use npx:
 
 **Use a git branch**:
+
 ```sh
 npx -p chromaui/chromatic-cli#master chromatic --dev
 ```
 
 **Use a debug version on npm**:
+
 ```sh
 npx -p chromatic#next chromatic
 ```
@@ -50,6 +52,8 @@ Do not run this based on a github pull_request event. If you do, the commit and 
 
 You can also use the environment variable: `CHROMATIC_PROJECT_TOKEN`
 
+> Note: this option was previously known as "--app-code". If you encounter an error referring to this, you should upgrade to the latest version of the Chromatic CLI. See [Migrating to the new CLI package](#migrating-to-the-new-cli-package).
+
 ### Storybook options
 
 ```
@@ -58,6 +62,7 @@ You can also use the environment variable: `CHROMATIC_PROJECT_TOKEN`
 ```
 
 Deprecated options (for tunneled builds):
+
 ```
 --script-name [name], -s  The npm script that starts your Storybook [storybook]
 --exec <command>, -e  Alternatively, a full command to run to start your storybook
@@ -68,7 +73,7 @@ Deprecated options (for tunneled builds):
 --storybook-https  Use if Storybook is running on https (auto detected from -s, if set)
 --storybook-cert <path>  Use if Storybook is running on https (auto detected from -s, if set)
 --storybook-key <path>  Use if Storybook is running on https (auto detected from -s, if set)
---storybook-ca <ca>  Use if Storybook is running on https (auto detected from -s, if set)    
+--storybook-ca <ca>  Use if Storybook is running on https (auto detected from -s, if set)
 ```
 
 These options are not required, this CLI is 0-config if you have a `build-storybook` script in your `package.json`.
@@ -139,3 +144,21 @@ To facilitate upgrading in the future, removing and adding features, this is the
 - Any new features will have to be on Chromatic production before they could be used in this package
 - We can add feature flags to be able to test new functionality
 - Chromatic production can not remove any features this package depends on until after the usage has been removed from this package in addition to a grace period to allow users to upgrade
+
+### Migrating to the new CLI package
+
+This package was previously named `storybook-chromatic`. If you still have `storybook-chromatic` installed, you should remove it and install `chromatic` instead:
+
+**With npm:**
+
+```
+npm uninstall --dev storybook-chromatic
+npm install --dev chromatic
+```
+
+**With yarn:**
+
+```
+yarn remove --dev storybook-chromatic
+yarn add --dev chromatic
+```
