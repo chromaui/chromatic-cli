@@ -152,7 +152,11 @@ jest.mock('./lib/getRuntimeSpecs');
 let processEnv;
 beforeEach(() => {
   processEnv = process.env;
-  process.env = { DISABLE_LOGGING: true };
+  process.env = {
+    DISABLE_LOGGING: true,
+    CHROMATIC_APP_CODE: undefined,
+    CHROMATIC_PROJECT_TOKEN: undefined,
+  };
   execa.mockReset();
   getRuntimeSpecs
     .mockReset()
