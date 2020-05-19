@@ -15,6 +15,6 @@ export const runTunnelBuild = [auth, gitInfo, storybookInfo, start, tunnel, veri
 export const runPatchBuild = runBuild => [prepareWorkspace, ...runBuild, restoreWorkspace];
 
 export default options => {
-  const runBuild = options.scriptName || options.exec ? runTunnelBuild : runUploadBuild;
+  const runBuild = options.useTunnel ? runTunnelBuild : runUploadBuild;
   return options.patchHeadRef && options.patchBaseRef ? runPatchBuild(runBuild) : runBuild;
 };

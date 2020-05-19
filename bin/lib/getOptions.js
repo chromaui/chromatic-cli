@@ -7,6 +7,7 @@ import {
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
   CHROMATIC_POLL_INTERVAL,
+  CHROMATIC_RETRIES,
 } from '../constants';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
@@ -69,6 +70,7 @@ export default async function getOptions({ flags, argv, log }) {
     indexUrl: CHROMATIC_INDEX_URL,
     tunnelUrl: CHROMATIC_TUNNEL_URL,
     pollInterval: CHROMATIC_POLL_INTERVAL,
+    uploadRetries: CHROMATIC_RETRIES,
 
     patchHeadRef,
     patchBaseRef,
@@ -87,7 +89,6 @@ export default async function getOptions({ flags, argv, log }) {
     }
   }
 
-  const packageJson = readFileSync(path.resolve('./package.json'));
   const { storybookBuildDir, exec } = options;
   let { port, storybookUrl, noStart, scriptName, buildScriptName } = options;
   let https = options.https && {
@@ -123,14 +124,17 @@ export default async function getOptions({ flags, argv, log }) {
     throw new Error(invalidExitOnceUploaded());
   }
 
+  // This is the user's own package.json, not ctx.pkg!
+  const packageJson = readFileSync(path.resolve('./package.json'));
+
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
-      return { ...options, noStart: true };
+      return { ...options, noStart: true, useTunnel: false };
     }
     buildScriptName = typeof buildScriptName === 'string' ? buildScriptName : 'build-storybook';
     if (packageJson.scripts && packageJson.scripts[buildScriptName]) {
-      return { ...options, noStart: true, buildScriptName };
+      return { ...options, noStart: true, useTunnel: false, buildScriptName };
     }
     throw new Error(missingBuildScriptName(buildScriptName));
   }
@@ -181,6 +185,7 @@ export default async function getOptions({ flags, argv, log }) {
   return {
     ...options,
     noStart,
+    useTunnel: true,
     https,
     url: parsedUrl.format(),
     scriptName,

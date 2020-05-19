@@ -32,7 +32,7 @@ export default createTask({
   skip: async ctx => {
     if (await checkResponse(ctx.options.url)) {
       ctx.isolatorUrl = ctx.options.url;
-      return skipped.output;
+      return skipped(ctx).output;
     }
     if (ctx.options.noStart) {
       throw new Error(skipFailed(ctx).output);

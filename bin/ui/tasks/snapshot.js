@@ -1,4 +1,5 @@
 import pluralize from 'pluralize';
+import { getDuration } from '../../lib/tasks';
 import { progress as progressBar } from '../../lib/utils';
 
 export const initial = {
@@ -36,7 +37,7 @@ export const buildPassed = ctx => {
     title: ctx.build.features.uiTests
       ? `Build ${ctx.build.number} passed!`
       : `Build ${ctx.build.number} published!`,
-    output: `Took ${snapshots} (${components}, ${specs}); no changes found`,
+    output: `Took ${snapshots} (${components}, ${specs}) in ${getDuration(ctx)}; no changes found`,
   };
 };
 
@@ -44,7 +45,7 @@ export const buildComplete = ctx => {
   const { changes, snapshots, components, specs } = stats(ctx);
   return {
     status: 'success',
-    title: `Build ${ctx.build.number} complete`,
+    title: `Build ${ctx.build.number} completed in ${getDuration(ctx)}`,
     output: ctx.build.autoAcceptChanges
       ? `Auto-accepted ${changes} (${snapshots}, ${components}, ${specs})`
       : `Found ${changes} (${components}, ${specs}, ${snapshots}); exiting with status code ${ctx.exitCode}`,
@@ -55,7 +56,7 @@ export const buildFailed = ctx => {
   const { errors, snapshots, components, specs } = stats(ctx);
   return {
     status: 'error',
-    title: `Build ${ctx.build.number} failed`,
+    title: `Build ${ctx.build.number} failed after ${getDuration(ctx)}`,
     output: `Found ${errors} (${components}, ${specs}, ${snapshots}); exiting with status code ${ctx.exitCode}`,
   };
 };

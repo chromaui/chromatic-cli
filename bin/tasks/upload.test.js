@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { readdirSync, statSync, createReadStream } from 'fs';
 import progress from 'progress-stream';
-import { uploadFiles } from './upload';
+import { uploadStorybook } from './upload';
 
 jest.mock('fs');
 jest.mock('node-fetch');
@@ -9,7 +9,7 @@ jest.mock('progress-stream');
 
 const log = { debug: jest.fn() };
 
-describe('uploadFiles', () => {
+describe('uploadStorybook', () => {
   it('retrieves the upload locations, puts the files there and sets the isolatorUrl on context', async () => {
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({
@@ -37,7 +37,7 @@ describe('uploadFiles', () => {
     progress.mockReturnValue({ on: jest.fn() });
 
     const ctx = { client, log, sourceDir: '/static/', options: {} };
-    await uploadFiles(ctx, {});
+    await uploadStorybook(ctx, {});
 
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/TesterGetUploadUrlsMutation/),

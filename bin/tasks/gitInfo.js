@@ -5,7 +5,7 @@ import { initial, pending, success } from '../ui/tasks/gitInfo';
 
 export const setGitInfo = async ctx => {
   const { patchBaseRef, fromCI, ignoreLastBuildOnBranch } = ctx.options;
-  ctx.git = await getCommitAndBranch({ patchBaseRef, inputFromCI: fromCI });
+  ctx.git = await getCommitAndBranch({ patchBaseRef, inputFromCI: fromCI, log: ctx.log });
   ctx.git.version = await getVersion();
   ctx.git.baselineCommits = await getBaselineCommits(ctx.client, {
     branch: ctx.git.branch,

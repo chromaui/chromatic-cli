@@ -1,13 +1,15 @@
-// import { confirm } from 'node-ask';
-// import kill from 'tree-kill';
+import fs from 'fs';
+import execa from 'execa';
+import kill from 'tree-kill';
+import { confirm } from 'node-ask';
+import fetch from 'node-fetch';
 
-// import { version as packageVersion } from '../package.json';
-// import getRuntimeSpecs from './lib/getRuntimeSpecs';
-// import startApp, { checkResponse } from './lib/startStorybook';
-// import openTunnel from './lib/tunnel';
-import { run } from './main';
-import { createLogger } from './lib/log';
+import getRuntimeSpecs from './lib/getRuntimeSpecs';
+import startApp, { checkResponse } from './lib/startStorybook';
+import openTunnel from './lib/tunnel';
+import { runAll, runBuild } from './main';
 import parseArgs from './lib/parseArgs';
+import uploadFiles from './lib/uploadFiles';
 
 let lastBuild;
 let mockBuildFeatures;
@@ -18,119 +20,147 @@ beforeEach(() => {
   };
 });
 
-jest.mock('node-fetch', () => async (url, { body } = {}) => ({
-  ok: true,
-  json: async () => {
-    const { query, variables } = JSON.parse(body);
+jest.mock('execa');
 
-    // Authenticate
-    if (query.match('TesterCreateAppTokenMutation')) {
-      return { data: { createAppToken: 'token' } };
-    }
+jest.mock('jsonfile', () => ({
+  readFileSync: () => ({
+    scripts: {
+      storybook: 'start-storybook -p 1337',
+      otherStorybook: 'start-storybook -p 7070',
+      notStorybook: 'lint',
+      'build-storybook': 'build-storybook',
+      otherBuildStorybook: 'build-storybook',
+    },
+  }),
+}));
 
-    if (query.match('TesterCreateBuildMutation')) {
-      lastBuild = variables;
-      return {
-        data: {
-          createBuild: {
-            number: 1,
-            specCount: 1,
-            componentCount: 1,
-            webUrl: 'http://test.com',
-            ...mockBuildFeatures,
-            app: {
-              account: {
-                billingUrl: 'https://foo.bar',
-                exceededThreshold: false,
-                paymentRequired: false,
+jest.mock('node-ask');
+
+jest.mock('node-fetch', () =>
+  jest.fn(async (url, { body } = {}) => ({
+    ok: true,
+    json: async () => {
+      const { query, variables } = JSON.parse(body);
+
+      // Authenticate
+      if (query.match('TesterCreateAppTokenMutation')) {
+        return { data: { createAppToken: 'token' } };
+      }
+
+      if (query.match('TesterCreateBuildMutation')) {
+        lastBuild = variables;
+        return {
+          data: {
+            createBuild: {
+              number: 1,
+              specCount: 1,
+              componentCount: 1,
+              webUrl: 'http://test.com',
+              ...mockBuildFeatures,
+              app: {
+                account: {
+                  billingUrl: 'https://foo.bar',
+                  exceededThreshold: false,
+                  paymentRequired: false,
+                },
               },
             },
           },
-        },
-      };
-    }
+        };
+      }
 
-    if (query.match('TesterBuildQuery')) {
-      return {
-        data: {
-          app: { build: { status: 'BUILD_PENDING', changeCount: 1 } },
-        },
-      };
-    }
+      if (query.match('TesterBuildQuery')) {
+        return {
+          data: {
+            app: { build: { status: 'BUILD_PENDING', changeCount: 1 } },
+          },
+        };
+      }
 
-    throw new Error('Unknown Query');
-  },
-}));
+      if (query.match('TesterFirstCommittedAtQuery')) {
+        return { data: { app: { firstBuild: { committedAt: null } } } };
+      }
+
+      if (query.match('TesterHasBuildsWithCommitsQuery')) {
+        return { data: { app: { hasBuildsWithCommits: [] } } };
+      }
+
+      if (query.match('TesterGetUploadUrlsMutation')) {
+        return {
+          data: {
+            getUploadUrls: {
+              domain: 'https://chromatic.com',
+              urls: [
+                {
+                  path: 'one.js',
+                  url: 'https://cdn.example.com/one.js',
+                  contentType: 'text/javascript',
+                },
+                {
+                  path: 'two.js',
+                  url: 'https://cdn.example.com/two.js',
+                  contentType: 'text/javascript',
+                },
+              ],
+            },
+          },
+        };
+      }
+
+      throw new Error(`Unknown Query: ${query}`);
+    },
+  }))
+);
+
 jest.mock('tree-kill');
+
 jest.mock('fs-extra', () => ({
   pathExists: async () => true,
   readFileSync: require.requireActual('fs-extra').readFileSync,
 }));
-jest.mock('node-ask');
 
-// jest.mock('../git/git', () => ({
-//   getCommit: () => ({
-//     commit: 'commit',
-//     committedAt: 1234,
-//     committerEmail: 'test@test.com',
-//     committerName: 'tester',
-//   }),
-//   getBranch: () => 'branch',
-//   getBaselineCommits: () => ['baseline'],
-// }));
+fs.readdirSync = jest.fn(() => ['one.js', 'two.js']);
+const fsStatSync = fs.statSync;
+fs.statSync = jest.fn(path => {
+  if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
+  return { isDirectory: () => false, size: 42 };
+});
 
-// jest.mock('../storybook/start-app');
-// jest.mock('../storybook/get-info', () => () => ({
-//   version: '5.1.0',
-//   viewLayer: 'viewLayer',
-//   addons: [],
-// }));
-// jest.mock('../lib/tunnel');
-// jest.mock('../lib/log', () =>
-//   Object.keys(console).reduce(
-//     (acc, k) => ({
-//       ...acc,
-//       [k]: jest.fn(),
-//     }),
-//     {}
-//   )
-// );
+jest.mock('./git/git', () => ({
+  getCommit: () => ({
+    commit: 'commit',
+    committedAt: 1234,
+    committerEmail: 'test@test.com',
+    committerName: 'tester',
+  }),
+  getBranch: () => 'branch',
+  getBaselineCommits: () => ['baseline'],
+  getVersion: () => '2.24.1',
+}));
 
-// jest.mock('../io/upload-to-s3');
+jest.mock('./lib/startStorybook');
+jest.mock('./lib/getStorybookInfo', () => () => ({
+  version: '5.1.0',
+  viewLayer: 'viewLayer',
+  addons: [],
+}));
+jest.mock('./lib/tunnel');
+jest.mock('./lib/uploadFiles');
+jest.mock('./lib/getRuntimeSpecs');
+// jest.mock('./lib/updatePackageJson');
 
-// jest.mock('../tester/runtimes');
-// jest.mock('../lib/updatePackageJson');
-
-// let processEnv;
-// beforeEach(() => {
-//   processEnv = process.env;
-//   process.env = { DISABLE_LOGGING: true };
-//   confirm.mockReset();
-//   startApp.mockReset().mockReturnValue({
-//     on: jest.fn(),
-//     stderr: { on: jest.fn(), resume: jest.fn() },
-//     stdout: { on: jest.fn(), resume: jest.fn() },
-//   });
-//   checkResponse.mockReset();
-//   openTunnel.mockReset().mockReturnValue({
-//     url: 'http://tunnel.com/?clientId=foo',
-//     cachedUrl: 'http://cached.tunnel.com',
-//     close: jest.fn,
-//   });
-//   getRuntimeSpecs.mockReset().mockReturnValue(['story']);
-//   kill.mockReset().mockImplementation((pid, sig, cb) => cb());
-// });
-// afterEach(() => {
-//   process.env = processEnv;
-// });
-
-const defaultOutput = {
-  buildNumber: 1,
-  changeCount: 1,
-  componentCount: 1,
-  errorCount: undefined,
-  specCount: 1,
-};
+let processEnv;
+beforeEach(() => {
+  processEnv = process.env;
+  process.env = { DISABLE_LOGGING: true };
+  execa.mockReset();
+  getRuntimeSpecs
+    .mockReset()
+    .mockReturnValue([{ name: 'story', component: { name: 'component' } }]);
+});
+afterEach(() => {
+  process.env = processEnv;
+});
 
 class TestLogger {
   constructor() {
@@ -167,350 +197,353 @@ class TestLogger {
   }
 }
 
-const getContext = (argv = []) => {
+const getContext = argv => {
   const log = new TestLogger();
   return { sessionId: ':sessionId', log, ...parseArgs(argv) };
 };
 
 it('fails on missing project token', async () => {
-  const ctx = getContext();
-  await run(ctx);
+  const ctx = getContext([]);
+  await runBuild(ctx);
   expect(ctx.exitCode).toBe(254);
   expect(ctx.log.errors[0]).toMatch(/Missing project token/);
 });
 
-// it('runs in simple situations', async () => {
-//   const ctx = getContext(['--project-token=123']);
-//   await run(ctx);
-//   expect(ctx.log).toMatchObject({
-//     exitCode: 1,
-//   });
-//   // expect(lastBuild).toMatchObject({
-//   //   input: {
-//   //     autoAcceptChanges: false,
-//   //     branch: 'branch',
-//   //     commit: 'commit',
-//   //     committedAt: 1234,
-//   //     baselineCommits: ['baseline'],
-//   //     runtimeSpecs: ['story'],
-//   //     fromCI: false,
-//   //     isTravisPrBuild: false,
-//   //     packageVersion: '1.0.0',
-//   //     storybookVersion: '5.1.0',
-//   //     viewLayer: 'viewLayer',
-//   //     committerEmail: 'test@test.com',
-//   //     committerName: 'tester',
-//   //     cachedUrl: 'http://cached.tunnel.com/iframe.html',
-//   //   },
-//   //   isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
-//   // });
-// });
+it('runs in simple situations', async () => {
+  const ctx = getContext(['--project-token=123']);
+  await runBuild(ctx);
 
-// it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {
-//   // Returns 1 because there is a change
-//   expect(
-//     await runTest({
-//       ...defaultOptions,
-//       url: 'http://localhost:1337/iframe.html?foo=bar#hash',
-//     })
-//   ).toEqual({ ...defaultOutput, exitCode: 1, exitUrl: 'http://test.com' });
+  expect(ctx.exitCode).toBe(1);
+  expect(lastBuild).toMatchObject({
+    input: {
+      branch: 'branch',
+      commit: 'commit',
+      committedAt: 1234,
+      baselineCommits: ['baseline'],
+      runtimeSpecs: [{ name: 'story', component: { name: 'component' } }],
+      fromCI: false,
+      isTravisPrBuild: false,
+      packageVersion: expect.any(String),
+      storybookVersion: '5.1.0',
+      viewLayer: 'viewLayer',
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+    },
+    isolatorUrl: `https://chromatic.com/iframe.html`,
+  });
+});
 
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar#hash',
-//     },
-//     isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent(
-//       '/iframe.html?foo=bar'
-//     )}#hash`,
-//   });
-// });
+it('returns 0 with exit-zero-on-changes', async () => {
+  const ctx = getContext(['--project-token=123', '--exit-zero-on-changes']);
+  await runBuild(ctx);
+  expect(ctx.exitCode).toBe(0);
+});
 
-// it('returns 0 when test have been completed', async () => {
-//   expect(
-//     await runTest({
-//       ...defaultOptions,
-//       exitZeroOnChanges: true,
-//     })
-//   ).toEqual({ ...defaultOutput, exitCode: 0, exitUrl: 'http://test.com' });
-// });
+it('returns 0 with exit-once-uploaded', async () => {
+  const ctx = getContext(['--project-token=123', '--exit-once-uploaded']);
+  await runBuild(ctx);
+  expect(ctx.exitCode).toBe(0);
+});
 
-// it('returns 0 when stopped after the build has been sent to chromatic', async () => {
-//   expect(
-//     await runTest({
-//       ...defaultOptions,
-//       exitOnceUploaded: true,
-//     })
-//   ).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
-// });
+it('returns 0 when the build is publish only', async () => {
+  mockBuildFeatures = {
+    features: { uiTests: false, uiReview: false },
+    wasLimited: false,
+  };
+  const ctx = getContext(['--project-token=123']);
+  await runBuild(ctx);
+  expect(ctx.exitCode).toBe(0);
+});
 
-// it('returns 0 when the build is publish only', async () => {
-//   mockBuildFeatures = {
-//     features: { uiTests: false, uiReview: false },
-//     wasLimited: false,
-//   };
-//   expect(await runTest(defaultOptions)).toEqual({ exitCode: 0, exitUrl: 'http://test.com' });
-// });
+it('calls out to npm build script passed and uploads files', async () => {
+  const ctx = getContext(['--project-token=123', '--build-script-name=build-storybook']);
+  await runBuild(ctx);
+  expect(ctx.exitCode).toBe(1);
+  expect(uploadFiles).toHaveBeenCalledWith(
+    expect.any(Object),
+    [
+      {
+        contentLength: 42,
+        contentType: 'text/javascript',
+        path: expect.stringMatching(/\/one\.js$/),
+        url: 'https://cdn.example.com/one.js',
+      },
+      {
+        contentLength: 42,
+        contentType: 'text/javascript',
+        path: expect.stringMatching(/\/two\.js$/),
+        url: 'https://cdn.example.com/two.js',
+      },
+    ],
+    expect.any(Function)
+  );
+});
 
-// it('detects CI environments successfully', async () => {
-//   // Standard CI
-//   process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       fromCI: true,
-//       isTravisPrBuild: false,
-//     },
-//   });
+it('skips building and uploads directly with storybook-build-dir', async () => {
+  const ctx = getContext(['--project-token=123', '--storybook-build-dir=dirname']);
+  await runBuild(ctx);
+  expect(ctx.exitCode).toBe(1);
+  expect(execa).not.toHaveBeenCalled();
+  expect(uploadFiles).toHaveBeenCalledWith(
+    expect.any(Object),
+    [
+      {
+        contentLength: 42,
+        contentType: 'text/javascript',
+        path: expect.stringMatching(/\/one\.js$/),
+        url: 'https://cdn.example.com/one.js',
+      },
+      {
+        contentLength: 42,
+        contentType: 'text/javascript',
+        path: expect.stringMatching(/\/two\.js$/),
+        url: 'https://cdn.example.com/two.js',
+      },
+    ],
+    expect.any(Function)
+  );
+});
 
-//   // CI passed as option
-//   process.env = { DISABLE_LOGGING: 'true' };
-//   expect(await runTest({ ...defaultOptions, fromCI: true })).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       fromCI: true,
-//       isTravisPrBuild: false,
-//     },
-//   });
+it('passes autoAcceptChanges to the index', async () => {
+  const ctx = getContext(['--project-token=123', '--auto-accept-changes']);
+  await runBuild(ctx);
+  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
+});
 
-//   // Netlify CI
-//   process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       fromCI: true,
-//       isTravisPrBuild: false,
-//     },
-//   });
+it('passes autoAcceptChanges to the index based on branch', async () => {
+  await runBuild(getContext(['--project-token=123', '--auto-accept-changes=branch']));
+  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
 
-//   // Travis PR build, external
-//   process.env = {
-//     CI: 'true',
-//     TRAVIS_EVENT_TYPE: 'pull_request',
-//     TRAVIS_PULL_REQUEST_SLUG: 'a',
-//     TRAVIS_REPO_SLUG: 'b',
-//     TRAVIS_PULL_REQUEST_SHA: 'travis-commit',
-//     TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
-//     DISABLE_LOGGING: 'true',
-//   };
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       commit: 'travis-commit',
-//       branch: 'travis-branch',
-//       fromCI: true,
-//       isTravisPrBuild: true,
-//     },
-//   });
+  await runBuild(getContext(['--project-token=123', '--auto-accept-changes=wrong-branch']));
+  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: false } });
+});
 
-//   // Travis PR build, internal
-//   process.env = {
-//     CI: 'true',
-//     TRAVIS_EVENT_TYPE: 'pull_request',
-//     TRAVIS_PULL_REQUEST_SLUG: 'a',
-//     TRAVIS_REPO_SLUG: 'a',
-//     TRAVIS_PULL_REQUEST_SHA: 'travis-commit',
-//     TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
-//     DISABLE_LOGGING: 'true',
-//   };
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(lastBuild).toMatchObject({
-//     input: {
-//       commit: 'travis-commit',
-//       branch: 'travis-branch',
-//       fromCI: true,
-//       isTravisPrBuild: true,
-//     },
-//   });
-// });
+describe('tunneled build', () => {
+  beforeEach(() => {
+    startApp.mockReset().mockReturnValue({
+      on: jest.fn(),
+      stderr: { on: jest.fn(), resume: jest.fn() },
+      stdout: { on: jest.fn(), resume: jest.fn() },
+    });
+    checkResponse.mockReset();
+    openTunnel.mockReset().mockReturnValue({
+      url: 'http://tunnel.com/?clientId=foo',
+      cachedUrl: 'http://cached.tunnel.com?foo=bar#hash',
+      close: jest.fn,
+    });
+    kill.mockReset().mockImplementation((pid, sig, cb) => cb());
+  });
 
-// it('prompts you to a script to your package.json', async () => {
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(confirm).toHaveBeenCalled();
-// });
+  it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {
+    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    await runBuild(ctx);
 
-// it('does not run interactively on CI', async () => {
-//   process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
-//   expect(await runTest(defaultOptions)).toEqual({
-//     ...defaultOutput,
-//     exitCode: 1,
-//     exitUrl: 'http://test.com',
-//   });
-//   expect(confirm).not.toHaveBeenCalled();
-// });
+    expect(ctx.exitCode).toBe(1);
+    expect(ctx.closeTunnel).toBeDefined();
+    expect(lastBuild).toMatchObject({
+      input: { cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar' },
+      isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
+    });
+  });
 
-// it('does not run interactively if you pass interactive:false', async () => {
-//   expect(
-//     await runTest({
-//       ...defaultOptions,
-//       interactive: false,
-//     })
-//   ).toEqual({ ...defaultOutput, exitCode: 1, exitUrl: 'http://test.com' });
-//   expect(confirm).not.toHaveBeenCalled();
-// });
+  it('calls out to npm script passed', async () => {
+    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    await runBuild(ctx);
+    expect(startApp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scriptName: 'storybook',
+        url: 'http://localhost:1337/iframe.html',
+        args: ['--', '--ci'],
+      })
+    );
+  });
 
-// it('calls out to npm script passed', async () => {
-//   await runTest(defaultOptions);
-//   expect(startApp).toHaveBeenCalledWith({
-//     scriptName: 'storybook',
-//     url: 'http://localhost:1337/iframe.html',
-//     args: ['--', '--ci'],
-//   });
-// });
+  it('calls out to the command passed', async () => {
+    const ctx = getContext(['--project-token=123', '--exec=run', '--storybook-port=9001']);
+    await runBuild(ctx);
+    expect(startApp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandName: 'run',
+        url: 'http://localhost:9001/iframe.html',
+      })
+    );
+    expect(openTunnel).toHaveBeenCalledWith(expect.objectContaining({ port: '9001' }));
+  });
 
-// it('calls out to npm build script passed and uploads to s3', async () => {
-//   startApp.mockReturnValueOnce({
-//     on: jest.fn().mockImplementation((event, cb) => {
-//       if (event === 'close') {
-//         cb(0);
-//       }
-//     }),
-//     stderr: { on: jest.fn(), resume: jest.fn() },
-//     stdout: { on: jest.fn(), resume: jest.fn() },
-//   });
-//   await runTest({
-//     ...defaultOptions,
-//     scriptName: null,
-//     buildScriptName: 'build-storybook',
-//     noStart: true,
-//   });
-//   expect(startApp).toHaveBeenCalledWith(
-//     expect.objectContaining({
-//       scriptName: 'build-storybook',
-//     })
-//   );
-//   expect(uploadToS3).toHaveBeenCalled();
-// });
+  it('skips start when already running', async () => {
+    checkResponse.mockReturnValue(true);
+    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    await runBuild(ctx);
+    expect(startApp).not.toHaveBeenCalled();
+    expect(openTunnel).toHaveBeenCalledWith(expect.objectContaining({ port: '1337' }));
+  });
 
-// it('uploads to s3 if storybookBuildDir passed', async () => {
-//   await runTest({
-//     ...defaultOptions,
-//     scriptName: null,
-//     storybookBuildDir: 'dirname',
-//     noStart: true,
-//   });
-//   expect(startApp).not.toHaveBeenCalled();
-//   expect(uploadToS3).toHaveBeenCalledWith('dirname', expect.any(Object));
-// });
+  it('fails when trying to use --do-not-start while not running', async () => {
+    checkResponse.mockReturnValueOnce(false);
+    const ctx = getContext(['--project-token=123', '--script-name=storybook', '--do-not-start']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(255);
+    expect(startApp).not.toHaveBeenCalled();
+  });
 
-// it('calls out to command passed', async () => {
-//   await runTest({
-//     ...defaultOptions,
-//     scriptName: undefined,
-//     exec: 'run something',
-//   });
-//   expect(startApp).toHaveBeenCalledWith({
-//     commandName: 'run something',
-//     url: 'http://localhost:1337/iframe.html',
-//   });
-// });
+  it('skips tunnel when using --storybook-url', async () => {
+    checkResponse.mockReturnValue(true);
+    const ctx = getContext([
+      '--project-token=123',
+      '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
+    ]);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(ctx.closeTunnel).toBeUndefined();
+    expect(openTunnel).not.toHaveBeenCalled();
+    expect(lastBuild).toMatchObject({
+      isolatorUrl: 'http://localhost:1337/iframe.html?foo=bar#hash',
+    });
+  });
 
-// it('does not start anything if noStart is passed', async () => {
-//   checkResponse.mockReturnValueOnce(true);
-//   await runTest({
-//     ...defaultOptions,
-//     scriptName: undefined,
-//     noStart: true,
-//   });
-//   expect(startApp).not.toHaveBeenCalled();
-//   expect(checkResponse).toHaveBeenCalledWith('http://localhost:1337/iframe.html');
-// });
+  it('stops the running Storybook if something goes wrong', async () => {
+    openTunnel.mockImplementation(() => {
+      throw new Error('tunnel error');
+    });
+    startApp.mockReturnValueOnce({ pid: 'childpid' });
+    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(255);
+    expect(ctx.log.errors[0]).toMatch('tunnel error');
+    expect(kill).toHaveBeenCalledWith('childpid', 'SIGHUP', expect.any(Function));
+  });
 
-// it('does not start anything if noStart is passed, even if scriptName is set', async () => {
-//   checkResponse.mockReturnValueOnce(true);
-//   await runTest({
-//     ...defaultOptions,
-//     noStart: true,
-//   });
-//   expect(startApp).not.toHaveBeenCalled();
-//   expect(checkResponse).toHaveBeenCalledWith('http://localhost:1337/iframe.html');
-// });
+  it('stops the tunnel if something goes wrong', async () => {
+    const close = jest.fn();
+    openTunnel.mockReturnValueOnce({
+      url: 'http://tunnel.com/',
+      cachedUrl: 'http://tunnel.com/',
+      close,
+    });
+    getRuntimeSpecs.mockImplementation(() => {
+      throw new Error('runtime spec error');
+    });
+    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(255);
+    expect(ctx.log.errors[0]).toMatch('runtime spec error');
+    expect(close).toHaveBeenCalled();
+  });
+});
 
-// it('passes the url into the tunnel', async () => {
-//   await runTest(defaultOptions);
-//   expect(openTunnel).toHaveBeenCalledWith({
-//     port: '1337',
-//   });
-// });
+describe('in CI', () => {
+  it('detects standard CI environments', async () => {
+    process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
+    const ctx = getContext(['--project-token=123']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(lastBuild).toMatchObject({
+      input: {
+        fromCI: true,
+        isTravisPrBuild: false,
+      },
+    });
+    expect(ctx.options.interactive).toBe(false);
+  });
 
-// it('passes the url directly to the build if noTunnel is set', async () => {
-//   await runTest({ ...defaultOptions, createTunnel: false });
-//   expect(openTunnel).not.toHaveBeenCalled();
-//   expect(lastBuild).toMatchObject({
-//     isolatorUrl: 'http://localhost:1337/iframe.html',
-//   });
-// });
+  it('detects CI passed as option', async () => {
+    process.env = { DISABLE_LOGGING: 'true' };
+    const ctx = getContext(['--project-token=123', '--ci']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(lastBuild).toMatchObject({
+      input: {
+        fromCI: true,
+        isTravisPrBuild: false,
+      },
+    });
+    expect(ctx.options.interactive).toBe(false);
+  });
 
-// it('stops the Storybook if something goes wrong', async () => {
-//   openTunnel.mockImplementation(() => {
-//     throw new Error('tunnel error');
-//   });
-//   startApp.mockReturnValueOnce({ pid: 'childpid' });
+  it('detects Netlify CI', async () => {
+    process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
+    const ctx = getContext(['--project-token=123']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(lastBuild).toMatchObject({
+      input: {
+        fromCI: true,
+        isTravisPrBuild: false,
+      },
+    });
+    expect(ctx.options.interactive).toBe(false);
+  });
 
-//   await expect(runTest(defaultOptions)).rejects.toThrow('tunnel error');
+  it('detects Travis PR build, external', async () => {
+    process.env = {
+      CI: 'true',
+      TRAVIS_EVENT_TYPE: 'pull_request',
+      TRAVIS_PULL_REQUEST_SLUG: 'a',
+      TRAVIS_REPO_SLUG: 'b',
+      TRAVIS_PULL_REQUEST_SHA: 'travis-commit',
+      TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
+      DISABLE_LOGGING: 'true',
+    };
+    const ctx = getContext(['--project-token=123']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(lastBuild).toMatchObject({
+      input: {
+        commit: 'travis-commit',
+        branch: 'travis-branch',
+        fromCI: true,
+        isTravisPrBuild: true,
+      },
+    });
+    expect(ctx.options.interactive).toBe(false);
+    expect(ctx.log.warnings.length).toBe(0);
+  });
 
-//   expect(kill).toHaveBeenCalledWith('childpid', 'SIGHUP', expect.any(Function));
-// });
+  it('detects Travis PR build, internal', async () => {
+    process.env = {
+      CI: 'true',
+      TRAVIS_EVENT_TYPE: 'pull_request',
+      TRAVIS_PULL_REQUEST_SLUG: 'a',
+      TRAVIS_REPO_SLUG: 'a',
+      TRAVIS_PULL_REQUEST_SHA: 'travis-commit',
+      TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
+      DISABLE_LOGGING: 'true',
+    };
+    const ctx = getContext(['--project-token=123']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(lastBuild).toMatchObject({
+      input: {
+        commit: 'travis-commit',
+        branch: 'travis-branch',
+        fromCI: true,
+        isTravisPrBuild: true,
+      },
+    });
+    expect(ctx.options.interactive).toBe(false);
+    expect(ctx.log.warnings.length).toBe(1);
+    expect(ctx.log.warnings[0]).toMatch(
+      /Running Chromatic on a Travis PR build from an internal branch/
+    );
+  });
+});
 
-// it('stops the tunnel if something goes wrong', async () => {
-//   const close = jest.fn();
-//   openTunnel.mockReturnValueOnce({
-//     url: 'http://tunnel.com/',
-//     cachedUrl: 'http://tunnel.com/',
-//     close,
-//   });
-//   getRuntimeSpecs.mockImplementation(() => {
-//     throw new Error('runtime spec error');
-//   });
+it('checks for updates', async () => {
+  const ctx = getContext(['--project-token=123']);
+  ctx.pkg.version = '4.3.2';
+  fetch.mockReturnValueOnce(
+    Promise.resolve({ json: () => ({ 'dist-tags': { latest: '5.0.0' } }) })
+  );
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(1);
+  expect(fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
+  expect(ctx.log.warnings[0]).toMatch('Using outdated package');
+});
 
-//   await expect(runTest(defaultOptions)).rejects.toThrow('runtime spec error');
-
-//   expect(close).toHaveBeenCalled();
-// });
-
-// it('passes autoAcceptChanges to the index', async () => {
-//   await runTest({ ...defaultOptions, autoAcceptChanges: true });
-//   expect(lastBuild).toMatchObject({
-//     input: { autoAcceptChanges: true },
-//   });
-
-//   await runTest({ ...defaultOptions, autoAcceptChanges: false });
-//   expect(lastBuild).toMatchObject({
-//     input: { autoAcceptChanges: false },
-//   });
-// });
-
-// it('passes autoAcceptChanges to the index based on branch', async () => {
-//   await runTest({ ...defaultOptions, autoAcceptChanges: 'branch' });
-//   expect(lastBuild).toMatchObject({
-//     input: { autoAcceptChanges: true },
-//   });
-
-//   await runTest({ ...defaultOptions, autoAcceptChanges: 'wrong-branch' });
-//   expect(lastBuild).toMatchObject({
-//     input: { autoAcceptChanges: false },
-//   });
-// });
+it('prompts you to add a script to your package.json', async () => {
+  process.stdout.isTTY = true;
+  const ctx = getContext(['--project-token=123']);
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(1);
+  expect(confirm).toHaveBeenCalled();
+});

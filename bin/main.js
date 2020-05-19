@@ -6,6 +6,7 @@ import getOptions from './lib/getOptions';
 import parseArgs from './lib/parseArgs';
 import { createLogger } from './lib/log';
 import checkForUpdates from './lib/checkForUpdates';
+import checkPackageJson from './lib/checkPackageJson';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import getTasks from './tasks';
 
@@ -18,16 +19,24 @@ import runtimeError from './ui/messages/errors/runtimeError';
 export async function main(argv) {
   const sessionId = uuid();
   const log = createLogger(sessionId);
-  const context = { sessionId, log, ...parseArgs(argv) };
+  const ctx = { sessionId, log, ...parseArgs(argv) };
 
-  // Run these two in parallel; checkForUpdates never fails
-  await Promise.all([run(context), checkForUpdates(context)]);
+  await runAll(ctx);
 
   log.info('');
-  process.exit(context.exitCode);
+  process.exit(ctx.exitCode);
 }
 
-export async function run(ctx) {
+export async function runAll(ctx) {
+  // Run these in parallel; neither should ever reject
+  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
+
+  if (!ctx.exitCode || ctx.exitCode === 1) {
+    await checkPackageJson(ctx);
+  }
+}
+
+export async function runBuild(ctx) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 

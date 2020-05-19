@@ -7,7 +7,7 @@ import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
 const rejectIn = ms => new Promise((_, reject) => setTimeout(reject, ms));
 const withTimeout = (promise, ms) => Promise.race([promise, rejectIn(ms)]);
 
-const checkForUpdates = async ctx => {
+export default async function checkForUpdates(ctx) {
   if (!semver.valid(ctx.pkg.version)) {
     ctx.log.warn(`Invalid semver version in package.json: ${ctx.pkg.version}`);
     return;
@@ -32,6 +32,4 @@ const checkForUpdates = async ctx => {
   if (semver.major(ctx.pkg.version) < semver.major(latestVersion)) {
     ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn));
   }
-};
-
-export default checkForUpdates;
+}

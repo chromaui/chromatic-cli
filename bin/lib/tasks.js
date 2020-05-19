@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import pluralize from 'pluralize';
 
 export const createTask = ({ steps, ...config }) => ({
   ...config,
@@ -32,4 +33,7 @@ export const transitionTo = (stateFn, last) => (ctx, task) => {
   if (!last && output) setOutput(output)(ctx, task);
 };
 
-export const getDuration = ctx => `${((new Date() - ctx.startedAt) / 1000).toFixed(1)}s`;
+export const getDuration = ctx => {
+  const seconds = ((new Date() - ctx.startedAt) / 1000).toFixed(1);
+  return pluralize('second', seconds, true);
+};
