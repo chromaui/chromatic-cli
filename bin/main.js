@@ -2,6 +2,7 @@ import Listr from 'listr';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
+import getEnv from './lib/getEnv';
 import getOptions from './lib/getOptions';
 import parseArgs from './lib/parseArgs';
 import { createLogger } from './lib/log';
@@ -18,8 +19,9 @@ import runtimeError from './ui/messages/errors/runtimeError';
 
 export async function main(argv) {
   const sessionId = uuid();
-  const log = createLogger(sessionId);
-  const ctx = { sessionId, log, ...parseArgs(argv) };
+  const env = getEnv();
+  const log = createLogger(sessionId, env);
+  const ctx = { env, log, sessionId, ...parseArgs(argv) };
 
   await runAll(ctx);
 
@@ -51,7 +53,7 @@ export async function runBuild(ctx) {
 
   try {
     ctx.client = new GraphQLClient({
-      uri: `${ctx.options.indexUrl}/graphql`,
+      uri: `${ctx.env.CHROMATIC_INDEX_URL}/graphql`,
       headers: {
         'x-chromatic-session-id': ctx.sessionId,
         'x-chromatic-cli-version': ctx.pkg.version,

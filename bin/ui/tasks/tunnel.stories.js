@@ -6,12 +6,12 @@ export default {
   decorators: [storyFn => task(storyFn())],
 };
 
-const tunnelUrl = 'https://tunnel.chromaticqa.com';
+const CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com';
 const cachedUrl = 'https://fdeulpymiq.tunnel.chromaticqa.com/iframe.html';
 
 export const Initial = () => initial;
 
-export const Pending = () => pending({ options: { tunnelUrl } });
+export const Pending = () => pending({ env: { CHROMATIC_TUNNEL_URL } });
 
 export const Success = () => success({ cachedUrl });
 

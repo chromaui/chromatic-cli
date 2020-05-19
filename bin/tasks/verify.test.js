@@ -6,11 +6,12 @@ jest.mock('../lib/getRuntimeSpecs');
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
 
+const env = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
 const log = { warn: jest.fn(), debug: jest.fn() };
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
-    const ctx = { log };
+    const ctx = { env, log };
     await setEnvironment(ctx);
     expect(ctx.environment).toBe(
       JSON.stringify({
@@ -24,14 +25,14 @@ describe('setEnvironment', () => {
 describe('setRuntimeSpecs', () => {
   it('sets the runtimeSpecs on context', async () => {
     getRuntimeSpecs.mockReturnValue([{ name: 'foo' }, { name: 'bar' }]);
-    const ctx = { log, options: {} };
+    const ctx = { env, log, options: {} };
     await setRuntimeSpecs(ctx, {});
     expect(ctx.runtimeSpecs).toEqual([{ name: 'foo' }, { name: 'bar' }]);
   });
 
   it('fails if there are no runtimeSpecs', async () => {
     getRuntimeSpecs.mockReturnValue([]);
-    const ctx = { log, options: {} };
+    const ctx = { env, log, options: {} };
     await expect(setRuntimeSpecs(ctx, {})).rejects.toThrow(/Cannot run a build with no stories/);
     expect(ctx.runtimeSpecs).toEqual([]);
   });
@@ -39,6 +40,7 @@ describe('setRuntimeSpecs', () => {
 
 describe('createBuild', () => {
   const defaultContext = {
+    env,
     log,
     options: {},
     environment: ':environment',

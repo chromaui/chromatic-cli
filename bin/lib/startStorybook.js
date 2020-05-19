@@ -3,8 +3,6 @@ import https from 'https';
 import fetch from 'node-fetch';
 import path from 'path';
 
-import { CHROMATIC_POLL_INTERVAL, CHROMATIC_TIMEOUT } from '../constants';
-
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 export async function checkResponse(url) {
@@ -16,15 +14,17 @@ export async function checkResponse(url) {
   }
 }
 
-async function waitForResponse(child, url) {
-  const timeoutAt = Date.now() + CHROMATIC_TIMEOUT;
+async function waitForResponse(child, url, env) {
+  const timeoutAt = Date.now() + env.CHROMATIC_TIMEOUT;
   return new Promise((resolve, reject) => {
     let resolved = false;
     async function check() {
       if (Date.now() > timeoutAt) {
         resolved = true;
         reject(
-          new Error(`No server responding at ${url} within ${CHROMATIC_TIMEOUT / 1000} seconds.`)
+          new Error(
+            `No server responding at ${url} within ${env.CHROMATIC_TIMEOUT / 1000} seconds.`
+          )
         );
         return;
       }
@@ -34,7 +34,7 @@ async function waitForResponse(child, url) {
         resolve();
         return;
       }
-      setTimeout(check, CHROMATIC_POLL_INTERVAL);
+      setTimeout(check, env.CHROMATIC_POLL_INTERVAL);
     }
     check();
 
@@ -62,9 +62,8 @@ export default async function startApp({
   args,
   url,
   options = { stdio: 'inherit' },
+  env,
 }) {
-  const { env } = process;
-
   let child;
   if (scriptName) {
     if (await checkResponse(url)) {
@@ -82,15 +81,15 @@ export default async function startApp({
     const spawnArgs = npmPathIsJs ? [npmPath] : [];
 
     spawnArgs.push('run', scriptName, ...args);
-    child = spawn(execPath, spawnArgs, { cwd: process.cwd(), env, ...options });
+    child = spawn(execPath, spawnArgs, { cwd: process.cwd(), env: process.env, ...options });
   } else if (commandName) {
-    child = spawn(commandName, { env, shell: true });
+    child = spawn(commandName, { env: process.env, shell: true });
   } else {
     throw new Error('You must pass --script-name or --exec');
   }
 
   if (url) {
-    await waitForResponse(child, url);
+    await waitForResponse(child, url, env);
   }
 
   return child;

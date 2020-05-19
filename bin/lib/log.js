@@ -3,11 +3,9 @@ import loggly from 'node-loggly-bulk';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
-import { LOGGLY_CUSTOMER_TOKEN } from '../constants';
 import { errorSerializer } from './logSerializers';
 
 const { DISABLE_LOGGING, LOG_LEVEL } = process.env;
-
 const logLevel = DISABLE_LOGGING === 'true' ? 'silent' : LOG_LEVEL || 'info';
 const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const level = levels[logLevel];
@@ -23,12 +21,12 @@ const logVerbose = (type, args) => {
   return args.map(arg => (typeof arg === 'string' ? stripAnsi(arg) : stringify(arg)));
 };
 
-export const createLogger = sessionId => {
+export const createLogger = (sessionId, env) => {
   let enqueue = false;
   const queue = [];
 
   const logglyClient = loggly.createClient({
-    token: LOGGLY_CUSTOMER_TOKEN,
+    token: env.LOGGLY_CUSTOMER_TOKEN,
     subdomain: 'hichroma',
     tags: ['chromatic-cli'],
     json: true,

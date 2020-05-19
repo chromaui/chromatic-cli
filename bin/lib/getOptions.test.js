@@ -1,15 +1,15 @@
 import chalk from 'chalk';
-import getStorybookConfiguration from './getStorybookConfiguration';
+
+import getEnv from './getEnv';
 import getOptions from './getOptions';
+import getStorybookConfiguration from './getStorybookConfiguration';
 import parseArgs from './parseArgs';
 
 // Make sure we don't print any colors so we can match against plain strings
 chalk.enabled = false;
 chalk.level = 0;
 
-const getContext = argv => parseArgs(argv);
-
-jest.mock('../constants', () => ({
+jest.mock('./getEnv', () => () => ({
   CHROMATIC_CREATE_TUNNEL: true,
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
@@ -26,7 +26,7 @@ jest.mock('jsonfile', () => ({
   }),
 }));
 
-process.env.CHROMATIC_PROJECT_TOKEN = 'test';
+const getContext = argv => ({ env: getEnv(), ...parseArgs(argv) });
 
 describe('await getOptions', () => {
   it('sets reasonable defaults', async () => {

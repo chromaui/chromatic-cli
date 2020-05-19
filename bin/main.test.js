@@ -4,6 +4,7 @@ import kill from 'tree-kill';
 import { confirm } from 'node-ask';
 import fetch from 'node-fetch';
 
+import getEnv from './lib/getEnv';
 import getRuntimeSpecs from './lib/getRuntimeSpecs';
 import startApp, { checkResponse } from './lib/startStorybook';
 import openTunnel from './lib/tunnel';
@@ -147,7 +148,6 @@ jest.mock('./lib/getStorybookInfo', () => () => ({
 jest.mock('./lib/tunnel');
 jest.mock('./lib/uploadFiles');
 jest.mock('./lib/getRuntimeSpecs');
-// jest.mock('./lib/updatePackageJson');
 
 let processEnv;
 beforeEach(() => {
@@ -202,12 +202,14 @@ class TestLogger {
 }
 
 const getContext = argv => {
+  const env = getEnv();
   const log = new TestLogger();
-  return { sessionId: ':sessionId', log, ...parseArgs(argv) };
+  return { env, log, sessionId: ':sessionId', ...parseArgs(argv) };
 };
 
 it('fails on missing project token', async () => {
   const ctx = getContext([]);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(254);
   expect(ctx.log.errors[0]).toMatch(/Missing project token/);
@@ -362,12 +364,12 @@ describe('tunneled build', () => {
     );
   });
 
-  it('calls out to the command passed', async () => {
-    const ctx = getContext(['--project-token=123', '--exec=run', '--storybook-port=9001']);
+  it('calls out to the exec command passed', async () => {
+    const ctx = getContext(['--project-token=123', '--exec=./run.sh', '--storybook-port=9001']);
     await runBuild(ctx);
     expect(startApp).toHaveBeenCalledWith(
       expect.objectContaining({
-        commandName: 'run',
+        commandName: './run.sh',
         url: 'http://localhost:9001/iframe.html',
       })
     );
@@ -545,7 +547,7 @@ it('checks for updates', async () => {
 });
 
 it('prompts you to add a script to your package.json', async () => {
-  process.stdout.isTTY = true;
+  process.stdout.isTTY = true; // enable interactive mode
   const ctx = getContext(['--project-token=123']);
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);

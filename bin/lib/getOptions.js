@@ -1,14 +1,6 @@
 import { readFileSync } from 'jsonfile';
 import path from 'path';
 import { parse } from 'url';
-import {
-  CHROMATIC_CREATE_TUNNEL,
-  CHROMATIC_PROJECT_TOKEN,
-  CHROMATIC_INDEX_URL,
-  CHROMATIC_TUNNEL_URL,
-  CHROMATIC_POLL_INTERVAL,
-  CHROMATIC_RETRIES,
-} from '../constants';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
 import inferredOptions from '../ui/messages/info/inferredOptions';
@@ -27,11 +19,11 @@ const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : inpu
 const resolveHomeDir = filepath =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
-export default async function getOptions({ flags, argv, log }) {
+export default async function getOptions({ argv, env, flags, log }) {
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
 
   const options = {
-    projectToken: takeLast(flags.projectToken || flags.appCode) || CHROMATIC_PROJECT_TOKEN, // backwards compatibility
+    projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
     config: flags.config,
 
     only: flags.only,
@@ -66,11 +58,7 @@ export default async function getOptions({ flags, argv, log }) {
             : flags.storybookBuildDir
         )
       : undefined,
-    createTunnel: !flags.storybookUrl && CHROMATIC_CREATE_TUNNEL !== 'false',
-    indexUrl: CHROMATIC_INDEX_URL,
-    tunnelUrl: CHROMATIC_TUNNEL_URL,
-    pollInterval: CHROMATIC_POLL_INTERVAL,
-    uploadRetries: CHROMATIC_RETRIES,
+    createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
     patchHeadRef,
     patchBaseRef,

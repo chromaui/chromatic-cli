@@ -1,7 +1,6 @@
 import { gte } from 'semver';
 import treeKill from 'tree-kill';
 
-import { STORYBOOK_CLI_FLAGS_BY_VERSION } from '../constants';
 import startApp, { checkResponse } from '../lib/startStorybook';
 import { createTask, transitionTo } from '../lib/tasks';
 import { initial, pending, success, skipped, skipFailed } from '../ui/tasks/start';
@@ -15,8 +14,9 @@ export const startStorybook = async ctx => {
     url,
     args: scriptName &&
       ctx.storybook.version &&
-      gte(ctx.storybook.version, STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && ['--', '--ci'],
+      gte(ctx.storybook.version, ctx.env.STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && ['--', '--ci'],
     options: { stdio: 'pipe' },
+    env: ctx.env,
   });
 
   ctx.isolatorUrl = url;

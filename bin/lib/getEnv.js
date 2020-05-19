@@ -23,7 +23,7 @@ const CHROMATIC_PROJECT_TOKEN =
   process.env.CHROMATIC_APP_CODE || // backwards compatibility
   process.env.CHROMA_APP_CODE; // backwards compatibility
 
-export {
+export default () => ({
   CHROMATIC_SERVER_PORT,
   CHROMATIC_INDEX_URL,
   CHROMATIC_TUNNEL_URL,
@@ -36,4 +36,4 @@ export {
   LOGGLY_CUSTOMER_TOKEN,
   STORYBOOK_CLI_FLAGS_BY_VERSION,
   ENVIRONMENT_WHITELIST,
-};
+});

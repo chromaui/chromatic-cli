@@ -65,7 +65,7 @@ export const takeSnapshots = async (ctx, task) => {
       task.output = pending({ ...ctx, cursor, label }).output;
     }
 
-    await delay(options.pollInterval);
+    await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
     return waitForBuild();
   };
 

@@ -8,7 +8,6 @@ import { matchesBranch } from '../lib/utils';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import { ENVIRONMENT_WHITELIST } from '../constants';
 import {
   initial,
   pending,
@@ -55,7 +54,7 @@ export const setEnvironment = async ctx => {
   // about the user's build environment
   ctx.environment = JSON.stringify(
     Object.entries(process.env).reduce((acc, [key, value]) => {
-      if (ENVIRONMENT_WHITELIST.find(regex => key.match(regex))) {
+      if (ctx.env.ENVIRONMENT_WHITELIST.find(regex => key.match(regex))) {
         acc[key] = value;
       }
       return acc;

@@ -1,12 +1,14 @@
 import fetch from 'node-fetch';
 import { readdirSync, statSync, createReadStream } from 'fs';
 import progress from 'progress-stream';
+
 import { uploadStorybook } from './upload';
 
 jest.mock('fs');
 jest.mock('node-fetch');
 jest.mock('progress-stream');
 
+const env = { CHROMATIC_RETRIES: 2 };
 const log = { debug: jest.fn() };
 
 describe('uploadStorybook', () => {
@@ -36,7 +38,7 @@ describe('uploadStorybook', () => {
     fetch.mockReturnValue({ ok: true });
     progress.mockReturnValue({ on: jest.fn() });
 
-    const ctx = { client, log, sourceDir: '/static/', options: {} };
+    const ctx = { client, env, log, sourceDir: '/static/', options: {} };
     await uploadStorybook(ctx, {});
 
     expect(client.runQuery).toHaveBeenCalledWith(

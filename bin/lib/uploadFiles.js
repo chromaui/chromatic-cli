@@ -4,7 +4,7 @@ import retry from 'async-retry';
 import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 
-export default async function uploadFiles({ log, options }, files, onProgress) {
+export default async function uploadFiles({ env, log }, files, onProgress) {
   const limitConcurrency = pLimit(10);
   let totalProgress = 0;
 
@@ -42,7 +42,7 @@ export default async function uploadFiles({ log, options }, files, onProgress) {
             log.debug(`Uploaded '${path}'.`);
           },
           {
-            retries: options.uploadRetries,
+            retries: env.CHROMATIC_RETRIES,
             onRetry: err => {
               totalProgress -= fileProgress;
               fileProgress = 0;

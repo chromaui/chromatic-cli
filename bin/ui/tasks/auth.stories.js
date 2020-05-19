@@ -6,10 +6,10 @@ export default {
   decorators: [storyFn => task(storyFn())],
 };
 
-const indexUrl = 'https://index.chromatic.com';
+const CHROMATIC_INDEX_URL = 'https://index.chromatic.com';
 const projectToken = '3cm6b49xnld';
 
 export const Initial = () => initial;
-export const Authenticating = () => authenticating({ options: { indexUrl } });
+export const Authenticating = () => authenticating({ env: { CHROMATIC_INDEX_URL } });
 export const Authenticated = () => authenticated({ options: { projectToken } });
 export const InvalidToken = () => invalidToken({ options: { projectToken } });

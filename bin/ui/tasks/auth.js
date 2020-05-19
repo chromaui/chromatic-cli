@@ -6,7 +6,7 @@ export const initial = {
 export const authenticating = ctx => ({
   status: 'pending',
   title: 'Authenticating with Chromatic',
-  output: `Connecting to ${ctx.options.indexUrl}`,
+  output: `Connecting to ${ctx.env.CHROMATIC_INDEX_URL}`,
 });
 
 export const authenticated = ctx => ({

@@ -1,15 +1,13 @@
 import localtunnel from '@chromaui/localtunnel';
 
-import { CHROMATIC_TUNNEL_URL } from '../constants';
-
-export default async function openTunnel({ log, port, https, host = 'localhost', ...rest }) {
+export default async function openTunnel({ env, log, port, https, host = 'localhost', ...rest }) {
   if (!port) {
     throw new Error('Need to pass a port into `openTunnel`');
   }
 
   const tunnel = await localtunnel({
     // upstream
-    host: CHROMATIC_TUNNEL_URL,
+    host: env.CHROMATIC_TUNNEL_URL,
     port,
 
     // local

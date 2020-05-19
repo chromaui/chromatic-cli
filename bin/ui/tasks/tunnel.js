@@ -8,7 +8,7 @@ export const initial = {
 export const pending = ctx => ({
   status: 'pending',
   title: 'Opening tunnel to Chromatic capture servers',
-  output: `Connecting to ${ctx.options.tunnelUrl}`,
+  output: `Connecting to ${ctx.env.CHROMATIC_TUNNEL_URL}`,
 });
 
 export const success = ctx => ({

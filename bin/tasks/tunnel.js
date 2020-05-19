@@ -6,12 +6,12 @@ import openTunnel from '../lib/tunnel';
 import { initial, pending, success, failed } from '../ui/tasks/tunnel';
 
 export const createTunnel = async ctx => {
-  const { log, options } = ctx;
+  const { env, log, options } = ctx;
   const { port, pathname, query, hash } = parse(ctx.isolatorUrl, true);
 
   let tunnel;
   try {
-    tunnel = await openTunnel({ log, port, https: options.https });
+    tunnel = await openTunnel({ env, log, port, https: options.https });
     ctx.closeTunnel = () => tunnel.close();
   } catch (err) {
     if (ctx.stopApp) ctx.stopApp();

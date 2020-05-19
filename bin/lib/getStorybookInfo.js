@@ -3,7 +3,6 @@
 
 import fs from 'fs-extra';
 import resolve from 'enhanced-resolve';
-import { CHROMATIC_STORYBOOK_VERSION } from '../constants';
 
 const viewLayers = [
   'react',
@@ -74,10 +73,10 @@ const timeout = count =>
 const disregard = () => neverResolve;
 const neverResolve = new Promise(() => {});
 
-const findViewlayer = async () => {
+const findViewlayer = async ({ env }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='react@4.0-alpha.8' for unusual cases
-  if (CHROMATIC_STORYBOOK_VERSION) {
-    const [viewLayer, storybookVersion] = CHROMATIC_STORYBOOK_VERSION.split('@');
+  if (env.CHROMATIC_STORYBOOK_VERSION) {
+    const [viewLayer, storybookVersion] = env.CHROMATIC_STORYBOOK_VERSION.split('@');
     if (!viewLayer || !storybookVersion) {
       throw new Error('CHROMATIC_STORYBOOK_VERSION was provided but could not be used');
     }
@@ -117,8 +116,8 @@ const findAddons = async () => {
   return { addons: result.filter(Boolean) };
 };
 
-export default async function getStorybookInfo() {
-  const storybookInfo = await findViewlayer();
+export default async function getStorybookInfo(ctx) {
+  const storybookInfo = await findViewlayer(ctx);
   const addonInfo = await findAddons();
 
   return {
