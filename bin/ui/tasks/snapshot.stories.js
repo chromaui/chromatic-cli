@@ -24,6 +24,7 @@ export const Pending = () =>
   pending({
     build,
     cursor: 6,
+    label: 'ComponentName › StoryName',
   });
 
 export const BuildPassed = () =>

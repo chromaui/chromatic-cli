@@ -34,6 +34,9 @@ export const transitionTo = (stateFn, last) => (ctx, task) => {
 };
 
 export const getDuration = ctx => {
-  const seconds = ((new Date() - ctx.startedAt) / 1000).toFixed(1);
-  return pluralize('second', seconds, true);
+  const seconds = (new Date() - ctx.startedAt) / 1000;
+  const minutes = seconds / 60;
+  return minutes > 1
+    ? `${minutes.toFixed(1)} ${pluralize('minute', minutes)}`
+    : pluralize('second', Math.ceil(seconds), true);
 };
