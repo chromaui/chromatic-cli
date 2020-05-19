@@ -1,8 +1,19 @@
 import fatalError from './fatalError';
-import pkg from '../../../../package.json';
 
 export default {
   title: 'CLI/Messages/Errors',
+};
+
+const pkg = {
+  name: 'chromatic',
+  version: '4.0.3',
+  description: 'Visual Testing for Storybook',
+  homepage: 'https://www.chromatic.com',
+  docs: 'https://www.chromatic.com/docs/',
+  bugs: {
+    url: 'https://github.com/chromaui/chromatic-cli',
+    email: 'support@chromatic.com',
+  },
 };
 
 const stack = `Error: Oh no!

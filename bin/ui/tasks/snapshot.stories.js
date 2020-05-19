@@ -16,13 +16,51 @@ const build = {
   features: { uiTests: true },
 };
 
+const startedAt = new Date() - 123456;
+
 export const Initial = () => initial;
-export const Pending = () => pending({ build, cursor: 6 });
-export const BuildPassed = () => buildPassed({ build });
+
+export const Pending = () =>
+  pending({
+    build,
+    cursor: 6,
+  });
+
+export const BuildPassed = () =>
+  buildPassed({
+    build,
+    startedAt,
+  });
+
 export const BuildPublished = () =>
-  buildPassed({ build: { ...build, features: { uiTests: false } } });
-export const BuildComplete = () => buildComplete({ build, exitCode: 1 });
+  buildPassed({
+    build: { ...build, features: { uiTests: false } },
+    startedAt,
+  });
+
+export const BuildComplete = () =>
+  buildComplete({
+    build,
+    startedAt,
+    exitCode: 1,
+  });
+
 export const BuildAutoAccepted = () =>
-  buildComplete({ build: { ...build, autoAcceptChanges: true } });
-export const BuildFailed = () => buildFailed({ build, exitCode: 2 });
-export const BuildError = () => buildError({ build, exitCode: 3 });
+  buildComplete({
+    build: { ...build, autoAcceptChanges: true },
+    startedAt,
+  });
+
+export const BuildFailed = () =>
+  buildFailed({
+    build,
+    startedAt,
+    exitCode: 2,
+  });
+
+export const BuildError = () =>
+  buildError({
+    build,
+    startedAt,
+    exitCode: 3,
+  });
