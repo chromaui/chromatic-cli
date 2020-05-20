@@ -6,6 +6,6 @@ import { error } from '../../components/icons';
 export default scriptName =>
   dedent(chalk`
     ${error} Missing {bold --storybook-port}
-    Didn't detect a port in your {bold ${scriptName}} script.
+    The CLI didn't detect a port in your {bold ${scriptName}} script.
     You must pass a port with the {bold --storybook-port} option.
   `);

@@ -5,8 +5,10 @@ import stripAnsi from 'strip-ansi';
 
 import link from '../../components/link';
 
+const buildFields = ({ id, number, webUrl, cachedUrl }) => ({ id, number, webUrl, cachedUrl });
+
 export default function fatalError(
-  { sessionId, git = {}, pkg, flags, exitCode },
+  { sessionId, git = {}, pkg, flags, exitCode, build, isolatorUrl },
   error,
   timestamp = new Date().toISOString()
 ) {
@@ -25,6 +27,8 @@ export default function fatalError(
     exitCode,
     errorType: errors.map(err => err.name).join('\n'),
     errorMessage: stripAnsi(errors.map(err => err.message).join('\n')),
+    ...(isolatorUrl ? { isolatorUrl } : {}),
+    ...(build && { build: buildFields(build) }),
   };
   const stacktraces = errors.map(err => err.stack).filter(Boolean);
   const viewStacktraces = stacktraces.length

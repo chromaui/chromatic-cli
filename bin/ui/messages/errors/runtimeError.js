@@ -23,11 +23,11 @@ export default function runtimeError({ options = {}, runtimeErrors = [], runtime
 
   const errorHint = options.allowConsoleErrors
     ? dedent(chalk`
-      We'll ignore these errors because you passed the {bold --allow-console-errors} flag.
-      However this is not recommended.`)
+      We'll ignore these errors because you passed the {bold --allow-console-errors} flag,
+      but this is not recommended.`)
     : dedent(chalk`
       If you want to continue despite runtime errors, you can pass the
-      {bold --allow-console-errors} flag. However this is not recommended.`);
+      {bold --allow-console-errors} flag, but this is not recommended.`);
 
   const warningHint = dedent(chalk`
     You should probably fix these warnings, but we'll continue anyway.`);

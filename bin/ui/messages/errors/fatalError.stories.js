@@ -4,16 +4,32 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-const pkg = {
-  name: 'chromatic',
-  version: '4.0.3',
-  description: 'Visual Testing for Storybook',
-  homepage: 'https://www.chromatic.com',
-  docs: 'https://www.chromatic.com/docs/',
-  bugs: {
-    url: 'https://github.com/chromaui/chromatic-cli',
-    email: 'support@chromatic.com',
+const context = {
+  sessionId: '452a4bfa-5f0f-45a9-bf02-cd0ba550472a',
+  git: { version: '2.24.1 (Apple Git-126)' },
+  pkg: {
+    name: 'chromatic',
+    version: '4.0.3',
+    description: 'Visual Testing for Storybook',
+    homepage: 'https://www.chromatic.com',
+    docs: 'https://www.chromatic.com/docs/',
+    bugs: {
+      url: 'https://github.com/chromaui/chromatic-cli',
+      email: 'support@chromatic.com',
+    },
   },
+  flags: {
+    projectToken: 'asdf123',
+    buildScriptName: 'build:storybook',
+  },
+  exitCode: 255,
+  build: {
+    id: '5ec5069ae0d35e0022b6a9cc',
+    number: 1400,
+    webUrl: 'https://www.chromatic.com/build?appId=5d67dc0374b2e300209c41e7&number=1400',
+    cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
+  },
+  isolatorUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
 };
 
 const stack = `Error: Oh no!
@@ -31,13 +47,11 @@ const stack = `Error: Oh no!
 const timestamp = '2020-05-12T15:06:30.553Z';
 
 export const FatalError = () => {
-  const context = { title: 'Run a job', pkg };
-  const error = { message: "That's not right!", stack };
+  const error = { name: 'SyntaxError', message: "That's not right!", stack };
   return fatalError(context, error, timestamp);
 };
 
 export const FatalErrorSimple = () => {
-  const context = { title: 'Run a job', pkg };
-  const error = { message: "That's not right!" };
+  const error = { name: 'SyntaxError', message: "That's not right!" };
   return fatalError(context, error, timestamp);
 };
