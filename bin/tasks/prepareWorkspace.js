@@ -26,7 +26,7 @@ export const runPrepareWorkspace = async (ctx, task) => {
   }
 
   // Make sure both the head and base branches are up-to-date with the remote.
-  if (!(await isUpToDate())) {
+  if (!(await isUpToDate(ctx))) {
     ctx.exitCode = 102;
     ctx.userError = true;
     ctx.log.error(workspaceNotUpToDate(await getUpdateMessage()));
