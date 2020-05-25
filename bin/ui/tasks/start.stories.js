@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, success, skipped, skipFailed } from './start';
+import { initial, pending, skipFailed, skipped, success } from './start';
 
 export default {
   title: 'CLI/Tasks/Start',
@@ -14,7 +14,7 @@ export const Starting = () => pending({ options: { scriptName: 'start-storybook'
 
 export const StartingCommand = () => pending({ options: { commandName: './start.sh' } });
 
-export const Started = () => success({ isolatorUrl, startedAt: new Date() - 21000 });
+export const Started = () => success({ isolatorUrl, now: 0, startedAt: -21000 });
 
 export const Skipped = () => skipped({ isolatorUrl, options: {} });
 

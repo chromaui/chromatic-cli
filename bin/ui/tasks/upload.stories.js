@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, preparing, starting, uploading, success, skipped, failed } from './upload';
+import { failed, initial, preparing, skipped, starting, success, uploading } from './upload';
 
 export default {
   title: 'CLI/Tasks/Upload',
@@ -17,7 +17,7 @@ export const Starting = () => starting();
 
 export const Uploading = () => uploading({ percentage: 42 });
 
-export const Success = () => success({ startedAt: new Date() - 54321, isolatorUrl });
+export const Success = () => success({ now: 0, startedAt: -54321, isolatorUrl });
 
 export const Skipped = () => skipped({ options: { storybookUrl } });
 

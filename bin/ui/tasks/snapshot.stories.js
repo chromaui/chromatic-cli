@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, buildPassed, buildComplete, buildFailed, buildError } from './snapshot';
+import { buildComplete, buildError, buildFailed, buildPassed, initial, pending } from './snapshot';
 
 export default {
   title: 'CLI/Tasks/Snapshot',
@@ -16,7 +16,8 @@ const build = {
   features: { uiTests: true },
 };
 
-const startedAt = new Date() - 123456;
+const now = 0;
+const startedAt = -123456;
 
 export const Initial = () => initial;
 
@@ -30,18 +31,21 @@ export const Pending = () =>
 export const BuildPassed = () =>
   buildPassed({
     build,
+    now,
     startedAt,
   });
 
 export const BuildPublished = () =>
   buildPassed({
     build: { ...build, features: { uiTests: false } },
+    now,
     startedAt,
   });
 
 export const BuildComplete = () =>
   buildComplete({
     build,
+    now,
     startedAt,
     exitCode: 1,
   });
@@ -49,12 +53,14 @@ export const BuildComplete = () =>
 export const BuildAutoAccepted = () =>
   buildComplete({
     build: { ...build, autoAcceptChanges: true },
+    now,
     startedAt,
   });
 
 export const BuildFailed = () =>
   buildFailed({
     build,
+    now,
     startedAt,
     exitCode: 2,
   });
@@ -62,6 +68,7 @@ export const BuildFailed = () =>
 export const BuildError = () =>
   buildError({
     build,
+    now,
     startedAt,
     exitCode: 3,
   });

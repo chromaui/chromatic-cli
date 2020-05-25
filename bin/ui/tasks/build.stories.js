@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, success, skipped, skipFailed } from './build';
+import { initial, pending, skipFailed, skipped, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
@@ -15,7 +15,8 @@ export const Building = () =>
 
 export const Built = () =>
   success({
-    startedAt: new Date() - 32100,
+    now: 0,
+    startedAt: -32100,
     buildLogFile: '/users/me/project/build-storybook.log',
   });
 

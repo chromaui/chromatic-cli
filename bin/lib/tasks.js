@@ -6,7 +6,7 @@ export const createTask = ({ steps, ...config }) => ({
   task: async (ctx, task) => {
     ctx.title = config.title;
     ctx.task = task;
-    ctx.startedAt = new Date();
+    ctx.startedAt = Number.isInteger(ctx.now) ? ctx.now : new Date();
     // eslint-disable-next-line no-restricted-syntax
     for (const step of steps) {
       // eslint-disable-next-line no-await-in-loop
@@ -34,9 +34,11 @@ export const transitionTo = (stateFn, last) => (ctx, task) => {
 };
 
 export const getDuration = ctx => {
-  const seconds = (new Date() - ctx.startedAt) / 1000;
-  const minutes = seconds / 60;
-  return minutes > 1
-    ? `${minutes.toFixed(1)} ${pluralize('minute', minutes)}`
-    : pluralize('second', Math.ceil(seconds), true);
+  const now = Number.isInteger(ctx.now) ? ctx.now : new Date();
+  const duration = Math.round((now - ctx.startedAt) / 1000);
+  const seconds = pluralize('second', Math.floor(duration % 60), true);
+  if (duration < 60) return seconds;
+  const minutes = pluralize('minute', Math.floor(duration / 60), true);
+  if (duration % 60) return `${minutes} ${seconds}`;
+  return minutes;
 };
