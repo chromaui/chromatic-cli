@@ -6,7 +6,7 @@ import link from '../../components/link';
 
 export default ({ projectToken }) =>
   dedent(chalk`
-    ${error} Invalid {bold --projectToken} '${projectToken}'
+    ${error} Invalid {bold --project-token} '${projectToken}'
     You can find your project token on the Manage screen in your Chromatic project.
     ${info} Read more at ${link('https://www.chromatic.com/docs/setup')}
   `);
