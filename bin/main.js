@@ -2,20 +2,19 @@ import Listr from 'listr';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
-import getEnv from './lib/getEnv';
-import getOptions from './lib/getOptions';
-import parseArgs from './lib/parseArgs';
-import { createLogger } from './lib/log';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
+import getEnv from './lib/getEnv';
+import getOptions from './lib/getOptions';
+import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/NonTTYRenderer';
+import parseArgs from './lib/parseArgs';
 import getTasks from './tasks';
-
-import intro from './ui/messages/info/intro';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
-import taskError from './ui/messages/errors/taskError';
 import runtimeError from './ui/messages/errors/runtimeError';
+import taskError from './ui/messages/errors/taskError';
+import intro from './ui/messages/info/intro';
 
 export async function main(argv) {
   const sessionId = uuid();
@@ -68,8 +67,8 @@ export async function runBuild(ctx) {
       const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
-      if (!ctx.options.interactive) ctx.log.info('');
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
+        ctx.log.info('');
         ctx.log.error(fetchError(ctx, err));
         return;
       }
