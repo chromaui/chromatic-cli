@@ -1,6 +1,6 @@
+import { VirtualConsole } from 'jsdom';
 import minimatch from 'minimatch';
 import pluralize from 'pluralize';
-import { VirtualConsole } from 'jsdom';
 
 import getRuntimeSpecs from '../lib/getRuntimeSpecs';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -9,13 +9,13 @@ import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
 import {
-  initial,
-  pending,
-  listing,
-  runOnly,
-  invalidOnly,
-  success,
   failed,
+  initial,
+  invalidOnly,
+  listing,
+  pending,
+  runOnly,
+  success,
 } from '../ui/tasks/verify';
 
 const TesterCreateBuildMutation = `
@@ -27,7 +27,6 @@ const TesterCreateBuildMutation = `
       snapshotCount
       componentCount
       webUrl
-      cachedUrl
       features {
         uiTests
         uiReview

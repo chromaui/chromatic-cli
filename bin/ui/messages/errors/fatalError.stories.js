@@ -27,9 +27,9 @@ const context = {
     id: '5ec5069ae0d35e0022b6a9cc',
     number: 1400,
     webUrl: 'https://www.chromatic.com/build?appId=5d67dc0374b2e300209c41e7&number=1400',
-    cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
   },
-  isolatorUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
+  isolatorUrl: 'https://pfkaemtlit.tunnel.chromatic.com/iframe.html',
+  cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
 };
 
 const stack = `Error: Oh no!

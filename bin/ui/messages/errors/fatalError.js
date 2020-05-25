@@ -1,14 +1,14 @@
-import pluralize from 'pluralize';
 import chalk from 'chalk';
-import dedent from 'ts-dedent';
+import pluralize from 'pluralize';
 import stripAnsi from 'strip-ansi';
+import dedent from 'ts-dedent';
 
 import link from '../../components/link';
 
-const buildFields = ({ id, number, webUrl, cachedUrl }) => ({ id, number, webUrl, cachedUrl });
+const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
 
 export default function fatalError(
-  { sessionId, git = {}, pkg, flags, exitCode, build, isolatorUrl },
+  { sessionId, git = {}, pkg, flags, exitCode, build, isolatorUrl, cachedUrl },
   error,
   timestamp = new Date().toISOString()
 ) {
@@ -28,6 +28,7 @@ export default function fatalError(
     errorType: errors.map(err => err.name).join('\n'),
     errorMessage: stripAnsi(errors.map(err => err.message).join('\n')),
     ...(isolatorUrl ? { isolatorUrl } : {}),
+    ...(cachedUrl ? { cachedUrl } : {}),
     ...(build && { build: buildFields(build) }),
   };
   const stacktraces = errors.map(err => err.stack).filter(Boolean);
