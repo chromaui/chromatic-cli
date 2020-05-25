@@ -71,6 +71,11 @@ const TesterHasBuildsWithCommitsQuery = gql`
   }
 `;
 
+export async function getVersion() {
+  const result = await execGitCommand(`git --version`);
+  return result.replace('git version ', '');
+}
+
 // NOTE: At some point we should check that the commit has been pushed to the
 // remote and the branch matches with origin/REF, but for now we are naive about
 // adhoc builds.
@@ -258,16 +263,27 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
  * Returns a boolean indicating whether the workspace is up-to-date (neither ahead nor behind) with
  * the remote.
  */
-export async function isUpToDate() {
+export async function isUpToDate({ log }) {
   execGitCommand(`git remote update`);
-  const localCommit = await execGitCommand('git rev-parse HEAD');
-  const remoteCommit = await execGitCommand('git rev-parse "@{upstream}"');
-  if (!localCommit) {
-    throw new Error('Failed to retrieve last local commit hash');
+
+  let localCommit;
+  try {
+    localCommit = await execGitCommand('git rev-parse HEAD');
+    if (!localCommit) throw new Error('Failed to retrieve last local commit hash');
+  } catch (e) {
+    log.warn(e);
+    return true;
   }
-  if (!remoteCommit) {
-    throw new Error('Failed to retrieve last remote commit hash');
+
+  let remoteCommit;
+  try {
+    remoteCommit = await execGitCommand('git rev-parse "@{upstream}"');
+    if (!remoteCommit) throw new Error('Failed to retrieve last remote commit hash');
+  } catch (e) {
+    log.warn(e);
+    return true;
   }
+
   return localCommit === remoteCommit;
 }
 

@@ -1,18 +1,13 @@
 import localtunnel from '@chromaui/localtunnel';
-import setupDebug from 'debug';
 
-import { CHROMATIC_TUNNEL_URL } from '../constants';
-
-const debug = setupDebug('chromatic-cli:tunnel');
-
-export default async function openTunnel({ port, https, host = 'localhost', ...rest }) {
+export default async function openTunnel({ env, log, port, https, host = 'localhost', ...rest }) {
   if (!port) {
     throw new Error('Need to pass a port into `openTunnel`');
   }
 
   const tunnel = await localtunnel({
     // upstream
-    host: CHROMATIC_TUNNEL_URL,
+    host: env.CHROMATIC_TUNNEL_URL,
     port,
 
     // local
@@ -26,9 +21,11 @@ export default async function openTunnel({ port, https, host = 'localhost', ...r
     ca: https && https.ca,
   });
 
-  tunnel.on('url', url => debug(`Got tunnel url: %s`, url));
-  tunnel.on('request', request => debug(`Got request: %O`, request));
-  tunnel.tunnelCluster.on('error', error => debug(`Got tunnel cluster error: %O`, error));
+  log.debug(tunnel);
+
+  tunnel.on('url', url => log.debug(`Got tunnel url: %s`, url));
+  tunnel.on('request', request => log.debug(`Got request: %O`, request));
+  tunnel.tunnelCluster.on('error', error => log.debug(`Got tunnel cluster error: %O`, error));
 
   return tunnel;
 }

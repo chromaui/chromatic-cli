@@ -2,7 +2,6 @@ import envCi from 'env-ci';
 import dedent from 'ts-dedent';
 import setupDebug from 'debug';
 import { getCommit, getBranch } from './git';
-import log from '../lib/log';
 
 export const debug = setupDebug('chromatic-cli:tester');
 
@@ -13,7 +12,7 @@ const notHead = b => {
   return b;
 };
 
-export async function getCommitAndBranch({ patchBaseRef, inputFromCI } = {}) {
+export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
   let branch = patchBaseRef || (await getBranch());
@@ -37,12 +36,12 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI } = {}) {
 
   if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
     log.warn(dedent`
-        WARNING: Running Chromatic on a Travis PR build from an internal branch.
+      WARNING: Running Chromatic on a Travis PR build from an internal branch.
 
-        It is recommended to run Chromatic on the push builds from Travis where possible.
-        We advise turning on push builds and disabling Chromatic for internal PR builds.
-        Read more: https://www.chromatic.com/docs/ci#travis
-      `);
+      It is recommended to run Chromatic on the push builds from Travis where possible.
+      We advise turning on push builds and disabling Chromatic for internal PR builds.
+      Read more: https://www.chromatic.com/docs/ci#travis
+    `);
   }
 
   if (isFromEnvVariable) {
