@@ -2,7 +2,7 @@
 
 Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
-<img width="100%" src="https://user-images.githubusercontent.com/321738/82900693-36e56680-9f5d-11ea-8e8a-02823bec59d5.gif" alt="">
+<img width="100%" src="https://user-images.githubusercontent.com/321738/82901859-d820ec80-9f5e-11ea-81e7-78d494c103ad.gif" alt="">
 
 ## Install
 
