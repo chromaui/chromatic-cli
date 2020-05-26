@@ -4,41 +4,29 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 <img width="100%" src="https://user-images.githubusercontent.com/321738/82901859-d820ec80-9f5e-11ea-81e7-78d494c103ad.gif" alt="">
 
-## Install
+## Quick Start
 
 ```sh
-yarn add chromatic
+npx chromatic --project-token <your token>
 ```
 
-## Usage
+After the first run, the CLI will automatically ask you to add a script to your `package.json`.
 
-You can use this package normally, which means installing it and adding a script called `chromatic` to your `package.json`
+### Installing
 
-```
-  "chromatic": "chromatic",
-```
-
-But alternatively (and this is useful for testing) you can use npx:
-
-**Use a git branch**:
+Optionally, you can install `chromatic` as a dependency, while using the same script above.
 
 ```sh
-npx -p chromaui/chromatic-cli#master chromatic --dev
+npm install -D chromatic
 ```
 
-**Use a debug version on npm**:
+If you don't install `chromatic` as a dependency, `npx` will download and run the latest version automatically. This has pros and cons:
 
-```sh
-npx -p chromatic#next chromatic
-```
+- 👍 You'll never be out of date, you'll use the latest version every time, never have to worry about upgrading Chromatic.
+- 👍 You won't need to install the package during local development if you're only running it in continuous integration.
+- 👎 It will be slower to run because the package has to be downloaded first.
 
-Using npx has pros and cons:
-
-- 👍 You'll never be out of date, you'll use the latest version every time, never have to worry about upgrading this.
-- 👍 You don't need this package as a dependency, and don't need to install it during local development
-- 👎 This will add a delay when you actually do want to run this, like in your CI, delaying feedback.
-
-### Usage in a github action
+### Usage in a GitHub Action
 
 There are examples here: [/.github/workflows](/.github/workflows).
 
@@ -47,7 +35,7 @@ Do not run this based on a github pull_request event. If you do, the commit and 
 ### Main options
 
 ```
---project-token="<your token>"
+--project-token <your token>
 ```
 
 You can also use the environment variable: `CHROMATIC_PROJECT_TOKEN`
@@ -76,7 +64,7 @@ Deprecated options (for tunneled builds):
 --storybook-ca <ca>  Use if Storybook is running on https (auto detected from -s, if set)
 ```
 
-These options are not required, this CLI is 0-config if you have a `build-storybook` script in your `package.json`.
+These options are not required, this CLI is zero-config if you have a `build-storybook` script in your `package.json`.
 
 ### Chromatic options
 
@@ -152,8 +140,8 @@ This package was previously named `storybook-chromatic`. If you still have `stor
 **With npm:**
 
 ```
-npm uninstall --dev storybook-chromatic
-npm install --dev chromatic
+npm uninstall --save-dev storybook-chromatic
+npm install --save-dev chromatic
 ```
 
 **With yarn:**
