@@ -1,3 +1,5 @@
+const mask = secret => '*'.repeat(secret.length - 4) + secret.substr(-4);
+
 export const initial = {
   status: 'initial',
   title: 'Authenticate',
@@ -12,7 +14,7 @@ export const authenticating = ctx => ({
 export const authenticated = ctx => ({
   status: 'success',
   title: 'Authenticated with Chromatic',
-  output: `Using project token '${ctx.options.projectToken}'`,
+  output: `Using project token '${mask(ctx.options.projectToken)}'`,
 });
 
 export const invalidToken = ctx => ({
