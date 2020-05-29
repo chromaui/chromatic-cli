@@ -2,9 +2,11 @@ name: Chromatic Action
 author: Chroma
 description: "Publishes your Storybook to Chromatic and runs visual tests"
 
-inputs: 
+inputs:
+  token:
+    description: "Your github token"
   projectToken: 
-    description: "Your chromatic/chroma project token"
+    description: "Your chromatic project token"
   buildScriptName: 
     description: "The npm script that builds your Storybook [build-storybook]"
   doNotStart: 
@@ -27,6 +29,14 @@ inputs:
     description: "What port is your Storybook running on (auto detected from -s, if set)"
   storybookUrl: 
     description: "Storybook is already running at (external) url (implies -S)"
+  allowConsoleErrors:
+    description: "Do not exit when runtime errors occur in storybook"
+  autoAcceptChanges:
+    description: "Automatically accept all changes in chromatic: boolean or branchname"
+  exitZeroOnChanges:
+    description: "Positive exit of action even when there are changes: boolean or branchname"
+  exitOnceUploaded:
+    description: "Exit with 0 once the built version has been sent to chromatic: boolean or branchname"
 
 runs: 
   main: main.js
