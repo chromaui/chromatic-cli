@@ -1,6 +1,7 @@
 import execa from 'execa';
 import fs from 'fs';
 import path from 'path';
+import semver from 'semver';
 import tmp from 'tmp-promise';
 
 import { createTask, transitionTo } from '../lib/tasks';
@@ -20,8 +21,13 @@ const TesterSkipBuildMutation = `
 `;
 
 export const setSourceDir = async ctx => {
-  const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
-  ctx.sourceDir = tmpDir.path;
+  if (semver.lt(ctx.storybook.version, '5.0.0')) {
+    // Storybook v4 doesn't support absolute paths
+    ctx.sourceDir = 'storybook-static';
+  } else {
+    const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
+    ctx.sourceDir = tmpDir.path;
+  }
 };
 
 export const setSpawnParams = ctx => {
