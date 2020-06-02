@@ -40,7 +40,6 @@ export const setSpawnParams = ctx => {
       isYarn ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
-      '--quiet',
     ].filter(Boolean),
   };
 };
