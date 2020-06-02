@@ -216,7 +216,7 @@ it('fails on missing project token', async () => {
 });
 
 it('runs in simple situations', async () => {
-  const ctx = getContext(['--project-token=123']);
+  const ctx = getContext(['--project-token=asdf1234']);
   await runBuild(ctx);
 
   expect(ctx.exitCode).toBe(1);
@@ -240,13 +240,13 @@ it('runs in simple situations', async () => {
 });
 
 it('returns 0 with exit-zero-on-changes', async () => {
-  const ctx = getContext(['--project-token=123', '--exit-zero-on-changes']);
+  const ctx = getContext(['--project-token=asdf1234', '--exit-zero-on-changes']);
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(0);
 });
 
 it('returns 0 with exit-once-uploaded', async () => {
-  const ctx = getContext(['--project-token=123', '--exit-once-uploaded']);
+  const ctx = getContext(['--project-token=asdf1234', '--exit-once-uploaded']);
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(0);
 });
@@ -256,13 +256,13 @@ it('returns 0 when the build is publish only', async () => {
     features: { uiTests: false, uiReview: false },
     wasLimited: false,
   };
-  const ctx = getContext(['--project-token=123']);
+  const ctx = getContext(['--project-token=asdf1234']);
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(0);
 });
 
 it('calls out to npm build script passed and uploads files', async () => {
-  const ctx = getContext(['--project-token=123', '--build-script-name=build-storybook']);
+  const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(1);
   expect(uploadFiles).toHaveBeenCalledWith(
@@ -286,7 +286,7 @@ it('calls out to npm build script passed and uploads files', async () => {
 });
 
 it('skips building and uploads directly with storybook-build-dir', async () => {
-  const ctx = getContext(['--project-token=123', '--storybook-build-dir=dirname']);
+  const ctx = getContext(['--project-token=asdf1234', '--storybook-build-dir=dirname']);
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(1);
   expect(execa).not.toHaveBeenCalled();
@@ -311,16 +311,16 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
 });
 
 it('passes autoAcceptChanges to the index', async () => {
-  const ctx = getContext(['--project-token=123', '--auto-accept-changes']);
+  const ctx = getContext(['--project-token=asdf1234', '--auto-accept-changes']);
   await runBuild(ctx);
   expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
 });
 
 it('passes autoAcceptChanges to the index based on branch', async () => {
-  await runBuild(getContext(['--project-token=123', '--auto-accept-changes=branch']));
+  await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=branch']));
   expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
 
-  await runBuild(getContext(['--project-token=123', '--auto-accept-changes=wrong-branch']));
+  await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
   expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: false } });
 });
 
@@ -341,7 +341,7 @@ describe('tunneled build', () => {
   });
 
   it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {
-    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
 
     expect(ctx.exitCode).toBe(1);
@@ -353,7 +353,7 @@ describe('tunneled build', () => {
   });
 
   it('calls out to npm script passed', async () => {
-    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(startApp).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -365,7 +365,11 @@ describe('tunneled build', () => {
   });
 
   it('calls out to the exec command passed', async () => {
-    const ctx = getContext(['--project-token=123', '--exec=./run.sh', '--storybook-port=9001']);
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--exec=./run.sh',
+      '--storybook-port=9001',
+    ]);
     await runBuild(ctx);
     expect(startApp).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -378,7 +382,7 @@ describe('tunneled build', () => {
 
   it('skips start when already running', async () => {
     checkResponse.mockReturnValue(true);
-    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(startApp).not.toHaveBeenCalled();
     expect(openTunnel).toHaveBeenCalledWith(expect.objectContaining({ port: '1337' }));
@@ -386,7 +390,11 @@ describe('tunneled build', () => {
 
   it('fails when trying to use --do-not-start while not running', async () => {
     checkResponse.mockReturnValueOnce(false);
-    const ctx = getContext(['--project-token=123', '--script-name=storybook', '--do-not-start']);
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--script-name=storybook',
+      '--do-not-start',
+    ]);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(255);
     expect(startApp).not.toHaveBeenCalled();
@@ -395,7 +403,7 @@ describe('tunneled build', () => {
   it('skips tunnel when using --storybook-url', async () => {
     checkResponse.mockReturnValue(true);
     const ctx = getContext([
-      '--project-token=123',
+      '--project-token=asdf1234',
       '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
     ]);
     await runBuild(ctx);
@@ -412,7 +420,7 @@ describe('tunneled build', () => {
       throw new Error('tunnel error');
     });
     startApp.mockReturnValueOnce({ pid: 'childpid' });
-    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(255);
     expect(ctx.log.errors[0]).toMatch('tunnel error');
@@ -429,7 +437,7 @@ describe('tunneled build', () => {
     getRuntimeSpecs.mockImplementation(() => {
       throw new Error('runtime spec error');
     });
-    const ctx = getContext(['--project-token=123', '--script-name=storybook']);
+    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(255);
     expect(ctx.log.errors[0]).toMatch('runtime spec error');
@@ -440,7 +448,7 @@ describe('tunneled build', () => {
 describe('in CI', () => {
   it('detects standard CI environments', async () => {
     process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
-    const ctx = getContext(['--project-token=123']);
+    const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(lastBuild).toMatchObject({
@@ -454,7 +462,7 @@ describe('in CI', () => {
 
   it('detects CI passed as option', async () => {
     process.env = { DISABLE_LOGGING: 'true' };
-    const ctx = getContext(['--project-token=123', '--ci']);
+    const ctx = getContext(['--project-token=asdf1234', '--ci']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(lastBuild).toMatchObject({
@@ -468,7 +476,7 @@ describe('in CI', () => {
 
   it('detects Netlify CI', async () => {
     process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
-    const ctx = getContext(['--project-token=123']);
+    const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(lastBuild).toMatchObject({
@@ -490,7 +498,7 @@ describe('in CI', () => {
       TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
       DISABLE_LOGGING: 'true',
     };
-    const ctx = getContext(['--project-token=123']);
+    const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(lastBuild).toMatchObject({
@@ -515,7 +523,7 @@ describe('in CI', () => {
       TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
       DISABLE_LOGGING: 'true',
     };
-    const ctx = getContext(['--project-token=123']);
+    const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(lastBuild).toMatchObject({
@@ -535,7 +543,7 @@ describe('in CI', () => {
 });
 
 it('checks for updates', async () => {
-  const ctx = getContext(['--project-token=123']);
+  const ctx = getContext(['--project-token=asdf1234']);
   ctx.pkg.version = '4.3.2';
   fetch.mockReturnValueOnce(
     Promise.resolve({ json: () => ({ 'dist-tags': { latest: '5.0.0' } }) })
@@ -548,7 +556,7 @@ it('checks for updates', async () => {
 
 it('prompts you to add a script to your package.json', async () => {
   process.stdout.isTTY = true; // enable interactive mode
-  const ctx = getContext(['--project-token=123']);
+  const ctx = getContext(['--project-token=asdf1234']);
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
   expect(confirm).toHaveBeenCalled();

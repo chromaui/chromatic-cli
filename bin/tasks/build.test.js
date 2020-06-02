@@ -20,7 +20,7 @@ describe('setSpawnParams', () => {
     expect(ctx.spawnParams).toEqual({
       command: 'npm',
       clientArgs: ['run', '--silent'],
-      scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/', '--quiet'],
+      scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/'],
     });
   });
 });
