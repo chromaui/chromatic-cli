@@ -1,7 +1,8 @@
+import setupDebug from 'debug';
 import envCi from 'env-ci';
 import dedent from 'ts-dedent';
-import setupDebug from 'debug';
-import { getCommit, getBranch } from './git';
+
+import { getBranch, getCommit } from './git';
 
 export const debug = setupDebug('chromatic-cli:tester');
 

@@ -21,6 +21,7 @@ module.exports = {
     'react',
     'jsx-a11y',
     'json',
+    'simple-import-sort',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -42,6 +43,9 @@ module.exports = {
     },
   },
   rules: {
+    'simple-import-sort/sort': 'error',
+    'sort-imports': 'off',
+    'import/order': 'off',
     'no-useless-constructor': ignore,
     '@typescript-eslint/no-useless-constructor': error,
     'no-restricted-imports': [

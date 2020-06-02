@@ -1,16 +1,16 @@
-import fs from 'fs';
 import execa from 'execa';
-import kill from 'tree-kill';
+import fs from 'fs';
 import { confirm } from 'node-ask';
 import fetch from 'node-fetch';
+import kill from 'tree-kill';
 
 import getEnv from './lib/getEnv';
 import getRuntimeSpecs from './lib/getRuntimeSpecs';
+import parseArgs from './lib/parseArgs';
 import startApp, { checkResponse } from './lib/startStorybook';
 import openTunnel from './lib/tunnel';
-import { runAll, runBuild } from './main';
-import parseArgs from './lib/parseArgs';
 import uploadFiles from './lib/uploadFiles';
+import { runAll, runBuild } from './main';
 
 let lastBuild;
 let mockBuildFeatures;

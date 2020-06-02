@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, listing, runOnly, invalidOnly, success, failed } from './verify';
+import { failed, initial, invalidOnly, listing, pending, runOnly, success } from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',

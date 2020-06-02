@@ -1,4 +1,4 @@
-import { isClean, isUpToDate, findMergeBase, checkout } from '../git/git';
+import { checkout, findMergeBase, isClean, isUpToDate } from '../git/git';
 import installDependencies from '../lib/installDependencies';
 import { runPrepareWorkspace } from './prepareWorkspace';
 

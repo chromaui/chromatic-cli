@@ -1,11 +1,11 @@
 import task from '../components/task';
 import * as auth from '../tasks/auth.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
-import * as storybookInfo from '../tasks/storybookInfo.stories';
+import * as snapshot from '../tasks/snapshot.stories';
 import * as start from '../tasks/start.stories';
+import * as storybookInfo from '../tasks/storybookInfo.stories';
 import * as tunnel from '../tasks/tunnel.stories';
 import * as verify from '../tasks/verify.stories';
-import * as snapshot from '../tasks/snapshot.stories';
 
 export default {
   title: 'CLI/Workflows/TunnelBuild',

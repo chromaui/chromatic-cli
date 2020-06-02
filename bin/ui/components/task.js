@@ -5,11 +5,11 @@ import {
   arrowDown,
   arrowRight,
   chevronRight,
-  spinner,
+  error,
   info,
+  spinner,
   success,
   warning,
-  error,
 } from './icons';
 
 const icons = {

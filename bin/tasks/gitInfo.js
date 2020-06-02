@@ -1,6 +1,6 @@
-import { createTask, transitionTo } from '../lib/tasks';
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
 import { getBaselineCommits, getVersion } from '../git/git';
+import { createTask, transitionTo } from '../lib/tasks';
 import { initial, pending, success } from '../ui/tasks/gitInfo';
 
 export const setGitInfo = async ctx => {

@@ -1,5 +1,5 @@
+import { createReadStream, readdirSync, statSync } from 'fs';
 import fetch from 'node-fetch';
-import { readdirSync, statSync, createReadStream } from 'fs';
 import progress from 'progress-stream';
 
 import { uploadStorybook } from './upload';

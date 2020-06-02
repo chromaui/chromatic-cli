@@ -1,7 +1,6 @@
-import path from 'path';
-
 import { readFileSync, writeFileSync } from 'jsonfile';
 import { confirm } from 'node-ask';
+import path from 'path';
 
 import addedScript from '../ui/messages/info/addedScript';
 import notAddedScript from '../ui/messages/info/notAddedScript';

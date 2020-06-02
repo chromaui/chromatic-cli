@@ -3,7 +3,7 @@ import treeKill from 'tree-kill';
 
 import startApp, { checkResponse } from '../lib/startStorybook';
 import { createTask, transitionTo } from '../lib/tasks';
-import { initial, pending, success, skipped, skipFailed } from '../ui/tasks/start';
+import { initial, pending, skipFailed, skipped, success } from '../ui/tasks/start';
 
 export const startStorybook = async ctx => {
   const { exec: commandName, scriptName, url } = ctx.options;

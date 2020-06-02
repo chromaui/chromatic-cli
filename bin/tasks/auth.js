@@ -1,6 +1,6 @@
-import { initial, authenticating, authenticated } from '../ui/tasks/auth';
 import { createTask, transitionTo } from '../lib/tasks';
 import invalidProjectToken from '../ui/messages/errors/invalidProjectToken';
+import { authenticated, authenticating, initial } from '../ui/tasks/auth';
 
 const TesterCreateAppTokenMutation = `
   mutation TesterCreateAppTokenMutation($projectToken: String!) {

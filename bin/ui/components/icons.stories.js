@@ -1,4 +1,4 @@
-import { arrowDown, arrowRight, chevronRight, info, success, warning, error } from './icons';
+import { arrowDown, arrowRight, chevronRight, error, info, success, warning } from './icons';
 
 export default {
   title: 'CLI/Components/Icons',

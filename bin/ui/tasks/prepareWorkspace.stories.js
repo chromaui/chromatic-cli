@@ -1,10 +1,10 @@
 import task from '../components/task';
 import {
-  initial,
-  pending,
-  lookupMergeBase,
   checkoutMergeBase,
+  initial,
   installingDependencies,
+  lookupMergeBase,
+  pending,
   success,
 } from './prepareWorkspace';
 

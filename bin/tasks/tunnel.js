@@ -3,7 +3,7 @@ import { format, parse } from 'url';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import openTunnel from '../lib/tunnel';
-import { initial, pending, success, failed } from '../ui/tasks/tunnel';
+import { failed, initial, pending, success } from '../ui/tasks/tunnel';
 
 export const createTunnel = async ctx => {
   const { env, log, options } = ctx;

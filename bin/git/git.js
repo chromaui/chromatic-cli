@@ -1,8 +1,8 @@
-import execa from 'execa';
 import setupDebug from 'debug';
+import execa from 'execa';
 import gql from 'fake-tag';
-import dedent from 'ts-dedent';
 import { EOL } from 'os';
+import dedent from 'ts-dedent';
 
 const debug = setupDebug('chromatic-cli:git');
 

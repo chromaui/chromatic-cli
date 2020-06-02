@@ -1,4 +1,5 @@
 import pluralize from 'pluralize';
+
 import { getDuration } from '../../lib/tasks';
 import { progress as progressBar } from '../../lib/utils';
 

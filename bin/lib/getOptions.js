@@ -1,9 +1,7 @@
 import { readFileSync } from 'jsonfile';
 import path from 'path';
 import { parse } from 'url';
-import getStorybookConfiguration from './getStorybookConfiguration';
 
-import inferredOptions from '../ui/messages/info/inferredOptions';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
@@ -13,6 +11,8 @@ import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import missingScriptName from '../ui/messages/errors/missingScriptName';
 import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
 import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
+import inferredOptions from '../ui/messages/info/inferredOptions';
+import getStorybookConfiguration from './getStorybookConfiguration';
 
 const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : input);
 

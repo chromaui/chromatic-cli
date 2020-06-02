@@ -1,17 +1,17 @@
-import { isClean, isUpToDate, getUpdateMessage, findMergeBase, checkout } from '../git/git';
+import { checkout, findMergeBase, getUpdateMessage, isClean, isUpToDate } from '../git/git';
 import installDependencies from '../lib/installDependencies';
-import {
-  initial,
-  pending,
-  lookupMergeBase,
-  checkoutMergeBase,
-  installingDependencies,
-  success,
-} from '../ui/tasks/prepareWorkspace';
-import mergeBaseNotFound from '../ui/messages/errors/mergeBaseNotFound';
 import { createTask, transitionTo } from '../lib/tasks';
+import mergeBaseNotFound from '../ui/messages/errors/mergeBaseNotFound';
 import workspaceNotClean from '../ui/messages/errors/workspaceNotClean';
 import workspaceNotUpToDate from '../ui/messages/errors/workspaceNotUpToDate';
+import {
+  checkoutMergeBase,
+  initial,
+  installingDependencies,
+  lookupMergeBase,
+  pending,
+  success,
+} from '../ui/tasks/prepareWorkspace';
 import { runRestoreWorkspace } from './restoreWorkspace';
 
 export const runPrepareWorkspace = async (ctx, task) => {

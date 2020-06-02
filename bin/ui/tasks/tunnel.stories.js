@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, success, failed } from './tunnel';
+import { failed, initial, pending, success } from './tunnel';
 
 export default {
   title: 'CLI/Tasks/Tunnel',

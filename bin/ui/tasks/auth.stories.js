@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, authenticating, authenticated, invalidToken } from './auth';
+import { authenticated, authenticating, initial, invalidToken } from './auth';
 
 export default {
   title: 'CLI/Tasks/Auth',

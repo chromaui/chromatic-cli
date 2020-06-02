@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-env browser */
-import deprecate from 'util-deprecate';
 import dedent from 'ts-dedent';
+import deprecate from 'util-deprecate';
 
 import isChromatic from './isChromatic';
 

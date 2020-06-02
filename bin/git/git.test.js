@@ -1,19 +1,17 @@
 /* eslint-disable jest/expect-expect */
-import { dirSync } from 'tmp';
-import process from 'process';
 import { exec } from 'child_process';
+import process from 'process';
+import { dirSync } from 'tmp';
 import { promisify } from 'util';
 
+import generateGitRepository from './generateGitRepository';
 import { getBaselineCommits } from './git';
-
-import simpleLoopDescription from './mocks/simple-loop';
 import longLineDescription from './mocks/long-line';
 import longLoopDescription from './mocks/long-loop';
+import createMockIndex from './mocks/mock-index';
+import simpleLoopDescription from './mocks/simple-loop';
 import threeParentsDescription from './mocks/three-parents';
 import twoRootsDescription from './mocks/two-roots';
-import createMockIndex from './mocks/mock-index';
-
-import generateGitRepository from './generateGitRepository';
 
 // Bumping up the Jest timeout for this file because it is timing out sometimes
 // I think this just a bit of a slow file due to git stuff, takes ~2-3s on my computer.

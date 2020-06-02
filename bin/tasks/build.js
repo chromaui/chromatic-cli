@@ -1,16 +1,16 @@
 import execa from 'execa';
+import fs from 'fs';
 import path from 'path';
 import tmp from 'tmp-promise';
-import fs from 'fs';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import {
   initial,
   pending,
-  success,
+  skipFailed,
   skipped,
   skippedForCommit,
-  skipFailed,
+  success,
 } from '../ui/tasks/build';
 
 const TesterSkipBuildMutation = `

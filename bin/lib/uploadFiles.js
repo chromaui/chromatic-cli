@@ -1,8 +1,8 @@
-import fs from 'fs';
-import progress from 'progress-stream';
 import retry from 'async-retry';
+import fs from 'fs';
 import fetch from 'node-fetch';
 import pLimit from 'p-limit';
+import progress from 'progress-stream';
 
 export default async function uploadFiles({ env, log }, files, onProgress) {
   const limitConcurrency = pLimit(10);

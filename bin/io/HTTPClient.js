@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
-import fetch from 'node-fetch';
 import retry from 'async-retry';
+import fetch from 'node-fetch';
 
 export class HTTPClientError extends Error {
   constructor(fetchResponse, message, ...params) {

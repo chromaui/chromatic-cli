@@ -1,8 +1,9 @@
 /* eslint-disable no-underscore-dangle */
 import retry from 'async-retry';
 import { JSDOM, ResourceLoader } from 'jsdom';
-import { addShimsToJSDOM } from './jsdomShims';
+
 import { extractStoryData } from './extractStoryData';
+import { addShimsToJSDOM } from './jsdomShims';
 
 export default async function getRuntimeSpecs(ctx, virtualConsole) {
   const { isolatorUrl, log } = ctx;

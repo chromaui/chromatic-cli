@@ -1,6 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading, react/prop-types */
-import React from 'react';
 import PropTypes from 'prop-types';
+import React from 'react';
 
 const style = {
   display: 'flex',

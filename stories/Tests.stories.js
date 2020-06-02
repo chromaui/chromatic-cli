@@ -4,7 +4,6 @@
 import React from 'react';
 
 import isChromatic from '../src/isChromatic';
-
 import AComponent from './A';
 
 export default {

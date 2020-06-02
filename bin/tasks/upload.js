@@ -1,20 +1,19 @@
 /* eslint-disable no-param-reassign */
 import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
-import { URL } from 'url';
 import slash from 'slash';
+import { URL } from 'url';
 
 import { createTask, transitionTo } from '../lib/tasks';
-
 import uploadFiles from '../lib/uploadFiles';
 import {
+  failed,
   initial,
   preparing,
-  starting,
-  uploading,
-  success,
   skipped,
-  failed,
+  starting,
+  success,
+  uploading,
 } from '../ui/tasks/upload';
 
 const TesterGetUploadUrlsMutation = `

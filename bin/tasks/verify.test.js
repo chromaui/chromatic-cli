@@ -1,5 +1,5 @@
 import getRuntimeSpecs from '../lib/getRuntimeSpecs';
-import { setEnvironment, setRuntimeSpecs, createBuild } from './verify';
+import { createBuild, setEnvironment, setRuntimeSpecs } from './verify';
 
 jest.mock('../lib/getRuntimeSpecs');
 

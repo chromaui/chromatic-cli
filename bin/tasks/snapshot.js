@@ -5,12 +5,12 @@ import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import {
+  buildComplete,
+  buildError,
+  buildFailed,
+  buildPassed,
   initial,
   pending,
-  buildPassed,
-  buildComplete,
-  buildFailed,
-  buildError,
 } from '../ui/tasks/snapshot';
 
 const TesterBuildQuery = `

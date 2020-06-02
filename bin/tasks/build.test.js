@@ -1,5 +1,6 @@
 import execa from 'execa';
-import { setSourceDir, setSpawnParams, buildStorybook } from './build';
+
+import { buildStorybook, setSourceDir, setSpawnParams } from './build';
 
 jest.mock('execa');
 
