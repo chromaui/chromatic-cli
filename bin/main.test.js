@@ -5,7 +5,6 @@ import fetch from 'node-fetch';
 import kill from 'tree-kill';
 
 import getEnv from './lib/getEnv';
-import getRuntimeSpecs from './lib/getRuntimeSpecs';
 import parseArgs from './lib/parseArgs';
 import startApp, { checkResponse } from './lib/startStorybook';
 import openTunnel from './lib/tunnel';
@@ -15,6 +14,7 @@ import { runAll, runBuild } from './main';
 let lastBuild;
 let mockBuildFeatures;
 beforeEach(() => {
+  fetch.mockClear();
   mockBuildFeatures = {
     features: { uiTests: true, uiReview: true },
     wasLimited: false,
@@ -49,6 +49,9 @@ jest.mock('node-fetch', () =>
       }
 
       if (query.match('TesterCreateBuildMutation')) {
+        if (variables.isolatorUrl.startsWith('http://throw-an-error')) {
+          throw new Error('fetch error');
+        }
         lastBuild = variables;
         return {
           data: {
@@ -65,6 +68,12 @@ jest.mock('node-fetch', () =>
                   paymentRequired: false,
                 },
               },
+              snapshots: [
+                {
+                  spec: { name: 'name', component: { displayName: 'component' } },
+                  parameters: { viewport: 320, viewportIsDefault: false },
+                },
+              ],
             },
           },
         };
@@ -147,7 +156,6 @@ jest.mock('./lib/getStorybookInfo', () => () => ({
 }));
 jest.mock('./lib/tunnel');
 jest.mock('./lib/uploadFiles');
-jest.mock('./lib/getRuntimeSpecs');
 
 let processEnv;
 beforeEach(() => {
@@ -158,9 +166,6 @@ beforeEach(() => {
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
   execa.mockReset();
-  getRuntimeSpecs
-    .mockReset()
-    .mockReturnValue([{ name: 'story', component: { name: 'component' } }]);
 });
 afterEach(() => {
   process.env = processEnv;
@@ -226,7 +231,6 @@ it('runs in simple situations', async () => {
       commit: 'commit',
       committedAt: 1234,
       baselineCommits: ['baseline'],
-      runtimeSpecs: [{ name: 'story', component: { name: 'component' } }],
       fromCI: false,
       isTravisPrBuild: false,
       packageVersion: expect.any(String),
@@ -430,17 +434,14 @@ describe('tunneled build', () => {
   it('stops the tunnel if something goes wrong', async () => {
     const close = jest.fn();
     openTunnel.mockReturnValueOnce({
-      url: 'http://tunnel.com/',
+      url: 'http://throw-an-error',
       cachedUrl: 'http://tunnel.com/',
       close,
-    });
-    getRuntimeSpecs.mockImplementation(() => {
-      throw new Error('runtime spec error');
     });
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(255);
-    expect(ctx.log.errors[0]).toMatch('runtime spec error');
+    expect(ctx.log.errors[0]).toMatch('fetch error');
     expect(close).toHaveBeenCalled();
   });
 });

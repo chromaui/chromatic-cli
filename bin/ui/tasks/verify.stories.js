@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { failed, initial, invalidOnly, listing, pending, runOnly, success } from './verify';
+import { failed, initial, invalidOnly, pending, runOnly, success } from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',
@@ -15,8 +15,6 @@ const build = {
 export const Initial = () => initial;
 
 export const Pending = () => pending();
-
-export const Listing = () => listing({ name: 'MyStory', component: { name: 'MyComponent' } });
 
 export const RunOnly = () => runOnly({ storyName: 'MyStory', componentName: 'MyComponent' });
 

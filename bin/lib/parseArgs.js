@@ -67,7 +67,7 @@ export default function parseArgs(argv) {
         'patch-build': { type: 'string' },
 
         // debug options
-        list: { type: 'string' },
+        list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
         ci: { type: 'boolean' },
         debug: { type: 'boolean' },

@@ -1,22 +1,10 @@
-import { VirtualConsole } from 'jsdom';
-import minimatch from 'minimatch';
-import pluralize from 'pluralize';
-
-import getRuntimeSpecs from '../lib/getRuntimeSpecs';
 import { createTask, transitionTo } from '../lib/tasks';
 import { matchesBranch } from '../lib/utils';
+import listingStories from '../ui/messages/info/listingStories';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import {
-  failed,
-  initial,
-  invalidOnly,
-  listing,
-  pending,
-  runOnly,
-  success,
-} from '../ui/tasks/verify';
+import { initial, invalidOnly, pending, runOnly, success } from '../ui/tasks/verify';
 
 const TesterCreateBuildMutation = `
   mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
@@ -43,6 +31,19 @@ const TesterCreateBuildMutation = `
         }
         setupUrl
       }
+      snapshots {
+        spec {
+          name
+          component {
+            name
+            displayName
+          }
+        }
+        parameters {
+          viewport
+          viewportIsDefault
+        }
+      }
     }
   }
 `;
@@ -63,62 +64,28 @@ export const setEnvironment = async ctx => {
   ctx.log.debug(`Got environment ${ctx.environment}`);
 };
 
-export const setRuntimeSpecs = async (ctx, task) => {
-  const { log, options } = ctx;
-  const { only, list } = options;
-
-  const [match, componentName, storyName] = (only && only.match(/(.*):([^:]*)/)) || [];
-  if (only && !match) {
-    throw new Error(invalidOnly(ctx).output);
-  }
-
-  const virtualConsole = new VirtualConsole();
-  if (options.verbose) virtualConsole.sendTo(log);
-
-  ctx.runtimeErrors = [];
-  ctx.runtimeWarnings = [];
-
-  virtualConsole.on('jsdomError', line => ctx.runtimeErrors.push(line));
-  virtualConsole.on('error', line => ctx.runtimeErrors.push(line));
-  virtualConsole.on('warn', line => ctx.runtimeWarnings.push(line));
-
-  ctx.runtimeSpecs = await getRuntimeSpecs(ctx, virtualConsole);
-
-  if (list) {
-    log.info(listing(ctx).title);
-    ctx.runtimeSpecs.forEach(story => log.info(listing(story).output));
-  }
-
-  if (only) {
-    transitionTo(runOnly)({ componentName, storyName }, task);
-    ctx.runtimeSpecs = ctx.runtimeSpecs.filter(
-      spec => minimatch(spec.name, storyName) && minimatch(spec.component.name, componentName)
-    );
-  }
-
-  if (!ctx.runtimeSpecs.length) {
-    throw new Error(failed(ctx).output);
-  }
-
-  log.debug(`Found ${pluralize('story', ctx.runtimeSpecs.length, true)}`);
-};
-
 export const createBuild = async (ctx, task) => {
-  const { client, environment, git, log, pkg, cachedUrl, isolatorUrl, options, runtimeSpecs } = ctx;
-  const { patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
+  const { client, environment, git, log, pkg, cachedUrl, isolatorUrl, options } = ctx;
+  const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
   const { version, ...commitInfo } = git; // omit version
   const autoAcceptChanges = matchesBranch(options.autoAcceptChanges, git.branch);
+
+  const [match, componentName, name] = (only && only.match(/(.*):([^:]*)/)) || [];
+  if (only) {
+    if (!match) throw new Error(invalidOnly(ctx).output);
+    transitionTo(runOnly)({ componentName, name }, task);
+  }
 
   const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
     input: {
       ...commitInfo,
+      ...(only && { only: { componentName, name } }),
       autoAcceptChanges,
       cachedUrl,
       environment,
       patchBaseRef,
       patchHeadRef,
       preserveMissingSpecs,
-      runtimeSpecs,
       packageVersion: pkg.version,
       storybookVersion: ctx.storybook.version,
       viewLayer: ctx.storybook.viewLayer,
@@ -127,6 +94,10 @@ export const createBuild = async (ctx, task) => {
     isolatorUrl,
   });
   ctx.build = build;
+
+  if (list) {
+    log.info(listingStories(build.snapshots));
+  }
 
   if (build.wasLimited) {
     const { account } = build.app;
@@ -148,7 +119,7 @@ export const createBuild = async (ctx, task) => {
 
   transitionTo(success, true)({ ...ctx, isPublishOnly, isOnboarding }, task);
 
-  if (isPublishOnly || matchesBranch(options.exitOnceUploaded, git.branch)) {
+  if (list || isPublishOnly || matchesBranch(options.exitOnceUploaded, git.branch)) {
     ctx.exitCode = 0;
     ctx.skipSnapshots = true;
   }
@@ -156,5 +127,5 @@ export const createBuild = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  steps: [transitionTo(pending), setEnvironment, setRuntimeSpecs, createBuild],
+  steps: [transitionTo(pending), setEnvironment, createBuild],
 });

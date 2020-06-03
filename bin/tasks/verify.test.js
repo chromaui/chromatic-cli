@@ -1,7 +1,4 @@
-import getRuntimeSpecs from '../lib/getRuntimeSpecs';
-import { createBuild, setEnvironment, setRuntimeSpecs } from './verify';
-
-jest.mock('../lib/getRuntimeSpecs');
+import { createBuild, setEnvironment } from './verify';
 
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
@@ -22,22 +19,6 @@ describe('setEnvironment', () => {
   });
 });
 
-describe('setRuntimeSpecs', () => {
-  it('sets the runtimeSpecs on context', async () => {
-    getRuntimeSpecs.mockReturnValue([{ name: 'foo' }, { name: 'bar' }]);
-    const ctx = { env, log, options: {} };
-    await setRuntimeSpecs(ctx, {});
-    expect(ctx.runtimeSpecs).toEqual([{ name: 'foo' }, { name: 'bar' }]);
-  });
-
-  it('fails if there are no runtimeSpecs', async () => {
-    getRuntimeSpecs.mockReturnValue([]);
-    const ctx = { env, log, options: {} };
-    await expect(setRuntimeSpecs(ctx, {})).rejects.toThrow(/Cannot run a build with no stories/);
-    expect(ctx.runtimeSpecs).toEqual([]);
-  });
-});
-
 describe('createBuild', () => {
   const defaultContext = {
     env,
@@ -46,7 +27,6 @@ describe('createBuild', () => {
     environment: ':environment',
     git: { version: 'whatever' },
     cachedUrl: 'http://...',
-    runtimeSpecs: [],
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
     isolatorUrl: 'https://tunnel.chromatic.com/',
@@ -70,7 +50,6 @@ describe('createBuild', () => {
           patchBaseRef: undefined,
           patchHeadRef: undefined,
           preserveMissingSpecs: undefined,
-          runtimeSpecs: ctx.runtimeSpecs,
           packageVersion: ctx.pkg.version,
           storybookVersion: ctx.storybook.version,
           viewLayer: ctx.storybook.viewLayer,
