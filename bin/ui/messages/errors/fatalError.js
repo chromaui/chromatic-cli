@@ -8,7 +8,7 @@ import link from '../../components/link';
 const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
 
 export default function fatalError(
-  { sessionId, git = {}, pkg, flags, exitCode, build, isolatorUrl, cachedUrl },
+  { sessionId, git = {}, pkg, flags, exitCode, storybook, build, isolatorUrl, cachedUrl },
   error,
   timestamp = new Date().toISOString()
 ) {
@@ -23,6 +23,7 @@ export default function fatalError(
     nodeVersion: process.versions.node,
     packageName: pkg.name,
     packageVersion: pkg.version,
+    ...(storybook ? { storybook } : {}),
     flags,
     exitCode,
     errorType: errors.map(err => err.name).join('\n'),
