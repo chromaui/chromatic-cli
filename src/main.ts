@@ -1,5 +1,5 @@
 import { getInput, error, setFailed, setOutput } from '@actions/core';
-import { GitHub, context } from "@actions/github";
+import { context } from "@actions/github";
 import { runTest } from 'chromatic/bin/tester/index';
 import { verifyOptions } from 'chromatic/bin/lib/verify-option';
 
@@ -64,22 +64,10 @@ async function runChromatic(options): Promise<Output> {
   };
 }
 
-const getApi = () => {
-  try {
-    const token = getInput('token');
-    return new GitHub(token);
-  } catch (e){
-    setFailed(e.message);
-
-    return null;
-  }
-}
-
 async function run() {
-  const api = getApi();
   const commit = getCommit(context);
   
-  if (!api || !commit){
+  if (!commit){
     return;
   }
 
