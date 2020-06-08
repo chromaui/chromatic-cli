@@ -30,8 +30,8 @@ const TesterBuildQuery = `
 `;
 
 export const takeSnapshots = async (ctx, task) => {
-  const { client, git, log, options, runtimeSpecs } = ctx;
-  const { number: buildNumber } = ctx.build;
+  const { client, git, log, options } = ctx;
+  const { number: buildNumber, snapshots } = ctx.build;
 
   if (ctx.build.app.repository && ctx.uploadedBytes) {
     log.info('');
@@ -40,15 +40,10 @@ export const takeSnapshots = async (ctx, task) => {
 
   const snapshotLabels =
     options.interactive &&
-    runtimeSpecs.reduce((acc, { name, component, parameters = {} }) => {
-      const { viewports } = parameters;
-      for (let i = 0; i < (viewports ? viewports.length : 1); i += 1) {
-        const suffix = viewports ? ` [${viewports[i]}px]` : '';
-        const label = `${component.displayName} › ${name}${suffix}`;
-        acc.push(label);
-      }
-      return acc;
-    }, []);
+    snapshots.map(({ spec, parameters }) => {
+      const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
+      return `${spec.component.displayName} › ${spec.name}${suffix}`;
+    });
 
   const waitForBuild = async () => {
     const { app } = await client.runQuery(TesterBuildQuery, { buildNumber });
