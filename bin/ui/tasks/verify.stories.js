@@ -16,7 +16,7 @@ export const Initial = () => initial;
 
 export const Pending = () => pending();
 
-export const RunOnly = () => runOnly({ storyName: 'MyStory', componentName: 'MyComponent' });
+export const RunOnly = () => runOnly({ name: 'MyStory', componentName: 'MyComponent' });
 
 export const InvalidOnly = () => invalidOnly();
 
