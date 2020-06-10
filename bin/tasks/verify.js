@@ -14,6 +14,7 @@ const TesterCreateBuildMutation = `
       snapshotCount
       componentCount
       webUrl
+      reportToken
       features {
         uiTests
         uiReview

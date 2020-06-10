@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "5.0.0-beta.0",
+  "version": "5.0.0-beta.1",
   "description": "Visual Testing for Storybook",
   "homepage": "https://www.chromatic.com",
   "bugs": {
@@ -68,6 +68,7 @@
     "fs-extra": "^9.0.0",
     "jest": "^25.2.7",
     "jsonfile": "^6.0.1",
+    "junit-report-builder": "2.0.0",
     "listr": "0.14.3",
     "meow": "^6.1.0",
     "node-ask": "^1.0.1",

@@ -5,6 +5,7 @@ import { parse } from 'url';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
+import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
@@ -32,6 +33,7 @@ export default async function getOptions({ argv, env, flags, log }) {
     skip: flags.skip === '' ? true : flags.skip,
     verbose: !!flags.debug,
     interactive: !flags.ci && !!flags.interactive && !!process.stdout.isTTY,
+    report: flags.report === '' ? true : flags.report,
 
     autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
@@ -110,6 +112,10 @@ export default async function getOptions({ argv, env, flags, log }) {
 
   if (scriptName && options.exitOnceUploaded) {
     throw new Error(invalidExitOnceUploaded());
+  }
+
+  if (typeof options.report === 'string' && path.extname(options.report) !== '.xml') {
+    throw new Error(invalidReportPath());
   }
 
   // This is the user's own package.json, not ctx.pkg!

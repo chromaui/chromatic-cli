@@ -12,10 +12,10 @@ export default class GraphQLClient {
     this.headers.Authorization = `Bearer ${token}`;
   }
 
-  async runQuery(query, variables) {
+  async runQuery(query, variables, headers) {
     const response = await this.client.fetch(this.uri, {
       body: JSON.stringify({ query, variables }),
-      headers: this.headers,
+      headers: { ...this.headers, ...headers },
       method: 'post',
     });
 
