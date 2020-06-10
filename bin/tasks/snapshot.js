@@ -62,7 +62,7 @@ export const generateReport = async (ctx, task) => {
   const { client, log, options } = ctx;
   const { number: buildNumber, reportToken } = ctx.build;
 
-  const file = options.report === true ? 'chromatic-test-report.xml' : options.report;
+  const file = options.report === true ? 'chromatic-build-{buildNumber}.xml' : options.report;
   ctx.reportPath = path.resolve(file.replace(/{buildNumber}/g, buildNumber));
 
   task.output = `Generating XML report at ${ctx.reportPath}`;

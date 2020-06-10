@@ -29,7 +29,7 @@ export default function parseArgs(argv) {
       --list  List available stories (for debugging purposes)
       --ci  This build is running in continuous integration, non-interactively (alternatively, set CI=true)
       --debug  Output more debugging information
-      --report [filepath]  Write build details to JUnit XML [chromatic-test-report.xml]
+      --report [filepath]  Write build details to JUnit XML [chromatic-build-{buildNumber}.xml]
     `,
     {
       argv,
