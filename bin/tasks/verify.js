@@ -3,7 +3,7 @@ import listingStories from '../ui/messages/info/listingStories';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import { initial, invalidOnly, pending, runOnly, success } from '../ui/tasks/verify';
+import { initial, pending, runOnly, success } from '../ui/tasks/verify';
 
 const TesterCreateBuildMutation = `
   mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
@@ -70,16 +70,14 @@ export const createBuild = async (ctx, task) => {
   const { version, matchesBranch, ...commitInfo } = git; // omit some fields
   const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
 
-  const [match, componentName, name] = (only && only.match(/(.*):([^:]*)/)) || [];
   if (only) {
-    if (!match) throw new Error(invalidOnly(ctx).output);
-    transitionTo(runOnly)({ componentName, name }, task);
+    transitionTo(runOnly)(ctx, task);
   }
 
   const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
     input: {
       ...commitInfo,
-      ...(only && { only: { componentName, name } }),
+      ...(only && { only: ctx.options.onlyMatch }),
       autoAcceptChanges,
       cachedUrl,
       environment,

@@ -4,6 +4,7 @@ import { parse } from 'url';
 
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
+import invalidOnly from '../ui/messages/errors/invalidOnly';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
@@ -23,11 +24,15 @@ const resolveHomeDir = filepath =>
 export default async function getOptions({ argv, env, flags, log }) {
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
 
+  const [match, componentName, storyName] = (flags.only && flags.only.match(/(.+):([^:]+)/)) || [];
+  if (flags.only && !match) throw new Error(invalidOnly());
+
   const options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
     config: flags.config,
 
     only: flags.only,
+    onlyMatch: flags.only && { componentName, name: storyName },
     list: flags.list,
     fromCI: !!flags.ci,
     skip: flags.skip === '' ? true : flags.skip,

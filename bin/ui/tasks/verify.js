@@ -9,15 +9,9 @@ export const pending = ctx => ({
   output: 'This may take a few minutes',
 });
 
-export const runOnly = only => ({
+export const runOnly = ctx => ({
   status: 'pending',
-  title: `Running only story '${only.name}' of component '${only.componentName}'`,
-});
-
-export const invalidOnly = ctx => ({
-  status: 'error',
-  title: 'Verifying your Storybook',
-  output: `Invalid --only argument: must provided in the form "componentName:storyName"`,
+  title: `Running only stories matching '${ctx.options.only}'`,
 });
 
 export const success = ctx => ({
