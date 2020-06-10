@@ -3,7 +3,14 @@ import picomatch from 'picomatch';
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
 import { getBaselineCommits, getVersion } from '../git/git';
 import { createTask, transitionTo } from '../lib/tasks';
-import { initial, pending, skipFailed, skippedForCommit, success } from '../ui/tasks/gitInfo';
+import {
+  initial,
+  pending,
+  skipFailed,
+  skippedForCommit,
+  skippingBuild,
+  success,
+} from '../ui/tasks/gitInfo';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -22,6 +29,7 @@ export const setGitInfo = async (ctx, task) => {
   ctx.git.matchesBranch = matchesBranch;
 
   if (matchesBranch(skip)) {
+    transitionTo(skippingBuild)(ctx, task);
     if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
       ctx.skip = true;
       return transitionTo(skippedForCommit, true)(ctx, task);
