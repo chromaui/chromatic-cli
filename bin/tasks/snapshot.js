@@ -3,7 +3,7 @@ import reportBuilder from 'junit-report-builder';
 import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay, matchesBranch } from '../lib/utils';
+import { delay } from '../lib/utils';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import speedUpCI from '../ui/messages/info/speedUpCI';
@@ -164,7 +164,7 @@ export const takeSnapshots = async (ctx, task) => {
     case 'BUILD_PENDING':
     case 'BUILD_DENIED': {
       ctx.exitCode = 0;
-      if (!build.autoAcceptChanges && !matchesBranch(options.exitZeroOnChanges, git.branch)) {
+      if (!build.autoAcceptChanges && !ctx.git.matchesBranch(options.exitZeroOnChanges)) {
         ctx.exitCode = 1;
         ctx.log.error(buildHasChanges(ctx));
       }
@@ -191,6 +191,6 @@ export const takeSnapshots = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: ctx => ctx.skipSnapshots,
+  skip: ctx => ctx.skip || ctx.skipSnapshots,
   steps: [transitionTo(pending), takeSnapshots],
 });

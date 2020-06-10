@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, skipFailed, skipped, success } from './build';
+import { initial, pending, skipped, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
@@ -22,10 +22,5 @@ export const Built = () =>
 
 export const Skipped = () =>
   skipped({
-    options: { storybookBuildDir: '/users/me/project/storybook-static' },
-  });
-
-export const SkipFailed = () =>
-  skipFailed({
     options: { storybookBuildDir: '/users/me/project/storybook-static' },
   });

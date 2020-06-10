@@ -5,20 +5,7 @@ import semver from 'semver';
 import tmp from 'tmp-promise';
 
 import { createTask, transitionTo } from '../lib/tasks';
-import {
-  initial,
-  pending,
-  skipFailed,
-  skipped,
-  skippedForCommit,
-  success,
-} from '../ui/tasks/build';
-
-const TesterSkipBuildMutation = `
-  mutation TesterSkipBuildMutation($appId: ObjID, $commit: String!) {
-    skipBuild(appId: $appId, commit: $commit)
-  }
-`;
+import { initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async ctx => {
   if (semver.lt(ctx.storybook.version, '5.0.0')) {
@@ -69,12 +56,7 @@ export const buildStorybook = async ctx => {
 export default createTask({
   title: initial.title,
   skip: async ctx => {
-    if (ctx.options.skip) {
-      if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit: ctx.git.commit })) {
-        return skippedForCommit(ctx).output;
-      }
-      throw new Error(skipFailed(ctx).output);
-    }
+    if (ctx.skip) return true;
     if (ctx.options.storybookBuildDir) {
       ctx.sourceDir = ctx.options.storybookBuildDir;
       return skipped(ctx).output;

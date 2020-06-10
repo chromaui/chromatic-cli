@@ -17,6 +17,24 @@ export const pending = ctx => ({
   title: 'Retrieving git information',
 });
 
+export const skippingBuild = ctx => ({
+  status: 'pending',
+  title: 'Skipping build',
+  output: `Skipping build for commit ${ctx.git.commit.substr(0, 7)} due to --skip`,
+});
+
+export const skippedForCommit = ctx => ({
+  status: 'success',
+  title: 'Skipping build',
+  output: `Skipped build for commit ${ctx.git.commit.substr(0, 7)} due to --skip`,
+});
+
+export const skipFailed = ctx => ({
+  status: 'error',
+  title: 'Skipping build',
+  output: `Failed to skip build`,
+});
+
 export const success = ctx => ({
   status: 'success',
   title: 'Retrieved git information',

@@ -13,7 +13,7 @@ describe('setGitInfo', () => {
     getBaselineCommits.mockReturnValue(['asd2344']);
     getVersion.mockReturnValue('Git v1.0.0');
     const ctx = { log, options: {} };
-    await setGitInfo(ctx);
+    await setGitInfo(ctx, {});
     expect(ctx.git).toMatchObject({
       commit: '123asdf',
       branch: 'something',
