@@ -20,13 +20,13 @@ export default function parseArgs(argv) {
       --ignore-last-build-on-branch <branch>  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch>, globs supported]
       --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline
       --no-interactive  Do not prompt for package.json changes
-      --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
       --allow-console-errors  Continue, even when encountering runtime errors
       --patch-build <headbranch...basebranch>  Create a patch build to fix a missing PR comparison
-
-    Debug options
-      --skip [branch]  Skip Chromatic tests, but mark the commit as passing [only for <branch> if specified, globs supported]
+      
+      Debug options
       --list  List available stories (for debugging purposes)
+      --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
+      --skip [branch]  Skip Chromatic tests, but mark the commit as passing [only for <branch> if specified, globs supported]
       --ci  This build is running in continuous integration, non-interactively (alternatively, set CI=true)
       --debug  Output more debugging information
       --report [filepath]  Write build details to JUnit XML [chromatic-build-{buildNumber}.xml]
