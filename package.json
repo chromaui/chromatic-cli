@@ -18,6 +18,12 @@
     "chromatic": "./bin/register.js",
     "chromatic-cli": "./bin/register.js"
   },
+  "files": [
+    "bin",
+    "dist",
+    "isChromatic.js",
+    "storybook-addon.js"
+  ],
   "scripts": {
     "prebuild": "rm -rf ./dist",
     "build": "npm-run-all --serial -l build:**",

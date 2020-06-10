@@ -2,6 +2,7 @@ node_modules
 .cache
 .env
 *.log
+*.tgz
 
 # the dist folder IS included so we can test every version in the CI without publishing
 storybook-static
