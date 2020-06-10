@@ -16,7 +16,4 @@ export const progress = (percentage, size = 20) => {
   return `${completed.join('')}${track.join('')}`.substr(0, 20);
 };
 
-export const matchesBranch = (value, branch) =>
-  typeof value === 'string' ? value === branch : value;
-
 export const baseStorybookUrl = url => url.replace(/\/iframe\.html$/, '');

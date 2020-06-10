@@ -9,5 +9,6 @@ export const setStorybookInfo = async ctx => {
 
 export default createTask({
   title: initial.title,
+  skip: ctx => ctx.skip,
   steps: [transitionTo(pending), setStorybookInfo, transitionTo(success, true)],
 });

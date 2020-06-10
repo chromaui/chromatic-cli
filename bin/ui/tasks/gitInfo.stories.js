@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, success } from './gitInfo';
+import { initial, pending, skipFailed, skippedForCommit, success } from './gitInfo';
 
 export default {
   title: 'CLI/Tasks/GitInfo',
@@ -12,3 +12,5 @@ export const Initial = () => initial;
 export const Pending = () => pending({});
 export const Success = () => success({ git });
 export const NoBaselines = () => success({ git: { ...git, baselineCommits: [] } });
+export const Skipped = () => skippedForCommit({ git });
+export const SkipFailed = () => skipFailed();

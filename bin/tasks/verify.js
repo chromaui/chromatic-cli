@@ -1,5 +1,4 @@
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesBranch } from '../lib/utils';
 import listingStories from '../ui/messages/info/listingStories';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
@@ -67,8 +66,8 @@ export const setEnvironment = async ctx => {
 export const createBuild = async (ctx, task) => {
   const { client, environment, git, log, pkg, cachedUrl, isolatorUrl, options } = ctx;
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
-  const { version, ...commitInfo } = git; // omit version
-  const autoAcceptChanges = matchesBranch(options.autoAcceptChanges, git.branch);
+  const { version, matchesBranch, ...commitInfo } = git; // omit some fields
+  const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
 
   const [match, componentName, name] = (only && only.match(/(.*):([^:]*)/)) || [];
   if (only) {
@@ -119,7 +118,7 @@ export const createBuild = async (ctx, task) => {
 
   transitionTo(success, true)({ ...ctx, isPublishOnly, isOnboarding }, task);
 
-  if (list || isPublishOnly || matchesBranch(options.exitOnceUploaded, git.branch)) {
+  if (list || isPublishOnly || matchesBranch(options.exitOnceUploaded)) {
     ctx.exitCode = 0;
     ctx.skipSnapshots = true;
   }
@@ -127,5 +126,6 @@ export const createBuild = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
+  skip: ctx => ctx.skip,
   steps: [transitionTo(pending), setEnvironment, createBuild],
 });
