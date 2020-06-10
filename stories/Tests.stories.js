@@ -64,3 +64,18 @@ export const IgnoredElements = () => (
     />
   </div>
 );
+
+export const RightToLeftBody = () => {
+  React.useEffect(() => {
+    const { dir } = document.body;
+    document.body.dir = 'rtl';
+    return () => {
+      document.body.dir = dir;
+    };
+  }, []);
+  return <div>Content</div>;
+};
+
+export const RightToLeftContainer = () => {
+  return <div dir="rtl">Content</div>;
+};
