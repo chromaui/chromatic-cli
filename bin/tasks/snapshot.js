@@ -93,10 +93,13 @@ export const generateReport = async (ctx, task) => {
         testCase.error('Server error while taking snapshot, please try again', status);
         break;
       case 'SNAPSHOT_CAPTURE_ERROR':
-        testCase.error('Snapshot is broken due to a JavaScript error in your Storybook', status);
+        testCase.error('Snapshot is broken due to an error in your Storybook', status);
         break;
       case 'SNAPSHOT_DENIED':
         testCase.failure('Snapshot was denied by a user', status);
+        break;
+      case 'SNAPSHOT_PENDING':
+        testCase.failure('Snapshot contains visual changes and must be reviewed', status);
         break;
       case 'SNAPSHOT_NO_CAPTURE':
         testCase.skipped();
