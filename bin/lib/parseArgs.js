@@ -25,7 +25,7 @@ export default function parseArgs(argv) {
       
       Debug options
       --list  List available stories (for debugging purposes)
-      --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
+      --only <component:story>  Only run a single story or a subset of stories. Globbing is supported on either side.
       --skip [branch]  Skip Chromatic tests, but mark the commit as passing [only for <branch> if specified, globs supported]
       --ci  This build is running in continuous integration, non-interactively (alternatively, set CI=true)
       --debug  Output more debugging information
