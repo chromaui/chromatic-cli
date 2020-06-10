@@ -25,7 +25,7 @@ describe('createBuild', () => {
     log,
     options: {},
     environment: ':environment',
-    git: { version: 'whatever' },
+    git: { version: 'whatever', matchesBranch: () => false },
     cachedUrl: 'http://...',
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
@@ -44,7 +44,7 @@ describe('createBuild', () => {
       expect.stringMatching(/TesterCreateBuildMutation/),
       {
         input: {
-          autoAcceptChanges: undefined,
+          autoAcceptChanges: false,
           cachedUrl: ctx.cachedUrl,
           environment: ctx.environment,
           patchBaseRef: undefined,
