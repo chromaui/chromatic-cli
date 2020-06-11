@@ -147,6 +147,6 @@ npm install --save-dev chromatic
 **With yarn:**
 
 ```
-yarn remove --dev storybook-chromatic
+yarn remove storybook-chromatic
 yarn add --dev chromatic
 ```
