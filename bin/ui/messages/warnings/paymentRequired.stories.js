@@ -6,5 +6,5 @@ export default {
 
 export const PaymentRequired = () =>
   paymentRequired({
-    billingUrl: 'https://www.chromatic.com/billing',
+    billingUrl: 'https://www.chromatic.com/billing?accountId=5af25af03c9f2c4bdccc0fcb',
   });
