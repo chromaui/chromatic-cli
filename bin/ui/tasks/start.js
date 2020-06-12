@@ -22,7 +22,9 @@ export const skipped = ctx => ({
   status: 'skipped',
   title: 'Start Storybook [skipped]',
   output: ctx.options.noStart
-    ? `Skipped due to --do-not-start; using ${baseStorybookUrl(ctx.isolatorUrl)}`
+    ? `Skipped due to ${
+        ctx.options.storybookUrl ? '--storybook-url' : '--do-not-start'
+      }; using ${baseStorybookUrl(ctx.isolatorUrl)}`
     : `Storybook already running at ${baseStorybookUrl(ctx.isolatorUrl)}`,
 });
 
