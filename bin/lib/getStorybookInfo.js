@@ -59,11 +59,7 @@ const find = name =>
     });
   });
 
-const read = async l => {
-  const result = await fs.readFile(l, 'utf8');
-
-  return JSON.parse(result);
-};
+const read = async filepath => JSON.parse(await fs.readFile(filepath, 'utf8'));
 
 const timeout = count =>
   new Promise((_, rej) => {
@@ -83,12 +79,12 @@ const findViewlayer = async ({ env }) => {
     return { viewLayer, storybookVersion };
   }
 
-  // Try to find the
+  // Try to find the Storybook viewlayer package
   const findings = viewLayers.map(v => find(v));
   const rejectedFindings = findings.map(p => p.then(disregard, () => true));
   const allFailed = Promise.all(rejectedFindings).then(() => {
     throw new Error(
-      'Could not discover Storybook version. Try upgrading the chromatic-cli package?'
+      'Could not find a supported Storybook viewlayer package. Make sure one is installed.'
     );
   });
 
