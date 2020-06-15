@@ -31,6 +31,7 @@
     "build:bin": "cross-env BABEL_ENV=build babel -s -d ./dist ./src -D",
     "chromatic": "node ./bin/register.js",
     "chromatic-prebuild": "node ./bin/register.js --storybook-build-dir=\"storybook-static\"",
+    "chromatic-staging": "CHROMATIC_INDEX_URL=https://staging-www.chromaticqa.com node ./bin/register.js",
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose node ./bin/register.js",
     "dev": "npm-run-all --parallel -l 'build:** -- --watch'",
     "lint": "yarn lint:js src .storybook bin stories",
