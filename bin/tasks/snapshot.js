@@ -85,7 +85,7 @@ export const generateReport = async (ctx, task) => {
     const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
     const testCase = suite
       .testCase()
-      .className(spec.component.name)
+      .className(spec.component.name.replace(/[|/]/g, '.')) // transform story path to class path
       .name(`${spec.name}${suffix}`);
 
     switch (status) {
@@ -113,7 +113,7 @@ export const generateReport = async (ctx, task) => {
 };
 
 export const takeSnapshots = async (ctx, task) => {
-  const { client, git, log, options } = ctx;
+  const { client, log, options } = ctx;
   const { number: buildNumber, snapshots } = ctx.build;
 
   if (ctx.build.app.repository && ctx.uploadedBytes) {
