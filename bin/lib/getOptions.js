@@ -22,6 +22,8 @@ const resolveHomeDir = filepath =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 export default async function getOptions({ argv, env, flags, log }) {
+  const fromCI = !!flags.ci || !!process.env.CI;
+
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
 
   const [match, componentName, storyName] = (flags.only && flags.only.match(/(.+):([^:]+)/)) || [];
@@ -34,10 +36,10 @@ export default async function getOptions({ argv, env, flags, log }) {
     only: flags.only,
     onlyMatch: flags.only && { componentName, name: storyName },
     list: flags.list,
-    fromCI: !!flags.ci,
+    fromCI,
     skip: flags.skip === '' ? true : flags.skip,
     verbose: !!flags.debug,
-    interactive: !flags.ci && !!flags.interactive && !!process.stdout.isTTY,
+    interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
     report: flags.report === '' ? true : flags.report,
 
     autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
