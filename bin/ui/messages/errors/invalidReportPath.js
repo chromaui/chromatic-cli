@@ -5,6 +5,6 @@ import { error } from '../../components/icons';
 
 export default () =>
   dedent(chalk`
-    ${error} Invalid value for {bold --report}
+    ${error} Invalid value for {bold --junit-report}
     If you pass a file path, make sure it ends with '.xml'
   `);

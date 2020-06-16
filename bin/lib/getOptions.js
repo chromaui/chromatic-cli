@@ -40,7 +40,7 @@ export default async function getOptions({ argv, env, flags, log }) {
     skip: flags.skip === '' ? true : flags.skip,
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
-    report: flags.report === '' ? true : flags.report,
+    junitReport: flags.junitReport === '' ? true : flags.junitReport,
 
     autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
@@ -121,7 +121,7 @@ export default async function getOptions({ argv, env, flags, log }) {
     throw new Error(invalidExitOnceUploaded());
   }
 
-  if (typeof options.report === 'string' && path.extname(options.report) !== '.xml') {
+  if (typeof options.junitReport === 'string' && path.extname(options.junitReport) !== '.xml') {
     throw new Error(invalidReportPath());
   }
 

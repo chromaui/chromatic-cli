@@ -59,10 +59,11 @@ const ReportQuery = `
 `;
 
 export const generateReport = async (ctx, task) => {
-  const { client, log, options } = ctx;
+  const { client, log } = ctx;
+  const { junitReport } = ctx.options;
   const { number: buildNumber, reportToken } = ctx.build;
 
-  const file = options.report === true ? 'chromatic-build-{buildNumber}.xml' : options.report;
+  const file = junitReport === true ? 'chromatic-build-{buildNumber}.xml' : junitReport;
   ctx.reportPath = path.resolve(file.replace(/{buildNumber}/g, buildNumber));
 
   task.output = `Generating XML report at ${ctx.reportPath}`;
@@ -149,7 +150,7 @@ export const takeSnapshots = async (ctx, task) => {
 
   const build = await waitForBuild();
 
-  if (options.report) {
+  if (options.junitReport) {
     await generateReport(ctx, task);
   }
 

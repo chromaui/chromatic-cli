@@ -29,13 +29,13 @@ export default function parseArgs(argv) {
       --skip [branch]  Skip Chromatic tests, but mark the commit as passing [only for <branch> if specified, globs supported]
       --ci  This build is running in continuous integration, non-interactively (alternatively, set CI=true)
       --debug  Output more debugging information
-      --report [filepath]  Write build details to JUnit XML [chromatic-build-{buildNumber}.xml]
+      --junit-report [filepath]  Write build details to JUnit XML [chromatic-build-{buildNumber}.xml]
     `,
     {
       argv,
       booleanDefault: undefined,
       flags: {
-        'app-code': { type: 'string', alias: 'a' },
+        'app-code': { type: 'string', alias: 'a' }, // for backwards compatibility
         'project-token': { type: 'string', alias: 't' },
 
         // main config option in the future
@@ -63,16 +63,16 @@ export default function parseArgs(argv) {
         'ignore-last-build-on-branch': { type: 'string' },
         'preserve-missing': { type: 'boolean' },
         'allow-console-errors': { type: 'boolean' },
-        only: { type: 'string' },
         skip: { type: 'string' },
         'patch-build': { type: 'string' },
 
         // debug options
-        list: { type: 'boolean' },
+        debug: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
         ci: { type: 'boolean' },
-        debug: { type: 'boolean' },
-        report: { type: 'string' },
+        list: { type: 'boolean' },
+        only: { type: 'string' },
+        'junit-report': { type: 'string' },
       },
     }
   );
