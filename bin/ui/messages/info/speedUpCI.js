@@ -15,5 +15,5 @@ export default provider =>
     ${info} {bold Speed up Continuous Integration}
     Your project is linked to ${providers[provider]} so Chromatic will report results there.
     This means you can pass the {bold --exit-once-uploaded} flag to skip waiting for build results.
-    Read more here: ${link('https://github.com/chromaui/chromatic-cli/#chromatic-options')}
+    Read more here: ${link('https://www.chromatic.com/docs/cli#chromatic-options')}
   `);

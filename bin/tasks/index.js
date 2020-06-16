@@ -2,6 +2,7 @@ import auth from './auth';
 import build from './build';
 import gitInfo from './gitInfo';
 import prepareWorkspace from './prepareWorkspace';
+import report from './report';
 import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
 import start from './start';
@@ -16,5 +17,6 @@ export const runPatchBuild = runBuild => [prepareWorkspace, ...runBuild, restore
 
 export default options => {
   const runBuild = options.useTunnel ? runTunnelBuild : runUploadBuild;
-  return options.patchHeadRef && options.patchBaseRef ? runPatchBuild(runBuild) : runBuild;
+  const tasks = options.patchHeadRef && options.patchBaseRef ? runPatchBuild(runBuild) : runBuild;
+  return options.junitReport ? tasks.concat(report) : tasks;
 };

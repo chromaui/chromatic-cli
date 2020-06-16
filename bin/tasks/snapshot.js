@@ -1,13 +1,9 @@
 /* eslint-disable no-param-reassign */
-import reportBuilder from 'junit-report-builder';
-import path from 'path';
-
 import { createTask, transitionTo } from '../lib/tasks';
 import { delay } from '../lib/utils';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import speedUpCI from '../ui/messages/info/speedUpCI';
-import wroteReport from '../ui/messages/info/wroteReport';
 import {
   buildComplete,
   buildError,
@@ -33,92 +29,11 @@ const TesterBuildQuery = `
   }
 `;
 
-const ReportQuery = `
-  query ReportQuery($buildNumber: Int!) {
-    app {
-      build(number: $buildNumber) {
-        createdAt
-        completedAt
-        snapshots {
-          status
-          spec {
-            name
-            component {
-              name
-              displayName
-            }
-          }
-          parameters {
-            viewport
-            viewportIsDefault
-          }
-        }
-      }
-    }
-  }
-`;
-
-export const generateReport = async (ctx, task) => {
-  const { client, log } = ctx;
-  const { junitReport } = ctx.options;
-  const { number: buildNumber, reportToken } = ctx.build;
-
-  const file = junitReport === true ? 'chromatic-build-{buildNumber}.xml' : junitReport;
-  ctx.reportPath = path.resolve(file.replace(/{buildNumber}/g, buildNumber));
-
-  task.output = `Generating XML report at ${ctx.reportPath}`;
-
-  const { app } = await client.runQuery(
-    ReportQuery,
-    { buildNumber },
-    { Authorization: `Bearer ${reportToken}` }
-  );
-  const { createdAt, completedAt, snapshots } = app.build;
-  const buildTime = (completedAt || Date.now()) - createdAt;
-
-  const suite = reportBuilder
-    .testSuite()
-    .name(`Chromatic build ${buildNumber}`)
-    .time(Math.round(buildTime / 1000))
-    .timestamp(new Date(createdAt).toISOString());
-
-  snapshots.forEach(({ status, spec, parameters }) => {
-    const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
-    const testCase = suite
-      .testCase()
-      .className(spec.component.name.replace(/[|/]/g, '.')) // transform story path to class path
-      .name(`${spec.name}${suffix}`);
-
-    switch (status) {
-      case 'SNAPSHOT_ERROR':
-        testCase.error('Server error while taking snapshot, please try again', status);
-        break;
-      case 'SNAPSHOT_CAPTURE_ERROR':
-        testCase.error('Snapshot is broken due to an error in your Storybook', status);
-        break;
-      case 'SNAPSHOT_DENIED':
-        testCase.failure('Snapshot was denied by a user', status);
-        break;
-      case 'SNAPSHOT_PENDING':
-        testCase.failure('Snapshot contains visual changes and must be reviewed', status);
-        break;
-      case 'SNAPSHOT_NO_CAPTURE':
-        testCase.skipped();
-        break;
-      default:
-    }
-  });
-
-  reportBuilder.writeTo(ctx.reportPath);
-  log.info(wroteReport(ctx.reportPath));
-};
-
 export const takeSnapshots = async (ctx, task) => {
   const { client, log, options } = ctx;
   const { number: buildNumber, snapshots } = ctx.build;
 
-  if (ctx.build.app.repository && ctx.uploadedBytes) {
-    log.info('');
+  if (ctx.build.app.repository && ctx.uploadedBytes && !options.junitReport) {
     log.info(speedUpCI(ctx.build.app.repository.provider));
   }
 
@@ -149,10 +64,6 @@ export const takeSnapshots = async (ctx, task) => {
   };
 
   const build = await waitForBuild();
-
-  if (options.junitReport) {
-    await generateReport(ctx, task);
-  }
 
   switch (build.status) {
     case 'BUILD_PASSED':
