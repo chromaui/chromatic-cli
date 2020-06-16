@@ -8,33 +8,11 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 👉 See the [Chromatic CLI docs](https://www.chromatic.com/docs/cli).
 
-## Migrating to the new CLI package
+## Contributing
 
-This package was previously named `storybook-chromatic`. If you still have `storybook-chromatic` installed, you should remove it and install `chromatic` instead:
+Contributions of any kind are welcome! We're available to chat via the Intercom widget on the documentation site.
 
-**With npm:**
-
-```
-npm uninstall --save-dev storybook-chromatic
-npm install --save-dev chromatic
-```
-
-**With yarn:**
-
-```
-yarn remove storybook-chromatic
-yarn add --dev chromatic
-```
-
-## Publishing to npm
-
-```sh
-npm version <major|minor|patch|prerelease> [--preid <tag>]
-git push --follow-tags
-npm publish [--tag <tag>]
-```
-
-## Compatibility & versioning
+### Compatibility & versioning
 
 Compatibility is guaranteed between this package and Chromatic like so:
 
@@ -47,3 +25,11 @@ To facilitate upgrading in the future, removing and adding features, this is the
 - Any new features will have to be on Chromatic production before they could be used in this package
 - We can add feature flags to be able to test new functionality
 - Chromatic production can not remove any features this package depends on until after the usage has been removed from this package in addition to a grace period to allow users to upgrade
+
+### Publishing a new version to npm
+
+```sh
+npm version <major|minor|patch|prerelease> [--preid <tag>]
+git push --follow-tags
+npm publish [--tag <tag>]
+```
