@@ -6,6 +6,6 @@ import { error } from '../../components/icons';
 export default () =>
   dedent(chalk`
     ${error} Invalid {bold --only}
-    Value must be provided in the form {bold 'Path/To/MyComponent:MyStory'}.
-    Globbing is supported on either side, for example: 'Pages/**:*'
+    Value must be provided in the form {bold 'Path/To/MyStory'}.
+    Globbing is supported, for example: 'Pages/**'
   `);

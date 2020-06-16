@@ -24,7 +24,7 @@ export const Initial = () => initial;
 export const Pending = () =>
   pending({
     build,
-    options: { only: 'Pages/**:*' },
+    options: { only: 'Pages/**' },
     cursor: 6,
     label: 'ComponentName › StoryName',
   });

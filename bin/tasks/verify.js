@@ -77,7 +77,7 @@ export const createBuild = async (ctx, task) => {
   const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
     input: {
       ...commitInfo,
-      ...(only && { only: ctx.options.onlyMatch }),
+      ...(only && { only }),
       autoAcceptChanges,
       cachedUrl,
       environment,

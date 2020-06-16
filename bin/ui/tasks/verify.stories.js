@@ -16,7 +16,7 @@ export const Initial = () => initial;
 
 export const Pending = () => pending();
 
-export const RunOnly = () => runOnly({ options: { only: 'MyComponent:MyStory' } });
+export const RunOnly = () => runOnly({ options: { only: 'MyComponent/MyStory' } });
 
 export const Started = () => success({ build });
 
@@ -26,4 +26,4 @@ export const ContinueSetup = () => success({ isOnboarding: true, build });
 
 export const NoStories = () => failed({ options: {} });
 
-export const NoMatches = () => failed({ options: { only: 'MyComponent:MyStory' } });
+export const NoMatches = () => failed({ options: { only: 'MyComponent/MyStory' } });

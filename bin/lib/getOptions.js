@@ -23,18 +23,13 @@ const resolveHomeDir = filepath =>
 
 export default async function getOptions({ argv, env, flags, log }) {
   const fromCI = !!flags.ci || !!process.env.CI;
-
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
-
-  const [match, componentName, storyName] = (flags.only && flags.only.match(/(.+):([^:]+)/)) || [];
-  if (flags.only && !match) throw new Error(invalidOnly());
 
   const options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
     config: flags.config,
 
     only: flags.only,
-    onlyMatch: flags.only && { componentName, name: storyName },
     list: flags.list,
     fromCI,
     skip: flags.skip === '' ? true : flags.skip,
@@ -84,6 +79,10 @@ export default async function getOptions({ argv, env, flags, log }) {
     if (options.patchHeadRef === options.patchBaseRef) {
       throw new Error(duplicatePatchBuild());
     }
+  }
+
+  if (flags.only && !/\w\/\w/.test(flags.only)) {
+    throw new Error(invalidOnly());
   }
 
   const { storybookBuildDir, exec } = options;
