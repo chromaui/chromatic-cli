@@ -81,7 +81,7 @@ export default async function getOptions({ argv, env, flags, log }) {
     }
   }
 
-  if (flags.only && !/\w\/\w/.test(flags.only)) {
+  if (flags.only && !/[\w*]\/[\w*]/.test(flags.only)) {
     throw new Error(invalidOnly());
   }
 
