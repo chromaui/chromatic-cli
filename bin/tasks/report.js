@@ -2,6 +2,7 @@ import reportBuilder from 'junit-report-builder';
 import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
+import { baseStorybookUrl } from '../lib/utils';
 import wroteReport from '../ui/messages/info/wroteReport';
 import { initial, pending, success } from '../ui/tasks/report';
 
@@ -58,7 +59,7 @@ export const generateReport = async ctx => {
     .property('buildNumber', build.number)
     .property('buildStatus', build.status)
     .property('buildUrl', build.webUrl)
-    .property('storybookUrl', build.cachedUrl);
+    .property('storybookUrl', baseStorybookUrl(build.cachedUrl));
 
   build.snapshots.forEach(({ status, spec, parameters }) => {
     const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
