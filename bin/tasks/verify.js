@@ -1,5 +1,6 @@
 import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
+import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
@@ -14,6 +15,7 @@ const TesterCreateBuildMutation = `
       snapshotCount
       componentCount
       webUrl
+      cachedUrl
       reportToken
       features {
         uiTests
@@ -91,7 +93,10 @@ export const createBuild = async (ctx, task) => {
     },
     isolatorUrl,
   });
+
   ctx.build = build;
+  ctx.isPublishOnly = !build.features.uiReview && !build.features.uiTests;
+  ctx.isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
 
   if (list) {
     log.info(listingStories(build.snapshots));
@@ -112,14 +117,12 @@ export const createBuild = async (ctx, task) => {
     }
   }
 
-  const isPublishOnly = !build.features.uiReview && !build.features.uiTests;
-  const isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
+  transitionTo(success, true)(ctx, task);
 
-  transitionTo(success, true)({ ...ctx, isPublishOnly, isOnboarding }, task);
-
-  if (list || isPublishOnly || matchesBranch(options.exitOnceUploaded)) {
+  if (list || ctx.isPublishOnly || matchesBranch(options.exitOnceUploaded)) {
     ctx.exitCode = 0;
     ctx.skipSnapshots = true;
+    ctx.log.info(storybookPublished(ctx));
   }
 };
 

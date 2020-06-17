@@ -8,7 +8,7 @@ export const initial = {
   title: 'Take snapshots of your stories',
 };
 
-const stats = ctx => ({
+export const stats = ctx => ({
   errors: pluralize('error', ctx.build.errorCount, true),
   changes: pluralize('change', ctx.build.changeCount, true),
   snapshots: pluralize('snapshot', ctx.build.snapshotCount, true),
@@ -36,9 +36,7 @@ export const buildPassed = ctx => {
   const { snapshots, components, specs } = stats(ctx);
   return {
     status: 'success',
-    title: ctx.build.features.uiTests
-      ? `Build ${ctx.build.number} passed!`
-      : `Build ${ctx.build.number} published!`,
+    title: `Build ${ctx.build.number} passed!`,
     output: `Took ${snapshots} (${components}, ${specs}) in ${getDuration(ctx)}; no changes found`,
   };
 };
@@ -68,5 +66,15 @@ export const buildError = ctx => {
     status: 'error',
     title: `Oops. Build ${ctx.build.number} failed to run. Please try again.`,
     output: `Exiting with status code ${ctx.exitCode}`,
+  };
+};
+
+export const skipped = ctx => {
+  return {
+    status: 'skipped',
+    title: 'Take snapshots of your stories',
+    output: ctx.isPublishOnly
+      ? `No UI tests or UI review enabled`
+      : `Skipped due to ${ctx.options.list ? '--list' : '--exit-once-uploaded'}`,
   };
 };

@@ -1,5 +1,13 @@
 import task from '../components/task';
-import { buildComplete, buildError, buildFailed, buildPassed, initial, pending } from './snapshot';
+import {
+  buildComplete,
+  buildError,
+  buildFailed,
+  buildPassed,
+  initial,
+  pending,
+  skipped,
+} from './snapshot';
 
 export default {
   title: 'CLI/Tasks/Snapshot',
@@ -7,7 +15,7 @@ export default {
 };
 
 const build = {
-  number: 1,
+  number: 42,
   errorCount: 1,
   changeCount: 2,
   snapshotCount: 10,
@@ -32,13 +40,6 @@ export const Pending = () =>
 export const BuildPassed = () =>
   buildPassed({
     build,
-    now,
-    startedAt,
-  });
-
-export const BuildPublished = () =>
-  buildPassed({
-    build: { ...build, features: { uiTests: false } },
     now,
     startedAt,
   });
@@ -72,4 +73,19 @@ export const BuildError = () =>
     now,
     startedAt,
     exitCode: 3,
+  });
+
+export const SkippedPublishOnly = () =>
+  skipped({
+    isPublishOnly: true,
+  });
+
+export const SkippedList = () =>
+  skipped({
+    options: { list: true },
+  });
+
+export const SkippedExitOnceUploaded = () =>
+  skipped({
+    options: { exitOnceUploaded: true },
   });

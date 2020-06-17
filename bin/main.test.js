@@ -60,6 +60,7 @@ jest.mock('node-fetch', () =>
               specCount: 1,
               componentCount: 1,
               webUrl: 'http://test.com',
+              cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
               ...mockBuildFeatures,
               app: {
                 account: {

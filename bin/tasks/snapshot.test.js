@@ -1,7 +1,7 @@
 import { takeSnapshots } from './snapshot';
 
 const env = { CHROMATIC_POLL_INTERVAL: 0 };
-const log = { error: jest.fn() };
+const log = { error: jest.fn(), info: jest.fn() };
 const matchesBranch = () => false;
 
 describe('takeSnapshots', () => {

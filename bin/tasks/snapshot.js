@@ -3,6 +3,7 @@ import { createTask, transitionTo } from '../lib/tasks';
 import { delay } from '../lib/utils';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
+import buildPassedMessage from '../ui/messages/info/buildPassed';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import {
   buildComplete,
@@ -11,6 +12,7 @@ import {
   buildPassed,
   initial,
   pending,
+  skipped,
 } from '../ui/tasks/snapshot';
 
 const TesterBuildQuery = `
@@ -68,6 +70,7 @@ export const takeSnapshots = async (ctx, task) => {
   switch (build.status) {
     case 'BUILD_PASSED':
       ctx.exitCode = 0;
+      ctx.log.info(buildPassedMessage(ctx));
       transitionTo(buildPassed, true)(ctx, task);
       break;
 
@@ -75,8 +78,10 @@ export const takeSnapshots = async (ctx, task) => {
     case 'BUILD_ACCEPTED':
     case 'BUILD_PENDING':
     case 'BUILD_DENIED': {
-      ctx.exitCode = 0;
-      if (!build.autoAcceptChanges && !ctx.git.matchesBranch(options.exitZeroOnChanges)) {
+      if (build.autoAcceptChanges || ctx.git.matchesBranch(options.exitZeroOnChanges)) {
+        ctx.exitCode = 0;
+        ctx.log.info(buildPassedMessage(ctx));
+      } else {
         ctx.exitCode = 1;
         ctx.log.error(buildHasChanges(ctx));
       }
@@ -103,6 +108,10 @@ export const takeSnapshots = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: ctx => ctx.skip || ctx.skipSnapshots,
+  skip: ctx => {
+    if (ctx.skip) return true;
+    if (ctx.skipSnapshots) return skipped(ctx).output;
+    return false;
+  },
   steps: [transitionTo(pending), takeSnapshots],
 });

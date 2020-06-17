@@ -4,7 +4,7 @@ process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
 
 const env = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
-const log = { warn: jest.fn(), debug: jest.fn() };
+const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
@@ -26,7 +26,6 @@ describe('createBuild', () => {
     options: {},
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false },
-    cachedUrl: 'http://...',
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
     isolatorUrl: 'https://tunnel.chromatic.com/',
@@ -68,6 +67,7 @@ describe('createBuild', () => {
     client.runQuery.mockReturnValue({
       createBuild: {
         number: 1,
+        cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
         features: { uiTests: true, uiReview: false },
         app: { account: {} },
         wasLimited: true,
@@ -84,6 +84,7 @@ describe('createBuild', () => {
     client.runQuery.mockReturnValue({
       createBuild: {
         number: 1,
+        cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
         features: { uiTests: true, uiReview: false },
         app: { account: { exceededThreshold: true } },
         wasLimited: true,
@@ -100,6 +101,7 @@ describe('createBuild', () => {
     client.runQuery.mockReturnValue({
       createBuild: {
         number: 1,
+        cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
         features: { uiTests: true, uiReview: false },
         app: { account: { paymentRequired: true } },
         wasLimited: true,
@@ -116,6 +118,7 @@ describe('createBuild', () => {
     client.runQuery.mockReturnValue({
       createBuild: {
         number: 1,
+        cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
         features: { uiTests: false, uiReview: false },
         app: { account: { paymentRequired: true } },
         wasLimited: true,
