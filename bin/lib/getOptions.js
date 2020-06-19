@@ -27,7 +27,6 @@ export default async function getOptions({ argv, env, flags, log }) {
 
   const options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
-    config: flags.config,
 
     only: flags.only,
     list: flags.list,
@@ -41,7 +40,7 @@ export default async function getOptions({ argv, env, flags, log }) {
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
     exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing,
+    preserveMissingSpecs: flags.preserveMissing || flags.only,
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
