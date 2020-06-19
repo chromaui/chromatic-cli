@@ -3,6 +3,7 @@ import path from 'path';
 import { parse } from 'url';
 
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
+import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
 import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
 import invalidOnly from '../ui/messages/errors/invalidOnly';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
@@ -117,6 +118,10 @@ export default async function getOptions({ argv, env, flags, log }) {
 
   if (scriptName && options.exitOnceUploaded) {
     throw new Error(invalidExitOnceUploaded());
+  }
+
+  if (options.junitReport && options.exitOnceUploaded) {
+    throw new Error(incompatibleOptions(['--junit-report', '--exit-once-uploaded']));
   }
 
   if (typeof options.junitReport === 'string' && path.extname(options.junitReport) !== '.xml') {
