@@ -1,3 +1,12 @@
+# 5.0.0 - 2020-06-19
+
+- Completely overhauled the CLI, with improved UX and better error handling
+- Removed JSDOM and its shims to avoid a whole category of issues with broken builds
+- Added a version upgrade check that warns when a new major update is available
+- Added --junit-report to generating build reports for integration with other tools
+- Changed --only to accept a simple glob
+- Moved documentation to the Chromatic website
+
 # 4.0.3 - 2020-05-18
 
 - Replace child_process.execSync with execa
