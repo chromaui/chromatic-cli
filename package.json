@@ -21,17 +21,17 @@
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.2.4",
-    "@actions/github": "^3.0.0",
-    "chromatic": "^4.0.3",
+    "@actions/github": "^4.0.0",
+    "chromatic": "^5.0.0",
     "esm": "^3.2.25"
   },
   "devDependencies": {
     "@storybook/react": "^5.3.19",
-    "@types/jest": "^25.2.3",
-    "@types/node": "^14.0.11",
-    "jest": "^26.0.1",
-    "jest-circus": "^26.0.1",
-    "ts-jest": "^26.1.0",
-    "typescript": "^3.9.5"
+    "@types/jest": "^26.0.4",
+    "@types/node": "^14.0.22",
+    "jest": "^26.1.0",
+    "jest-circus": "^26.1.0",
+    "ts-jest": "^26.1.2",
+    "typescript": "^3.9.6"
   }
 }
