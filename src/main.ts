@@ -86,6 +86,7 @@ async function run() {
     const storybookCert = getInput('storybookCert');
     const storybookKey = getInput('storybookKey');
     const storybookCa = getInput('storybookCa');
+    const preserveMissing = getInput('preserveMissing');
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const allowConsoleErrors = getInput('allowConsoleErrors');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
@@ -110,6 +111,7 @@ async function run() {
       storybookCa: maybe(storybookCa),
       fromCI: true,
       interactive: false,
+      preserveMissing: maybe(preserveMissing),
       autoAcceptChanges: maybe(autoAcceptChanges),
       exitZeroOnChanges: maybe(exitZeroOnChanges, true),
       exitOnceUploaded: maybe(exitOnceUploaded, false),
