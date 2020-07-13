@@ -29,6 +29,8 @@ inputs:
     description: "What port is your Storybook running on (auto detected from -s, if set)"
   storybookUrl: 
     description: "Storybook is already running at (external) url (implies -S)"
+  preserveMissing:
+    description: "Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them"
   allowConsoleErrors:
     description: "Do not exit when runtime errors occur in storybook"
   autoAcceptChanges:

@@ -1,7 +1,11 @@
 import { getInput, error, setFailed, setOutput } from '@actions/core';
 import { context } from "@actions/github";
-import { runTest } from 'chromatic/bin/tester/index';
-import { verifyOptions } from 'chromatic/bin/lib/verify-option';
+import { v4 as uuid } from 'uuid';
+
+import { runAll } from 'chromatic/bin/main';
+import parseArgs from 'chromatic/bin/lib/parseArgs';
+import {createLogger} from 'chromatic/bin/lib/log';
+import getEnv from 'chromatic/bin/lib/getEnv';
 
 const maybe = (a: string, b: any = undefined) => {
   if(!a) {
@@ -56,7 +60,15 @@ interface Output {
 }
 
 async function runChromatic(options): Promise<Output> {
-  const { exitCode, exitUrl } = await runTest(await verifyOptions(options));  
+  const sessionId = uuid();
+  const env = getEnv();
+  const log = createLogger(sessionId, env);
+
+  const context = {...parseArgs([]), env, log, sessionId, flags: options} as any
+  
+  await runAll(context);  
+
+  const { build: { webUrl: exitUrl }, exitCode } = context;
 
   return {
     url: exitUrl,
@@ -86,6 +98,7 @@ async function run() {
     const storybookCert = getInput('storybookCert');
     const storybookKey = getInput('storybookKey');
     const storybookCa = getInput('storybookCa');
+    const preserveMissing = getInput('preserveMissing');
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const allowConsoleErrors = getInput('allowConsoleErrors');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
@@ -110,6 +123,7 @@ async function run() {
       storybookCa: maybe(storybookCa),
       fromCI: true,
       interactive: false,
+      preserveMissing: maybe(preserveMissing),
       autoAcceptChanges: maybe(autoAcceptChanges),
       exitZeroOnChanges: maybe(exitZeroOnChanges, true),
       exitOnceUploaded: maybe(exitOnceUploaded, false),
