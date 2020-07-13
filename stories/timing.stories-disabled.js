@@ -1,8 +1,8 @@
 /* eslint-env browser */
 /* eslint-disable react/prop-types */
 
-import React, { useState } from 'react';
 import { storiesOf } from '@storybook/react';
+import React, { useState } from 'react';
 
 // Some stories to test out timing code. Disabled by default
 // These stories are available at (e.g.)

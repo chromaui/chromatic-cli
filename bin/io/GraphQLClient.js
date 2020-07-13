@@ -1,32 +1,40 @@
 import HTTPClient from './HTTPClient';
 
 export default class GraphQLClient {
-  constructor({ uri, headers, retries }) {
+  constructor({ uri, ...httpClientOptions }) {
     if (!uri) throw new Error('Option `uri` required.');
-
     this.uri = uri;
-    this.headers = headers;
-    this.retries = retries;
-    this.client = new HTTPClient();
+    this.client = new HTTPClient(httpClientOptions);
+    this.headers = { 'Content-Type': 'application/json' };
   }
 
-  async runQuery(query, variables) {
-    const response = await this.client.fetch(
-      this.uri,
-      {
-        headers: {
-          ...this.headers,
-          'Content-Type': 'application/json',
-        },
-        method: 'post',
-        body: JSON.stringify({ query, variables }),
-      },
-      { retries: this.retries }
-    );
+  setAuthorization(token) {
+    this.headers.Authorization = `Bearer ${token}`;
+  }
+
+  async runQuery(query, variables, headers) {
+    const response = await this.client.fetch(this.uri, {
+      body: JSON.stringify({ query, variables }),
+      headers: { ...this.headers, ...headers },
+      method: 'post',
+    });
 
     const { data, errors } = await response.json();
 
-    if (errors) throw errors;
+    if (errors) {
+      if (Array.isArray(errors)) {
+        errors.forEach(err => {
+          // eslint-disable-next-line no-param-reassign
+          err.name = err.name || 'GraphQLError';
+          // eslint-disable-next-line no-param-reassign
+          err.at = `${err.path.join('.')} ${err.locations
+            .map(l => `${l.line}:${l.column}`)
+            .join(', ')}`;
+        });
+        throw errors.length === 1 ? errors[0] : errors;
+      }
+      throw errors;
+    }
 
     return data;
   }

@@ -1,3 +1,8 @@
 module.exports = {
-  stories: ['../**/stories/*.stories.js'],
-}
+  stories: [
+    // CLI stories
+    '../bin/ui/**/*.stories.js',
+    // Test stories
+    '../**/stories/*.stories.js',
+  ],
+};

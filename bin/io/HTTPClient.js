@@ -1,8 +1,6 @@
 /* eslint-disable max-classes-per-file */
-import fetch from 'node-fetch';
-import pino from 'pino';
 import retry from 'async-retry';
-import serializers from './serializers';
+import fetch from 'node-fetch';
 
 export class HTTPClientError extends Error {
   constructor(fetchResponse, message, ...params) {
@@ -16,64 +14,46 @@ export class HTTPClientError extends Error {
     this.response = fetchResponse;
     this.message =
       message ||
-      `HTTPClient Failed to fetch ${fetchResponse.url}, got ${fetchResponse.status}/${fetchResponse.statusText}`;
+      `HTTPClient failed to fetch ${fetchResponse.url}, got ${fetchResponse.status}/${fetchResponse.statusText}`;
   }
 }
 
 // A basic wrapper class for fetch with the ability to retry fetches
 export default class HTTPClient {
-  constructor(options = {}) {
-    const { log = pino({ name: 'HTTPClient', serializers }), retries = 0, headers = {} } = options;
+  constructor({ log, headers = {}, retries = 0 }) {
+    if (!log) throw new Error(`Missing required option in HTTPClient: log`);
     this.log = log;
-    this.retries = retries;
     this.headers = headers;
+    this.retries = retries;
   }
 
-  async fetch(url, options = {}, { retries, noLogErrorBody = false } = {}) {
+  async fetch(url, options = {}, opts = {}) {
+    // The user can override retries and set it to 0
+    const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
+    const onRetry = (err, n) =>
+      this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
+
     return retry(
       async () => {
-        const res = await fetch(url, {
-          ...options,
-          headers: {
-            ...this.headers,
-            ...options.headers,
-          },
-        });
-
+        const headers = { ...this.headers, ...options.headers };
+        const res = await fetch(url, { ...options, headers });
         if (!res.ok) {
           const error = new HTTPClientError(res);
           // You can only call text() or json() once, so if we are going to handle it outside of here..
-          if (!noLogErrorBody) {
+          if (!opts.noLogErrorBody) {
             const body = await res.text();
-            this.log.warn({ body }, error.message);
+            this.log.debug({ body }, error.message);
           }
-
           throw error;
         }
-
         return res;
       },
-      {
-        // The user can override retries and set it to 0
-        retries: typeof retries !== 'undefined' ? retries : this.retries,
-        onRetry: err => {
-          this.log.warn({ url, err }, 'Retrying fetch');
-        },
-      }
+      { retries, onRetry }
     );
   }
 
   async fetchBuffer(url, options) {
     const res = await this.fetch(url, options);
     return res.buffer();
-  }
-
-  // Convenience static methods
-  static async fetch(url, fetchOptions = {}, clientOptions = {}) {
-    return new HTTPClient(clientOptions).fetch(url, fetchOptions);
-  }
-
-  static async fetchBuffer(url, fetchOptions = {}, clientOptions = {}) {
-    return new HTTPClient(clientOptions).fetchBuffer(url, fetchOptions);
   }
 }

@@ -1,131 +1,107 @@
-import meow from 'meow';
-import dedent from 'ts-dedent';
+import Listr from 'listr';
+import { v4 as uuid } from 'uuid';
 
-import log from './lib/log';
-import { verifyOptions } from './lib/verify-option';
-import sendDebugToLoggly from './lib/sendDebugToLoggly';
+import GraphQLClient from './io/GraphQLClient';
+import checkForUpdates from './lib/checkForUpdates';
+import checkPackageJson from './lib/checkPackageJson';
+import getEnv from './lib/getEnv';
+import getOptions from './lib/getOptions';
+import { createLogger } from './lib/log';
+import NonTTYRenderer from './lib/NonTTYRenderer';
+import parseArgs from './lib/parseArgs';
+import getTasks from './tasks';
+import fatalError from './ui/messages/errors/fatalError';
+import fetchError from './ui/messages/errors/fetchError';
+import runtimeError from './ui/messages/errors/runtimeError';
+import taskError from './ui/messages/errors/taskError';
+import intro from './ui/messages/info/intro';
 
-import { runTest } from './tester/index';
-import { runPatchBuild } from './tester/patchBuild';
+export async function main(argv) {
+  const sessionId = uuid();
+  const env = getEnv();
+  const log = createLogger(sessionId, env);
+  const ctx = { env, log, sessionId, ...parseArgs(argv) };
 
-export async function parseArgv(argv) {
-  const cli = meow(
-    `
-    Usage
-      $ chromatic
+  await runAll(ctx);
 
-    Main options
-      --project-token <token>, -t  The code for your app, get from chromatic.com (alternatively, set CHROMATIC_PROJECT_TOKEN)
-
-    Storybook options
-      --build-script-name [name], -b  The npm script that builds your Storybook [build-storybook]
-      --storybook-build-dir, -d <dirname>  Provide a directory with your built Storybook; use if you've already built your Storybook
-
-    Chromatic options
-      --auto-accept-changes [branch]  Accept any (non-error) changes or new stories for this build [only for <branch> if specified]
-      --exit-zero-on-changes [branch]  Use a 0 exit code if changes are detected (i.e. don't stop the build) [only for <branch> if specified]
-      --exit-once-uploaded [branch]  Exit with 0 once the built version has been sent to chromatic [only for <branch> if specified]
-      --ignore-last-build-on-branch [branch]  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased) [only for <branch> if specified]
-      --preserve-missing  Treat missing stories as unchanged (as opposed to deleted) when comparing to the baseline
-      --no-interactive  Do not prompt for package.json changes
-      --only <component:story>  Only run a single story or a glob-style subset of stories (for debugging purposes)
-      --allow-console-errors  Continue, even when encountering runtime errors
-      --patch-build <headbranch...basebranch>  Create a patch build to fix a missing PR comparison
-
-    Debug options
-      --skip  Skip chromatic tests (mark as passing)
-      --list  List available stories (for debugging purposes)
-      --ci  This build is running in continuous integration, non-interactively (alternatively, set CI=true)
-      --debug  Output more debugging information
-    `,
-    {
-      argv,
-      booleanDefault: undefined,
-      flags: {
-        'app-code': { type: 'string', alias: 'a' },
-        'project-token': { type: 'string', alias: 't' },
-
-        // main config option in the future
-        config: { type: 'string' },
-
-        // to be deprecated in the future
-        'build-script-name': { type: 'string', alias: 'b' },
-        'script-name': { type: 'string', alias: 's' },
-        exec: { type: 'string', alias: 'e' },
-        'do-not-start': { type: 'boolean', alias: 'S' },
-        'storybook-build-dir': { type: 'string', alias: 'd' },
-        'storybook-port': { type: 'string', alias: 'p' },
-        'storybook-url': { type: 'string', alias: 'u' },
-        'storybook-https': { type: 'boolean' },
-        'storybook-cert': { type: 'string' },
-        'storybook-key': { type: 'string' },
-        'storybook-ca': { type: 'string' },
-
-        // chromatic options
-        'auto-accept-changes': { type: 'string' },
-        'exit-zero-on-changes': { type: 'string' },
-        'exit-once-uploaded': { type: 'string' },
-        'ignore-last-build-on-branch': { type: 'string' },
-        'preserve-missing': { type: 'boolean' },
-        'allow-console-errors': { type: 'boolean' },
-        only: { type: 'string' },
-        skip: { type: 'string' },
-        'patch-build': { type: 'string' },
-
-        // debug options
-        list: { type: 'string' },
-        interactive: { type: 'boolean', default: true },
-        ci: { type: 'boolean' },
-        debug: { type: 'boolean' },
-      },
-    }
-  );
-
-  return verifyOptions(cli.flags, argv);
+  log.info('');
+  process.exit(ctx.exitCode);
 }
 
-export async function run(argv) {
-  const options = await parseArgv(argv);
+export async function runAll(ctx) {
+  // Run these in parallel; neither should ever reject
+  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 
-  sendDebugToLoggly(options);
+  if (!ctx.exitCode || ctx.exitCode === 1) {
+    await checkPackageJson(ctx);
+  }
+}
+
+export async function runBuild(ctx) {
+  ctx.log.info('');
+  ctx.log.info(intro(ctx));
 
   try {
-    const { exitCode } = options.patchBuild ? await runPatchBuild(options) : await runTest(options);
+    ctx.options = await getOptions(ctx);
+  } catch (e) {
+    ctx.log.info('');
+    ctx.log.error(e.message);
+    ctx.exitCode = 254;
+    return;
+  }
 
-    process.exitCode = exitCode;
+  try {
+    ctx.client = new GraphQLClient({
+      uri: `${ctx.env.CHROMATIC_INDEX_URL}/graphql`,
+      headers: {
+        'x-chromatic-session-id': ctx.sessionId,
+        'x-chromatic-cli-version': ctx.pkg.version,
+      },
+      retries: 3,
+      log: ctx.log,
+    });
+
+    try {
+      ctx.log.info('');
+      if (ctx.options.interactive) ctx.log.queue(); // queue up any log messages while Listr is running
+      const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
+      await new Listr(getTasks(ctx.options), options).run(ctx);
+    } catch (err) {
+      if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
+        ctx.log.info('');
+        ctx.log.error(fetchError(ctx, err));
+        return;
+      }
+      try {
+        // DOMException doesn't allow setting the message, so this might fail
+        err.message = taskError(ctx, err);
+      } catch (ex) {
+        const error = new Error(taskError(ctx, err));
+        error.stack = err.stack; // try to preserve the original stack
+        throw error;
+      }
+      throw err;
+    } finally {
+      // Handle potential runtime errors from JSDOM
+      const { runtimeErrors, runtimeWarnings } = ctx;
+      if ((runtimeErrors && runtimeErrors.length) || (runtimeWarnings && runtimeWarnings.length)) {
+        ctx.log.info('');
+        ctx.log.error(runtimeError(ctx));
+      }
+
+      ctx.log.flush();
+      if (ctx.stopApp) ctx.stopApp();
+      if (ctx.closeTunnel) ctx.closeTunnel();
+    }
   } catch (error) {
-    log.error(
-      dedent`
-        ** Chromatic build failed. **
-        Please note the session id: '${options.sessionId}'
-        contact support@chromatic.com -or- open a support ticket at https://www.chromatic.com
+    const errors = [].concat(error); // GraphQLClient might throw an array of errors
 
-      `
-    );
-
-    const errors = [].concat(error);
-
-    if (errors.length) {
-      // eslint-disable-next-line no-console
-      console.log('');
-      log.error('Problems encountered:');
-      console.log('');
-      errors.forEach((e, i, l) => {
-        log.error(e.message ? e.message.toString() : e.toString());
-        if (options.verbose) {
-          console.log(e);
-        }
-
-        if (i === l.length - 1) {
-          // empty line in between errors
-          console.log(' ');
-        }
-      });
+    if (errors.length && !ctx.userError) {
+      ctx.log.info('');
+      ctx.log.error(fatalError(ctx, errors));
     }
 
     // Not sure what exit code to use but this can mean error.
-    process.exitCode = process.exitCode || 255;
-  } finally {
-    process.exit(process.exitCode);
+    if (!ctx.exitCode) ctx.exitCode = 255;
   }
 }
