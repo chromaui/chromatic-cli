@@ -34,7 +34,7 @@ describe('await getOptions', () => {
       projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
       noStart: true,
-      fromCI: false,
+      fromCI: !!process.env.CI,
       autoAcceptChanges: undefined,
       exitZeroOnChanges: undefined,
       exitOnceUploaded: undefined,
