@@ -13,6 +13,7 @@
   },
   "license": "MIT",
   "main": "./storybook-addon.js",
+  "types": "./storybook-addon.d.ts",
   "bin": {
     "chroma": "./bin/register.js",
     "chromatic": "./bin/register.js",
@@ -22,7 +23,9 @@
     "bin",
     "dist",
     "isChromatic.js",
-    "storybook-addon.js"
+    "isChromatic.d.ts",
+    "storybook-addon.js",
+    "storybook-addon.d.ts"
   ],
   "scripts": {
     "prebuild": "rm -rf ./dist",
