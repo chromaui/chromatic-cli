@@ -36,6 +36,12 @@ export const skipped = ctx => ({
   output: `Using hosted Storybook at ${ctx.options.storybookUrl}`,
 });
 
+export const invalid = ctx => ({
+  status: 'error',
+  title: 'Publishing your built Storybook',
+  output: `Invalid Storybook build at ${ctx.sourceDir} (check the build log)`,
+});
+
 export const failed = ctx => ({
   status: 'error',
   title: 'Publishing your built Storybook',
