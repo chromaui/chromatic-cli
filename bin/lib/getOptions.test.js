@@ -4,6 +4,7 @@ import getEnv from './getEnv';
 import getOptions from './getOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
 import parseArgs from './parseArgs';
+import TestLogger from './testLogger';
 
 // Make sure we don't print any colors so we can match against plain strings
 chalk.enabled = false;
@@ -26,7 +27,11 @@ jest.mock('jsonfile', () => ({
   }),
 }));
 
-const getContext = argv => ({ env: getEnv(), ...parseArgs(argv) });
+const getContext = argv => {
+  const env = getEnv();
+  const log = new TestLogger();
+  return { env, log, ...parseArgs(argv) };
+};
 
 describe('await getOptions', () => {
   it('sets reasonable defaults', async () => {

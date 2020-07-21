@@ -9,6 +9,7 @@ import uploadFiles from '../lib/uploadFiles';
 import {
   failed,
   initial,
+  invalid,
   preparing,
   skipped,
   starting,
@@ -51,6 +52,10 @@ export const uploadStorybook = async (ctx, task) => {
   const pathAndLengths = getPathsInDir(sourceDir).map(o => ({ ...o, knownAs: slash(o.pathname) }));
   const paths = pathAndLengths.map(({ knownAs }) => knownAs);
   const total = pathAndLengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
+
+  if (!total || !paths.includes('iframe.html')) {
+    throw new Error(invalid(ctx).output);
+  }
 
   task.output = preparing(ctx).output;
 

@@ -7,6 +7,7 @@ import kill from 'tree-kill';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import startApp, { checkResponse } from './lib/startStorybook';
+import TestLogger from './lib/testLogger';
 import openTunnel from './lib/tunnel';
 import uploadFiles from './lib/uploadFiles';
 import { runAll, runBuild } from './main';
@@ -103,14 +104,14 @@ jest.mock('node-fetch', () =>
               domain: 'https://chromatic.com',
               urls: [
                 {
-                  path: 'one.js',
-                  url: 'https://cdn.example.com/one.js',
-                  contentType: 'text/javascript',
+                  path: 'iframe.html',
+                  url: 'https://cdn.example.com/iframe.html',
+                  contentType: 'text/html',
                 },
                 {
-                  path: 'two.js',
-                  url: 'https://cdn.example.com/two.js',
-                  contentType: 'text/javascript',
+                  path: 'index.html',
+                  url: 'https://cdn.example.com/index.html',
+                  contentType: 'text/html',
                 },
               ],
             },
@@ -130,7 +131,7 @@ jest.mock('fs-extra', () => ({
   readFileSync: require.requireActual('fs-extra').readFileSync,
 }));
 
-fs.readdirSync = jest.fn(() => ['one.js', 'two.js']);
+fs.readdirSync = jest.fn(() => ['iframe.html', 'index.html']);
 const fsStatSync = fs.statSync;
 fs.statSync = jest.fn(path => {
   if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
@@ -171,41 +172,6 @@ beforeEach(() => {
 afterEach(() => {
   process.env = processEnv;
 });
-
-class TestLogger {
-  constructor() {
-    this.errors = [];
-    this.warnings = [];
-  }
-
-  error(...args) {
-    this.errors.push(...args);
-  }
-
-  warn(...args) {
-    this.warnings.push(...args);
-  }
-
-  info() {
-    // do nothing
-  }
-
-  log() {
-    // do nothing
-  }
-
-  debug() {
-    // do nothing
-  }
-
-  queue() {
-    // do nothing
-  }
-
-  flush() {
-    // do nothing
-  }
-}
 
 const getContext = argv => {
   const env = getEnv();
@@ -275,15 +241,15 @@ it('calls out to npm build script passed and uploads files', async () => {
     [
       {
         contentLength: 42,
-        contentType: 'text/javascript',
-        path: expect.stringMatching(/\/one\.js$/),
-        url: 'https://cdn.example.com/one.js',
+        contentType: 'text/html',
+        path: expect.stringMatching(/\/iframe\.html$/),
+        url: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
-        contentType: 'text/javascript',
-        path: expect.stringMatching(/\/two\.js$/),
-        url: 'https://cdn.example.com/two.js',
+        contentType: 'text/html',
+        path: expect.stringMatching(/\/index\.html$/),
+        url: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -300,15 +266,15 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
     [
       {
         contentLength: 42,
-        contentType: 'text/javascript',
-        path: expect.stringMatching(/\/one\.js$/),
-        url: 'https://cdn.example.com/one.js',
+        contentType: 'text/html',
+        path: expect.stringMatching(/\/iframe\.html$/),
+        url: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
-        contentType: 'text/javascript',
-        path: expect.stringMatching(/\/two\.js$/),
-        url: 'https://cdn.example.com/two.js',
+        contentType: 'text/html',
+        path: expect.stringMatching(/\/index\.html$/),
+        url: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)

@@ -68,6 +68,11 @@ export default async function getOptions({ argv, env, flags, log }) {
     patchBaseRef,
   };
 
+  if (flags.debug) {
+    log.setLevel('debug');
+    log.setInteractive(false);
+  }
+
   if (!options.projectToken) {
     throw new Error(missingProjectToken());
   }
