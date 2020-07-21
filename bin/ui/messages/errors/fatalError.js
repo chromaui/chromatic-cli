@@ -7,14 +7,14 @@ import link from '../../components/link';
 
 const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
 
-export default function fatalError(
-  { sessionId, git = {}, pkg, flags, exitCode, storybook, build, isolatorUrl, cachedUrl },
-  error,
-  timestamp = new Date().toISOString()
-) {
+export default function fatalError(ctx, error, timestamp = new Date().toISOString()) {
+  const { flags, options, sessionId, pkg, packageJson } = ctx;
+  const { scripts = {} } = packageJson;
   const errors = [].concat(error);
   const email = link(pkg.bugs.email);
   const website = link(pkg.docs);
+
+  const { git = {}, storybook, exitCode, isolatorUrl, cachedUrl, build } = ctx;
   const debugInfo = {
     timestamp,
     sessionId,
@@ -25,6 +25,8 @@ export default function fatalError(
     packageVersion: pkg.version,
     ...(storybook ? { storybook } : {}),
     flags,
+    ...(options.buildScriptName ? { buildScript: scripts[options.buildScriptName] } : {}),
+    ...(options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     exitCode,
     errorType: errors.map(err => err.name).join('\n'),
     errorMessage: stripAnsi(errors.map(err => err.message).join('\n')),
@@ -32,6 +34,7 @@ export default function fatalError(
     ...(cachedUrl ? { cachedUrl } : {}),
     ...(build && { build: buildFields(build) }),
   };
+
   const stacktraces = errors.map(err => err.stack).filter(Boolean);
   const viewStacktraces = stacktraces.length
     ? chalk`\n{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}`
