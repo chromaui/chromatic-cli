@@ -65,11 +65,15 @@ export const buildStorybook = async ctx => {
     logFile.end();
   }
 
-  const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
-  const outputDir = getOutputDir(buildLog);
-  if (outputDir && outputDir !== ctx.sourceDir) {
-    ctx.log.warn(deviatingOutputDir(ctx, outputDir));
-    ctx.sourceDir = outputDir;
+  try {
+    const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
+    const outputDir = getOutputDir(buildLog);
+    if (outputDir && outputDir !== ctx.sourceDir) {
+      ctx.log.warn(deviatingOutputDir(ctx, outputDir));
+      ctx.sourceDir = outputDir;
+    }
+  } catch (e) {
+    ctx.log.debug(e);
   }
 };
 
