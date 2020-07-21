@@ -45,6 +45,7 @@ export default async function getOptions({ argv, env, flags, log }) {
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
+    outputDir: flags.outputDir,
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: flags.scriptName === '' ? true : flags.scriptName,
     exec: flags.exec,

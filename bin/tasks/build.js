@@ -8,8 +8,10 @@ import { createTask, transitionTo } from '../lib/tasks';
 import { initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async ctx => {
-  if (semver.lt(ctx.storybook.version, '5.0.0')) {
-    // Storybook v4 doesn't support absolute paths
+  if (ctx.options.outputDir) {
+    ctx.sourceDir = ctx.options.outputDir;
+  } else if (semver.lt(ctx.storybook.version, '5.0.0')) {
+    // Storybook v4 doesn't support absolute paths like tmp.dir would yield
     ctx.sourceDir = 'storybook-static';
   } else {
     const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });

@@ -11,6 +11,7 @@ export default function parseArgs(argv) {
 
     Storybook options
       --build-script-name, -b [name]  The npm script that builds your Storybook we should take snapshots against. Use this if your Storybook build script is named differently. [build-storybook]
+      --output-dir, -o <dirname>  Relative path to target directory for building your Storybook, in case you want to preserve it. Otherwise a temporary directory is used if possible.
       --storybook-build-dir, -d <dirname>  If you have already built your Storybook, provide the path to the static build directory.
 
     Chromatic options
@@ -41,6 +42,7 @@ export default function parseArgs(argv) {
 
         // Storybook options
         'build-script-name': { type: 'string', alias: 'b' },
+        'output-dir': { type: 'string', alias: 'o' },
         'storybook-build-dir': { type: 'string', alias: 'd' },
 
         // Chromatic options
