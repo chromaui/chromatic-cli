@@ -34,16 +34,20 @@ const TesterGetUploadUrlsMutation = `
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
 // paths will be like iframe.html rather than storybook-static/iframe.html
 function getPathsInDir(rootDir, dirname = '.') {
-  return readdirSync(join(rootDir, dirname))
-    .map(p => join(dirname, p))
-    .map(pathname => {
-      const stats = statSync(join(rootDir, pathname));
-      if (stats.isDirectory()) {
-        return getPathsInDir(rootDir, pathname);
-      }
-      return [{ pathname, contentLength: stats.size }];
-    })
-    .reduce((a, b) => [...a, ...b], []); // flatten
+  try {
+    return readdirSync(join(rootDir, dirname))
+      .map(p => join(dirname, p))
+      .map(pathname => {
+        const stats = statSync(join(rootDir, pathname));
+        if (stats.isDirectory()) {
+          return getPathsInDir(rootDir, pathname);
+        }
+        return [{ pathname, contentLength: stats.size }];
+      })
+      .reduce((a, b) => [...a, ...b], []); // flatten
+  } catch (e) {
+    throw new Error(invalid({ sourceDir: rootDir }).output);
+  }
 }
 
 export const uploadStorybook = async (ctx, task) => {
