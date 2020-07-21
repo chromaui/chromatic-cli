@@ -41,9 +41,10 @@ export const setSpawnParams = ctx => {
 };
 
 const getOutputDir = buildLog => {
-  const outputIndex = buildLog.lastIndexOf('Output directory: ');
+  const outputString = 'Output directory: ';
+  const outputIndex = buildLog.lastIndexOf(outputString);
   if (outputIndex === -1) return undefined;
-  const remainingLog = buildLog.substr(outputIndex + 18);
+  const remainingLog = buildLog.substr(outputIndex + outputString.length);
   const newlineIndex = remainingLog.indexOf('\n');
   const outputDir = newlineIndex === -1 ? remainingLog : remainingLog.substr(0, newlineIndex);
   return outputDir.trim();
