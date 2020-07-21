@@ -15,8 +15,10 @@ jest.mock('./getEnv', () => () => ({
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
-jest.mock('jsonfile', () => ({
-  readFileSync: () => ({
+const getContext = argv => {
+  const env = getEnv();
+  const log = new TestLogger();
+  const packageJson = {
     scripts: {
       storybook: 'start-storybook -p 1337',
       otherStorybook: 'start-storybook -p 7070',
@@ -24,13 +26,8 @@ jest.mock('jsonfile', () => ({
       'build-storybook': 'build-storybook',
       otherBuildStorybook: 'build-storybook',
     },
-  }),
-}));
-
-const getContext = argv => {
-  const env = getEnv();
-  const log = new TestLogger();
-  return { env, log, ...parseArgs(argv) };
+  };
+  return { env, log, packageJson, ...parseArgs(argv) };
 };
 
 describe('await getOptions', () => {

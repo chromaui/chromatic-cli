@@ -22,7 +22,7 @@ const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : inpu
 const resolveHomeDir = filepath =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
-export default async function getOptions({ argv, env, flags, log }) {
+export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
 
@@ -133,9 +133,6 @@ export default async function getOptions({ argv, env, flags, log }) {
   if (typeof options.junitReport === 'string' && path.extname(options.junitReport) !== '.xml') {
     throw new Error(invalidReportPath());
   }
-
-  // This is the user's own package.json, not ctx.pkg!
-  const packageJson = readFileSync(path.resolve('./package.json'));
 
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {

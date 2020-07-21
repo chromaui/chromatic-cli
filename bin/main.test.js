@@ -24,18 +24,6 @@ beforeEach(() => {
 
 jest.mock('execa');
 
-jest.mock('jsonfile', () => ({
-  readFileSync: () => ({
-    scripts: {
-      storybook: 'start-storybook -p 1337',
-      otherStorybook: 'start-storybook -p 7070',
-      notStorybook: 'lint',
-      'build-storybook': 'build-storybook',
-      otherBuildStorybook: 'build-storybook',
-    },
-  }),
-}));
-
 jest.mock('node-ask');
 
 jest.mock('node-fetch', () =>
@@ -176,7 +164,17 @@ afterEach(() => {
 const getContext = argv => {
   const env = getEnv();
   const log = new TestLogger();
-  return { env, log, sessionId: ':sessionId', ...parseArgs(argv) };
+  const packageJson = {
+    scripts: {
+      storybook: 'start-storybook -p 1337',
+      otherStorybook: 'start-storybook -p 7070',
+      notStorybook: 'lint',
+      'build-storybook': 'build-storybook',
+      otherBuildStorybook: 'build-storybook',
+    },
+  };
+  const packagePath = '';
+  return { env, log, sessionId: ':sessionId', packageJson, packagePath, ...parseArgs(argv) };
 };
 
 it('fails on missing project token', async () => {
