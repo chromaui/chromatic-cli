@@ -5,11 +5,9 @@ import { format } from 'util';
 
 import { errorSerializer } from './logSerializers';
 
-const { DISABLE_LOGGING, LOG_LEVEL } = process.env;
-const logLevel = DISABLE_LOGGING === 'true' ? 'silent' : LOG_LEVEL || 'info';
-const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
-const level = levels[logLevel];
-const interactive = !process.argv.slice(2).includes('--no-interactive');
+const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
+const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
+const DEFAULT_LEVEL = 'info';
 
 // Omits any JSON metadata, returning only the message string
 const logInteractive = args =>
@@ -22,6 +20,8 @@ const logVerbose = (type, args) => {
 };
 
 export const createLogger = (sessionId, env) => {
+  let level = DISABLE_LOGGING === 'true' ? 'silent' : LOG_LEVEL.toLowerCase() || DEFAULT_LEVEL;
+  let interactive = !process.argv.slice(2).includes('--no-interactive');
   let enqueue = false;
   const queue = [];
 
@@ -34,7 +34,7 @@ export const createLogger = (sessionId, env) => {
 
   /* eslint-disable no-console */
   const log = type => (...args) => {
-    if (level < levels[type]) return;
+    if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
     // Convert the messages to an appropriate format
     const messages = interactive ? logInteractive(args) : logVerbose(type, args);
@@ -49,7 +49,12 @@ export const createLogger = (sessionId, env) => {
   };
 
   const logger = {
-    level: logLevel,
+    setLevel(value) {
+      if (value in LOG_LEVELS) level = value;
+    },
+    setInteractive(value) {
+      interactive = !!value;
+    },
     error: log('error'),
     warn: log('warn'),
     info: log('info'),
