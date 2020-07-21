@@ -19,21 +19,21 @@ describe('uploadStorybook', () => {
         domain: 'https://asdqwe.chromatic.com',
         urls: [
           {
-            path: 'one.js',
-            url: 'https://asdqwe.chromatic.com/one.js',
-            contentType: 'text/javascript',
+            path: 'iframe.html',
+            url: 'https://asdqwe.chromatic.com/iframe.html',
+            contentType: 'text/html',
           },
           {
-            path: 'two.js',
-            url: 'https://asdqwe.chromatic.com/two.js',
-            contentType: 'text/javascript',
+            path: 'index.html',
+            url: 'https://asdqwe.chromatic.com/index.html',
+            contentType: 'text/html',
           },
         ],
       },
     });
 
     createReadStream.mockReturnValue({ pipe: jest.fn() });
-    readdirSync.mockReturnValue(['one.js', 'two.js']);
+    readdirSync.mockReturnValue(['iframe.html', 'index.html']);
     statSync.mockReturnValue({ isDirectory: () => false, size: 42 });
     fetch.mockReturnValue({ ok: true });
     progress.mockReturnValue({ on: jest.fn() });
@@ -43,25 +43,25 @@ describe('uploadStorybook', () => {
 
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/TesterGetUploadUrlsMutation/),
-      { paths: ['one.js', 'two.js'] }
+      { paths: ['iframe.html', 'index.html'] }
     );
     expect(fetch).toHaveBeenCalledWith(
-      'https://asdqwe.chromatic.com/one.js',
+      'https://asdqwe.chromatic.com/iframe.html',
       expect.objectContaining({
         method: 'PUT',
         headers: {
-          'content-type': 'text/javascript',
+          'content-type': 'text/html',
           'content-length': 42,
           'cache-control': 'max-age=31536000',
         },
       })
     );
     expect(fetch).toHaveBeenCalledWith(
-      'https://asdqwe.chromatic.com/two.js',
+      'https://asdqwe.chromatic.com/index.html',
       expect.objectContaining({
         method: 'PUT',
         headers: {
-          'content-type': 'text/javascript',
+          'content-type': 'text/html',
           'content-length': 42,
           'cache-control': 'max-age=31536000',
         },
