@@ -5,6 +5,7 @@ import semver from 'semver';
 import tmp from 'tmp-promise';
 
 import { createTask, transitionTo } from '../lib/tasks';
+import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import { initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async ctx => {
@@ -39,6 +40,15 @@ export const setSpawnParams = ctx => {
   };
 };
 
+const getOutputDir = buildLog => {
+  const outputIndex = buildLog.lastIndexOf('Output directory: ');
+  if (outputIndex === -1) return undefined;
+  const remainingLog = buildLog.substr(outputIndex + 18);
+  const newlineIndex = remainingLog.indexOf('\n');
+  const outputDir = newlineIndex === -1 ? remainingLog : remainingLog.substr(0, newlineIndex);
+  return outputDir.trim();
+};
+
 export const buildStorybook = async ctx => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
   const logFile = fs.createWriteStream(ctx.buildLogFile);
@@ -52,6 +62,13 @@ export const buildStorybook = async ctx => {
     await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
   } finally {
     logFile.end();
+  }
+
+  const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
+  const outputDir = getOutputDir(buildLog);
+  if (outputDir && outputDir !== ctx.sourceDir) {
+    ctx.log.warn(deviatingOutputDir(ctx, outputDir));
+    ctx.sourceDir = outputDir;
   }
 };
 
