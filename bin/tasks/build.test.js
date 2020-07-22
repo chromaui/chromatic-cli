@@ -6,15 +6,27 @@ jest.mock('execa');
 
 describe('setSourceDir', () => {
   it('sets a random temp directory path on the context', async () => {
-    const ctx = { storybook: { version: '5.0.0' } };
+    const ctx = { options: {}, storybook: { version: '5.0.0' } };
     await setSourceDir(ctx);
     expect(ctx.sourceDir).toMatch(/chromatic-/);
   });
 
   it('falls back to the default output dir for older Storybooks', async () => {
-    const ctx = { storybook: { version: '4.0.0' } };
+    const ctx = { options: {}, storybook: { version: '4.0.0' } };
     await setSourceDir(ctx);
     expect(ctx.sourceDir).toBe('storybook-static');
+  });
+
+  it('uses the outputDir option if provided', async () => {
+    const ctx = { options: { outputDir: 'storybook-out' }, storybook: { version: '5.0.0' } };
+    await setSourceDir(ctx);
+    expect(ctx.sourceDir).toBe('storybook-out');
+  });
+
+  it('uses the outputDir option if provided, even for older Storybooks', async () => {
+    const ctx = { options: { outputDir: 'storybook-out' }, storybook: { version: '4.0.0' } };
+    await setSourceDir(ctx);
+    expect(ctx.sourceDir).toBe('storybook-out');
   });
 });
 

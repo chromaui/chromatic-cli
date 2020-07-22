@@ -1,4 +1,6 @@
+import { readFile } from 'jsonfile';
 import Listr from 'listr';
+import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
@@ -20,7 +22,9 @@ export async function main(argv) {
   const sessionId = uuid();
   const env = getEnv();
   const log = createLogger(sessionId, env);
-  const ctx = { env, log, sessionId, ...parseArgs(argv) };
+  const packagePath = await pkgUp(); // the user's own package.json
+  const packageJson = await readFile(packagePath);
+  const ctx = { env, log, sessionId, packageJson, packagePath, ...parseArgs(argv) };
 
   await runAll(ctx);
 
