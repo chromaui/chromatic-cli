@@ -29,7 +29,8 @@ export default ({ sourceDir, options, packageJson }, outputDir) => {
 
   return dedent(chalk`
     ${warning} {bold Unexpected build directory}
-    The CLI tried to build your Storybook at {bold ${sourceDir}} but instead it was built at {bold ${outputDir}}.
+    The CLI tried to build your Storybook at {bold ${sourceDir}}
+    but instead it was built at {bold ${outputDir}}
     Make sure your {bold "${buildScriptName}"} script forwards the {bold --output-dir (-o)} flag to the {bold build-storybook} CLI.
 
     ${getHint(buildScriptName, buildScript)}
