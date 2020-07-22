@@ -41,7 +41,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
     exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing || flags.only,
+    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
