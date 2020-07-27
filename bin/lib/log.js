@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import debug from 'debug';
 import loggly from 'node-loggly-bulk';
 import stripAnsi from 'strip-ansi';
@@ -8,6 +9,10 @@ import { errorSerializer } from './logSerializers';
 const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
+
+// Top-level promise rejection handler to deal with initialization errors
+const handleRejection = reason => console.error('Unhandled promise rejection:', reason);
+process.on('unhandledRejection', handleRejection);
 
 // Omits any JSON metadata, returning only the message string
 const logInteractive = args =>
@@ -32,7 +37,6 @@ export const createLogger = (sessionId, env) => {
     json: true,
   });
 
-  /* eslint-disable no-console */
   const log = type => (...args) => {
     if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
@@ -76,6 +80,10 @@ export const createLogger = (sessionId, env) => {
   // Intercept Localtunnel's logging
   debug.enable('localtunnel:*');
   debug.log = (...args) => log.debug(format(...args));
+
+  // Redirect unhandled promise rejections
+  process.off('unhandledRejection', handleRejection);
+  process.on('unhandledRejection', reason => logger.error('Unhandled promise rejection:', reason));
 
   return logger;
 };
