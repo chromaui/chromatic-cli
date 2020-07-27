@@ -1,3 +1,14 @@
+# 5.1.0 - unreleased
+
+- If the build directory we defined is empty, try to detect the actual build output directory from the Storybook build log and warn about it.
+- Show a user-friendly error message if we still don't find any Storybook files to publish.
+- We now read package.json using `pkgUp`, so theoretically you can run `chromatic` from a subdirectory.
+- Added the `--output-dir (-o)` flag to use instead of a temp dir.
+- Added `buildScript` to the error json output so we won't have to ask for it in support every time.
+- Added a global promise rejection handler, in case we accidently forget to catch them.
+- Fixed the `--debug` flag so it actually prints something.
+- Fixed the `--only` flag.
+
 # 5.0.0 - 2020-06-19
 
 - Completely overhauled the CLI, with improved UX and better error handling
