@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import debug from 'debug';
-import { createClient } from 'node-loggly-bulk';
+import { createClient } from 'node-loggly-bulk/lib/loggly/client';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
