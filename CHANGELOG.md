@@ -8,6 +8,7 @@
 - Added a global promise rejection handler, in case we accidently forget to catch them.
 - Fixed the `--debug` flag so it actually prints something.
 - Fixed the `--only` flag.
+- Fixed issue with `node-loggly-bulk` when using Yarn 2.
 
 # 5.0.0 - 2020-06-19
 
