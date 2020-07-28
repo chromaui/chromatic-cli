@@ -70,7 +70,6 @@
     "cross-spawn": "^7.0.2",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
-    "enhanced-resolve": "^4.1.1",
     "env-ci": "^5.0.2",
     "esm": "^3.2.25",
     "execa": "^4.0.0",

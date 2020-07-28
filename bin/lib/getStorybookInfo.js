@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 // Figure out the Storybook version and view layer
 
-import resolve from 'enhanced-resolve';
 import fs from 'fs-extra';
 
 const viewLayers = [
@@ -48,16 +47,14 @@ const supportedAddons = [
   'viewport',
 ];
 
-const find = name =>
-  new Promise((res, rej) => {
-    resolve(process.cwd(), `@storybook/${name}/package.json`, (err, results) => {
-      if (err) {
-        rej(err);
-      } else {
-        res(results);
-      }
-    });
-  });
+const resolve = name => {
+  try {
+    const path = require.resolve(`@storybook/${name}/package.json`, { paths: [process.cwd()] });
+    return Promise.resolve(path);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
 
 const read = async filepath => JSON.parse(await fs.readFile(filepath, 'utf8'));
 
@@ -66,8 +63,8 @@ const timeout = count =>
     setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
   });
 
-const disregard = () => neverResolve;
 const neverResolve = new Promise(() => {});
+const disregard = () => neverResolve;
 
 const findViewlayer = async ({ env }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='react@4.0-alpha.8' for unusual cases
@@ -80,7 +77,7 @@ const findViewlayer = async ({ env }) => {
   }
 
   // Try to find the Storybook viewlayer package
-  const findings = viewLayers.map(v => find(v));
+  const findings = viewLayers.map(v => resolve(v));
   const rejectedFindings = findings.map(p => p.then(disregard, () => true));
   const allFailed = Promise.all(rejectedFindings).then(() => {
     throw new Error(
@@ -103,7 +100,7 @@ const findViewlayer = async ({ env }) => {
 const findAddons = async () => {
   const result = await Promise.all(
     supportedAddons.map(name =>
-      find(`addon-${name}`)
+      resolve(`addon-${name}`)
         .then(l => read(l).then(r => ({ name, packageName: r.name, packageVersion: r.version })))
         .catch(e => false)
     )
