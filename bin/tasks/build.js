@@ -5,6 +5,7 @@ import semver from 'semver';
 import tmp from 'tmp-promise';
 
 import { createTask, transitionTo } from '../lib/tasks';
+import buildFailed from '../ui/messages/errors/buildFailed';
 import { initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async ctx => {
@@ -50,6 +51,9 @@ export const buildStorybook = async ctx => {
   try {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
     await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
+  } catch (e) {
+    e.message = buildFailed(ctx, e);
+    throw e;
   } finally {
     logFile.end();
   }
