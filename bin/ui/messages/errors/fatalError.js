@@ -46,7 +46,7 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
     If you need help, please chat with us at ${website} for the fastest response.
     You can also email the team at ${email} if chat is not an option.
 
-    Please provide us with the following info:
+    Please provide us with the above CLI output and the following info:
     {bold ${JSON.stringify(debugInfo, null, 2)}}
     ${stacktraces.length ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : ''}
   `);
