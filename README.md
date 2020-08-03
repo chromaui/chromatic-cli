@@ -32,8 +32,50 @@ To facilitate upgrading in the future, removing and adding features, this is the
 
 ### Publishing a new version to npm
 
+Before publishing, make sure you've done the following:
+
+- `yarn build`
+- Updated CHANGELOG.md
+- Committed and pushed everything
+- Decide on the proper semver bump (major/minor/patch)
+
 ```sh
 npm version <major|minor|patch|prerelease> [--preid <tag>]
 git push --follow-tags
 npm publish [--tag <tag>]
+```
+
+#### Doing an alpha (or beta) release
+
+For the first alpha release, bump the version like so (depending on the semver bump):
+
+```sh
+npm version <premajor|preminor|prepatch> --preid alpha
+```
+
+For consecutive alpha releases on the same version:
+
+```sh
+npm version prerelease --preid=alpha
+```
+
+Then push and publish:
+
+```sh
+git push --follow-tags
+npm publish --tag alpha
+```
+
+#### Doing a final release
+
+```sh
+npm version <major|minor|patch>
+git push --follow-tags
+npm publish
+```
+
+And finally, remove the alpha tag, if any:
+
+```
+npm dist-tag rm chromatic alpha
 ```
