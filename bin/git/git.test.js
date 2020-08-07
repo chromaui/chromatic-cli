@@ -44,8 +44,8 @@ beforeAll(async () =>
   )
 );
 
-function createClient(repository, builds) {
-  const mockIndex = createMockIndex(repository, builds);
+function createClient(repository, builds, prs) {
+  const mockIndex = createMockIndex(repository, builds, prs);
   return {
     runQuery(query, variables) {
       const queryName = query.match(/query ([a-zA-Z]+)/)[1];
@@ -60,7 +60,9 @@ function expectCommitsToEqualNames(hashes, names, { commitMap }) {
 
 async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
   process.chdir(dirname);
-  return runGit(`git checkout ${branch !== 'HEAD' ? `-B ${branch}` : ''} ${commitMap[name].hash}`);
+  await runGit(`git checkout ${branch !== 'HEAD' ? `-B ${branch}` : ''} ${commitMap[name].hash}`);
+
+  return commitMap[name].hash;
 }
 
 describe('getBaselineCommits', () => {
@@ -387,5 +389,24 @@ describe('getBaselineCommits', () => {
     // We can pass 'HEAD' as the branch if we fail to find any other branch info from another source
     const baselineCommits = await getBaselineCommits(client, { branch: 'HEAD' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
+  });
+
+  describe('PR commits', () => {
+    it(`also includes PR head commits that were squashed to this commit`, async () => {
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('E', 'master', repository);
+      const client = createClient(
+        repository,
+        [
+          ['C', 'master'],
+          ['D', 'branch'],
+        ],
+        [['E', 'branch']]
+      );
+
+      const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+      // This doesn't include 'C' as D "covers" it.
+      expectCommitsToEqualNames(baselineCommits, ['D'], repository);
+    });
   });
 });

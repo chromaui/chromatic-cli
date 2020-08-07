@@ -50,7 +50,7 @@ async function execGitCommand(command) {
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
 const TesterFirstCommittedAtQuery = gql`
-  query TesterFirstCommittedAtQuery($branch: String!) {
+  query TesterFirstCommittedAtQuery($commit: String!, $branch: String!) {
     app {
       firstBuild(sortByCommittedAt: true) {
         committedAt
@@ -58,6 +58,11 @@ const TesterFirstCommittedAtQuery = gql`
       lastBuild(branch: $branch, sortByCommittedAt: true) {
         commit
         committedAt
+      }
+      pullRequest(mergedWith: { commit: $commit, branch: $branch }) {
+        lastHeadBuild {
+          commit
+        }
       }
     }
   }
@@ -208,15 +213,16 @@ async function step(
 }
 
 export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBranch = false } = {}) {
-  const { committedAt } = await getCommit();
+  const { commit, committedAt } = await getCommit();
 
   // Include the latest build from this branch as an ancestor of the current build
   const {
-    app: { firstBuild, lastBuild },
+    app: { firstBuild, lastBuild, pullRequest },
   } = await client.runQuery(TesterFirstCommittedAtQuery, {
     branch,
+    commit,
   });
-  debug(`App firstBuild: ${firstBuild}, lastBuild: ${lastBuild}`);
+  debug(`App firstBuild: ${firstBuild}, lastBuild: ${lastBuild}, pullRequest: ${pullRequest}`);
 
   if (!firstBuild) {
     debug('App has no builds, returning []');
@@ -226,8 +232,10 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
   const initialCommitsWithBuilds = [];
   const extraBaselineCommits = [];
 
-  // Don't do any special branching logic for builds on `HEAD`, this is fairly meaningless
-  // (CI systems that have been pushed tags can not set a branch)
+  // Add the most recent build on the branch as a baseline (unless the user opts out), or it is newer than this commit(?)
+  // @see https://www.chromatic.com/docs/branching-and-baselines#rebasing
+  // [Don't do any special branching logic for builds on `HEAD`, this is fairly meaningless
+  // (CI systems that have been pushed tags can not set a branch)]
   if (
     branch !== 'HEAD' &&
     !ignoreLastBuildOnBranch &&
@@ -235,10 +243,29 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
     lastBuild.committedAt <= committedAt
   ) {
     if (await commitExists(lastBuild.commit)) {
+      debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
       initialCommitsWithBuilds.push(lastBuild.commit);
     } else {
-      debug(`Last build commit not in index, blindly appending to baselines`);
+      debug(
+        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to baselines`
+      );
       extraBaselineCommits.push(lastBuild.commit);
+    }
+  }
+
+  // Add the final commit of the head branch if this commit is the merge commit for a PR
+  // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
+  if (pullRequest && pullRequest.lastHeadBuild) {
+    if (await commitExists(pullRequest.lastHeadBuild.commit)) {
+      debug(
+        `Adding merged PR build commit ${pullRequest.lastHeadBuild.commit} to commits with builds`
+      );
+      initialCommitsWithBuilds.push(pullRequest.lastHeadBuild.commit);
+    } else {
+      debug(
+        `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to baselines`
+      );
+      extraBaselineCommits.push(pullRequest.lastHeadBuild.commit);
     }
   }
 
