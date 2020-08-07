@@ -59,7 +59,7 @@ const TesterFirstCommittedAtQuery = gql`
         commit
         committedAt
       }
-      pullRequest(mergedWith: { commit: $commit, branch: $branch }) {
+      pullRequest(mergeInfo: { commit: $commit, branch: $branch }) {
         lastHeadBuild {
           commit
         }
