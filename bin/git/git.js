@@ -238,10 +238,13 @@ export async function getBaselineCommits(
   const initialCommitsWithBuilds = [];
   const extraBaselineCommits = [];
 
-  // Add the most recent build on the branch as a baseline (unless the user opts out), or it is newer than this commit(?)
+  // Add the most recent build on the branch as a (potential) baseline build, unless:
+  //   - the user opts out with `--ignore-last-build-on-branch`
+  //   - the commit is newer than the build we are running, in which case we doing this build out
+  //     of order and that could lead to problems.
+  //   - the current branch is `HEAD`; this is fairly meaningless
+  //     (CI systems that have been pushed tags can not set a branch)
   // @see https://www.chromatic.com/docs/branching-and-baselines#rebasing
-  // [Don't do any special branching logic for builds on `HEAD`, this is fairly meaningless
-  // (CI systems that have been pushed tags can not set a branch)]
   if (
     branch !== 'HEAD' &&
     !ignoreLastBuildOnBranch &&
@@ -259,7 +262,8 @@ export async function getBaselineCommits(
     }
   }
 
-  // Add the final commit of the head branch if this commit is the merge commit for a PR
+  // Add the most recent build on a (merged) branch if as a (potential) baseline if we think
+  // this commit was the commit that merged the PR.
   // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
   if (pullRequest && pullRequest.lastHeadBuild) {
     if (await commitExists(pullRequest.lastHeadBuild.commit)) {
