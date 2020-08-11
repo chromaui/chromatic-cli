@@ -65,13 +65,15 @@ async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
   return commitMap[name].hash;
 }
 
+const log = { debug: jest.fn() };
+
 describe('getBaselineCommits', () => {
   it('returns no baseline when there are no builds for the app', async () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('F', 'master', repository);
     const client = createClient(repository, []);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, [], repository);
   });
 
@@ -80,7 +82,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('F', 'master', repository);
     const client = createClient(repository, [['F', 'master']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['F'], repository);
   });
 
@@ -89,7 +91,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('C', 'master', repository);
     const client = createClient(repository, [['B', 'master']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['B'], repository);
   });
 
@@ -101,7 +103,7 @@ describe('getBaselineCommits', () => {
       ['E', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['E', 'D'], repository);
   });
 
@@ -114,7 +116,7 @@ describe('getBaselineCommits', () => {
       ['D', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['D', 'C', 'B'], repository);
   });
 
@@ -126,7 +128,7 @@ describe('getBaselineCommits', () => {
       ['C', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['C', 'B'], repository);
   });
 
@@ -138,7 +140,7 @@ describe('getBaselineCommits', () => {
       ['B', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['B'], repository);
   });
 
@@ -151,7 +153,7 @@ describe('getBaselineCommits', () => {
       ['E', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['E', 'D'], repository);
   });
 
@@ -160,7 +162,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('F', 'master', repository);
     const client = createClient(repository, [['C', 'master']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
   });
 
@@ -172,7 +174,7 @@ describe('getBaselineCommits', () => {
       ['D', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
   });
 
@@ -184,7 +186,7 @@ describe('getBaselineCommits', () => {
       ['D', 'branch'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
   });
 
@@ -193,7 +195,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('E', 'master', repository);
     const client = createClient(repository, [['D', 'branch']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, [], repository);
   });
 
@@ -202,7 +204,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('D', 'master', repository);
     const client = createClient(repository, [['E', 'branch']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, [], repository);
   });
 
@@ -211,7 +213,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('D', 'master', repository);
     const client = createClient(repository, [['B', 'branch']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, [], repository);
   });
 
@@ -227,7 +229,7 @@ describe('getBaselineCommits', () => {
       [['Z', 'branch']]
     );
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, [], repository);
   });
 
@@ -236,7 +238,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('F', 'master', repository);
     const client = createClient(repository, [['D', 'master']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
   });
 
@@ -245,7 +247,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('Z', 'master', repository);
     const client = createClient(repository, [['z', 'branch']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, [], repository);
   });
 
@@ -254,7 +256,7 @@ describe('getBaselineCommits', () => {
     await checkoutCommit('Z', 'master', repository);
     const client = createClient(repository, [['A', 'branch']]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
     expectCommitsToEqualNames(baselineCommits, ['A'], repository);
   });
 
@@ -276,7 +278,7 @@ describe('getBaselineCommits', () => {
       },
     };
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['A'], repository);
   });
 
@@ -288,7 +290,7 @@ describe('getBaselineCommits', () => {
       ['D', 'branch'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
   });
 
@@ -300,7 +302,7 @@ describe('getBaselineCommits', () => {
       ['D', 'branch'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['D'], repository);
   });
 
@@ -312,7 +314,7 @@ describe('getBaselineCommits', () => {
       ['E', 'branch'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
   });
 
@@ -324,10 +326,13 @@ describe('getBaselineCommits', () => {
       ['D', 'branch'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, {
-      branch: 'branch',
-      ignoreLastBuildOnBranch: true,
-    });
+    const baselineCommits = await getBaselineCommits(
+      { client, log },
+      {
+        branch: 'branch',
+        ignoreLastBuildOnBranch: true,
+      }
+    );
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
   });
 
@@ -349,7 +354,7 @@ describe('getBaselineCommits', () => {
       ]
     );
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expect(baselineCommits).toEqual([Zhash, repository.commitMap.C.hash]);
   });
 
@@ -362,7 +367,7 @@ describe('getBaselineCommits', () => {
       ['B', 'master'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['B'], repository);
   });
 
@@ -374,7 +379,7 @@ describe('getBaselineCommits', () => {
       ['E', 'branch'],
     ]);
 
-    const baselineCommits = await getBaselineCommits(client, { branch: 'branch' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'branch' });
     expectCommitsToEqualNames(baselineCommits, ['E'], repository);
   });
 
@@ -387,7 +392,7 @@ describe('getBaselineCommits', () => {
     ]);
 
     // We can pass 'HEAD' as the branch if we fail to find any other branch info from another source
-    const baselineCommits = await getBaselineCommits(client, { branch: 'HEAD' });
+    const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'HEAD' });
     expectCommitsToEqualNames(baselineCommits, ['C'], repository);
   });
 
@@ -404,7 +409,7 @@ describe('getBaselineCommits', () => {
         [['E', 'branch']]
       );
 
-      const baselineCommits = await getBaselineCommits(client, { branch: 'master' });
+      const baselineCommits = await getBaselineCommits({ client, log }, { branch: 'master' });
       // This doesn't include 'C' as D "covers" it.
       expectCommitsToEqualNames(baselineCommits, ['D'], repository);
     });
