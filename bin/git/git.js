@@ -223,7 +223,12 @@ export async function getBaselineCommits(
     branch,
     commit,
   });
-  log.debug(`App firstBuild: ${firstBuild}, lastBuild: ${lastBuild}, pullRequest: ${pullRequest}`);
+  log.debug(
+    `App firstBuild: %o, lastBuild: %o, pullRequest: %o`,
+    firstBuild,
+    lastBuild,
+    pullRequest
+  );
 
   if (!firstBuild) {
     log.debug('App has no builds, returning []');
