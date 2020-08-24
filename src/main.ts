@@ -67,11 +67,12 @@ async function runChromatic(options): Promise<Output> {
   const context = {...parseArgs([]), env, log, sessionId, flags: options} as any
   
   await runAll(context);  
+  const { build, exitCode } = context; 
 
-  const { build: { webUrl: exitUrl }, exitCode } = context;
+  const { webUrl } = build || {};
 
   return {
-    url: exitUrl,
+    url: webUrl,
     code: exitCode,
   };
 }
