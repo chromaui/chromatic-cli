@@ -91,6 +91,7 @@ async function run() {
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
+    const skip = getInput('skip');
     const doNotStart = getInput('doNotStart');
     const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
@@ -114,6 +115,7 @@ async function run() {
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),
+      skip: maybe(skip),
       doNotStart: maybe(doNotStart),
       storybookPort: maybe(storybookPort),
       storybookUrl: maybe(storybookUrl),
@@ -138,6 +140,10 @@ async function run() {
 
     setOutput('url', url);
     setOutput('code', code.toString());
+
+    if(code !== 0){
+      setFailed('non-zero exit code');
+    }
   } catch (e) {
     e.message && error(e.message);
     e.stack && error(e.stack);
