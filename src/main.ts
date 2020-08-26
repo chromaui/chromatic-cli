@@ -138,6 +138,10 @@ async function run() {
 
     setOutput('url', url);
     setOutput('code', code.toString());
+
+    if(code !== 0){
+      setFailed('non-zero exit code');
+    }
   } catch (e) {
     e.message && error(e.message);
     e.stack && error(e.stack);
