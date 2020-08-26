@@ -1,3 +1,12 @@
+# v1 (Fri Aug 28 2020)
+
+#### 🚀  Version 1
+
+- FIX problem with build missing failing in chromatic-cli
+- UPGRADE to latest dependencies, including chromatic-cli
+- ADD --skip option from chromatic-cli
+- FIX the --exitZeroOnChanges not causing the action output to be set to failure
+
 # v1 (Wed Feb 20 2020)
 
 #### 🚀  Version 1
