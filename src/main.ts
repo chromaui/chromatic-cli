@@ -1,6 +1,8 @@
 import { getInput, error, setFailed, setOutput } from '@actions/core';
 import { context } from "@actions/github";
 import { v4 as uuid } from 'uuid';
+import pkgUp from 'pkg-up';
+import { readFile } from 'jsonfile';
 
 import { runAll } from 'chromatic/bin/main';
 import parseArgs from 'chromatic/bin/lib/parseArgs';
@@ -63,8 +65,10 @@ async function runChromatic(options): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
   const log = createLogger(sessionId, env);
+  const packagePath = await pkgUp(); // the user's own package.json
+  const packageJson = await readFile(packagePath);
 
-  const context = {...parseArgs([]), env, log, sessionId, flags: options} as any
+  const context = {...parseArgs([]), packagePath, packageJson, env, log, sessionId, flags: options} as any
   
   await runAll(context);  
   const { build, exitCode } = context; 
