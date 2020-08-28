@@ -23,6 +23,8 @@
     "@actions/core": "^1.2.4",
     "@actions/github": "^4.0.0",
     "chromatic": "^5.1.0",
+    "pkg-up": "^3.1.0",
+    "jsonfile": "^6.0.1",
     "esm": "^3.2.25"
   },
   "devDependencies": {
