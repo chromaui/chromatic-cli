@@ -1,4 +1,3 @@
-import { readFileSync } from 'jsonfile';
 import path from 'path';
 import { parse } from 'url';
 
