@@ -1,3 +1,7 @@
+# 5.2.0-beta.0 - 2020-09-08
+
+- Keep track of baselines when doing squash or rebase merges.
+
 # 5.1.0 - 2020-08-03
 
 - If the build directory we defined is empty, try to detect the actual build output directory from the Storybook build log and warn about it.
