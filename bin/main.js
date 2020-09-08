@@ -24,8 +24,10 @@ export async function main(argv) {
   const log = createLogger(sessionId, env);
   const packagePath = await pkgUp(); // the user's own package.json
   const packageJson = await readFile(packagePath);
-  const ctx = { env, log, sessionId, packageJson, packagePath, ...parseArgs(argv) };
 
+  // Warning: chromaui/action directly invokes runAll, so if new properties or arguments are added
+  // here, they must also be added to the GitHub Action.
+  const ctx = { env, log, sessionId, packageJson, packagePath, ...parseArgs(argv) };
   await runAll(ctx);
 
   log.info('');
