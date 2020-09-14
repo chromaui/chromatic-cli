@@ -1,4 +1,4 @@
-# 5.2.0-beta.0 - 2020-09-08
+# 5.2.0 - 2020-09-14
 
 - Keep track of baselines when doing squash or rebase merges.
 
