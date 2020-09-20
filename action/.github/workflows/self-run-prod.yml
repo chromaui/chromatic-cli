@@ -1,0 +1,19 @@
+name: "self test production-like"
+on:
+  pull_request:
+  push:
+    branches:
+      - 'release/*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ./
+      with: 
+        projectToken: 5oy3iw6rkio
+        token: ${{ secrets.GITHUB_TOKEN }}
+        storybookBuildDir: storybook-static
+      env:
+        CHROMATIC_STORYBOOK_VERSION: react@5.3.0

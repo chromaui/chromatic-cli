@@ -1,10 +1,7 @@
-import setupDebug from 'debug';
 import envCi from 'env-ci';
 import dedent from 'ts-dedent';
 
 import { getBranch, getCommit } from './git';
-
-export const debug = setupDebug('chromatic-cli:tester');
 
 const notHead = b => {
   if (!b || b === 'HEAD') {
@@ -101,7 +98,7 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
     !!process.env.CI ||
     !!process.env.REPOSITORY_URL ||
     !!process.env.GITHUB_REPOSITORY;
-  debug(
+  log.debug(
     `git info: ${JSON.stringify({
       commit,
       committedAt,

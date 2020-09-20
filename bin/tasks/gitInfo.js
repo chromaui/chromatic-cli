@@ -37,7 +37,7 @@ export const setGitInfo = async (ctx, task) => {
     throw new Error(skipFailed(ctx).output);
   }
 
-  const baselineCommits = await getBaselineCommits(ctx.client, {
+  const baselineCommits = await getBaselineCommits(ctx, {
     branch,
     ignoreLastBuildOnBranch: matchesBranch(ignoreLastBuildOnBranch),
   });
