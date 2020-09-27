@@ -1,6 +1,6 @@
 import retry from 'async-retry';
+import fetch from 'fetch-with-proxy';
 import fs from 'fs';
-import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
 

@@ -109,7 +109,7 @@ export const uploadStorybook = async (ctx, task) => {
   try {
     await uploadFiles(ctx, files, progress => {
       if (ctx.options.interactive) {
-        const percentage = Math.round((progress / total) * 100);
+        const percentage = Math.floor((progress / total) * 100);
         task.output = uploading({ percentage }).output;
       }
     });
