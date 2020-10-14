@@ -78,6 +78,12 @@ export async function getVersion() {
   return result.replace('git version ', '');
 }
 
+export async function getSlug() {
+  const result = await execGitCommand(`git config --get remote.origin.url`);
+  const [, slug] = result.match(/([^/:]+\/[^/]+?)(\.git)?/) || [];
+  return slug;
+}
+
 // NOTE: At some point we should check that the commit has been pushed to the
 // remote and the branch matches with origin/REF, but for now we are naive about
 // adhoc builds.

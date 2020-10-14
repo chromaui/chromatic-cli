@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
-import { getBaselineCommits, getVersion } from '../git/git';
+import { getBaselineCommits, getSlug, getVersion } from '../git/git';
 import { createTask, transitionTo } from '../lib/tasks';
 import {
   initial,
@@ -22,6 +22,7 @@ export const setGitInfo = async (ctx, task) => {
   const { patchBaseRef, fromCI, ignoreLastBuildOnBranch, skip } = ctx.options;
 
   ctx.git = await getCommitAndBranch({ patchBaseRef, inputFromCI: fromCI, log: ctx.log });
+  ctx.git.slug = ctx.git.slug || (await getSlug());
   ctx.git.version = await getVersion();
   const { branch, commit } = ctx.git;
 

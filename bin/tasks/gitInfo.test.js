@@ -1,5 +1,5 @@
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
-import { getBaselineCommits, getVersion } from '../git/git';
+import { getBaselineCommits, getSlug, getVersion } from '../git/git';
 import { setGitInfo } from './gitInfo';
 
 jest.mock('../git/getCommitAndBranch');
@@ -11,6 +11,7 @@ describe('setGitInfo', () => {
   it('sets the git info on context', async () => {
     getCommitAndBranch.mockReturnValue({ commit: '123asdf', branch: 'something' });
     getBaselineCommits.mockReturnValue(['asd2344']);
+    getSlug.mockReturnValue('user/repo');
     getVersion.mockReturnValue('Git v1.0.0');
     const ctx = { log, options: {} };
     await setGitInfo(ctx, {});

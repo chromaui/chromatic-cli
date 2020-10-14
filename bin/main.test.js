@@ -135,6 +135,7 @@ jest.mock('./git/git', () => ({
   }),
   getBranch: () => 'branch',
   getBaselineCommits: () => ['baseline'],
+  getSlug: () => 'user/repo',
   getVersion: () => '2.24.1',
 }));
 
