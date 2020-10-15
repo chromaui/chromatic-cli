@@ -1,6 +1,9 @@
-name: Chromatic Action
-author: Chroma
-description: "Publishes your Storybook to Chromatic and runs visual tests"
+name: Publish to Chromatic
+author: Chroma Software, Inc.
+description: "Publish your Storybook to Chromatic and run visual regression tests"
+branding:
+  icon: "aperture"
+  color: "orange"
 
 inputs:
   token:

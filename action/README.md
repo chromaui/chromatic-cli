@@ -1,10 +1,8 @@
-# Chromatic GitHub Action
+# GitHub Action for Chromatic
 
-This action takes care of publishing your Storybook to Chromatic and running visual regression tests. It's a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli), which is also where the action's source code resides.
+Builds and publishes your Storybook to Chromatic and runs visual regression tests.
 
-The action can build your Storybook, publish it to Chromatic, and print test results to the log.
-
-> Note: Chromatic requires full [git history](#checkout-depth), so if you are using the `action/checkout@v2` action, ensure you set the `fetch-depth: 0` option.
+This is a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli), which is also where the action's source code resides.
 
 ## Getting started
 
@@ -27,6 +25,8 @@ jobs:
 ```
 
 Make sure to replace the value of `projectToken` with the project token provided to you by Chromatic. You can find it on the Manage page of your Chromatic project. The GitHub token is unrelated and will be set automatically. See below if you want to keep your projectToken secret.
+
+> Note: Chromatic requires full [git history](#checkout-depth), so if you are using the `action/checkout@v2` action, ensure you set the `fetch-depth: 0` option.
 
 ## Usage
 
