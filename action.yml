@@ -7,6 +7,8 @@ inputs:
     description: "Your github token"
   projectToken: 
     description: "Your chromatic project token"
+  appCode: 
+    description: "Deprecated, please use projectToken instead"
   buildScriptName: 
     description: "The npm script that builds your Storybook [build-storybook]"
   doNotStart: 
@@ -41,5 +43,5 @@ inputs:
     description: "Exit with 0 once the built version has been sent to chromatic: boolean or branchname"
 
 runs: 
-  main: main.js
+  main: action/register.js
   using: node12

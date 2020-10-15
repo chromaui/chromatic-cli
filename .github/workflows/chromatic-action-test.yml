@@ -1,4 +1,4 @@
-name: "Chromatic via action"
+name: "Chromatic via action-test"
 on: [push, pull_request]
 
 jobs:
@@ -7,9 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - run: yarn
-    - uses: chromaui/action@v1
-      env:
-        DEBUG: chromatic-cli
+    - uses: chromaui/action-test@v1
       with:
         projectToken: gcaw1ai2dgo
         appCode: gcaw1ai2dgo

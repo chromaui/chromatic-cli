@@ -81,7 +81,7 @@ const findViewlayer = async ({ env }) => {
   const rejectedFindings = findings.map(p => p.then(disregard, () => true));
   const allFailed = Promise.all(rejectedFindings).then(() => {
     throw new Error(
-      'Could not find a supported Storybook viewlayer package. Make sure one is installed.'
+      'Could not find a supported Storybook viewlayer package. Make sure one is installed, or set CHROMATIC_STORYBOOK_VERSION.'
     );
   });
 
