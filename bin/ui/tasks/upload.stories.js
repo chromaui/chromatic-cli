@@ -33,6 +33,7 @@ export const Skipped = () => skipped({ options: { storybookUrl } });
 export const Invalid = () =>
   invalid({
     sourceDir: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-20036LMP9FAlLEjpu',
+    buildLogFile: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log',
   });
 
 export const Failed = () => failed({ path: 'main.9e3e453142da82719bf4.bundle.js' });
