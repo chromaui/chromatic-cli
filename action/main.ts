@@ -1,32 +1,32 @@
-import { getInput, error, setFailed, setOutput } from '@actions/core';
-import { context } from "@actions/github";
-import { v4 as uuid } from 'uuid';
-import pkgUp from 'pkg-up';
+import { error, getInput, setFailed, setOutput } from '@actions/core';
+import { context } from '@actions/github';
 import { readFile } from 'jsonfile';
+import pkgUp from 'pkg-up';
+import { v4 as uuid } from 'uuid';
 
-import { runAll } from 'chromatic/bin/main';
-import parseArgs from 'chromatic/bin/lib/parseArgs';
-import {createLogger} from 'chromatic/bin/lib/log';
-import getEnv from 'chromatic/bin/lib/getEnv';
+import getEnv from '../bin/lib/getEnv';
+import { createLogger } from '../bin/lib/log';
+import parseArgs from '../bin/lib/parseArgs';
+import { runAll } from '../bin/main';
 
 const maybe = (a: string, b: any = undefined) => {
-  if(!a) {
+  if (!a) {
     return b;
   }
 
   try {
     return JSON.parse(a);
-  } catch(e){
+  } catch (e) {
     return a;
   }
-}
+};
 
 const getCommit = (event: typeof context) => {
   switch (event.eventName) {
     case 'pull_request': {
       return {
         // @ts-ignore
-        owner: event.payload.repository.owner.login, 
+        owner: event.payload.repository.owner.login,
         // @ts-ignore
         repo: event.payload.repository.name,
         // @ts-ignore
@@ -40,7 +40,7 @@ const getCommit = (event: typeof context) => {
     case 'push': {
       return {
         // @ts-ignore
-        owner: event.payload.repository.owner.login, 
+        owner: event.payload.repository.owner.login,
         // @ts-ignore
         repo: event.payload.repository.name,
         branch: event.payload.ref.replace('refs/heads/', ''),
@@ -49,12 +49,12 @@ const getCommit = (event: typeof context) => {
       };
     }
     default: {
-      setFailed(event.eventName + ' event is not supported in this action');
+      setFailed(`${event.eventName} event is not supported in this action`);
 
       return null;
-    };
+    }
   }
-}
+};
 
 interface Output {
   url: string;
@@ -68,23 +68,27 @@ async function runChromatic(options): Promise<Output> {
   const packagePath = await pkgUp(); // the user's own package.json
   const packageJson = await readFile(packagePath);
 
-  const context = {...parseArgs([]), packagePath, packageJson, env, log, sessionId, flags: options} as any
-  
-  await runAll(context);  
-  const { build, exitCode } = context; 
-
-  const { webUrl } = build || {};
+  const ctx = {
+    ...parseArgs([]),
+    packagePath,
+    packageJson,
+    env,
+    log,
+    sessionId,
+    flags: options,
+  } as any;
+  await runAll(ctx);
 
   return {
-    url: webUrl,
-    code: exitCode,
+    url: ctx.build?.webUrl,
+    code: ctx.exitCode,
   };
 }
 
 async function run() {
   const commit = getCommit(context);
-  
-  if (!commit){
+
+  if (!commit) {
     return;
   }
 
@@ -138,21 +142,18 @@ async function run() {
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 
-    const [{ url, code }] = await Promise.all([
-      chromatic,
-    ]);
+    const [{ url, code }] = await Promise.all([chromatic]);
 
     setOutput('url', url);
     setOutput('code', code.toString());
 
-    if(code !== 0){
+    if (code !== 0) {
       setFailed('non-zero exit code');
     }
   } catch (e) {
-    e.message && error(e.message);
-    e.stack && error(e.stack);
-    e.description && error(e.description);
-
+    if (e.message) error(e.message);
+    if (e.stack) error(e.stack);
+    if (e.description) error(e.description);
     setFailed(e.message);
   }
 }

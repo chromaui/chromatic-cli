@@ -101,7 +101,24 @@ export async function getCommit() {
 }
 
 export async function getBranch() {
-  return execGitCommand(`git rev-parse --abbrev-ref HEAD`);
+  try {
+    // Git v2.22 and above
+    // Yields an empty string when in detached HEAD state
+    const branch = await execGitCommand('git branch --show-current');
+    return branch || 'HEAD';
+  } catch (e) {
+    try {
+      // Git v1.8 and above
+      // Throws when in detached HEAD state
+      const ref = await execGitCommand('git symbolic-ref HEAD');
+      return ref.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
+    } catch (ex) {
+      // Git v1.7 and above
+      // Yields 'HEAD' when in detached HEAD state
+      const ref = await execGitCommand('git rev-parse --abbrev-ref HEAD');
+      return ref.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
+    }
+  }
 }
 
 // Check if a commit exists in the repository
