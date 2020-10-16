@@ -9,6 +9,5 @@ jobs:
     - run: yarn
     - uses: chromaui/action-test@v1
       with:
-        projectToken: gcaw1ai2dgo
-        appCode: gcaw1ai2dgo
         token: ${{ secrets.GITHUB_TOKEN }}
+        projectToken: gcaw1ai2dgo
