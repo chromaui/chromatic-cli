@@ -83,7 +83,7 @@ export async function getVersion() {
 // ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
 export async function getSlug() {
   const result = await execGitCommand(`git config --get remote.origin.url`);
-  const [, slug] = result.match(/([^/:]+\/[^/]+?)(\.git)?/) || [];
+  const [, slug] = result.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
   return slug;
 }
 
