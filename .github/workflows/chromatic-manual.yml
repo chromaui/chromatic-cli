@@ -11,8 +11,7 @@ jobs:
         node-version: '10.x'
     - uses: actions/checkout@v1
     - name: install
-      run: |
-        yarn && git status --porcelain
+      run: yarn && git status --porcelain
     - name: prep package
       run: ./scripts/rename.js storybook-chromatic
     - name: run chromatic
