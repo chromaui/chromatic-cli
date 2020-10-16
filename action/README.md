@@ -1,39 +1,34 @@
-# Chromatic GitHub Action
+# GitHub Action for Chromatic
 
-This action takes care of publishing your Storybook to Chromatic and kicking off tests if they're enabled.
+Builds and publishes your Storybook to Chromatic and runs visual regression tests.
 
-It's a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli).
+This is a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli), which is also where the action's source code resides.
 
-It can:
-  - build your Storybook
-  - publish the Storybook to Chromatic
-  - report test results to log
+## Getting started
 
-it does NOT:
-  - install dependencies
+In your git repository, create a file `.github/workflows/chromatic.yml` with the following contents:
 
-## How to add a GitHub action
+```yml
+name: 'Chromatic'
+on: push
 
-- Create a file in your repo: `.github/workflows/chromatic.yml`
-- set it's content to:
-  ```yml
-  name: "Chromatic"
-  on: push
-
-  jobs:
-    test:
-      runs-on: ubuntu-latest
-      steps:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v1
-      - run: |
-          yarn && yarn build
+      - run: yarn
       - uses: chromaui/action@v1
-        with: 
-          projectToken: <insert the chromatic projectToken here>
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
-  ```
+          projectToken: <insert the chromatic projectToken here>
+```
 
-## Usage (all options)
+Make sure to replace the value of `projectToken` with the project token provided to you by Chromatic. You can find it on the Manage page of your Chromatic project. The GitHub token is unrelated and will be set automatically. See below if you want to keep your projectToken secret.
+
+> Note: Chromatic requires full [git history](#checkout-depth), so if you are using the `action/checkout@v2` action, ensure you set the `fetch-depth: 0` option.
+
+## Usage
 
 ```yaml
 - uses: chromaui/action@v1
@@ -42,12 +37,11 @@ it does NOT:
     projectToken: 'Your chromatic project token'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
-    allowConsoleErrors: 'do not exit when runtime errors occur in storybook'
-    autoAcceptChanges: 'automatically accept all changes in chromatic: boolean or branchname'
-    exitZeroOnChanges: 'positive exit of action even when there are changes: boolean or branchname'
-    exitOnceUploaded: 'exit with 0 once the built version has been sent to chromatic: boolean or branchname'
+    allowConsoleErrors: 'Do not exit when runtime errors occur in storybook'
+    autoAcceptChanges: 'Automatically accept all changes in chromatic: boolean or branchname'
+    exitZeroOnChanges: 'Positive exit of action even when there are changes: boolean or branchname'
+    exitOnceUploaded: 'Exit with 0 once the built version has been sent to chromatic: boolean or branchname'
 ```
-
 
 We suggest you use a secret to hide the project token:
 
@@ -58,67 +52,12 @@ We suggest you use a secret to hide the project token:
     projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
 
-You have to configure secrets in the settings tab (`https://github.com/{YOUR_ORGANSATION}/{YOUR_REPOSITORY}/settings/secrets`)
-
-However if you need to be able to run this action on forked PRs you can't make it a secret, it has to be public:
-
-```yaml
-- uses: chromaui/action@v1
-  with:
-    token: ${{ secrets.GITHUB_TOKEN }}
-    projectToken: projectTokenhere
-```
+You can to configure secrets in the repository settings (`/<owner>/<repository>/settings/secrets`). However if you need to be able to run this action on pull requests from forks, because those can't access your secret.
 
 ## Checkout depth
 
-In the v2 version of the `actions/checkout` action, there's no git history. Chromatic needs the git history in order to find the base-build.
+Version 2 of the `actions/checkout` action will only checkout a single commit without history by default. Chromatic needs the full git history in order to track changes over time. Set `fetch-depth: 0` to enable this. See [actions/checkout](https://github.com/actions/checkout#readme) for details.
 
-Add `fetch-depth: 0` to add full history, see: https://github.com/actions/checkout#whats-new
+## Issues and support
 
-## Development
-
-### Publish to a distribution branch
-
-Actions are run from GitHub repos. We will create a releases branch and only commit production modules. 
-
-Comment out node_modules in `.gitignore` and create a releases/v1 branch
-```plaintext
-# comment out in distribution branches
-# node_modules/
-```
-
-```sh
-git checkout -b releases/v1
-git commit -a -m "prod dependencies"
-```
-
-```sh
-npm prune --production
-git add node_modules
-git commit -a -m "prod dependencies"
-git push origin releases/v1
-```
-
-See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-
-### Validate
-
-You can now validate the action by referencing the releases/v1 branch
-
-```yaml
-- uses: chromaui/action@releases/v1
-  with:
-    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-```
-
-See the [actions tab](https://github.com/chromaui/action/actions) for runs of this action! :rocket:
-
-### Usage:
-
-After testing you can [create a v1 tag](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md) to reference the stable and tested action
-
-```yaml
-- uses: chromaui/action@v1
-  with:
-    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-```
+Please report any issues in the [chromatic-cli](https://github.com/chromaui/chromatic-cli) repository. We provide documentation and support chat at https://www.chromatic.com/docs/.
