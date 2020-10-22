@@ -88,7 +88,9 @@ export async function getCommit() {
     await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
   ).split(',');
 
-  console.log(await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn" --skip=1`));
+  console.log(
+    `previous commit: ${await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn" --skip=1`)}`
+  );
 
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
