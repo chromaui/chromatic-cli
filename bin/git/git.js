@@ -88,6 +88,8 @@ export async function getCommit() {
     await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
   ).split(',');
 
+  console.log({ commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName });
+
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
 
