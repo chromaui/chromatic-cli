@@ -6,8 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: |
-        yarn
+    - run: yarn
     - uses: chromaui/action@v1
       env:
         DEBUG: chromatic-cli

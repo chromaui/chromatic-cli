@@ -138,8 +138,15 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     if (storybookBuildDir) {
       return { ...options, noStart: true, useTunnel: false };
     }
-    buildScriptName = typeof buildScriptName === 'string' ? buildScriptName : 'build-storybook';
-    if (packageJson.scripts && packageJson.scripts[buildScriptName]) {
+    const { scripts } = packageJson;
+    if (typeof buildScriptName !== 'string') {
+      buildScriptName = 'build-storybook';
+      if (!scripts[buildScriptName]) {
+        const [k] = Object.entries(scripts).find(([, v]) => v.startsWith('build-storybook')) || [];
+        if (k) buildScriptName = k;
+      }
+    }
+    if (scripts && buildScriptName && scripts[buildScriptName]) {
       return { ...options, noStart: true, useTunnel: false, buildScriptName };
     }
     throw new Error(missingBuildScriptName(buildScriptName));
