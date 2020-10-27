@@ -88,11 +88,16 @@ export async function getCommit() {
     await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
   ).split(',');
 
-  console.log(
-    `previous commit: ${await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn" --skip=1`)}`
-  );
+  if (await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn" --skip=1`)) {
+    return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
+  }
 
-  return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
+  throw new Error(dedent`
+    Your commit history has only 1 commit
+
+    Chromatic requires that a proper git history before it can be run.
+    
+  `);
 }
 
 export async function getBranch() {
