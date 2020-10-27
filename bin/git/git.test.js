@@ -36,7 +36,7 @@ const repositories = {};
 beforeAll(async () =>
   Promise.all(
     Object.keys(descriptions).map(async (key) => {
-      const dirname = await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` }).name;
+      const dirname = (await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` })).path;
       const runGit = makeRunGit(dirname);
       const commitMap = await generateGitRepository(runGit, descriptions[key]);
       repositories[key] = { dirname, runGit, commitMap };
