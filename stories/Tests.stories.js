@@ -7,7 +7,7 @@ import AComponent from './A';
 
 export default {
   title: 'Tests',
-  parameters: { chromatic: { viewports: [600, 1200] } },
+  parameters: { chromatic: { viewports: [600, 1200] }, layout: 'padded' },
 };
 
 export const WithViewports = () => {
