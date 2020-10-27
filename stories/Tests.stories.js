@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-env browser */
 
 import React from 'react';

@@ -1,6 +1,6 @@
-export const lcfirst = str => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
+export const lcfirst = (str) => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
-export const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export const tick = async (times, interval, fn) => {
   for (let i = 0; i < times; i += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -16,4 +16,4 @@ export const progress = (percentage, size = 20) => {
   return `${completed.join('')}${track.join('')}`.substr(0, 20);
 };
 
-export const baseStorybookUrl = url => url.replace(/\/iframe\.html$/, '');
+export const baseStorybookUrl = (url) => url.replace(/\/iframe\.html$/, '');

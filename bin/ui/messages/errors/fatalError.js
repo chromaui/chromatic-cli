@@ -28,20 +28,20 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
     ...(options.buildScriptName ? { buildScript: scripts[options.buildScriptName] } : {}),
     ...(options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     exitCode,
-    errorType: errors.map(err => err.name).join('\n'),
-    errorMessage: stripAnsi(errors.map(err => err.message).join('\n')),
+    errorType: errors.map((err) => err.name).join('\n'),
+    errorMessage: stripAnsi(errors.map((err) => err.message).join('\n')),
     ...(isolatorUrl ? { isolatorUrl } : {}),
     ...(cachedUrl ? { cachedUrl } : {}),
     ...(build && { build: buildFields(build) }),
   };
 
-  const stacktraces = errors.map(err => err.stack).filter(Boolean);
+  const stacktraces = errors.map((err) => err.stack).filter(Boolean);
   const viewStacktraces = stacktraces.length
     ? chalk`\n{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}`
     : '';
 
   return dedent(chalk`
-    ${errors.map(err => err.message).join('\n')}${viewStacktraces}
+    ${errors.map((err) => err.message).join('\n')}${viewStacktraces}
 
     If you need help, please chat with us at ${website} for the fastest response.
     You can also email the team at ${email} if chat is not an option.

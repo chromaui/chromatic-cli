@@ -5,7 +5,7 @@ import startApp, { checkResponse } from '../lib/startStorybook';
 import { createTask, transitionTo } from '../lib/tasks';
 import { initial, pending, skipFailed, skipped, success } from '../ui/tasks/start';
 
-export const startStorybook = async ctx => {
+export const startStorybook = async (ctx) => {
   const { exec: commandName, scriptName, url } = ctx.options;
 
   const child = await startApp({
@@ -23,13 +23,13 @@ export const startStorybook = async ctx => {
   ctx.stopApp = () =>
     child &&
     new Promise((resolve, reject) =>
-      treeKill(child.pid, 'SIGHUP', err => (err ? reject(err) : resolve()))
+      treeKill(child.pid, 'SIGHUP', (err) => (err ? reject(err) : resolve()))
     );
 };
 
 export default createTask({
   title: initial.title,
-  skip: async ctx => {
+  skip: async (ctx) => {
     if (ctx.skip) return true;
     if (await checkResponse(ctx.options.url)) {
       ctx.isolatorUrl = ctx.options.url;

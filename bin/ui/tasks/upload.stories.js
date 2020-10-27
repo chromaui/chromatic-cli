@@ -12,7 +12,7 @@ import {
 
 export default {
   title: 'CLI/Tasks/Upload',
-  decorators: [storyFn => task(storyFn())],
+  decorators: [(storyFn) => task(storyFn())],
 };
 
 const isolatorUrl = 'https://5eb48280e78a12aeeaea33cf-kdypokzbrs.chromatic.com/iframe.html';

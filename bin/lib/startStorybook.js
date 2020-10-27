@@ -40,10 +40,10 @@ async function waitForResponse(child, url, env) {
 
     if (child) {
       let output = '';
-      child.stderr.on('data', e => {
+      child.stderr.on('data', (e) => {
         output += e.toString();
       });
-      child.stdout.on('data', o => {
+      child.stdout.on('data', (o) => {
         output += o.toString();
       });
 

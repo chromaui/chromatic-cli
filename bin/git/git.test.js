@@ -35,7 +35,7 @@ function makeRunGit(directory) {
 const repositories = {};
 beforeAll(async () =>
   Promise.all(
-    Object.keys(descriptions).map(async key => {
+    Object.keys(descriptions).map(async (key) => {
       const dirname = await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` }).name;
       const runGit = makeRunGit(dirname);
       const commitMap = await generateGitRepository(runGit, descriptions[key]);
@@ -55,7 +55,7 @@ function createClient(repository, builds, prs) {
 }
 
 function expectCommitsToEqualNames(hashes, names, { commitMap }) {
-  return expect(hashes).toEqual(names.map(n => commitMap[n].hash));
+  return expect(hashes).toEqual(names.map((n) => commitMap[n].hash));
 }
 
 async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {

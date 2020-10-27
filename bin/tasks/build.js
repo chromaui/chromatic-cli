@@ -8,7 +8,7 @@ import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { initial, pending, skipped, success } from '../ui/tasks/build';
 
-export const setSourceDir = async ctx => {
+export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
   } else if (semver.lt(ctx.storybook.version, '5.0.0')) {
@@ -20,7 +20,7 @@ export const setSourceDir = async ctx => {
   }
 };
 
-export const setSpawnParams = ctx => {
+export const setSpawnParams = (ctx) => {
   // Run either:
   //   npm/yarn run scriptName (depending on npm_execpath)
   //   node path/to/npm.js run scriptName (if npm run via node)
@@ -40,7 +40,7 @@ export const setSpawnParams = ctx => {
   };
 };
 
-export const buildStorybook = async ctx => {
+export const buildStorybook = async (ctx) => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
   const logFile = fs.createWriteStream(ctx.buildLogFile);
   await new Promise((resolve, reject) => {
@@ -61,7 +61,7 @@ export const buildStorybook = async ctx => {
 
 export default createTask({
   title: initial.title,
-  skip: async ctx => {
+  skip: async (ctx) => {
     if (ctx.skip) return true;
     if (ctx.options.storybookBuildDir) {
       ctx.sourceDir = ctx.options.storybookBuildDir;

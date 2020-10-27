@@ -123,7 +123,7 @@ async function commitExists(commit) {
 }
 
 function commitsForCLI(commits) {
-  return commits.map(c => c.trim()).join(' ');
+  return commits.map((c) => c.trim()).join(' ');
 }
 
 // git rev-list in a basic form gives us a list of commits reaching back to
@@ -154,14 +154,14 @@ async function nextCommits(
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
   log.debug(`running ${command}`);
-  const commits = (await execGitCommand(command)).split('\n').filter(c => !!c);
+  const commits = (await execGitCommand(command)).split('\n').filter((c) => !!c);
   log.debug(`command output: ${commits}`);
 
   return (
     commits
       // No sense in checking commits we already know about
-      .filter(c => !commitsWithBuilds.includes(c))
-      .filter(c => !commitsWithoutBuilds.includes(c))
+      .filter((c) => !commitsWithBuilds.includes(c))
+      .filter((c) => !commitsWithoutBuilds.includes(c))
       .slice(0, limit)
   );
 }
@@ -174,12 +174,12 @@ async function maximallyDescendentCommits({ log }, commits) {
   }
 
   // <commit>^@ expands to all parents of commit
-  const parentCommits = commits.map(c => `"${c}^@"`);
+  const parentCommits = commits.map((c) => `"${c}^@"`);
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
   log.debug(`running ${command}`);
-  const maxCommits = (await execGitCommand(command)).split('\n').filter(c => !!c);
+  const maxCommits = (await execGitCommand(command)).split('\n').filter((c) => !!c);
   log.debug(`command output: ${maxCommits}`);
 
   return maxCommits;
@@ -217,7 +217,7 @@ async function step(
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
   const newCommitsWithoutBuilds = candidateCommits.filter(
-    commit => !newCommitsWithBuilds.find(c => c === commit)
+    (commit) => !newCommitsWithBuilds.find((c) => c === commit)
   );
 
   return step({ client, log }, limit * 2, {
@@ -361,7 +361,7 @@ export async function getUpdateMessage() {
   return status
     .split(EOL + EOL)[0] // drop the 'nothing to commit' part
     .split(EOL)
-    .filter(line => !line.startsWith('On branch')) // drop the 'On branch x' part
+    .filter((line) => !line.startsWith('On branch')) // drop the 'On branch x' part
     .join(EOL)
     .trim();
 }
@@ -405,12 +405,12 @@ export async function findMergeBase(headRef, baseRef) {
   // If we find multiple merge bases, look for one on the base branch.
   // If we don't find a merge base on the base branch, just return the first one.
   const branchNames = await Promise.all(
-    mergeBases.map(async sha => {
+    mergeBases.map(async (sha) => {
       const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
       return name.replace(/~[0-9]+$/, ''); // Drop the potential suffix
     })
   );
-  const baseRefIndex = branchNames.findIndex(branch => branch === baseRef);
+  const baseRefIndex = branchNames.findIndex((branch) => branch === baseRef);
   return mergeBases[baseRefIndex] || mergeBases[0];
 }
 
