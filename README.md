@@ -39,26 +39,30 @@ Before publishing, make sure you've done the following:
 - Committed and pushed everything
 - Decide on the proper semver bump (major/minor/patch)
 
-#### Doing an alpha (or beta) release
+#### Doing a `dev` or `rc` release
 
-For the first alpha release, bump the version like so (depending on the semver bump):
+We have two types of pre-releases: `dev` and `rc`. `dev` releases are intended for development purposes and should not be used in production, as they may only work against a staging or dev environment. `rc` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
+
+For the first `dev` (or `rc`) release, bump the version like so (depending on the semver bump):
 
 ```sh
-npm version <premajor|preminor|prepatch> --preid alpha
+npm version <premajor|preminor|prepatch> --preid dev
 ```
 
-For consecutive alpha releases on the same version:
+For consecutive `dev` releases on the same version:
 
 ```sh
-npm version prerelease --preid=alpha
+npm version prerelease --preid=dev
 ```
 
 Then push and publish:
 
 ```sh
 git push --follow-tags
-npm publish --tag alpha
+npm publish --tag dev
 ```
+
+Make sure to replace `dev` with `rc` if appropriate.
 
 #### Doing a final release
 
@@ -69,8 +73,8 @@ npm publish
 yarn publish-action
 ```
 
-And finally, remove the alpha tag, if any:
+And finally, remove the `dev` and/or `rc` tag, if any:
 
 ```
-npm dist-tag rm chromatic alpha
+npm dist-tag rm chromatic dev
 ```
