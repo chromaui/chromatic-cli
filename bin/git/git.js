@@ -407,7 +407,7 @@ export async function getUpdateMessage() {
  */
 export async function findMergeBase(headRef, baseRef) {
   const result = await execGitCommand(`git merge-base --all ${headRef} ${baseRef}`);
-  const mergeBases = result.split(EOL).filter(Boolean);
+  const mergeBases = result.split(EOL).filter(line => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
 
