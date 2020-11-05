@@ -96,7 +96,6 @@ export async function getCommit() {
     Your commit history has only 1 commit
 
     Chromatic requires that a proper git history before it can be run.
-    
   `);
 }
 
