@@ -1,3 +1,9 @@
+# 5.3.0 - 2020-10-29
+
+- Retrieve branch name using more modern git commands, if available.
+- Auto-detect buildScriptName from available scripts.
+- Improve various log messages.
+
 # 5.2.0 - 2020-09-14
 
 - Keep track of baselines when doing squash or rebase merges.
