@@ -93,7 +93,7 @@ export async function getCommit() {
   }
 
   throw new Error(dedent`
-    Your commit history has only 1 commit
+    Your commit history has less then 2 commits
 
     Chromatic requires that a proper git history before it can be run.
   `);
