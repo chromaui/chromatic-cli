@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "5.3.0-alpha.1",
+  "version": "5.4.0-alpha.0",
   "description": "Visual Testing for Storybook",
   "homepage": "https://www.chromatic.com",
   "bugs": {
