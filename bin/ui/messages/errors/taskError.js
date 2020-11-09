@@ -5,9 +5,9 @@ import { error } from '../../components/icons';
 
 const lcfirst = str => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
-export default function taskError({ title }, e) {
+export default function taskError({ title }, err) {
   return dedent(chalk`
     ${error} {bold Failed to ${lcfirst(title)}}
-    ${e.message}
+    ${err.message}
   `);
 }
