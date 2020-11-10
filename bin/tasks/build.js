@@ -1,5 +1,5 @@
 import execa from 'execa';
-import fs from 'fs';
+import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -52,9 +52,10 @@ export const buildStorybook = async ctx => {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
     await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
   } catch (e) {
+    const buildLog = await fs.readFile(ctx.buildLogFile, 'utf8');
+    ctx.log.error(buildFailed(ctx, e, buildLog));
     ctx.exitCode = 201;
     ctx.userError = true;
-    ctx.log.error(buildFailed(ctx, e));
     throw new Error(failed(ctx).output);
   } finally {
     logFile.end();

@@ -1,14 +1,12 @@
 import chalk from 'chalk';
-import { readFileSync } from 'fs';
 import { EOL } from 'os';
 import dedent from 'ts-dedent';
 
 import { info } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ options, buildLogFile }, { message }) => {
+export default ({ options, buildLogFile }, { message }, buildLog) => {
   const { buildScriptName } = options;
-  const buildLog = readFileSync(buildLogFile, 'utf8');
   const lines = buildLog.split(EOL).filter(line => line && !line.startsWith('<s>'));
 
   return [
