@@ -127,6 +127,7 @@ fs.statSync = jest.fn(path => {
 });
 
 jest.mock('./git/git', () => ({
+  getCommitCount: () => 2,
   getCommit: () => ({
     commit: 'commit',
     committedAt: 1234,
@@ -502,9 +503,7 @@ describe('in CI', () => {
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.log.warnings.length).toBe(1);
-    expect(ctx.log.warnings[0]).toMatch(
-      /Running Chromatic on a Travis PR build from an internal branch/
-    );
+    expect(ctx.log.warnings[0]).toMatch(/Running on a Travis PR build from an internal branch/);
   });
 });
 
