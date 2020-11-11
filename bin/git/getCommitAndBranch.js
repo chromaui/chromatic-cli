@@ -1,8 +1,8 @@
 import envCi from 'env-ci';
 
+import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
 import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
-import shallowClone from '../ui/messages/warnings/shallowClone';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
 
@@ -38,7 +38,7 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
   const isGitHubPrBuild = GITHUB_WORKFLOW;
 
   if (!(await hasPreviousCommit())) {
-    log.warn(shallowClone(isGitHubAction));
+    throw new Error(gitOneCommit(isGitHubAction));
   }
 
   if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {

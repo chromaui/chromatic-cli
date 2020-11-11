@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import dedent from 'ts-dedent';
 
-import { info, warning } from '../../components/icons';
+import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
 const githubActionNote = dedent`
@@ -14,7 +14,7 @@ const genericNote = dedent`
 
 export default isGithubAction =>
   dedent(chalk`
-    ${warning} {bold Found only one commit}
+    ${error} {bold Found only one commit}
     This typically means you've checked out a shallow copy of the Git repository, which some CI systems do by default.
     In order for Chromatic to correctly determine baseline commits, we need access to the full Git history graph.
     ${isGithubAction ? githubActionNote : genericNote}
