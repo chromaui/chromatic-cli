@@ -11,9 +11,11 @@ import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
+import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
+import missingStories from './ui/messages/errors/missingStories';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
@@ -78,15 +80,10 @@ export async function runBuild(ctx) {
         ctx.log.error(fetchError(ctx, err));
         return;
       }
-      try {
-        // DOMException doesn't allow setting the message, so this might fail
-        err.message = taskError(ctx, err);
-      } catch (ex) {
-        const error = new Error(taskError(ctx, err));
-        error.stack = err.stack; // try to preserve the original stack
-        throw error;
+      if (err.message.startsWith('Cannot run a build with no stories')) {
+        throw rewriteErrorMessage(err, missingStories(ctx));
       }
-      throw err;
+      throw rewriteErrorMessage(err, taskError(ctx, err));
     } finally {
       // Handle potential runtime errors from JSDOM
       const { runtimeErrors, runtimeWarnings } = ctx;
