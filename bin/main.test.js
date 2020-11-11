@@ -127,7 +127,7 @@ fs.statSync = jest.fn(path => {
 });
 
 jest.mock('./git/git', () => ({
-  getCommitCount: () => 2,
+  hasPreviousCommit: () => true,
   getCommit: () => ({
     commit: 'commit',
     committedAt: 1234,

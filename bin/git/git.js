@@ -78,18 +78,6 @@ export async function getVersion() {
   return result.replace('git version ', '');
 }
 
-export async function getCommitCount() {
-  try {
-    // Git v1.8 and above
-    const result = await execGitCommand(`git rev-list --count HEAD`);
-    return parseInt(result, 10) || 0;
-  } catch (e) {
-    // Git v1.7 and above
-    const result = await execGitCommand(`git log --pretty=oneline | wc -l`);
-    return parseInt(result, 10) || 0;
-  }
-}
-
 // NOTE: At some point we should check that the commit has been pushed to the
 // remote and the branch matches with origin/REF, but for now we are naive about
 // adhoc builds.
@@ -122,6 +110,11 @@ export async function getBranch() {
       return ref.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
+}
+
+export async function hasPreviousCommit() {
+  const result = await execGitCommand(`git log -n 1 --skip=1 --format="%H"`);
+  return !!result.trim();
 }
 
 // Check if a commit exists in the repository

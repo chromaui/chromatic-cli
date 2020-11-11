@@ -4,7 +4,7 @@ import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
 import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import shallowClone from '../ui/messages/warnings/shallowClone';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
-import { getBranch, getCommit, getCommitCount } from './git';
+import { getBranch, getCommit, hasPreviousCommit } from './git';
 
 const notHead = b => {
   if (!b || b === 'HEAD') {
@@ -37,7 +37,7 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
   const isGitHubAction = GITHUB_ACTIONS === 'true';
   const isGitHubPrBuild = GITHUB_WORKFLOW;
 
-  if ((await getCommitCount()) === 1) {
+  if (!(await hasPreviousCommit())) {
     log.warn(shallowClone(isGitHubAction));
   }
 
