@@ -1,7 +1,10 @@
 import execa from 'execa';
 import gql from 'fake-tag';
 import { EOL } from 'os';
-import dedent from 'ts-dedent';
+
+import gitNoCommits from '../ui/messages/errors/gitNoCommits';
+import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
+import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
 async function execGitCommand(command) {
   try {
@@ -16,28 +19,15 @@ async function execGitCommand(command) {
     const { message } = error;
 
     if (message.includes('not a git repository')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic only works in git projects.
-        Contact us at support@chromatic.com if you need to use Chromatic outside of one.
-      `);
+      throw new Error(gitNotInitialized({ command }));
     }
 
     if (message.includes('git not found')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic only works in with git installed.
-      `);
+      throw new Error(gitNotInstalled({ command }));
     }
 
     if (message.includes('does not have any commits yet')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic requires that you have created a commit before it can be run.
-      `);
+      throw new Error(gitNoCommits({ command }));
     }
 
     throw error;
