@@ -74,10 +74,8 @@ export async function getVersion() {
 
 // We could cache this, but it's probably pretty quick
 export async function getCommit() {
-  const [commit, committedAtSeconds, committerEmail, committerName] = (
-    await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
-  ).split(',');
-
+  const result = await execGitCommand(`git log -n 1 --format="%H ## %ct ## %ce ## %cn"`);
+  const [commit, committedAtSeconds, committerEmail, committerName] = result.split(' ## ');
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
 
