@@ -6,7 +6,7 @@ import tmp from 'tmp-promise';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
-import { initial, pending, skipped, success } from '../ui/tasks/build';
+import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
@@ -52,8 +52,11 @@ export const buildStorybook = async (ctx) => {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
     await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
   } catch (e) {
-    e.message = buildFailed(ctx, e);
-    throw e;
+    const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
+    ctx.log.error(buildFailed(ctx, e, buildLog));
+    ctx.exitCode = 201;
+    ctx.userError = true;
+    throw new Error(failed(ctx).output);
   } finally {
     logFile.end();
   }
