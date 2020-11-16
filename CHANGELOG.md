@@ -2,6 +2,7 @@
 
 - Throw error when running from shallow clone.
 - Improve error messages for when build-storybook fails.
+- Add support for `pull_request_target` and `pull_request_review` events to GitHub Action.
 
 # 5.3.0 - 2020-10-29
 
