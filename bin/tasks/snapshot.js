@@ -108,7 +108,7 @@ export const takeSnapshots = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: ctx => {
+  skip: (ctx) => {
     if (ctx.skip) return true;
     if (ctx.skipSnapshots) return skipped(ctx).output;
     return false;

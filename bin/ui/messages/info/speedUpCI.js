@@ -10,7 +10,7 @@ const providers = {
   bitbucket: 'Bitbucket',
 };
 
-export default provider =>
+export default (provider) =>
   dedent(chalk`
     ${info} {bold Speed up Continuous Integration}
     Your project is linked to ${providers[provider]} so Chromatic will report results there.

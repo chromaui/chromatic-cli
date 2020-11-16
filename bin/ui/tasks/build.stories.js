@@ -3,7 +3,7 @@ import { initial, pending, skipped, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
-  decorators: [storyFn => task(storyFn())],
+  decorators: [(storyFn) => task(storyFn())],
 };
 
 export const Initial = () => initial;

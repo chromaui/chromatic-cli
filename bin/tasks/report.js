@@ -35,7 +35,7 @@ const ReportQuery = `
   }
 `;
 
-export const generateReport = async ctx => {
+export const generateReport = async (ctx) => {
   const { client, log } = ctx;
   const { junitReport } = ctx.options;
   const { number: buildNumber, reportToken } = ctx.build;
@@ -94,6 +94,6 @@ export const generateReport = async ctx => {
 
 export default createTask({
   title: initial.title,
-  skip: ctx => ctx.skip,
+  skip: (ctx) => ctx.skip,
   steps: [transitionTo(pending), generateReport, transitionTo(success, true)],
 });

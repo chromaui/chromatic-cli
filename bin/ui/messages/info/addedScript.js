@@ -3,7 +3,7 @@ import dedent from 'ts-dedent';
 
 import { info, success } from '../../components/icons';
 
-export default scriptName =>
+export default (scriptName) =>
   dedent(chalk`
     ${success} {bold Added script '${scriptName}' to package.json}
     You can now run it here or in CI with 'npm run ${scriptName}' or 'yarn ${scriptName}'.

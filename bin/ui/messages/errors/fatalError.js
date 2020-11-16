@@ -28,16 +28,16 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
     ...(options.buildScriptName ? { buildScript: scripts[options.buildScriptName] } : {}),
     ...(options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     exitCode,
-    errorType: errors.map(err => err.name).join('\n'),
+    errorType: errors.map((err) => err.name).join('\n'),
     errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
     ...(isolatorUrl ? { isolatorUrl } : {}),
     ...(cachedUrl ? { cachedUrl } : {}),
     ...(build && { build: buildFields(build) }),
   };
 
-  const stacktraces = errors.map(err => err.stack).filter(Boolean);
+  const stacktraces = errors.map((err) => err.stack).filter(Boolean);
   return [
-    errors.map(err => err.message).join('\n'),
+    errors.map((err) => err.message).join('\n'),
     stacktraces.length
       ? chalk`{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}\n`
       : '',

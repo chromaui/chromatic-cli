@@ -16,7 +16,7 @@ function stripEnvPairs(err) {
   return { sanitizedErr, ...(err.options && { options }) };
 }
 
-export const errorSerializer = err => ({
+export const errorSerializer = (err) => ({
   ...stripEnvPairs(err),
   // Serialize the response part of err with the response serializer
   ...(err.response && { response: responseSerializer(err.response) }),

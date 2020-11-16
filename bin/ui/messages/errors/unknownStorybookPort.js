@@ -3,7 +3,7 @@ import dedent from 'ts-dedent';
 
 import { error } from '../../components/icons';
 
-export default scriptName =>
+export default (scriptName) =>
   dedent(chalk`
     ${error} Missing {bold --storybook-port}
     The CLI didn't detect a port in your {bold ${scriptName}} script.

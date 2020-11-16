@@ -13,7 +13,7 @@ function specFromStory({
   name,
   parameters: { chromatic, docsOnly, fileName, framework } = {},
 }) {
-  const param = value => (typeof value === 'function' ? value({ id, kind, name }) : value);
+  const param = (value) => (typeof value === 'function' ? value({ id, kind, name }) : value);
   return {
     storyId: id,
     name,
@@ -35,7 +35,7 @@ function specFromStory({
   };
 }
 
-export const extractStoryData = global => {
+export const extractStoryData = (global) => {
   const { __STORYBOOK_CLIENT_API__ } = global;
 
   if (!__STORYBOOK_CLIENT_API__) {

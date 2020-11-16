@@ -3,7 +3,7 @@ import dedent from 'ts-dedent';
 
 import { getBranch, getCommit } from './git';
 
-const notHead = b => {
+const notHead = (b) => {
   if (!b || b === 'HEAD') {
     return false;
   }

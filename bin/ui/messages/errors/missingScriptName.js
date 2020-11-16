@@ -3,7 +3,7 @@ import dedent from 'ts-dedent';
 
 import { error } from '../../components/icons';
 
-export default scriptName =>
+export default (scriptName) =>
   dedent(chalk`
     ${error} {bold Start script not found}
     The CLI didn't find a script called {bold "${scriptName}"} in your {bold package.json}.

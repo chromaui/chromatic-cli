@@ -3,7 +3,7 @@ import dedent from 'ts-dedent';
 
 import { error } from '../../components/icons';
 
-export default buildScriptName =>
+export default (buildScriptName) =>
   dedent(chalk`
     ${error} {bold Build script not found}
     The CLI didn't find a script called {bold "${buildScriptName}"} in your {bold package.json}.

@@ -50,13 +50,13 @@ const TesterCreateBuildMutation = `
   }
 `;
 
-export const setEnvironment = async ctx => {
+export const setEnvironment = async (ctx) => {
   // We send up all environment variables provided by these complicated systems.
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
   ctx.environment = JSON.stringify(
     Object.entries(process.env).reduce((acc, [key, value]) => {
-      if (ctx.env.ENVIRONMENT_WHITELIST.find(regex => key.match(regex))) {
+      if (ctx.env.ENVIRONMENT_WHITELIST.find((regex) => key.match(regex))) {
         acc[key] = value;
       }
       return acc;
@@ -128,6 +128,6 @@ export const createBuild = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: ctx => ctx.skip,
+  skip: (ctx) => ctx.skip,
   steps: [transitionTo(pending), setEnvironment, createBuild],
 });

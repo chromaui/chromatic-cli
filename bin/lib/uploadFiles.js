@@ -43,7 +43,7 @@ export default async function uploadFiles({ env, log }, files, onProgress) {
           },
           {
             retries: env.CHROMATIC_RETRIES,
-            onRetry: err => {
+            onRetry: (err) => {
               totalProgress -= fileProgress;
               fileProgress = 0;
               log.debug('Retrying upload %s, %O', url, err);
