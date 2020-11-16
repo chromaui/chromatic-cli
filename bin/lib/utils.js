@@ -17,3 +17,16 @@ export const progress = (percentage, size = 20) => {
 };
 
 export const baseStorybookUrl = url => url.replace(/\/iframe\.html$/, '');
+
+export const rewriteErrorMessage = (err, message) => {
+  try {
+    // DOMException doesn't allow setting the message, so this might fail
+    // eslint-disable-next-line no-param-reassign
+    err.message = message;
+    return err;
+  } catch (ex) {
+    const error = new Error(message);
+    error.stack = err.stack; // try to preserve the original stack
+    return error;
+  }
+};

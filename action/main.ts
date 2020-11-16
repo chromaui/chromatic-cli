@@ -24,6 +24,7 @@ const maybe = (a: string, b: any = undefined) => {
 const getCommit = (event: typeof context) => {
   switch (event.eventName) {
     case 'pull_request':
+    case 'pull_request_review':
     case 'pull_request_target': {
       return {
         // @ts-ignore
