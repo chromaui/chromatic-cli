@@ -3,7 +3,7 @@ import { initial, pending, success } from './report';
 
 export default {
   title: 'CLI/Tasks/Report',
-  decorators: [storyFn => task(storyFn())],
+  decorators: [(storyFn) => task(storyFn())],
 };
 
 export const Initial = () => initial;

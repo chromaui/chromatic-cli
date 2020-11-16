@@ -7,8 +7,8 @@ import scriptNotFound from '../ui/messages/warnings/scriptNotFound';
 
 const scriptName = 'chromatic';
 
-const findScript = scripts =>
-  scripts[scriptName] || Object.values(scripts).find(cmd => cmd.startsWith(scriptName));
+const findScript = (scripts) =>
+  scripts[scriptName] || Object.values(scripts).find((cmd) => cmd.startsWith(scriptName));
 
 export default async function checkPackageJson({ log, options, packageJson, packagePath }) {
   if (!options.interactive) return;

@@ -116,12 +116,12 @@ jest.mock('tree-kill');
 
 jest.mock('fs-extra', () => ({
   pathExists: async () => true,
-  readFileSync: require.requireActual('fs-extra').readFileSync,
+  readFileSync: jest.requireActual('fs-extra').readFileSync,
 }));
 
 fs.readdirSync = jest.fn(() => ['iframe.html', 'index.html']);
 const fsStatSync = fs.statSync;
-fs.statSync = jest.fn(path => {
+fs.statSync = jest.fn((path) => {
   if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
   return { isDirectory: () => false, size: 42 };
 });
@@ -162,7 +162,7 @@ afterEach(() => {
   process.env = processEnv;
 });
 
-const getContext = argv => {
+const getContext = (argv) => {
   const env = getEnv();
   const log = new TestLogger();
   const packageJson = {

@@ -3,7 +3,7 @@ import { authenticated, authenticating, initial, invalidToken } from './auth';
 
 export default {
   title: 'CLI/Tasks/Auth',
-  decorators: [storyFn => task(storyFn())],
+  decorators: [(storyFn) => task(storyFn())],
 };
 
 const env = { CHROMATIC_INDEX_URL: 'https://index.chromatic.com' };

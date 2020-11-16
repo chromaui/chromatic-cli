@@ -4,7 +4,7 @@ import { hasYarn } from 'yarn-or-npm';
 
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
 
-const rejectIn = ms => new Promise((_, reject) => setTimeout(reject, ms));
+const rejectIn = (ms) => new Promise((_, reject) => setTimeout(reject, ms));
 const withTimeout = (promise, ms) => Promise.race([promise, rejectIn(ms)]);
 
 export default async function checkForUpdates(ctx) {

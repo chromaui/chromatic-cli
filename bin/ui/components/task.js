@@ -27,6 +27,6 @@ export default ({ status, title, output = [] }) => {
   const icon = icons[status] ? `${icons[status]} ` : '';
   return [
     `${icon}${status === 'initial' ? title : chalk.bold(title)}`,
-    ...lines.map(line => chalk.dim(`  ${arrowRight} ${line}`)),
+    ...lines.map((line) => chalk.dim(`  ${arrowRight} ${line}`)),
   ].join('\n');
 };

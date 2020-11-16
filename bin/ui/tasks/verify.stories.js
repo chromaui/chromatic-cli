@@ -3,7 +3,7 @@ import { failed, initial, pending, runOnly, success } from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',
-  decorators: [storyFn => task(storyFn())],
+  decorators: [(storyFn) => task(storyFn())],
 };
 
 const build = {

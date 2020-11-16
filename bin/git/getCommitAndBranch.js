@@ -6,7 +6,7 @@ import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
 
-const notHead = b => {
+const notHead = (b) => {
   if (!b || b === 'HEAD') {
     return false;
   }

@@ -16,9 +16,9 @@ import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 import inferredOptions from '../ui/messages/info/inferredOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
-const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : input);
+const takeLast = (input) => (Array.isArray(input) ? input[input.length - 1] : input);
 
-const resolveHomeDir = filepath =>
+const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 export default async function getOptions({ argv, env, flags, log, packageJson }) {
@@ -106,10 +106,10 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     storybookUrl: '--storybook-url',
     storybookBuildDir: '--storybook-build-dir',
   };
-  const foundSingularOpts = Object.keys(singularOpts).filter(name => !!options[name]);
+  const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
 
   if (foundSingularOpts.length > 1) {
-    throw new Error(invalidSingularOptions(foundSingularOpts.map(key => singularOpts[key])));
+    throw new Error(invalidSingularOptions(foundSingularOpts.map((key) => singularOpts[key])));
   }
 
   // No need to start or build Storybook if we're going to fetch from a URL

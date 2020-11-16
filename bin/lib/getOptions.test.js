@@ -15,7 +15,7 @@ jest.mock('./getEnv', () => () => ({
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
-const getContext = argv => {
+const getContext = (argv) => {
   const env = getEnv();
   const log = new TestLogger();
   const packageJson = {
