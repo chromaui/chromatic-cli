@@ -1,7 +1,10 @@
 import execa from 'execa';
 import gql from 'fake-tag';
 import { EOL } from 'os';
-import dedent from 'ts-dedent';
+
+import gitNoCommits from '../ui/messages/errors/gitNoCommits';
+import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
+import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
 async function execGitCommand(command) {
   try {
@@ -16,28 +19,15 @@ async function execGitCommand(command) {
     const { message } = error;
 
     if (message.includes('not a git repository')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic only works in git projects.
-        Contact us at support@chromatic.com if you need to use Chromatic outside of one.
-      `);
+      throw new Error(gitNotInitialized({ command }));
     }
 
     if (message.includes('git not found')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic only works in with git installed.
-      `);
+      throw new Error(gitNotInstalled({ command }));
     }
 
     if (message.includes('does not have any commits yet')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic requires that you have created a commit before it can be run.
-      `);
+      throw new Error(gitNoCommits({ command }));
     }
 
     throw error;
@@ -84,10 +74,8 @@ export async function getVersion() {
 
 // We could cache this, but it's probably pretty quick
 export async function getCommit() {
-  const [commit, committedAtSeconds, committerEmail, committerName] = (
-    await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
-  ).split(',');
-
+  const result = await execGitCommand(`git log -n 1 --format="%H ## %ct ## %ce ## %cn"`);
+  const [commit, committedAtSeconds, committerEmail, committerName] = result.split(' ## ');
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
 
@@ -110,6 +98,11 @@ export async function getBranch() {
       return ref.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
+}
+
+export async function hasPreviousCommit() {
+  const result = await execGitCommand(`git log -n 1 --skip=1 --format="%H"`);
+  return !!result.trim();
 }
 
 // Check if a commit exists in the repository

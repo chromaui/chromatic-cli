@@ -1,7 +1,10 @@
 import envCi from 'env-ci';
-import dedent from 'ts-dedent';
 
-import { getBranch, getCommit } from './git';
+import gitOneCommit from '../ui/messages/errors/gitOneCommit';
+import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
+import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
+import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
+import { getBranch, getCommit, hasPreviousCommit } from './git';
 
 const notHead = (b) => {
   if (!b || b === 'HEAD') {
@@ -21,6 +24,7 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
     TRAVIS_REPO_SLUG,
     TRAVIS_PULL_REQUEST_SHA,
     TRAVIS_PULL_REQUEST_BRANCH,
+    GITHUB_ACTIONS,
     GITHUB_WORKFLOW,
     GITHUB_SHA,
     GITHUB_REF,
@@ -30,16 +34,15 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
 
   const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH;
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
+  const isGitHubAction = GITHUB_ACTIONS === 'true';
   const isGitHubPrBuild = GITHUB_WORKFLOW;
 
-  if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
-    log.warn(dedent`
-      WARNING: Running Chromatic on a Travis PR build from an internal branch.
+  if (!(await hasPreviousCommit())) {
+    throw new Error(gitOneCommit(isGitHubAction));
+  }
 
-      It is recommended to run Chromatic on the push builds from Travis where possible.
-      We advise turning on push builds and disabling Chromatic for internal PR builds.
-      Read more: https://www.chromatic.com/docs/ci#travis
-    `);
+  if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
+    log.warn(travisInternalBuild());
   }
 
   if (isFromEnvVariable) {
@@ -52,12 +55,7 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
     commit = TRAVIS_PULL_REQUEST_SHA;
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     if (!commit || !branch) {
-      throw new Error(dedent`
-      \`TRAVIS_EVENT_TYPE\` environment variable set to '${TRAVIS_EVENT_TYPE}', 
-      but \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
-      
-      Read more here: https://www.chromatic.com/docs/ci#travis
-      `);
+      throw new Error(missingTravisInfo({ TRAVIS_EVENT_TYPE }));
     }
   } else if (isGitHubPrBuild) {
     // GitHub PR builds are weird. push events are fine, but PR in events, the sha will point to a not-yet-committed sha of a final merge.
@@ -65,12 +63,7 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
     commit = GITHUB_SHA;
     branch = GITHUB_REF.replace('refs/heads/', '');
     if (!commit || !branch) {
-      throw new Error(dedent`
-        \`GITHUB_WORKFLOW\` environment variable set to '${GITHUB_WORKFLOW}', 
-        but \`GITHUB_SHA\` and \`GITHUB_REF\` are not both set.
-
-        Read more here: https://www.chromatic.com/docs/ci#github
-      `);
+      throw new Error(missingGitHubInfo({ GITHUB_WORKFLOW }));
     }
   }
 
