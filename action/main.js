@@ -73,7 +73,9 @@ var maybe = function (a, b) {
 };
 var getCommit = function (event) {
     switch (event.eventName) {
-        case 'pull_request': {
+        case 'pull_request':
+        case 'pull_request_review':
+        case 'pull_request_target': {
             return {
                 // @ts-ignore
                 owner: event.payload.repository.owner.login,
