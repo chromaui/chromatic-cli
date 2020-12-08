@@ -12,7 +12,7 @@ In your git repository, create a file `.github/workflows/chromatic.yml` with the
 # .github/workflows/chromatic.yml
 
 # Workflow name
-name: 'Chromatic Deployment'
+name: 'Chromatic'
 
 # Event for the workflow
 on: push
@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: yarn
         # 👇 Adds Chromatic as a step in the workflow
-      - name: Deploy to Chromatic
+      - name: Publish to Chromatic
         uses: chromaui/action@v1
         # Chromatic GitHub Action options
         with:
