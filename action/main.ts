@@ -3,6 +3,7 @@ import { context } from '@actions/github';
 import { readFile } from 'jsonfile';
 import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
+import path from 'path';
 
 import getEnv from '../bin/lib/getEnv';
 import { createLogger } from '../bin/lib/log';
@@ -98,6 +99,7 @@ async function run() {
 
   try {
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
+    const workingDir = getInput('workingDir');
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
@@ -119,9 +121,11 @@ async function run() {
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
+    process.chdir(path.join(process.cwd(), workingDir || ''));
 
     const chromatic = runChromatic({
       projectToken,
+      workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),
