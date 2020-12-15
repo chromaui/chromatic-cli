@@ -14,7 +14,9 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - run: yarn && yarn build && yarn build-storybook
+    - run: yarn
+    - run: yarn build
+    - run: yarn build-storybook
     - uses: ./
       with: 
         projectToken: 5oy3iw6rkio
