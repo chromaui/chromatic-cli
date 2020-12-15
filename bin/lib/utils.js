@@ -16,7 +16,6 @@ export const progress = (percentage, size = 20) => {
   return `${completed.join('')}${track.join('')}`.substr(0, 20);
 };
 
-
 export const baseStorybookUrl = (url) => url.replace(/\/iframe\.html$/, '');
 
 export const rewriteErrorMessage = (err, message) => {

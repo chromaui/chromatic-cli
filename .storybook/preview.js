@@ -30,8 +30,8 @@ const style = {
 };
 
 addParameters({
-  layout: 'fullscreen'
-})
+  layout: 'fullscreen',
+});
 
 addDecorator((storyFn, { kind }) => {
   if (kind.startsWith('CLI/')) {

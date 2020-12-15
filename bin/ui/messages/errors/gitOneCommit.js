@@ -12,7 +12,7 @@ const genericNote = dedent`
   Refer to your CI provider's documentation for details.
 `;
 
-export default isGithubAction =>
+export default (isGithubAction) =>
   dedent(chalk`
     ${error} {bold Found only one commit}
     This typically means you've checked out a shallow copy of the Git repository, which some CI systems do by default.
