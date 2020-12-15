@@ -70,7 +70,13 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
-    const { prBranch: prBranchFromEnvCi, branch: branchFromEnvCi } = envCi();
+    const {
+      prBranch: prBranchFromEnvCi,
+      branch: branchFromEnvCi,
+      commit: commitFromEnvCi,
+    } = envCi();
+
+    commit = commitFromEnvCi;
 
     // $HEAD is for netlify: https://www.netlify.com/docs/continuous-deployment/
     // $GERRIT_BRANCH is for Gerrit/Jenkins: https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
