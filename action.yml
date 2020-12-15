@@ -8,31 +8,33 @@ branding:
 inputs:
   token:
     description: "Your github token"
-  projectToken: 
+  projectToken:
     description: "Your chromatic project token"
-  appCode: 
+  workingDir:
+    description: "Working directory for the package.json file"
+  appCode:
     description: "Deprecated, please use projectToken instead"
-  buildScriptName: 
+  buildScriptName:
     description: "The npm script that builds your Storybook [build-storybook]"
-  doNotStart: 
+  doNotStart:
     description: "Do not attempt to start or build; use if your Storybook is already running"
-  exec: 
+  exec:
     description: "Alternatively, a full command to run to start your storybook"
-  scriptName: 
+  scriptName:
     description: "The npm script that starts your Storybook [storybook]"
-  storybookBuildDir: 
+  storybookBuildDir:
     description: "Provide a directory with your built storybook; use if you have already built your storybook"
-  storybookCa: 
+  storybookCa:
     description: "Use if Storybook is running on https (auto detected from -s, if set)"
-  storybookCert: 
+  storybookCert:
     description: "Use if Storybook is running on https (auto detected from -s, if set)"
-  storybookHttps: 
+  storybookHttps:
     description: "Use if Storybook is running on https (auto detected from -s, if set)"
-  storybookKey: 
+  storybookKey:
     description: "Use if Storybook is running on https (auto detected from -s, if set)"
-  storybookPort: 
+  storybookPort:
     description: "What port is your Storybook running on (auto detected from -s, if set)"
-  storybookUrl: 
+  storybookUrl:
     description: "Storybook is already running at (external) url (implies -S)"
   preserveMissing:
     description: "Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them"
@@ -45,6 +47,6 @@ inputs:
   exitOnceUploaded:
     description: "Exit with 0 once the built version has been sent to chromatic: boolean or branchname"
 
-runs: 
+runs:
   main: action/register.js
   using: node12
