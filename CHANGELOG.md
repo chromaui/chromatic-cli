@@ -1,3 +1,9 @@
+# 5.5.0 - 2020-12-20
+
+- [212](https://github.com/chromaui/chromatic-cli/pull/212) Add support for monorepo using a new `path` argument
+- [218](https://github.com/chromaui/chromatic-cli/pull/218) isChromatic should always be a boolean
+- Dependency upgrades
+
 # 5.4.0 - 2020-11-16
 
 - Throw error when running from shallow clone.
