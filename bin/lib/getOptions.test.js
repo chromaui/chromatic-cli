@@ -4,6 +4,7 @@ import getEnv from './getEnv';
 import getOptions from './getOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
 import parseArgs from './parseArgs';
+import TestLogger from './testLogger';
 
 // Make sure we don't print any colors so we can match against plain strings
 chalk.enabled = false;
@@ -14,8 +15,10 @@ jest.mock('./getEnv', () => () => ({
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
-jest.mock('jsonfile', () => ({
-  readFileSync: () => ({
+const getContext = (argv) => {
+  const env = getEnv();
+  const log = new TestLogger();
+  const packageJson = {
     scripts: {
       storybook: 'start-storybook -p 1337',
       otherStorybook: 'start-storybook -p 7070',
@@ -23,10 +26,9 @@ jest.mock('jsonfile', () => ({
       'build-storybook': 'build-storybook',
       otherBuildStorybook: 'build-storybook',
     },
-  }),
-}));
-
-const getContext = argv => ({ env: getEnv(), ...parseArgs(argv) });
+  };
+  return { env, log, packageJson, ...parseArgs(argv) };
+};
 
 describe('await getOptions', () => {
   it('sets reasonable defaults', async () => {

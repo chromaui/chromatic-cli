@@ -11,11 +11,11 @@ import * as storybookInfo from '../tasks/storybookInfo.stories';
 import * as upload from '../tasks/upload.stories';
 import * as verify from '../tasks/verify.stories';
 
-const steps = (...arr) => arr.map(step => task(step())).join('\n');
+const steps = (...arr) => arr.map((step) => task(step())).join('\n');
 
 export default {
   title: 'CLI/Workflows/UploadBuild',
-  decorators: [storyFn => storyFn().join('\n\n')],
+  decorators: [(storyFn) => storyFn().join('\n\n')],
 };
 
 export const Initial = () => [

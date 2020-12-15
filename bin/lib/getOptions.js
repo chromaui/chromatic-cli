@@ -1,4 +1,3 @@
-import { readFileSync } from 'jsonfile';
 import path from 'path';
 import { parse } from 'url';
 
@@ -17,12 +16,12 @@ import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 import inferredOptions from '../ui/messages/info/inferredOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
-const takeLast = input => (Array.isArray(input) ? input[input.length - 1] : input);
+const takeLast = (input) => (Array.isArray(input) ? input[input.length - 1] : input);
 
-const resolveHomeDir = filepath =>
+const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
-export default async function getOptions({ argv, env, flags, log }) {
+export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
 
@@ -41,10 +40,11 @@ export default async function getOptions({ argv, env, flags, log }) {
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
     exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing || flags.only,
+    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
+    outputDir: flags.outputDir,
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: flags.scriptName === '' ? true : flags.scriptName,
     exec: flags.exec,
@@ -67,6 +67,11 @@ export default async function getOptions({ argv, env, flags, log }) {
     patchHeadRef,
     patchBaseRef,
   };
+
+  if (flags.debug) {
+    log.setLevel('debug');
+    log.setInteractive(false);
+  }
 
   if (!options.projectToken) {
     throw new Error(missingProjectToken());
@@ -101,10 +106,10 @@ export default async function getOptions({ argv, env, flags, log }) {
     storybookUrl: '--storybook-url',
     storybookBuildDir: '--storybook-build-dir',
   };
-  const foundSingularOpts = Object.keys(singularOpts).filter(name => !!options[name]);
+  const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
 
   if (foundSingularOpts.length > 1) {
-    throw new Error(invalidSingularOptions(foundSingularOpts.map(key => singularOpts[key])));
+    throw new Error(invalidSingularOptions(foundSingularOpts.map((key) => singularOpts[key])));
   }
 
   // No need to start or build Storybook if we're going to fetch from a URL
@@ -128,16 +133,20 @@ export default async function getOptions({ argv, env, flags, log }) {
     throw new Error(invalidReportPath());
   }
 
-  // This is the user's own package.json, not ctx.pkg!
-  const packageJson = readFileSync(path.resolve('./package.json'));
-
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
       return { ...options, noStart: true, useTunnel: false };
     }
-    buildScriptName = typeof buildScriptName === 'string' ? buildScriptName : 'build-storybook';
-    if (packageJson.scripts && packageJson.scripts[buildScriptName]) {
+    const { scripts } = packageJson;
+    if (typeof buildScriptName !== 'string') {
+      buildScriptName = 'build-storybook';
+      if (!scripts[buildScriptName]) {
+        const [k] = Object.entries(scripts).find(([, v]) => v.startsWith('build-storybook')) || [];
+        if (k) buildScriptName = k;
+      }
+    }
+    if (scripts && buildScriptName && scripts[buildScriptName]) {
       return { ...options, noStart: true, useTunnel: false, buildScriptName };
     }
     throw new Error(missingBuildScriptName(buildScriptName));

@@ -1,0 +1,17 @@
+name: "self test development-like"
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: yarn
+    - run: yarn build
+    - run: yarn build-storybook
+    - uses: ./
+      with: 
+        projectToken: 5oy3iw6rkio
+        token: ${{ secrets.GITHUB_TOKEN }}
+        storybookBuildDir: storybook-static

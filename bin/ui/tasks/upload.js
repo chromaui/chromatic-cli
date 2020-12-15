@@ -6,37 +6,45 @@ export const initial = {
   title: 'Publish your built Storybook',
 };
 
-export const preparing = ctx => ({
+export const preparing = (ctx) => ({
   status: 'pending',
   title: 'Publishing your built Storybook',
   output: `Retrieving target location`,
 });
 
-export const starting = ctx => ({
+export const starting = (ctx) => ({
   status: 'pending',
   title: 'Publishing your built Storybook',
   output: `Starting publish`,
 });
 
-export const uploading = ctx => ({
+export const uploading = (ctx) => ({
   status: 'pending',
   title: 'Publishing your built Storybook',
   output: `[${progressBar(ctx.percentage)}] ${ctx.percentage}%`,
 });
 
-export const success = ctx => ({
+export const success = (ctx) => ({
   status: 'success',
   title: `Publish complete in ${getDuration(ctx)}`,
   output: `View your Storybook at ${baseStorybookUrl(ctx.isolatorUrl)}`,
 });
 
-export const skipped = ctx => ({
+export const skipped = (ctx) => ({
   status: 'skipped',
   title: 'Publish your built Storybook [skipped]',
   output: `Using hosted Storybook at ${ctx.options.storybookUrl}`,
 });
 
-export const failed = ctx => ({
+export const invalid = (ctx) => ({
+  status: 'error',
+  title: 'Publishing your built Storybook',
+  output: `Invalid Storybook build at ${ctx.sourceDir}${
+    ctx.buildLogFile ? ' (check the build log)' : ''
+  }`,
+});
+
+export const failed = (ctx) => ({
   status: 'error',
   title: 'Publishing your built Storybook',
   output: `Failed to upload ${ctx.path}`,

@@ -1,10 +1,10 @@
-import setupDebug from 'debug';
 import execa from 'execa';
 import gql from 'fake-tag';
 import { EOL } from 'os';
-import dedent from 'ts-dedent';
 
-const debug = setupDebug('chromatic-cli:git');
+import gitNoCommits from '../ui/messages/errors/gitNoCommits';
+import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
+import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
 async function execGitCommand(command) {
   try {
@@ -19,28 +19,15 @@ async function execGitCommand(command) {
     const { message } = error;
 
     if (message.includes('not a git repository')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic only works in git projects.
-        Contact us at support@chromatic.com if you need to use Chromatic outside of one.
-      `);
+      throw new Error(gitNotInitialized({ command }));
     }
 
     if (message.includes('git not found')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic only works in with git installed.
-      `);
+      throw new Error(gitNotInstalled({ command }));
     }
 
     if (message.includes('does not have any commits yet')) {
-      throw new Error(dedent`
-        Unable to execute git command '${command}'.
-
-        Chromatic requires that you have created a commit before it can be run.
-      `);
+      throw new Error(gitNoCommits({ command }));
     }
 
     throw error;
@@ -50,7 +37,7 @@ async function execGitCommand(command) {
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
 const TesterFirstCommittedAtQuery = gql`
-  query TesterFirstCommittedAtQuery($branch: String!) {
+  query TesterFirstCommittedAtQuery($commit: String!, $branch: String!) {
     app {
       firstBuild(sortByCommittedAt: true) {
         committedAt
@@ -58,6 +45,11 @@ const TesterFirstCommittedAtQuery = gql`
       lastBuild(branch: $branch, sortByCommittedAt: true) {
         commit
         committedAt
+      }
+      pullRequest(mergeInfo: { commit: $commit, baseRefName: $branch }) {
+        lastHeadBuild {
+          commit
+        }
       }
     }
   }
@@ -82,15 +74,35 @@ export async function getVersion() {
 
 // We could cache this, but it's probably pretty quick
 export async function getCommit() {
-  const [commit, committedAtSeconds, committerEmail, committerName] = (
-    await execGitCommand(`git log -n 1 --format="%H,%ct,%ce,%cn"`)
-  ).split(',');
-
+  const result = await execGitCommand(`git log -n 1 --format="%H ## %ct ## %ce ## %cn"`);
+  const [commit, committedAtSeconds, committerEmail, committerName] = result.split(' ## ');
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
 
 export async function getBranch() {
-  return execGitCommand(`git rev-parse --abbrev-ref HEAD`);
+  try {
+    // Git v2.22 and above
+    // Yields an empty string when in detached HEAD state
+    const branch = await execGitCommand('git branch --show-current');
+    return branch || 'HEAD';
+  } catch (e) {
+    try {
+      // Git v1.8 and above
+      // Throws when in detached HEAD state
+      const ref = await execGitCommand('git symbolic-ref HEAD');
+      return ref.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
+    } catch (ex) {
+      // Git v1.7 and above
+      // Yields 'HEAD' when in detached HEAD state
+      const ref = await execGitCommand('git rev-parse --abbrev-ref HEAD');
+      return ref.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
+    }
+  }
+}
+
+export async function hasPreviousCommit() {
+  const result = await execGitCommand(`git log -n 1 --skip=1 --format="%H"`);
+  return !!result.trim();
 }
 
 // Check if a commit exists in the repository
@@ -104,7 +116,7 @@ async function commitExists(commit) {
 }
 
 function commitsForCLI(commits) {
-  return commits.map(c => c.trim()).join(' ');
+  return commits.map((c) => c.trim()).join(' ');
 }
 
 // git rev-list in a basic form gives us a list of commits reaching back to
@@ -124,6 +136,7 @@ function commitsForCLI(commits) {
 // `commitsWithBuilds`.
 //
 async function nextCommits(
+  { log },
   limit,
   { firstCommittedAtSeconds, commitsWithBuilds, commitsWithoutBuilds }
 ) {
@@ -133,59 +146,59 @@ async function nextCommits(
   const command = `git rev-list HEAD \
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
-  debug(`running ${command}`);
-  const commits = (await execGitCommand(command)).split('\n').filter(c => !!c);
-  debug(`command output: ${commits}`);
+  log.debug(`running ${command}`);
+  const commits = (await execGitCommand(command)).split('\n').filter((c) => !!c);
+  log.debug(`command output: ${commits}`);
 
   return (
     commits
       // No sense in checking commits we already know about
-      .filter(c => !commitsWithBuilds.includes(c))
-      .filter(c => !commitsWithoutBuilds.includes(c))
+      .filter((c) => !commitsWithBuilds.includes(c))
+      .filter((c) => !commitsWithoutBuilds.includes(c))
       .slice(0, limit)
   );
 }
 
 // Which of the listed commits are "maximally descendent":
 // ie c in commits such that there are no descendents of c in commits.
-async function maximallyDescendentCommits(commits) {
+async function maximallyDescendentCommits({ log }, commits) {
   if (commits.length === 0) {
     return commits;
   }
 
   // <commit>^@ expands to all parents of commit
-  const parentCommits = commits.map(c => `"${c}^@"`);
+  const parentCommits = commits.map((c) => `"${c}^@"`);
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
-  debug(`running ${command}`);
-  const maxCommits = (await execGitCommand(command)).split('\n').filter(c => !!c);
-  debug(`command output: ${maxCommits}`);
+  log.debug(`running ${command}`);
+  const maxCommits = (await execGitCommand(command)).split('\n').filter((c) => !!c);
+  log.debug(`command output: ${maxCommits}`);
 
   return maxCommits;
 }
 
 // Exponentially iterate `limit` up to infinity to find a "covering" set of commits with builds
 async function step(
-  client,
+  { client, log },
   limit,
   { firstCommittedAtSeconds, commitsWithBuilds, commitsWithoutBuilds }
 ) {
-  debug(`step: checking ${limit} up to ${firstCommittedAtSeconds}`);
-  debug(`step: commitsWithBuilds: ${commitsWithBuilds}`);
-  debug(`step: commitsWithoutBuilds: ${commitsWithoutBuilds}`);
+  log.debug(`step: checking ${limit} up to ${firstCommittedAtSeconds}`);
+  log.debug(`step: commitsWithBuilds: ${commitsWithBuilds}`);
+  log.debug(`step: commitsWithoutBuilds: ${commitsWithoutBuilds}`);
 
-  const candidateCommits = await nextCommits(limit, {
+  const candidateCommits = await nextCommits({ log }, limit, {
     firstCommittedAtSeconds,
     commitsWithBuilds,
     commitsWithoutBuilds,
   });
 
-  debug(`step: candidateCommits: ${candidateCommits}`);
+  log.debug(`step: candidateCommits: ${candidateCommits}`);
 
   // No more commits uncovered commitsWithBuilds!
   if (candidateCommits.length === 0) {
-    debug('step: no candidateCommits; we are done');
+    log.debug('step: no candidateCommits; we are done');
     return commitsWithBuilds;
   }
 
@@ -194,40 +207,54 @@ async function step(
   } = await client.runQuery(TesterHasBuildsWithCommitsQuery, {
     commits: candidateCommits,
   });
-  debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
+  log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
   const newCommitsWithoutBuilds = candidateCommits.filter(
-    commit => !newCommitsWithBuilds.find(c => c === commit)
+    (commit) => !newCommitsWithBuilds.find((c) => c === commit)
   );
 
-  return step(client, limit * 2, {
+  return step({ client, log }, limit * 2, {
     firstCommittedAtSeconds,
     commitsWithBuilds: [...commitsWithBuilds, ...newCommitsWithBuilds],
     commitsWithoutBuilds: [...commitsWithoutBuilds, ...newCommitsWithoutBuilds],
   });
 }
 
-export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBranch = false } = {}) {
-  const { committedAt } = await getCommit();
+export async function getBaselineCommits(
+  { client, log },
+  { branch, ignoreLastBuildOnBranch = false } = {}
+) {
+  const { commit, committedAt } = await getCommit();
 
   // Include the latest build from this branch as an ancestor of the current build
   const {
-    app: { firstBuild, lastBuild },
+    app: { firstBuild, lastBuild, pullRequest },
   } = await client.runQuery(TesterFirstCommittedAtQuery, {
     branch,
+    commit,
   });
-  debug(`App firstBuild: ${firstBuild}, lastBuild: ${lastBuild}`);
+  log.debug(
+    `App firstBuild: %o, lastBuild: %o, pullRequest: %o`,
+    firstBuild,
+    lastBuild,
+    pullRequest
+  );
 
   if (!firstBuild) {
-    debug('App has no builds, returning []');
+    log.debug('App has no builds, returning []');
     return [];
   }
 
   const initialCommitsWithBuilds = [];
   const extraBaselineCommits = [];
 
-  // Don't do any special branching logic for builds on `HEAD`, this is fairly meaningless
-  // (CI systems that have been pushed tags can not set a branch)
+  // Add the most recent build on the branch as a (potential) baseline build, unless:
+  //   - the user opts out with `--ignore-last-build-on-branch`
+  //   - the commit is newer than the build we are running, in which case we doing this build out
+  //     of order and that could lead to problems.
+  //   - the current branch is `HEAD`; this is fairly meaningless
+  //     (CI systems that have been pushed tags can not set a branch)
+  // @see https://www.chromatic.com/docs/branching-and-baselines#rebasing
   if (
     branch !== 'HEAD' &&
     !ignoreLastBuildOnBranch &&
@@ -235,10 +262,30 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
     lastBuild.committedAt <= committedAt
   ) {
     if (await commitExists(lastBuild.commit)) {
+      log.debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
       initialCommitsWithBuilds.push(lastBuild.commit);
     } else {
-      debug(`Last build commit not in index, blindly appending to baselines`);
+      log.debug(
+        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to baselines`
+      );
       extraBaselineCommits.push(lastBuild.commit);
+    }
+  }
+
+  // Add the most recent build on a (merged) branch if as a (potential) baseline if we think
+  // this commit was the commit that merged the PR.
+  // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
+  if (pullRequest && pullRequest.lastHeadBuild) {
+    if (await commitExists(pullRequest.lastHeadBuild.commit)) {
+      log.debug(
+        `Adding merged PR build commit ${pullRequest.lastHeadBuild.commit} to commits with builds`
+      );
+      initialCommitsWithBuilds.push(pullRequest.lastHeadBuild.commit);
+    } else {
+      log.debug(
+        `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to baselines`
+      );
+      extraBaselineCommits.push(pullRequest.lastHeadBuild.commit);
     }
   }
 
@@ -247,16 +294,19 @@ export async function getBaselineCommits(client, { branch, ignoreLastBuildOnBran
   //   - in commitsWithBuilds
   //   - an ancestor of a commit in commitsWithBuilds
   //   - has no build
-  const commitsWithBuilds = await step(client, FETCH_N_INITIAL_BUILD_COMMITS, {
+  const commitsWithBuilds = await step({ client, log }, FETCH_N_INITIAL_BUILD_COMMITS, {
     firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
     commitsWithBuilds: initialCommitsWithBuilds,
     commitsWithoutBuilds: [],
   });
 
-  debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
+  log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
 
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
-  return [...extraBaselineCommits, ...(await maximallyDescendentCommits(commitsWithBuilds))];
+  return [
+    ...extraBaselineCommits,
+    ...(await maximallyDescendentCommits({ log }, commitsWithBuilds)),
+  ];
 }
 
 /**
@@ -304,7 +354,7 @@ export async function getUpdateMessage() {
   return status
     .split(EOL + EOL)[0] // drop the 'nothing to commit' part
     .split(EOL)
-    .filter(line => !line.startsWith('On branch')) // drop the 'On branch x' part
+    .filter((line) => !line.startsWith('On branch')) // drop the 'On branch x' part
     .join(EOL)
     .trim();
 }
@@ -341,19 +391,19 @@ export async function getUpdateMessage() {
  */
 export async function findMergeBase(headRef, baseRef) {
   const result = await execGitCommand(`git merge-base --all ${headRef} ${baseRef}`);
-  const mergeBases = result.split(EOL).filter(Boolean);
+  const mergeBases = result.split(EOL).filter((line) => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
 
   // If we find multiple merge bases, look for one on the base branch.
   // If we don't find a merge base on the base branch, just return the first one.
   const branchNames = await Promise.all(
-    mergeBases.map(async sha => {
+    mergeBases.map(async (sha) => {
       const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
       return name.replace(/~[0-9]+$/, ''); // Drop the potential suffix
     })
   );
-  const baseRefIndex = branchNames.findIndex(branch => branch === baseRef);
+  const baseRefIndex = branchNames.findIndex((branch) => branch === baseRef);
   return mergeBases[baseRefIndex] || mergeBases[0];
 }
 

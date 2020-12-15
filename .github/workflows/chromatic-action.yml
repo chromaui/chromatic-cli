@@ -1,17 +1,13 @@
 name: "Chromatic via action"
-on: [push, pull_request]
+on: [push, pull_request, pull_request_review, pull_request_target]
 
 jobs:
   chromatic:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: |
-        yarn
+    - run: yarn
     - uses: chromaui/action@v1
-      env:
-        DEBUG: chromatic-cli
       with:
-        projectToken: gcaw1ai2dgo
-        appCode: gcaw1ai2dgo
         token: ${{ secrets.GITHUB_TOKEN }}
+        projectToken: gcaw1ai2dgo

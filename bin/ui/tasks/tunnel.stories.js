@@ -3,7 +3,7 @@ import { failed, initial, pending, success } from './tunnel';
 
 export default {
   title: 'CLI/Tasks/Tunnel',
-  decorators: [storyFn => task(storyFn())],
+  decorators: [(storyFn) => task(storyFn())],
 };
 
 const CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com';

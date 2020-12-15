@@ -25,7 +25,7 @@ export const setGitInfo = async (ctx, task) => {
   ctx.git.version = await getVersion();
   const { branch, commit } = ctx.git;
 
-  const matchesBranch = glob => (glob && glob.length ? picomatch(glob)(branch) : !!glob);
+  const matchesBranch = (glob) => (glob && glob.length ? picomatch(glob)(branch) : !!glob);
   ctx.git.matchesBranch = matchesBranch;
 
   if (matchesBranch(skip)) {
@@ -37,7 +37,7 @@ export const setGitInfo = async (ctx, task) => {
     throw new Error(skipFailed(ctx).output);
   }
 
-  const baselineCommits = await getBaselineCommits(ctx.client, {
+  const baselineCommits = await getBaselineCommits(ctx, {
     branch,
     ignoreLastBuildOnBranch: matchesBranch(ignoreLastBuildOnBranch),
   });

@@ -12,7 +12,7 @@ export default class NonTTYRenderer {
     // eslint-disable-next-line no-restricted-syntax
     for (const task of this.tasks) {
       let lastData;
-      task.subscribe(event => {
+      task.subscribe((event) => {
         if (event.type === 'TITLE') this.options.log.info(`${task.title}`);
         if (event.type === 'DATA' && lastData !== event.data) {
           lastData = event.data;

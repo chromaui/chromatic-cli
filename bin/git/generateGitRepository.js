@@ -10,11 +10,9 @@ function nextDate() {
 }
 
 async function generateCommit(runGit, [name, parentNames], commitMap) {
-  const parentCommits = [...(parentNames || [])].map(parentName => commitMap[parentName].hash);
+  const parentCommits = [...(parentNames || [])].map((parentName) => commitMap[parentName].hash);
 
-  const randomBranchName = `temp-${Math.random()
-    .toString()
-    .substring(2)}`;
+  const randomBranchName = `temp-${Math.random().toString().substring(2)}`;
   const commitEnv = `GIT_COMMITTER_DATE='${nextDate()}'`;
   // No parent, check out nothing
   if (parentCommits.length === 0) {

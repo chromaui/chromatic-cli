@@ -18,8 +18,16 @@ const context = {
       email: 'support@chromatic.com',
     },
   },
+  packageJson: {
+    scripts: {
+      'build:storybook': 'build-storybook -o dist/storybook',
+    },
+  },
   flags: {
     projectToken: 'asdf123',
+    buildScriptName: 'build:storybook',
+  },
+  options: {
     buildScriptName: 'build:storybook',
   },
   exitCode: 255,

@@ -1,4 +1,3 @@
-/* eslint-disable max-classes-per-file */
 import retry from 'async-retry';
 import fetch from 'node-fetch';
 

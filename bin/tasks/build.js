@@ -5,11 +5,14 @@ import semver from 'semver';
 import tmp from 'tmp-promise';
 
 import { createTask, transitionTo } from '../lib/tasks';
-import { initial, pending, skipped, success } from '../ui/tasks/build';
+import buildFailed from '../ui/messages/errors/buildFailed';
+import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
-export const setSourceDir = async ctx => {
-  if (semver.lt(ctx.storybook.version, '5.0.0')) {
-    // Storybook v4 doesn't support absolute paths
+export const setSourceDir = async (ctx) => {
+  if (ctx.options.outputDir) {
+    ctx.sourceDir = ctx.options.outputDir;
+  } else if (semver.lt(ctx.storybook.version, '5.0.0')) {
+    // Storybook v4 doesn't support absolute paths like tmp.dir would yield
     ctx.sourceDir = 'storybook-static';
   } else {
     const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
@@ -17,7 +20,7 @@ export const setSourceDir = async ctx => {
   }
 };
 
-export const setSpawnParams = ctx => {
+export const setSpawnParams = (ctx) => {
   // Run either:
   //   npm/yarn run scriptName (depending on npm_execpath)
   //   node path/to/npm.js run scriptName (if npm run via node)
@@ -37,7 +40,7 @@ export const setSpawnParams = ctx => {
   };
 };
 
-export const buildStorybook = async ctx => {
+export const buildStorybook = async (ctx) => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
   const logFile = fs.createWriteStream(ctx.buildLogFile);
   await new Promise((resolve, reject) => {
@@ -48,6 +51,12 @@ export const buildStorybook = async ctx => {
   try {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
     await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
+  } catch (e) {
+    const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
+    ctx.log.error(buildFailed(ctx, e, buildLog));
+    ctx.exitCode = 201;
+    ctx.userError = true;
+    throw new Error(failed(ctx).output);
   } finally {
     logFile.end();
   }
@@ -55,7 +64,7 @@ export const buildStorybook = async ctx => {
 
 export default createTask({
   title: initial.title,
-  skip: async ctx => {
+  skip: async (ctx) => {
     if (ctx.skip) return true;
     if (ctx.options.storybookBuildDir) {
       ctx.sourceDir = ctx.options.storybookBuildDir;

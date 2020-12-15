@@ -1,4 +1,6 @@
+import { readFile } from 'jsonfile';
 import Listr from 'listr';
+import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
@@ -9,9 +11,11 @@ import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
+import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
+import missingStories from './ui/messages/errors/missingStories';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
@@ -20,8 +24,12 @@ export async function main(argv) {
   const sessionId = uuid();
   const env = getEnv();
   const log = createLogger(sessionId, env);
-  const ctx = { env, log, sessionId, ...parseArgs(argv) };
+  const packagePath = await pkgUp(); // the user's own package.json
+  const packageJson = await readFile(packagePath);
 
+  // Warning: chromaui/action directly invokes runAll, so if new properties or arguments are added
+  // here, they must also be added to the GitHub Action.
+  const ctx = { env, log, sessionId, packageJson, packagePath, ...parseArgs(argv) };
   await runAll(ctx);
 
   log.info('');
@@ -72,15 +80,10 @@ export async function runBuild(ctx) {
         ctx.log.error(fetchError(ctx, err));
         return;
       }
-      try {
-        // DOMException doesn't allow setting the message, so this might fail
-        err.message = taskError(ctx, err);
-      } catch (ex) {
-        const error = new Error(taskError(ctx, err));
-        error.stack = err.stack; // try to preserve the original stack
-        throw error;
+      if (err.message.startsWith('Cannot run a build with no stories')) {
+        throw rewriteErrorMessage(err, missingStories(ctx));
       }
-      throw err;
+      throw rewriteErrorMessage(err, taskError(ctx, err));
     } finally {
       // Handle potential runtime errors from JSDOM
       const { runtimeErrors, runtimeWarnings } = ctx;
