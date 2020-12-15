@@ -3,18 +3,18 @@ export const initial = {
   title: 'Verify your Storybook',
 };
 
-export const pending = ctx => ({
+export const pending = (ctx) => ({
   status: 'pending',
   title: 'Verifying your Storybook',
   output: 'This may take a few minutes',
 });
 
-export const runOnly = ctx => ({
+export const runOnly = (ctx) => ({
   status: 'pending',
   title: `Running only stories matching '${ctx.options.only}'`,
 });
 
-export const success = ctx => ({
+export const success = (ctx) => ({
   status: 'success',
   title: ctx.isPublishOnly ? `Published your Storybook` : `Started build ${ctx.build.number}`,
   output: ctx.isOnboarding
@@ -22,7 +22,7 @@ export const success = ctx => ({
     : `View build details at ${ctx.build.webUrl}`,
 });
 
-export const failed = ctx => ({
+export const failed = (ctx) => ({
   status: 'error',
   title: 'Verifying your Storybook',
   output: ctx.options.only

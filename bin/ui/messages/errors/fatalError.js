@@ -10,9 +10,9 @@ const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
 export default function fatalError(ctx, error, timestamp = new Date().toISOString()) {
   const { flags, options, sessionId, pkg, packageJson } = ctx;
   const { scripts = {} } = packageJson;
-  const errors = [].concat(error);
   const email = link(pkg.bugs.email);
   const website = link(pkg.docs);
+  const errors = [].concat(error);
 
   const { git = {}, storybook, exitCode, isolatorUrl, cachedUrl, build } = ctx;
   const debugInfo = {
@@ -28,26 +28,26 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
     ...(options.buildScriptName ? { buildScript: scripts[options.buildScriptName] } : {}),
     ...(options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     exitCode,
-    errorType: errors.map(err => err.name).join('\n'),
-    errorMessage: stripAnsi(errors.map(err => err.message).join('\n')),
+    errorType: errors.map((err) => err.name).join('\n'),
+    errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
     ...(isolatorUrl ? { isolatorUrl } : {}),
     ...(cachedUrl ? { cachedUrl } : {}),
     ...(build && { build: buildFields(build) }),
   };
 
-  const stacktraces = errors.map(err => err.stack).filter(Boolean);
-  const viewStacktraces = stacktraces.length
-    ? chalk`\n{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}`
-    : '';
+  const stacktraces = errors.map((err) => err.stack).filter(Boolean);
+  return [
+    errors.map((err) => err.message).join('\n'),
+    stacktraces.length
+      ? chalk`{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}\n`
+      : '',
+    dedent(chalk`
+      If you need help, please chat with us at ${website} for the fastest response.
+      You can also email the team at ${email} if chat is not an option.
 
-  return dedent(chalk`
-    ${errors.map(err => err.message).join('\n')}${viewStacktraces}
-
-    If you need help, please chat with us at ${website} for the fastest response.
-    You can also email the team at ${email} if chat is not an option.
-
-    Please provide us with the above CLI output and the following info:
-    {bold ${JSON.stringify(debugInfo, null, 2)}}
-    ${stacktraces.length ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : ''}
-  `);
+      Please provide us with the above CLI output and the following info:
+    `),
+    chalk`{bold ${JSON.stringify(debugInfo, null, 2)}}`,
+    stacktraces.length ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : '',
+  ].join('\n');
 }

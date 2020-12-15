@@ -5,7 +5,7 @@ import { info } from '../../components/icons';
 
 const snapshotRow = ({ spec }) => chalk`{dim → }${spec.component.name}:${spec.name}`;
 
-export default snapshots =>
+export default (snapshots) =>
   dedent(chalk`
     {bold Listing available stories:}
     ${snapshots.map(snapshotRow).join('\n')}

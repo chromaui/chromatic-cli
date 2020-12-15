@@ -8,7 +8,7 @@ const TesterCreateAppTokenMutation = `
   }
 `;
 
-export const setAuthorizationToken = async ctx => {
+export const setAuthorizationToken = async (ctx) => {
   const { client, options } = ctx;
   const variables = { projectToken: options.projectToken };
 

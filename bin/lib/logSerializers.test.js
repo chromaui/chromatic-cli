@@ -1,4 +1,4 @@
-/* eslint-disable jest/no-try-expect */
+/* eslint-disable jest/no-conditional-expect, jest/no-try-expect */
 import { execSync } from 'child_process';
 
 import { errorSerializer } from './logSerializers';

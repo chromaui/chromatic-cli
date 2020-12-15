@@ -3,6 +3,7 @@ import { context } from '@actions/github';
 import { readFile } from 'jsonfile';
 import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
+import path from 'path';
 
 import getEnv from '../bin/lib/getEnv';
 import { createLogger } from '../bin/lib/log';
@@ -23,7 +24,9 @@ const maybe = (a: string, b: any = undefined) => {
 
 const getCommit = (event: typeof context) => {
   switch (event.eventName) {
-    case 'pull_request': {
+    case 'pull_request':
+    case 'pull_request_review':
+    case 'pull_request_target': {
       return {
         // @ts-ignore
         owner: event.payload.repository.owner.login,
@@ -96,6 +99,7 @@ async function run() {
 
   try {
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
+    const workingDir = getInput('workingDir');
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
@@ -117,9 +121,11 @@ async function run() {
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
+    process.chdir(path.join(process.cwd(), workingDir || ''));
 
     const chromatic = runChromatic({
       projectToken,
+      workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       exec: maybe(exec),

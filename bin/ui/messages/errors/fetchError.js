@@ -4,7 +4,7 @@ import dedent from 'ts-dedent';
 import { error as icon } from '../../components/icons';
 import link from '../../components/link';
 
-const lcfirst = str => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
+const lcfirst = (str) => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
 export default function fetchError({ title }, { error, response, statusCode } = {}) {
   const err = error ? chalk`\n{dim → ${error.toString()}}` : '';
