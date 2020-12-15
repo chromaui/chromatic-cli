@@ -23,7 +23,7 @@ export const skipped = (ctx) => ({
   output: `Using prebuilt Storybook at ${ctx.options.storybookBuildDir}`,
 });
 
-export const failed = ctx => ({
+export const failed = (ctx) => ({
   status: 'error',
   title: 'Building your Storybook',
   output: `Command failed: ${ctx.spawnParams.scriptArgs.join(' ')}`,
