@@ -9,19 +9,32 @@ This is a wrapper for [chromatic-cli](https://github.com/chromaui/chromatic-cli)
 In your git repository, create a file `.github/workflows/chromatic.yml` with the following contents:
 
 ```yml
+# .github/workflows/chromatic.yml
+
+# Workflow name
 name: 'Chromatic'
+
+# Event for the workflow
 on: push
 
+# List of jobs
 jobs:
-  test:
+  chromatic-deployment:
+    # Operating System
     runs-on: ubuntu-latest
+    # Job steps
     steps:
       - uses: actions/checkout@v1
-      - run: yarn
-      - uses: chromaui/action@v1
+      - name: Install dependencies
+        run: yarn
+        # 👇 Adds Chromatic as a step in the workflow
+      - name: Publish to Chromatic
+        uses: chromaui/action@v1
+        # Chromatic GitHub Action options
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          projectToken: <insert the chromatic projectToken here>
+          # 👇 Chromatic projectToken, refer to the manage page to obtain it.
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
 
 Make sure to replace the value of `projectToken` with the project token provided to you by Chromatic. You can find it on the Manage page of your Chromatic project. The GitHub token is unrelated and will be set automatically. See below if you want to keep your projectToken secret.
