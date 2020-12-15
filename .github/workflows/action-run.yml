@@ -1,7 +1,6 @@
 name: "self test development-like"
 on:
   pull_request:
-  pull_request_target:
   pull_request_review:
   push:
     branches:
