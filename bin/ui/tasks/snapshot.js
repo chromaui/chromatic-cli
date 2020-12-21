@@ -8,7 +8,7 @@ export const initial = {
   title: 'Take snapshots of your stories',
 };
 
-export const stats = ctx => ({
+export const stats = (ctx) => ({
   errors: pluralize('error', ctx.build.errorCount, true),
   changes: pluralize('change', ctx.build.changeCount, true),
   snapshots: pluralize('snapshot', ctx.build.snapshotCount, true),
@@ -16,7 +16,7 @@ export const stats = ctx => ({
   specs: pluralize('story', ctx.build.specCount, true),
 });
 
-export const pending = ctx => {
+export const pending = (ctx) => {
   const { build, options, cursor = 0, label = '' } = ctx;
   const { errors, snapshots, components, specs } = stats(ctx);
   const only = options.only ? ` for stories matching '${options.only}'` : '';
@@ -32,7 +32,7 @@ export const pending = ctx => {
   };
 };
 
-export const buildPassed = ctx => {
+export const buildPassed = (ctx) => {
   const { snapshots, components, specs } = stats(ctx);
   return {
     status: 'success',
@@ -41,7 +41,7 @@ export const buildPassed = ctx => {
   };
 };
 
-export const buildComplete = ctx => {
+export const buildComplete = (ctx) => {
   const { changes, snapshots, components, specs } = stats(ctx);
   return {
     status: 'success',
@@ -52,7 +52,7 @@ export const buildComplete = ctx => {
   };
 };
 
-export const buildFailed = ctx => {
+export const buildFailed = (ctx) => {
   const { errors, snapshots, components, specs } = stats(ctx);
   return {
     status: 'error',
@@ -61,7 +61,7 @@ export const buildFailed = ctx => {
   };
 };
 
-export const buildError = ctx => {
+export const buildError = (ctx) => {
   return {
     status: 'error',
     title: `Oops. Build ${ctx.build.number} failed to run. Please try again.`,
@@ -69,7 +69,7 @@ export const buildError = ctx => {
   };
 };
 
-export const skipped = ctx => {
+export const skipped = (ctx) => {
   return {
     status: 'skipped',
     title: 'Take snapshots of your stories',

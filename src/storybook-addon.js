@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-env browser */
 import dedent from 'ts-dedent';
 import deprecate from 'util-deprecate';

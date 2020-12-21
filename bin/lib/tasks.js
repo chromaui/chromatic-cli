@@ -22,7 +22,7 @@ export const setTitle = (title, subtitle) => (ctx, task) => {
   task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
 };
 
-export const setOutput = output => (ctx, task) => {
+export const setOutput = (output) => (ctx, task) => {
   // eslint-disable-next-line no-param-reassign
   task.output = typeof output === 'function' ? output(ctx, task) : output;
 };
@@ -33,7 +33,7 @@ export const transitionTo = (stateFn, last) => (ctx, task) => {
   if (!last && output) setOutput(output)(ctx, task);
 };
 
-export const getDuration = ctx => {
+export const getDuration = (ctx) => {
   const now = Number.isInteger(ctx.now) ? ctx.now : new Date();
   const duration = Math.round((now - ctx.startedAt) / 1000);
   const seconds = pluralize('second', Math.floor(duration % 60), true);

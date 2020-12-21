@@ -116,17 +116,18 @@ jest.mock('tree-kill');
 
 jest.mock('fs-extra', () => ({
   pathExists: async () => true,
-  readFileSync: require.requireActual('fs-extra').readFileSync,
+  readFileSync: jest.requireActual('fs-extra').readFileSync,
 }));
 
 fs.readdirSync = jest.fn(() => ['iframe.html', 'index.html']);
 const fsStatSync = fs.statSync;
-fs.statSync = jest.fn(path => {
+fs.statSync = jest.fn((path) => {
   if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
   return { isDirectory: () => false, size: 42 };
 });
 
 jest.mock('./git/git', () => ({
+  hasPreviousCommit: () => true,
   getCommit: () => ({
     commit: 'commit',
     committedAt: 1234,
@@ -162,7 +163,7 @@ afterEach(() => {
   process.env = processEnv;
 });
 
-const getContext = argv => {
+const getContext = (argv) => {
   const env = getEnv();
   const log = new TestLogger();
   const packageJson = {
@@ -503,9 +504,7 @@ describe('in CI', () => {
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.log.warnings.length).toBe(1);
-    expect(ctx.log.warnings[0]).toMatch(
-      /Running Chromatic on a Travis PR build from an internal branch/
-    );
+    expect(ctx.log.warnings[0]).toMatch(/Running on a Travis PR build from an internal branch/);
   });
 });
 

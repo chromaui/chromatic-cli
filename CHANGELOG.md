@@ -1,6 +1,21 @@
-# 5.3.0 - unreleased
+# Unreleased
 
 - Record the repository slug (owner/repo) to support forks.
+
+# 5.5.0 - 2020-12-20
+
+- [212](https://github.com/chromaui/chromatic-cli/pull/212) Add support for monorepo using a new `path` argument
+- [218](https://github.com/chromaui/chromatic-cli/pull/218) isChromatic should always be a boolean
+- Dependency upgrades
+
+# 5.4.0 - 2020-11-16
+
+- Throw error when running from shallow clone.
+- Improve error messages for when build-storybook fails.
+- Add support for `pull_request_target` and `pull_request_review` events to GitHub Action.
+
+# 5.3.0 - 2020-10-29
+
 - Retrieve branch name using more modern git commands, if available.
 - Auto-detect buildScriptName from available scripts.
 - Improve various log messages.

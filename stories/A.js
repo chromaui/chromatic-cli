@@ -1,4 +1,4 @@
-/* eslint-disable react/jsx-props-no-spreading, react/prop-types */
+/* eslint-disable react/prop-types */
 import PropTypes from 'prop-types';
 import React from 'react';
 

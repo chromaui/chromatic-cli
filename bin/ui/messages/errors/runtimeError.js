@@ -5,8 +5,12 @@ import dedent from 'ts-dedent';
 import { error, warning } from '../../components/icons';
 
 export default function runtimeError({ options = {}, runtimeErrors = [], runtimeWarnings = [] }) {
-  const messages = [...runtimeErrors, ...runtimeWarnings].map(err => err.message || err.toString());
-  const stacktraces = [...runtimeErrors, ...runtimeWarnings].map(err => err.stack).filter(Boolean);
+  const messages = [...runtimeErrors, ...runtimeWarnings].map(
+    (err) => err.message || err.toString()
+  );
+  const stacktraces = [...runtimeErrors, ...runtimeWarnings]
+    .map((err) => err.stack)
+    .filter(Boolean);
   const viewStacktraces = stacktraces.length
     ? chalk`\n{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}`
     : '';

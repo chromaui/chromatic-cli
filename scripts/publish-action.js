@@ -24,7 +24,7 @@ const tmp = require('tmp-promise');
 
   await run('yarn install --production --no-lockfile');
   await run('git init');
-  await run('git remote add origin git@github.com:chromaui/action-test.git');
+  await run('git remote add origin git@github.com:chromaui/action.git');
   await run('git add .');
   await run('git commit -m Publish');
   await run('git tag v1');

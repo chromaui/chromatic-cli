@@ -1,16 +1,15 @@
 name: "self test development-like"
 on:
-  pull_request:
   push:
-    branches:
-      - master
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - run: yarn && yarn build && yarn build-storybook
+    - uses: actions/checkout@v1
+    - run: yarn
+    - run: yarn build
+    - run: yarn build-storybook
     - uses: ./
       with: 
         projectToken: 5oy3iw6rkio

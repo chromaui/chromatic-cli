@@ -37,8 +37,8 @@ const TesterGetUploadUrlsMutation = `
 function getPathsInDir(rootDir, dirname = '.') {
   try {
     return readdirSync(join(rootDir, dirname))
-      .map(p => join(dirname, p))
-      .map(pathname => {
+      .map((p) => join(dirname, p))
+      .map((pathname) => {
         const stats = statSync(join(rootDir, pathname));
         if (stats.isDirectory()) {
           return getPathsInDir(rootDir, pathname);
@@ -62,7 +62,7 @@ function getOutputDir(buildLog) {
 }
 
 function getFileInfo(sourceDir) {
-  const lengths = getPathsInDir(sourceDir).map(o => ({ ...o, knownAs: slash(o.pathname) }));
+  const lengths = getPathsInDir(sourceDir).map((o) => ({ ...o, knownAs: slash(o.pathname) }));
   const paths = lengths.map(({ knownAs }) => knownAs);
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   return { lengths, paths, total };
@@ -107,7 +107,7 @@ export const uploadStorybook = async (ctx, task) => {
   task.output = starting(ctx).output;
 
   try {
-    await uploadFiles(ctx, files, progress => {
+    await uploadFiles(ctx, files, (progress) => {
       if (ctx.options.interactive) {
         const percentage = Math.round((progress / total) * 100);
         task.output = uploading({ percentage }).output;
@@ -126,7 +126,7 @@ export const uploadStorybook = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: ctx => {
+  skip: (ctx) => {
     if (ctx.skip) return true;
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;

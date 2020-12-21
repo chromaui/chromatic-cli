@@ -18,11 +18,11 @@ const mocks = {
       return builds
         .slice()
         .reverse()
-        .find(b => b.branch === findingBranch);
+        .find((b) => b.branch === findingBranch);
     }
 
     const lastBuild = lastBuildOnBranch(branch);
-    const pr = prs.find(p => p.mergeCommitHash === commit);
+    const pr = prs.find((p) => p.mergeCommitHash === commit);
     const prLastBuild = pr && lastBuildOnBranch(pr.headBranch);
     return {
       app: {
@@ -43,7 +43,7 @@ const mocks = {
   },
   TesterHasBuildsWithCommitsQuery: (builds, _prs, { commits }) => ({
     app: {
-      hasBuildsWithCommits: commits.filter(commit => !!builds.find(b => b.commit === commit)),
+      hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
     },
   }),
 };

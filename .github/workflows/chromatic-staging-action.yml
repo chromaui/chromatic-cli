@@ -1,5 +1,5 @@
 name: "[Staging] Chromatic via action"
-on: [push, pull_request]
+on: [push, pull_request, pull_request_target, pull_request_review]
 
 jobs:
   chromatic:

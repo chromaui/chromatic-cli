@@ -2,7 +2,7 @@
 import { exec } from 'child_process';
 import execa from 'execa';
 import process from 'process';
-import { dirSync } from 'tmp';
+import tmp from 'tmp-promise';
 import { promisify } from 'util';
 
 import generateGitRepository from './generateGitRepository';
@@ -38,8 +38,8 @@ function makeRunGit(directory) {
 const repositories = {};
 beforeAll(async () =>
   Promise.all(
-    Object.keys(descriptions).map(async key => {
-      const dirname = dirSync().name;
+    Object.keys(descriptions).map(async (key) => {
+      const dirname = (await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` })).path;
       const runGit = makeRunGit(dirname);
       const commitMap = await generateGitRepository(runGit, descriptions[key]);
       repositories[key] = { dirname, runGit, commitMap };
@@ -58,7 +58,7 @@ function createClient(repository, builds, prs) {
 }
 
 function expectCommitsToEqualNames(hashes, names, { commitMap }) {
-  return expect(hashes).toEqual(names.map(n => commitMap[n].hash));
+  return expect(hashes).toEqual(names.map((n) => commitMap[n].hash));
 }
 
 async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
