@@ -68,11 +68,11 @@ const disregard = () => neverResolve;
 const findViewlayer = async ({ env }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
-    const [viewLayer, storybookVersion] = env.CHROMATIC_STORYBOOK_VERSION.split('@');
-    if (!viewLayer || !storybookVersion) {
+    const [viewLayer, version] = env.CHROMATIC_STORYBOOK_VERSION.split('@');
+    if (!viewLayer || !version) {
       throw new Error('CHROMATIC_STORYBOOK_VERSION was provided but could not be used');
     }
-    return { viewLayer, storybookVersion };
+    return { viewLayer, version };
   }
 
   // Try to find the Storybook viewlayer package
