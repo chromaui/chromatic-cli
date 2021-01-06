@@ -64,6 +64,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
       : undefined,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
+    branchName: flags.branchName,
     patchHeadRef,
     patchBaseRef,
   };
