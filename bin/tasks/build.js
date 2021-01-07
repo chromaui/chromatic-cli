@@ -40,6 +40,9 @@ export const setSpawnParams = (ctx) => {
   };
 };
 
+const timeoutAfter = (ms) =>
+  new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
+
 export const buildStorybook = async (ctx) => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
   const logFile = fs.createWriteStream(ctx.buildLogFile);
@@ -50,7 +53,10 @@ export const buildStorybook = async (ctx) => {
 
   try {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
-    await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
+    await Promise.race([
+      execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
+      timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
+    ]);
   } catch (e) {
     const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));
