@@ -29,8 +29,8 @@ export const setSpawnParams = (ctx) => {
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
   const isYarn = npmExecPath && path.basename(npmExecPath) === 'yarn.js';
   ctx.spawnParams = {
-    command: isJsPath ? process.execPath : npmExecPath || 'npm',
-    clientArgs: [isJsPath ? npmExecPath : '', isYarn ? '' : 'run', '--silent'].filter(Boolean),
+    command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
+    clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
     scriptArgs: [
       ctx.options.buildScriptName,
       isYarn ? '' : '--',
