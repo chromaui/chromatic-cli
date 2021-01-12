@@ -17,7 +17,7 @@ export default function parseArgs(argv) {
     Chromatic options
       --allow-console-errors  Continue running Chromatic even if there are errors logged to console in your Storybook.
       --auto-accept-changes [branch]  If there are any changes to the build, automatically accept them. Only for [branch], if specified. Globs are supported via picomatch.
-      --branch-name <branch>  Override the branch name. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons.
+      --branch-name <branch>  Override the branch name. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Also accepts <owner>:<branch> format.
       --exit-once-uploaded [branch]  Exit with 0 once the built version has been published to Chromatic. Only for [branch], if specified. Globs are supported via picomatch.
       --exit-zero-on-changes [branch]  If all snapshots render but there are visual changes, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --ignore-last-build-on-branch <branch>  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.

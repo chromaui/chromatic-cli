@@ -24,6 +24,7 @@ const resolveHomeDir = (filepath) =>
 export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
+  const [branchName, ownerName] = (flags.branchName || '').split(':').reverse();
 
   const options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
@@ -64,7 +65,8 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
       : undefined,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
-    branchName: flags.branchName,
+    ownerName,
+    branchName,
     patchHeadRef,
     patchBaseRef,
   };
