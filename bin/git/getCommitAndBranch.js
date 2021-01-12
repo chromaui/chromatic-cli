@@ -6,17 +6,12 @@ import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
 
-const notHead = (b) => {
-  if (!b || b === 'HEAD') {
-    return false;
-  }
-  return b;
-};
+const notHead = (branch) => (branch && branch !== 'HEAD' ? branch : false);
 
-export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}) {
+export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } = {}) {
   // eslint-disable-next-line prefer-const
   let { commit, committedAt, committerEmail, committerName } = await getCommit();
-  let branch = patchBaseRef || (await getBranch());
+  let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch());
 
   const {
     TRAVIS_EVENT_TYPE,
@@ -88,15 +83,13 @@ export async function getCommitAndBranch({ patchBaseRef, inputFromCI, log } = {}
       notHead(process.env.GERRIT_BRANCH) ||
       notHead(process.env.CI_BRANCH) ||
       notHead(process.env.GITHUB_REF) ||
-      notHead(branch) ||
       'HEAD';
   }
+
   // REPOSITORY_URL is for netlify: https://www.netlify.com/docs/continuous-deployment/
   const fromCI =
-    !!inputFromCI ||
-    !!process.env.CI ||
-    !!process.env.REPOSITORY_URL ||
-    !!process.env.GITHUB_REPOSITORY;
+    !!ci || !!process.env.CI || !!process.env.REPOSITORY_URL || !!process.env.GITHUB_REPOSITORY;
+
   log.debug(
     `git info: ${JSON.stringify({
       commit,

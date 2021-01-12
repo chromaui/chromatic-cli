@@ -19,9 +19,9 @@ const TesterSkipBuildMutation = `
 `;
 
 export const setGitInfo = async (ctx, task) => {
-  const { patchBaseRef, fromCI, ignoreLastBuildOnBranch, skip } = ctx.options;
+  const { branchName, patchBaseRef, fromCI, ignoreLastBuildOnBranch, skip } = ctx.options;
 
-  ctx.git = await getCommitAndBranch({ patchBaseRef, inputFromCI: fromCI, log: ctx.log });
+  ctx.git = await getCommitAndBranch({ branchName, patchBaseRef, ci: fromCI, log: ctx.log });
   ctx.git.version = await getVersion();
   const { branch, commit } = ctx.git;
 
