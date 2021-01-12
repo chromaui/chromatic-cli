@@ -62,33 +62,28 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     }
   }
 
+  const { isCi, prBranch, branch: ciBranch, commit: ciCommit, slug } = envCi();
+
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
-    const {
-      prBranch: prBranchFromEnvCi,
-      branch: branchFromEnvCi,
-      commit: commitFromEnvCi,
-    } = envCi();
-
-    commit = commitFromEnvCi;
-
-    // $HEAD is for netlify: https://www.netlify.com/docs/continuous-deployment/
-    // $GERRIT_BRANCH is for Gerrit/Jenkins: https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
-    // $CI_BRANCH is a general setting that lots of systems use
+    commit = ciCommit;
     branch =
-      notHead(prBranchFromEnvCi) ||
-      notHead(branchFromEnvCi) ||
-      notHead(process.env.HEAD) ||
-      notHead(process.env.GERRIT_BRANCH) ||
+      notHead(prBranch) ||
+      notHead(ciBranch) ||
+      notHead(process.env.HEAD) || // https://www.netlify.com/docs/continuous-deployment/
+      notHead(process.env.GERRIT_BRANCH) || // https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
+      notHead(process.env.GITHUB_REF) || // https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables#default-environment-variables
       notHead(process.env.CI_BRANCH) ||
-      notHead(process.env.GITHUB_REF) ||
       'HEAD';
   }
 
-  // REPOSITORY_URL is for netlify: https://www.netlify.com/docs/continuous-deployment/
   const fromCI =
-    !!ci || !!process.env.CI || !!process.env.REPOSITORY_URL || !!process.env.GITHUB_REPOSITORY;
+    isCi ||
+    !!ci ||
+    !!process.env.CI ||
+    !!process.env.REPOSITORY_URL || // https://www.netlify.com/docs/continuous-deployment/
+    !!process.env.GITHUB_REPOSITORY;
 
   log.debug(
     `git info: ${JSON.stringify({
@@ -97,9 +92,20 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
       committerEmail,
       committerName,
       branch,
+      slug,
       isTravisPrBuild,
       fromCI,
     })}`
   );
-  return { commit, committedAt, committerEmail, committerName, branch, isTravisPrBuild, fromCI };
+
+  return {
+    commit,
+    committedAt,
+    committerEmail,
+    committerName,
+    branch,
+    slug,
+    isTravisPrBuild,
+    fromCI,
+  };
 }
