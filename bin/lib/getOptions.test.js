@@ -195,6 +195,12 @@ describe('await getOptions', () => {
       createTunnel: false,
     });
   });
+
+  it('allows you to specify the branch name', async () => {
+    expect(await getOptions(getContext(['--branch-name', 'my/branch']))).toMatchObject({
+      branchName: 'my/branch',
+    });
+  });
 });
 
 describe('getStorybookConfiguration', () => {

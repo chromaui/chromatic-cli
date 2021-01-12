@@ -1,6 +1,8 @@
 # Unreleased
 
-- Record the repository slug (owner/repo) to support forks.
+- [233](https://github.com/chromaui/chromatic-cli/pull/233) Add `--branch-name` flag to override branch name
+- [237](https://github.com/chromaui/chromatic-cli/pull/237) Avoid passing `--silent` when invoking npm through Node.js script
+- [193](https://github.com/chromaui/chromatic-cli/pull/193) Record the repository slug (owner/repo) to support forks
 
 # 5.5.0 - 2020-12-20
 

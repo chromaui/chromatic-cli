@@ -19,17 +19,21 @@ const TesterSkipBuildMutation = `
 `;
 
 export const setGitInfo = async (ctx, task) => {
-  const { patchBaseRef, fromCI, ignoreLastBuildOnBranch, skip } = ctx.options;
-
-  ctx.git = await getCommitAndBranch({ patchBaseRef, inputFromCI: fromCI, log: ctx.log });
+  const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
+  ctx.git = await getCommitAndBranch({ branchName, patchBaseRef, ci, log: ctx.log });
   ctx.git.slug = ctx.git.slug || (await getSlug());
   ctx.git.version = await getVersion();
+
+  if (ctx.options.ownerName) {
+    ctx.git.slug = ctx.git.slug.replace(/[^/]+/, ctx.options.ownerName);
+  }
+
   const { branch, commit } = ctx.git;
 
   const matchesBranch = (glob) => (glob && glob.length ? picomatch(glob)(branch) : !!glob);
   ctx.git.matchesBranch = matchesBranch;
 
-  if (matchesBranch(skip)) {
+  if (matchesBranch(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
     if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
       ctx.skip = true;
@@ -40,7 +44,7 @@ export const setGitInfo = async (ctx, task) => {
 
   const baselineCommits = await getBaselineCommits(ctx, {
     branch,
-    ignoreLastBuildOnBranch: matchesBranch(ignoreLastBuildOnBranch),
+    ignoreLastBuildOnBranch: matchesBranch(ctx.options.ignoreLastBuildOnBranch),
   });
   ctx.git.baselineCommits = baselineCommits;
   ctx.log.debug(`Found baselineCommits: ${baselineCommits}`);

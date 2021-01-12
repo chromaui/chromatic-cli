@@ -11,8 +11,8 @@ describe('setGitInfo', () => {
   it('sets the git info on context', async () => {
     getCommitAndBranch.mockReturnValue({ commit: '123asdf', branch: 'something' });
     getBaselineCommits.mockReturnValue(['asd2344']);
-    getSlug.mockReturnValue('user/repo');
     getVersion.mockReturnValue('Git v1.0.0');
+    getSlug.mockReturnValue('user/repo');
     const ctx = { log, options: {} };
     await setGitInfo(ctx, {});
     expect(ctx.git).toMatchObject({
@@ -20,6 +20,23 @@ describe('setGitInfo', () => {
       branch: 'something',
       baselineCommits: ['asd2344'],
       version: 'Git v1.0.0',
+      slug: 'user/repo',
+    });
+  });
+
+  it('supports overriding the owner name in the slug', async () => {
+    getCommitAndBranch.mockReturnValue({ commit: '123asdf', branch: 'something' });
+    getBaselineCommits.mockReturnValue(['asd2344']);
+    getVersion.mockReturnValue('Git v1.0.0');
+    getSlug.mockReturnValue('user/repo');
+    const ctx = { log, options: { ownerName: 'org' } };
+    await setGitInfo(ctx, {});
+    expect(ctx.git).toMatchObject({
+      commit: '123asdf',
+      branch: 'something',
+      baselineCommits: ['asd2344'],
+      version: 'Git v1.0.0',
+      slug: 'org/repo',
     });
   });
 });
