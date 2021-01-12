@@ -1,4 +1,4 @@
-# Unreleased
+# 5.6.0 - 2021-01-12
 
 - [233](https://github.com/chromaui/chromatic-cli/pull/233) Add `--branch-name` flag to override branch name
 - [193](https://github.com/chromaui/chromatic-cli/pull/193) Record the repository slug to support builds from forks
