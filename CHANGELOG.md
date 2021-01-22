@@ -1,3 +1,7 @@
+# 5.6.1 - 2021-01-22
+
+- Update `@chromaui/localtunnel` dependency to patch Axios security vulnerability
+
 # 5.6.0 - 2021-01-12
 
 - [233](https://github.com/chromaui/chromatic-cli/pull/233) Add `--branch-name` flag to override branch name
