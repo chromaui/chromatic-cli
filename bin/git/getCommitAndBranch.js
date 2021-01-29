@@ -62,7 +62,7 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     }
   }
 
-  const { isCi, prBranch, branch: ciBranch, commit: ciCommit, slug } = envCi();
+  const { isCi, service: ciService, prBranch, branch: ciBranch, commit: ciCommit, slug } = envCi();
 
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
@@ -95,6 +95,7 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
       slug,
       isTravisPrBuild,
       fromCI,
+      ciService,
     })}`
   );
 
@@ -107,5 +108,6 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     slug,
     isTravisPrBuild,
     fromCI,
+    ciService,
   };
 }
