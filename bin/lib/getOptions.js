@@ -40,6 +40,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
     exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
+    ignoreChangedFiles: flags.ignoreChangedFiles,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     preserveMissingSpecs: flags.preserveMissing || !!flags.only,
     originalArgv: argv,

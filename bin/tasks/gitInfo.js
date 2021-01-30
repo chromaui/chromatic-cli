@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
-import { getBaselineCommits, getSlug, getVersion } from '../git/git';
+import { getBaselineCommits, getSlug, getVersion, getChangedFiles } from '../git/git';
 import { createTask, transitionTo } from '../lib/tasks';
 import {
   initial,
@@ -17,6 +17,15 @@ const TesterSkipBuildMutation = `
     skipBuild(commit: $commit)
   }
 `;
+
+const skipBuild = async (ctx, task) => {
+  transitionTo(skippingBuild)(ctx, task);
+  if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit: ctx.git.commit })) {
+    ctx.skip = true;
+    return transitionTo(skippedForCommit, true)(ctx, task);
+  }
+  throw new Error(skipFailed(ctx).output);
+};
 
 export const setGitInfo = async (ctx, task) => {
   const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
@@ -34,12 +43,8 @@ export const setGitInfo = async (ctx, task) => {
   ctx.git.matchesBranch = matchesBranch;
 
   if (matchesBranch(ctx.options.skip)) {
-    transitionTo(skippingBuild)(ctx, task);
-    if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
-      ctx.skip = true;
-      return transitionTo(skippedForCommit, true)(ctx, task);
-    }
-    throw new Error(skipFailed(ctx).output);
+    ctx.skipReason = '--skip';
+    return skipBuild(ctx, task);
   }
 
   const baselineCommits = await getBaselineCommits(ctx, {
@@ -48,6 +53,15 @@ export const setGitInfo = async (ctx, task) => {
   });
   ctx.git.baselineCommits = baselineCommits;
   ctx.log.debug(`Found baselineCommits: ${baselineCommits}`);
+
+  if (baselineCommits.length && ctx.options.ignoreChangedFiles) {
+    const matchesFile = picomatch(ctx.options.ignoreChangedFiles);
+    const changedFiles = await Promise.all(baselineCommits.map((c) => getChangedFiles(c, commit)));
+    if ([...new Set(changedFiles)].every(matchesFile)) {
+      ctx.skipReason = '--skip-files';
+      return skipBuild(ctx, task);
+    }
+  }
 
   return transitionTo(success, true)(ctx, task);
 };

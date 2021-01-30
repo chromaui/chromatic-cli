@@ -368,6 +368,11 @@ export async function getUpdateMessage() {
     .trim();
 }
 
+export async function getChangedFiles(baseCommit, headCommit = 'HEAD') {
+  const files = await execGitCommand(`git diff --name-only ${baseCommit} ${headCommit}`);
+  return files.split(EOL).filter(Boolean);
+}
+
 /**
  * Returns the git merge base between two branches, which is the best common ancestor between the
  * last commit on either branch. The "best" is defined by not having any descendants which are a
