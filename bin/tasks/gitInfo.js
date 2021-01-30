@@ -56,8 +56,10 @@ export const setGitInfo = async (ctx, task) => {
 
   if (baselineCommits.length && ctx.options.ignoreChangedFiles) {
     const matchesFile = picomatch(ctx.options.ignoreChangedFiles, { dot: true });
-    const changedFiles = await Promise.all(baselineCommits.map((c) => getChangedFiles(c, commit)));
-    if ([...new Set(changedFiles)].every(matchesFile)) {
+    const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c, commit)));
+    const changedFiles = [...new Set(results.flat())];
+    ctx.log.debug(changedFiles);
+    if (changedFiles.every(matchesFile)) {
       ctx.skipReason = '--skip-files';
       return skipBuild(ctx, task);
     }
