@@ -60,7 +60,7 @@ export const setGitInfo = async (ctx, task) => {
     const changedFiles = [...new Set(results.flat())];
     ctx.log.debug(changedFiles);
     if (changedFiles.every(matchesFile)) {
-      ctx.skipReason = '--skip-files';
+      ctx.skipReason = '--ignore-changed-files';
       return skipBuild(ctx, task);
     }
   }
