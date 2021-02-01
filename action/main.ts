@@ -117,6 +117,7 @@ async function run() {
     const allowConsoleErrors = getInput('allowConsoleErrors');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const exitOnceUploaded = getInput('exitOnceUploaded');
+    const ignoreChangedFiles = getInput('ignoreChangedFiles');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
 
     process.env.CHROMATIC_SHA = sha;
@@ -145,6 +146,7 @@ async function run() {
       exitZeroOnChanges: maybe(exitZeroOnChanges, true),
       exitOnceUploaded: maybe(exitOnceUploaded, false),
       allowConsoleErrors: maybe(allowConsoleErrors, false),
+      ignoreChangedFiles: maybe(ignoreChangedFiles),
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 

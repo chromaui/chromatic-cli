@@ -141,7 +141,7 @@ function runChromatic(options) {
 }
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, chromatic, _a, url, code, e_1;
+        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreChangedFiles, ignoreLastBuildOnBranch, chromatic, _a, url, code, e_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -172,6 +172,7 @@ function run() {
                     allowConsoleErrors = core_1.getInput('allowConsoleErrors');
                     exitZeroOnChanges = core_1.getInput('exitZeroOnChanges');
                     exitOnceUploaded = core_1.getInput('exitOnceUploaded');
+                    ignoreChangedFiles = core_1.getInput('ignoreChangedFiles');
                     ignoreLastBuildOnBranch = core_1.getInput('ignoreLastBuildOnBranch');
                     process.env.CHROMATIC_SHA = sha;
                     process.env.CHROMATIC_BRANCH = branch;
@@ -198,6 +199,7 @@ function run() {
                         exitZeroOnChanges: maybe(exitZeroOnChanges, true),
                         exitOnceUploaded: maybe(exitOnceUploaded, false),
                         allowConsoleErrors: maybe(allowConsoleErrors, false),
+                        ignoreChangedFiles: maybe(ignoreChangedFiles),
                         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch)
                     });
                     return [4 /*yield*/, Promise.all([chromatic])];
