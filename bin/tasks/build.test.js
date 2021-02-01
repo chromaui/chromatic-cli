@@ -51,6 +51,7 @@ describe('buildStorybook', () => {
         clientArgs: ['--client-args'],
         scriptArgs: ['--script-args'],
       },
+      env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
     };
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
@@ -59,5 +60,21 @@ describe('buildStorybook', () => {
       ['--client-args', '--script-args'],
       expect.objectContaining({ stdio: expect.any(Array) })
     );
+  });
+
+  it('fails when build times out', async () => {
+    const ctx = {
+      spawnParams: {
+        command: 'build:storybook',
+        clientArgs: ['--client-args'],
+        scriptArgs: ['--script-args'],
+      },
+      options: { buildScriptName: '' },
+      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+      log: { error: jest.fn() },
+    };
+    execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 10)));
+    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
   });
 });

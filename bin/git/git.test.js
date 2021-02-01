@@ -1,17 +1,20 @@
 /* eslint-disable jest/expect-expect */
 import { exec } from 'child_process';
+import execa from 'execa';
 import process from 'process';
 import tmp from 'tmp-promise';
 import { promisify } from 'util';
 
 import generateGitRepository from './generateGitRepository';
-import { getBaselineCommits } from './git';
+import { getBaselineCommits, getSlug } from './git';
 import longLineDescription from './mocks/long-line';
 import longLoopDescription from './mocks/long-loop';
 import createMockIndex from './mocks/mock-index';
 import simpleLoopDescription from './mocks/simple-loop';
 import threeParentsDescription from './mocks/three-parents';
 import twoRootsDescription from './mocks/two-roots';
+
+const execaCommand = jest.spyOn(execa, 'command');
 
 // Bumping up the Jest timeout for this file because it is timing out sometimes
 // I think this just a bit of a slow file due to git stuff, takes ~2-3s on my computer.
@@ -413,5 +416,18 @@ describe('getBaselineCommits', () => {
       // This doesn't include 'C' as D "covers" it.
       expectCommitsToEqualNames(baselineCommits, ['D'], repository);
     });
+  });
+});
+
+describe('getSlug', () => {
+  it('returns the slug portion of the git url', async () => {
+    execaCommand.mockImplementation(() => ({ all: 'git@github.com:chromaui/chromatic-cli.git' }));
+    expect(await getSlug()).toBe('chromaui/chromatic-cli');
+
+    execaCommand.mockImplementation(() => ({ all: 'https://github.com/chromaui/chromatic-cli' }));
+    expect(await getSlug()).toBe('chromaui/chromatic-cli');
+
+    execaCommand.mockImplementation(() => ({ all: 'https://gitlab.com/foo/bar.baz.git' }));
+    expect(await getSlug()).toBe('foo/bar.baz');
   });
 });

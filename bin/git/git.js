@@ -68,6 +68,15 @@ export async function getVersion() {
   return result.replace('git version ', '');
 }
 
+// The slug consists of the last two parts of the URL, at least for GitHub, GitLab and Bitbucket,
+// and is typically followed by `.git`. The regex matches the last two parts between slashes, and
+// ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
+export async function getSlug() {
+  const result = await execGitCommand(`git config --get remote.origin.url`);
+  const [, slug] = result.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
+  return slug;
+}
+
 // NOTE: At some point we should check that the commit has been pushed to the
 // remote and the branch matches with origin/REF, but for now we are naive about
 // adhoc builds.
