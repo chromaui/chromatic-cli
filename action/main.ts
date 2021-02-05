@@ -98,6 +98,7 @@ async function run() {
   const { branch, sha } = commit;
 
   try {
+    // Remember to keep this list in sync with ../action.yml
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const workingDir = getInput('workingDir');
     const buildScriptName = getInput('buildScriptName');
