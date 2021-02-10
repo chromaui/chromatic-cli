@@ -81,3 +81,4 @@ And finally, remove the `dev` and/or `rc` tag, if any:
 ```
 npm dist-tag rm chromatic dev
 ```
+
