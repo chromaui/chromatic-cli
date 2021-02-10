@@ -54,6 +54,8 @@ const getCommit = (event: typeof context) => {
 
 interface Output {
   url: string;
+  buildUrl: string;
+  storybookUrl: string;
   code: number;
 }
 
@@ -78,6 +80,8 @@ async function runChromatic(options): Promise<Output> {
   return {
     url: ctx.build?.webUrl,
     code: ctx.exitCode,
+    buildUrl: ctx.build?.webUrl,
+    storybookUrl: ctx.build?.isolatorUrl,
   };
 }
 
@@ -141,19 +145,24 @@ async function run() {
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 
-    const { url, code } = await chromatic;
+    const output = await chromatic;
 
-    setOutput('url', url);
-    setOutput('code', code.toString());
+    setOutput('url', output.url);
+    setOutput('buildUrl', output.buildUrl);
+    setOutput('storybookUrl', output.storybookUrl);
+    setOutput('code', output.code.toString());
 
-    if (code !== 0) {
+    if (output.code !== 0) {
       setFailed('non-zero exit code');
     }
+
+    process.exit(output.code);
   } catch (e) {
     if (e.message) error(e.message);
     if (e.stack) error(e.stack);
     if (e.description) error(e.description);
     setFailed(e.message);
   }
+  process.exit(1);
 }
 run();

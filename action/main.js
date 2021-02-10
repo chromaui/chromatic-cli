@@ -101,21 +101,21 @@ var getCommit = function (event) {
     }
 };
 function runChromatic(options) {
-    var _a;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
         var sessionId, env, log, packagePath, packageJson, ctx;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        return __generator(this, function (_d) {
+            switch (_d.label) {
                 case 0:
                     sessionId = uuid_1.v4();
                     env = getEnv_1["default"]();
                     log = log_1.createLogger(sessionId, env);
                     return [4 /*yield*/, pkg_up_1["default"]()];
                 case 1:
-                    packagePath = _b.sent();
+                    packagePath = _d.sent();
                     return [4 /*yield*/, jsonfile_1.readFile(packagePath)];
                 case 2:
-                    packageJson = _b.sent();
+                    packageJson = _d.sent();
                     ctx = __assign(__assign({}, parseArgs_1["default"]([])), { packagePath: packagePath,
                         packageJson: packageJson,
                         env: env,
@@ -123,10 +123,12 @@ function runChromatic(options) {
                         sessionId: sessionId, flags: options });
                     return [4 /*yield*/, main_1.runAll(ctx)];
                 case 3:
-                    _b.sent();
+                    _d.sent();
                     return [2 /*return*/, {
                             url: (_a = ctx.build) === null || _a === void 0 ? void 0 : _a.webUrl,
-                            code: ctx.exitCode
+                            code: ctx.exitCode,
+                            buildUrl: (_b = ctx.build) === null || _b === void 0 ? void 0 : _b.webUrl,
+                            storybookUrl: (_c = ctx.build) === null || _c === void 0 ? void 0 : _c.isolatorUrl
                         }];
             }
         });
@@ -134,18 +136,18 @@ function runChromatic(options) {
 }
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, chromatic, _a, url, code, e_1;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, chromatic, output, e_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
                     commit = getCommit(github_1.context);
                     if (!commit) {
                         return [2 /*return*/];
                     }
                     branch = commit.branch, sha = commit.sha;
-                    _b.label = 1;
+                    _a.label = 1;
                 case 1:
-                    _b.trys.push([1, 3, , 4]);
+                    _a.trys.push([1, 3, , 4]);
                     projectToken = core_1.getInput('projectToken') || core_1.getInput('appCode');
                     workingDir = core_1.getInput('workingDir');
                     buildScriptName = core_1.getInput('buildScriptName');
@@ -195,15 +197,18 @@ function run() {
                     });
                     return [4 /*yield*/, chromatic];
                 case 2:
-                    _a = _b.sent(), url = _a.url, code = _a.code;
-                    core_1.setOutput('url', url);
-                    core_1.setOutput('code', code.toString());
-                    if (code !== 0) {
+                    output = _a.sent();
+                    core_1.setOutput('url', output.url);
+                    core_1.setOutput('buildUrl', output.buildUrl);
+                    core_1.setOutput('storybookUrl', output.storybookUrl);
+                    core_1.setOutput('code', output.code.toString());
+                    if (output.code !== 0) {
                         core_1.setFailed('non-zero exit code');
                     }
+                    process.exit(output.code);
                     return [3 /*break*/, 4];
                 case 3:
-                    e_1 = _b.sent();
+                    e_1 = _a.sent();
                     if (e_1.message)
                         core_1.error(e_1.message);
                     if (e_1.stack)
@@ -212,7 +217,9 @@ function run() {
                         core_1.error(e_1.description);
                     core_1.setFailed(e_1.message);
                     return [3 /*break*/, 4];
-                case 4: return [2 /*return*/];
+                case 4:
+                    process.exit(1);
+                    return [2 /*return*/];
             }
         });
     });
