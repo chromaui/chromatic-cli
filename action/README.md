@@ -54,6 +54,7 @@ Make sure to replace the value of `projectToken` with the project token provided
     autoAcceptChanges: 'Automatically accept all changes in chromatic: boolean or branchname'
     exitZeroOnChanges: 'Positive exit of action even when there are changes: boolean or branchname'
     exitOnceUploaded: 'Exit with 0 once the built version has been sent to chromatic: boolean or branchname'
+    ignoreLastBuildOnBranch: 'Ignores latest build on target branch as a baseline if branch is no longer present in history (i.e. branch was rebased): branchname'
 ```
 
 We suggest you use a secret to hide the project token:
