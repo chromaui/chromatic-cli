@@ -160,8 +160,9 @@ async function run() {
     if (e.message) error(e.message);
     if (e.stack) error(e.stack);
     if (e.description) error(e.description);
+
     setFailed(e.message);
+    process.exit(1);
   }
-  process.exit(1);
 }
 run();
