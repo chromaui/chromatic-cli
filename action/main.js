@@ -136,7 +136,7 @@ function runChromatic(options) {
 }
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, chromatic, output, e_1;
+        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, output, e_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -171,31 +171,30 @@ function run() {
                     process.env.CHROMATIC_SHA = sha;
                     process.env.CHROMATIC_BRANCH = branch;
                     process.chdir(path_1["default"].join(process.cwd(), workingDir || ''));
-                    chromatic = runChromatic({
-                        projectToken: projectToken,
-                        workingDir: maybe(workingDir),
-                        buildScriptName: maybe(buildScriptName),
-                        scriptName: maybe(scriptName),
-                        exec: maybe(exec),
-                        skip: maybe(skip),
-                        doNotStart: maybe(doNotStart),
-                        storybookPort: maybe(storybookPort),
-                        storybookUrl: maybe(storybookUrl),
-                        storybookBuildDir: maybe(storybookBuildDir),
-                        storybookHttps: maybe(storybookHttps),
-                        storybookCert: maybe(storybookCert),
-                        storybookKey: maybe(storybookKey),
-                        storybookCa: maybe(storybookCa),
-                        fromCI: true,
-                        interactive: false,
-                        preserveMissing: maybe(preserveMissing),
-                        autoAcceptChanges: maybe(autoAcceptChanges),
-                        exitZeroOnChanges: maybe(exitZeroOnChanges, true),
-                        exitOnceUploaded: maybe(exitOnceUploaded, false),
-                        allowConsoleErrors: maybe(allowConsoleErrors, false),
-                        ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch)
-                    });
-                    return [4 /*yield*/, chromatic];
+                    return [4 /*yield*/, runChromatic({
+                            projectToken: projectToken,
+                            workingDir: maybe(workingDir),
+                            buildScriptName: maybe(buildScriptName),
+                            scriptName: maybe(scriptName),
+                            exec: maybe(exec),
+                            skip: maybe(skip),
+                            doNotStart: maybe(doNotStart),
+                            storybookPort: maybe(storybookPort),
+                            storybookUrl: maybe(storybookUrl),
+                            storybookBuildDir: maybe(storybookBuildDir),
+                            storybookHttps: maybe(storybookHttps),
+                            storybookCert: maybe(storybookCert),
+                            storybookKey: maybe(storybookKey),
+                            storybookCa: maybe(storybookCa),
+                            fromCI: true,
+                            interactive: false,
+                            preserveMissing: maybe(preserveMissing),
+                            autoAcceptChanges: maybe(autoAcceptChanges),
+                            exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+                            exitOnceUploaded: maybe(exitOnceUploaded, false),
+                            allowConsoleErrors: maybe(allowConsoleErrors, false),
+                            ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch)
+                        })];
                 case 2:
                     output = _a.sent();
                     core_1.setOutput('url', output.url);
@@ -216,10 +215,9 @@ function run() {
                     if (e_1.description)
                         core_1.error(e_1.description);
                     core_1.setFailed(e_1.message);
-                    return [3 /*break*/, 4];
-                case 4:
                     process.exit(1);
-                    return [2 /*return*/];
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
             }
         });
     });
