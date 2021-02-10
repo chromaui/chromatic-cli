@@ -28,23 +28,16 @@ const getCommit = (event: typeof context) => {
     case 'pull_request_review':
     case 'pull_request_target': {
       return {
-        // @ts-ignore
         owner: event.payload.repository.owner.login,
-        // @ts-ignore
         repo: event.payload.repository.name,
-        // @ts-ignore
         branch: event.payload.pull_request.head.ref,
-        // @ts-ignore
         ref: event.ref || event.payload.pull_request.head.ref,
-        // @ts-ignore
         sha: event.payload.pull_request.head.sha,
       };
     }
     case 'push': {
       return {
-        // @ts-ignore
         owner: event.payload.repository.owner.login,
-        // @ts-ignore
         repo: event.payload.repository.name,
         branch: event.payload.ref.replace('refs/heads/', ''),
         ref: event.payload.ref,
@@ -61,6 +54,8 @@ const getCommit = (event: typeof context) => {
 
 interface Output {
   url: string;
+  buildUrl: string;
+  storybookUrl: string;
   code: number;
 }
 
@@ -85,6 +80,8 @@ async function runChromatic(options): Promise<Output> {
   return {
     url: ctx.build?.webUrl,
     code: ctx.exitCode,
+    buildUrl: ctx.build?.webUrl,
+    storybookUrl: ctx.build?.isolatorUrl,
   };
 }
 
@@ -98,6 +95,7 @@ async function run() {
   const { branch, sha } = commit;
 
   try {
+    // Remember to keep this list in sync with ../action.yml
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const workingDir = getInput('workingDir');
     const buildScriptName = getInput('buildScriptName');
@@ -123,7 +121,7 @@ async function run() {
     process.env.CHROMATIC_BRANCH = branch;
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
-    const chromatic = runChromatic({
+    const output = await runChromatic({
       projectToken,
       workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
@@ -148,19 +146,23 @@ async function run() {
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 
-    const [{ url, code }] = await Promise.all([chromatic]);
+    setOutput('url', output.url);
+    setOutput('buildUrl', output.buildUrl);
+    setOutput('storybookUrl', output.storybookUrl);
+    setOutput('code', output.code.toString());
 
-    setOutput('url', url);
-    setOutput('code', code.toString());
-
-    if (code !== 0) {
+    if (output.code !== 0) {
       setFailed('non-zero exit code');
     }
+
+    process.exit(output.code);
   } catch (e) {
     if (e.message) error(e.message);
     if (e.stack) error(e.stack);
     if (e.description) error(e.description);
+
     setFailed(e.message);
+    process.exit(1);
   }
 }
 run();

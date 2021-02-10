@@ -38,43 +38,43 @@ export default function parseArgs(argv) {
       booleanDefault: undefined,
       flags: {
         // Required options
-        'project-token': { type: 'string', alias: 't' },
-        'app-code': { type: 'string', alias: 'a' }, // for backwards compatibility
+        projectToken: { type: 'string', alias: 't' },
+        appCode: { type: 'string', alias: 'a' }, // for backwards compatibility
 
         // Storybook options
-        'build-script-name': { type: 'string', alias: 'b' },
-        'output-dir': { type: 'string', alias: 'o' },
-        'storybook-build-dir': { type: 'string', alias: 'd' },
+        buildScriptName: { type: 'string', alias: 'b' },
+        outputDir: { type: 'string', alias: 'o' },
+        storybookBuildDir: { type: 'string', alias: 'd' },
 
         // Chromatic options
-        'allow-console-errors': { type: 'boolean' },
-        'auto-accept-changes': { type: 'string' },
-        'exit-once-uploaded': { type: 'string' },
-        'exit-zero-on-changes': { type: 'string' },
-        'ignore-last-build-on-branch': { type: 'string' },
+        allowConsoleErrors: { type: 'boolean' },
+        autoAcceptChanges: { type: 'string' },
+        exitOnceUploaded: { type: 'string' },
+        exitZeroOnChanges: { type: 'string' },
+        ignoreLastBuildOnBranch: { type: 'string' },
         only: { type: 'string' },
-        'branch-name': { type: 'string' },
-        'patch-build': { type: 'string' },
-        'preserve-missing': { type: 'boolean' },
+        branchName: { type: 'string' },
+        patchBuild: { type: 'string' },
+        preserveMissing: { type: 'boolean' },
         skip: { type: 'string' },
 
         // Debug options
         ci: { type: 'boolean' },
         debug: { type: 'boolean' },
-        'junit-report': { type: 'string' },
+        junitReport: { type: 'string' },
         list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
 
         // Deprecated options for tunneled builds
-        'do-not-start': { type: 'boolean', alias: 'S' }, // assumes already started
+        doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
         exec: { type: 'string', alias: 'e' }, // aka commandName; start via spawn
-        'script-name': { type: 'string', alias: 's' }, // start via npm/yarn run
-        'storybook-port': { type: 'string', alias: 'p' },
-        'storybook-url': { type: 'string', alias: 'u' },
-        'storybook-https': { type: 'boolean' },
-        'storybook-cert': { type: 'string' },
-        'storybook-key': { type: 'string' },
-        'storybook-ca': { type: 'string' },
+        scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
+        storybookPort: { type: 'string', alias: 'p' },
+        storybookUrl: { type: 'string', alias: 'u' },
+        storybookHttps: { type: 'boolean' },
+        storybookCert: { type: 'string' },
+        storybookKey: { type: 'string' },
+        storybookCa: { type: 'string' },
       },
     }
   );
