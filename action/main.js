@@ -78,23 +78,16 @@ var getCommit = function (event) {
         case 'pull_request_review':
         case 'pull_request_target': {
             return {
-                // @ts-ignore
                 owner: event.payload.repository.owner.login,
-                // @ts-ignore
                 repo: event.payload.repository.name,
-                // @ts-ignore
                 branch: event.payload.pull_request.head.ref,
-                // @ts-ignore
                 ref: event.ref || event.payload.pull_request.head.ref,
-                // @ts-ignore
                 sha: event.payload.pull_request.head.sha
             };
         }
         case 'push': {
             return {
-                // @ts-ignore
                 owner: event.payload.repository.owner.login,
-                // @ts-ignore
                 repo: event.payload.repository.name,
                 branch: event.payload.ref.replace('refs/heads/', ''),
                 ref: event.payload.ref,
