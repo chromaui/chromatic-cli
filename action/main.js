@@ -200,9 +200,9 @@ function run() {
                         allowConsoleErrors: maybe(allowConsoleErrors, false),
                         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch)
                     });
-                    return [4 /*yield*/, Promise.all([chromatic])];
+                    return [4 /*yield*/, chromatic];
                 case 2:
-                    _a = (_b.sent())[0], url = _a.url, code = _a.code;
+                    _a = _b.sent(), url = _a.url, code = _a.code;
                     core_1.setOutput('url', url);
                     core_1.setOutput('code', code.toString());
                     if (code !== 0) {
