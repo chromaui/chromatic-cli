@@ -29,8 +29,8 @@ export const setSpawnParams = (ctx) => {
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
   const isYarn = npmExecPath && path.basename(npmExecPath) === 'yarn.js';
   ctx.spawnParams = {
-    command: isJsPath ? process.execPath : npmExecPath || 'npm',
-    clientArgs: [isJsPath ? npmExecPath : '', isYarn ? '' : 'run', '--silent'].filter(Boolean),
+    command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
+    clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
     scriptArgs: [
       ctx.options.buildScriptName,
       isYarn ? '' : '--',
@@ -39,6 +39,9 @@ export const setSpawnParams = (ctx) => {
     ].filter(Boolean),
   };
 };
+
+const timeoutAfter = (ms) =>
+  new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 export const buildStorybook = async (ctx) => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
@@ -50,7 +53,10 @@ export const buildStorybook = async (ctx) => {
 
   try {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
-    await execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] });
+    await Promise.race([
+      execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
+      timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
+    ]);
   } catch (e) {
     const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));

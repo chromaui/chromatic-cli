@@ -16,12 +16,14 @@ inputs:
     description: "Deprecated, please use projectToken instead"
   buildScriptName:
     description: "The npm script that builds your Storybook [build-storybook]"
-  doNotStart:
-    description: "Do not attempt to start or build; use if your Storybook is already running"
-  exec:
-    description: "Alternatively, a full command to run to start your storybook"
   scriptName:
     description: "The npm script that starts your Storybook [storybook]"
+  exec:
+    description: "Alternatively, a full command to run to start your storybook"
+  skip:
+    description: "Skip Chromatic tests, but mark the commit as passing"
+  doNotStart:
+    description: "Do not attempt to start or build; use if your Storybook is already running"
   storybookBuildDir:
     description: "Provide a directory with your built storybook; use if you have already built your storybook"
   storybookCa:
@@ -38,14 +40,16 @@ inputs:
     description: "Storybook is already running at (external) url (implies -S)"
   preserveMissing:
     description: "Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them"
-  allowConsoleErrors:
-    description: "Do not exit when runtime errors occur in storybook"
   autoAcceptChanges:
     description: "Automatically accept all changes in chromatic: boolean or branchname"
+  allowConsoleErrors:
+    description: "Do not exit when runtime errors occur in storybook"
   exitZeroOnChanges:
     description: "Positive exit of action even when there are changes: boolean or branchname"
   exitOnceUploaded:
     description: "Exit with 0 once the built version has been sent to chromatic: boolean or branchname"
+  ignoreLastBuildOnBranch:
+    description: "Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)"
 
 runs:
   main: action/register.js

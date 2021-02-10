@@ -1,7 +1,8 @@
 import pluralize from 'pluralize';
 
-const infoMessage = ({ commit, branch, baselineCommits }) => {
-  const info = `Commit '${commit.substr(0, 7)}' on branch '${branch}'`;
+const infoMessage = ({ commit, branch, baselineCommits }, { ownerName }) => {
+  const branchName = ownerName ? `${ownerName}:${branch}` : branch;
+  const info = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
   return baselineCommits.length
     ? `${info}; found ${pluralize('baseline commit', baselineCommits.length, true)}`
     : `${info}; no baseline commits found`;
@@ -38,5 +39,5 @@ export const skipFailed = (ctx) => ({
 export const success = (ctx) => ({
   status: 'success',
   title: 'Retrieved git information',
-  output: infoMessage(ctx.git),
+  output: infoMessage(ctx.git, ctx.options),
 });

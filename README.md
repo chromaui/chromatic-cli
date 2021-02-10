@@ -4,6 +4,9 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 <img width="100%" src="https://user-images.githubusercontent.com/321738/82901859-d820ec80-9f5e-11ea-81e7-78d494c103ad.gif" alt="">
 
+<a href="https://www.npmjs.com/package/chromatic">
+  <img src="https://badgen.net/npm/v/chromatic" alt="Published on npm">
+</a>
 <a href="https://www.chromatic.com/builds?appId=5d67dc0374b2e300209c41e7">
   <img src="https://badgen.net/badge/tested%20with/chromatic/fc521f" alt="Tested with Chromatic">
 </a>

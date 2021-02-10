@@ -17,6 +17,7 @@ export default function parseArgs(argv) {
     Chromatic options
       --allow-console-errors  Continue running Chromatic even if there are errors logged to console in your Storybook.
       --auto-accept-changes [branch]  If there are any changes to the build, automatically accept them. Only for [branch], if specified. Globs are supported via picomatch.
+      --branch-name <branch>  Override the branch name. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Also accepts <owner>:<branch> format.
       --exit-once-uploaded [branch]  Exit with 0 once the built version has been published to Chromatic. Only for [branch], if specified. Globs are supported via picomatch.
       --exit-zero-on-changes [branch]  If all snapshots render but there are visual changes, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --ignore-last-build-on-branch <branch>  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
@@ -37,42 +38,43 @@ export default function parseArgs(argv) {
       booleanDefault: undefined,
       flags: {
         // Required options
-        'project-token': { type: 'string', alias: 't' },
-        'app-code': { type: 'string', alias: 'a' }, // for backwards compatibility
+        projectToken: { type: 'string', alias: 't' },
+        appCode: { type: 'string', alias: 'a' }, // for backwards compatibility
 
         // Storybook options
-        'build-script-name': { type: 'string', alias: 'b' },
-        'output-dir': { type: 'string', alias: 'o' },
-        'storybook-build-dir': { type: 'string', alias: 'd' },
+        buildScriptName: { type: 'string', alias: 'b' },
+        outputDir: { type: 'string', alias: 'o' },
+        storybookBuildDir: { type: 'string', alias: 'd' },
 
         // Chromatic options
-        'allow-console-errors': { type: 'boolean' },
-        'auto-accept-changes': { type: 'string' },
-        'exit-once-uploaded': { type: 'string' },
-        'exit-zero-on-changes': { type: 'string' },
-        'ignore-last-build-on-branch': { type: 'string' },
+        allowConsoleErrors: { type: 'boolean' },
+        autoAcceptChanges: { type: 'string' },
+        exitOnceUploaded: { type: 'string' },
+        exitZeroOnChanges: { type: 'string' },
+        ignoreLastBuildOnBranch: { type: 'string' },
         only: { type: 'string' },
-        'patch-build': { type: 'string' },
-        'preserve-missing': { type: 'boolean' },
+        branchName: { type: 'string' },
+        patchBuild: { type: 'string' },
+        preserveMissing: { type: 'boolean' },
         skip: { type: 'string' },
 
         // Debug options
         ci: { type: 'boolean' },
         debug: { type: 'boolean' },
-        'junit-report': { type: 'string' },
+        junitReport: { type: 'string' },
         list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
 
         // Deprecated options for tunneled builds
-        'do-not-start': { type: 'boolean', alias: 'S' }, // assumes already started
+        doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
         exec: { type: 'string', alias: 'e' }, // aka commandName; start via spawn
-        'script-name': { type: 'string', alias: 's' }, // start via npm/yarn run
-        'storybook-port': { type: 'string', alias: 'p' },
-        'storybook-url': { type: 'string', alias: 'u' },
-        'storybook-https': { type: 'boolean' },
-        'storybook-cert': { type: 'string' },
-        'storybook-key': { type: 'string' },
-        'storybook-ca': { type: 'string' },
+        scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
+        storybookPort: { type: 'string', alias: 'p' },
+        storybookUrl: { type: 'string', alias: 'u' },
+        storybookHttps: { type: 'boolean' },
+        storybookCert: { type: 'string' },
+        storybookKey: { type: 'string' },
+        storybookCa: { type: 'string' },
       },
     }
   );

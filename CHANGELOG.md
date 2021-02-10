@@ -1,3 +1,20 @@
+# 5.6.1 - 2021-01-22
+
+- Update `@chromaui/localtunnel` dependency to patch Axios security vulnerability
+
+# 5.6.0 - 2021-01-12
+
+- [233](https://github.com/chromaui/chromatic-cli/pull/233) Add `--branch-name` flag to override branch name
+- [193](https://github.com/chromaui/chromatic-cli/pull/193) Record the repository slug to support builds from forks
+- [237](https://github.com/chromaui/chromatic-cli/pull/237) Avoid passing `--silent` when invoking npm through Node.js script
+- [231](https://github.com/chromaui/chromatic-cli/pull/231) Fix overriding Storybook version through environment variable
+
+# 5.5.0 - 2020-12-20
+
+- [212](https://github.com/chromaui/chromatic-cli/pull/212) Add support for monorepo using a new `path` argument
+- [218](https://github.com/chromaui/chromatic-cli/pull/218) isChromatic should always be a boolean
+- Dependency upgrades
+
 # 5.4.0 - 2020-11-16
 
 - Throw error when running from shallow clone.

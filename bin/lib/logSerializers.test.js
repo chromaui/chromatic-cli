@@ -1,14 +1,15 @@
-/* eslint-disable jest/no-conditional-expect, jest/no-try-expect */
 import { execSync } from 'child_process';
 
 import { errorSerializer } from './logSerializers';
 
 it('strips off envPairs', () => {
+  let err;
   try {
     execSync('some hot garbage');
-  } catch (err) {
-    expect(errorSerializer(err).envPairs).toBeUndefined();
+  } catch (e) {
+    err = e;
   }
+  expect(errorSerializer(err).envPairs).toBeUndefined();
 });
 
 it('does not add random things to the error', () => {
