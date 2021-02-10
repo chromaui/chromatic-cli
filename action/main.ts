@@ -121,7 +121,7 @@ async function run() {
     process.env.CHROMATIC_BRANCH = branch;
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
-    const chromatic = runChromatic({
+    const output = await runChromatic({
       projectToken,
       workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
@@ -145,8 +145,6 @@ async function run() {
       allowConsoleErrors: maybe(allowConsoleErrors, false),
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
-
-    const output = await chromatic;
 
     setOutput('url', output.url);
     setOutput('buildUrl', output.buildUrl);
