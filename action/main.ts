@@ -148,7 +148,7 @@ async function run() {
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
     });
 
-    const [{ url, code }] = await Promise.all([chromatic]);
+    const { url, code } = await chromatic;
 
     setOutput('url', url);
     setOutput('code', code.toString());
