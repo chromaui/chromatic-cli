@@ -94,7 +94,7 @@
     "strip-ansi": "6.0.0",
     "tmp-promise": "3.0.2",
     "tree-kill": "^1.2.2",
-    "ts-dedent": "^2.0.0",
+    "ts-dedent": "^1.0.0",
     "util-deprecate": "^1.0.2",
     "uuid": "^8.3.2",
     "yarn-or-npm": "^3.0.1"
