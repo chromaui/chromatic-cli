@@ -1,6 +1,7 @@
 # 5.6.3 - 2021-02-17
 
 - [282](https://github.com/chromaui/chromatic-cli/pull/282) Revert meow upgrade (will upgrade again in next major release)
+
 # 5.6.2 - 2021-02-10
 
 - [269](https://github.com/chromaui/chromatic-cli/pull/269) Record CI service name on build
