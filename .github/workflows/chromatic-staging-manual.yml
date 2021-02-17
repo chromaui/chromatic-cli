@@ -19,4 +19,4 @@ jobs:
       env: 
         CHROMATIC_APP_CODE: mpm7osoy9sa
         CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
-        CHROMATIC_INDEX_URL: https://staging-www.chromaticqa.com
+        CHROMATIC_INDEX_URL: https://www.staging-chromatic.com
