@@ -220,7 +220,7 @@
 
 - Allow controlling package initialization timing via `import configure from 'storybook-chromatic/configure'; configure()`
 
-- Add a flag `--ignore-last-build-on-branch=X` to not use the last build on a branch no matter what (which helps with rebasing, see: http://docs.chromatic.com/branching-and-baselines#rebasing).
+- Add a flag `--ignore-last-build-on-branch=X` to not use the last build on a branch no matter what (which helps with rebasing, see: http://chromatic.com/docs/branching-and-baselines#rebasing).
 
 # 1.2.1 - 2018-12-04
 
@@ -231,8 +231,8 @@
 
 - Pass `chromatic` parameters from Storybook@4, supporting:
 
-  - Viewports: http://docs.chromatic.com/viewports
-  - Delay: http://docs.chromatic.com/delay
+  - Viewports: http://chromatic.com/docs/viewports
+  - Delay: http://chromatic.com/docs/delay
 
 - Better logging from the package to allow us to debug build problems.
 
