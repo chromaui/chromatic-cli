@@ -11,7 +11,7 @@ export const initial = {
 export const stats = (ctx) => ({
   errors: pluralize('error', ctx.build.errorCount, true),
   changes: pluralize('change', ctx.build.changeCount, true),
-  snapshots: pluralize('snapshot', ctx.build.snapshotCount, true),
+  snapshots: pluralize('test', ctx.build.testCount, true),
   components: pluralize('component', ctx.build.componentCount, true),
   specs: pluralize('story', ctx.build.specCount, true),
 });
@@ -20,8 +20,8 @@ export const pending = (ctx) => {
   const { build, options, cursor = 0, label = '' } = ctx;
   const { errors, snapshots, components, specs } = stats(ctx);
   const only = options.only ? ` for stories matching '${options.only}'` : '';
-  const percentage = Math.round((cursor / build.snapshotCount) * 100);
-  const counts = `${cursor}/${build.snapshotCount}`;
+  const percentage = Math.round((cursor / build.testCount) * 100);
+  const counts = `${cursor}/${build.testCount}`;
   const errs = build.errorCount ? `(${errors}) ` : '';
   return {
     status: 'pending',

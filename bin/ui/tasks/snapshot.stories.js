@@ -18,7 +18,7 @@ const build = {
   number: 42,
   errorCount: 1,
   changeCount: 2,
-  snapshotCount: 10,
+  testCount: 10,
   componentCount: 5,
   specCount: 8,
   features: { uiTests: true },
