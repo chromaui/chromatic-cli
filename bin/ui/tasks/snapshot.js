@@ -11,7 +11,7 @@ export const initial = {
 export const stats = (ctx) => ({
   errors: pluralize('error', ctx.build.errorCount, true),
   changes: pluralize('change', ctx.build.changeCount, true),
-  snapshots: pluralize('test', ctx.build.testCount, true),
+  snapshots: pluralize('snapshot', ctx.build.testCount, true),
   components: pluralize('component', ctx.build.componentCount, true),
   specs: pluralize('story', ctx.build.specCount, true),
 });
