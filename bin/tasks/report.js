@@ -84,12 +84,8 @@ export const generateReport = async (ctx) => {
         testCase.failure('Snapshot contains visual changes and must be reviewed', status);
         break;
       default: {
-        switch (result) {
-          case 'SKIPPED':
-          case 'PRESERVED':
-            testCase.skipped();
-            break;
-          default:
+        if (['SKIPPED', 'PRESERVED'].includes(result)) {
+          testCase.skipped();
         }
       }
     }
