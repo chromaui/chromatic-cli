@@ -81,7 +81,7 @@ async function runChromatic(options): Promise<Output> {
     url: ctx.build?.webUrl,
     code: ctx.exitCode,
     buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.isolatorUrl,
+    storybookUrl: ctx.build?.cachedUrl,
   };
 }
 
