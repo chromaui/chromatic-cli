@@ -9,10 +9,10 @@ const log = { debug: jest.fn() };
 
 describe('setGitInfo', () => {
   it('sets the git info on context', async () => {
-    getCommitAndBranch.mockReturnValue({ commit: '123asdf', branch: 'something' });
-    getBaselineCommits.mockReturnValue(['asd2344']);
-    getVersion.mockReturnValue('Git v1.0.0');
-    getSlug.mockReturnValue('user/repo');
+    getCommitAndBranch.mockReturnValue(Promise.resolve({ commit: '123asdf', branch: 'something' }));
+    getBaselineCommits.mockReturnValue(Promise.resolve(['asd2344']));
+    getVersion.mockReturnValue(Promise.resolve('Git v1.0.0'));
+    getSlug.mockReturnValue(Promise.resolve('user/repo'));
     const ctx = { log, options: {} };
     await setGitInfo(ctx, {});
     expect(ctx.git).toMatchObject({
@@ -25,10 +25,10 @@ describe('setGitInfo', () => {
   });
 
   it('supports overriding the owner name in the slug', async () => {
-    getCommitAndBranch.mockReturnValue({ commit: '123asdf', branch: 'something' });
-    getBaselineCommits.mockReturnValue(['asd2344']);
-    getVersion.mockReturnValue('Git v1.0.0');
-    getSlug.mockReturnValue('user/repo');
+    getCommitAndBranch.mockReturnValue(Promise.resolve({ commit: '123asdf', branch: 'something' }));
+    getBaselineCommits.mockReturnValue(Promise.resolve(['asd2344']));
+    getVersion.mockReturnValue(Promise.resolve('Git v1.0.0'));
+    getSlug.mockReturnValue(Promise.resolve('user/repo'));
     const ctx = { log, options: { ownerName: 'org' } };
     await setGitInfo(ctx, {});
     expect(ctx.git).toMatchObject({
