@@ -38,8 +38,8 @@ export default function parseArgs(argv) {
       booleanDefault: undefined,
       flags: {
         // Required options
-        projectToken: { type: 'string', alias: 't' },
-        appCode: { type: 'string', alias: 'a' }, // for backwards compatibility
+        projectToken: { type: 'string', alias: 't', isMultiple: true },
+        appCode: { type: 'string', alias: 'a', isMultiple: true }, // for backwards compatibility
 
         // Storybook options
         buildScriptName: { type: 'string', alias: 'b' },
