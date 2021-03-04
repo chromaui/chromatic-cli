@@ -70,12 +70,12 @@ You can to configure secrets in the repository settings (`/<owner>/<repository>/
 
 ### Outputs
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `url` | string | An alias for the build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)` |
-| `buildUrl` | string | The build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>`) |
+| Name           | Type   | Description                                                                                                                       |
+| -------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `url`          | string | An alias for the build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)`                |
+| `buildUrl`     | string | The build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>`)                             |
 | `storybookUrl` | string | The Storybook preview URL for your current branch / Pull Request (e.g. `https://<app id goes here>-<branch hash>.chromatic.com/`) |
-| `code` | string | The exit code for the current run of the Chromatic CLI |
+| `code`         | string | The exit code for the current run of the Chromatic CLI                                                                            |
 
 ## Checkout depth
 
