@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 const viewLayers = [
   'react',
   'vue',
+  'vue3',
   'angular',
   'html',
   'web-components',
