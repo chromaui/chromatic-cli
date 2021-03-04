@@ -68,6 +68,15 @@ We suggest you use a secret to hide the project token:
 
 You can to configure secrets in the repository settings (`/<owner>/<repository>/settings/secrets`). However if you need to be able to run this action on pull requests from forks, because those can't access your secret.
 
+### Outputs
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `url` | string | An alias for the build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)` |
+| `buildUrl` | string | The build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>`) |
+| `storybookUrl` | string | The Storybook preview URL for your current branch / Pull Request (e.g. `https://<app id goes here>-<branch hash>.chromatic.com/`) |
+| `code` | string | The exit code for the current run of the Chromatic CLI |
+
 ## Checkout depth
 
 Version 2 of the `actions/checkout` action will only checkout a single commit without history by default. Chromatic needs the full git history in order to track changes over time. Set `fetch-depth: 0` to enable this. See [actions/checkout](https://github.com/actions/checkout#readme) for details.
