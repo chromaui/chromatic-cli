@@ -85,6 +85,9 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     !!process.env.REPOSITORY_URL || // https://www.netlify.com/docs/continuous-deployment/
     !!process.env.GITHUB_REPOSITORY;
 
+  // Strip off any `origin/` prefix that's added sometimes.
+  if (!branchName && !isFromEnvVariable) branch = branch.replace(/^origin\//, '');
+
   log.debug(
     `git info: ${JSON.stringify({
       commit,
