@@ -318,6 +318,12 @@ export async function getBaselineCommits(
   ];
 }
 
+export async function getChangedFiles(baseCommit, headCommit = '') {
+  // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
+  const files = await execGitCommand(`git diff --name-only ${baseCommit} ${headCommit}`);
+  return files.split(EOL).filter(Boolean);
+}
+
 /**
  * Returns a boolean indicating whether the workspace is up-to-date (neither ahead nor behind) with
  * the remote.

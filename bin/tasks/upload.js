@@ -63,9 +63,15 @@ function getOutputDir(buildLog) {
 
 function getFileInfo(sourceDir) {
   const lengths = getPathsInDir(sourceDir).map((o) => ({ ...o, knownAs: slash(o.pathname) }));
-  const paths = lengths.map(({ knownAs }) => knownAs);
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
-  return { lengths, paths, total };
+  const paths = [];
+  let statsPath;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const { knownAs } of lengths) {
+    if (knownAs.endsWith('preview-stats.json')) statsPath = knownAs;
+    else paths.push(knownAs);
+  }
+  return { lengths, paths, statsPath, total };
 }
 
 const isValidStorybook = ({ paths, total }) =>
@@ -94,7 +100,7 @@ export const uploadStorybook = async (ctx, task) => {
 
   task.output = preparing(ctx).output;
 
-  const { lengths, paths, total } = fileInfo;
+  const { lengths, paths, statsPath, total } = fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery(TesterGetUploadUrlsMutation, { paths });
   const { domain, urls } = getUploadUrls;
   const files = urls.map(({ path, url, contentType }) => ({
@@ -121,6 +127,7 @@ export const uploadStorybook = async (ctx, task) => {
   }
 
   ctx.uploadedBytes = total;
+  ctx.statsPath = join(ctx.sourceDir, statsPath);
   ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
 };
 

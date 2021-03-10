@@ -1,10 +1,13 @@
+import { readJson } from 'fs-extra';
+
 import { createTask, transitionTo } from '../lib/tasks';
+import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import { initial, pending, runOnly, success } from '../ui/tasks/verify';
+import { initial, pending, runOnly, runOnlyFiles, tracing, success } from '../ui/tasks/verify';
 
 const TesterCreateBuildMutation = `
   mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
@@ -66,27 +69,40 @@ export const setEnvironment = async (ctx) => {
   ctx.log.debug(`Got environment ${ctx.environment}`);
 };
 
+export const traceChangedFiles = async (ctx, task) => {
+  const { statsPath } = ctx;
+  const { changedFiles } = ctx.git;
+  if (!statsPath || !changedFiles) return;
+
+  transitionTo(tracing)(ctx, task);
+
+  const stats = await readJson(statsPath);
+  ctx.onlyStoryFiles = getDependentStoryFiles(changedFiles, stats);
+  ctx.log.debug(`Testing only story files:\n${ctx.onlyStoryFiles.map((f) => `  ${f}`).join('\n')}`);
+};
+
 export const createBuild = async (ctx, task) => {
-  const { client, environment, git, log, pkg, cachedUrl, isolatorUrl, options } = ctx;
+  const { client, git, log, isolatorUrl, options, onlyStoryFiles } = ctx;
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
-  const { version, matchesBranch, ...commitInfo } = git; // omit some fields
+  const { version, matchesBranch, changedFiles, ...commitInfo } = git; // omit some fields
   const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
 
-  if (only) {
-    transitionTo(runOnly)(ctx, task);
-  }
+  // It's not possible to set both --only and --only-changed
+  if (only) transitionTo(runOnly)(ctx, task);
+  else if (onlyStoryFiles) transitionTo(runOnlyFiles)(ctx, task);
 
   const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
     input: {
       ...commitInfo,
       ...(only && { only }),
+      ...(onlyStoryFiles && { onlyStoryFiles }),
       autoAcceptChanges,
-      cachedUrl,
-      environment,
+      cachedUrl: ctx.cachedUrl,
+      environment: ctx.environment,
       patchBaseRef,
       patchHeadRef,
       preserveMissingSpecs,
-      packageVersion: pkg.version,
+      packageVersion: ctx.pkg.version,
       storybookVersion: ctx.storybook.version,
       viewLayer: ctx.storybook.viewLayer,
       addons: ctx.storybook.addons,
@@ -129,5 +145,5 @@ export const createBuild = async (ctx, task) => {
 export default createTask({
   title: initial.title,
   skip: (ctx) => ctx.skip,
-  steps: [transitionTo(pending), setEnvironment, createBuild],
+  steps: [transitionTo(pending), setEnvironment, traceChangedFiles, createBuild],
 });

@@ -1,14 +1,14 @@
 import picomatch from 'picomatch';
 
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
-import { getBaselineCommits, getSlug, getVersion } from '../git/git';
+import { getBaselineCommits, getChangedFiles, getSlug, getVersion } from '../git/git';
 import { createTask, transitionTo } from '../lib/tasks';
 import {
   initial,
   pending,
   skipFailed,
-  skippedForCommit,
   skippingBuild,
+  skippedForCommit,
   success,
 } from '../ui/tasks/gitInfo';
 
@@ -47,7 +47,13 @@ export const setGitInfo = async (ctx, task) => {
     ignoreLastBuildOnBranch: matchesBranch(ctx.options.ignoreLastBuildOnBranch),
   });
   ctx.git.baselineCommits = baselineCommits;
-  ctx.log.debug(`Found baselineCommits: ${baselineCommits}`);
+  ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+
+  if (baselineCommits.length && matchesBranch(ctx.options.onlyChanged)) {
+    const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
+    ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
+    ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+  }
 
   return transitionTo(success, true)(ctx, task);
 };
