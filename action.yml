@@ -1,55 +1,87 @@
 name: Publish to Chromatic
 author: Chroma Software, Inc.
-description: "Publish your Storybook to Chromatic and run visual regression tests"
+description: 'Publish your Storybook to Chromatic and run visual regression tests'
 branding:
-  icon: "aperture"
-  color: "orange"
+  icon: 'aperture'
+  color: 'orange'
 
 inputs:
   token:
-    description: "Your github token"
+    description: 'Your github token'
+    required: true
   projectToken:
-    description: "Your chromatic project token"
+    description: 'Your chromatic project token'
+    required: true
   workingDir:
-    description: "Working directory for the package.json file"
+    description: 'Working directory for the package.json file'
+    required: false
   appCode:
-    description: "Deprecated, please use projectToken instead"
+    description: 'Deprecated, please use projectToken instead'
+    required: false
   buildScriptName:
-    description: "The npm script that builds your Storybook [build-storybook]"
+    description: 'The npm script that builds your Storybook [build-storybook]'
+    required: false
   scriptName:
-    description: "The npm script that starts your Storybook [storybook]"
+    description: 'The npm script that starts your Storybook [storybook]'
+    required: false
   exec:
-    description: "Alternatively, a full command to run to start your storybook"
+    description: 'Alternatively, a full command to run to start your storybook'
+    required: false
   skip:
-    description: "Skip Chromatic tests, but mark the commit as passing"
+    description: 'Skip Chromatic tests, but mark the commit as passing'
+    required: false
   doNotStart:
-    description: "Do not attempt to start or build; use if your Storybook is already running"
+    description: 'Do not attempt to start or build; use if your Storybook is already running'
+    required: false
   storybookBuildDir:
-    description: "Provide a directory with your built storybook; use if you have already built your storybook"
+    description: 'Provide a directory with your built storybook; use if you have already built your storybook'
+    required: false
   storybookCa:
-    description: "Use if Storybook is running on https (auto detected from -s, if set)"
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    required: false
   storybookCert:
-    description: "Use if Storybook is running on https (auto detected from -s, if set)"
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    required: false
   storybookHttps:
-    description: "Use if Storybook is running on https (auto detected from -s, if set)"
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    required: false
   storybookKey:
-    description: "Use if Storybook is running on https (auto detected from -s, if set)"
+    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
+    required: false
   storybookPort:
-    description: "What port is your Storybook running on (auto detected from -s, if set)"
+    description: 'What port is your Storybook running on (auto detected from -s, if set)'
+    required: false
   storybookUrl:
-    description: "Storybook is already running at (external) url (implies -S)"
+    description: 'Storybook is already running at (external) url (implies -S)'
+    required: false
   preserveMissing:
-    description: "Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them"
+    description: 'Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them'
+    required: false
   autoAcceptChanges:
-    description: "Automatically accept all changes in chromatic: boolean or branchname"
+    description: 'Automatically accept all changes in chromatic: boolean or branchname'
+    required: false
   allowConsoleErrors:
-    description: "Do not exit when runtime errors occur in storybook"
+    description: 'Do not exit when runtime errors occur in storybook'
+    required: false
   exitZeroOnChanges:
-    description: "Positive exit of action even when there are changes: boolean or branchname"
+    description: 'Positive exit of action even when there are changes: boolean or branchname'
+    required: false
   exitOnceUploaded:
-    description: "Exit with 0 once the built version has been sent to chromatic: boolean or branchname"
+    description: 'Exit with 0 once the built version has been sent to chromatic: boolean or branchname'
+    required: false
   ignoreLastBuildOnBranch:
-    description: "Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)"
+    description: 'Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)'
+    required: false
+
+outputs:
+  url:
+    description: 'An alias for the build URL (e.g. https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)'
+  buildUrl:
+    description: 'The build URL (e.g. https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)'
+  storybookUrl:
+    description: 'The Storybook preview URL for your current branch / Pull Request (e.g. https://<app id goes here>-<branch hash>.chromatic.com/)'
+  code:
+    description: 'The exit code for the current run of the Chromatic CLI'
 
 runs:
   main: action/register.js
