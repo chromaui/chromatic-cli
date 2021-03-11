@@ -7,7 +7,7 @@ export default {
 };
 
 const CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com';
-const cachedUrl = 'https://fdeulpymiq.tunnel.chromatic.com/iframe.html';
+const cachedUrl = 'https://fdeulpymiq.tunnel.chromaticqa.com/iframe.html';
 
 export const Initial = () => initial;
 
