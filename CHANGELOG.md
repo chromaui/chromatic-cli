@@ -1,3 +1,15 @@
+# 5.7.0 - 2021-03-11
+
+- [283](https://github.com/chromaui/chromatic-cli/pull/283) Explicitly allow multiple project-tokens (last will be used)
+- [301](https://github.com/chromaui/chromatic-cli/pull/301) Strip `origin/*` prefix from branch name
+- [297](https://github.com/chromaui/chromatic-cli/pull/297) Add @storybook/vue3 support
+- [296](https://github.com/chromaui/chromatic-cli/pull/296) Support Yarn 2 execpath
+- [295](https://github.com/chromaui/chromatic-cli/pull/295) Gracefully handle `git config` command in Netlify
+- [284](https://github.com/chromaui/chromatic-cli/pull/284) Fix `storybookUrl` in GitHub Action
+- [287](https://github.com/chromaui/chromatic-cli/pull/287) Update CLI to use new `test` terminology and statuses
+- [298](https://github.com/chromaui/chromatic-cli/pull/298) Document GitHub action outputs
+- [306](https://github.com/chromaui/chromatic-cli/pull/306) Fix tunnel builds
+
 # 5.6.3 - 2021-02-17
 
 - [282](https://github.com/chromaui/chromatic-cli/pull/282) Revert meow upgrade (will upgrade again in next major release)
