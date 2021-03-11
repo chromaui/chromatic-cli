@@ -11,7 +11,7 @@ const ReportQuery = `
     app {
       build(number: $buildNumber) {
         number
-        status
+        status(legacy: false)
         webUrl
         cachedUrl
         createdAt
