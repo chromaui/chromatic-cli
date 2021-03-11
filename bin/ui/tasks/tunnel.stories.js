@@ -6,7 +6,7 @@ export default {
   decorators: [(storyFn) => task(storyFn())],
 };
 
-const CHROMATIC_TUNNEL_URL = 'https://tunnel.chromatic.com';
+const CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com';
 const cachedUrl = 'https://fdeulpymiq.tunnel.chromatic.com/iframe.html';
 
 export const Initial = () => initial;
