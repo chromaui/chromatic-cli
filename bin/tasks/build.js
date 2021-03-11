@@ -39,6 +39,10 @@ export const setSpawnParams = (ctx) => {
       '--output-dir',
       ctx.sourceDir,
     ].filter(Boolean),
+    spawnOptions: {
+      preferLocal: true,
+      localDir: path.resolve('node_modules/.bin'),
+    },
   };
 };
 
@@ -54,10 +58,13 @@ export const buildStorybook = async (ctx) => {
   });
 
   try {
-    const { command, clientArgs, scriptArgs } = ctx.spawnParams;
+    const { command, clientArgs, scriptArgs, spawnOptions } = ctx.spawnParams;
     ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
     await Promise.race([
-      execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
+      execa(command, [...clientArgs, ...scriptArgs], {
+        stdio: [null, logFile, logFile],
+        ...spawnOptions,
+      }),
       timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
     ]);
   } catch (e) {
