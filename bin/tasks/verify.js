@@ -15,6 +15,7 @@ const TesterCreateBuildMutation = `
       id
       number
       specCount
+      skipCount
       snapshotCount
       componentCount
       webUrl
@@ -76,9 +77,12 @@ export const traceChangedFiles = async (ctx, task) => {
 
   transitionTo(tracing)(ctx, task);
 
-  const stats = await readJson(statsPath);
-  ctx.onlyStoryFiles = getDependentStoryFiles(changedFiles, stats);
-  ctx.log.debug(`Testing only story files:\n${ctx.onlyStoryFiles.map((f) => `  ${f}`).join('\n')}`);
+  try {
+    const stats = await readJson(statsPath);
+    ctx.onlyStoryFiles = getDependentStoryFiles(changedFiles, stats);
+  } catch (e) {
+    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
+  }
 };
 
 export const createBuild = async (ctx, task) => {
@@ -88,14 +92,21 @@ export const createBuild = async (ctx, task) => {
   const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
 
   // It's not possible to set both --only and --only-changed
-  if (only) transitionTo(runOnly)(ctx, task);
-  else if (onlyStoryFiles) transitionTo(runOnlyFiles)(ctx, task);
+  if (only) {
+    transitionTo(runOnly)(ctx, task);
+  }
+  if (onlyStoryFiles) {
+    transitionTo(runOnlyFiles)(ctx, task);
+    ctx.log.debug(
+      `Affected story files:\n${ctx.onlyStoryFiles.map(([id, f]) => `  ${f} [${id}]`).join('\n')}`
+    );
+  }
 
   const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
     input: {
       ...commitInfo,
       ...(only && { only }),
-      ...(onlyStoryFiles && { onlyStoryFiles }),
+      ...(onlyStoryFiles && { onlyStoryFiles: onlyStoryFiles.flat() }),
       autoAcceptChanges,
       cachedUrl: ctx.cachedUrl,
       environment: ctx.environment,

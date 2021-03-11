@@ -106,7 +106,7 @@
     "@babel/preset-env": "^7.12.13",
     "@storybook/eslint-config-storybook": "^3.0.0",
     "@storybook/linter-config": "^3.0.0",
-    "@storybook/react": "^6.2.0-beta.13",
+    "@storybook/react": "^6.2.0-beta.14",
     "@types/node": "^14.14.25",
     "@typescript-eslint/eslint-plugin": "^4.15.0",
     "@typescript-eslint/parser": "^4.15.0",

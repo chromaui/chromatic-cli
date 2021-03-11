@@ -90,5 +90,5 @@ export function getDependentStoryFiles(changedFiles, stats) {
     reasonsMap[id].map(reachName);
   }
 
-  return bailFile ? false : [...changedCsfIds].map((id) => reverseIdsMap[id]);
+  return bailFile ? false : [...changedCsfIds].map((id) => [String(id), reverseIdsMap[id]]);
 }

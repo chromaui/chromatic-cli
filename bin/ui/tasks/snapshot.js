@@ -14,18 +14,23 @@ export const stats = (ctx) => ({
   snapshots: pluralize('snapshot', ctx.build.snapshotCount, true),
   components: pluralize('component', ctx.build.componentCount, true),
   specs: pluralize('story', ctx.build.specCount, true),
+  skips: pluralize('story', ctx.build.skipCount || 0, true),
 });
 
 export const pending = (ctx) => {
   const { build, options, cursor = 0, label = '' } = ctx;
-  const { errors, snapshots, components, specs } = stats(ctx);
+  const { errors, snapshots, components, specs, skips } = stats(ctx);
   const only = options.only ? ` for stories matching '${options.only}'` : '';
+  const onlyFiles = options.onlyStoryFiles
+    ? ` for ${options.onlyStoryFiles.length} affected story files`
+    : '';
+  const skipping = build.skipCount ? ` (skipping ${skips})` : '';
   const percentage = Math.round((cursor / build.snapshotCount) * 100);
   const counts = `${cursor}/${build.snapshotCount}`;
   const errs = build.errorCount ? `(${errors}) ` : '';
   return {
     status: 'pending',
-    title: `Taking ${snapshots} (${components}, ${specs})${only}`,
+    title: `Taking ${snapshots} (${components}, ${specs})${only}${onlyFiles}${skipping}`,
     output: cursor
       ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}`
       : 'This may take a few minutes',
