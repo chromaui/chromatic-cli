@@ -58,7 +58,7 @@ jest.mock('node-fetch', () =>
                   paymentRequired: false,
                 },
               },
-              snapshots: [
+              tests: [
                 {
                   spec: { name: 'name', component: { displayName: 'component' } },
                   parameters: { viewport: 320, viewportIsDefault: false },
@@ -72,7 +72,7 @@ jest.mock('node-fetch', () =>
       if (query.match('TesterBuildQuery')) {
         return {
           data: {
-            app: { build: { status: 'BUILD_PENDING', changeCount: 1 } },
+            app: { build: { status: 'PENDING', changeCount: 1 } },
           },
         };
       }

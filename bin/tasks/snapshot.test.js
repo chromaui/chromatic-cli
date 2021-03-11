@@ -10,9 +10,9 @@ describe('takeSnapshots', () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = { client, env, git: { matchesBranch }, log, options: {}, build };
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'BUILD_IN_PROGRESS' } } });
+    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 0, status: 'BUILD_PASSED' } },
+      app: { build: { changeCount: 0, status: 'PASSED' } },
     });
 
     await takeSnapshots(ctx, {});
@@ -20,7 +20,7 @@ describe('takeSnapshots', () => {
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/TesterBuildQuery/), {
       buildNumber: 1,
     });
-    expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'BUILD_PASSED' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED' });
     expect(ctx.exitCode).toBe(0);
   });
 
@@ -29,43 +29,43 @@ describe('takeSnapshots', () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = { client, env, git: { matchesBranch }, log, options: {}, build };
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'BUILD_IN_PROGRESS' } } });
+    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 2, status: 'BUILD_PENDING' } },
+      app: { build: { changeCount: 2, status: 'PENDING' } },
     });
 
     await takeSnapshots(ctx, {});
-    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BUILD_PENDING' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING' });
     expect(ctx.exitCode).toBe(1);
   });
 
-  it('sets exitCode to 2 when build fails', async () => {
+  it('sets exitCode to 2 when build is broken (capture error)', async () => {
     const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = { client, env, git: { matchesBranch }, log, options: {}, build };
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'BUILD_IN_PROGRESS' } } });
+    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 2, status: 'BUILD_FAILED' } },
+      app: { build: { changeCount: 2, status: 'BROKEN' } },
     });
 
     await takeSnapshots(ctx, {});
-    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BUILD_FAILED' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BROKEN' });
     expect(ctx.exitCode).toBe(2);
   });
 
-  it('sets exitCode to 3 when build errors', async () => {
+  it('sets exitCode to 3 when build fails (system error)', async () => {
     const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = { client, env, git: { matchesBranch }, log, options: {}, build };
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'BUILD_IN_PROGRESS' } } });
+    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 2, status: 'BUILD_ERROR' } },
+      app: { build: { changeCount: 2, status: 'FAILED' } },
     });
 
     await takeSnapshots(ctx, {});
-    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BUILD_ERROR' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'FAILED' });
     expect(ctx.exitCode).toBe(3);
   });
 });
