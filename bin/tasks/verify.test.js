@@ -28,7 +28,7 @@ describe('createBuild', () => {
     git: { version: 'whatever', matchesBranch: () => false },
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
-    isolatorUrl: 'https://tunnel.chromatic.com/',
+    isolatorUrl: 'https://tunnel.chromaticqa.com/',
   };
 
   it('creates a build on the index and puts it on context', async () => {

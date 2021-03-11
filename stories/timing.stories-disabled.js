@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 
 // Some stories to test out timing code. Disabled by default
 // These stories are available at (e.g.)
-//   http://vmdbnybkvx.tunnel.staging-chromatic.com/iframe.html?id=timing--5s
+//   http://vmdbnybkvx.staging-tunnel.chromaticqa.com/iframe.html?id=timing--5s
 
 // A component that guarantees the load event won't load for timeout seconds
 // Note that the img loading tends to take a litle longer so this is a minimum
