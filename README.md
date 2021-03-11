@@ -46,7 +46,7 @@ Before publishing, make sure you've done the following:
 
 We have two types of pre-releases: `canary` and `next`. `canary` releases are intended for development purposes and should not be used in production, as they may only work against a staging or dev environment. `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
 
-> Users should *not* use tags in their package.json (e.g. `chromatic@next`), but rather specific version numbers (e.g. `chromatic@5.6.2-next.0`). Otherwise they'll end up with a broken build when we remove or update the tag.
+> As a consumer, **you should not specify a tag** (e.g. `chromatic@next`) in your package dependencies, but rather a specific version number (e.g. `chromatic@5.6.2-next.0`). Otherwise you'll end up with a broken build when we remove or update the tag.
 
 For the first `canary` (or `next`) release, bump the version like so (depending on the semver bump):
 
