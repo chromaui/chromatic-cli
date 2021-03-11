@@ -26,7 +26,7 @@ export const setGitInfo = async (ctx, task) => {
     ctx.git.slug = await getSlug().catch((e) => ctx.log.warn('Failed to retrieve slug', e));
   }
 
-  if (ctx.options.ownerName) {
+  if (ctx.git.slug && ctx.options.ownerName) {
     ctx.git.slug = ctx.git.slug.replace(/[^/]+/, ctx.options.ownerName);
   }
 
