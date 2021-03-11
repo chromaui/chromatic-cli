@@ -7,3 +7,4 @@ node_modules
 # the dist folder IS included so we can test every version in the CI without publishing
 storybook-static
 chromatic-build-*.xml
+.yarnrc.yml
