@@ -27,7 +27,7 @@ export const setSpawnParams = (ctx) => {
   // Based on https://github.com/mysticatea/npm-run-all/blob/52eaf86242ba408dedd015f53ca7ca368f25a026/lib/run-task.js#L156-L174
   const npmExecPath = process.env.npm_execpath;
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
-  const isYarn = npmExecPath && path.basename(npmExecPath) === 'yarn.js';
+  const isYarn = npmExecPath && /^yarn(\.js)?$/.test(path.basename(npmExecPath));
   ctx.spawnParams = {
     command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
     clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
