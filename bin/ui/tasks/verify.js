@@ -17,13 +17,13 @@ export const tracing = (ctx) => ({
 
 export const runOnly = (ctx) => ({
   status: 'pending',
-  title: `Tests will be limited to stories matching '${ctx.options.only}'`,
+  title: `Snapshots will be limited to stories matching '${ctx.options.only}'`,
 });
 
 export const runOnlyFiles = (ctx) => ({
   status: 'pending',
   title: 'Retrieved story files affected by recent changes',
-  output: `Tests will be limited to ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
+  output: `Snapshots will be limited to ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
 });
 
 export const success = (ctx) => ({
