@@ -17,7 +17,7 @@ export const FirstBuildPassed = () =>
     isOnboarding: true,
     build: {
       number: 1,
-      snapshotCount: 10,
+      testCount: 10,
       componentCount: 5,
       specCount: 8,
       app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },

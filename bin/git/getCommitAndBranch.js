@@ -6,6 +6,7 @@ import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
 
+const ORIGIN_PREFIX_REGEXP = /^origin\//;
 const notHead = (branch) => (branch && branch !== 'HEAD' ? branch : false);
 
 export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } = {}) {
@@ -84,6 +85,12 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     !!process.env.CI ||
     !!process.env.REPOSITORY_URL || // https://www.netlify.com/docs/continuous-deployment/
     !!process.env.GITHUB_REPOSITORY;
+
+  // Strip off any `origin/` prefix that's added sometimes.
+  if (!branchName && !isFromEnvVariable && ORIGIN_PREFIX_REGEXP.test(branch)) {
+    log.warn(`Ignoring 'origin/' prefix in branch name.`);
+    branch = branch.replace(ORIGIN_PREFIX_REGEXP, '');
+  }
 
   log.debug(
     `git info: ${JSON.stringify({

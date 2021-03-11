@@ -11,13 +11,14 @@ const ReportQuery = `
     app {
       build(number: $buildNumber) {
         number
-        status
+        status(legacy: false)
         webUrl
         cachedUrl
         createdAt
         completedAt
-        snapshots {
+        tests {
           status
+          result
           spec {
             name
             component {
@@ -43,12 +44,13 @@ export const generateReport = async (ctx) => {
   const file = junitReport === true ? 'chromatic-build-{buildNumber}.xml' : junitReport;
   ctx.reportPath = path.resolve(file.replace(/{buildNumber}/g, buildNumber));
 
-  const result = await client.runQuery(
+  const {
+    app: { build },
+  } = await client.runQuery(
     ReportQuery,
     { buildNumber },
     { Authorization: `Bearer ${reportToken}` }
   );
-  const { build } = result.app;
   const buildTime = (build.completedAt || Date.now()) - build.createdAt;
 
   const suite = reportBuilder
@@ -61,7 +63,7 @@ export const generateReport = async (ctx) => {
     .property('buildUrl', build.webUrl)
     .property('storybookUrl', baseStorybookUrl(build.cachedUrl));
 
-  build.snapshots.forEach(({ status, spec, parameters }) => {
+  build.tests.forEach(({ status, result, spec, parameters }) => {
     const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
     const testCase = suite
       .testCase()
@@ -69,22 +71,23 @@ export const generateReport = async (ctx) => {
       .name(`${spec.name}${suffix}`);
 
     switch (status) {
-      case 'SNAPSHOT_ERROR':
+      case 'FAILED':
         testCase.error('Server error while taking snapshot, please try again', status);
         break;
-      case 'SNAPSHOT_CAPTURE_ERROR':
+      case 'BROKEN':
         testCase.error('Snapshot is broken due to an error in your Storybook', status);
         break;
-      case 'SNAPSHOT_DENIED':
+      case 'DENIED':
         testCase.failure('Snapshot was denied by a user', status);
         break;
-      case 'SNAPSHOT_PENDING':
+      case 'PENDING':
         testCase.failure('Snapshot contains visual changes and must be reviewed', status);
         break;
-      case 'SNAPSHOT_NO_CAPTURE':
-        testCase.skipped();
-        break;
-      default:
+      default: {
+        if (['SKIPPED', 'PRESERVED'].includes(result)) {
+          testCase.skipped();
+        }
+      }
     }
   });
 
