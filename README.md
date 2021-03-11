@@ -42,32 +42,36 @@ Before publishing, make sure you've done the following:
 - Committed and pushed everything
 - Decide on the proper semver bump (major/minor/patch)
 
-#### Doing a `dev` or `rc` release
+#### Doing a `canary` or `next` release
 
-We have two types of pre-releases: `dev` and `rc`. `dev` releases are intended for development purposes and should not be used in production, as they may only work against a staging or dev environment. `rc` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
+We have two types of pre-releases: `canary` and `next`. `canary` releases are intended for development purposes and should not be used in production, as they may only work against a staging or dev environment. `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
 
-For the first `dev` (or `rc`) release, bump the version like so (depending on the semver bump):
+> As a consumer, **you should not specify a tag** (e.g. `chromatic@next`) in your package dependencies, but rather a specific version number (e.g. `chromatic@5.6.2-next.0`). Otherwise you'll end up with a broken build when we remove or update the tag.
+
+For the first `canary` (or `next`) release, bump the version like so (depending on the semver bump):
 
 ```sh
-npm version <premajor|preminor|prepatch> --preid dev
+npm version <premajor|preminor|prepatch> --preid canary
 ```
 
-For consecutive `dev` releases on the same version:
+For consecutive `canary` releases on the same version:
 
 ```sh
-npm version prerelease --preid=dev
+npm version prerelease --preid=canary
 ```
 
 Then push and publish:
 
 ```sh
 git push --follow-tags
-npm publish --tag dev
+npm publish --tag canary
 ```
 
-Make sure to replace `dev` with `rc` if appropriate.
+Make sure to replace `canary` with `next` if appropriate.
 
-#### Doing a final release
+#### Doing a `latest` release
+
+A final release is automatically tagged `latest` by npm.
 
 ```sh
 npm version <major|minor|patch>
@@ -76,8 +80,10 @@ npm publish
 yarn publish-action
 ```
 
-And finally, remove the `dev` and/or `rc` tag, if any:
+And finally, remove the `canary` and/or `next` tag, if any:
 
 ```
-npm dist-tag rm chromatic dev
+npm dist-tag rm chromatic canary
 ```
+
+This ensures we can safely do a new `canary` or `next` release later, without anyone getting an unexpected update.
