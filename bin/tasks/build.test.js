@@ -53,9 +53,15 @@ describe('setSpawnParams', () => {
     const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
+      client: 'yarn',
+      platform: expect.stringMatching(/darwin|linux|win32/),
       command: '/path/to/yarn',
       clientArgs: ['run', '--silent'],
       scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
+      spawnOptions: {
+        preferLocal: true,
+        localDir: expect.stringMatching(/node_modules[/\\]\.bin$/),
+      },
     });
   });
 });
