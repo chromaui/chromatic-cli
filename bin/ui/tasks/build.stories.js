@@ -1,17 +1,19 @@
 import task from '../components/task';
-import { initial, pending, skipped, success } from './build';
+import { initial, pending, skipped, success, failed } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
   decorators: [(storyFn) => task(storyFn())],
 };
 
+const spawnParams = {
+  client: 'yarn',
+  scriptArgs: ['build-storybook', '-o', 'storybook-static'],
+};
+
 export const Initial = () => initial;
 
-export const Building = () =>
-  pending({
-    spawnParams: { scriptArgs: ['build-storybook', '-o', 'storybook-static'] },
-  });
+export const Building = () => pending({ spawnParams });
 
 export const Built = () =>
   success({
@@ -24,3 +26,5 @@ export const Skipped = () =>
   skipped({
     options: { storybookBuildDir: '/users/me/project/storybook-static' },
   });
+
+export const Failed = () => failed({ spawnParams });

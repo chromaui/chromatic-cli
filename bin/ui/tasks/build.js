@@ -7,7 +7,7 @@ export const initial = {
 
 export const pending = (ctx) => ({
   status: 'pending',
-  title: 'Building your Storybook',
+  title: `Building your Storybook with ${ctx.spawnParams.client}`,
   output: `Running command: ${ctx.spawnParams.scriptArgs.join(' ')}`,
 });
 
@@ -25,6 +25,6 @@ export const skipped = (ctx) => ({
 
 export const failed = (ctx) => ({
   status: 'error',
-  title: 'Building your Storybook',
+  title: `Building your Storybook with ${ctx.spawnParams.client}`,
   output: `Command failed: ${ctx.spawnParams.scriptArgs.join(' ')}`,
 });

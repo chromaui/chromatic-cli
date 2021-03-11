@@ -29,6 +29,8 @@ export const setSpawnParams = (ctx) => {
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
   const isYarn = npmExecPath && path.basename(npmExecPath) === 'yarn.js';
   ctx.spawnParams = {
+    client: isYarn ? 'yarn' : 'npm',
+    platform: process.platform,
     command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
     clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
     scriptArgs: [
@@ -53,6 +55,7 @@ export const buildStorybook = async (ctx) => {
 
   try {
     const { command, clientArgs, scriptArgs } = ctx.spawnParams;
+    ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
     await Promise.race([
       execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
       timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
