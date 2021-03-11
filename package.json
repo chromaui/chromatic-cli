@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "5.6.3",
+  "version": "5.7.0",
   "description": "Visual Testing for Storybook",
   "homepage": "https://www.chromatic.com",
   "bugs": {
@@ -15,9 +15,9 @@
   "main": "./storybook-addon.js",
   "types": "./storybook-addon.d.ts",
   "bin": {
-    "chroma": "./bin/register.js",
-    "chromatic": "./bin/register.js",
-    "chromatic-cli": "./bin/register.js"
+    "chroma": "bin/register.js",
+    "chromatic": "bin/register.js",
+    "chromatic-cli": "bin/register.js"
   },
   "files": [
     "bin",
