@@ -41,6 +41,17 @@ describe('setSpawnParams', () => {
       scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/'],
     });
   });
+
+  it('supports yarn', async () => {
+    process.env.npm_execpath = '/path/to/yarn';
+    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    await setSpawnParams(ctx);
+    expect(ctx.spawnParams).toEqual({
+      command: '/path/to/yarn',
+      clientArgs: ['run', '--silent'],
+      scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
+    });
+  });
 });
 
 describe('buildStorybook', () => {
