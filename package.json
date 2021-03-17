@@ -1,7 +1,7 @@
 {
   "name": "chromatic",
   "version": "5.7.0",
-  "description": "Visual Testing for Storybook",
+  "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "homepage": "https://www.chromatic.com",
   "bugs": {
     "url": "https://github.com/chromaui/chromatic-cli",
@@ -126,5 +126,16 @@
     "typescript": "^4.1.4",
     "why-is-node-running": "^2.1.2"
   },
-  "docs": "https://www.chromatic.com/docs/cli"
+  "docs": "https://www.chromatic.com/docs/cli",
+  "keywords": [
+    "storybook-addon",
+    "storybook",
+    "addon",
+    "test",
+    "popular"
+  ],
+  "storybook": {
+    "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
+    "displayName": "Chromatic"
+  }
 }
