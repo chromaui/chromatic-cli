@@ -77,6 +77,26 @@ You can to configure secrets in the repository settings (`/<owner>/<repository>/
 | `storybookUrl` | string | The Storybook preview URL for your current branch / Pull Request (e.g. `https://<app id goes here>-<branch hash>.chromatic.com/`) |
 | `code`         | string | The exit code for the current run of the Chromatic CLI                                                                            |
 
+### Triggering from `workflow_dispatch`
+
+Two inputs are required in order to trigger from `workflow_dispatch`, `ref` and `sha`. See [this post](https://github.blog/changelog/2020-07-06-github-actions-manual-triggers-with-workflow_dispatch/) for details regarding `workflow_dispatch`.
+
+To run on both `push` and `workflow_dispatch`:
+
+```yaml
+# Event for the workflow
+on:
+  push
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: The SHA-1 hash referring to the commit to check.
+        required: true
+      ref:
+        description: The full git ref for the PR (`refs/heads/my-branch`).
+        required: true
+```
+
 ## Checkout depth
 
 Version 2 of the `actions/checkout` action will only checkout a single commit without history by default. Chromatic needs the full git history in order to track changes over time. Set `fetch-depth: 0` to enable this. See [actions/checkout](https://github.com/actions/checkout#readme) for details.

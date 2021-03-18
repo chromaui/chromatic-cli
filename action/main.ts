@@ -44,6 +44,27 @@ const getCommit = (event: typeof context) => {
         sha: event.payload.after,
       };
     }
+    case 'workflow_dispatch': {
+      const { ref, sha } = event.payload.inputs;
+
+      if (!ref) {
+        setFailed(`When triggering via workflow_dispatch, ref is a required input.`);
+        return null;
+      }
+
+      if (!sha) {
+        setFailed(`When triggering via workflow_dispatch, sha is a required input.`);
+        return null;
+      }
+
+      return {
+        owner: event.payload.repository.owner.login,
+        repo: event.payload.repository.name,
+        branch: ref.replace('refs/heads/', ''),
+        ref,
+        sha,
+      };
+    }
     default: {
       setFailed(`${event.eventName} event is not supported in this action`);
 
