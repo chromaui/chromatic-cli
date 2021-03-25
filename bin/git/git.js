@@ -259,6 +259,7 @@ export async function getBaselineCommits(
 
   // Add the most recent build on the branch as a (potential) baseline build, unless:
   //   - the user opts out with `--ignore-last-build-on-branch`
+  //   - the commit is equal (and by definition on the same branch), in which case we're dealing with a rebuild
   //   - the commit is newer than the build we are running, in which case we doing this build out
   //     of order and that could lead to problems.
   //   - the current branch is `HEAD`; this is fairly meaningless
@@ -268,6 +269,7 @@ export async function getBaselineCommits(
     branch !== 'HEAD' &&
     !ignoreLastBuildOnBranch &&
     lastBuild &&
+    lastBuild.commit !== commit &&
     lastBuild.committedAt <= committedAt
   ) {
     if (await commitExists(lastBuild.commit)) {
@@ -281,7 +283,7 @@ export async function getBaselineCommits(
     }
   }
 
-  // Add the most recent build on a (merged) branch if as a (potential) baseline if we think
+  // Add the most recent build on a (merged) branch as a (potential) baseline if we think
   // this commit was the commit that merged the PR.
   // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
   if (pullRequest && pullRequest.lastHeadBuild) {
