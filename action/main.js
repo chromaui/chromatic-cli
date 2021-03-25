@@ -128,7 +128,7 @@ function runChromatic(options) {
                             url: (_a = ctx.build) === null || _a === void 0 ? void 0 : _a.webUrl,
                             code: ctx.exitCode,
                             buildUrl: (_b = ctx.build) === null || _b === void 0 ? void 0 : _b.webUrl,
-                            storybookUrl: (_c = ctx.build) === null || _c === void 0 ? void 0 : _c.isolatorUrl
+                            storybookUrl: (_c = ctx.build) === null || _c === void 0 ? void 0 : _c.cachedUrl
                         }];
             }
         });

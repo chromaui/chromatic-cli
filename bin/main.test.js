@@ -58,7 +58,7 @@ jest.mock('node-fetch', () =>
                   paymentRequired: false,
                 },
               },
-              snapshots: [
+              tests: [
                 {
                   spec: { name: 'name', component: { displayName: 'component' } },
                   parameters: { viewport: 320, viewportIsDefault: false },
@@ -72,7 +72,7 @@ jest.mock('node-fetch', () =>
       if (query.match('TesterBuildQuery')) {
         return {
           data: {
-            app: { build: { status: 'BUILD_PENDING', changeCount: 1 } },
+            app: { build: { status: 'PENDING', changeCount: 1 } },
           },
         };
       }
@@ -127,17 +127,18 @@ fs.statSync = jest.fn((path) => {
 });
 
 jest.mock('./git/git', () => ({
-  hasPreviousCommit: () => true,
-  getCommit: () => ({
-    commit: 'commit',
-    committedAt: 1234,
-    committerEmail: 'test@test.com',
-    committerName: 'tester',
-  }),
-  getBranch: () => 'branch',
-  getBaselineCommits: () => ['baseline'],
-  getSlug: () => 'user/repo',
-  getVersion: () => '2.24.1',
+  hasPreviousCommit: () => Promise.resolve(true),
+  getCommit: () =>
+    Promise.resolve({
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+    }),
+  getBranch: () => Promise.resolve('branch'),
+  getBaselineCommits: () => Promise.resolve(['baseline']),
+  getSlug: () => Promise.resolve('user/repo'),
+  getVersion: () => Promise.resolve('2.24.1'),
 }));
 
 jest.mock('./lib/startStorybook');

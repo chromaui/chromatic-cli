@@ -20,12 +20,12 @@ const TesterBuildQuery = `
     app {
       build(number: $buildNumber) {
         id
-        status
+        status(legacy: false)
         autoAcceptChanges
-        inProgressCount: snapshotCount(statuses: [SNAPSHOT_IN_PROGRESS])
-        snapshotCount
+        inProgressCount: testCount(statuses: [IN_PROGRESS])
+        testCount
         changeCount
-        errorCount: snapshotCount(statuses: [SNAPSHOT_CAPTURE_ERROR])
+        errorCount: testCount(statuses: [BROKEN])
       }
     }
   }
@@ -33,15 +33,15 @@ const TesterBuildQuery = `
 
 export const takeSnapshots = async (ctx, task) => {
   const { client, log, options } = ctx;
-  const { number: buildNumber, snapshots } = ctx.build;
+  const { number: buildNumber, tests } = ctx.build;
 
   if (ctx.build.app.repository && ctx.uploadedBytes && !options.junitReport) {
     log.info(speedUpCI(ctx.build.app.repository.provider));
   }
 
-  const snapshotLabels =
+  const testLabels =
     options.interactive &&
-    snapshots.map(({ spec, parameters }) => {
+    tests.map(({ spec, parameters }) => {
       const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
       return `${spec.component.displayName} › ${spec.name}${suffix}`;
     });
@@ -50,14 +50,14 @@ export const takeSnapshots = async (ctx, task) => {
     const { app } = await client.runQuery(TesterBuildQuery, { buildNumber });
     ctx.build = { ...ctx.build, ...app.build };
 
-    if (app.build.status !== 'BUILD_IN_PROGRESS') {
+    if (app.build.status !== 'IN_PROGRESS') {
       return ctx.build;
     }
 
     if (options.interactive) {
-      const { inProgressCount, snapshotCount } = ctx.build;
-      const cursor = snapshotCount - inProgressCount + 1;
-      const label = snapshotLabels[cursor - 1] || '';
+      const { inProgressCount, testCount } = ctx.build;
+      const cursor = testCount - inProgressCount + 1;
+      const label = testLabels[cursor - 1] || '';
       task.output = pending({ ...ctx, cursor, label }).output;
     }
 
@@ -68,16 +68,16 @@ export const takeSnapshots = async (ctx, task) => {
   const build = await waitForBuild();
 
   switch (build.status) {
-    case 'BUILD_PASSED':
+    case 'PASSED':
       ctx.exitCode = 0;
       ctx.log.info(buildPassedMessage(ctx));
       transitionTo(buildPassed, true)(ctx, task);
       break;
 
     // They may have sneakily looked at the build while we were waiting
-    case 'BUILD_ACCEPTED':
-    case 'BUILD_PENDING':
-    case 'BUILD_DENIED': {
+    case 'ACCEPTED':
+    case 'PENDING':
+    case 'DENIED': {
       if (build.autoAcceptChanges || ctx.git.matchesBranch(options.exitZeroOnChanges)) {
         ctx.exitCode = 0;
         ctx.log.info(buildPassedMessage(ctx));
@@ -89,14 +89,14 @@ export const takeSnapshots = async (ctx, task) => {
       break;
     }
 
-    case 'BUILD_FAILED':
+    case 'BROKEN':
       ctx.exitCode = 2;
       ctx.log.error(buildHasErrors(ctx));
       transitionTo(buildFailed, true)(ctx, task);
       break;
 
-    case 'BUILD_TIMED_OUT':
-    case 'BUILD_ERROR':
+    case 'FAILED':
+    case 'CANCELLED':
       ctx.exitCode = 3;
       transitionTo(buildError, true)(ctx, task);
       break;
