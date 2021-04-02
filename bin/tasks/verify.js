@@ -12,7 +12,7 @@ const TesterCreateBuildMutation = `
       id
       number
       specCount
-      snapshotCount
+      testCount
       componentCount
       webUrl
       cachedUrl
@@ -33,7 +33,7 @@ const TesterCreateBuildMutation = `
         }
         setupUrl
       }
-      snapshots {
+      tests {
         spec {
           name
           component {
@@ -99,7 +99,7 @@ export const createBuild = async (ctx, task) => {
   ctx.isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
 
   if (list) {
-    log.info(listingStories(build.snapshots));
+    log.info(listingStories(build.tests));
   }
 
   if (build.wasLimited) {
