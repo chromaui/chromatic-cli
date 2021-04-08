@@ -1,8 +1,7 @@
 import fs from 'fs-extra';
 import { getDependentStoryFiles } from '../bin/lib/getDependentStoryFiles';
 
-const statsFile = process.argv[2] || './storybook-static/preview-stats.json';
-const changedFiles = [];
+const [statsFile, ...changedFiles] = process.argv.slice(2);
 
 const main = async () => {
   const stats = await fs.readJson(statsFile);
