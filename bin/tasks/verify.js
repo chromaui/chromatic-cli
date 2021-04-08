@@ -1,7 +1,7 @@
 import { readJson } from 'fs-extra';
 
 import { createTask, transitionTo } from '../lib/tasks';
-import { getDependentStoryFiles, statsToDependencies } from '../lib/getDependentStoryFiles';
+import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
@@ -79,8 +79,7 @@ export const traceChangedFiles = async (ctx, task) => {
 
   try {
     const stats = await readJson(statsPath);
-    const deps = statsToDependencies(stats);
-    ctx.onlyStoryFiles = getDependentStoryFiles(changedFiles, deps);
+    ctx.onlyStoryFiles = getDependentStoryFiles(ctx, stats, changedFiles);
   } catch (e) {
     ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
   }
@@ -99,7 +98,9 @@ export const createBuild = async (ctx, task) => {
   if (onlyStoryFiles) {
     transitionTo(runOnlyFiles)(ctx, task);
     ctx.log.debug(
-      `Affected story files:\n${ctx.onlyStoryFiles.map(([id, f]) => `  ${f} [${id}]`).join('\n')}`
+      `Affected story files:\n${Object.entries(ctx.onlyStoryFiles)
+        .map(([id, f]) => `  ${f} [${id}]`)
+        .join('\n')}`
     );
   }
 
@@ -107,7 +108,7 @@ export const createBuild = async (ctx, task) => {
     input: {
       ...commitInfo,
       ...(only && { only }),
-      ...(onlyStoryFiles && { onlyStoryFiles: onlyStoryFiles.flat() }),
+      ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
       autoAcceptChanges,
       cachedUrl: ctx.cachedUrl,
       environment: ctx.environment,

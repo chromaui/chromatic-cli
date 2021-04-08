@@ -1,6 +1,8 @@
 // Figure out the Storybook version and view layer
 
 import fs from 'fs-extra';
+import meow from 'meow';
+import argv from 'string-argv';
 
 const viewLayers = [
   'react',
@@ -73,7 +75,7 @@ const findViewlayer = async ({ env }) => {
     if (!viewLayer || !version) {
       throw new Error('CHROMATIC_STORYBOOK_VERSION was provided but could not be used');
     }
-    return { viewLayer, version };
+    return { version, viewLayer };
   }
 
   // Try to find the Storybook viewlayer package
@@ -88,7 +90,7 @@ const findViewlayer = async ({ env }) => {
   return Promise.race([
     ...findings.map((p, i) =>
       p.then(
-        (l) => read(l).then((r) => ({ viewLayer: viewLayers[i], ...r })),
+        (l) => read(l).then(({ version }) => ({ version, viewLayer: viewLayers[i] })),
         disregard // keep it pending forever
       )
     ),
@@ -111,12 +113,25 @@ const findAddons = async () => {
   return { addons: result.filter(Boolean) };
 };
 
-export default async function getStorybookInfo(ctx) {
-  const storybookInfo = await findViewlayer(ctx);
-  const addonInfo = await findAddons();
+const findConfigFlags = async ({ options, packageJson }) => {
+  const { scripts = {} } = packageJson;
+  if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
+
+  const { flags } = meow({
+    argv: argv(scripts[options.buildScriptName]),
+    flags: {
+      configDir: { type: 'string', alias: 'c' },
+      staticDir: { type: 'string', alias: 's' },
+    },
+  });
 
   return {
-    ...storybookInfo,
-    ...addonInfo,
+    configDir: flags.configDir,
+    staticDir: flags.staticDir && flags.staticDir.split(','),
   };
+};
+
+export default async function getStorybookInfo(ctx) {
+  const info = await Promise.all([findAddons(), findConfigFlags(ctx), findViewlayer(ctx)]);
+  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 }
