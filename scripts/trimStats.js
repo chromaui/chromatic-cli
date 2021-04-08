@@ -1,6 +1,7 @@
 const { readJson, outputFile } = require('fs-extra');
 
-const statsFile = process.argv[2];
+const statsFile = process.argv[2] || './storybook-static/preview-stats.json';
+const targetFile = statsFile.replace('.json', '.trimmed.json');
 
 const isUserCode = (mod) => !(mod.name || mod.moduleName).match(/(node_modules|webpack\/runtime)/);
 const dedupe = (arr) => [...new Set(arr)];
@@ -24,11 +25,14 @@ const main = async () => {
     .filter(Boolean);
 
   await outputFile(
-    statsFile.replace('.json', '.trimmed.json'),
+    targetFile,
     JSON.stringify({ modules: trimmedModules }, null, 2)
       .replace(/{\n {10}/g, '{ ')
       .replace(/\n {8}}/g, ' }')
   );
+
+  // eslint-disable-next-line no-console
+  console.log(`Wrote ${targetFile}`);
 };
 
 main();
