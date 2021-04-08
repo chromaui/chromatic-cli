@@ -1,4 +1,4 @@
-const { readJson, outputFile } = require('fs-extra');
+import { readJson, outputFile } from 'fs-extra';
 
 const statsFile = process.argv[2] || './storybook-static/preview-stats.json';
 const targetFile = statsFile.replace('.json', '.trimmed.json');
