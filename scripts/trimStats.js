@@ -3,8 +3,9 @@ const { readJson, outputFile } = require('fs-extra');
 const statsFile = process.argv[2] || './storybook-static/preview-stats.json';
 const targetFile = statsFile.replace('.json', '.trimmed.json');
 
-const isUserCode = (mod) => !(mod.name || mod.moduleName).match(/(node_modules|webpack\/runtime)/);
 const dedupe = (arr) => [...new Set(arr)];
+const isUserCode = ({ name, moduleName = name }) =>
+  !moduleName.startsWith('(webpack)') && !moduleName.match(/\/(node_modules|webpack\/runtime)\//);
 
 const main = async () => {
   const stats = await readJson(statsFile);
