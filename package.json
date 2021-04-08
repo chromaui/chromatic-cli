@@ -44,6 +44,7 @@
     "prepare": "npm run build",
     "publish-action": "yarn build:action && node scripts/publish-action.js",
     "trim-stats": "node -r esm scripts/trim-stats-file.js",
+    "stats-to-story-files": "node -r esm scripts/stats-to-story-files.js",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest"
   },
