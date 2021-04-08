@@ -1,7 +1,7 @@
 import { readJson } from 'fs-extra';
 
 import { createTask, transitionTo } from '../lib/tasks';
-import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
+import { getDependentStoryFiles, statsToDependencies } from '../lib/getDependentStoryFiles';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
@@ -79,7 +79,8 @@ export const traceChangedFiles = async (ctx, task) => {
 
   try {
     const stats = await readJson(statsPath);
-    ctx.onlyStoryFiles = getDependentStoryFiles(changedFiles, stats);
+    const deps = statsToDependencies(stats);
+    ctx.onlyStoryFiles = getDependentStoryFiles(changedFiles, deps);
   } catch (e) {
     ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
   }
