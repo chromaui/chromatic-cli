@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "5.7.0",
+  "version": "5.7.1",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "homepage": "https://www.chromatic.com",
   "bugs": {
@@ -106,7 +106,7 @@
     "@babel/preset-env": "^7.12.13",
     "@storybook/eslint-config-storybook": "^3.0.0",
     "@storybook/linter-config": "^3.0.0",
-    "@storybook/react": "^6.2.0-beta.14",
+    "@storybook/react": "6.2.0-rc.13",
     "@types/node": "^14.14.25",
     "@typescript-eslint/eslint-plugin": "^4.15.0",
     "@typescript-eslint/parser": "^4.15.0",
