@@ -64,7 +64,7 @@ export const setGitInfo = async (ctx, task) => {
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
-  // If the sole baseline is the most recent ancestor, then this is likely a rebuild (rerun of CI job).
+  // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
@@ -77,8 +77,9 @@ export const setGitInfo = async (ctx, task) => {
     }
   }
 
-  // Retrieve a list of changed file paths since the baseline commit(s), which will be used to
-  // determine affected story files later.
+  // TODO retrieve actual baseline commits
+  // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
+  // to determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // completely, since we know for certain it wouldn't have any effect.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
