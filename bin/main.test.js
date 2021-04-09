@@ -199,7 +199,7 @@ it('runs in simple situations', async () => {
       branch: 'branch',
       commit: 'commit',
       committedAt: 1234,
-      baselineCommits: ['baseline'],
+      parentCommits: ['baseline'],
       fromCI: false,
       isTravisPrBuild: false,
       packageVersion: expect.any(String),

@@ -18,7 +18,7 @@ describe('setGitInfo', () => {
     expect(ctx.git).toMatchObject({
       commit: '123asdf',
       branch: 'something',
-      baselineCommits: ['asd2344'],
+      parentCommits: ['asd2344'],
       version: 'Git v1.0.0',
       slug: 'user/repo',
     });
@@ -34,7 +34,7 @@ describe('setGitInfo', () => {
     expect(ctx.git).toMatchObject({
       commit: '123asdf',
       branch: 'something',
-      baselineCommits: ['asd2344'],
+      parentCommits: ['asd2344'],
       version: 'Git v1.0.0',
       slug: 'org/repo',
     });

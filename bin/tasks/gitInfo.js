@@ -58,17 +58,17 @@ export const setGitInfo = async (ctx, task) => {
     throw new Error(skipFailed(ctx).output);
   }
 
-  const baselineCommits = await getParentCommits(ctx, {
+  const parentCommits = await getParentCommits(ctx, {
     ignoreLastBuildOnBranch: matchesBranch(ctx.options.ignoreLastBuildOnBranch),
   });
-  ctx.git.baselineCommits = baselineCommits;
-  ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+  ctx.git.parentCommits = parentCommits;
+  ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
   // If the sole baseline is the most recent ancestor, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
-  if (baselineCommits.length === 1 && baselineCommits[0] === commit) {
+  if (parentCommits.length === 1 && parentCommits[0] === commit) {
     const mostRecentAncestor = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
     if (mostRecentAncestor && ['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
       ctx.skip = true;
@@ -81,8 +81,8 @@ export const setGitInfo = async (ctx, task) => {
   // determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // completely, since we know for certain it wouldn't have any effect.
-  if (baselineCommits.length && matchesBranch(ctx.options.onlyChanged)) {
-    const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
+  if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
+    const results = await Promise.all(parentCommits.map((c) => getChangedFiles(c)));
     ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
     ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
     if (ctx.git.changedFiles.length === 0) {

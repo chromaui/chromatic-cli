@@ -1,10 +1,10 @@
 import pluralize from 'pluralize';
 
-const infoMessage = ({ commit, branch, baselineCommits }, { ownerName }) => {
+const infoMessage = ({ commit, branch, parentCommits }, { ownerName }) => {
   const branchName = ownerName ? `${ownerName}:${branch}` : branch;
   const info = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
-  return baselineCommits.length
-    ? `${info}; found ${pluralize('baseline commit', baselineCommits.length, true)}`
+  return parentCommits.length
+    ? `${info}; found ${pluralize('baseline commit', parentCommits.length, true)}`
     : `${info}; no baseline commits found`;
 };
 
