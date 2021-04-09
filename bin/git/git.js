@@ -230,18 +230,13 @@ async function step(
 }
 
 export async function getBaselineCommits(
-  { client, log },
-  { branch, ignoreLastBuildOnBranch = false } = {}
+  { client, git, log },
+  { ignoreLastBuildOnBranch = false } = {}
 ) {
-  const { commit, committedAt } = await getCommit();
-
+  const { branch, commit, committedAt } = git;
   // Include the latest build from this branch as an ancestor of the current build
-  const {
-    app: { firstBuild, lastBuild, pullRequest },
-  } = await client.runQuery(TesterFirstCommittedAtQuery, {
-    branch,
-    commit,
-  });
+  const { app } = await client.runQuery(TesterFirstCommittedAtQuery, { branch, commit });
+  const { firstBuild, lastBuild, pullRequest } = app;
   log.debug(
     `App firstBuild: %o, lastBuild: %o, pullRequest: %o`,
     firstBuild,

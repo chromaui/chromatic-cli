@@ -114,12 +114,12 @@ export const validateFiles = async (ctx, task) => {
 };
 
 export const traceChangedFiles = async (ctx, task) => {
+  if (!ctx.fileInfo.statsPath || !ctx.git.changedFiles) return;
   const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
-  const { changedFiles } = ctx.git;
-  if (!statsPath || !changedFiles) return;
 
   transitionTo(tracing)(ctx, task);
 
+  const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
     ctx.onlyStoryFiles = getDependentStoryFiles(ctx, stats, changedFiles);

@@ -1,5 +1,5 @@
 import execa from 'execa';
-import fs from 'fs';
+import fs from 'fs-extra';
 import { confirm } from 'node-ask';
 import fetch from 'node-fetch';
 import kill from 'tree-kill';
@@ -117,6 +117,7 @@ jest.mock('tree-kill');
 jest.mock('fs-extra', () => ({
   pathExists: async () => true,
   readFileSync: jest.requireActual('fs-extra').readFileSync,
+  createWriteStream: jest.requireActual('fs-extra').createWriteStream,
 }));
 
 fs.readdirSync = jest.fn(() => ['iframe.html', 'index.html']);

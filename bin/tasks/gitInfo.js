@@ -59,7 +59,6 @@ export const setGitInfo = async (ctx, task) => {
   }
 
   const baselineCommits = await getBaselineCommits(ctx, {
-    branch,
     ignoreLastBuildOnBranch: matchesBranch(ctx.options.ignoreLastBuildOnBranch),
   });
   ctx.git.baselineCommits = baselineCommits;
