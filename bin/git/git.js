@@ -281,7 +281,7 @@ export async function getBaselineCommits(
     }
   }
 
-  // Add the most recent build on a (merged) branch if as a (potential) baseline if we think
+  // Add the most recent build on a (merged) branch as a (potential) baseline if we think
   // this commit was the commit that merged the PR.
   // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
   if (pullRequest && pullRequest.lastHeadBuild) {

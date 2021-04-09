@@ -30,6 +30,12 @@ export const skippedForCommit = (ctx) => ({
   output: `Skipped build for commit ${ctx.git.commit.substr(0, 7)} due to --skip`,
 });
 
+export const skippedRebuild = (ctx) => ({
+  status: 'success',
+  title: 'Skipping build',
+  output: `Skipped rebuild of an already fully passed/accepted build`,
+});
+
 export const skipFailed = (ctx) => ({
   status: 'error',
   title: 'Skipping build',
