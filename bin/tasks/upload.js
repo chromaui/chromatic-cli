@@ -34,20 +34,21 @@ const TesterGetUploadUrlsMutation = `
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
 // paths will be like iframe.html rather than storybook-static/iframe.html
-function getPathsInDir(rootDir, dirname = '.') {
+function getPathsInDir(ctx, rootDir, dirname = '.') {
   try {
     return readdirSync(join(rootDir, dirname))
       .map((p) => join(dirname, p))
       .map((pathname) => {
         const stats = statSync(join(rootDir, pathname));
         if (stats.isDirectory()) {
-          return getPathsInDir(rootDir, pathname);
+          return getPathsInDir(ctx, rootDir, pathname);
         }
         return [{ pathname, contentLength: stats.size }];
       })
       .reduce((a, b) => [...a, ...b], []); // flatten
   } catch (e) {
-    throw new Error(invalid({ sourceDir: rootDir }).output);
+    ctx.log.debug(e);
+    throw new Error(invalid({ sourceDir: rootDir }, e).output);
   }
 }
 
@@ -61,8 +62,8 @@ function getOutputDir(buildLog) {
   return outputDir.trim();
 }
 
-function getFileInfo(sourceDir) {
-  const lengths = getPathsInDir(sourceDir).map((o) => ({ ...o, knownAs: slash(o.pathname) }));
+function getFileInfo(ctx, sourceDir) {
+  const lengths = getPathsInDir(ctx, sourceDir).map((o) => ({ ...o, knownAs: slash(o.pathname) }));
   const paths = lengths.map(({ knownAs }) => knownAs);
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   return { lengths, paths, total };
@@ -72,7 +73,7 @@ const isValidStorybook = ({ paths, total }) =>
   total > 0 && paths.includes('iframe.html') && paths.includes('index.html');
 
 export const uploadStorybook = async (ctx, task) => {
-  let fileInfo = getFileInfo(ctx.sourceDir);
+  let fileInfo = getFileInfo(ctx, ctx.sourceDir);
 
   if (!isValidStorybook(fileInfo) && ctx.buildLogFile) {
     try {
@@ -81,7 +82,7 @@ export const uploadStorybook = async (ctx, task) => {
       if (outputDir && outputDir !== ctx.sourceDir) {
         ctx.log.warn(deviatingOutputDir(ctx, outputDir));
         ctx.sourceDir = outputDir;
-        fileInfo = getFileInfo(ctx.sourceDir);
+        fileInfo = getFileInfo(ctx, ctx.sourceDir);
       }
     } catch (e) {
       ctx.log.debug(e);
