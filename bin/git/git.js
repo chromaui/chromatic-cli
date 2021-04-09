@@ -229,11 +229,12 @@ async function step(
   });
 }
 
-export async function getBaselineCommits(
+export async function getParentCommits(
   { client, git, log },
   { ignoreLastBuildOnBranch = false } = {}
 ) {
   const { branch, commit, committedAt } = git;
+
   // Include the latest build from this branch as an ancestor of the current build
   const { app } = await client.runQuery(TesterFirstCommittedAtQuery, { branch, commit });
   const { firstBuild, lastBuild, pullRequest } = app;
@@ -250,9 +251,9 @@ export async function getBaselineCommits(
   }
 
   const initialCommitsWithBuilds = [];
-  const extraBaselineCommits = [];
+  const extraParentCommits = [];
 
-  // Add the most recent build on the branch as a (potential) baseline build, unless:
+  // Add the most recent build on the branch as a parent build, unless:
   //   - the user opts out with `--ignore-last-build-on-branch`
   //   - the commit is newer than the build we are running, in which case we doing this build out
   //     of order and that could lead to problems.
@@ -270,14 +271,14 @@ export async function getBaselineCommits(
       initialCommitsWithBuilds.push(lastBuild.commit);
     } else {
       log.debug(
-        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to baselines`
+        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to parents`
       );
-      extraBaselineCommits.push(lastBuild.commit);
+      extraParentCommits.push(lastBuild.commit);
     }
   }
 
-  // Add the most recent build on a (merged) branch as a (potential) baseline if we think
-  // this commit was the commit that merged the PR.
+  // Add the most recent build on a (merged) branch as a parent if we think this was the commit that
+  // merged the pull request.
   // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
   if (pullRequest && pullRequest.lastHeadBuild) {
     if (await commitExists(pullRequest.lastHeadBuild.commit)) {
@@ -287,9 +288,9 @@ export async function getBaselineCommits(
       initialCommitsWithBuilds.push(pullRequest.lastHeadBuild.commit);
     } else {
       log.debug(
-        `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to baselines`
+        `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to parents`
       );
-      extraBaselineCommits.push(pullRequest.lastHeadBuild.commit);
+      extraParentCommits.push(pullRequest.lastHeadBuild.commit);
     }
   }
 
@@ -307,10 +308,7 @@ export async function getBaselineCommits(
   log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
 
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
-  return [
-    ...extraBaselineCommits,
-    ...(await maximallyDescendentCommits({ log }, commitsWithBuilds)),
-  ];
+  return [...extraParentCommits, ...(await maximallyDescendentCommits({ log }, commitsWithBuilds))];
 }
 
 export async function getChangedFiles(baseCommit, headCommit = '') {

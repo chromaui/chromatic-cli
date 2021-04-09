@@ -137,7 +137,7 @@ jest.mock('./git/git', () => ({
       committerName: 'tester',
     }),
   getBranch: () => Promise.resolve('branch'),
-  getBaselineCommits: () => Promise.resolve(['baseline']),
+  getParentCommits: () => Promise.resolve(['baseline']),
   getSlug: () => Promise.resolve('user/repo'),
   getVersion: () => Promise.resolve('2.24.1'),
 }));
