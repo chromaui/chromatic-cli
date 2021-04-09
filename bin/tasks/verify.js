@@ -1,13 +1,10 @@
-import { readJson } from 'fs-extra';
-
 import { createTask, transitionTo } from '../lib/tasks';
-import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import { initial, pending, runOnly, runOnlyFiles, tracing, success } from '../ui/tasks/verify';
+import { initial, pending, runOnly, runOnlyFiles, success } from '../ui/tasks/verify';
 
 const TesterCreateBuildMutation = `
   mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
@@ -68,21 +65,6 @@ export const setEnvironment = async (ctx) => {
   );
 
   ctx.log.debug(`Got environment ${ctx.environment}`);
-};
-
-export const traceChangedFiles = async (ctx, task) => {
-  const { statsPath } = ctx;
-  const { changedFiles } = ctx.git;
-  if (!statsPath || !changedFiles) return;
-
-  transitionTo(tracing)(ctx, task);
-
-  try {
-    const stats = await readJson(statsPath);
-    ctx.onlyStoryFiles = getDependentStoryFiles(ctx, stats, changedFiles);
-  } catch (e) {
-    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
-  }
 };
 
 export const createBuild = async (ctx, task) => {
@@ -158,5 +140,5 @@ export const createBuild = async (ctx, task) => {
 export default createTask({
   title: initial.title,
   skip: (ctx) => ctx.skip,
-  steps: [transitionTo(pending), setEnvironment, traceChangedFiles, createBuild],
+  steps: [transitionTo(pending), setEnvironment, createBuild],
 });

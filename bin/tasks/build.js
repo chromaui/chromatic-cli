@@ -1,5 +1,5 @@
 import execa from 'execa';
-import fs from 'fs';
+import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';

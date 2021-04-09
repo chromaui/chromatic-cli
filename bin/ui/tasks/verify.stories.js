@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { failed, initial, pending, tracing, runOnly, runOnlyFiles, success } from './verify';
+import { failed, initial, pending, runOnly, runOnlyFiles, success } from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',
@@ -15,8 +15,6 @@ const build = {
 export const Initial = () => initial;
 
 export const Pending = () => pending();
-
-export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } });
 
 export const RunOnly = () => runOnly({ options: { only: 'MyComponent/MyStory' } });
 

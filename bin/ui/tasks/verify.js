@@ -9,12 +9,6 @@ export const pending = (ctx) => ({
   output: 'This may take a few minutes',
 });
 
-export const tracing = (ctx) => ({
-  status: 'pending',
-  title: 'Retrieving story files affected by recent changes',
-  output: `Traversing dependencies for ${ctx.git.changedFiles.length} files that changed since the last build`,
-});
-
 export const runOnly = (ctx) => ({
   status: 'pending',
   title: `Snapshots will be limited to stories matching '${ctx.options.only}'`,
