@@ -1,11 +1,16 @@
 import pluralize from 'pluralize';
 
-const infoMessage = ({ commit, branch, parentCommits }, { ownerName }) => {
+const infoMessage = ({ commit, branch, parentCommits, changedFiles }, { ownerName }) => {
   const branchName = ownerName ? `${ownerName}:${branch}` : branch;
-  const info = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
-  return parentCommits.length
-    ? `${info}; found ${pluralize('baseline commit', parentCommits.length, true)}`
-    : `${info}; no baseline commits found`;
+  let message = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
+  if (parentCommits.length > 0) {
+    message += `; found ${pluralize('baseline commit', parentCommits.length, true)}`;
+    if (changedFiles) {
+      message += ` with ${pluralize('changed file', changedFiles.length, true)}`;
+    }
+    return message;
+  }
+  return `${message}; no baseline commits found`;
 };
 
 export const initial = {

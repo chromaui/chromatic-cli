@@ -36,6 +36,8 @@ export const setSpawnParams = (ctx) => {
       isYarn ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
+      ctx.git.changedFiles && '--webpack-stats-json',
+      ctx.git.changedFiles && ctx.sourceDir,
     ].filter(Boolean),
   };
 };
