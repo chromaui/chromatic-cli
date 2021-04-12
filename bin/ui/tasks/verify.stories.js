@@ -18,7 +18,10 @@ export const Pending = () => pending();
 
 export const RunOnly = () => runOnly({ options: { only: 'MyComponent/MyStory' } });
 
-export const RunOnlyFiles = () => runOnlyFiles({ onlyStoryFiles: new Array(12) });
+export const RunOnlyFiles = () =>
+  runOnlyFiles({
+    onlyStoryFiles: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i])),
+  });
 
 export const Started = () => success({ build });
 

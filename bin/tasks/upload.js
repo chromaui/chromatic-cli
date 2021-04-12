@@ -16,6 +16,7 @@ import {
   invalid,
   preparing,
   tracing,
+  traced,
   skippingBuild,
   skippedBuild,
   skipFailed,
@@ -123,6 +124,8 @@ export const traceChangedFiles = async (ctx, task) => {
   try {
     const stats = await fs.readJson(statsPath);
     ctx.onlyStoryFiles = getDependentStoryFiles(ctx, stats, changedFiles);
+
+    transitionTo(traced)(ctx, task);
 
     if (ctx.onlyStoryFiles && Object.keys(ctx.onlyStoryFiles).length === 0) {
       transitionTo(skippingBuild)(ctx, task);

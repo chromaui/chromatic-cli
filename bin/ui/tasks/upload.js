@@ -35,6 +35,12 @@ export const tracing = (ctx) => ({
   output: `Traversing dependencies for ${ctx.git.changedFiles.length} files that changed since the last build`,
 });
 
+export const traced = (ctx) => ({
+  status: 'pending',
+  title: 'Retrieved story files affected by recent changes',
+  output: `Found ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
+});
+
 export const skippingBuild = (ctx) => ({
   status: 'pending',
   title: 'Skipping build',

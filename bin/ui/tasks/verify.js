@@ -17,7 +17,9 @@ export const runOnly = (ctx) => ({
 export const runOnlyFiles = (ctx) => ({
   status: 'pending',
   title: 'Retrieved story files affected by recent changes',
-  output: `Snapshots will be limited to ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
+  output: `Snapshots will be limited to ${
+    Object.keys(ctx.onlyStoryFiles).length
+  } story files affected by recent changes`,
 });
 
 export const success = (ctx) => ({

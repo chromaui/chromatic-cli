@@ -5,6 +5,7 @@ import {
   validating,
   invalid,
   tracing,
+  traced,
   skippingBuild,
   skippedBuild,
   skipFailed,
@@ -36,6 +37,8 @@ export const Invalid = () =>
   });
 
 export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } });
+
+export const Traced = () => traced({ onlyStoryFiles: new Array(5) });
 
 export const SkippingBuild = () => skippingBuild();
 
