@@ -28,6 +28,10 @@ export const setSpawnParams = (ctx) => {
   const npmExecPath = process.env.npm_execpath;
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
   const isYarn = npmExecPath && /^yarn(\.js)?$/.test(path.basename(npmExecPath));
+  const webpackStatsSupported = semver.gte(ctx.storybook.version, '6.2.0');
+  if (ctx.git.changedFiles && !webpackStatsSupported) {
+    ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
+  }
   ctx.spawnParams = {
     command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
     clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
@@ -36,8 +40,8 @@ export const setSpawnParams = (ctx) => {
       isYarn ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
-      ctx.git.changedFiles && '--webpack-stats-json',
-      ctx.git.changedFiles && ctx.sourceDir,
+      ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
+      ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
     ].filter(Boolean),
   };
 };
