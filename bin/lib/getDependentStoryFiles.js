@@ -74,7 +74,7 @@ export function getDependentStoryFiles(ctx, stats, changedFiles) {
   }
 
   if (bail) {
-    ctx.log.debug(`Ignoring --only-changed due to ${bail}`);
+    ctx.log.debug(`Ignoring --only-changed due to change in ${bail}`);
     return false;
   }
 

@@ -10,6 +10,7 @@ import {
   skippingBuild,
   skippedForCommit,
   skippedRebuild,
+  skippedNoChanges,
   success,
 } from '../ui/tasks/gitInfo';
 
@@ -88,7 +89,7 @@ export const setGitInfo = async (ctx, task) => {
     ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
     if (ctx.git.changedFiles.length === 0) {
       ctx.skip = true;
-      transitionTo(skippedRebuild, true)(ctx, task);
+      transitionTo(skippedNoChanges, true)(ctx, task);
       return;
     }
   }
