@@ -1,6 +1,7 @@
 // Figure out the Storybook version and view layer
 
 import fs from 'fs-extra';
+import semver from 'semver';
 
 const viewLayers = [
   'react',
@@ -66,29 +67,72 @@ const timeout = (count) =>
 const neverResolve = new Promise(() => {});
 const disregard = () => neverResolve;
 
-const findViewlayer = async ({ env }) => {
-  // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='react@4.0-alpha.8' for unusual cases
+const findViewlayer = async ({ env, log, options, packageJson }) => {
+  // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
-    const [viewLayer, version] = env.CHROMATIC_STORYBOOK_VERSION.split('@');
+    const [viewLayer, v] = env.CHROMATIC_STORYBOOK_VERSION.replace('@storybook/', '').split('@');
+    const version = semver.valid(v);
     if (!viewLayer || !version) {
-      throw new Error('CHROMATIC_STORYBOOK_VERSION was provided but could not be used');
+      throw new Error(
+        'Invalid CHROMATIC_STORYBOOK_VERSION; expecting something like "@storybook/react@6.2.0".'
+      );
+    }
+    if (!viewLayers.includes(viewLayer)) {
+      throw new Error(
+        `Unsupported viewlayer specified in CHROMATIC_STORYBOOK_VERSION: ${viewLayer}`
+      );
     }
     return { viewLayer, version };
   }
 
-  // Try to find the Storybook viewlayer package
+  // Pull the viewlayer from dependencies in package.json
+  const dep = Object.entries(packageJson.dependencies || {}).find(([pkg]) =>
+    viewLayers.some((viewLayer) => pkg === `@storybook/${viewLayer}`)
+  );
+  const devDep = Object.entries(packageJson.devDependencies || {}).find(([pkg]) =>
+    viewLayers.some((viewLayer) => pkg === `@storybook/${viewLayer}`)
+  );
+  const peerDep = Object.entries(packageJson.peerDependencies || {}).find(([pkg]) =>
+    viewLayers.some((viewLayer) => pkg === `@storybook/${viewLayer}`)
+  );
+  const dependency = dep || devDep || peerDep;
+
+  if (!dependency) {
+    throw new Error(
+      'Could not find a supported Storybook viewlayer package in your package.json dependencies. Make sure one is installed.'
+    );
+  }
+  if (dep && devDep && dep[0] === devDep[0]) {
+    log.warn(
+      `Found "${dep[0]}" in both "dependencies" and "devDependencies". This is probably a mistake.`
+    );
+  }
+  if (dep && peerDep && dep[0] === peerDep[0]) {
+    log.warn(
+      `Found "${dep[0]}" in both "dependencies" and "peerDependencies". This is probably a mistake.`
+    );
+  }
+
+  const [pkg, version] = dependency;
+  const viewLayer = pkg.replace('@storybook/', '');
+
+  // If we won't need the Storybook CLI, we can exit early
+  // Note that `version` can be a semver range in this case.
+  if (options.storybookBuildDir) return { viewLayer, version };
+
+  // Try to find the viewlayer package in node_modules so we know it's installed
   const findings = viewLayers.map((v) => resolve(v));
   const rejectedFindings = findings.map((p) => p.then(disregard, () => true));
   const allFailed = Promise.all(rejectedFindings).then(() => {
     throw new Error(
-      'Could not find a supported Storybook viewlayer package. Make sure one is installed, or set CHROMATIC_STORYBOOK_VERSION.'
+      'Could not find a supported Storybook viewlayer package in node_modules. Make sure one is installed.'
     );
   });
 
   return Promise.race([
     ...findings.map((p, i) =>
       p.then(
-        (l) => read(l).then((r) => ({ viewLayer: viewLayers[i], ...r })),
+        (l) => read(l).then((r) => ({ viewLayer: viewLayers[i], version: r.version })),
         disregard // keep it pending forever
       )
     ),
