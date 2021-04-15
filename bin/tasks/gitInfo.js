@@ -13,6 +13,7 @@ import {
   skippedNoChanges,
   success,
 } from '../ui/tasks/gitInfo';
+import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -84,13 +85,18 @@ export const setGitInfo = async (ctx, task) => {
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // completely, since we know for certain it wouldn't have any effect.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
-    const results = await Promise.all(parentCommits.map((c) => getChangedFiles(c)));
-    ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
-    ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
-    if (ctx.git.changedFiles.length === 0) {
-      ctx.skip = true;
-      transitionTo(skippedNoChanges, true)(ctx, task);
-      return;
+    try {
+      const results = await Promise.all(parentCommits.map((c) => getChangedFiles(c)));
+      ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
+      ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+      if (ctx.git.changedFiles.length === 0) {
+        ctx.skip = true;
+        transitionTo(skippedNoChanges, true)(ctx, task);
+        return;
+      }
+    } catch (e) {
+      ctx.log.warn(invalidChangedFiles());
+      ctx.log.debug(e);
     }
   }
 
