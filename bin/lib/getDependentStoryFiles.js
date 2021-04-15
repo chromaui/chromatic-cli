@@ -1,3 +1,5 @@
+import bailFile from '../ui/messages/warnings/bailFile';
+
 // Bail whenever one of these was changed
 const GLOBALS = [/\/node_modules\//, /\/package\.json$/, /\/package-lock\.json$/, /\/yarn\.lock$/];
 
@@ -74,7 +76,7 @@ export function getDependentStoryFiles(ctx, stats, changedFiles) {
   }
 
   if (bail) {
-    ctx.log.debug(`Ignoring --only-changed due to change in ${bail}`);
+    ctx.log.warn(bailFile(bail));
     return false;
   }
 
