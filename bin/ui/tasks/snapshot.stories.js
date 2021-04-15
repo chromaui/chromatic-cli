@@ -23,6 +23,7 @@ const build = {
   specCount: 8,
   features: { uiTests: true },
 };
+const options = {};
 
 const now = 0;
 const startedAt = -123456;
@@ -32,9 +33,26 @@ export const Initial = () => initial;
 export const Pending = () =>
   pending({
     build,
+    options,
+    cursor: 6,
+    label: 'ComponentName › StoryName',
+  });
+
+export const PendingOnly = () =>
+  pending({
+    build: { ...build, skipCount: 42 },
     options: { only: 'Pages/**' },
     cursor: 6,
     label: 'ComponentName › StoryName',
+  });
+
+export const PendingOnlyChanged = () =>
+  pending({
+    build: { ...build, skipCount: 42 },
+    options,
+    cursor: 6,
+    label: 'ComponentName › StoryName',
+    onlyStoryFiles: true,
   });
 
 export const BuildPassed = () =>
