@@ -63,6 +63,16 @@ const TesterHasBuildsWithCommitsQuery = gql`
   }
 `;
 
+const TesterBaselineCommitsQuery = gql`
+  query TesterBaselineCommitsQuery($branch: String!, $parentCommits: [String!]!) {
+    app {
+      baselineBuilds(branch: $branch, parentCommits: $parentCommits) {
+        commit
+      }
+    }
+  }
+`;
+
 export async function getVersion() {
   const result = await execGitCommand(`git --version`);
   return result.replace('git version ', '');
@@ -309,6 +319,12 @@ export async function getParentCommits(
 
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
   return [...extraParentCommits, ...(await maximallyDescendentCommits({ log }, commitsWithBuilds))];
+}
+
+export async function getBaselineCommits({ client }, { branch, parentCommits }) {
+  const { app } = await client.runQuery(TesterBaselineCommitsQuery, { branch, parentCommits });
+  const { baselineBuildsForCommits } = app;
+  return baselineBuildsForCommits.map((build) => build.commit);
 }
 
 export async function getChangedFiles(baseCommit, headCommit = '') {

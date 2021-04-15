@@ -6,6 +6,6 @@ import { warning } from '../../components/icons';
 export default () =>
   dedent(chalk`
     ${warning} {bold Ignoring --only-changed}
-    Could not retrieve changed files since parent commit(s).
+    Could not retrieve changed files since baseline commit(s).
     This typically happens after rebasing.
   `);

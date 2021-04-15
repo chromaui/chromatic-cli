@@ -1,7 +1,13 @@
 import picomatch from 'picomatch';
 
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
-import { getParentCommits, getChangedFiles, getSlug, getVersion } from '../git/git';
+import {
+  getParentCommits,
+  getBaselineCommits,
+  getChangedFiles,
+  getSlug,
+  getVersion,
+} from '../git/git';
 import { createTask, transitionTo } from '../lib/tasks';
 import {
   initial,
@@ -79,16 +85,19 @@ export const setGitInfo = async (ctx, task) => {
     }
   }
 
-  // TODO retrieve actual baseline commits
   // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
   // to determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
     try {
-      const results = await Promise.all(parentCommits.map((c) => getChangedFiles(c)));
+      const baselineCommits = await getBaselineCommits(ctx, { branch, parentCommits });
+      ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+
+      const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+
       if (ctx.git.changedFiles.length === 0) {
         transitionTo(skippingBuild)(ctx, task);
         // The SkipBuildMutation ensures the commit is still tagged properly.
