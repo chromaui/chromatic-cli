@@ -8,6 +8,7 @@ import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import uploadFiles from '../lib/uploadFiles';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
+import noStatsFile from '../ui/messages/warnings/noStatsFile';
 import {
   failed,
   initial,
@@ -115,11 +116,15 @@ export const validateFiles = async (ctx, task) => {
 };
 
 export const traceChangedFiles = async (ctx, task) => {
-  if (!ctx.fileInfo.statsPath || !ctx.git.changedFiles) return;
-  const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
+  if (!ctx.git.changedFiles) return;
+  if (!ctx.fileInfo.statsPath) {
+    ctx.log.warn(noStatsFile());
+    return;
+  }
 
   transitionTo(tracing)(ctx, task);
 
+  const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
