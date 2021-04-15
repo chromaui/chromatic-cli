@@ -33,24 +33,56 @@ describe('setSourceDir', () => {
 describe('setSpawnParams', () => {
   it('sets the spawn params on the context', async () => {
     process.env.npm_execpath = 'npm';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
+    };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
       command: 'npm',
       clientArgs: ['run', '--silent'],
-      scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/'],
+      scriptArgs: [
+        'build:storybook',
+        '--',
+        '--output-dir',
+        './source-dir/',
+        '--webpack-stats-json',
+        './source-dir/',
+      ],
     });
   });
 
   it('supports yarn', async () => {
     process.env.npm_execpath = '/path/to/yarn';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: {},
+    };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
       command: '/path/to/yarn',
       clientArgs: ['run', '--silent'],
       scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
     });
+  });
+
+  it('warns if --only-changes is not supported', async () => {
+    process.env.npm_execpath = 'npm';
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: { changedFiles: ['./index.js'] },
+      log: { warn: jest.fn() },
+    };
+    await setSpawnParams(ctx);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      'Storybook version 6.2.0 or later is required to use the --only-changed flag'
+    );
   });
 });
 
