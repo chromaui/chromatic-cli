@@ -83,16 +83,21 @@ export const setGitInfo = async (ctx, task) => {
   // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
   // to determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
-  // completely, since we know for certain it wouldn't have any effect.
+  // since we know for certain it wouldn't have any effect. We do want to tag the commit.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
     try {
       const results = await Promise.all(parentCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
       if (ctx.git.changedFiles.length === 0) {
-        ctx.skip = true;
-        transitionTo(skippedNoChanges, true)(ctx, task);
-        return;
+        transitionTo(skippingBuild)(ctx, task);
+        // The SkipBuildMutation ensures the commit is still tagged properly.
+        if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
+          ctx.skip = true;
+          transitionTo(skippedNoChanges, true)(ctx, task);
+          return;
+        }
+        throw new Error(skipFailed(ctx).output);
       }
     } catch (e) {
       ctx.log.warn(invalidChangedFiles());
