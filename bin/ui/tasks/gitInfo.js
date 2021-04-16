@@ -26,7 +26,7 @@ export const pending = (ctx) => ({
 export const skippingBuild = (ctx) => ({
   status: 'pending',
   title: 'Skipping build',
-  output: `Skipping build for commit ${ctx.git.commit.substr(0, 7)} due to --skip`,
+  output: `Skipping build for commit ${ctx.git.commit.substr(0, 7)}`,
 });
 
 export const skippedForCommit = (ctx) => ({
