@@ -85,7 +85,7 @@ function getFileInfo(ctx, sourceDir) {
   // eslint-disable-next-line no-restricted-syntax
   for (const { knownAs } of lengths) {
     if (knownAs.endsWith('preview-stats.json')) statsPath = knownAs;
-    else paths.push(knownAs);
+    else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
   }
   return { lengths, paths, statsPath, total };
 }
