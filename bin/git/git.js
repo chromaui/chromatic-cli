@@ -323,8 +323,7 @@ export async function getParentCommits(
 
 export async function getBaselineCommits({ client }, { branch, parentCommits }) {
   const { app } = await client.runQuery(TesterBaselineCommitsQuery, { branch, parentCommits });
-  const { baselineBuildsForCommits } = app;
-  return baselineBuildsForCommits.map((build) => build.commit);
+  return app.baselineBuilds.map((build) => build.commit);
 }
 
 export async function getChangedFiles(baseCommit, headCommit = '') {
