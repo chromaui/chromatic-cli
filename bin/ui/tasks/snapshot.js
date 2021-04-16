@@ -14,7 +14,7 @@ export const stats = (ctx) => ({
   snapshots: pluralize('snapshot', ctx.build.testCount, true),
   components: pluralize('component', ctx.build.componentCount, true),
   specs: pluralize('story', ctx.build.specCount, true),
-  skips: pluralize('story', ctx.build.skipCount || 0, true),
+  skips: pluralize('component', ctx.build.skippedComponentCount, true),
 });
 
 export const pending = (ctx) => {
@@ -22,7 +22,7 @@ export const pending = (ctx) => {
   const { errors, snapshots, components, specs, skips } = stats(ctx);
   const matching = options.only ? ` for stories matching '${options.only}'` : '';
   const affected = ctx.onlyStoryFiles ? ' affected by recent changes' : '';
-  const skipping = build.skipCount ? ` (skipping ${skips})` : '';
+  const skipping = build.skippedComponentCount ? ` (skipping ${skips})` : '';
   const percentage = Math.round((cursor / build.testCount) * 100);
   const counts = `${cursor}/${build.testCount}`;
   const errs = build.errorCount ? `(${errors}) ` : '';

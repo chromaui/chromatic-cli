@@ -40,7 +40,7 @@ export const Pending = () =>
 
 export const PendingOnly = () =>
   pending({
-    build: { ...build, skipCount: 42 },
+    build: { ...build, skippedComponentCount: 2 },
     options: { only: 'Pages/**' },
     cursor: 6,
     label: 'ComponentName › StoryName',
@@ -48,7 +48,7 @@ export const PendingOnly = () =>
 
 export const PendingOnlyChanged = () =>
   pending({
-    build: { ...build, skipCount: 42 },
+    build: { ...build, skippedComponentCount: 2 },
     options,
     cursor: 6,
     label: 'ComponentName › StoryName',

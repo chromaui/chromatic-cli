@@ -12,9 +12,9 @@ const TesterCreateBuildMutation = `
       id
       number
       specCount
-      skipCount
       testCount
       componentCount
+      skippedComponentCount
       webUrl
       cachedUrl
       reportToken
