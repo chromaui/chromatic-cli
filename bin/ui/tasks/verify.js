@@ -11,12 +11,11 @@ export const pending = (ctx) => ({
 
 export const runOnly = (ctx) => ({
   status: 'pending',
-  title: `Snapshots will be limited to stories matching '${ctx.options.only}'`,
+  output: `Snapshots will be limited to stories matching '${ctx.options.only}'`,
 });
 
 export const runOnlyFiles = (ctx) => ({
   status: 'pending',
-  title: 'Retrieved story files affected by recent changes',
   output: `Snapshots will be limited to ${
     Object.keys(ctx.onlyStoryFiles).length
   } story files affected by recent changes`,

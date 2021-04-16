@@ -79,11 +79,6 @@ export const createBuild = async (ctx, task) => {
   }
   if (onlyStoryFiles) {
     transitionTo(runOnlyFiles)(ctx, task);
-    ctx.log.debug(
-      `Affected story files:\n${Object.entries(ctx.onlyStoryFiles)
-        .map(([id, f]) => `  ${f} [${id}]`)
-        .join('\n')}`
-    );
   }
 
   const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
