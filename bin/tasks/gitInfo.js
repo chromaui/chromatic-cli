@@ -90,27 +90,27 @@ export const setGitInfo = async (ctx, task) => {
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
-    try {
-      const baselineCommits = await getBaselineCommits(ctx, { branch, parentCommits });
-      ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+    const baselineCommits = await getBaselineCommits(ctx, { branch, parentCommits });
+    ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
 
+    try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
-
-      if (ctx.git.changedFiles.length === 0) {
-        transitionTo(skippingBuild)(ctx, task);
-        // The SkipBuildMutation ensures the commit is still tagged properly.
-        if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
-          ctx.skip = true;
-          transitionTo(skippedNoChanges, true)(ctx, task);
-          return;
-        }
-        throw new Error(skipFailed(ctx).output);
-      }
     } catch (e) {
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
+    }
+
+    if (ctx.git.changedFiles.length === 0) {
+      transitionTo(skippingBuild)(ctx, task);
+      // The SkipBuildMutation ensures the commit is still tagged properly.
+      if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
+        ctx.skip = true;
+        transitionTo(skippedNoChanges, true)(ctx, task);
+        return;
+      }
+      throw new Error(skipFailed(ctx).output);
     }
   }
 
