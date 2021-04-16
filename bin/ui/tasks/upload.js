@@ -38,7 +38,7 @@ export const tracing = (ctx) => ({
 export const traced = (ctx) => ({
   status: 'pending',
   title: 'Retrieved story files affected by recent changes',
-  output: `Found ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
+  output: `Found ${Object.keys(ctx.onlyStoryFiles).length} story files affected by recent changes`,
 });
 
 export const skippingBuild = (ctx) => ({
