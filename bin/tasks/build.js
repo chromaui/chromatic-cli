@@ -28,7 +28,7 @@ export const setSpawnParams = (ctx) => {
   const npmExecPath = process.env.npm_execpath;
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
   const isYarn = npmExecPath && /^yarn(\.js)?$/.test(path.basename(npmExecPath));
-  const webpackStatsSupported = semver.gte(ctx.storybook.version, '6.2.0');
+  const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
