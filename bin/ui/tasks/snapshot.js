@@ -40,27 +40,27 @@ export const buildPassed = (ctx) => {
   return {
     status: 'success',
     title: `Build ${ctx.build.number} passed!`,
-    output: `Took ${snapshots} (${components}, ${specs}) in ${getDuration(ctx)}; no changes found`,
+    output: `Tested ${specs} across ${components}; captured ${snapshots} in ${getDuration(ctx)}`,
   };
 };
 
 export const buildComplete = (ctx) => {
-  const { changes, snapshots, components, specs } = stats(ctx);
+  const { snapshots, components, specs } = stats(ctx);
   return {
     status: 'success',
-    title: `Build ${ctx.build.number} completed in ${getDuration(ctx)}`,
-    output: ctx.build.autoAcceptChanges
-      ? `Auto-accepted ${changes} (${snapshots}, ${components}, ${specs})`
-      : `Found ${changes} (${components}, ${specs}, ${snapshots}); exiting with status code ${ctx.exitCode}`,
+    title: ctx.build.autoAcceptChanges
+      ? `Build ${ctx.build.number} auto-accepted`
+      : `Build ${ctx.build.number} completed`,
+    output: `Tested ${specs} across ${components}; captured ${snapshots} in ${getDuration(ctx)}`,
   };
 };
 
 export const buildFailed = (ctx) => {
-  const { errors, snapshots, components, specs } = stats(ctx);
+  const { snapshots, components, specs, errors } = stats(ctx);
   return {
     status: 'error',
     title: `Build ${ctx.build.number} failed after ${getDuration(ctx)}`,
-    output: `Found ${errors} (${components}, ${specs}, ${snapshots}); exiting with status code ${ctx.exitCode}`,
+    output: `Tested ${specs} across ${components}; captured ${snapshots} and found ${errors}`,
   };
 };
 

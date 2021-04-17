@@ -6,12 +6,19 @@ import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 
 export default ({ build, isOnboarding }) => {
-  const { snapshots, components, specs } = stats({ build });
-  return isOnboarding
-    ? dedent(chalk`
+  const { changes, snapshots, components, specs } = stats({ build });
+  if (isOnboarding) {
+    return dedent(chalk`
       ${success} {bold Build passed. Welcome to Chromatic!}
       We found ${components} with ${specs} and took ${snapshots}.
       ${info} Please continue setup at ${link(build.app.setupUrl)}
+    `);
+  }
+  return build.autoAcceptChanges
+    ? dedent(chalk`
+      ${success} {bold Build ${build.number} passed!}
+      Auto-accepted ${changes}.
+      ${info} View build details at ${link(build.webUrl)}
     `)
     : dedent(chalk`
       ${success} {bold Build ${build.number} passed!}
