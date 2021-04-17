@@ -5,21 +5,22 @@ import { progress as progressBar } from '../../lib/utils';
 
 export const initial = {
   status: 'initial',
-  title: 'Take snapshots of your stories',
+  title: 'Test your stories',
 };
 
 export const stats = (ctx) => ({
+  tests: pluralize('test', ctx.build.testCount, true),
   errors: pluralize('error', ctx.build.errorCount, true),
   changes: pluralize('change', ctx.build.changeCount, true),
-  snapshots: pluralize('snapshot', ctx.build.testCount, true),
+  stories: pluralize('story', ctx.build.specCount, true),
   components: pluralize('component', ctx.build.componentCount, true),
-  specs: pluralize('story', ctx.build.specCount, true),
   skips: pluralize('component', ctx.build.skippedComponentCount, true),
+  snapshots: pluralize('snapshot', ctx.build.billableCaptureCount, true),
 });
 
 export const pending = (ctx) => {
   const { build, options, cursor = 0, label = '' } = ctx;
-  const { errors, snapshots, components, specs, skips } = stats(ctx);
+  const { errors, tests, components, stories, skips } = stats(ctx);
   const matching = options.only ? ` for stories matching '${options.only}'` : '';
   const affected = ctx.onlyStoryFiles ? ' affected by recent changes' : '';
   const skipping = build.skippedComponentCount ? ` (skipping ${skips})` : '';
@@ -28,7 +29,7 @@ export const pending = (ctx) => {
   const errs = build.errorCount ? `(${errors}) ` : '';
   return {
     status: 'pending',
-    title: `Taking ${snapshots} (${components}, ${specs})${matching}${affected}${skipping}`,
+    title: `Running ${tests} (${components}, ${stories})${matching}${affected}${skipping}`,
     output: cursor
       ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}`
       : 'This may take a few minutes',
@@ -36,31 +37,31 @@ export const pending = (ctx) => {
 };
 
 export const buildPassed = (ctx) => {
-  const { snapshots, components, specs } = stats(ctx);
+  const { snapshots, components, stories } = stats(ctx);
   return {
     status: 'success',
     title: `Build ${ctx.build.number} passed!`,
-    output: `Tested ${specs} across ${components}; captured ${snapshots} in ${getDuration(ctx)}`,
+    output: `Tested ${stories} across ${components}; captured ${snapshots} in ${getDuration(ctx)}`,
   };
 };
 
 export const buildComplete = (ctx) => {
-  const { snapshots, components, specs } = stats(ctx);
+  const { snapshots, components, stories } = stats(ctx);
   return {
     status: 'success',
     title: ctx.build.autoAcceptChanges
       ? `Build ${ctx.build.number} auto-accepted`
       : `Build ${ctx.build.number} completed`,
-    output: `Tested ${specs} across ${components}; captured ${snapshots} in ${getDuration(ctx)}`,
+    output: `Tested ${stories} across ${components}; captured ${snapshots} in ${getDuration(ctx)}`,
   };
 };
 
 export const buildFailed = (ctx) => {
-  const { snapshots, components, specs, errors } = stats(ctx);
+  const { snapshots, components, stories, errors } = stats(ctx);
   return {
     status: 'error',
     title: `Build ${ctx.build.number} failed after ${getDuration(ctx)}`,
-    output: `Tested ${specs} across ${components}; captured ${snapshots} and found ${errors}`,
+    output: `Tested ${stories} across ${components}; captured ${snapshots} and found ${errors}`,
   };
 };
 
@@ -75,7 +76,7 @@ export const buildError = (ctx) => {
 export const skipped = (ctx) => {
   return {
     status: 'skipped',
-    title: 'Take snapshots of your stories',
+    title: 'Take snapsots of your stories',
     output: ctx.isPublishOnly
       ? `No UI tests or UI review enabled`
       : `Skipped due to ${ctx.options.list ? '--list' : '--exit-once-uploaded'}`,

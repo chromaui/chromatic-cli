@@ -33,7 +33,7 @@ const TesterBuildQuery = `
 
 export const takeSnapshots = async (ctx, task) => {
   const { client, log, options } = ctx;
-  const { number: buildNumber, tests } = ctx.build;
+  const { number: buildNumber, tests, skippedComponentCount } = ctx.build;
 
   if (ctx.build.app.repository && ctx.uploadedBytes && !options.junitReport) {
     log.info(speedUpCI(ctx.build.app.repository.provider));
@@ -41,6 +41,7 @@ export const takeSnapshots = async (ctx, task) => {
 
   const testLabels =
     options.interactive &&
+    !skippedComponentCount &&
     tests.map(({ spec, parameters }) => {
       const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
       return `${spec.component.displayName} › ${spec.name}${suffix}`;
@@ -54,7 +55,7 @@ export const takeSnapshots = async (ctx, task) => {
       return ctx.build;
     }
 
-    if (options.interactive) {
+    if (options.interactive && !skippedComponentCount) {
       const { inProgressCount, testCount } = ctx.build;
       const cursor = testCount - inProgressCount + 1;
       const label = testLabels[cursor - 1] || '';

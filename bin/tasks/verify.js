@@ -15,6 +15,7 @@ const TesterCreateBuildMutation = `
       testCount
       componentCount
       skippedComponentCount
+      billableCaptureCount
       webUrl
       cachedUrl
       reportToken
