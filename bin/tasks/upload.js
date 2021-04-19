@@ -183,6 +183,7 @@ export const uploadStorybook = async (ctx, task) => {
 
   ctx.uploadedBytes = total;
   ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
+  transitionTo(success, true)(ctx, task);
 };
 
 export default createTask({
@@ -192,11 +193,5 @@ export default createTask({
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },
-  steps: [
-    transitionTo(validating),
-    validateFiles,
-    traceChangedFiles,
-    uploadStorybook,
-    transitionTo(success, true),
-  ],
+  steps: [transitionTo(validating), validateFiles, traceChangedFiles, uploadStorybook],
 });
