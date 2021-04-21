@@ -97,20 +97,20 @@ export const setGitInfo = async (ctx, task) => {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+
+      if (ctx.git.changedFiles.length === 0) {
+        transitionTo(skippingBuild)(ctx, task);
+        // The SkipBuildMutation ensures the commit is still tagged properly.
+        if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
+          ctx.skip = true;
+          transitionTo(skippedNoChanges, true)(ctx, task);
+          return;
+        }
+        throw new Error(skipFailed(ctx).output);
+      }
     } catch (e) {
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
-    }
-
-    if (ctx.git.changedFiles.length === 0) {
-      transitionTo(skippingBuild)(ctx, task);
-      // The SkipBuildMutation ensures the commit is still tagged properly.
-      if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
-        ctx.skip = true;
-        transitionTo(skippedNoChanges, true)(ctx, task);
-        return;
-      }
-      throw new Error(skipFailed(ctx).output);
     }
   }
 
