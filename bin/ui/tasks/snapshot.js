@@ -8,28 +8,30 @@ export const initial = {
   title: 'Test your stories',
 };
 
-export const stats = (ctx) => ({
-  tests: pluralize('test', ctx.build.testCount, true),
-  errors: pluralize('error', ctx.build.errorCount, true),
-  changes: pluralize('change', ctx.build.changeCount, true),
-  stories: pluralize('story', ctx.build.specCount, true),
-  components: pluralize('component', ctx.build.componentCount, true),
-  skips: pluralize('component', ctx.build.skippedComponentCount, true),
-  snapshots: pluralize('snapshot', ctx.build.billableCaptureCount, true),
-});
+export const stats = (ctx) => {
+  return {
+    tests: pluralize('test', ctx.build.actualTestCount, true),
+    errors: pluralize('error', ctx.build.errorCount, true),
+    changes: pluralize('change', ctx.build.changeCount, true),
+    stories: pluralize('story', ctx.build.specCount, true),
+    components: pluralize('component', ctx.build.componentCount, true),
+    skips: pluralize('test', ctx.build.testCount - ctx.build.actualTestCount, true),
+    snapshots: pluralize('snapshot', ctx.build.actualCaptureCount, true),
+  };
+};
 
 export const pending = (ctx) => {
-  const { build, options, cursor = 0, label = '' } = ctx;
-  const { errors, tests, components, stories, skips } = stats(ctx);
+  const { build, options, onlyStoryFiles, cursor = 0, label = '' } = ctx;
+  const { errors, tests, skips } = stats(ctx);
   const matching = options.only ? ` for stories matching '${options.only}'` : '';
-  const affected = ctx.onlyStoryFiles ? ' affected by recent changes' : '';
-  const skipping = build.skippedComponentCount ? ` (skipping ${skips})` : '';
-  const percentage = Math.round((cursor / build.testCount) * 100);
-  const counts = `${cursor}/${build.testCount}`;
+  const affected = onlyStoryFiles ? ' affected by recent changes' : '';
+  const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
+  const percentage = Math.round((cursor / build.actualTestCount) * 100);
+  const counts = `${cursor}/${build.actualTestCount}`;
   const errs = build.errorCount ? `(${errors}) ` : '';
   return {
     status: 'pending',
-    title: `Running ${tests} (${components}, ${stories})${matching}${affected}${skipping}`,
+    title: `Running ${tests}${matching}${affected}${skipping}`,
     output: cursor
       ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}`
       : 'This may take a few minutes',

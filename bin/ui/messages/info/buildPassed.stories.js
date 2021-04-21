@@ -20,6 +20,7 @@ export const FirstBuildPassed = () =>
       testCount: 10,
       componentCount: 5,
       specCount: 8,
+      actualCaptureCount: 20,
       app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
     },
   });

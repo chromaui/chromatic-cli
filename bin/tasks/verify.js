@@ -12,13 +12,16 @@ const TesterCreateBuildMutation = `
       id
       number
       specCount
-      testCount
       componentCount
-      skippedComponentCount
-      billableCaptureCount
+      testCount
+      actualTestCount: testCount(statuses: [IN_PROGRESS])
+      actualCaptureCount
       webUrl
       cachedUrl
       reportToken
+      browsers {
+        browser
+      }
       features {
         uiTests
         uiReview

@@ -19,6 +19,8 @@ const build = {
   errorCount: 1,
   changeCount: 2,
   testCount: 10,
+  actualTestCount: 10,
+  actualCaptureCount: 20,
   componentCount: 5,
   specCount: 8,
   features: { uiTests: true },
@@ -40,18 +42,16 @@ export const Pending = () =>
 
 export const PendingOnly = () =>
   pending({
-    build: { ...build, skippedComponentCount: 2 },
+    build: { ...build, actualTestCount: 8 },
     options: { only: 'Pages/**' },
     cursor: 6,
-    label: 'ComponentName › StoryName',
   });
 
 export const PendingOnlyChanged = () =>
   pending({
-    build: { ...build, skippedComponentCount: 2 },
+    build: { ...build, actualTestCount: 8 },
     options,
     cursor: 6,
-    label: 'ComponentName › StoryName',
     onlyStoryFiles: true,
   });
 
