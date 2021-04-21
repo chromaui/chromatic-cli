@@ -15,7 +15,7 @@ jobs:
     - name: prep package
       run: ./scripts/rename.js storybook-chromatic
     - name: run chromatic
-      run: yarn chromatic
+      run: yarn chromatic --only-changed
       env: 
         CHROMATIC_APP_CODE: mpm7osoy9sa
         CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
