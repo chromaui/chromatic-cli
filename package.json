@@ -30,7 +30,7 @@
   "scripts": {
     "prebuild": "rm -rf ./dist",
     "build": "npm-run-all --serial -l build:**",
-    "build-storybook": "build-storybook -s static --webpack-stats-json storybook-static",
+    "build-storybook": "build-storybook -s static",
     "build:action": "tsc",
     "build:bin": "cross-env BABEL_ENV=build babel -s -d ./dist ./src -D",
     "chromatic": "node ./bin/register.js",
