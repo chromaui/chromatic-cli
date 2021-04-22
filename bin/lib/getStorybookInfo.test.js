@@ -44,6 +44,13 @@ describe('getStorybookInfo', () => {
       );
     });
 
+    it('supports unscoped package name', async () => {
+      const ctx = { ...context, env: { CHROMATIC_STORYBOOK_VERSION: 'react@3.2.1' } };
+      await expect(getStorybookInfo(ctx)).resolves.toEqual(
+        expect.objectContaining({ viewLayer: 'react', version: '3.2.1' })
+      );
+    });
+
     it('throws on invalid value', async () => {
       const ctx = { ...context, env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } };
       await expect(getStorybookInfo(ctx)).rejects.toThrow('Invalid');
