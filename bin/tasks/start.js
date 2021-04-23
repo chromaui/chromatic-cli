@@ -30,7 +30,7 @@ export const startStorybook = async (ctx) => {
 export default createTask({
   title: initial.title,
   skip: async (ctx) => {
-    if (ctx.skip) return true;
+    if (ctx.skip || ctx.inherit) return true;
     if (await checkResponse(ctx.options.url)) {
       ctx.isolatorUrl = ctx.options.url;
       return skipped(ctx).output;

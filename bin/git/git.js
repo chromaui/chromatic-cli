@@ -67,7 +67,12 @@ const TesterBaselineCommitsQuery = gql`
   query TesterBaselineCommitsQuery($branch: String!, $parentCommits: [String!]!) {
     app {
       baselineBuilds(branch: $branch, parentCommits: $parentCommits) {
+        number
+        status
         commit
+        committedAt
+        changeCount
+        webUrl
       }
     }
   }
@@ -321,9 +326,9 @@ export async function getParentCommits(
   return [...extraParentCommits, ...(await maximallyDescendentCommits({ log }, commitsWithBuilds))];
 }
 
-export async function getBaselineCommits({ client }, { branch, parentCommits }) {
+export async function getBaselineBuilds({ client }, { branch, parentCommits }) {
   const { app } = await client.runQuery(TesterBaselineCommitsQuery, { branch, parentCommits });
-  return app.baselineBuilds.map((build) => build.commit);
+  return app.baselineBuilds;
 }
 
 export async function getChangedFiles(baseCommit, headCommit = '') {

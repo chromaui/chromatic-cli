@@ -70,15 +70,15 @@ export const buildFailed = (ctx) => {
 export const buildError = (ctx) => {
   return {
     status: 'error',
-    title: `Oops. Build ${ctx.build.number} failed to run. Please try again.`,
-    output: `Exiting with status code ${ctx.exitCode}`,
+    title: `Build ${ctx.build.number} errored`,
+    output: `Please try again, or contact us if the problem persists`,
   };
 };
 
 export const skipped = (ctx) => {
   return {
     status: 'skipped',
-    title: 'Take snapsots of your stories',
+    title: 'Test your stories',
     output: ctx.isPublishOnly
       ? `No UI tests or UI review enabled`
       : `Skipped due to ${ctx.options.list ? '--list' : '--exit-once-uploaded'}`,

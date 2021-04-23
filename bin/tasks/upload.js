@@ -189,7 +189,7 @@ export const uploadStorybook = async (ctx, task) => {
 export default createTask({
   title: initial.title,
   skip: (ctx) => {
-    if (ctx.skip) return true;
+    if (ctx.skip || ctx.inherit) return true;
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },

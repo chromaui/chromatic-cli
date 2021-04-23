@@ -138,6 +138,6 @@ export const createBuild = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: (ctx) => ctx.skip,
+  skip: (ctx) => ctx.skip || ctx.inherit,
   steps: [transitionTo(pending), setEnvironment, createBuild],
 });

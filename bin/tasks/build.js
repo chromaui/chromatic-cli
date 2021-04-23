@@ -77,7 +77,7 @@ export const buildStorybook = async (ctx) => {
 export default createTask({
   title: initial.title,
   skip: async (ctx) => {
-    if (ctx.skip) return true;
+    if (ctx.skip || ctx.inherit) return true;
     if (ctx.options.storybookBuildDir) {
       ctx.sourceDir = ctx.options.storybookBuildDir;
       return skipped(ctx).output;

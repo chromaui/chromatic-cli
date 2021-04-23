@@ -60,6 +60,6 @@ export const testConnection = async (ctx) => {
 
 export default createTask({
   title: initial.title,
-  skip: (ctx) => ctx.skip || !ctx.options.createTunnel,
+  skip: (ctx) => ctx.skip || ctx.inherit || !ctx.options.createTunnel,
   steps: [transitionTo(pending), createTunnel, testConnection, transitionTo(success, true)],
 });

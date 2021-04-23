@@ -3,7 +3,7 @@ import picomatch from 'picomatch';
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
 import {
   getParentCommits,
-  getBaselineCommits,
+  getBaselineBuilds,
   getChangedFiles,
   getSlug,
   getVersion,
@@ -90,8 +90,14 @@ export const setGitInfo = async (ctx, task) => {
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
-    const baselineCommits = await getBaselineCommits(ctx, { branch, parentCommits });
+    const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
+    const baselineCommits = baselineBuilds.map((build) => build.commit);
     ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+
+    // Use the most recent baseline to determine final CLI output if we end up skipping the build.
+    // Note this will get overwritten if we end up not skipping the build.
+    // eslint-disable-next-line prefer-destructuring
+    ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0];
 
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
@@ -102,7 +108,7 @@ export const setGitInfo = async (ctx, task) => {
         transitionTo(skippingBuild)(ctx, task);
         // The SkipBuildMutation ensures the commit is still tagged properly.
         if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
-          ctx.skip = true;
+          ctx.inherit = true;
           transitionTo(skippedNoChanges, true)(ctx, task);
           return;
         }

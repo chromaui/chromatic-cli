@@ -8,6 +8,6 @@ export const setStorybookInfo = async (ctx) => {
 
 export default createTask({
   title: initial.title,
-  skip: (ctx) => ctx.skip,
+  skip: (ctx) => ctx.skip || ctx.inherit,
   steps: [transitionTo(pending), setStorybookInfo, transitionTo(success, true)],
 });
