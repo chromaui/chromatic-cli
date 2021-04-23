@@ -43,20 +43,20 @@ export const traced = (ctx) => ({
 
 export const skippingBuild = (ctx) => ({
   status: 'pending',
-  title: 'Skipping build',
-  output: `Skipping build because no story files were affected`,
+  title: 'No update necessary',
+  output: `Skipping Chromatic build because your Storybook has no code changes`,
 });
 
 export const skippedBuild = (ctx) => ({
   status: 'success',
-  title: 'Skipping build',
-  output: `Skipped build because no story files were affected`,
+  title: 'No update necessary',
+  output: `Skipped Chromatic build because your Storybook has no code changes`,
 });
 
 export const skipFailed = (ctx) => ({
   status: 'error',
-  title: 'Skipping build',
-  output: `Failed to skip build`,
+  title: 'No update necessary',
+  output: `Failed to skip Chromatic build`,
 });
 
 export const preparing = (ctx) => ({
