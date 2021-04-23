@@ -16,3 +16,4 @@ jobs:
         projectToken: mpm7osoy9sa
         onlyChanged: true
         exitZeroOnChanges: true
+        exitOnceUploaded: true

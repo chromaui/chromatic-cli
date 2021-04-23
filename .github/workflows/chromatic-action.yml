@@ -12,3 +12,4 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         projectToken: gcaw1ai2dgo
         exitZeroOnChanges: true
+        exitOnceUploaded: true
