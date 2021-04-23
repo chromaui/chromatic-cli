@@ -66,9 +66,6 @@ const timeout = (count) =>
     setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
   });
 
-const neverResolve = new Promise(() => {});
-const disregard = () => neverResolve;
-
 const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
@@ -114,19 +111,11 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   if (options.storybookBuildDir) return { viewLayer, version };
 
   // Try to find the viewlayer package in node_modules so we know it's installed
-  const findings = Object.entries(viewLayers).map(([pk, name]) => [resolve(pk), name]);
-  const rejectedFindings = findings.map(([p]) => p.then(disregard, () => true));
-  const allFailed = Promise.all(rejectedFindings).then(() => {
-    throw new Error(noViewLayerPackage());
-  });
-
   return Promise.race([
-    ...findings.map(([promise, name]) =>
-      promise
-        .then(fs.readJson, disregard)
-        .then((pkgJson) => ({ viewLayer: name, version: pkgJson.version }))
-    ),
-    allFailed,
+    resolve(pkg)
+      .then(fs.readJson)
+      .then((json) => ({ viewLayer, version: json.version }))
+      .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
     timeout(10000),
   ]);
 };

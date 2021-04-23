@@ -4,6 +4,7 @@ const log = { warn: jest.fn() };
 const context = { env: {}, log, options: {}, packageJson: {} };
 
 const REACT = { '@storybook/react': '1.2.3' };
+const VUE = { '@storybook/vue': '1.2.3' };
 
 describe('getStorybookInfo', () => {
   it('returns viewLayer and version', async () => {
@@ -15,9 +16,7 @@ describe('getStorybookInfo', () => {
   });
 
   it('throws on missing dependency', async () => {
-    await expect(getStorybookInfo(context)).rejects.toThrow(
-      'Could not find a supported Storybook viewlayer package in your package.json dependencies'
-    );
+    await expect(getStorybookInfo(context)).rejects.toThrow('Storybook dependency not found');
   });
 
   it('warns on duplicate devDependency', async () => {
@@ -34,6 +33,11 @@ describe('getStorybookInfo', () => {
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('both "dependencies" and "peerDependencies"')
     );
+  });
+
+  it('throws on missing package', async () => {
+    const ctx = { ...context, packageJson: { dependencies: VUE } };
+    await expect(getStorybookInfo(ctx)).rejects.toThrow('Storybook package not installed');
   });
 
   describe('with CHROMATIC_STORYBOOK_VERSION', () => {

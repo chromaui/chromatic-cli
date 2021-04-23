@@ -4,4 +4,4 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-export const NoViewLayerPackage = () => noViewLayerPackage();
+export const NoViewLayerPackage = () => noViewLayerPackage('@storybook/vue');
