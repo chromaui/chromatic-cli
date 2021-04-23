@@ -3,6 +3,9 @@
 import fs from 'fs-extra';
 import semver from 'semver';
 
+import noViewLayerDependency from '../ui/messages/errors/noViewLayerDependency';
+import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
+
 const viewLayers = {
   '@storybook/react': 'react',
   '@storybook/vue': 'vue',
@@ -90,9 +93,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   const dependency = dep || devDep || peerDep;
 
   if (!dependency) {
-    throw new Error(
-      'Could not find a supported Storybook viewlayer package in your package.json dependencies. Make sure one is installed.'
-    );
+    throw new Error(noViewLayerDependency());
   }
   if (dep && devDep && dep[0] === devDep[0]) {
     log.warn(
@@ -116,9 +117,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   const findings = Object.entries(viewLayers).map(([pk, name]) => [resolve(pk), name]);
   const rejectedFindings = findings.map(([p]) => p.then(disregard, () => true));
   const allFailed = Promise.all(rejectedFindings).then(() => {
-    throw new Error(
-      'Could not find a supported Storybook viewlayer package in node_modules. Make sure one is installed.'
-    );
+    throw new Error(noViewLayerPackage());
   });
 
   return Promise.race([
