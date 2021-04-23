@@ -1,4 +1,4 @@
-name: "Chromatic via action"
+name: "Chromatic (action)"
 on: [push, pull_request, pull_request_review, pull_request_target]
 
 jobs:
@@ -11,3 +11,4 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         projectToken: gcaw1ai2dgo
+        exitZeroOnChanges: true
