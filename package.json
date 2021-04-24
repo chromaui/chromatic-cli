@@ -1,7 +1,7 @@
 {
   "name": "chromatic",
   "version": "5.8.0-canary.0",
-  "description": "Visual Testing for Storybook",
+  "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "homepage": "https://www.chromatic.com",
   "bugs": {
     "url": "https://github.com/chromaui/chromatic-cli",
@@ -106,11 +106,12 @@
     "@babel/preset-env": "7.12.13",
     "@storybook/eslint-config-storybook": "^3.0.0",
     "@storybook/linter-config": "^3.0.0",
-    "@storybook/react": "6.1.17",
+    "@storybook/react": "6.2.0-rc.13",
     "@types/node": "^14.14.25",
     "@typescript-eslint/eslint-plugin": "^4.15.0",
     "@typescript-eslint/parser": "^4.15.0",
     "ansi-html": "0.0.7",
+    "babel-preset-minify": "^0.5.1",
     "cpy": "^8.1.1",
     "cross-env": "^7.0.3",
     "eslint": "^7.19.0",
@@ -126,5 +127,16 @@
     "typescript": "^4.1.4",
     "why-is-node-running": "^2.1.2"
   },
-  "docs": "https://www.chromatic.com/docs/cli"
+  "docs": "https://www.chromatic.com/docs/cli",
+  "keywords": [
+    "storybook-addon",
+    "storybook",
+    "addon",
+    "test",
+    "popular"
+  ],
+  "storybook": {
+    "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
+    "displayName": "Chromatic"
+  }
 }
