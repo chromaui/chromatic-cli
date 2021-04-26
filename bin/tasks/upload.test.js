@@ -98,29 +98,6 @@ describe('traceChangedFiles', () => {
 
     expect(ctx.onlyStoryFiles).toEqual(deps);
   });
-
-  it("skips build when there's zero affected story files", async () => {
-    getDependentStoryFiles.mockReturnValueOnce({});
-    readJson.mockReturnValue({});
-
-    const ctx = {
-      env,
-      log,
-      client: { runQuery: jest.fn().mockReturnValue({}) },
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { commit: '516dd7d', changedFiles: ['./example.js'] },
-    };
-    await traceChangedFiles(ctx, {});
-
-    expect(getDependentStoryFiles).toHaveBeenCalledWith(expect.any(Object), {}, ['./example.js']);
-    expect(ctx.client.runQuery).toHaveBeenCalledWith(
-      expect.stringContaining('TesterSkipBuildMutation'),
-      { commit: '516dd7d' }
-    );
-    expect(ctx.onlyStoryFiles).toEqual({});
-    expect(ctx.skip).toBe(true);
-  });
 });
 
 describe('uploadStorybook', () => {

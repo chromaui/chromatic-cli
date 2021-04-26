@@ -18,19 +18,10 @@ import {
   preparing,
   tracing,
   traced,
-  skippingBuild,
-  skippedBuild,
-  skipFailed,
   starting,
   success,
   uploading,
 } from '../ui/tasks/upload';
-
-const TesterSkipBuildMutation = `
-  mutation TesterSkipBuildMutation($commit: String!) {
-    skipBuild(commit: $commit)
-  }
-`;
 
 const TesterGetUploadUrlsMutation = `
   mutation TesterGetUploadUrlsMutation($paths: [String!]!) {
@@ -134,18 +125,7 @@ export const traceChangedFiles = async (ctx, task) => {
         .map(([id, f]) => `  ${f} [${id}]`)
         .join('\n')}`
     );
-
     transitionTo(traced)(ctx, task);
-
-    if (ctx.onlyStoryFiles && Object.keys(ctx.onlyStoryFiles).length === 0) {
-      transitionTo(skippingBuild)(ctx, task);
-      if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit: ctx.git.commit })) {
-        ctx.skip = true;
-        transitionTo(skippedBuild, true)(ctx, task);
-        return;
-      }
-      throw new Error(skipFailed(ctx).output);
-    }
   } catch (e) {
     ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
   }
@@ -189,7 +169,7 @@ export const uploadStorybook = async (ctx, task) => {
 export default createTask({
   title: initial.title,
   skip: (ctx) => {
-    if (ctx.skip || ctx.inherit) return true;
+    if (ctx.skip) return true;
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },

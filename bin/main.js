@@ -13,8 +13,6 @@ import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
 import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
-import buildHasChanges from './ui/messages/errors/buildHasChanges';
-import buildPassedMessage from './ui/messages/info/buildPassed';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import missingStories from './ui/messages/errors/missingStories';
@@ -76,22 +74,6 @@ export async function runBuild(ctx) {
       if (ctx.options.interactive) ctx.log.queue(); // queue up any log messages while Listr is running
       const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
       await new Listr(getTasks(ctx.options), options).run(ctx);
-
-      if (ctx.inherit) {
-        switch (ctx.build.status) {
-          case 'PASSED':
-          case 'ACCEPTED':
-            ctx.exitCode = 0;
-            ctx.log.info(buildPassedMessage(ctx));
-            break;
-          case 'PENDING':
-            ctx.exitCode = ctx.git.matchesBranch(ctx.options.exitZeroOnChanges) ? 0 : 1;
-            ctx.log.error(buildHasChanges(ctx));
-            break;
-          default:
-            throw new Error(`Unexpected inherited build status: ${ctx.build.status}`);
-        }
-      }
     } catch (err) {
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         ctx.log.info('');

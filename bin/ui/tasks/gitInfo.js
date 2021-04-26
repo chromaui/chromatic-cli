@@ -47,12 +47,6 @@ export const skippedRebuild = (ctx) => ({
   output: `Skipping rebuild of an already fully passed/accepted build`,
 });
 
-export const skippedNoChanges = (ctx) => ({
-  status: 'success',
-  title: 'Skipping build',
-  output: `Skipping build because no files have changed since the baseline commit(s)`,
-});
-
 export const success = (ctx) => ({
   status: 'success',
   title: 'Retrieved git information',

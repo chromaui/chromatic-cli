@@ -5,21 +5,8 @@ import { info, success } from '../../components/icons';
 import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 
-export default ({ build, inherit, isOnboarding }) => {
+export default ({ build, isOnboarding }) => {
   const { changes, snapshots, components, stories } = stats({ build });
-  if (inherit) {
-    return build.changeCount
-      ? dedent(chalk`
-        ${success} {bold Build passed!}
-        No new snapshots were taken, and ${changes} were previously accepted on the baseline.
-        ${info} View baseline build at ${link(build.webUrl)}
-      `)
-      : dedent(chalk`
-        ${success} {bold Build passed!}
-        No new snapshots were taken, and the baseline had no changes.
-        ${info} View baseline build at ${link(build.webUrl)}
-      `);
-  }
   if (isOnboarding) {
     return dedent(chalk`
       ${success} {bold Build passed. Welcome to Chromatic!}

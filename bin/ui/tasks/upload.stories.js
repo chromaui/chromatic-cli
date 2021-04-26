@@ -6,9 +6,6 @@ import {
   invalid,
   tracing,
   traced,
-  skippingBuild,
-  skippedBuild,
-  skipFailed,
   preparing,
   starting,
   uploading,
@@ -40,12 +37,6 @@ export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } });
 
 export const Traced = () =>
   traced({ onlyStoryFiles: Object.fromEntries(Array.from({ length: 5 }, (_, i) => [i])) });
-
-export const SkippingBuild = () => skippingBuild();
-
-export const SkippedBuild = () => skippedBuild();
-
-export const SkipFailed = () => skipFailed();
 
 export const Preparing = () => preparing();
 

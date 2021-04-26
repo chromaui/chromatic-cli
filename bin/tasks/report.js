@@ -97,6 +97,6 @@ export const generateReport = async (ctx) => {
 
 export default createTask({
   title: initial.title,
-  skip: (ctx) => ctx.skip || ctx.inherit,
+  skip: (ctx) => ctx.skip,
   steps: [transitionTo(pending), generateReport, transitionTo(success, true)],
 });
