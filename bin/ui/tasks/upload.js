@@ -36,13 +36,16 @@ export const skipped = (ctx) => ({
   output: `Using hosted Storybook at ${ctx.options.storybookUrl}`,
 });
 
-export const invalid = (ctx) => ({
-  status: 'error',
-  title: 'Publishing your built Storybook',
-  output: `Invalid Storybook build at ${ctx.sourceDir}${
-    ctx.buildLogFile ? ' (check the build log)' : ''
-  }`,
-});
+export const invalid = (ctx, error) => {
+  let output = `Invalid Storybook build at ${ctx.sourceDir}`;
+  if (ctx.buildLogFile) output += ' (check the build log)';
+  if (error) output += `: ${error.message}`;
+  return {
+    status: 'error',
+    title: 'Publishing your built Storybook',
+    output,
+  };
+};
 
 export const failed = (ctx) => ({
   status: 'error',

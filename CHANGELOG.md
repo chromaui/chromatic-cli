@@ -1,3 +1,7 @@
+# 5.7.1 - 2021-02-02
+
+- Better logging when Storybook validation fails
+
 # 5.7.0 - 2021-03-11
 
 - [283](https://github.com/chromaui/chromatic-cli/pull/283) Explicitly allow multiple project-tokens (last will be used)
