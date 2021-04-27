@@ -35,6 +35,7 @@ const supportedAddons = {
   '@storybook/addon-cssresources': 'cssresources',
   '@storybook/addon-design-assets': 'design-assets',
   '@storybook/addon-docs': 'docs',
+  '@storybook/addon-essentials': 'essentials',
   '@storybook/addon-events': 'events',
   '@storybook/addon-google-analytics': 'google-analytics',
   '@storybook/addon-graphql': 'graphql',
