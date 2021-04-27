@@ -68,6 +68,12 @@ const timeout = (count) =>
     setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
   });
 
+const findDependency = ({ dependencies, devDependencies, peerDependencies }, predicate) => [
+  Object.entries(dependencies || {}).find(predicate),
+  Object.entries(devDependencies || {}).find(predicate),
+  Object.entries(peerDependencies || {}).find(predicate),
+];
+
 const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
@@ -86,9 +92,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   }
 
   // Pull the viewlayer from dependencies in package.json
-  const dep = Object.entries(packageJson.dependencies || {}).find(([p]) => viewLayers[p]);
-  const devDep = Object.entries(packageJson.devDependencies || {}).find(([p]) => viewLayers[p]);
-  const peerDep = Object.entries(packageJson.peerDependencies || {}).find(([p]) => viewLayers[p]);
+  const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => viewLayers[key]);
   const dependency = dep || devDep || peerDep;
 
   if (!dependency) {
@@ -122,17 +126,15 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-const findAddons = async () => {
-  const result = await Promise.all(
-    Object.entries(supportedAddons).map(([pkg, name]) =>
-      resolve(pkg)
-        .then(fs.readJson, () => false)
-        .then((pkgJson) => ({ name, packageName: pkgJson.name, packageVersion: pkgJson.version }))
-    )
-  );
-
-  return { addons: result.filter(Boolean) };
-};
+const findAddons = async ({ packageJson }) => ({
+  addons: Object.entries(supportedAddons)
+    .map(([pkg, name]) => {
+      const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => key === pkg);
+      const [packageName, packageVersion] = dep || devDep || peerDep || [];
+      return packageName && packageVersion && { name, packageName, packageVersion };
+    })
+    .filter(Boolean),
+});
 
 const findConfigFlags = async ({ options, packageJson }) => {
   const { scripts = {} } = packageJson;
@@ -153,6 +155,6 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export default async function getStorybookInfo(ctx) {
-  const info = await Promise.all([findAddons(), findConfigFlags(ctx), findViewlayer(ctx)]);
+  const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
   return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 }
