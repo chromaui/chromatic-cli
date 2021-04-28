@@ -50,20 +50,11 @@ const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 export const buildStorybook = async (ctx) => {
-  ctx.log.debug('buildStorybook')
   ctx.buildLogFile = path.resolve('./build-storybook.log');
-  ctx.log.debug(ctx.buildLogFile);
   const logFile = fs.createWriteStream(ctx.buildLogFile);
-  ctx.log.debug(logFile);
   await new Promise((resolve, reject) => {
-    logFile.on('open', () => {
-      ctx.log.debug('open');
-      resolve();
-    });
-    logFile.on('error', (e) => {
-      ctx.log.debug('error', e);
-      reject();
-    });
+    logFile.on('open', resolve);
+    logFile.on('error', reject);
   });
 
   try {
