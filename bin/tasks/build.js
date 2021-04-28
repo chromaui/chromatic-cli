@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
+import yarnOrNpm, { hasYarn } from 'yarn-or-npm';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
@@ -21,21 +22,14 @@ export const setSourceDir = async (ctx) => {
 };
 
 export const setSpawnParams = (ctx) => {
-  // Run either:
-  //   npm/yarn run scriptName (depending on npm_execpath)
-  //   node path/to/npm.js run scriptName (if npm run via node)
-  // Based on https://github.com/mysticatea/npm-run-all/blob/52eaf86242ba408dedd015f53ca7ca368f25a026/lib/run-task.js#L156-L174
-  const npmExecPath = process.env.npm_execpath;
-  const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
-  const isYarn = npmExecPath && /^yarn(\.js)?$/.test(path.basename(npmExecPath));
   ctx.spawnParams = {
-    client: isYarn ? 'yarn' : 'npm',
+    client: yarnOrNpm(),
     platform: process.platform,
-    command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
-    clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
+    command: yarnOrNpm(),
+    clientArgs: ['run', '--silent'],
     scriptArgs: [
       ctx.options.buildScriptName,
-      isYarn ? '' : '--',
+      hasYarn() ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
     ].filter(Boolean),
