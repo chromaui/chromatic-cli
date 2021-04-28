@@ -28,6 +28,8 @@ export const setSpawnParams = (ctx) => {
   const npmExecPath = process.env.npm_execpath;
   const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
   const isYarn = npmExecPath && /^yarn(\.js)?$/.test(path.basename(npmExecPath));
+  ctx.log.debug('process.env.npm_execpath', process.env.npm_execpath);
+  ctx.log.debug('process.execPath', process.execPath);
   ctx.spawnParams = {
     client: isYarn ? 'yarn' : 'npm',
     platform: process.platform,
