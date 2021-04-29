@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
+import yarnOrNpm, { hasYarn } from 'yarn-or-npm';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
@@ -21,28 +22,27 @@ export const setSourceDir = async (ctx) => {
 };
 
 export const setSpawnParams = (ctx) => {
-  // Run either:
-  //   npm/yarn run scriptName (depending on npm_execpath)
-  //   node path/to/npm.js run scriptName (if npm run via node)
-  // Based on https://github.com/mysticatea/npm-run-all/blob/52eaf86242ba408dedd015f53ca7ca368f25a026/lib/run-task.js#L156-L174
-  const npmExecPath = process.env.npm_execpath;
-  const isJsPath = typeof npmExecPath === 'string' && /\.m?js/.test(path.extname(npmExecPath));
-  const isYarn = npmExecPath && /^yarn(\.js)?$/.test(path.basename(npmExecPath));
   const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
   ctx.spawnParams = {
-    command: (isJsPath ? process.execPath : npmExecPath) || 'npm',
-    clientArgs: isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
+    client: yarnOrNpm(),
+    platform: process.platform,
+    command: yarnOrNpm(),
+    clientArgs: ['run', '--silent'],
     scriptArgs: [
       ctx.options.buildScriptName,
-      isYarn ? '' : '--',
+      hasYarn() ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
       ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
       ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
     ].filter(Boolean),
+    spawnOptions: {
+      preferLocal: true,
+      localDir: path.resolve('node_modules/.bin'),
+    },
   };
 };
 
@@ -58,9 +58,13 @@ export const buildStorybook = async (ctx) => {
   });
 
   try {
-    const { command, clientArgs, scriptArgs } = ctx.spawnParams;
+    const { command, clientArgs, scriptArgs, spawnOptions } = ctx.spawnParams;
+    ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
     await Promise.race([
-      execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
+      execa(command, [...clientArgs, ...scriptArgs], {
+        stdio: [null, logFile, logFile],
+        ...spawnOptions,
+      }),
       timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
     ]);
   } catch (e) {
