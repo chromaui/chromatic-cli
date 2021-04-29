@@ -1,3 +1,10 @@
+# 5.8.0 - 2021-04-29
+
+- [319](https://github.com/chromaui/chromatic-cli/pull/319) Retrieve viewLayer and version from dependencies and support @web/dev-server-storybook
+- [313](https://github.com/chromaui/chromatic-cli/pull/313) Use original baseline for rebuilds (new build for the same commit)
+- [304](https://github.com/chromaui/chromatic-cli/pull/304) Support only testing components affected by recent git changes
+- [305](https://github.com/chromaui/chromatic-cli/pull/305) Fix `npx chromatic` timing out on build-storybook
+
 # 5.7.1 - 2021-02-02
 
 - Better logging when Storybook validation fails
