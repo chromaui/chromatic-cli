@@ -36,9 +36,32 @@ describe('setSpawnParams', () => {
     const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
+      client: 'npm',
+      platform: expect.stringMatching(/darwin|linux|win32/),
       command: 'npm',
       clientArgs: ['run', '--silent'],
       scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/'],
+      spawnOptions: {
+        preferLocal: true,
+        localDir: expect.stringMatching(/node_modules[/\\]\.bin$/),
+      },
+    });
+  });
+
+  it('supports yarn', async () => {
+    process.env.npm_execpath = '/path/to/yarn';
+    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    await setSpawnParams(ctx);
+    expect(ctx.spawnParams).toEqual({
+      client: 'yarn',
+      platform: expect.stringMatching(/darwin|linux|win32/),
+      command: '/path/to/yarn',
+      clientArgs: ['run', '--silent'],
+      scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
+      spawnOptions: {
+        preferLocal: true,
+        localDir: expect.stringMatching(/node_modules[/\\]\.bin$/),
+      },
     });
   });
 
@@ -63,6 +86,7 @@ describe('buildStorybook', () => {
         scriptArgs: ['--script-args'],
       },
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
+      log: { debug: jest.fn() },
     };
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
@@ -70,6 +94,10 @@ describe('buildStorybook', () => {
       'build:storybook',
       ['--client-args', '--script-args'],
       expect.objectContaining({ stdio: expect.any(Array) })
+    );
+    expect(ctx.log.debug).toHaveBeenCalledWith(
+      'Using spawnParams:',
+      JSON.stringify(ctx.spawnParams, null, 2)
     );
   });
 
@@ -82,7 +110,7 @@ describe('buildStorybook', () => {
       },
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: { error: jest.fn() },
+      log: { debug: jest.fn(), error: jest.fn() },
     };
     execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 10)));
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
