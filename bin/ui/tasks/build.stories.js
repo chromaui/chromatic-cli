@@ -7,7 +7,8 @@ export default {
 };
 
 const spawnParams = {
-  client: 'yarn',
+  command: 'yarn',
+  clientArgs: ['run', '--silent'],
   scriptArgs: ['build-storybook', '-o', 'storybook-static'],
 };
 

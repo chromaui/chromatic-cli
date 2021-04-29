@@ -1,5 +1,8 @@
 import { getDuration } from '../../lib/tasks';
 
+const fullCommand = ({ command, clientArgs, scriptArgs }) =>
+  [command, ...clientArgs, ...scriptArgs].join(' ');
+
 export const initial = {
   status: 'initial',
   title: 'Build Storybook',
@@ -7,8 +10,8 @@ export const initial = {
 
 export const pending = (ctx) => ({
   status: 'pending',
-  title: `Building your Storybook with ${ctx.spawnParams.client}`,
-  output: `Running command: ${ctx.spawnParams.scriptArgs.join(' ')}`,
+  title: `Building your Storybook`,
+  output: `Running command: ${fullCommand(ctx.spawnParams)}`,
 });
 
 export const success = (ctx) => ({
@@ -25,6 +28,6 @@ export const skipped = (ctx) => ({
 
 export const failed = (ctx) => ({
   status: 'error',
-  title: `Building your Storybook with ${ctx.spawnParams.client}`,
-  output: `Command failed: ${ctx.spawnParams.scriptArgs.join(' ')}`,
+  title: `Building your Storybook`,
+  output: `Command failed: ${fullCommand(ctx.spawnParams)}`,
 });
