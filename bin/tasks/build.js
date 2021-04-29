@@ -1,5 +1,5 @@
 import execa from 'execa';
-import fs from 'fs';
+import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -22,6 +22,10 @@ export const setSourceDir = async (ctx) => {
 };
 
 export const setSpawnParams = (ctx) => {
+  const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
+  if (ctx.git.changedFiles && !webpackStatsSupported) {
+    ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
+  }
   ctx.spawnParams = {
     client: yarnOrNpm(),
     platform: process.platform,
@@ -32,6 +36,8 @@ export const setSpawnParams = (ctx) => {
       hasYarn() ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
+      ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
+      ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
     ].filter(Boolean),
     spawnOptions: {
       preferLocal: true,

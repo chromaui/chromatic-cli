@@ -1,4 +1,4 @@
-name: "[Staging] Chromatic via manual"
+name: "[Staging] Chromatic (manual)"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 
@@ -15,8 +15,7 @@ jobs:
     - name: prep package
       run: ./scripts/rename.js storybook-chromatic
     - name: run chromatic
-      run: yarn chromatic
+      run: yarn chromatic --only-changed
       env: 
-        CHROMATIC_APP_CODE: mpm7osoy9sa
         CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
         CHROMATIC_INDEX_URL: https://www.staging-chromatic.com

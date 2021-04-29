@@ -30,6 +30,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
 
     only: flags.only,
+    onlyChanged: flags.onlyChanged === '' ? true : flags.onlyChanged,
     list: flags.list,
     fromCI,
     skip: flags.skip === '' ? true : flags.skip,
@@ -41,7 +42,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
     exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
+    preserveMissingSpecs: flags.preserveMissing,
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
@@ -113,6 +114,10 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
 
   if (foundSingularOpts.length > 1) {
     throw new Error(invalidSingularOptions(foundSingularOpts.map((key) => singularOpts[key])));
+  }
+
+  if (options.only && options.onlyChanged) {
+    throw new Error(invalidSingularOptions(['--only', '--only-changed']));
   }
 
   // No need to start or build Storybook if we're going to fetch from a URL

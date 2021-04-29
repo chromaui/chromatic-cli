@@ -33,7 +33,7 @@ const TesterBuildQuery = `
 
 export const takeSnapshots = async (ctx, task) => {
   const { client, log, options } = ctx;
-  const { number: buildNumber, tests } = ctx.build;
+  const { number: buildNumber, tests, testCount, actualTestCount } = ctx.build;
 
   if (ctx.build.app.repository && ctx.uploadedBytes && !options.junitReport) {
     log.info(speedUpCI(ctx.build.app.repository.provider));
@@ -41,6 +41,7 @@ export const takeSnapshots = async (ctx, task) => {
 
   const testLabels =
     options.interactive &&
+    testCount === actualTestCount &&
     tests.map(({ spec, parameters }) => {
       const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
       return `${spec.component.displayName} › ${spec.name}${suffix}`;
@@ -55,9 +56,9 @@ export const takeSnapshots = async (ctx, task) => {
     }
 
     if (options.interactive) {
-      const { inProgressCount, testCount } = ctx.build;
-      const cursor = testCount - inProgressCount + 1;
-      const label = testLabels[cursor - 1] || '';
+      const { inProgressCount } = ctx.build;
+      const cursor = actualTestCount - inProgressCount + 1;
+      const label = testLabels && testLabels[cursor - 1];
       task.output = pending({ ...ctx, cursor, label }).output;
     }
 

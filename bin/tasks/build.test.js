@@ -1,8 +1,15 @@
 import execa from 'execa';
+import yarnOrNpm, { hasYarn } from 'yarn-or-npm';
 
 import { buildStorybook, setSourceDir, setSpawnParams } from './build';
 
 jest.mock('execa');
+jest.mock('yarn-or-npm');
+
+beforeEach(() => {
+  yarnOrNpm.mockReturnValue('npm');
+  hasYarn.mockReturnValue(false);
+});
 
 describe('setSourceDir', () => {
   it('sets a random temp directory path on the context', async () => {
@@ -33,14 +40,26 @@ describe('setSourceDir', () => {
 describe('setSpawnParams', () => {
   it('sets the spawn params on the context', async () => {
     process.env.npm_execpath = 'npm';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
+    };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
       client: 'npm',
       platform: expect.stringMatching(/darwin|linux|win32/),
       command: 'npm',
       clientArgs: ['run', '--silent'],
-      scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/'],
+      scriptArgs: [
+        'build:storybook',
+        '--',
+        '--output-dir',
+        './source-dir/',
+        '--webpack-stats-json',
+        './source-dir/',
+      ],
       spawnOptions: {
         preferLocal: true,
         localDir: expect.stringMatching(/node_modules[/\\]\.bin$/),
@@ -49,13 +68,19 @@ describe('setSpawnParams', () => {
   });
 
   it('supports yarn', async () => {
-    process.env.npm_execpath = '/path/to/yarn';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    yarnOrNpm.mockReturnValue('yarn');
+    hasYarn.mockReturnValue(true);
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: {},
+    };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
       client: 'yarn',
       platform: expect.stringMatching(/darwin|linux|win32/),
-      command: '/path/to/yarn',
+      command: 'yarn',
       clientArgs: ['run', '--silent'],
       scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
       spawnOptions: {
@@ -65,15 +90,19 @@ describe('setSpawnParams', () => {
     });
   });
 
-  it('supports yarn', async () => {
-    process.env.npm_execpath = '/path/to/yarn';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+  it('warns if --only-changes is not supported', async () => {
+    process.env.npm_execpath = 'npm';
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: { changedFiles: ['./index.js'] },
+      log: { warn: jest.fn() },
+    };
     await setSpawnParams(ctx);
-    expect(ctx.spawnParams).toEqual({
-      command: '/path/to/yarn',
-      clientArgs: ['run', '--silent'],
-      scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
-    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      'Storybook version 6.2.0 or later is required to use the --only-changed flag'
+    );
   });
 });
 

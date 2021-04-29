@@ -1,4 +1,4 @@
-name: "[Staging] Chromatic via action"
+name: "[Staging] Chromatic (action)"
 on: [push, pull_request, pull_request_target, pull_request_review]
 
 jobs:
@@ -10,10 +10,10 @@ jobs:
     - uses: chromaui/action@v1
       env:
         DEBUG: chromatic-cli
-        CHROMATIC_APP_CODE: mpm7osoy9sa
-        CHROMATIC_PROJECT_TOKEN: mpm7osoy9sa
         CHROMATIC_INDEX_URL: https://www.staging-chromatic.com
       with:
-        appCode: mpm7osoy9sa
-        projectToken: mpm7osoy9sa
         token: ${{ secrets.GITHUB_TOKEN }}
+        projectToken: mpm7osoy9sa
+        onlyChanged: true
+        exitZeroOnChanges: true
+        exitOnceUploaded: true

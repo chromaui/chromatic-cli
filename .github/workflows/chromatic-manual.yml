@@ -1,4 +1,4 @@
-name: "Chromatic via manual"
+name: "Chromatic (manual)"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 
@@ -18,4 +18,3 @@ jobs:
       run: yarn chromatic
       env: 
         CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
-        CHROMATIC_APP_CODE: gcaw1ai2dgo

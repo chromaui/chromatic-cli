@@ -1,6 +1,8 @@
 // Figure out the Storybook version and view layer
 
 import fs from 'fs-extra';
+import meow from 'meow';
+import argv from 'string-argv';
 import semver from 'semver';
 
 import noViewLayerDependency from '../ui/messages/errors/noViewLayerDependency';
@@ -33,6 +35,7 @@ const supportedAddons = {
   '@storybook/addon-cssresources': 'cssresources',
   '@storybook/addon-design-assets': 'design-assets',
   '@storybook/addon-docs': 'docs',
+  '@storybook/addon-essentials': 'essentials',
   '@storybook/addon-events': 'events',
   '@storybook/addon-google-analytics': 'google-analytics',
   '@storybook/addon-graphql': 'graphql',
@@ -66,6 +69,12 @@ const timeout = (count) =>
     setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
   });
 
+const findDependency = ({ dependencies, devDependencies, peerDependencies }, predicate) => [
+  Object.entries(dependencies || {}).find(predicate),
+  Object.entries(devDependencies || {}).find(predicate),
+  Object.entries(peerDependencies || {}).find(predicate),
+];
+
 const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
@@ -80,13 +89,11 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     if (!viewLayer) {
       throw new Error(`Unsupported viewlayer specified in CHROMATIC_STORYBOOK_VERSION: ${p}`);
     }
-    return { viewLayer, version };
+    return { version, viewLayer };
   }
 
   // Pull the viewlayer from dependencies in package.json
-  const dep = Object.entries(packageJson.dependencies || {}).find(([p]) => viewLayers[p]);
-  const devDep = Object.entries(packageJson.devDependencies || {}).find(([p]) => viewLayers[p]);
-  const peerDep = Object.entries(packageJson.peerDependencies || {}).find(([p]) => viewLayers[p]);
+  const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => viewLayers[key]);
   const dependency = dep || devDep || peerDep;
 
   if (!dependency) {
@@ -120,24 +127,35 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-const findAddons = async () => {
-  const result = await Promise.all(
-    Object.entries(supportedAddons).map(([pkg, name]) =>
-      resolve(pkg)
-        .then(fs.readJson, () => false)
-        .then((pkgJson) => ({ name, packageName: pkgJson.name, packageVersion: pkgJson.version }))
-    )
-  );
+const findAddons = async ({ packageJson }) => ({
+  addons: Object.entries(supportedAddons)
+    .map(([pkg, name]) => {
+      const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => key === pkg);
+      const [packageName, packageVersion] = dep || devDep || peerDep || [];
+      return packageName && packageVersion && { name, packageName, packageVersion };
+    })
+    .filter(Boolean),
+});
 
-  return { addons: result.filter(Boolean) };
+const findConfigFlags = async ({ options, packageJson }) => {
+  const { scripts = {} } = packageJson;
+  if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
+
+  const { flags } = meow({
+    argv: argv(scripts[options.buildScriptName]),
+    flags: {
+      configDir: { type: 'string', alias: 'c' },
+      staticDir: { type: 'string', alias: 's' },
+    },
+  });
+
+  return {
+    configDir: flags.configDir,
+    staticDir: flags.staticDir && flags.staticDir.split(','),
+  };
 };
 
 export default async function getStorybookInfo(ctx) {
-  const storybookInfo = await findViewlayer(ctx);
-  const addonInfo = await findAddons();
-
-  return {
-    ...storybookInfo,
-    ...addonInfo,
-  };
+  const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 }

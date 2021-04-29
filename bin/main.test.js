@@ -1,5 +1,5 @@
 import execa from 'execa';
-import fs from 'fs';
+import fs from 'fs-extra';
 import { confirm } from 'node-ask';
 import fetch from 'node-fetch';
 import kill from 'tree-kill';
@@ -117,6 +117,7 @@ jest.mock('tree-kill');
 jest.mock('fs-extra', () => ({
   pathExists: async () => true,
   readFileSync: jest.requireActual('fs-extra').readFileSync,
+  createWriteStream: jest.requireActual('fs-extra').createWriteStream,
 }));
 
 fs.readdirSync = jest.fn(() => ['iframe.html', 'index.html']);
@@ -136,7 +137,7 @@ jest.mock('./git/git', () => ({
       committerName: 'tester',
     }),
   getBranch: () => Promise.resolve('branch'),
-  getBaselineCommits: () => Promise.resolve(['baseline']),
+  getParentCommits: () => Promise.resolve(['baseline']),
   getSlug: () => Promise.resolve('user/repo'),
   getVersion: () => Promise.resolve('2.24.1'),
 }));
@@ -198,7 +199,7 @@ it('runs in simple situations', async () => {
       branch: 'branch',
       commit: 'commit',
       committedAt: 1234,
-      baselineCommits: ['baseline'],
+      parentCommits: ['baseline'],
       fromCI: false,
       isTravisPrBuild: false,
       packageVersion: expect.any(String),

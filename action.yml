@@ -30,6 +30,12 @@ inputs:
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false
+  only:
+    description: 'Only run a single story or a subset of stories'
+    required: false
+  onlyChanged:
+    description: 'Only run stories affected by files changed since the baseline build'
+    required: false
   doNotStart:
     description: 'Do not attempt to start or build; use if your Storybook is already running'
     required: false
