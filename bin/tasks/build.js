@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
-import yarnOrNpm, { hasYarn } from 'yarn-or-npm';
+import yarnOrNpm, { spawn } from 'yarn-or-npm';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
@@ -26,14 +26,18 @@ export const setSpawnParams = (ctx) => {
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
+  const client = yarnOrNpm();
+  const { stdout } = spawn.sync(['--version']);
+  const clientVersion = stdout && stdout.toString().trim();
   ctx.spawnParams = {
-    client: yarnOrNpm(),
+    client,
+    clientVersion,
     platform: process.platform,
-    command: yarnOrNpm(),
+    command: client,
     clientArgs: ['run', '--silent'],
     scriptArgs: [
       ctx.options.buildScriptName,
-      hasYarn() ? '' : '--',
+      client === 'yarn' ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
       ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
