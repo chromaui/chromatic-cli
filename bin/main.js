@@ -34,7 +34,7 @@ export async function main(argv) {
   }
 
   const packageJson = await readFile(packagePath);
-  if (!packageJson || typeof packageJson !== 'object') {
+  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
     log.error(invalidPackageJson(packagePath));
     process.exit(252);
   }
