@@ -37,7 +37,7 @@ async function execGitCommand(command) {
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
 const TesterFirstCommittedAtQuery = gql`
-  query TesterFirstCommittedAtQuery($commit: String!, $branch: String!) {
+  query TesterFirstCommittedAtQuery($branch: String!) {
     app {
       firstBuild(sortByCommittedAt: true) {
         committedAt
