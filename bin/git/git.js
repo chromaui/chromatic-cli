@@ -46,11 +46,6 @@ const TesterFirstCommittedAtQuery = gql`
         commit
         committedAt
       }
-      pullRequest(mergeInfo: { commit: $commit, baseRefName: $branch }) {
-        lastHeadBuild {
-          commit
-        }
-      }
     }
   }
 `;
@@ -252,13 +247,8 @@ export async function getParentCommits(
 
   // Include the latest build from this branch as an ancestor of the current build
   const { app } = await client.runQuery(TesterFirstCommittedAtQuery, { branch, commit });
-  const { firstBuild, lastBuild, pullRequest } = app;
-  log.debug(
-    `App firstBuild: %o, lastBuild: %o, pullRequest: %o`,
-    firstBuild,
-    lastBuild,
-    pullRequest
-  );
+  const { firstBuild, lastBuild } = app;
+  log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, lastBuild);
 
   if (!firstBuild) {
     log.debug('App has no builds, returning []');
@@ -289,23 +279,6 @@ export async function getParentCommits(
         `Last branch build commit ${lastBuild.commit} not in index, blindly appending to parents`
       );
       extraParentCommits.push(lastBuild.commit);
-    }
-  }
-
-  // Add the most recent build on a (merged) branch as a parent if we think this was the commit that
-  // merged the pull request.
-  // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
-  if (pullRequest && pullRequest.lastHeadBuild) {
-    if (await commitExists(pullRequest.lastHeadBuild.commit)) {
-      log.debug(
-        `Adding merged PR build commit ${pullRequest.lastHeadBuild.commit} to commits with builds`
-      );
-      initialCommitsWithBuilds.push(pullRequest.lastHeadBuild.commit);
-    } else {
-      log.debug(
-        `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to parents`
-      );
-      extraParentCommits.push(pullRequest.lastHeadBuild.commit);
     }
   }
 
