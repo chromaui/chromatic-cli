@@ -18,10 +18,7 @@ export default async function checkPackageJson({ log, options, packageJson, pack
     if (!json.scripts) json.scripts = {};
     if (findScript(json.scripts)) return;
 
-    const scriptCommand = `${`npx chromatic ${options.originalArgv.slice(2).join(' ')}`
-      .replace(/--project-token[= ]\S+/, '')
-      .replace(/--app-code[= ]\S+/, '')
-      .trim()} --project-token ${options.projectToken}`;
+    const scriptCommand = `npx chromatic ${options.originalArgv.join(' ')}`;
 
     log.info('');
     if (await confirm(scriptNotFound(scriptName))) {
