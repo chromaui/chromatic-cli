@@ -6,17 +6,10 @@ export default {
   decorators: [(storyFn) => task(storyFn())],
 };
 
-const storybook = {
-  version: '5.3.0',
-  viewLayer: 'web-components',
-  addons: [],
-};
-const addons = [{ name: 'actions' }, { name: 'docs' }, { name: 'design-assets' }];
+const storybook = { version: '5.3.0', viewLayer: 'web-components' };
 
 export const Initial = () => initial;
 
 export const Pending = () => pending();
 
 export const Success = () => success({ storybook });
-
-export const WithAddons = () => success({ storybook: { ...storybook, addons } });

@@ -4,12 +4,8 @@ const capitalize = (string) =>
     .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
     .join(' ');
 
-const infoMessage = ({ addons, version, viewLayer }) => {
-  const info = `Storybook v${version} for ${capitalize(viewLayer)}`;
-  return addons.length
-    ? `${info}; supported addons found: ${addons.map((addon) => capitalize(addon.name)).join(', ')}`
-    : `${info}; no supported addons found`;
-};
+const infoMessage = ({ version, viewLayer }) =>
+  `Storybook v${version} for ${capitalize(viewLayer)}`;
 
 export const initial = {
   status: 'initial',

@@ -143,11 +143,7 @@ jest.mock('./git/git', () => ({
 }));
 
 jest.mock('./lib/startStorybook');
-jest.mock('./lib/getStorybookInfo', () => () => ({
-  version: '5.1.0',
-  viewLayer: 'viewLayer',
-  addons: [],
-}));
+jest.mock('./lib/getStorybookInfo', () => () => ({ version: '5.1.0', viewLayer: 'viewLayer' }));
 jest.mock('./lib/tunnel');
 jest.mock('./lib/uploadFiles');
 
