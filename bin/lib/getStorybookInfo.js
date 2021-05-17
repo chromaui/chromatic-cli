@@ -3,7 +3,6 @@ import meow from 'meow';
 import semver from 'semver';
 import argv from 'string-argv';
 
-import noViewLayerDependency from '../ui/messages/errors/noViewLayerDependency';
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 
 const viewLayers = {
@@ -21,22 +20,27 @@ const viewLayers = {
   '@storybook/svelte': 'svelte',
   '@storybook/preact': 'preact',
   '@storybook/rax': 'rax',
-  '@web/dev-server-storybook': 'web-components',
 };
 
-const resolve = (pkg) => {
+// Double inversion on Promise.all means fulfilling with the first fulfilled promise, or rejecting
+// when _everything_ rejects. This is different from Promise.race, which immediately rejects on the
+// first rejection.
+const invert = (promise) => new Promise((resolve, reject) => promise.then(reject, resolve));
+const raceFulfilled = (promises) => invert(Promise.all(promises.map(invert)).then((arr) => arr[0]));
+
+const timeout = (count) =>
+  new Promise((_, rej) => {
+    setTimeout(() => rej(new Error('Timeout while resolving Storybook view layer package')), count);
+  });
+
+const resolvePackageJson = (pkg) => {
   try {
     const path = require.resolve(`${pkg}/package.json`, { paths: [process.cwd()] });
-    return Promise.resolve(path);
+    return fs.readJson(path);
   } catch (error) {
     return Promise.reject(error);
   }
 };
-
-const timeout = (count) =>
-  new Promise((_, rej) => {
-    setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
-  });
 
 const findDependency = ({ dependencies, devDependencies, peerDependencies }, predicate) => [
   Object.entries(dependencies || {}).find(predicate),
@@ -64,11 +68,9 @@ export const getViewLayer = async ({ env, log, options, packageJson }) => {
 
   // Pull the viewlayer from dependencies in package.json
   const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => viewLayers[key]);
-  const dependency = dep || devDep || peerDep;
+  const [pkg, version] = dep || devDep || peerDep || [];
+  const viewLayer = viewLayers[pkg];
 
-  if (!dependency) {
-    throw new Error(noViewLayerDependency());
-  }
   if (dep && devDep && dep[0] === devDep[0]) {
     log.warn(
       `Found "${dep[0]}" in both "dependencies" and "devDependencies". This is probably a mistake.`
@@ -80,19 +82,34 @@ export const getViewLayer = async ({ env, log, options, packageJson }) => {
     );
   }
 
-  const [pkg, version] = dependency;
-  const viewLayer = pkg.replace('@storybook/', '');
+  if (viewLayer) {
+    if (options.storybookBuildDir) {
+      // If we aren't going to invoke the Storybook CLI later, we can exit early.
+      // Note that `version` can be a semver range in this case.
+      return { viewLayer, version };
+    }
 
-  // If we won't need the Storybook CLI, we can exit early
-  // Note that `version` can be a semver range in this case.
-  if (options.storybookBuildDir) return { viewLayer, version };
+    // Verify that the viewlayer package is actually present in node_modules.
+    return Promise.race([
+      resolvePackageJson(pkg)
+        .then((json) => ({ viewLayer, version: json.version }))
+        .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
+      timeout(10000),
+    ]);
+  }
 
-  // Try to find the viewlayer package in node_modules so we know it's installed
+  log.debug(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
+
+  // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
+  // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
+  // and return the first one we find.
   return Promise.race([
-    resolve(pkg)
-      .then(fs.readJson)
-      .then((json) => ({ viewLayer, version: json.version }))
-      .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
+    raceFulfilled(
+      Object.entries(viewLayers).map(async ([key, value]) => {
+        const json = await resolvePackageJson(key);
+        return { viewLayer: value, version: json.version };
+      })
+    ).catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
     timeout(10000),
   ]);
 };
