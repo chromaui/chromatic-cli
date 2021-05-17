@@ -21,7 +21,7 @@ const takeLast = (input) => (Array.isArray(input) ? input[input.length - 1] : in
 const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
-export default async function getOptions({ argv, env, flags, log, packageJson }) {
+export default async function getOptions({ argv, env, flags, log, packagePath, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, ownerName] = (flags.branchName || '').split(':').reverse();
@@ -157,7 +157,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     if (scripts && buildScriptName && scripts[buildScriptName]) {
       return { ...options, noStart: true, useTunnel: false, buildScriptName };
     }
-    throw new Error(missingBuildScriptName(buildScriptName));
+    throw new Error(missingBuildScriptName({ buildScriptName, packagePath }));
   }
 
   // Start Storybook on localhost and generate the URL to it
