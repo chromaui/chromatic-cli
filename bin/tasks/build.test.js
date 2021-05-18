@@ -1,5 +1,5 @@
 import execa from 'execa';
-import yarnOrNpm, { hasYarn } from 'yarn-or-npm';
+import yarnOrNpm, { spawn } from 'yarn-or-npm';
 
 import { buildStorybook, setSourceDir, setSpawnParams } from './build';
 
@@ -8,7 +8,7 @@ jest.mock('yarn-or-npm');
 
 beforeEach(() => {
   yarnOrNpm.mockReturnValue('npm');
-  hasYarn.mockReturnValue(false);
+  spawn.sync.mockReturnValue({ stdout: '1.2.3' });
 });
 
 describe('setSourceDir', () => {
@@ -49,6 +49,7 @@ describe('setSpawnParams', () => {
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
       client: 'npm',
+      clientVersion: '1.2.3',
       platform: expect.stringMatching(/darwin|linux|win32/),
       command: 'npm',
       clientArgs: ['run', '--silent'],
@@ -69,7 +70,6 @@ describe('setSpawnParams', () => {
 
   it('supports yarn', async () => {
     yarnOrNpm.mockReturnValue('yarn');
-    hasYarn.mockReturnValue(true);
     const ctx = {
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
@@ -79,6 +79,7 @@ describe('setSpawnParams', () => {
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
       client: 'yarn',
+      clientVersion: '1.2.3',
       platform: expect.stringMatching(/darwin|linux|win32/),
       command: 'yarn',
       clientArgs: ['run', '--silent'],
