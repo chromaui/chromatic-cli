@@ -79,6 +79,7 @@
     "execa": "^5.0.0",
     "fake-tag": "^2.0.0",
     "fs-extra": "^9.1.0",
+    "https-proxy-agent": "^5.0.0",
     "jsonfile": "^6.0.1",
     "junit-report-builder": "2.1.0",
     "listr": "0.14.3",
