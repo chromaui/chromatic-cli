@@ -30,6 +30,18 @@ const context = {
   options: {
     buildScriptName: 'build:storybook',
   },
+  spawnParams: {
+    client: 'npm',
+    clientVersion: '7.11.2',
+    platform: 'darwin',
+    command: 'npm',
+    clientArgs: ['run', '--silent'],
+    scriptArgs: ['build:storybook', '--', '--output-dir', '/tmp/path/to/output'],
+    spawnOptions: {
+      preferLocal: true,
+      localDir: '/path/to/node_modules/.bin',
+    },
+  },
   exitCode: 255,
   build: {
     id: '5ec5069ae0d35e0022b6a9cc',
