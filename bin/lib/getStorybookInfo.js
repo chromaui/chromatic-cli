@@ -51,6 +51,15 @@ const supportedAddons = {
   '@storybook/addon-viewport': 'viewport',
 };
 
+const resolvePackageJson = (pkg) => {
+  try {
+    const path = require.resolve(`${pkg}/package.json`, { paths: [process.cwd()] });
+    return fs.readJson(path);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 // Double inversion on Promise.all means fulfilling with the first fulfilled promise, or rejecting
 // when _everything_ rejects. This is different from Promise.race, which immediately rejects on the
 // first rejection.
@@ -61,15 +70,6 @@ const timeout = (count) =>
   new Promise((_, rej) => {
     setTimeout(() => rej(new Error('Timeout while resolving Storybook view layer package')), count);
   });
-
-const resolvePackageJson = (pkg) => {
-  try {
-    const path = require.resolve(`${pkg}/package.json`, { paths: [process.cwd()] });
-    return fs.readJson(path);
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
 
 const findDependency = ({ dependencies, devDependencies, peerDependencies }, predicate) => [
   Object.entries(dependencies || {}).find(predicate),
