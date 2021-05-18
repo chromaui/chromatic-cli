@@ -27,7 +27,7 @@ describe('createBuild', () => {
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false },
     pkg: { version: '1.0.0' },
-    storybook: { version: '2.0.0', viewLayer: 'react' },
+    storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
     isolatorUrl: 'https://tunnel.chromaticqa.com/',
   };
 
@@ -52,6 +52,7 @@ describe('createBuild', () => {
           packageVersion: ctx.pkg.version,
           storybookVersion: ctx.storybook.version,
           viewLayer: ctx.storybook.viewLayer,
+          addons: ctx.storybook.addons,
         },
         isolatorUrl: ctx.isolatorUrl,
       }

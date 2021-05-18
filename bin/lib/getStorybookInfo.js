@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import meow from 'meow';
-import semver from 'semver';
 import argv from 'string-argv';
+import semver from 'semver';
 
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 
@@ -20,6 +20,35 @@ const viewLayers = {
   '@storybook/svelte': 'svelte',
   '@storybook/preact': 'preact',
   '@storybook/rax': 'rax',
+};
+
+const supportedAddons = {
+  '@storybook/addon-a11y': 'a11y',
+  '@storybook/addon-actions': 'actions',
+  '@storybook/addon-backgrounds': 'backgrounds',
+  '@storybook/addon-centered': 'centered',
+  '@storybook/addon-contexts': 'contexts',
+  '@storybook/addon-cssresources': 'cssresources',
+  '@storybook/addon-design-assets': 'design-assets',
+  '@storybook/addon-docs': 'docs',
+  '@storybook/addon-essentials': 'essentials',
+  '@storybook/addon-events': 'events',
+  '@storybook/addon-google-analytics': 'google-analytics',
+  '@storybook/addon-graphql': 'graphql',
+  '@storybook/addon-info': 'info',
+  '@storybook/addon-jest': 'jest',
+  '@storybook/addon-knobs': 'knobs',
+  '@storybook/addon-links': 'links',
+  '@storybook/addon-notes': 'notes',
+  '@storybook/addon-ondevice-actions': 'ondevice-actions',
+  '@storybook/addon-ondevice-backgrounds': 'ondevice-backgrounds',
+  '@storybook/addon-ondevice-knobs': 'ondevice-knobs',
+  '@storybook/addon-ondevice-notes': 'ondevice-notes',
+  '@storybook/addon-options': 'options',
+  '@storybook/addon-queryparams': 'queryparams',
+  '@storybook/addon-storyshots': 'storyshots',
+  '@storybook/addon-storysource': 'storysource',
+  '@storybook/addon-viewport': 'viewport',
 };
 
 // Double inversion on Promise.all means fulfilling with the first fulfilled promise, or rejecting
@@ -48,8 +77,7 @@ const findDependency = ({ dependencies, devDependencies, peerDependencies }, pre
   Object.entries(peerDependencies || {}).find(predicate),
 ];
 
-// Retrieves Storybook version and viewLayer
-export const getViewLayer = async ({ env, log, options, packageJson }) => {
+const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
@@ -114,8 +142,17 @@ export const getViewLayer = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-// Retrieves relevant config flags from the `build-storybook` script
-export const getConfigFlags = ({ options, packageJson }) => {
+const findAddons = async ({ packageJson }) => ({
+  addons: Object.entries(supportedAddons)
+    .map(([pkg, name]) => {
+      const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => key === pkg);
+      const [packageName, packageVersion] = dep || devDep || peerDep || [];
+      return packageName && packageVersion && { name, packageName, packageVersion };
+    })
+    .filter(Boolean),
+});
+
+const findConfigFlags = async ({ options, packageJson }) => {
   const { scripts = {} } = packageJson;
   if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
 
@@ -134,8 +171,6 @@ export const getConfigFlags = ({ options, packageJson }) => {
 };
 
 export default async function getStorybookInfo(ctx) {
-  return {
-    ...(await getViewLayer(ctx)),
-    ...getConfigFlags(ctx),
-  };
+  const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 }
