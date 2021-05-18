@@ -1,6 +1,6 @@
 import getStorybookInfo from './getStorybookInfo';
 
-const log = { warn: jest.fn() };
+const log = { warn: jest.fn(), debug: jest.fn() };
 const context = { env: {}, log, options: {}, packageJson: {} };
 
 const REACT = { '@storybook/react': '1.2.3' };
@@ -13,10 +13,6 @@ describe('getStorybookInfo', () => {
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({ viewLayer: 'react', version: expect.any(String) })
     );
-  });
-
-  it('throws on missing dependency', async () => {
-    await expect(getStorybookInfo(context)).rejects.toThrow('Storybook dependency not found');
   });
 
   it('warns on duplicate devDependency', async () => {
@@ -38,6 +34,16 @@ describe('getStorybookInfo', () => {
   it('throws on missing package', async () => {
     const ctx = { ...context, packageJson: { dependencies: VUE } };
     await expect(getStorybookInfo(ctx)).rejects.toThrow('Storybook package not installed');
+  });
+
+  it('looks up package in node_modules on missing dependency', async () => {
+    await expect(getStorybookInfo(context)).resolves.toEqual(
+      // We're getting the result of tracing chromatic-cli's node_modules here.
+      expect.objectContaining({ viewLayer: 'react', version: expect.any(String) })
+    );
+    expect(log.debug).toHaveBeenCalledWith(
+      expect.stringContaining('No viewlayer package listed in dependencies')
+    );
   });
 
   describe('with CHROMATIC_STORYBOOK_VERSION', () => {
