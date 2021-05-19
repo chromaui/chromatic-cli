@@ -36,6 +36,7 @@ export const setSpawnParams = async (ctx) => {
   const isJsPath = npmExecFile && /\.m?js$/.test(npmExecFile);
   const isYarn = npmExecFile && npmExecFile.includes('yarn');
   const isNpx = npmExecFile && npmExecFile.includes('npx');
+  ctx.log.debug(`npm_execpath: ${npmExecPath}`);
 
   const client = isYarn ? 'yarn' : 'npm';
   const { stdout } = await execa(client, ['--version']);
