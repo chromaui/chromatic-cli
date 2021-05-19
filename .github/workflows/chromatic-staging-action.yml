@@ -9,6 +9,7 @@ jobs:
     - run: yarn
     - uses: chromaui/action-canary@v1
       env:
+        LOG_LEVEL: debug
         DEBUG: chromatic-cli
         CHROMATIC_INDEX_URL: https://www.staging-chromatic.com
       with:
