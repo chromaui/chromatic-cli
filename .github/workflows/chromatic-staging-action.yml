@@ -5,7 +5,12 @@ jobs:
   chromatic:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '14'
     - run: yarn
     - uses: chromaui/action-canary@v1
       env:
