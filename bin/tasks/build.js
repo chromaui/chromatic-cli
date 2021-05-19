@@ -56,10 +56,7 @@ export const setSpawnParams = async (ctx) => {
       ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
       ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
     ].filter(Boolean),
-    spawnOptions: {
-      preferLocal: true,
-      localDir: path.resolve('node_modules/.bin'),
-    },
+    spawnOptions: {},
   };
 };
 
