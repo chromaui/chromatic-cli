@@ -2,14 +2,7 @@ import execa from 'execa';
 
 import { buildStorybook, setSourceDir, setSpawnParams } from './build';
 
-const npmExecPath = process.env.npm_execpath;
-
 jest.mock('execa');
-
-beforeEach(() => {
-  process.env.npm_execpath = npmExecPath;
-  execa.mockReturnValue({ stdout: '1.2.3' });
-});
 
 describe('setSourceDir', () => {
   it('sets a random temp directory path on the context', async () => {
@@ -38,6 +31,13 @@ describe('setSourceDir', () => {
 });
 
 describe('setSpawnParams', () => {
+  const npmExecPath = process.env.npm_execpath;
+
+  beforeEach(() => {
+    process.env.npm_execpath = npmExecPath;
+    execa.mockReturnValue({ stdout: '1.2.3' });
+  });
+
   it('sets the spawn params on the context', async () => {
     process.env.npm_execpath = 'npm';
     const ctx = {
