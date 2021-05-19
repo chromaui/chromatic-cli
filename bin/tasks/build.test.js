@@ -1,15 +1,8 @@
 import execa from 'execa';
-import yarnOrNpm, { spawn } from 'yarn-or-npm';
 
 import { buildStorybook, setSourceDir, setSpawnParams } from './build';
 
 jest.mock('execa');
-jest.mock('yarn-or-npm');
-
-beforeEach(() => {
-  yarnOrNpm.mockReturnValue('npm');
-  spawn.sync.mockReturnValue({ stdout: '1.2.3' });
-});
 
 describe('setSourceDir', () => {
   it('sets a random temp directory path on the context', async () => {
@@ -38,6 +31,13 @@ describe('setSourceDir', () => {
 });
 
 describe('setSpawnParams', () => {
+  const npmExecPath = process.env.npm_execpath;
+
+  beforeEach(() => {
+    process.env.npm_execpath = npmExecPath;
+    execa.mockReturnValue({ stdout: '1.2.3' });
+  });
+
   it('sets the spawn params on the context', async () => {
     process.env.npm_execpath = 'npm';
     const ctx = {
@@ -69,7 +69,7 @@ describe('setSpawnParams', () => {
   });
 
   it('supports yarn', async () => {
-    yarnOrNpm.mockReturnValue('yarn');
+    process.env.npm_execpath = '/path/to/yarn.js';
     const ctx = {
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
@@ -81,8 +81,8 @@ describe('setSpawnParams', () => {
       client: 'yarn',
       clientVersion: '1.2.3',
       platform: expect.stringMatching(/darwin|linux|win32/),
-      command: 'yarn',
-      clientArgs: ['run', '--silent'],
+      command: expect.stringMatching(/node/),
+      clientArgs: ['/path/to/yarn.js', 'run'],
       scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
       spawnOptions: {
         preferLocal: true,

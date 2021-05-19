@@ -3,7 +3,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
-import yarnOrNpm, { spawn } from 'yarn-or-npm';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
@@ -21,23 +20,36 @@ export const setSourceDir = async (ctx) => {
   }
 };
 
-export const setSpawnParams = (ctx) => {
+export const setSpawnParams = async (ctx) => {
   const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
-  const client = yarnOrNpm();
-  const { stdout } = spawn.sync(['--version']);
+
+  // Run either:
+  //   node path/to/npm-cli.js run build-storybook
+  //   node path/to/yarn.js run build-storybook
+  //   npm run build-storybook
+  // Based on https://github.com/mysticatea/npm-run-all/blob/52eaf86242ba408dedd015f53ca7ca368f25a026/lib/run-task.js#L156-L174
+  const npmExecPath = process.env.npm_execpath;
+  const npmExecFile = npmExecPath && path.basename(npmExecPath);
+  const isJsPath = npmExecFile && /\.m?js$/.test(npmExecFile);
+  const isYarn = npmExecFile && npmExecFile.includes('yarn');
+  const isNpx = npmExecFile && npmExecFile.includes('npx');
+
+  const client = isYarn ? 'yarn' : 'npm';
+  const { stdout } = await execa(client, ['--version']);
   const clientVersion = stdout && stdout.toString().trim();
+
   ctx.spawnParams = {
     client,
     clientVersion,
     platform: process.platform,
-    command: client,
-    clientArgs: ['run', '--silent'],
+    command: (!isNpx && (isJsPath ? process.execPath : npmExecPath)) || 'npm',
+    clientArgs: !isNpx && isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
     scriptArgs: [
       ctx.options.buildScriptName,
-      client === 'yarn' ? '' : '--',
+      isYarn ? '' : '--',
       '--output-dir',
       ctx.sourceDir,
       ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
