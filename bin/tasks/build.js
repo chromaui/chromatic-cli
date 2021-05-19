@@ -8,6 +8,8 @@ import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
+const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
+
 export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
@@ -36,15 +38,15 @@ export const setSpawnParams = async (ctx) => {
   const isJsPath = npmExecFile && /\.m?js$/.test(npmExecFile);
   const isYarn = npmExecFile && npmExecFile.includes('yarn');
   const isNpx = npmExecFile && npmExecFile.includes('npx');
-  ctx.log.debug(`npm_execpath: ${npmExecPath}`);
 
   const client = isYarn ? 'yarn' : 'npm';
-  const { stdout } = await execa(client, ['--version']);
-  const clientVersion = stdout && stdout.toString().trim();
+  const clientVersion = await execa(client, ['--version']).then(trimOutput);
+  const nodeVersion = await execa('node', ['--version']).then(trimOutput);
 
   ctx.spawnParams = {
     client,
     clientVersion,
+    nodeVersion,
     platform: process.platform,
     command: (!isNpx && (isJsPath ? process.execPath : npmExecPath)) || 'npm',
     clientArgs: !isNpx && isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
