@@ -5,7 +5,7 @@ import dedent from 'ts-dedent';
 import { info } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ options, buildLogFile }, { message }, buildLog) => {
+export default ({ options, buildLogFile, spawnParams }, { message }, buildLog) => {
   const { buildScriptName } = options;
   const lines = buildLog.split(EOL).filter((line) => line && !line.startsWith('<s>'));
 
@@ -20,6 +20,7 @@ export default ({ options, buildLogFile }, { message }, buildLog) => {
       )}
     `),
     message,
+    chalk`${info} Spawn settings:\n{dim ${JSON.stringify(spawnParams, null, 2)}}`,
     chalk`${info} Storybook build output:\n{dim ${buildLogFile}}`,
     lines.join(`\n`),
   ].join('\n\n');

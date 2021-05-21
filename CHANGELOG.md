@@ -1,3 +1,11 @@
+# 5.8.3 - 2021-05-21
+
+- [350](https://github.com/chromaui/chromatic-cli/pull/350) Restore original `preferLocal` settings for Execa
+
+# 5.8.2 - 2021-05-19
+
+- [348](https://github.com/chromaui/chromatic-cli/pull/348) Restore original behavior to use npm_execpath
+
 # 5.8.1 - 2021-05-18
 
 - [345](https://github.com/chromaui/chromatic-cli/pull/345) Restore implying of `--preserve-missing` when using `--only`

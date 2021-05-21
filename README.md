@@ -79,7 +79,6 @@ A final release is automatically tagged `latest` by npm.
 npm version <major|minor|patch>
 git push --follow-tags
 npm publish
-yarn publish-action
 ```
 
 And finally, remove the `canary` and/or `next` tag, if any:

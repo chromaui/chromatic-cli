@@ -4,6 +4,20 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
+const spawnParams = {
+  client: 'npm',
+  clientVersion: '7.11.2',
+  platform: 'darwin',
+  command: '/path/to/node',
+  clientArgs: ['/path/to/npm-cli.js', 'run'],
+  scriptArgs: [
+    'build-storybook',
+    '--',
+    '--output-dir',
+    '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp',
+  ].filter(Boolean),
+};
+
 const buildLog = `
 info @storybook/react v6.1.0-alpha.33
 info
@@ -43,6 +57,7 @@ export const BuildFailed = () =>
     {
       options: { buildScriptName: 'build:storybook' },
       buildLogFile: '/path/to/project/build-storybook.log',
+      spawnParams,
     },
     { message: 'Command failed with exit code 1' },
     buildLog
