@@ -1,8 +1,17 @@
 const cpy = require('cpy');
 const execa = require('execa');
+const { readJSON } = require('fs-extra');
+const { join } = require('path');
 const tmp = require('tmp-promise');
 
 (async () => {
+  const { version } = await readJSON(join(__dirname, '../package.json'));
+  if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) {
+    // eslint-disable-next-line no-console
+    console.warn(`Not publishing action for ${version} because it's a prerelease`);
+    return;
+  }
+
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd, opts) => execa.command(cmd, { cwd: path, stdio: 'inherit', ...opts });
 
