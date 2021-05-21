@@ -160,6 +160,7 @@ beforeEach(() => {
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
   execa.mockReset();
+  execa.mockReturnValue({ stdout: '1.2.3' });
 });
 afterEach(() => {
   process.env = processEnv;

@@ -1,3 +1,18 @@
+# 5.8.3 - 2021-05-21
+
+- [350](https://github.com/chromaui/chromatic-cli/pull/350) Restore original `preferLocal` settings for Execa
+
+# 5.8.2 - 2021-05-19
+
+- [348](https://github.com/chromaui/chromatic-cli/pull/348) Restore original behavior to use npm_execpath
+
+# 5.8.1 - 2021-05-18
+
+- [345](https://github.com/chromaui/chromatic-cli/pull/345) Restore implying of `--preserve-missing` when using `--only`
+- [344](https://github.com/chromaui/chromatic-cli/pull/344) Fix determining viewLayer when using transitive dependency
+- [337](https://github.com/chromaui/chromatic-cli/pull/337) Fix chromatic script that can be added to package.json
+- [331](https://github.com/chromaui/chromatic-cli/pull/331) Log `clientVersion` on fatal error
+
 # 5.8.0 - 2021-04-29
 
 - [319](https://github.com/chromaui/chromatic-cli/pull/319) Retrieve viewLayer and version from dependencies and support @web/dev-server-storybook
