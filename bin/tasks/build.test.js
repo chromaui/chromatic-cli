@@ -35,7 +35,7 @@ describe('setSpawnParams', () => {
 
   beforeEach(() => {
     process.env.npm_execpath = npmExecPath;
-    execa.mockReturnValue({ stdout: '1.2.3' });
+    execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }));
   });
 
   it('sets the spawn params on the context', async () => {
@@ -50,6 +50,7 @@ describe('setSpawnParams', () => {
     expect(ctx.spawnParams).toEqual({
       client: 'npm',
       clientVersion: '1.2.3',
+      nodeVersion: '1.2.3',
       platform: expect.stringMatching(/darwin|linux|win32/),
       command: 'npm',
       clientArgs: ['run', '--silent'],
@@ -61,10 +62,6 @@ describe('setSpawnParams', () => {
         '--webpack-stats-json',
         './source-dir/',
       ],
-      spawnOptions: {
-        preferLocal: true,
-        localDir: expect.stringMatching(/node_modules[/\\]\.bin$/),
-      },
     });
   });
 
@@ -80,14 +77,11 @@ describe('setSpawnParams', () => {
     expect(ctx.spawnParams).toEqual({
       client: 'yarn',
       clientVersion: '1.2.3',
+      nodeVersion: '1.2.3',
       platform: expect.stringMatching(/darwin|linux|win32/),
       command: expect.stringMatching(/node/),
       clientArgs: ['/path/to/yarn.js', 'run'],
       scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
-      spawnOptions: {
-        preferLocal: true,
-        localDir: expect.stringMatching(/node_modules[/\\]\.bin$/),
-      },
     });
   });
 
