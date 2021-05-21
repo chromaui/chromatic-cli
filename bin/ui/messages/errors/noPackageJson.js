@@ -7,6 +7,6 @@ export default () =>
   dedent(chalk`
     ${error} {bold No package.json found}
     Chromatic only works from inside a JavaScript project.
-    Expecting a package.json somewhere up the directory tree.
+    We expected to find a package.json somewhere up the directory tree.
     Are you sure you're running from your project directory?
   `);
