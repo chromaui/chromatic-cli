@@ -1,3 +1,8 @@
+# 5.9.0 - unreleased
+
+- [347](https://github.com/chromaui/chromatic-cli/pull/347) Add support for proxy server
+- [334](https://github.com/chromaui/chromatic-cli/pull/334) Check existence and validity of package.json
+
 # 5.8.3 - 2021-05-21
 
 - [350](https://github.com/chromaui/chromatic-cli/pull/350) Restore original `preferLocal` settings for Execa
