@@ -8,6 +8,8 @@ import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
+const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
+
 export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
@@ -38,12 +40,13 @@ export const setSpawnParams = async (ctx) => {
   const isNpx = npmExecFile && npmExecFile.includes('npx');
 
   const client = isYarn ? 'yarn' : 'npm';
-  const { stdout } = await execa(client, ['--version']);
-  const clientVersion = stdout && stdout.toString().trim();
+  const clientVersion = await execa(client, ['--version']).then(trimOutput);
+  const nodeVersion = await execa('node', ['--version']).then(trimOutput);
 
   ctx.spawnParams = {
     client,
     clientVersion,
+    nodeVersion,
     platform: process.platform,
     command: (!isNpx && (isJsPath ? process.execPath : npmExecPath)) || 'npm',
     clientArgs: !isNpx && isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
@@ -55,10 +58,6 @@ export const setSpawnParams = async (ctx) => {
       ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
       ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
     ].filter(Boolean),
-    spawnOptions: {
-      preferLocal: true,
-      localDir: path.resolve('node_modules/.bin'),
-    },
   };
 };
 
@@ -74,13 +73,10 @@ export const buildStorybook = async (ctx) => {
   });
 
   try {
-    const { command, clientArgs, scriptArgs, spawnOptions } = ctx.spawnParams;
+    const { command, clientArgs, scriptArgs } = ctx.spawnParams;
     ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
     await Promise.race([
-      execa(command, [...clientArgs, ...scriptArgs], {
-        stdio: [null, logFile, logFile],
-        ...spawnOptions,
-      }),
+      execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
       timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
     ]);
   } catch (e) {
