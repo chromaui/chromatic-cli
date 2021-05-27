@@ -93,7 +93,7 @@ on:
         description: The SHA-1 hash referring to the commit to check.
         required: true
       ref:
-        description: The full git ref for the PR (`refs/heads/my-branch`).
+        description: The head branch associated with the pull request.
         required: true
 ```
 
