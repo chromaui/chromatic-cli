@@ -31,26 +31,73 @@ describe('setSourceDir', () => {
 });
 
 describe('setSpawnParams', () => {
+  const npmExecPath = process.env.npm_execpath;
+
+  beforeEach(() => {
+    process.env.npm_execpath = npmExecPath;
+    execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }));
+  });
+
   it('sets the spawn params on the context', async () => {
     process.env.npm_execpath = 'npm';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
+    };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
+      client: 'npm',
+      clientVersion: '1.2.3',
+      nodeVersion: '1.2.3',
+      platform: expect.stringMatching(/darwin|linux|win32/),
       command: 'npm',
       clientArgs: ['run', '--silent'],
-      scriptArgs: ['build:storybook', '--', '--output-dir', './source-dir/'],
+      scriptArgs: [
+        'build:storybook',
+        '--',
+        '--output-dir',
+        './source-dir/',
+        '--webpack-stats-json',
+        './source-dir/',
+      ],
     });
   });
 
   it('supports yarn', async () => {
-    process.env.npm_execpath = '/path/to/yarn';
-    const ctx = { sourceDir: './source-dir/', options: { buildScriptName: 'build:storybook' } };
+    process.env.npm_execpath = '/path/to/yarn.js';
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: {},
+    };
     await setSpawnParams(ctx);
     expect(ctx.spawnParams).toEqual({
-      command: '/path/to/yarn',
-      clientArgs: ['run', '--silent'],
+      client: 'yarn',
+      clientVersion: '1.2.3',
+      nodeVersion: '1.2.3',
+      platform: expect.stringMatching(/darwin|linux|win32/),
+      command: expect.stringMatching(/node/),
+      clientArgs: ['/path/to/yarn.js', 'run'],
       scriptArgs: ['build:storybook', '--output-dir', './source-dir/'],
     });
+  });
+
+  it('warns if --only-changes is not supported', async () => {
+    process.env.npm_execpath = 'npm';
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: { changedFiles: ['./index.js'] },
+      log: { warn: jest.fn() },
+    };
+    await setSpawnParams(ctx);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      'Storybook version 6.2.0 or later is required to use the --only-changed flag'
+    );
   });
 });
 
@@ -63,6 +110,7 @@ describe('buildStorybook', () => {
         scriptArgs: ['--script-args'],
       },
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
+      log: { debug: jest.fn() },
     };
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
@@ -70,6 +118,10 @@ describe('buildStorybook', () => {
       'build:storybook',
       ['--client-args', '--script-args'],
       expect.objectContaining({ stdio: expect.any(Array) })
+    );
+    expect(ctx.log.debug).toHaveBeenCalledWith(
+      'Using spawnParams:',
+      JSON.stringify(ctx.spawnParams, null, 2)
     );
   });
 
@@ -82,7 +134,7 @@ describe('buildStorybook', () => {
       },
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: { error: jest.fn() },
+      log: { debug: jest.fn(), error: jest.fn() },
     };
     execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 10)));
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');

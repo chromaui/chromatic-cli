@@ -60,7 +60,7 @@ export default function createMockIndex({ commitMap }, buildDescriptions, prDesc
       committedAt,
       createdAt: committedAt,
       branch,
-      // NOTE: we do not calculate baselineCommits here
+      // NOTE: we do not calculate parentCommits here
     };
   });
 

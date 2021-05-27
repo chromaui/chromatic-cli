@@ -1,5 +1,5 @@
 import retry from 'async-retry';
-import fs from 'fs';
+import fs from 'fs-extra';
 import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';

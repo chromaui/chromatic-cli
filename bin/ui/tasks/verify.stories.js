@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { failed, initial, pending, runOnly, success } from './verify';
+import { failed, initial, pending, runOnly, runOnlyFiles, success } from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',
@@ -17,6 +17,11 @@ export const Initial = () => initial;
 export const Pending = () => pending();
 
 export const RunOnly = () => runOnly({ options: { only: 'MyComponent/MyStory' } });
+
+export const RunOnlyFiles = () =>
+  runOnlyFiles({
+    onlyStoryFiles: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i])),
+  });
 
 export const Started = () => success({ build });
 

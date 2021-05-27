@@ -13,7 +13,9 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 ## Documentation
 
-👉 See the [Chromatic CLI docs](https://www.chromatic.com/docs/cli).
+👉 Read the [Chromatic CLI docs](https://www.chromatic.com/docs/cli)
+
+📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/master/CHANGELOG.md#readme)
 
 ## Contributing
 
@@ -77,7 +79,6 @@ A final release is automatically tagged `latest` by npm.
 npm version <major|minor|patch>
 git push --follow-tags
 npm publish
-yarn publish-action
 ```
 
 And finally, remove the `canary` and/or `next` tag, if any:

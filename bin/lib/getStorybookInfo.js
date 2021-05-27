@@ -1,9 +1,8 @@
-// Figure out the Storybook version and view layer
-
 import fs from 'fs-extra';
+import meow from 'meow';
+import argv from 'string-argv';
 import semver from 'semver';
 
-import noViewLayerDependency from '../ui/messages/errors/noViewLayerDependency';
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 
 const viewLayers = {
@@ -21,7 +20,6 @@ const viewLayers = {
   '@storybook/svelte': 'svelte',
   '@storybook/preact': 'preact',
   '@storybook/rax': 'rax',
-  '@web/dev-server-storybook': 'web-components',
 };
 
 const supportedAddons = {
@@ -33,6 +31,7 @@ const supportedAddons = {
   '@storybook/addon-cssresources': 'cssresources',
   '@storybook/addon-design-assets': 'design-assets',
   '@storybook/addon-docs': 'docs',
+  '@storybook/addon-essentials': 'essentials',
   '@storybook/addon-events': 'events',
   '@storybook/addon-google-analytics': 'google-analytics',
   '@storybook/addon-graphql': 'graphql',
@@ -52,19 +51,31 @@ const supportedAddons = {
   '@storybook/addon-viewport': 'viewport',
 };
 
-const resolve = (pkg) => {
+const resolvePackageJson = (pkg) => {
   try {
     const path = require.resolve(`${pkg}/package.json`, { paths: [process.cwd()] });
-    return Promise.resolve(path);
+    return fs.readJson(path);
   } catch (error) {
     return Promise.reject(error);
   }
 };
 
+// Double inversion on Promise.all means fulfilling with the first fulfilled promise, or rejecting
+// when _everything_ rejects. This is different from Promise.race, which immediately rejects on the
+// first rejection.
+const invert = (promise) => new Promise((resolve, reject) => promise.then(reject, resolve));
+const raceFulfilled = (promises) => invert(Promise.all(promises.map(invert)).then((arr) => arr[0]));
+
 const timeout = (count) =>
   new Promise((_, rej) => {
-    setTimeout(() => rej(new Error('The attempt to find the Storybook version timed out')), count);
+    setTimeout(() => rej(new Error('Timeout while resolving Storybook view layer package')), count);
   });
+
+const findDependency = ({ dependencies, devDependencies, peerDependencies }, predicate) => [
+  Object.entries(dependencies || {}).find(predicate),
+  Object.entries(devDependencies || {}).find(predicate),
+  Object.entries(peerDependencies || {}).find(predicate),
+];
 
 const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
@@ -80,18 +91,14 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     if (!viewLayer) {
       throw new Error(`Unsupported viewlayer specified in CHROMATIC_STORYBOOK_VERSION: ${p}`);
     }
-    return { viewLayer, version };
+    return { version, viewLayer };
   }
 
   // Pull the viewlayer from dependencies in package.json
-  const dep = Object.entries(packageJson.dependencies || {}).find(([p]) => viewLayers[p]);
-  const devDep = Object.entries(packageJson.devDependencies || {}).find(([p]) => viewLayers[p]);
-  const peerDep = Object.entries(packageJson.peerDependencies || {}).find(([p]) => viewLayers[p]);
-  const dependency = dep || devDep || peerDep;
+  const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => viewLayers[key]);
+  const [pkg, version] = dep || devDep || peerDep || [];
+  const viewLayer = viewLayers[pkg];
 
-  if (!dependency) {
-    throw new Error(noViewLayerDependency());
-  }
   if (dep && devDep && dep[0] === devDep[0]) {
     log.warn(
       `Found "${dep[0]}" in both "dependencies" and "devDependencies". This is probably a mistake.`
@@ -103,41 +110,67 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     );
   }
 
-  const [pkg, version] = dependency;
-  const viewLayer = pkg.replace('@storybook/', '');
+  if (viewLayer) {
+    if (options.storybookBuildDir) {
+      // If we aren't going to invoke the Storybook CLI later, we can exit early.
+      // Note that `version` can be a semver range in this case.
+      return { viewLayer, version };
+    }
 
-  // If we won't need the Storybook CLI, we can exit early
-  // Note that `version` can be a semver range in this case.
-  if (options.storybookBuildDir) return { viewLayer, version };
+    // Verify that the viewlayer package is actually present in node_modules.
+    return Promise.race([
+      resolvePackageJson(pkg)
+        .then((json) => ({ viewLayer, version: json.version }))
+        .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
+      timeout(10000),
+    ]);
+  }
 
-  // Try to find the viewlayer package in node_modules so we know it's installed
+  log.debug(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
+
+  // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
+  // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
+  // and return the first one we find.
   return Promise.race([
-    resolve(pkg)
-      .then(fs.readJson)
-      .then((json) => ({ viewLayer, version: json.version }))
-      .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
+    raceFulfilled(
+      Object.entries(viewLayers).map(async ([key, value]) => {
+        const json = await resolvePackageJson(key);
+        return { viewLayer: value, version: json.version };
+      })
+    ).catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
     timeout(10000),
   ]);
 };
 
-const findAddons = async () => {
-  const result = await Promise.all(
-    Object.entries(supportedAddons).map(([pkg, name]) =>
-      resolve(pkg)
-        .then(fs.readJson, () => false)
-        .then((pkgJson) => ({ name, packageName: pkgJson.name, packageVersion: pkgJson.version }))
-    )
-  );
+const findAddons = async ({ packageJson }) => ({
+  addons: Object.entries(supportedAddons)
+    .map(([pkg, name]) => {
+      const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => key === pkg);
+      const [packageName, packageVersion] = dep || devDep || peerDep || [];
+      return packageName && packageVersion && { name, packageName, packageVersion };
+    })
+    .filter(Boolean),
+});
 
-  return { addons: result.filter(Boolean) };
+const findConfigFlags = async ({ options, packageJson }) => {
+  const { scripts = {} } = packageJson;
+  if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
+
+  const { flags } = meow({
+    argv: argv(scripts[options.buildScriptName]),
+    flags: {
+      configDir: { type: 'string', alias: 'c' },
+      staticDir: { type: 'string', alias: 's' },
+    },
+  });
+
+  return {
+    configDir: flags.configDir,
+    staticDir: flags.staticDir && flags.staticDir.split(','),
+  };
 };
 
 export default async function getStorybookInfo(ctx) {
-  const storybookInfo = await findViewlayer(ctx);
-  const addonInfo = await findAddons();
-
-  return {
-    ...storybookInfo,
-    ...addonInfo,
-  };
+  const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 }

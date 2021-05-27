@@ -7,10 +7,10 @@ import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 
 export default ({ build }) => {
-  const { components, specs } = stats({ build });
+  const { components, stories } = stats({ build });
   return dedent(chalk`
     ${success} {bold Storybook published}
-    We found ${components} with ${specs}.
+    We found ${components} with ${stories}.
     ${info} View your Storybook at ${link(baseStorybookUrl(build.cachedUrl))}
   `);
 };

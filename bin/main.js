@@ -4,6 +4,7 @@ import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
+import setGlobalProxyAgent from './io/setGlobalProxyAgent';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
 import getEnv from './lib/getEnv';
@@ -15,7 +16,9 @@ import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
+import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import missingStories from './ui/messages/errors/missingStories';
+import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
@@ -24,8 +27,18 @@ export async function main(argv) {
   const sessionId = uuid();
   const env = getEnv();
   const log = createLogger(sessionId, env);
+
   const packagePath = await pkgUp(); // the user's own package.json
+  if (!packagePath) {
+    log.error(noPackageJson());
+    process.exit(253);
+  }
+
   const packageJson = await readFile(packagePath);
+  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
+    log.error(invalidPackageJson(packagePath));
+    process.exit(252);
+  }
 
   // Warning: chromaui/action directly invokes runAll, so if new properties or arguments are added
   // here, they must also be added to the GitHub Action.
@@ -37,6 +50,9 @@ export async function main(argv) {
 }
 
 export async function runAll(ctx) {
+  // Configure the proxy (if available) before we make any requests.
+  setGlobalProxyAgent(ctx);
+
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 

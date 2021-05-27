@@ -1,7 +1,13 @@
 import picomatch from 'picomatch';
 
 import { getCommitAndBranch } from '../git/getCommitAndBranch';
-import { getBaselineCommits, getSlug, getVersion } from '../git/git';
+import {
+  getParentCommits,
+  getBaselineBuilds,
+  getChangedFiles,
+  getSlug,
+  getVersion,
+} from '../git/git';
 import { createTask, transitionTo } from '../lib/tasks';
 import {
   initial,
@@ -12,6 +18,7 @@ import {
   skippedRebuild,
   success,
 } from '../ui/tasks/gitInfo';
+import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -52,31 +59,56 @@ export const setGitInfo = async (ctx, task) => {
     // The SkipBuildMutation ensures the commit is tagged properly.
     if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
       ctx.skip = true;
-      return transitionTo(skippedForCommit, true)(ctx, task);
+      transitionTo(skippedForCommit, true)(ctx, task);
+      return;
     }
     throw new Error(skipFailed(ctx).output);
   }
 
-  const baselineCommits = await getBaselineCommits(ctx, {
-    branch,
+  const parentCommits = await getParentCommits(ctx, {
     ignoreLastBuildOnBranch: matchesBranch(ctx.options.ignoreLastBuildOnBranch),
   });
-  ctx.git.baselineCommits = baselineCommits;
-  ctx.log.debug(`Found baselineCommits: ${baselineCommits}`);
+  ctx.git.parentCommits = parentCommits;
+  ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
-  // If the sole baseline is the most recent ancestor, then this is likely a rebuild (rerun of CI job).
+  // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
-  if (baselineCommits.length === 1 && baselineCommits[0] === commit) {
+  if (parentCommits.length === 1 && parentCommits[0] === commit) {
     const mostRecentAncestor = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
     if (mostRecentAncestor && ['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
       ctx.skip = true;
-      return transitionTo(skippedRebuild, true)(ctx, task);
+      transitionTo(skippedRebuild, true)(ctx, task);
+      return;
     }
   }
 
-  return transitionTo(success, true)(ctx, task);
+  // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
+  // to determine affected story files later.
+  // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
+  // since we know for certain it wouldn't have any effect. We do want to tag the commit.
+  if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
+    const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
+    const baselineCommits = baselineBuilds.map((build) => build.commit);
+    ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+
+    // Use the most recent baseline to determine final CLI output if we end up skipping the build.
+    // Note this will get overwritten if we end up not skipping the build.
+    // eslint-disable-next-line prefer-destructuring
+    ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0];
+
+    try {
+      const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
+      ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
+      ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+    } catch (e) {
+      ctx.log.warn(invalidChangedFiles());
+      ctx.log.debug(e);
+    }
+  }
+
+  transitionTo(success, true)(ctx, task);
 };
 
 export default createTask({

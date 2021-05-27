@@ -1,18 +1,23 @@
 /* eslint-disable no-param-reassign */
-import { readdirSync, readFileSync, statSync } from 'fs';
+import fs from 'fs-extra';
 import { join } from 'path';
 import slash from 'slash';
 import { URL } from 'url';
 
+import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import uploadFiles from '../lib/uploadFiles';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
+import noStatsFile from '../ui/messages/warnings/noStatsFile';
 import {
   failed,
   initial,
+  skipped,
+  validating,
   invalid,
   preparing,
-  skipped,
+  tracing,
+  traced,
   starting,
   success,
   uploading,
@@ -36,10 +41,11 @@ const TesterGetUploadUrlsMutation = `
 // paths will be like iframe.html rather than storybook-static/iframe.html
 function getPathsInDir(ctx, rootDir, dirname = '.') {
   try {
-    return readdirSync(join(rootDir, dirname))
+    return fs
+      .readdirSync(join(rootDir, dirname))
       .map((p) => join(dirname, p))
       .map((pathname) => {
-        const stats = statSync(join(rootDir, pathname));
+        const stats = fs.statSync(join(rootDir, pathname));
         if (stats.isDirectory()) {
           return getPathsInDir(ctx, rootDir, pathname);
         }
@@ -64,38 +70,72 @@ function getOutputDir(buildLog) {
 
 function getFileInfo(ctx, sourceDir) {
   const lengths = getPathsInDir(ctx, sourceDir).map((o) => ({ ...o, knownAs: slash(o.pathname) }));
-  const paths = lengths.map(({ knownAs }) => knownAs);
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
-  return { lengths, paths, total };
+  const paths = [];
+  let statsPath;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const { knownAs } of lengths) {
+    if (knownAs.endsWith('preview-stats.json')) statsPath = knownAs;
+    else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
+  }
+  return { lengths, paths, statsPath, total };
 }
 
 const isValidStorybook = ({ paths, total }) =>
   total > 0 && paths.includes('iframe.html') && paths.includes('index.html');
 
-export const uploadStorybook = async (ctx, task) => {
-  let fileInfo = getFileInfo(ctx, ctx.sourceDir);
+export const validateFiles = async (ctx, task) => {
+  ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
 
-  if (!isValidStorybook(fileInfo) && ctx.buildLogFile) {
+  if (!isValidStorybook(ctx.fileInfo) && ctx.buildLogFile) {
     try {
-      const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
+      const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
       const outputDir = getOutputDir(buildLog);
       if (outputDir && outputDir !== ctx.sourceDir) {
         ctx.log.warn(deviatingOutputDir(ctx, outputDir));
         ctx.sourceDir = outputDir;
-        fileInfo = getFileInfo(ctx, ctx.sourceDir);
+        ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
       }
     } catch (e) {
       ctx.log.debug(e);
     }
   }
 
-  if (!isValidStorybook(fileInfo)) {
+  if (!isValidStorybook(ctx.fileInfo)) {
     throw new Error(invalid(ctx).output);
   }
+};
 
-  task.output = preparing(ctx).output;
+export const traceChangedFiles = async (ctx, task) => {
+  if (!ctx.git.changedFiles) return;
+  if (!ctx.fileInfo.statsPath) {
+    ctx.log.warn(noStatsFile());
+    return;
+  }
 
-  const { lengths, paths, total } = fileInfo;
+  transitionTo(tracing)(ctx, task);
+
+  const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
+  const { changedFiles } = ctx.git;
+  try {
+    const stats = await fs.readJson(statsPath);
+    ctx.onlyStoryFiles = getDependentStoryFiles(ctx, stats, changedFiles);
+    ctx.log.debug(
+      `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
+        .map(([id, f]) => `  ${f} [${id}]`)
+        .join('\n')}`
+    );
+    transitionTo(traced)(ctx, task);
+  } catch (e) {
+    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
+  }
+};
+
+export const uploadStorybook = async (ctx, task) => {
+  if (ctx.skip) return;
+  transitionTo(preparing)(ctx, task);
+
+  const { lengths, paths, total } = ctx.fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery(TesterGetUploadUrlsMutation, { paths });
   const { domain, urls } = getUploadUrls;
   const files = urls.map(({ path, url, contentType }) => ({
@@ -123,6 +163,7 @@ export const uploadStorybook = async (ctx, task) => {
 
   ctx.uploadedBytes = total;
   ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
+  transitionTo(success, true)(ctx, task);
 };
 
 export default createTask({
@@ -132,5 +173,5 @@ export default createTask({
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },
-  steps: [transitionTo(preparing), uploadStorybook, transitionTo(success, true)],
+  steps: [transitionTo(validating), validateFiles, traceChangedFiles, uploadStorybook],
 });

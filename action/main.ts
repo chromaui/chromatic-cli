@@ -123,6 +123,8 @@ async function run() {
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
     const skip = getInput('skip');
+    const only = getInput('only');
+    const onlyChanged = getInput('onlyChanged');
     const doNotStart = getInput('doNotStart');
     const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
@@ -149,6 +151,8 @@ async function run() {
       scriptName: maybe(scriptName),
       exec: maybe(exec),
       skip: maybe(skip),
+      only: maybe(only),
+      onlyChanged: maybe(onlyChanged),
       doNotStart: maybe(doNotStart),
       storybookPort: maybe(storybookPort),
       storybookUrl: maybe(storybookUrl),

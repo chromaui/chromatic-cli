@@ -49,6 +49,7 @@ Make sure to replace the value of `projectToken` with the project token provided
     token: ${{ secrets.GITHUB_TOKEN }}
     projectToken: 'Your chromatic project token'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
+    workingDir: 'Working directory for the package.json file'
     storybookBuildDir: 'Provide a directory with your built storybook; use if you've already built your storybook'
     allowConsoleErrors: 'Do not exit when runtime errors occur in storybook'
     autoAcceptChanges: 'Automatically accept all changes in chromatic: boolean or branchname'
@@ -67,6 +68,32 @@ We suggest you use a secret to hide the project token:
 ```
 
 You can to configure secrets in the repository settings (`/<owner>/<repository>/settings/secrets`). However if you need to be able to run this action on pull requests from forks, because those can't access your secret.
+
+### Monorepo Support
+
+The `workingDir` input can be used to direct Chromatic to a subdirectory where your Storybook exists.  You will also need to provide this directory to other steps in your job, as needed.  This can be done per-step, or with top-level defaults for `run` steps using [defaults.run](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#defaultsrun) or [jobs.<job_id>.defaults.run](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun)
+
+```yaml
+jobs:
+  chromatic-deployment:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: yarn
+        # 👇 Runs yarn in ./frontend
+        working-directory: frontend
+      - name: Publish to Chromatic
+        uses: chromaui/action@v1
+        with:
+          # 👇 Runs Chromatic CLI in ./frontend
+          workingDir: frontend
+          token: ${{ secrets.GITHUB_TOKEN }}
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+```
 
 ### Outputs
 

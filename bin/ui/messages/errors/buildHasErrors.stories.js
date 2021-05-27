@@ -6,6 +6,9 @@ export default {
 
 export const BuildHasErrors = () =>
   buildHasErrors({
-    build: { errorCount: 2 },
+    build: {
+      errorCount: 2,
+      webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+    },
     exitCode: 1,
   });
