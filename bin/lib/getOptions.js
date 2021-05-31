@@ -33,6 +33,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
 
     only: flags.only,
     onlyChanged: trueIfSet(flags.onlyChanged),
+    externals: flags.externals,
     list: flags.list,
     fromCI,
     skip: trueIfSet(flags.skip),

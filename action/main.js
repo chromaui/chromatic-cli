@@ -136,7 +136,7 @@ function runChromatic(options) {
 }
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, only, onlyChanged, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, output, e_1;
+        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, only, onlyChanged, externals, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, output, e_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -156,6 +156,7 @@ function run() {
                     skip = core_1.getInput('skip');
                     only = core_1.getInput('only');
                     onlyChanged = core_1.getInput('onlyChanged');
+                    externals = core_1.getInput('externals');
                     doNotStart = core_1.getInput('doNotStart');
                     storybookPort = core_1.getInput('storybookPort');
                     storybookUrl = core_1.getInput('storybookUrl');
@@ -182,6 +183,7 @@ function run() {
                             skip: maybe(skip),
                             only: maybe(only),
                             onlyChanged: maybe(onlyChanged),
+                            externals: maybe(externals),
                             doNotStart: maybe(doNotStart),
                             storybookPort: maybe(storybookPort),
                             storybookUrl: maybe(storybookUrl),
