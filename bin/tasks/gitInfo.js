@@ -18,6 +18,7 @@ import {
   skippedRebuild,
   success,
 } from '../ui/tasks/gitInfo';
+import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 
 const TesterSkipBuildMutation = `
@@ -105,6 +106,19 @@ export const setGitInfo = async (ctx, task) => {
     } catch (e) {
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
+    }
+
+    if (ctx.git.changedFiles && ctx.options.externals) {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const glob of ctx.options.externals) {
+        const isMatch = picomatch(glob, { contains: true });
+        const match = ctx.git.changedFiles.find((path) => isMatch(path));
+        if (match) {
+          ctx.log.warn(externalsChanged(match));
+          delete ctx.git.changedFiles;
+          break;
+        }
+      }
     }
   }
 
