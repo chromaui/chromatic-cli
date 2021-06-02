@@ -1,7 +1,8 @@
-# 5.9.0 - unreleased
+# 5.9.0 - 2021-06-02
 
 - [347](https://github.com/chromaui/chromatic-cli/pull/347) Add support for proxy server
 - [334](https://github.com/chromaui/chromatic-cli/pull/334) Check existence and validity of package.json
+- [355](https://github.com/chromaui/chromatic-cli/pull/355) Ignore `--only-changed` on changes matching `--externals`
 
 # 5.8.3 - 2021-05-21
 
@@ -22,7 +23,7 @@
 
 - [319](https://github.com/chromaui/chromatic-cli/pull/319) Retrieve viewLayer and version from dependencies and support @web/dev-server-storybook
 - [313](https://github.com/chromaui/chromatic-cli/pull/313) Use original baseline for rebuilds (new build for the same commit)
-- [304](https://github.com/chromaui/chromatic-cli/pull/304) Support only testing components affected by recent git changes
+- [304](https://github.com/chromaui/chromatic-cli/pull/304) Support only testing components affected by recent git changes via `--only-changed`
 - [305](https://github.com/chromaui/chromatic-cli/pull/305) Fix `npx chromatic` timing out on build-storybook
 
 # 5.7.1 - 2021-02-02
