@@ -22,31 +22,29 @@ const maybe = (a: string, b: any = undefined) => {
   }
 };
 
-const getCommit = (event: typeof context) => {
+const getBuildInfo = (event: typeof context) => {
   switch (event.eventName) {
     case 'pull_request':
     case 'pull_request_review':
     case 'pull_request_target': {
+      const { head, base } = event.payload.pull_request;
+      const isCrossFork = head.repo.id !== base.repo.id;
       return {
-        owner: event.payload.repository.owner.login,
-        repo: event.payload.repository.name,
-        branch: event.payload.pull_request.head.ref,
-        ref: event.ref || event.payload.pull_request.head.ref,
-        sha: event.payload.pull_request.head.sha,
+        sha: head.sha,
+        branch: isCrossFork ? head.label : head.ref,
+        slug: head.repo.full_name,
       };
     }
     case 'push': {
+      const { after, ref, repository } = event.payload;
       return {
-        owner: event.payload.repository.owner.login,
-        repo: event.payload.repository.name,
-        branch: event.payload.ref.replace('refs/heads/', ''),
-        ref: event.payload.ref,
-        sha: event.payload.after,
+        sha: after,
+        branch: ref.replace('refs/heads/', ''),
+        slug: repository.full_name,
       };
     }
     default: {
       setFailed(`${event.eventName} event is not supported in this action`);
-
       return null;
     }
   }
@@ -86,13 +84,8 @@ async function runChromatic(options): Promise<Output> {
 }
 
 async function run() {
-  const commit = getCommit(context);
-
-  if (!commit) {
-    return;
-  }
-
-  const { branch, sha } = commit;
+  const { sha, branch, slug } = getBuildInfo(context) || {};
+  if (!sha || !branch || !slug) return;
 
   try {
     // Remember to keep this list in sync with ../action.yml
@@ -122,6 +115,8 @@ async function run() {
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
+    process.env.CHROMATIC_SLUG = slug;
+
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
     const output = await runChromatic({
