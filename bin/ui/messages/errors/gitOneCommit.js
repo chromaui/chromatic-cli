@@ -6,7 +6,7 @@ import link from '../../components/link';
 
 const githubActionNote = dedent`
   In {bold GitHub Actions}, you can enable this by setting \`fetch-depth: 0\`.
-  ${info} Read more at ${link('https://www.chromatic.com/docs/ci#github-actions')}
+  ${info} Read more at ${link('https://www.chromatic.com/docs/github-actions')}
 `;
 const genericNote = dedent`
   Refer to your CI provider's documentation for details.
