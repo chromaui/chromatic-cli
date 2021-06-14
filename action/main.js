@@ -72,26 +72,25 @@ var maybe = function (a, b) {
         return a;
     }
 };
-var getCommit = function (event) {
+var getBuildInfo = function (event) {
     switch (event.eventName) {
         case 'pull_request':
         case 'pull_request_review':
         case 'pull_request_target': {
+            var _a = event.payload.pull_request, head = _a.head, base = _a.base;
+            var isCrossFork = head.repo.id !== base.repo.id;
             return {
-                owner: event.payload.repository.owner.login,
-                repo: event.payload.repository.name,
-                branch: event.payload.pull_request.head.ref,
-                ref: event.ref || event.payload.pull_request.head.ref,
-                sha: event.payload.pull_request.head.sha
+                sha: head.sha,
+                branch: isCrossFork ? head.label : head.ref,
+                slug: head.repo.full_name
             };
         }
         case 'push': {
+            var _b = event.payload, after = _b.after, ref = _b.ref, repository = _b.repository;
             return {
-                owner: event.payload.repository.owner.login,
-                repo: event.payload.repository.name,
-                branch: event.payload.ref.replace('refs/heads/', ''),
-                ref: event.payload.ref,
-                sha: event.payload.after
+                sha: after,
+                branch: ref.replace('refs/heads/', ''),
+                slug: repository.full_name
             };
         }
         default: {
@@ -136,18 +135,16 @@ function runChromatic(options) {
 }
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var commit, branch, sha, projectToken, workingDir, buildScriptName, scriptName, exec, skip, only, onlyChanged, externals, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, output, e_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var _a, sha, branch, slug, projectToken, workingDir, buildScriptName, scriptName, exec, skip, only, onlyChanged, externals, doNotStart, storybookPort, storybookUrl, storybookBuildDir, storybookHttps, storybookCert, storybookKey, storybookCa, preserveMissing, autoAcceptChanges, allowConsoleErrors, exitZeroOnChanges, exitOnceUploaded, ignoreLastBuildOnBranch, output, e_1;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
-                    commit = getCommit(github_1.context);
-                    if (!commit) {
+                    _a = getBuildInfo(github_1.context) || {}, sha = _a.sha, branch = _a.branch, slug = _a.slug;
+                    if (!sha || !branch || !slug)
                         return [2 /*return*/];
-                    }
-                    branch = commit.branch, sha = commit.sha;
-                    _a.label = 1;
+                    _b.label = 1;
                 case 1:
-                    _a.trys.push([1, 3, , 4]);
+                    _b.trys.push([1, 3, , 4]);
                     projectToken = core_1.getInput('projectToken') || core_1.getInput('appCode');
                     workingDir = core_1.getInput('workingDir');
                     buildScriptName = core_1.getInput('buildScriptName');
@@ -173,6 +170,7 @@ function run() {
                     ignoreLastBuildOnBranch = core_1.getInput('ignoreLastBuildOnBranch');
                     process.env.CHROMATIC_SHA = sha;
                     process.env.CHROMATIC_BRANCH = branch;
+                    process.env.CHROMATIC_SLUG = slug;
                     process.chdir(path_1["default"].join(process.cwd(), workingDir || ''));
                     return [4 /*yield*/, runChromatic({
                             projectToken: projectToken,
@@ -202,7 +200,7 @@ function run() {
                             ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch)
                         })];
                 case 2:
-                    output = _a.sent();
+                    output = _b.sent();
                     core_1.setOutput('url', output.url);
                     core_1.setOutput('buildUrl', output.buildUrl);
                     core_1.setOutput('storybookUrl', output.storybookUrl);
@@ -213,7 +211,7 @@ function run() {
                     process.exit(output.code);
                     return [3 /*break*/, 4];
                 case 3:
-                    e_1 = _a.sent();
+                    e_1 = _b.sent();
                     if (e_1.message)
                         core_1.error(e_1.message);
                     if (e_1.stack)

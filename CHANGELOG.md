@@ -1,3 +1,7 @@
+# 5.9.1 - 2021-06-14
+
+- [365](https://github.com/chromaui/chromatic-cli/pull/365) Fix cross-fork builds from GitHub Action
+
 # 5.9.0 - 2021-06-02
 
 - [347](https://github.com/chromaui/chromatic-cli/pull/347) Add support for proxy server
