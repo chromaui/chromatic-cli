@@ -77,16 +77,15 @@ var getBuildInfo = function (event) {
         case 'pull_request':
         case 'pull_request_review':
         case 'pull_request_target': {
-            var _a = event.payload.pull_request, head = _a.head, base = _a.base;
-            var isCrossFork = head.repo.id !== base.repo.id;
+            var head = event.payload.pull_request.head;
             return {
                 sha: head.sha,
-                branch: isCrossFork ? head.label : head.ref,
+                branch: head.ref,
                 slug: head.repo.full_name
             };
         }
         case 'push': {
-            var _b = event.payload, after = _b.after, ref = _b.ref, repository = _b.repository;
+            var _a = event.payload, after = _a.after, ref = _a.ref, repository = _a.repository;
             return {
                 sha: after,
                 branch: ref.replace('refs/heads/', ''),

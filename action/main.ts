@@ -27,11 +27,10 @@ const getBuildInfo = (event: typeof context) => {
     case 'pull_request':
     case 'pull_request_review':
     case 'pull_request_target': {
-      const { head, base } = event.payload.pull_request;
-      const isCrossFork = head.repo.id !== base.repo.id;
+      const { head } = event.payload.pull_request;
       return {
         sha: head.sha,
-        branch: isCrossFork ? head.label : head.ref,
+        branch: head.ref,
         slug: head.repo.full_name,
       };
     }
