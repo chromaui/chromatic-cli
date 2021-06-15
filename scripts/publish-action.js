@@ -35,7 +35,7 @@ const tmp = require('tmp-promise');
   await run('git init');
   await run('git remote add origin git@github.com:chromaui/action.git');
   await run('git add .');
-  await run('git commit -m Publish');
+  await run(`git commit -m ${version}`);
   await run('git tag v1');
   await run('git push origin head --force');
   await run('git push --tags --force');
