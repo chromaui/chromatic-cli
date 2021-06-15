@@ -1,3 +1,7 @@
+# 5.9.2 - 2021-06-15
+
+- [366](https://github.com/chromaui/chromatic-cli/pull/366) Fix resolving webpack stats in subdirectory
+
 # 5.9.1 - 2021-06-14
 
 - [365](https://github.com/chromaui/chromatic-cli/pull/365) Fix cross-fork builds from GitHub Action
