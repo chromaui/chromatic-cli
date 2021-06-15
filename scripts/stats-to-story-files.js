@@ -13,7 +13,7 @@ const main = async () => {
     },
   };
   // eslint-disable-next-line no-console
-  console.log(getDependentStoryFiles(ctx, stats, changedFiles));
+  console.log(await getDependentStoryFiles(ctx, stats, changedFiles));
 };
 
 main();

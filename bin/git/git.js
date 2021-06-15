@@ -1,3 +1,4 @@
+import path from 'path';
 import execa from 'execa';
 import gql from 'fake-tag';
 import { EOL } from 'os';
@@ -445,4 +446,9 @@ export async function checkoutPrevious() {
 
 export async function discardChanges() {
   return execGitCommand(`git reset --hard`);
+}
+
+export async function getWorkingDir() {
+  const rootDir = await execGitCommand(`git rev-parse --show-toplevel`);
+  return path.relative(rootDir, '.');
 }

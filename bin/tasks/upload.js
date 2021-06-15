@@ -119,7 +119,7 @@ export const traceChangedFiles = async (ctx, task) => {
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
-    ctx.onlyStoryFiles = getDependentStoryFiles(ctx, stats, changedFiles);
+    ctx.onlyStoryFiles = await getDependentStoryFiles(ctx, stats, changedFiles);
     ctx.log.debug(
       `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
         .map(([id, f]) => `  ${f} [${id}]`)
