@@ -15,7 +15,7 @@ export default {
 
 const options = {
   scriptName: 'build-storybook',
-  patchBaseRef: 'master',
+  patchBaseRef: 'main',
   patchHeadRef: 'feature',
 };
 const mergeBase = '3f35708745837024bec510c0e5d8a3ac00ba6467';

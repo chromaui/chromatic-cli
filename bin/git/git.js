@@ -393,24 +393,24 @@ export async function getUpdateMessage() {
  * last commit on either branch. The "best" is defined by not having any descendants which are a
  * common ancestor themselves. Consider this example:
  *
- *   - A - M  <= master
+ *   - A - M  <= main
  *      \ /
  *       B    <= develop
  *        \
  *         C  <= feature
  *
- * The merge base between master and feature is B, because it's the best common ancestor of C and M.
+ * The merge base between main and feature is B, because it's the best common ancestor of C and M.
  * A is a common ancestor too, but it isn't the "best" one because it's an ancestor of B.
  *
  * It's also possible to have a situation with two merge bases, where there isn't one "best" option:
  *
- *   - A - M  <= master
+ *   - A - M  <= main
  *      \ /
  *       x    (not a commit)
  *      / \
  *   - B - N  <= develop
  *
- * Here, both A and B are the best common ancestor between master and develop. Neither one is the
+ * Here, both A and B are the best common ancestor between main and develop. Neither one is the
  * single "best" option because they aren't ancestors of each other. In this case we try to pick the
  * one on the base branch, but if that fails we just pick the first one and hope it works out.
  * Luckily this is an uncommon scenario.
