@@ -22,7 +22,7 @@ describe('createTunnel', () => {
 
 describe('testConnection', () => {
   it('tries to fetch the isolatorUrl', async () => {
-    testConnection({ isolatorUrl: 'https://tunnel.chromaticqa.com' });
-    expect(fetch).toHaveBeenCalledWith('https://tunnel.chromaticqa.com');
+    testConnection({ env: {}, log, isolatorUrl: 'https://tunnel.chromaticqa.com' });
+    expect(fetch).toHaveBeenCalledWith('https://tunnel.chromaticqa.com', expect.any(Object));
   });
 });

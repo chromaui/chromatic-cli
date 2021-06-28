@@ -16,6 +16,7 @@ describe('startStorybook', () => {
     await startStorybook(ctx);
     expect(ctx.isolatorUrl).toBe(ctx.options.url);
     expect(startApp).toHaveBeenCalledWith({
+      ctx,
       scriptName: ctx.options.scriptName,
       commandName: ctx.options.exec,
       url: ctx.options.url,

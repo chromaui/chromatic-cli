@@ -519,7 +519,7 @@ it('checks for updates', async () => {
   );
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
-  expect(fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
+  expect(fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic', expect.any(Object));
   expect(ctx.log.warnings[0]).toMatch('Using outdated package');
 });
 
