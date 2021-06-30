@@ -73,9 +73,9 @@ const log = { debug: jest.fn() };
 describe('getParentCommits', () => {
   it('returns no baseline when there are no builds for the app', async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
+    await checkoutCommit('F', 'main', repository);
     const client = createClient(repository, []);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, [], repository);
@@ -83,9 +83,9 @@ describe('getParentCommits', () => {
 
   it('returns the current commit when that already has a build', async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
-    const client = createClient(repository, [['F', 'master']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    await checkoutCommit('F', 'main', repository);
+    const client = createClient(repository, [['F', 'main']]);
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['F'], repository);
@@ -93,9 +93,9 @@ describe('getParentCommits', () => {
 
   it(`returns the current commit's parent when that already has a build`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('C', 'master', repository);
-    const client = createClient(repository, [['B', 'master']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    await checkoutCommit('C', 'main', repository);
+    const client = createClient(repository, [['B', 'main']]);
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['B'], repository);
@@ -103,12 +103,12 @@ describe('getParentCommits', () => {
 
   it(`returns both of the current commit's parents (in correct order) when they already have a build`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
+    await checkoutCommit('F', 'main', repository);
     const client = createClient(repository, [
-      ['D', 'master'],
-      ['E', 'master'],
+      ['D', 'main'],
+      ['E', 'main'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
@@ -116,13 +116,13 @@ describe('getParentCommits', () => {
 
   it(`returns the all of the commit's parents (in correct order) when they all have a build`, async () => {
     const repository = repositories.threeParents;
-    await checkoutCommit('E', 'master', repository);
+    await checkoutCommit('E', 'main', repository);
     const client = createClient(repository, [
-      ['B', 'master'],
-      ['C', 'master'],
-      ['D', 'master'],
+      ['B', 'main'],
+      ['C', 'main'],
+      ['D', 'main'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['D', 'C', 'B'], repository);
@@ -130,12 +130,12 @@ describe('getParentCommits', () => {
 
   it(`returns the all of the commit's ancestors (in correct order) when the parents don't have a build`, async () => {
     const repository = repositories.longLoop;
-    await checkoutCommit('H', 'master', repository);
+    await checkoutCommit('H', 'main', repository);
     const client = createClient(repository, [
-      ['B', 'master'],
-      ['C', 'master'],
+      ['B', 'main'],
+      ['C', 'main'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['C', 'B'], repository);
@@ -143,12 +143,12 @@ describe('getParentCommits', () => {
 
   it(`occludes commits that have a more recent build, simple line`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('C', 'master', repository);
+    await checkoutCommit('C', 'main', repository);
     const client = createClient(repository, [
-      ['A', 'master'],
-      ['B', 'master'],
+      ['A', 'main'],
+      ['B', 'main'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['B'], repository);
@@ -156,13 +156,13 @@ describe('getParentCommits', () => {
 
   it(`occludes commits that have a more recent build, both descendents on ancestor paths`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
+    await checkoutCommit('F', 'main', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
-      ['D', 'master'],
-      ['E', 'master'],
+      ['C', 'main'],
+      ['D', 'main'],
+      ['E', 'main'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
@@ -170,9 +170,9 @@ describe('getParentCommits', () => {
 
   it(`returns the mainline commit with a build common to both ancestor paths when no builds on a loop`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
-    const client = createClient(repository, [['C', 'master']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    await checkoutCommit('F', 'main', repository);
+    const client = createClient(repository, [['C', 'main']]);
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
@@ -180,12 +180,12 @@ describe('getParentCommits', () => {
 
   it(`returns a commit on one ancestor path when the other has no builds before rejoining mainline`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
+    await checkoutCommit('F', 'main', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
-      ['D', 'master'],
+      ['C', 'main'],
+      ['D', 'main'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['D'], repository);
@@ -193,12 +193,12 @@ describe('getParentCommits', () => {
 
   it(`ignores irrelevant builds ahead of the current commit`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('E', 'master', repository);
+    await checkoutCommit('E', 'main', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
+      ['C', 'main'],
       ['D', 'branch'],
     ]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
@@ -206,9 +206,9 @@ describe('getParentCommits', () => {
 
   it(`returns nothing if the only builds are on irrelevant branches, build older`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('E', 'master', repository);
+    await checkoutCommit('E', 'main', repository);
     const client = createClient(repository, [['D', 'branch']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, [], repository);
@@ -216,9 +216,9 @@ describe('getParentCommits', () => {
 
   it(`returns nothing if the only builds are on irrelevant branches, build newer`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('D', 'master', repository);
+    await checkoutCommit('D', 'main', repository);
     const client = createClient(repository, [['E', 'branch']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, [], repository);
@@ -226,9 +226,9 @@ describe('getParentCommits', () => {
 
   it(`ignores builds on unrooted trees`, async () => {
     const repository = repositories.twoRoots;
-    await checkoutCommit('D', 'master', repository);
+    await checkoutCommit('D', 'main', repository);
     const client = createClient(repository, [['B', 'branch']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, [], repository);
@@ -236,7 +236,7 @@ describe('getParentCommits', () => {
 
   it(`ignores non-existent commits (i.e. wrong repo)`, async () => {
     const repository = repositories.twoRoots;
-    await checkoutCommit('D', 'master', repository);
+    await checkoutCommit('D', 'main', repository);
     const client = createClient(
       {
         commitMap: {
@@ -245,7 +245,7 @@ describe('getParentCommits', () => {
       },
       [['Z', 'branch']]
     );
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, [], repository);
@@ -253,9 +253,9 @@ describe('getParentCommits', () => {
 
   it(`returns what it can when not every ancestor path has a build`, async () => {
     const repository = repositories.simpleLoop;
-    await checkoutCommit('F', 'master', repository);
-    const client = createClient(repository, [['D', 'master']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    await checkoutCommit('F', 'main', repository);
+    const client = createClient(repository, [['D', 'main']]);
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['D'], repository);
@@ -263,9 +263,9 @@ describe('getParentCommits', () => {
 
   it(`continues to the end of a long list and fails`, async () => {
     const repository = repositories.longLine;
-    await checkoutCommit('Z', 'master', repository);
+    await checkoutCommit('Z', 'main', repository);
     const client = createClient(repository, [['z', 'branch']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, [], repository);
@@ -273,9 +273,9 @@ describe('getParentCommits', () => {
 
   it(`continues to the end of a long list and succeeds`, async () => {
     const repository = repositories.longLine;
-    await checkoutCommit('Z', 'master', repository);
+    await checkoutCommit('Z', 'main', repository);
     const client = createClient(repository, [['A', 'branch']]);
-    const git = { branch: 'master', ...(await getCommit()) };
+    const git = { branch: 'main', ...(await getCommit()) };
 
     const parentCommits = await getParentCommits({ client, log, git });
     expectCommitsToEqualNames(parentCommits, ['A'], repository);
@@ -285,7 +285,7 @@ describe('getParentCommits', () => {
     const repository = repositories.longLine;
     await checkoutCommit('Z', 'branch', repository);
 
-    const mockIndex = createMockIndex(repository, [['A', 'master']]);
+    const mockIndex = createMockIndex(repository, [['A', 'main']]);
     const mockIndexWithNullFirstBuildCommittedAt = (queryName, variables) => {
       if (queryName === 'TesterFirstCommittedAtQuery') {
         return { app: { firstBuild: { committedAt: null } } };
@@ -308,7 +308,7 @@ describe('getParentCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'branch', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
+      ['C', 'main'],
       ['D', 'branch'],
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
@@ -321,7 +321,7 @@ describe('getParentCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'HEAD', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
+      ['C', 'main'],
       ['D', 'branch'],
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
@@ -334,7 +334,7 @@ describe('getParentCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('D', 'branch', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
+      ['C', 'main'],
       ['E', 'branch'],
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
@@ -347,7 +347,7 @@ describe('getParentCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'branch', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
+      ['C', 'main'],
       ['D', 'branch'],
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
@@ -372,7 +372,7 @@ describe('getParentCommits', () => {
         },
       },
       [
-        ['C', 'master'],
+        ['C', 'main'],
         ['Z', 'branch'],
       ]
     );
@@ -388,7 +388,7 @@ describe('getParentCommits', () => {
     // A is the latest commit on this branch, but B is newer
     const client = createClient(repository, [
       ['A', 'branch'],
-      ['B', 'master'],
+      ['B', 'main'],
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
@@ -400,7 +400,7 @@ describe('getParentCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'branch', repository);
     const client = createClient(repository, [
-      ['D', 'master'],
+      ['D', 'main'],
       ['E', 'branch'],
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
@@ -413,7 +413,7 @@ describe('getParentCommits', () => {
     const repository = repositories.simpleLoop;
     await checkoutCommit('E', 'HEAD', repository);
     const client = createClient(repository, [
-      ['C', 'master'],
+      ['C', 'main'],
       ['D', 'HEAD'],
     ]);
     const git = { branch: 'HEAD', ...(await getCommit()) };
@@ -426,16 +426,16 @@ describe('getParentCommits', () => {
   describe('PR commits', () => {
     it(`also includes PR head commits that were squashed to this commit`, async () => {
       const repository = repositories.simpleLoop;
-      await checkoutCommit('E', 'master', repository);
+      await checkoutCommit('E', 'main', repository);
       const client = createClient(
         repository,
         [
-          ['C', 'master'],
+          ['C', 'main'],
           ['D', 'branch'],
         ],
         [['E', 'branch']]
       );
-      const git = { branch: 'master', ...(await getCommit()) };
+      const git = { branch: 'main', ...(await getCommit()) };
 
       const parentCommits = await getParentCommits({ client, log, git });
       // This doesn't include 'C' as D "covers" it.

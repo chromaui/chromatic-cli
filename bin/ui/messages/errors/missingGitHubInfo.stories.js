@@ -4,4 +4,4 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-export const MissingGitHubInfo = () => missingGitHubInfo({ GITHUB_WORKFLOW: 'pull_request' });
+export const MissingGitHubInfo = () => missingGitHubInfo({ GITHUB_EVENT_NAME: 'pull_request' });

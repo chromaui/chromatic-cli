@@ -15,7 +15,7 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 👉 Read the [Chromatic CLI docs](https://www.chromatic.com/docs/cli)
 
-📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/master/CHANGELOG.md#readme)
+📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md#readme)
 
 ## Contributing
 
@@ -26,7 +26,7 @@ Contributions of any kind are welcome! We're available to chat via the Intercom 
 Compatibility is guaranteed between this package and Chromatic like so:
 
 - Production Chromatic ensures it’s compatible with what’s on npm
-- What's on the master branch is equal to what's published on npm
+- What's on the main branch is equal to what's published on npm
 - This package ensures it’s compatible with production Chromatic
 
 To facilitate upgrading in the future, removing and adding features, this is the process:

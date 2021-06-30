@@ -5,4 +5,4 @@ export default {
 };
 
 export const MergeBaseNotFound = () =>
-  mergeBaseNotFound({ patchBaseRef: 'master', patchHeadRef: 'feature' });
+  mergeBaseNotFound({ patchBaseRef: 'main', patchHeadRef: 'feature' });
