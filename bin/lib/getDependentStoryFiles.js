@@ -17,7 +17,6 @@ const isUserCode = ({ name, moduleName }) => !EXTERNALS.some((re) => re.test(nam
 // Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
 // already contains forward slashes, because that's what git yields even on Windows.
 const posix = (localPath) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
-// const dotslash = (posixPath) => (/[^./]+/.test(posixPath) ? `./${posixPath}` : posixPath || '.');
 const clean = (posixPath) => (posixPath.startsWith('./') ? posixPath.slice(2) : posixPath);
 
 export async function getDependentStoryFiles(ctx, stats, changedFiles) {
