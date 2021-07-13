@@ -55,6 +55,7 @@ export const createLogger = (sessionId, env) => {
   const logger = {
     setLevel(value) {
       if (value in LOG_LEVELS) level = value;
+      else throw new Error(`Invalid level, expecting one of ${Object.keys(LOG_LEVELS).join(', ')}`);
     },
     setInteractive(value) {
       interactive = !!value;
