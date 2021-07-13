@@ -30,10 +30,10 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   // By stripping either prefix, we have a consistent format to compare against (i.e. `module.js`).
   const basePath = path.posix.join(rootPath, workingDir);
   const baseRegExp = new RegExp(`^./|${basePath}/`);
-  const base = (dir) => dir && dir.replace(baseRegExp, '');
+  const base = (posixPath) => posixPath && posixPath.replace(baseRegExp, '');
 
-  const storybookDir = clean(posix(configDir));
-  const staticDirs = staticDir.map((dir) => clean(posix(dir)));
+  const storybookDir = base(posix(configDir));
+  const staticDirs = staticDir.map((dir) => base(posix(dir)));
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
