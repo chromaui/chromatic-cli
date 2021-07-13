@@ -4,7 +4,9 @@ import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
 
-export default async function uploadFiles({ env, log }, files, onProgress) {
+import getProxyAgent from '../io/getProxyAgent';
+
+export default async function uploadFiles(ctx, files, onProgress) {
   const limitConcurrency = pLimit(10);
   let totalProgress = 0;
 
@@ -12,7 +14,7 @@ export default async function uploadFiles({ env, log }, files, onProgress) {
     files.map(({ path, url, contentType, contentLength }) => {
       let fileProgress = 0; // The bytes uploaded for this this particular file
 
-      log.debug(`Uploading ${contentLength} bytes of ${contentType} for '${path}' to '${url}'`);
+      ctx.log.debug(`Uploading ${contentLength} bytes of ${contentType} for '${path}' to '${url}'`);
 
       return limitConcurrency(() =>
         retry(
@@ -28,6 +30,7 @@ export default async function uploadFiles({ env, log }, files, onProgress) {
             const res = await fetch(url, {
               method: 'PUT',
               body: fs.createReadStream(path).pipe(progressStream),
+              agent: getProxyAgent(ctx, url),
               headers: {
                 'content-type': contentType,
                 'content-length': contentLength,
@@ -36,17 +39,17 @@ export default async function uploadFiles({ env, log }, files, onProgress) {
             });
 
             if (!res.ok) {
-              log.debug(`Uploading '${path}' failed: %O`, res);
+              ctx.log.debug(`Uploading '${path}' failed: %O`, res);
               throw new Error(path);
             }
-            log.debug(`Uploaded '${path}'.`);
+            ctx.log.debug(`Uploaded '${path}'.`);
           },
           {
-            retries: env.CHROMATIC_RETRIES,
+            retries: ctx.env.CHROMATIC_RETRIES,
             onRetry: (err) => {
               totalProgress -= fileProgress;
               fileProgress = 0;
-              log.debug('Retrying upload %s, %O', url, err);
+              ctx.log.debug('Retrying upload %s, %O', url, err);
               onProgress(totalProgress);
             },
           }

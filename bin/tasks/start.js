@@ -9,6 +9,7 @@ export const startStorybook = async (ctx) => {
   const { exec: commandName, scriptName, url } = ctx.options;
 
   const child = await startApp({
+    ctx,
     scriptName,
     commandName,
     url,
@@ -16,7 +17,6 @@ export const startStorybook = async (ctx) => {
       ctx.storybook.version &&
       gte(ctx.storybook.version, ctx.env.STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && ['--', '--ci'],
     options: { stdio: 'pipe' },
-    env: ctx.env,
   });
 
   ctx.isolatorUrl = url;
@@ -31,7 +31,7 @@ export default createTask({
   title: initial.title,
   skip: async (ctx) => {
     if (ctx.skip) return true;
-    if (await checkResponse(ctx.options.url)) {
+    if (await checkResponse(ctx, ctx.options.url)) {
       ctx.isolatorUrl = ctx.options.url;
       return skipped(ctx).output;
     }

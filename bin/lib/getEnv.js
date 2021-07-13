@@ -10,6 +10,8 @@ const {
   CHROMATIC_STORYBOOK_VERSION,
   LOGGLY_CUSTOMER_TOKEN = 'b5e26204-cdc5-4c78-a9cc-c69eb7fabad3',
   STORYBOOK_BUILD_TIMEOUT = 10 * 60 * 1000,
+  HTTPS_PROXY = process.env.https_proxy,
+  HTTP_PROXY = process.env.http_proxy,
 } = process.env;
 
 const ENVIRONMENT_WHITELIST = [/^GERRIT/, /^TRAVIS/];
@@ -38,4 +40,6 @@ export default () => ({
   LOGGLY_CUSTOMER_TOKEN,
   STORYBOOK_BUILD_TIMEOUT: parseInt(STORYBOOK_BUILD_TIMEOUT, 10),
   STORYBOOK_CLI_FLAGS_BY_VERSION,
+  HTTPS_PROXY,
+  HTTP_PROXY,
 });

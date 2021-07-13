@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import semver from 'semver';
 import { hasYarn } from 'yarn-or-npm';
 
+import getProxyAgent from '../io/getProxyAgent';
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
 
 const rejectIn = (ms) => new Promise((_, reject) => setTimeout(reject, ms));
@@ -15,8 +16,9 @@ export default async function checkForUpdates(ctx) {
 
   let latestVersion;
   try {
+    const pkgUrl = `https://registry.npmjs.org/${ctx.pkg.name}`;
     // If not fetched within 5 seconds, nevermind.
-    const res = await withTimeout(fetch(`https://registry.npmjs.org/${ctx.pkg.name}`), 5000);
+    const res = await withTimeout(fetch(pkgUrl, { agent: getProxyAgent(ctx, pkgUrl) }), 5000);
     const { 'dist-tags': distTags = {} } = await res.json();
     if (!semver.valid(distTags.latest)) {
       ctx.log.warn(`Invalid dist-tag 'latest' returned from registry; skipping update check`);
