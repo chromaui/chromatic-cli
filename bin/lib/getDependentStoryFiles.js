@@ -51,6 +51,9 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
   });
 
+  ctx.log.debug(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
+  ctx.log.debug(`Found ${Object.keys(idsByName).length} user modules`);
+
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isConfigFile = (name) => name.startsWith(storybookDir) && name !== storiesEntryFile;
   const isStaticFile = (name) => staticDirs.some((dir) => name.startsWith(dir));

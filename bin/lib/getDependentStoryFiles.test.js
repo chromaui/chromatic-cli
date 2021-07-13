@@ -8,7 +8,7 @@ jest.mock('../git/git');
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 
 const ctx = {
-  log: { warn: jest.fn() },
+  log: { warn: jest.fn(), debug: jest.fn() },
 };
 
 describe('getDependentStoryFiles', () => {
