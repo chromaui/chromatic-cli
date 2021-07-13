@@ -110,7 +110,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
     expect(res).toEqual({
-      2: '/path/to/project/src/foo.stories.js',
+      2: './src/foo.stories.js',
     });
   });
 
@@ -139,7 +139,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
     expect(res).toEqual({
-      2: '/path/to/project/services/webapp/src/foo.stories.js',
+      2: './src/foo.stories.js',
     });
   });
 });
