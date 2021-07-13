@@ -1,3 +1,5 @@
+import path from 'path';
+
 export const lcfirst = (str) => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
 export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,3 +32,5 @@ export const rewriteErrorMessage = (err, message) => {
     return error;
   }
 };
+
+export const getWorkingDir = (basePath) => path.relative(basePath, '.');
