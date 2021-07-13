@@ -1,6 +1,7 @@
 import path from 'path';
 
-import { getWorkingDir } from '../git/git';
+import { getWorkingDir } from './utils';
+import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 
 // Bail whenever one of these was changed
@@ -12,18 +13,28 @@ const EXTERNALS = [/\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 const isGlobal = (name) => GLOBALS.some((re) => re.test(name));
 const isUserCode = ({ name, moduleName }) => !EXTERNALS.some((re) => re.test(name || moduleName));
 
-const posixRelativePath = (dir) => `./${dir.split(path.sep).filter(Boolean).join(path.posix.sep)}`;
+// Replaces Windows-style backslash path separators with POSIX-style forward slashes, because the
+// Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
+// already contains forward slashes, because that's what git yields even on Windows.
+const posix = (localPath) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
+// const dotslash = (posixPath) => (/[^./]+/.test(posixPath) ? `./${posixPath}` : posixPath || '.');
+const clean = (posixPath) => (posixPath.startsWith('./') ? posixPath.slice(2) : posixPath);
 
 export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const { configDir = '.storybook', staticDir = [] } = ctx.storybook || {};
-  const workingDir = await getWorkingDir();
+
+  const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
+  const workingDir = posix(getWorkingDir(rootPath)); // e.g. `services/webapp` or empty string
   const workingDirRegExp = workingDir && new RegExp(`^./${workingDir}`);
 
-  // Replace Windows-style backslash path separators with POSIX-style forward slashes, because the
-  // Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
-  // already contains forward slashes, because that's what git yields even on Windows.
-  const storybookDir = posixRelativePath(configDir);
-  const staticDirs = staticDir.map(posixRelativePath);
+  // Module paths can be relative (`./module.js`) or absolute (`/path/to/project/services/webapp/module.js`)
+  // By stripping either prefix, we have a consistent format to compare against (i.e. `module.js`).
+  const basePath = path.posix.join(rootPath, workingDir);
+  const baseRegExp = new RegExp(`^./|${basePath}/`);
+  const base = (dir) => dir && dir.replace(baseRegExp, '');
+
+  const storybookDir = clean(posix(configDir));
+  const staticDirs = staticDir.map((dir) => clean(posix(dir)));
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
@@ -34,20 +45,21 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const csfGlobsByName = {};
 
   stats.modules.filter(isUserCode).forEach((mod) => {
+    const baseModuleName = base(mod.name);
+
     if (mod.id) {
-      idsByName[mod.name] = mod.id;
-      (mod.modules ? mod.modules.map((m) => m.name) : []).forEach((name) => {
-        idsByName[name] = mod.id;
+      idsByName[baseModuleName] = mod.id;
+      (mod.modules ? mod.modules.map((m) => base(m.name)) : []).forEach((baseName) => {
+        idsByName[baseName] = mod.id;
       });
     }
 
     reasonsById[mod.id] = mod.reasons
-      .map((r) => r.moduleName)
-      .filter(Boolean)
-      .filter((n) => n !== mod.name);
+      .map((reason) => base(reason.moduleName))
+      .filter((reasonName) => reasonName && reasonName !== baseModuleName);
 
     if (reasonsById[mod.id].includes(storiesEntryFile)) {
-      csfGlobsByName[mod.name] = true;
+      csfGlobsByName[baseModuleName] = true;
     }
   });
 
@@ -82,7 +94,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   changedFiles.forEach((gitFilePath) => {
     const webpackFilePath = workingDir ? gitFilePath.replace(workingDirRegExp, '.') : gitFilePath;
-    traceName(webpackFilePath);
+    traceName(clean(webpackFilePath));
   });
   while (toCheck.length > 0) {
     const id = toCheck.pop();
