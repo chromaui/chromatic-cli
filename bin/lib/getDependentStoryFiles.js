@@ -106,9 +106,9 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     return false;
   }
 
-  return Object.fromEntries(
-    stats.modules
-      .filter((mod) => changedCsfIds.has(mod.id))
-      .map((mod) => [String(mod.id), `./${base(mod.name).replace(/ \+ \d+ modules$/, '')}`])
-  );
+  return stats.modules.reduce((acc, mod) => {
+    if (changedCsfIds.has(mod.id))
+      acc[String(mod.id)] = `./${base(mod.name).replace(/ \+ \d+ modules$/, '')}`;
+    return acc;
+  }, {});
 }
