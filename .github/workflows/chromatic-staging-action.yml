@@ -19,7 +19,7 @@ jobs:
         CHROMATIC_INDEX_URL: https://www.staging-chromatic.com
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        projectToken: mpm7osoy9sa
+        projectToken: 253df72b53d2
         onlyChanged: true
         exitZeroOnChanges: true
         exitOnceUploaded: true
