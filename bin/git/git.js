@@ -448,8 +448,6 @@ export async function discardChanges() {
   return execGitCommand(`git reset --hard`);
 }
 
-export async function getWorkingDir() {
-  const rootDir = await execGitCommand(`git rev-parse --show-toplevel`);
-  // Normalize to forward slashes, consistent with git's output (even on Windows)
-  return path.relative(rootDir, '.').split(path.sep).join(path.posix.sep);
+export async function getRepositoryRoot() {
+  return execGitCommand(`git rev-parse --show-toplevel`);
 }

@@ -16,6 +16,8 @@ const log = { warn: jest.fn(), debug: jest.fn() };
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue({ commit: '123asdf', branch: 'something' });
   getParentCommits.mockResolvedValue(['asd2344']);
+  getBaselineBuilds.mockResolvedValue([]);
+  getChangedFiles.mockResolvedValue([]);
   getVersion.mockResolvedValue('Git v1.0.0');
   getSlug.mockResolvedValue('user/repo');
 });
@@ -44,7 +46,7 @@ describe('setGitInfo', () => {
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
     const ctx = { log, options: { onlyChanged: true } };
     await setGitInfo(ctx, {});
-    expect(ctx.git).toMatchObject({ changedFiles: ['./styles/main.scss', './lib/utils.js'] });
+    expect(ctx.git.changedFiles).toEqual(['./styles/main.scss', './lib/utils.js']);
   });
 
   it('drops changedFiles when matching --externals', async () => {
@@ -52,6 +54,6 @@ describe('setGitInfo', () => {
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
     const ctx = { log, options: { onlyChanged: true, externals: ['*.scss'] } };
     await setGitInfo(ctx, {});
-    expect(ctx.git).not.toHaveProperty('changedFiles');
+    expect(ctx.git.changedFiles).toBeNull();
   });
 });

@@ -1,6 +1,5 @@
 name: "Action"
-on:
-  push:
+on: [push]
 
 jobs:
   self-test:
