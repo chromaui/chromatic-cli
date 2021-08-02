@@ -4,7 +4,7 @@ import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
-import setGlobalProxyAgent from './io/setGlobalProxyAgent';
+import HTTPClient from './io/HTTPClient';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
 import getEnv from './lib/getEnv';
@@ -50,8 +50,7 @@ export async function main(argv) {
 }
 
 export async function runAll(ctx) {
-  // Configure the proxy (if available) before we make any requests.
-  setGlobalProxyAgent(ctx);
+  ctx.http = ctx.http || new HTTPClient({ env: ctx.env, log: ctx.log });
 
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
@@ -82,6 +81,7 @@ export async function runBuild(ctx) {
         'x-chromatic-cli-version': ctx.pkg.version,
       },
       retries: 3,
+      env: ctx.env,
       log: ctx.log,
     });
 

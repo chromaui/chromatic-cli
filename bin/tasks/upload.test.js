@@ -1,24 +1,23 @@
-import { createReadStream, readJson, readdirSync, readFileSync, statSync } from 'fs-extra';
-import fetch from 'node-fetch';
+import { createReadStream, readdirSync, readFileSync, statSync } from 'fs-extra';
 import progress from 'progress-stream';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
 jest.mock('fs-extra');
-jest.mock('node-fetch');
 jest.mock('progress-stream');
 jest.mock('../lib/getDependentStoryFiles');
 
 const env = { CHROMATIC_RETRIES: 2 };
 const log = { warn: jest.fn(), debug: jest.fn() };
+const http = { fetch: jest.fn() };
 
 describe('validateFiles', () => {
   it('sets fileInfo on context', async () => {
     readdirSync.mockReturnValue(['iframe.html', 'index.html']);
     statSync.mockReturnValue({ isDirectory: () => false, size: 42 });
 
-    const ctx = { env, log, sourceDir: '/static/' };
+    const ctx = { env, log, http, sourceDir: '/static/' };
     await validateFiles(ctx, {});
 
     expect(ctx.fileInfo).toEqual(
@@ -37,7 +36,7 @@ describe('validateFiles', () => {
     readdirSync.mockReturnValue(['iframe.html']);
     statSync.mockReturnValue({ isDirectory: () => false, size: 42 });
 
-    const ctx = { env, log, sourceDir: '/static/' };
+    const ctx = { env, log, http, sourceDir: '/static/' };
     await expect(validateFiles(ctx, {})).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -45,7 +44,7 @@ describe('validateFiles', () => {
     readdirSync.mockReturnValue(['index.html']);
     statSync.mockReturnValue({ isDirectory: () => false, size: 42 });
 
-    const ctx = { env, log, sourceDir: '/static/' };
+    const ctx = { env, log, http, sourceDir: '/static/' };
     await expect(validateFiles(ctx, {})).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -59,6 +58,7 @@ describe('validateFiles', () => {
       const ctx = {
         env,
         log,
+        http,
         sourceDir: '/static/',
         buildLogFile: 'build-storybook.log',
         options: {},
@@ -90,6 +90,7 @@ describe('traceChangedFiles', () => {
     const ctx = {
       env,
       log,
+      http,
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },
@@ -122,7 +123,7 @@ describe('uploadStorybook', () => {
     });
 
     createReadStream.mockReturnValue({ pipe: jest.fn() });
-    fetch.mockReturnValue({ ok: true });
+    http.fetch.mockReturnValue({ ok: true });
     progress.mockReturnValue({ on: jest.fn() });
 
     const fileInfo = {
@@ -133,14 +134,14 @@ describe('uploadStorybook', () => {
       paths: ['iframe.html', 'index.html'],
       total: 84,
     };
-    const ctx = { client, env, log, sourceDir: '/static/', options: {}, fileInfo };
+    const ctx = { client, env, log, http, sourceDir: '/static/', options: {}, fileInfo };
     await uploadStorybook(ctx, {});
 
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/TesterGetUploadUrlsMutation/),
       { paths: ['iframe.html', 'index.html'] }
     );
-    expect(fetch).toHaveBeenCalledWith(
+    expect(http.fetch).toHaveBeenCalledWith(
       'https://asdqwe.chromatic.com/iframe.html',
       expect.objectContaining({
         method: 'PUT',
@@ -149,9 +150,10 @@ describe('uploadStorybook', () => {
           'content-length': 42,
           'cache-control': 'max-age=31536000',
         },
-      })
+      }),
+      expect.objectContaining({ retries: 0 })
     );
-    expect(fetch).toHaveBeenCalledWith(
+    expect(http.fetch).toHaveBeenCalledWith(
       'https://asdqwe.chromatic.com/index.html',
       expect.objectContaining({
         method: 'PUT',
@@ -160,7 +162,8 @@ describe('uploadStorybook', () => {
           'content-length': 42,
           'cache-control': 'max-age=31536000',
         },
-      })
+      }),
+      expect.objectContaining({ retries: 0 })
     );
     expect(ctx.uploadedBytes).toBe(84);
     expect(ctx.isolatorUrl).toBe('https://asdqwe.chromatic.com/iframe.html');

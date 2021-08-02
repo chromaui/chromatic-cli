@@ -114,6 +114,7 @@ export const setGitInfo = async (ctx, task) => {
       ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
     } catch (e) {
+      ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
     }
@@ -125,7 +126,7 @@ export const setGitInfo = async (ctx, task) => {
         const match = ctx.git.changedFiles.find((path) => isMatch(path));
         if (match) {
           ctx.log.warn(externalsChanged(match));
-          delete ctx.git.changedFiles;
+          ctx.git.changedFiles = null;
           break;
         }
       }
