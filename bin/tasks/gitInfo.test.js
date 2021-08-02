@@ -47,11 +47,11 @@ describe('setGitInfo', () => {
     expect(ctx.git.changedFiles).toEqual(['./styles/main.scss', './lib/utils.js']);
   });
 
-  it('drops changedFiles when matching --externals', async () => {
-    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' }]);
-    getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
-    const ctx = { log, options: { onlyChanged: true, externals: ['*.scss'] } };
-    await setGitInfo(ctx, {});
-    expect(ctx.git).not.toHaveProperty('changedFiles');
-  });
+  // it('drops changedFiles when matching --externals', async () => {
+  //   getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' }]);
+  //   getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
+  //   const ctx = { log, options: { onlyChanged: true, externals: ['*.scss'] } };
+  //   await setGitInfo(ctx, {});
+  //   expect(ctx.git).not.toHaveProperty('changedFiles');
+  // });
 });
