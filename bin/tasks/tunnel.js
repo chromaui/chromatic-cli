@@ -1,7 +1,5 @@
-import fetch from 'node-fetch';
 import { format, parse } from 'url';
 
-import getProxyAgent from '../io/getProxyAgent';
 import { createTask, transitionTo } from '../lib/tasks';
 import openTunnel from '../lib/tunnel';
 import { failed, initial, pending, success } from '../ui/tasks/tunnel';
@@ -52,7 +50,7 @@ export const createTunnel = async (ctx) => {
 
 export const testConnection = async (ctx) => {
   try {
-    await fetch(ctx.isolatorUrl, { agent: getProxyAgent(ctx, ctx.isolatorUrl) });
+    await ctx.http.fetch(ctx.isolatorUrl);
   } catch (err) {
     ctx.log.debug(err);
     throw new Error(failed(ctx).output);

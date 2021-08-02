@@ -169,6 +169,7 @@ afterEach(() => {
 const getContext = (argv) => {
   const env = getEnv();
   const log = new TestLogger();
+  const http = { fetch: jest.fn() };
   const packageJson = {
     scripts: {
       storybook: 'start-storybook -p 1337',
@@ -179,7 +180,7 @@ const getContext = (argv) => {
     },
   };
   const packagePath = '';
-  return { env, log, sessionId: ':sessionId', packageJson, packagePath, ...parseArgs(argv) };
+  return { env, log, http, sessionId: ':sessionId', packageJson, packagePath, ...parseArgs(argv) };
 };
 
 it('fails on missing project token', async () => {
@@ -514,12 +515,12 @@ describe('in CI', () => {
 it('checks for updates', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   ctx.pkg.version = '4.3.2';
-  fetch.mockReturnValueOnce(
+  ctx.http.fetch.mockReturnValueOnce(
     Promise.resolve({ json: () => ({ 'dist-tags': { latest: '5.0.0' } }) })
   );
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
-  expect(fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic', expect.any(Object));
+  expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
   expect(ctx.log.warnings[0]).toMatch('Using outdated package');
 });
 

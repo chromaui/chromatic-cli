@@ -1,9 +1,6 @@
-import fetch from 'node-fetch';
-
 import openTunnel from '../lib/tunnel';
 import { createTunnel, testConnection } from './tunnel';
 
-jest.mock('node-fetch');
 jest.mock('../lib/tunnel');
 
 const log = { debug: jest.fn() };
@@ -22,7 +19,8 @@ describe('createTunnel', () => {
 
 describe('testConnection', () => {
   it('tries to fetch the isolatorUrl', async () => {
-    testConnection({ env: {}, log, isolatorUrl: 'https://tunnel.chromaticqa.com' });
-    expect(fetch).toHaveBeenCalledWith('https://tunnel.chromaticqa.com', expect.any(Object));
+    const http = { fetch: jest.fn() };
+    await testConnection({ env: {}, log, http, isolatorUrl: 'https://tunnel.chromaticqa.com' });
+    expect(http.fetch).toHaveBeenCalledWith('https://tunnel.chromaticqa.com');
   });
 });

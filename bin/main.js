@@ -4,6 +4,7 @@ import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
 
 import GraphQLClient from './io/GraphQLClient';
+import HTTPClient from './io/HTTPClient';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
 import getEnv from './lib/getEnv';
@@ -49,6 +50,8 @@ export async function main(argv) {
 }
 
 export async function runAll(ctx) {
+  ctx.http = ctx.http || new HTTPClient({ env: ctx.env, log: ctx.log });
+
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 

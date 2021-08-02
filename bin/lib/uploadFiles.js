@@ -1,10 +1,7 @@
 import retry from 'async-retry';
 import fs from 'fs-extra';
-import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
-
-import getProxyAgent from '../io/getProxyAgent';
 
 export default async function uploadFiles(ctx, files, onProgress) {
   const limitConcurrency = pLimit(10);
@@ -27,16 +24,19 @@ export default async function uploadFiles(ctx, files, onProgress) {
               onProgress(totalProgress);
             });
 
-            const res = await fetch(url, {
-              method: 'PUT',
-              body: fs.createReadStream(path).pipe(progressStream),
-              agent: getProxyAgent(ctx, url),
-              headers: {
-                'content-type': contentType,
-                'content-length': contentLength,
-                'cache-control': 'max-age=31536000',
+            const res = await ctx.http.fetch(
+              url,
+              {
+                method: 'PUT',
+                body: fs.createReadStream(path).pipe(progressStream),
+                headers: {
+                  'content-type': contentType,
+                  'content-length': contentLength,
+                  'cache-control': 'max-age=31536000',
+                },
               },
-            });
+              { retries: 0 } // already retrying the whole operation
+            );
 
             if (!res.ok) {
               ctx.log.debug(`Uploading '${path}' failed: %O`, res);
