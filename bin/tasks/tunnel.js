@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { format, parse } from 'url';
 
 import { createTask, transitionTo } from '../lib/tasks';
@@ -51,7 +50,7 @@ export const createTunnel = async (ctx) => {
 
 export const testConnection = async (ctx) => {
   try {
-    await fetch(ctx.isolatorUrl);
+    await ctx.http.fetch(ctx.isolatorUrl);
   } catch (err) {
     ctx.log.debug(err);
     throw new Error(failed(ctx).output);

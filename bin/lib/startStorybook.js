@@ -1,21 +1,18 @@
 import { spawn } from 'cross-spawn';
-import https from 'https';
-import fetch from 'node-fetch';
 import path from 'path';
 
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
-export async function checkResponse(url) {
+export async function checkResponse(ctx, url) {
   try {
-    await fetch(url, { agent: url.startsWith('https:') ? httpsAgent : undefined });
+    // Allow invalid certificates, because we're running against localhost
+    await ctx.http.fetch(url, {}, { proxy: { rejectUnauthorized: false } });
     return true;
   } catch (e) {
     return false;
   }
 }
 
-async function waitForResponse(child, url, env) {
-  const timeoutAt = Date.now() + env.CHROMATIC_TIMEOUT;
+async function waitForResponse(ctx, child, url) {
+  const timeoutAt = Date.now() + ctx.env.CHROMATIC_TIMEOUT;
   return new Promise((resolve, reject) => {
     let resolved = false;
     async function check() {
@@ -23,18 +20,18 @@ async function waitForResponse(child, url, env) {
         resolved = true;
         reject(
           new Error(
-            `No server responding at ${url} within ${env.CHROMATIC_TIMEOUT / 1000} seconds.`
+            `No server responding at ${url} within ${ctx.env.CHROMATIC_TIMEOUT / 1000} seconds.`
           )
         );
         return;
       }
 
-      if (await checkResponse(url)) {
+      if (await checkResponse(ctx, url)) {
         resolved = true;
         resolve();
         return;
       }
-      setTimeout(check, env.CHROMATIC_POLL_INTERVAL);
+      setTimeout(check, ctx.env.CHROMATIC_POLL_INTERVAL);
     }
     check();
 
@@ -57,16 +54,16 @@ async function waitForResponse(child, url, env) {
 }
 
 export default async function startApp({
+  ctx,
   scriptName,
   commandName,
   args,
   url,
   options = { stdio: 'inherit' },
-  env,
 }) {
   let child;
   if (scriptName) {
-    if (await checkResponse(url)) {
+    if (await checkResponse(ctx, url)) {
       // We assume the process that is already running on the url is indeed our Storybook
       return null;
     }
@@ -89,7 +86,7 @@ export default async function startApp({
   }
 
   if (url) {
-    await waitForResponse(child, url, env);
+    await waitForResponse(ctx, child, url);
   }
 
   return child;
