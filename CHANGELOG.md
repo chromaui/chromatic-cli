@@ -1,8 +1,11 @@
 # 5.10.0 - unreleased
 
+- [311](https://github.com/chromaui/chromatic-cli/pull/311) Support `workflow_dispatch` event in GitHub Action
 - [382](https://github.com/chromaui/chromatic-cli/pull/382) Support absolute paths in webpack stats
+- [370](https://github.com/chromaui/chromatic-cli/pull/370) Ignore `--only-changed` on rebuild
 - [381](https://github.com/chromaui/chromatic-cli/pull/381) Throw when specifying an invalid loglevel
-- [374](https://github.com/chromaui/chromatic-cli/pull/374) Fix handling of NO_PROXY environment variable
+- [374](https://github.com/chromaui/chromatic-cli/pull/374) Fix handling of `NO_PROXY` environment variable
+- [380](https://github.com/chromaui/chromatic-cli/pull/380) Fix `isChromatic` for server-side rendering
 
 # 5.9.2 - 2021-06-15
 
