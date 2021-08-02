@@ -104,7 +104,7 @@ export const setGitInfo = async (ctx, task) => {
       ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
     } catch (e) {
-      ctx.git.changedFiles = null;
+      // ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
     }
