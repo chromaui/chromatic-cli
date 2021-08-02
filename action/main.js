@@ -93,7 +93,7 @@ var getBuildInfo = function (event) {
             };
         }
         case 'workflow_dispatch': {
-            var _a = event.payload.inputs, ref = _a.ref, sha = _a.sha;
+            var _b = event.payload.inputs, ref = _b.ref, sha = _b.sha;
             if (!ref) {
                 core_1.setFailed("When triggering via workflow_dispatch, ref is a required input.");
                 return null;
