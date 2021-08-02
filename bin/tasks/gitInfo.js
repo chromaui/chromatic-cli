@@ -20,6 +20,7 @@ import {
 } from '../ui/tasks/gitInfo';
 import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
+import isRebuild from '../ui/messages/warnings/isRebuild';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -78,10 +79,13 @@ export const setGitInfo = async (ctx, task) => {
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
     const mostRecentAncestor = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
-    if (mostRecentAncestor && ['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
-      ctx.skip = true;
-      transitionTo(skippedRebuild, true)(ctx, task);
-      return;
+    if (mostRecentAncestor) {
+      ctx.rebuild = true;
+      if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
+        ctx.skip = true;
+        transitionTo(skippedRebuild, true)(ctx, task);
+        return;
+      }
     }
   }
 
@@ -90,6 +94,12 @@ export const setGitInfo = async (ctx, task) => {
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
+    if (ctx.rebuild) {
+      ctx.log.warn(isRebuild());
+      transitionTo(success, true)(ctx, task);
+      return;
+    }
+
     const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
     const baselineCommits = baselineBuilds.map((build) => build.commit);
     ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
