@@ -1,3 +1,9 @@
+# 5.10.0 - unreleased
+
+- [382](https://github.com/chromaui/chromatic-cli/pull/382) Support absolute paths in webpack stats
+- [381](https://github.com/chromaui/chromatic-cli/pull/381) Throw when specifying an invalid loglevel
+- [374](https://github.com/chromaui/chromatic-cli/pull/374) Fix handling of NO_PROXY environment variable
+
 # 5.9.2 - 2021-06-15
 
 - [366](https://github.com/chromaui/chromatic-cli/pull/366) Fix resolving webpack stats in subdirectory
