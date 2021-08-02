@@ -30,7 +30,7 @@ export default class HTTPClient {
   }
 
   async fetch(url, options = {}, opts = {}) {
-    const agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url);
+    const agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
     // The user can override retries and set it to 0
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
     const onRetry = (err, n) =>

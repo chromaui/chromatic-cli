@@ -1,12 +1,10 @@
 import { spawn } from 'cross-spawn';
 import path from 'path';
 
-import getProxyAgent from '../io/getProxyAgent';
-
 export async function checkResponse(ctx, url) {
   try {
     // Allow invalid certificates, because we're running against localhost
-    await ctx.http.fetch(url, { agent: getProxyAgent(ctx, url, { rejectUnauthorized: false }) });
+    await ctx.http.fetch(url, {}, { proxy: { rejectUnauthorized: false } });
     return true;
   } catch (e) {
     return false;
