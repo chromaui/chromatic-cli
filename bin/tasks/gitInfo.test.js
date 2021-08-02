@@ -54,6 +54,6 @@ describe('setGitInfo', () => {
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
     const ctx = { log, options: { onlyChanged: true, externals: ['*.scss'] } };
     await setGitInfo(ctx, {});
-    expect(ctx.git).not.toHaveProperty('changedFiles');
+    expect(ctx.git.changedFiles).toBeNull();
   });
 });
