@@ -21,8 +21,6 @@ const takeLast = (input) => (Array.isArray(input) ? input[input.length - 1] : in
 const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
-const trueIfSet = (value) => (value === '' ? true : value);
-
 export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
@@ -32,18 +30,18 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
 
     only: flags.only,
-    onlyChanged: trueIfSet(flags.onlyChanged),
+    onlyChanged: flags.onlyChanged === '' ? true : flags.onlyChanged,
     externals: flags.externals,
     list: flags.list,
     fromCI,
-    skip: trueIfSet(flags.skip),
+    skip: flags.skip === '' ? true : flags.skip,
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
-    junitReport: trueIfSet(flags.junitReport),
+    junitReport: flags.junitReport === '' ? true : flags.junitReport,
 
-    autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
-    exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
-    exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
+    autoAcceptChanges: flags.autoAcceptChanges === '' ? true : flags.autoAcceptChanges,
+    exitZeroOnChanges: flags.exitZeroOnChanges === '' ? true : flags.exitZeroOnChanges,
+    exitOnceUploaded: flags.exitOnceUploaded === '' ? true : flags.exitOnceUploaded,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     preserveMissingSpecs: flags.preserveMissing || !!flags.only,
     originalArgv: argv,
@@ -51,7 +49,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     buildScriptName: flags.buildScriptName,
     outputDir: flags.outputDir,
     allowConsoleErrors: flags.allowConsoleErrors,
-    scriptName: trueIfSet(flags.scriptName),
+    scriptName: flags.scriptName === '' ? true : flags.scriptName,
     exec: flags.exec,
     noStart: !!flags.doNotStart,
     https: flags.storybookHttps,
@@ -59,7 +57,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     key: flags.storybookKey,
     ca: flags.storybookCa,
     port: flags.storybookPort,
-    storybookUrl: trueIfSet(flags.storybookUrl),
+    storybookUrl: flags.storybookUrl === '' ? true : flags.storybookUrl,
     storybookBuildDir: flags.storybookBuildDir
       ? path.resolve(
           Array.isArray(flags.storybookBuildDir)
