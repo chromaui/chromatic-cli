@@ -1,13 +1,21 @@
 import { readJson, outputFile } from 'fs-extra';
 
-const statsFile = process.argv[2] || './storybook-static/preview-stats.json';
-const targetFile = statsFile.replace('.json', '.trimmed.json');
-
 const dedupe = (arr) => [...new Set(arr)];
 const isUserCode = ({ name, moduleName = name }) =>
   !moduleName.startsWith('(webpack)') && !moduleName.match(/\/(node_modules|webpack\/runtime)\//);
 
-const main = async () => {
+/**
+ * Utility to trim down a `preview-stats.json` file to the bare minimum, so that it can be used to
+ * trace dependent story files while being (somewhat) human readable. By default it looks in the
+ * `storybook-static` directory. It outputs a new file alongside the original stats file, with
+ * `.trimmed.json` as file extension.
+ *
+ * Usage examples:
+ *   yarn chromatic trim-stats-file
+ *   yarn chromatic trim-stats-file ./path/to/preview-stats.json
+ */
+
+export async function main([statsFile = './storybook-static/preview-stats.json']) {
   const stats = await readJson(statsFile);
   const trimmedModules = stats.modules
     .filter(isUserCode)
@@ -25,6 +33,7 @@ const main = async () => {
     })
     .filter(Boolean);
 
+  const targetFile = statsFile.replace('.json', '.trimmed.json');
   await outputFile(
     targetFile,
     JSON.stringify({ modules: trimmedModules }, null, 2)
@@ -34,6 +43,4 @@ const main = async () => {
 
   // eslint-disable-next-line no-console
   console.log(`Wrote ${targetFile}`);
-};
-
-main();
+}
