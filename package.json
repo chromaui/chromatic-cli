@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "5.10.0-canary.2",
+  "version": "5.10.0-canary.3",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "homepage": "https://www.chromatic.com",
   "bugs": {
