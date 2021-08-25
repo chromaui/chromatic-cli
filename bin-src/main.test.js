@@ -14,6 +14,14 @@ import { runAll, runBuild } from './main';
 
 let lastBuild;
 let mockBuildFeatures;
+
+jest.useFakeTimers();
+
+afterEach(() => {
+  // This would clear all existing timer functions
+  jest.clearAllTimers();
+});
+
 beforeEach(() => {
   fetch.mockClear();
   mockBuildFeatures = {
