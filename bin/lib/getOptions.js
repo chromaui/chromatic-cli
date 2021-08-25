@@ -5,6 +5,7 @@ import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
 import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
 import invalidOnly from '../ui/messages/errors/invalidOnly';
+import invalidOnlyChanged from '../ui/messages/errors/invalidOnlyChanged';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
@@ -147,6 +148,10 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
+      if (options.onlyChanged) {
+        // TurboSnap requires that we build the Storybook, otherwise absolute paths won't match up.
+        throw new Error(incompatibleOptions(['--storybook-build-dir (-d)', '--only-changed']));
+      }
       return { ...options, noStart: true, useTunnel: false };
     }
     const { scripts } = packageJson;
@@ -162,6 +167,9 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     }
     throw new Error(missingBuildScriptName(buildScriptName));
   }
+
+  // TurboSnap requires generating a static build with a webpack stats file.
+  if (options.onlyChanged) throw new Error(invalidOnlyChanged());
 
   // Start Storybook on localhost and generate the URL to it
   if (!storybookUrl) {

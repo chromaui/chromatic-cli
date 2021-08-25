@@ -111,7 +111,7 @@ export const setGitInfo = async (ctx, task) => {
 
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
-      ctx.git.changedFiles = [...new Set(results.flat())].map((f) => `./${f}`);
+      ctx.git.changedFiles = [...new Set(results.flat())];
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
     } catch (e) {
       ctx.git.changedFiles = null;

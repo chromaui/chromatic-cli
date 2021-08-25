@@ -46,7 +46,7 @@ describe('setGitInfo', () => {
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
     const ctx = { log, options: { onlyChanged: true } };
     await setGitInfo(ctx, {});
-    expect(ctx.git.changedFiles).toEqual(['./styles/main.scss', './lib/utils.js']);
+    expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
   });
 
   it('drops changedFiles when matching --externals', async () => {
