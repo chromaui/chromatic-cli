@@ -122,7 +122,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
       resolvePackageJson(pkg)
         .then((json) => ({ viewLayer, version: json.version }))
         .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
-      timeout(9000),
+      timeout(10000),
     ]);
   }
 
@@ -138,7 +138,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
         return { viewLayer: value, version: json.version };
       })
     ).catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
-    timeout(9000),
+    timeout(10000),
   ]);
 };
 
