@@ -94,4 +94,4 @@ outputs:
 
 runs:
   main: action/register.js
-  using: node14
+  using: node12
