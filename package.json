@@ -105,6 +105,8 @@
     "ts-dedent": "^1.0.0",
     "util-deprecate": "^1.0.2",
     "uuid": "^8.3.2",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0",
     "yarn-or-npm": "^3.0.1"
   },
   "devDependencies": {
