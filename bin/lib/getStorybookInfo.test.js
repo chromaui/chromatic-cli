@@ -1,5 +1,7 @@
 import getStorybookInfo from './getStorybookInfo';
 
+jest.useFakeTimers();
+
 const log = { warn: jest.fn(), debug: jest.fn() };
 const context = { env: {}, log, options: {}, packageJson: {} };
 
@@ -7,6 +9,11 @@ const REACT = { '@storybook/react': '1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
 
 describe('getStorybookInfo', () => {
+  afterEach(() => {
+    // This would clear all existing timer functions
+    jest.clearAllTimers();
+  });
+
   it('returns viewLayer and version', async () => {
     const ctx = { ...context, packageJson: { dependencies: REACT } };
     await expect(getStorybookInfo(ctx)).resolves.toEqual(

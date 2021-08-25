@@ -1,5 +1,4 @@
 {
-  "files": ["action/main.ts"],
   "exclude": ["node_modules"],
   "compilerOptions": {
     "outDir": "./action",
