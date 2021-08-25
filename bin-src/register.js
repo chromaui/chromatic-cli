@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import Observable from 'zen-observable';
 
-const util = ['trim-stats-file', 'stats-to-story-files'].find((u) => u === process.argv[2]);
+global.Observable = Observable;
+require('any-observable/register')('global.Observable');
 
 require('dotenv').config();
-require('esm')(module)(`./${util || 'main'}.js`).main(process.argv.slice(util ? 3 : 2));
+require('./main').main(process.argv.slice(2));

@@ -8,3 +8,4 @@ action/main.js
 storybook-static
 chromatic-build-*.xml
 # the dist folder IS included so we can test every version in the CI without publishing
+bin
