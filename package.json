@@ -48,7 +48,8 @@
     "stats-to-story-files": "node -r esm scripts/stats-to-story-files.js",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "bundle": "webpack"
   },
   "husky": {
     "hooks": {
