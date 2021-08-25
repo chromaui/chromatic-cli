@@ -39,7 +39,7 @@
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose node ./bin/register.js",
     "dev": "npm-run-all --parallel -l 'build:** -- --watch'",
     "lint": "yarn lint:js src .storybook bin stories",
-    "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs --report-unused-disable-directives",
+    "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "prepublish": "npm run build",
     "postpublish": "npm run publish-action",

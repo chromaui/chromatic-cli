@@ -36,6 +36,7 @@ function specFromStory({
 }
 
 export const extractStoryData = (global) => {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   const { __STORYBOOK_CLIENT_API__ } = global;
 
   if (!__STORYBOOK_CLIENT_API__) {
