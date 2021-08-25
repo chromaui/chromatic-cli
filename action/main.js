@@ -56,10 +56,10 @@ var jsonfile_1 = require("jsonfile");
 var pkg_up_1 = __importDefault(require("pkg-up"));
 var uuid_1 = require("uuid");
 var path_1 = __importDefault(require("path"));
-var getEnv_1 = __importDefault(require("../bin/lib/getEnv"));
-var log_1 = require("../bin/lib/log");
-var parseArgs_1 = __importDefault(require("../bin/lib/parseArgs"));
-var main_1 = require("../bin/main");
+var getEnv_1 = __importDefault(require("../bin-src/lib/getEnv"));
+var log_1 = require("../bin-src/lib/log");
+var parseArgs_1 = __importDefault(require("../bin-src/lib/parseArgs"));
+var main_1 = require("../bin-src/main");
 var maybe = function (a, b) {
     if (b === void 0) { b = undefined; }
     if (!a) {

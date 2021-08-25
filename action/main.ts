@@ -5,10 +5,10 @@ import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
 import path from 'path';
 
-import getEnv from '../bin/lib/getEnv';
-import { createLogger } from '../bin/lib/log';
-import parseArgs from '../bin/lib/parseArgs';
-import { runAll } from '../bin/main';
+import getEnv from '../bin-src/lib/getEnv';
+import { createLogger } from '../bin-src/lib/log';
+import parseArgs from '../bin-src/lib/parseArgs';
+import { runAll } from '../bin-src/main';
 
 const maybe = (a: string, b: any = undefined) => {
   if (!a) {
