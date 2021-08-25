@@ -8,12 +8,9 @@
     ".*.js",
     "*.js",
     "*.ts",
-    "*.json",
-    "*.*.json",
     "bin/**/*.*",
     "src/**/*.*",
     ".storybook/*.*",
-    "stories/**/*.*",
-    "tsconfig.eslint.json"
+    "stories/**/*.*"
   ]
 }
