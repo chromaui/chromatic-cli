@@ -22,9 +22,9 @@
   "main": "./storybook-addon.js",
   "types": "./storybook-addon.d.ts",
   "bin": {
-    "chroma": "bin/register.js",
-    "chromatic": "bin/register.js",
-    "chromatic-cli": "bin/register.js"
+    "chroma": "bin/main.js",
+    "chromatic": "bin/main.js",
+    "chromatic-cli": "bin/main.js"
   },
   "files": [
     "bin",
