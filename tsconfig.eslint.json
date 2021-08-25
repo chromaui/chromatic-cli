@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true
+  },
+  "include": [
+    "bin/**/*.*",
+    "src/**/*.*",
+    ".storybook/*.*",
+    "stories/**/*.*"
+  ]
+}

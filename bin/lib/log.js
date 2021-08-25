@@ -37,20 +37,22 @@ export const createLogger = (sessionId, env) => {
     json: true,
   });
 
-  const log = (type) => (...args) => {
-    if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
+  const log =
+    (type) =>
+    (...args) => {
+      if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
-    // Convert the messages to an appropriate format
-    const messages = interactive ? logInteractive(args) : logVerbose(type, args);
-    if (!messages.length) return;
+      // Convert the messages to an appropriate format
+      const messages = interactive ? logInteractive(args) : logVerbose(type, args);
+      if (!messages.length) return;
 
-    // Queue up the logs or print them right away
-    if (enqueue) queue.push({ type, messages });
-    else console[type](...messages);
+      // Queue up the logs or print them right away
+      if (enqueue) queue.push({ type, messages });
+      else console[type](...messages);
 
-    // Also send logs to Loggly
-    logglyClient.log(messages.map((msg) => ({ sessionId, msg })));
-  };
+      // Also send logs to Loggly
+      logglyClient.log(messages.map((msg) => ({ sessionId, msg })));
+    };
 
   const logger = {
     setLevel(value) {
