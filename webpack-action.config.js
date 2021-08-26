@@ -5,6 +5,7 @@ module.exports = {
   target: 'node14',
   entry: './action-src/register.js',
   externalsPresets: { node: true },
+  devtool: 'source-map',
   output: {
     path: path.resolve(__dirname, 'action'),
   },

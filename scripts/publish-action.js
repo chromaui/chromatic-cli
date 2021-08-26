@@ -21,7 +21,7 @@ const tmp = require('tmp-promise');
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd, opts) => execa.command(cmd, { cwd: path, stdio: 'inherit', ...opts });
 
-  await cpy(['action/main.js', 'action.yml', 'package.json'], path, { parents: true });
+  await cpy(['action/*.js', 'action/*.txt', 'action.yml', 'package.json'], path, { parents: true });
   await cpy(['action/CHANGELOG.md', 'action/LICENSE', 'action/README.md'], path);
 
   await run('git init');

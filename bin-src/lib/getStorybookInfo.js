@@ -53,7 +53,8 @@ const supportedAddons = {
 
 const resolvePackageJson = (pkg) => {
   try {
-    const path = require.resolve(`${pkg}/package.json`, { paths: [process.cwd()] });
+    // eslint-disable-next-line no-undef
+    const path = __non_webpack_require__.resolve(`${pkg}/package.json`);
     return fs.readJson(path);
   } catch (error) {
     return Promise.reject(error);
