@@ -5,4 +5,7 @@ module.exports = {
     // Test stories
     '../**/stories/*.stories.js',
   ],
+  features: {
+    postcss: false,
+  },
 };
