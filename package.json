@@ -70,6 +70,9 @@
       "yarn lint:package"
     ]
   },
+  "resolutions": {
+    "any-observable": "^0.5.1"
+  },
   "dependencies": {
     "@actions/core": "^1.5.0",
     "@actions/github": "^5.0.0",
