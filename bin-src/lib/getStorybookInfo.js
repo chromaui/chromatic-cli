@@ -53,8 +53,13 @@ const supportedAddons = {
 
 const resolvePackageJson = (pkg) => {
   try {
+    // we bundle this app for node, meaning all require calls are replaced by webpack.
+    // in this case we want to use node's actual require functionality!
+    // webpack will provide a '__non_webpack_require__' function to do this with,
+    // but this will obviously not be present during tests, hence the check and fallback to the normal require
     // eslint-disable-next-line no-undef
-    const path = __non_webpack_require__.resolve(`${pkg}/package.json`);
+    const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
+    const path = r.resolve(`${pkg}/package.json`);
     return fs.readJson(path);
   } catch (error) {
     return Promise.reject(error);
