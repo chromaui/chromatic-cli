@@ -1,6 +1,6 @@
 import HttpsProxyAgent from 'https-proxy-agent';
 import noProxy from 'no-proxy';
-import URL from 'url';
+import { URL } from 'url';
 
 const agents = {};
 
@@ -11,8 +11,8 @@ const getProxyAgent = ({ env, log }, url, options = {}) => {
   log.debug({ url, proxy, options }, 'Using proxy agent');
   const requestHost = new URL(url).host;
   if (!agents[requestHost]) {
-    const { host, port, protocol } = new URL(proxy);
-    agents[requestHost] = new HttpsProxyAgent({ host, port, protocol, ...options });
+    const { hostname, port, protocol } = new URL(proxy);
+    agents[requestHost] = new HttpsProxyAgent({ hostname, port, protocol, ...options });
   }
   return agents[requestHost];
 };
