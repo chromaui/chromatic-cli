@@ -132,11 +132,7 @@ function runChromatic(options) {
                     return [4 /*yield*/, jsonfile_1.readFile(packagePath)];
                 case 2:
                     packageJson = _d.sent();
-                    ctx = __assign(__assign({}, parseArgs_1["default"]([])), { packagePath: packagePath,
-                        packageJson: packageJson,
-                        env: env,
-                        log: log,
-                        sessionId: sessionId, flags: options });
+                    ctx = __assign(__assign({}, parseArgs_1["default"]([])), { packagePath: packagePath, packageJson: packageJson, env: env, log: log, sessionId: sessionId, flags: options });
                     return [4 /*yield*/, main_1.runAll(ctx)];
                 case 3:
                     _d.sent();

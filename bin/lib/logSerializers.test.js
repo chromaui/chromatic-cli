@@ -5,7 +5,7 @@ import { errorSerializer } from './logSerializers';
 it('strips off envPairs', () => {
   let err;
   try {
-    execSync('some hot garbage');
+    execSync('some hot garbage', { stdio: 'ignore' });
   } catch (e) {
     err = e;
   }
