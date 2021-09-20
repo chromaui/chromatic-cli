@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import meow from 'meow';
-import argv from 'string-argv';
+import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
 
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
@@ -163,7 +163,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
   if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
 
   const { flags } = meow({
-    argv: argv(scripts[options.buildScriptName]),
+    argv: parseArgsStringToArgv(scripts[options.buildScriptName]),
     flags: {
       configDir: { type: 'string', alias: 'c' },
       staticDir: { type: 'string', alias: 's' },
