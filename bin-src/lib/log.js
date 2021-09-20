@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import debug from 'debug';
-import { createClient } from 'node-loggly-bulk/lib/loggly/client';
+import nlb from 'node-loggly-bulk/lib/loggly/client';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
@@ -30,7 +30,7 @@ export const createLogger = (sessionId, env) => {
   let enqueue = false;
   const queue = [];
 
-  const logglyClient = createClient({
+  const logglyClient = nlb.createClient({
     token: env.LOGGLY_CUSTOMER_TOKEN,
     subdomain: 'hichroma',
     tags: ['chromatic-cli'],
