@@ -1,5 +1,5 @@
 /* eslint-env browser */
-import dedent from 'ts-dedent';
+import { dedent } from 'ts-dedent';
 import deprecate from 'util-deprecate';
 
 import isChromatic from './isChromatic';

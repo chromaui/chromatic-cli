@@ -1,4 +1,4 @@
-import { gte } from 'semver';
+import semver from 'semver';
 import treeKill from 'tree-kill';
 
 import startApp, { checkResponse } from '../lib/startStorybook';
@@ -15,7 +15,10 @@ export const startStorybook = async (ctx) => {
     url,
     args: scriptName &&
       ctx.storybook.version &&
-      gte(ctx.storybook.version, ctx.env.STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && ['--', '--ci'],
+      semver.gte(ctx.storybook.version, ctx.env.STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && [
+        '--',
+        '--ci',
+      ],
     options: { stdio: 'pipe' },
   });
 

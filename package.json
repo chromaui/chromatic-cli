@@ -19,12 +19,13 @@
     "url": "https://github.com/chromaui/chromatic-cli.git"
   },
   "license": "MIT",
+  "type": "module",
   "main": "./storybook-addon.js",
   "types": "./storybook-addon.d.ts",
   "bin": {
-    "chroma": "bin/main.js",
-    "chromatic": "bin/main.js",
-    "chromatic-cli": "bin/main.js"
+    "chroma": "bin/main.cjs",
+    "chromatic": "bin/main.cjs",
+    "chromatic-cli": "bin/main.cjs"
   },
   "files": [
     "bin",
@@ -37,10 +38,11 @@
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
     "build-storybook": "build-storybook -s static",
-    "chromatic": "node ./bin/main.js",
-    "chromatic-prebuilt": "node ./bin/main.js --storybook-build-dir=\"storybook-static\"",
-    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com node ./bin/main.js",
-    "chromatic-verbose": "cross-env LOG_LEVEL=verbose node ./bin/main.js",
+    "chromatic": "node ./bin/main.cjs",
+    "chromatic-prebuilt": "node ./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
+    "chromatic-prebuilt-local": "node --es-module-specifier-resolution=node ./bin-src/register.js --storybook-build-dir=\"storybook-static\"",
+    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com node ./bin/main.cjs",
+    "chromatic-verbose": "cross-env LOG_LEVEL=verbose node ./bin/main.cjs",
     "lint": "yarn lint:js src .storybook bin-src stories",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts --report-unused-disable-directives",
     "lint:package": "sort-package-json",
@@ -52,8 +54,8 @@
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install",
-    "bundle:bin": "webpack --config=webpack-bin.config.js",
-    "bundle:action": "webpack --config=webpack-action.config.js",
+    "bundle:bin": "webpack --config=webpack-bin.config.cjs",
+    "bundle:action": "webpack --config=webpack-action.config.cjs",
     "lint-staged": "lint-staged"
   },
   "lint-staged": {
@@ -76,6 +78,7 @@
   "dependencies": {
     "@actions/core": "^1.5.0",
     "@actions/github": "^5.0.0",
+    "@babel/node": "^7.15.4",
     "@babel/preset-typescript": "^7.15.0",
     "@babel/runtime": "^7.15.3",
     "@chromaui/localtunnel": "^2.0.3",

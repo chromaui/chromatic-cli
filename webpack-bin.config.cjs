@@ -8,9 +8,16 @@ module.exports = {
   devtool: 'source-map',
   output: {
     path: path.resolve(__dirname, 'bin'),
+    filename: 'main.cjs',
   },
   module: {
     rules: [
+      {
+        test: /\.m?js/,
+        resolve: {
+          fullySpecified: false // disable the behaviour
+        }
+      },
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
@@ -18,8 +25,10 @@ module.exports = {
       },
     ],
   },
+  experiments: {topLevelAwait: true},
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.json'],
+    fullySpecified: false,
   },
   optimization: {
     minimize: true,

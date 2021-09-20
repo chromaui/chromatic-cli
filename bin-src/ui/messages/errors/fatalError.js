@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
 import stripAnsi from 'strip-ansi';
-import dedent from 'ts-dedent';
+import { dedent } from 'ts-dedent';
 
 import link from '../../components/link';
 

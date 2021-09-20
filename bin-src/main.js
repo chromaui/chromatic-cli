@@ -1,4 +1,4 @@
-import { readFile } from 'jsonfile';
+import jsonfile from 'jsonfile';
 import Listr from 'listr';
 import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
@@ -22,6 +22,8 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+
+const { readFile } = jsonfile;
 
 export async function main(argv) {
   const sessionId = uuid();

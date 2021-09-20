@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import dedent from 'ts-dedent';
+import { dedent } from 'ts-dedent';
 
 import { info, warning } from '../../components/icons';
 import link from '../../components/link';

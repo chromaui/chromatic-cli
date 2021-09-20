@@ -1,4 +1,6 @@
-import { spawn } from 'yarn-or-npm';
+import yon from 'yarn-or-npm';
+
+const { spawn } = yon;
 
 const installDependencies = (options) =>
   new Promise((resolve, reject) => {

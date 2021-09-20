@@ -1,7 +1,9 @@
 import semver from 'semver';
-import { hasYarn } from 'yarn-or-npm';
+import yon from 'yarn-or-npm';
 
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
+
+const { hasYarn } = yon;
 
 const rejectIn = (ms) => new Promise((_, reject) => setTimeout(reject, ms));
 const withTimeout = (promise, ms) => Promise.race([promise, rejectIn(ms)]);

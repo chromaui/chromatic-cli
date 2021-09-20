@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import dedent from 'ts-dedent';
+import { dedent } from 'ts-dedent';
 
 import { baseStorybookUrl } from '../../../lib/utils';
 import { info, success } from '../../components/icons';

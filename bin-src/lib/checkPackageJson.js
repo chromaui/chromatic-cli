@@ -1,9 +1,11 @@
-import { writeFile } from 'jsonfile';
+import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 
 import addedScript from '../ui/messages/info/addedScript';
 import notAddedScript from '../ui/messages/info/notAddedScript';
 import scriptNotFound from '../ui/messages/warnings/scriptNotFound';
+
+const { writeFile } = jsonfile;
 
 const scriptName = 'chromatic';
 
