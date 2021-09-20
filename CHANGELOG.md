@@ -1,11 +1,14 @@
-# 5.10.0 - unreleased
+# 5.10.0 - 2021-09-17
 
 - [311](https://github.com/chromaui/chromatic-cli/pull/311) Support `workflow_dispatch` event in GitHub Action
 - [382](https://github.com/chromaui/chromatic-cli/pull/382) Support absolute paths in webpack stats
 - [370](https://github.com/chromaui/chromatic-cli/pull/370) Ignore `--only-changed` on rebuild
 - [381](https://github.com/chromaui/chromatic-cli/pull/381) Throw when specifying an invalid loglevel
+- [392](https://github.com/chromaui/chromatic-cli/pull/392) Better path handling for TurboSnap
 - [374](https://github.com/chromaui/chromatic-cli/pull/374) Fix handling of `NO_PROXY` environment variable
+- [397](https://github.com/chromaui/chromatic-cli/pull/397) Fix runtime issues with HTTP_PROXY / NO_PROXY
 - [380](https://github.com/chromaui/chromatic-cli/pull/380) Fix `isChromatic` for server-side rendering
+- [401](https://github.com/chromaui/chromatic-cli/pull/401) Update BuildHasChanges message to be clearer
 
 # 5.9.2 - 2021-06-15
 

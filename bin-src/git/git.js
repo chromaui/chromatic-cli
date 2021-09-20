@@ -99,7 +99,7 @@ export async function getSlug() {
 
 // We could cache this, but it's probably pretty quick
 export async function getCommit() {
-  const result = await execGitCommand(`git log -n 1 --format="%H ## %ct ## %ce ## %cn"`);
+  const result = await execGitCommand(`git --no-pager log -n 1 --format="%H ## %ct ## %ce ## %cn"`);
   const [commit, committedAtSeconds, committerEmail, committerName] = result.split(' ## ');
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
 }
@@ -126,7 +126,7 @@ export async function getBranch() {
 }
 
 export async function hasPreviousCommit() {
-  const result = await execGitCommand(`git log -n 1 --skip=1 --format="%H"`);
+  const result = await execGitCommand(`git --no-pager log -n 1 --skip=1 --format="%H"`);
   return !!result.trim();
 }
 
@@ -334,7 +334,7 @@ export async function getBaselineBuilds({ client }, { branch, parentCommits }) {
 
 export async function getChangedFiles(baseCommit, headCommit = '') {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
-  const files = await execGitCommand(`git diff --name-only ${baseCommit} ${headCommit}`);
+  const files = await execGitCommand(`git --no-pager diff --name-only ${baseCommit} ${headCommit}`);
   return files.split(EOL).filter(Boolean);
 }
 
