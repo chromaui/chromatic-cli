@@ -48,7 +48,7 @@
     "lint:package": "sort-package-json",
     "prepublish": "npm run build",
     "postpublish": "npm run publish-action",
-    "publish-action": "yarn build:action && node scripts/publish-action.js",
+    "publish-action": "yarn build:action && node scripts/publish-action.cjs",
     "trim-stats": "node -r esm scripts/trim-stats-file.js",
     "stats-to-story-files": "node -r esm scripts/stats-to-story-files.js",
     "storybook": "start-storybook -p 9009 -s static",
