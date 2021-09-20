@@ -17,7 +17,7 @@ steps:
 
 - script: |
     yarn install
-    node ./scripts/rename.js storybook-chromatic
+    node ./scripts/rename.cjs storybook-chromatic
   displayName: 'yarn install and build'
 - script: |
     yarn chromatic --project-token="gcaw1ai2dgo"
