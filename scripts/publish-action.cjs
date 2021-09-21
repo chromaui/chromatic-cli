@@ -22,7 +22,7 @@ const tmp = require('tmp-promise');
   const run = (cmd, opts) => execa.command(cmd, { cwd: path, stdio: 'inherit', ...opts });
 
   await cpy(['action/*.js', 'action/*.txt', 'action.yml', 'package.json'], path, { parents: true });
-  await cpy(['action/CHANGELOG.md', 'action/LICENSE', 'action/README.md'], path);
+  await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
 
   await run('git init');
   await run(`git remote add origin git@github.com:${repo}.git`);

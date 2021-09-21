@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = {
   mode: 'production',
@@ -30,6 +31,9 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js', '.json'],
     fullySpecified: false,
   },
+  plugins: [
+    new webpack.BannerPlugin({ banner: "#!/usr/bin/env node", raw: true }),
+  ],
   optimization: {
     minimize: true,
   },
