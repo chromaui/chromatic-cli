@@ -1,5 +1,4 @@
 /* eslint-env browser */
-import { addDecorator, addParameters } from '@storybook/react';
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';
 import React from 'react';
@@ -29,16 +28,18 @@ const style = {
   color: '#c0c4cd',
 };
 
-addParameters({
+export const parameters = {
   layout: 'fullscreen',
-});
+}
 
-addDecorator((storyFn, { kind }) => {
-  if (kind.startsWith('CLI/')) {
-    document.body.style.backgroundColor = '#16242c';
-    // eslint-disable-next-line react/no-danger
-    return <code style={style} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
+export const decorators = [
+  (storyFn, { kind }) => {
+    if (kind.startsWith('CLI/')) {
+      document.body.style.backgroundColor = '#16242c';
+      // eslint-disable-next-line react/no-danger
+      return <code style={style} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
+    }
+    document.body.style.backgroundColor = 'paleturquoise';
+    return storyFn();
   }
-  document.body.style.backgroundColor = 'paleturquoise';
-  return storyFn();
-});
+];

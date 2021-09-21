@@ -5,7 +5,7 @@ module.exports = {
   target: 'node14',
   entry: './bin-src/register.js',
   externalsPresets: { node: true },
-  devtool: 'source-map',
+  // devtool: 'source-map',
   output: {
     path: path.resolve(__dirname, 'bin'),
     filename: 'main.cjs',
