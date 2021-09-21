@@ -1,3 +1,7 @@
+# 5.10.1 - 2021-09-21
+
+- [404](https://github.com/chromaui/chromatic-cli/pull/404) Fix the version of node-fetch to `2.6.0` due to a bug in `2.6.3`
+
 # 5.10.0 - 2021-09-17
 
 - [311](https://github.com/chromaui/chromatic-cli/pull/311) Support `workflow_dispatch` event in GitHub Action
