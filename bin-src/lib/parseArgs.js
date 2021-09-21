@@ -1,7 +1,9 @@
 import meow from 'meow';
 
+import pkg from '../../package.json';
+
 export default function parseArgs(argv) {
-  const { input, flags, help, pkg } = meow(
+  const { input, flags, help } = meow(
     `
     Usage
       $ chromatic --project-token <token>
@@ -82,5 +84,6 @@ export default function parseArgs(argv) {
       },
     }
   );
+
   return { argv, input, flags, help, pkg };
 }
