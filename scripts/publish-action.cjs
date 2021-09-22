@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+// eslint-disable-next-line import/no-extraneous-dependencies
 const cpy = require('cpy');
 const execa = require('execa');
 const { readJSON } = require('fs-extra');
