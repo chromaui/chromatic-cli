@@ -20,8 +20,6 @@
   },
   "license": "MIT",
   "type": "module",
-  "main": "./storybook-addon.js",
-  "types": "./storybook-addon.d.ts",
   "bin": {
     "chroma": "bin/main.cjs",
     "chromatic": "bin/main.cjs",
