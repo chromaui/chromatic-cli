@@ -13,7 +13,7 @@ jobs:
     - name: install
       run: yarn && git status --porcelain
     - name: prep package
-      run: ./scripts/rename.js storybook-chromatic
+      run: ./scripts/rename.cjs storybook-chromatic
     - name: run chromatic
       run: yarn chromatic --only-changed
       env: 
