@@ -28,10 +28,9 @@
   "files": [
     "bin",
     "dist",
-    "isChromatic.js",
-    "isChromatic.d.ts",
-    "storybook-addon.js",
-    "storybook-addon.d.ts"
+    "isChromatic.mjs",
+    "isChromatic.cjs",
+    "isChromatic.d.ts"
   ],
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
