@@ -14,7 +14,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['*.json'],
+      files: ['*.json', 'isChromatic.mjs', 'isChromatic.cjs'],
       parser: 'esprima',
       rules: {
         '@typescript-eslint/naming-convention': 'off',

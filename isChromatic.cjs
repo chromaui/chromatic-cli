@@ -5,4 +5,4 @@ module.exports = function isChromatic() {
     typeof window !== 'undefined' &&
     (window.navigator.userAgent.match(/Chromatic/) || window.location.href.match(/chromatic=true/))
   );
-}
+};

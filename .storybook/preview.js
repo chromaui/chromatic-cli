@@ -30,7 +30,7 @@ const style = {
 
 export const parameters = {
   layout: 'fullscreen',
-}
+};
 
 export const decorators = [
   (storyFn, { kind }) => {
@@ -41,5 +41,5 @@ export const decorators = [
     }
     document.body.style.backgroundColor = 'paleturquoise';
     return storyFn();
-  }
+  },
 ];
