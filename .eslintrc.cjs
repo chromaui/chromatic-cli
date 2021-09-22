@@ -5,6 +5,7 @@ module.exports = {
     'no-use-before-define': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     'eslint-comments/disable-enable-pair': 'off',
+    'import/no-extraneous-dependencies': 'off'
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
