@@ -19,7 +19,6 @@
     "url": "https://github.com/chromaui/chromatic-cli.git"
   },
   "license": "MIT",
-  "type": "module",
   "main": "isChromatic.cjs",
   "module": "isChromatic.js",
   "bin": {
