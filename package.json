@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "6.0.0-canary.6",
+  "version": "6.0.0-canary.7",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -46,14 +46,14 @@
     "lint:package": "sort-package-json",
     "prepublish": "npm run build",
     "postpublish": "npm run publish-action",
-    "publish-action": "node scripts/publish-action.cjs",
+    "publish-action": "node scripts/publish-action.js",
     "trim-stats": "node -r esm scripts/trim-stats-file.js",
     "stats-to-story-files": "node -r esm scripts/stats-to-story-files.js",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install",
-    "bundle:bin": "webpack --config=webpack-bin.config.cjs && chmod +x ./bin/main.cjs",
-    "bundle:action": "webpack --config=webpack-action.config.cjs",
+    "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",
+    "bundle:action": "webpack --config=webpack-action.config.js",
     "lint-staged": "lint-staged"
   },
   "lint-staged": {
