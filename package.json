@@ -54,7 +54,7 @@
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install",
-    "bundle:bin": "webpack --config=webpack-bin.config.cjs && chmod +x ./bin/main.js",
+    "bundle:bin": "webpack --config=webpack-bin.config.cjs && chmod +x ./bin/main.cjs",
     "bundle:action": "webpack --config=webpack-action.config.cjs",
     "lint-staged": "lint-staged"
   },
