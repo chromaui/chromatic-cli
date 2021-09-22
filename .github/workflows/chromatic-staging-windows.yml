@@ -13,7 +13,7 @@ jobs:
     - name: install
       run: yarn
     - name: prep package
-      run: node ./scripts/rename.cjs storybook-chromatic
+      run: node ./scripts/rename.js storybook-chromatic
     - name: run chromatic
       run: yarn chromatic --only-changed
       env: 

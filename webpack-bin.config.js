@@ -16,8 +16,8 @@ module.exports = {
       {
         test: /\.m?js/,
         resolve: {
-          fullySpecified: false // disable the behaviour
-        }
+          fullySpecified: false, // disable the behaviour
+        },
       },
       {
         test: /\.tsx?$/,
@@ -26,14 +26,12 @@ module.exports = {
       },
     ],
   },
-  experiments: {topLevelAwait: true},
+  experiments: { topLevelAwait: true },
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.json'],
     fullySpecified: false,
   },
-  plugins: [
-    new webpack.BannerPlugin({ banner: "#!/usr/bin/env node", raw: true }),
-  ],
+  plugins: [new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })],
   optimization: {
     minimize: true,
   },
