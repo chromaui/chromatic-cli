@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import isChromatic from '../isChromatic';
+import isChromatic from '..';
 import AComponent from './A';
 
 export default {

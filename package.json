@@ -20,6 +20,8 @@
   },
   "license": "MIT",
   "type": "module",
+  "main": "isChromatic.cjs",
+  "module": "isChromatic.mjs",
   "bin": {
     "chroma": "bin/main.cjs",
     "chromatic": "bin/main.cjs",
