@@ -1,3 +1,19 @@
+# 6.0.0 - unreleased
+
+- [393](https://github.com/chromaui/chromatic-cli/pull/393) Refactor to ESM & Bundle the bin so it's dependency-less
+
+Remove the deprecated storybook addon
+Change the `isChromatic` to the main export of the package
+
+before:
+```js
+import isChromatic from 'chromatic/isChromatic';
+```
+
+after:
+```js
+import isChromatic from 'chromatic';
+```
 # 5.10.1 - 2021-09-21
 
 - [404](https://github.com/chromaui/chromatic-cli/pull/404) Fix the version of node-fetch to `2.6.0` due to a bug in `2.6.3`
