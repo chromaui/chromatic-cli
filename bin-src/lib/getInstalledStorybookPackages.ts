@@ -23,7 +23,11 @@ export const getInstalledStorybookInfo = async () => {
   const result = {
     viewLayer: viewLayers[viewLayer ? viewLayer.name : ''],
     version: viewLayer ? viewLayer.version : undefined,
-    addons: addons.map((a) => ({ ...a, packageName: a.name, name: supportedAddons[a.name] })),
+    addons: addons.map((a) => ({
+      packageVersion: a.version,
+      packageName: a.name,
+      name: supportedAddons[a.name],
+    })),
   };
 
   return result;
