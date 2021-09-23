@@ -2,54 +2,11 @@ import fs from 'fs-extra';
 import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
+import { getInstalledStorybookInfo } from './getInstalledStorybookPackages';
 
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
-
-const viewLayers = {
-  '@storybook/react': 'react',
-  '@storybook/vue': 'vue',
-  '@storybook/vue3': 'vue3',
-  '@storybook/angular': 'angular',
-  '@storybook/html': 'html',
-  '@storybook/web-components': 'web-components',
-  '@storybook/polymer': 'polymer',
-  '@storybook/ember': 'ember',
-  '@storybook/marko': 'marko',
-  '@storybook/mithril': 'mithril',
-  '@storybook/riot': 'riot',
-  '@storybook/svelte': 'svelte',
-  '@storybook/preact': 'preact',
-  '@storybook/rax': 'rax',
-};
-
-const supportedAddons = {
-  '@storybook/addon-a11y': 'a11y',
-  '@storybook/addon-actions': 'actions',
-  '@storybook/addon-backgrounds': 'backgrounds',
-  '@storybook/addon-centered': 'centered',
-  '@storybook/addon-contexts': 'contexts',
-  '@storybook/addon-cssresources': 'cssresources',
-  '@storybook/addon-design-assets': 'design-assets',
-  '@storybook/addon-docs': 'docs',
-  '@storybook/addon-essentials': 'essentials',
-  '@storybook/addon-events': 'events',
-  '@storybook/addon-google-analytics': 'google-analytics',
-  '@storybook/addon-graphql': 'graphql',
-  '@storybook/addon-info': 'info',
-  '@storybook/addon-jest': 'jest',
-  '@storybook/addon-knobs': 'knobs',
-  '@storybook/addon-links': 'links',
-  '@storybook/addon-notes': 'notes',
-  '@storybook/addon-ondevice-actions': 'ondevice-actions',
-  '@storybook/addon-ondevice-backgrounds': 'ondevice-backgrounds',
-  '@storybook/addon-ondevice-knobs': 'ondevice-knobs',
-  '@storybook/addon-ondevice-notes': 'ondevice-notes',
-  '@storybook/addon-options': 'options',
-  '@storybook/addon-queryparams': 'queryparams',
-  '@storybook/addon-storyshots': 'storyshots',
-  '@storybook/addon-storysource': 'storysource',
-  '@storybook/addon-viewport': 'viewport',
-};
+import { viewLayers } from './viewLayers';
+import { supportedAddons } from './supportedAddons';
 
 const resolvePackageJson = (pkg) => {
   try {
@@ -177,6 +134,13 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export default async function getStorybookInfo(ctx) {
-  const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
-  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  let result;
+  try {
+    result = await getInstalledStorybookInfo();
+  } catch (e) {
+    const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+    result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  }
+
+  return result;
 }
