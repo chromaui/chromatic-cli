@@ -1,8 +1,8 @@
 /* eslint-env browser */
 
-module.exports = function isChromatic() {
+export default function isChromatic() {
   return !!(
     typeof window !== 'undefined' &&
     (window.navigator.userAgent.match(/Chromatic/) || window.location.href.match(/chromatic=true/))
   );
-};
+}
