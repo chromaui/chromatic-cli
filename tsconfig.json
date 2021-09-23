@@ -1,7 +1,6 @@
 {
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "outDir": "action-src",
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": false,
