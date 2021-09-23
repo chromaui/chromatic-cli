@@ -42,6 +42,10 @@ const getBuildInfo = (event: typeof context) => {
         slug: repository.full_name,
       };
     }
+    case 'workflow_run': {
+      console.log(event.payload);
+      return {};
+    }
     case 'workflow_dispatch': {
       const { ref, sha } = event.payload.inputs;
 
