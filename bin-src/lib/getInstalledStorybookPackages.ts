@@ -12,7 +12,7 @@ export const getInstalledStorybookInfo = async () => {
   });
 
   const { data } = JSON.parse(all as any);
-  const trees: { name: string; version: string }[] = data.trees.map((p) => {
+  const trees: { name: string; version: string }[] = data.trees.map((p: any) => {
     const [, name, version] = p.name.match(/(.+)@(.+)/);
     return { name, version };
   });
@@ -23,7 +23,7 @@ export const getInstalledStorybookInfo = async () => {
   const result = {
     viewLayer: viewLayers[viewLayer ? viewLayer.name : ''],
     version: viewLayer ? viewLayer.version : undefined,
-    addons: addons.map((a) => supportedAddons[a.name]),
+    addons: addons.map((a) => ({ ...a, packageName: a.name, name: supportedAddons[a.name] })),
   };
 
   return result;
