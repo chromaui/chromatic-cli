@@ -2,7 +2,7 @@ name: "Chromatic (workflow_run)"
 on:
   workflow_run:
     workflows:
-      - "Chromatic (manual)"
+      - "Action"
     types:
       - completed
 
@@ -10,15 +10,11 @@ jobs:
   chromatic:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-node@v1
-      with:
-        node-version: '14.x'
     - uses: actions/checkout@v1
-    - name: install
-      run: yarn && git status --porcelain
-    - name: prep package
-      run: ./scripts/rename.js storybook-chromatic
-    - name: run chromatic
-      run: yarn chromatic
-      env: 
-        CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+    - run: yarn
+    - uses: chromaui/action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        projectToken: gcaw1ai2dgo
+        exitZeroOnChanges: true
+        exitOnceUploaded: true
