@@ -1,6 +1,6 @@
-import Observable from 'zen-observable';
+const Observable = require('zen-observable');
 
 global.Observable = Observable;
-(await import('any-observable/register'))('global.Observable');
+require('any-observable/register')('global.Observable');
 
-await import('./main');
+require('./main');
