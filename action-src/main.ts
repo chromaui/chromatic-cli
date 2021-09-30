@@ -1,4 +1,4 @@
-import { error, getInput, setFailed, setOutput } from '@actions/core';
+import { error, getInput, setFailed, setOutput, info } from '@actions/core';
 import { context } from '@actions/github';
 import { readFile } from 'jsonfile';
 import pkgUp from 'pkg-up';
@@ -39,6 +39,17 @@ const getBuildInfo = (event: typeof context) => {
       return {
         sha: after,
         branch: ref.replace('refs/heads/', ''),
+        slug: repository.full_name,
+      };
+    }
+    case 'workflow_run': {
+      const { repository } = event.payload;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { head_sha, head_branch } = event.payload.workflow_run;
+
+      return {
+        sha: head_sha,
+        branch: head_branch.replace('refs/heads/', ''),
         slug: repository.full_name,
       };
     }
@@ -186,4 +197,7 @@ async function run() {
     process.exit(1);
   }
 }
-run();
+run().catch((e) => {
+  error(e);
+  setFailed(e.message);
+});
