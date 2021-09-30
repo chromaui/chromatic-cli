@@ -1,2 +1,0 @@
-"use strict";Object.defineProperty(exports,"__esModule",{value:!0}),exports["default"]=isChromatic;function isChromatic(){return!!("undefined"!=typeof window&&(window.navigator.userAgent.match(/Chromatic/)||window.location.href.match(/chromatic=true/)))}
-//# sourceMappingURL=isChromatic.js.map
