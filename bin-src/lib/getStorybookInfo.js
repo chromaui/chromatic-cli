@@ -141,12 +141,8 @@ export default async function getStorybookInfo(ctx) {
     }
   }
   if (!result) {
-    try {
-      const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
-      result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
-    } catch (e) {
-      //
-    }
+    const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+    result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
   }
   if (!result) {
     throw new Error(`Invalid`);
