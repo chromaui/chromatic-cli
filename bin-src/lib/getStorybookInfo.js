@@ -149,7 +149,7 @@ export default async function getStorybookInfo(ctx) {
     }
   }
   if (!result) {
-    throw new Error(`Could not determine the version of storybook you're using`);
+    throw new Error(`Invalid`);
   }
   return result;
 }

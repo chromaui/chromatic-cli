@@ -1,4 +1,4 @@
-name: "Chromatic (manual)"
+name: "Chromatic (npx)"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 

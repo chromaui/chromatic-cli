@@ -21,21 +21,19 @@ export const getInstalledStorybookInfoYarn1 = async () => {
   const viewLayer = trees.find(({ name }) => viewLayers[name]);
   const addons = trees.filter(({ name }) => supportedAddons[name]);
 
-  let result;
-
-  if (viewLayer) {
-    result = {
-      viewLayer: viewLayers[viewLayer.name],
-      version: viewLayer.version,
-      addons: addons.map((a) => ({
-        packageVersion: a.version,
-        packageName: a.name,
-        name: supportedAddons[a.name],
-      })),
-    };
+  if (!viewLayer) {
+    throw new Error('Invalid');
   }
 
-  return result;
+  return {
+    viewLayer: viewLayers[viewLayer.name],
+    version: viewLayer.version,
+    addons: addons.map((a) => ({
+      packageVersion: a.version,
+      packageName: a.name,
+      name: supportedAddons[a.name],
+    })),
+  };
 };
 
 const lookupPackage = async (
@@ -67,7 +65,7 @@ export const getInstalledStorybookInfoYarnBerry = async (ctx) => {
   ]);
 
   if (!viewLayer) {
-    throw new Error('no viewlayer!');
+    throw new Error('Invalid');
   }
 
   const addons = (
