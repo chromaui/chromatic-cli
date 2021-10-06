@@ -1,4 +1,4 @@
-name: "Chromatic (npx)"
+name: "Chromatic (yarn canary)"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 
