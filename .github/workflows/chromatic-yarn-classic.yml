@@ -10,10 +10,10 @@ jobs:
       with:
         node-version: '14.x'
     - uses: actions/checkout@v1
+    - name: install
+      run: yarn install
     - name: switch to yarn classic
       run: yarn set version 1.x.x
-    - name: install
-      run: yarn
     - name: run chromatic
       run: npx -p . chromatic
       env: 
