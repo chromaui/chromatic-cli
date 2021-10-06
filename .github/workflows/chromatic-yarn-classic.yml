@@ -10,10 +10,10 @@ jobs:
       with:
         node-version: '14.x'
     - uses: actions/checkout@v1
-    - name: switch to yarn berry
+    - name: switch to yarn classic
       run: yarn set version 1.x.x
     - name: install
-      run: yarn && git status --porcelain
+      run: yarn
     - name: run chromatic
       run: npx -p . chromatic
       env: 

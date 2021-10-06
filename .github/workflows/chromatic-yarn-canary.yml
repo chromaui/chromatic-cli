@@ -1,4 +1,4 @@
-name: "Chromatic (yarn latest)"
+name: "Chromatic (yarn canary)"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 
@@ -10,10 +10,11 @@ jobs:
       with:
         node-version: '14.x'
     - uses: actions/checkout@v1
-    - name: switch to yarn berry
-      run: yarn set version latest
+    - name: switch to yarn canary
+      run: yarn set version berry
+      run: yarn set version canary
     - name: install
-      run: yarn && git status --porcelain
+      run: yarn install
     - name: run chromatic
       run: npx -p . chromatic
       env: 
