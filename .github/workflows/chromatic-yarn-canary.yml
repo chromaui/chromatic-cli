@@ -10,8 +10,9 @@ jobs:
       with:
         node-version: '14.x'
     - uses: actions/checkout@v1
-    - name: switch to yarn canary
+    - name: switch to yarn berry
       run: yarn set version berry
+    - name: switch to yarn canary
       run: yarn set version canary
     - name: install
       run: yarn install
