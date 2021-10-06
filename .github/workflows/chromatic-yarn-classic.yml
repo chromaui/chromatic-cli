@@ -1,4 +1,4 @@
-name: "Chromatic (yarn classic)"
+name: "Chromatic (yarn 1.x.x)"
 on: [push]
 # do not use pull_request here, it report the wrong commit_sha and commit_ref
 
@@ -11,7 +11,7 @@ jobs:
         node-version: '14.x'
     - uses: actions/checkout@v1
     - name: switch to yarn berry
-      run: yarn set version classic
+      run: yarn set version 1.x.x
     - name: install
       run: yarn && git status --porcelain
     - name: run chromatic
