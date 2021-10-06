@@ -2,11 +2,15 @@ import fs from 'fs-extra';
 import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
-import { getInstalledStorybookInfo } from './getInstalledStorybookPackages';
+import {
+  getInstalledStorybookInfoYarn1,
+  getInstalledStorybookInfoYarnBerry,
+} from './getInstalledStorybookPackages';
 
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
 import { supportedAddons } from './supportedAddons';
+import { timeout, raceFulfilled } from './promises';
 
 const resolvePackageJson = (pkg) => {
   try {
@@ -22,17 +26,6 @@ const resolvePackageJson = (pkg) => {
     return Promise.reject(error);
   }
 };
-
-// Double inversion on Promise.all means fulfilling with the first fulfilled promise, or rejecting
-// when _everything_ rejects. This is different from Promise.race, which immediately rejects on the
-// first rejection.
-const invert = (promise) => new Promise((resolve, reject) => promise.then(reject, resolve));
-const raceFulfilled = (promises) => invert(Promise.all(promises.map(invert)).then((arr) => arr[0]));
-
-const timeout = (count) =>
-  new Promise((_, rej) => {
-    setTimeout(() => rej(new Error('Timeout while resolving Storybook view layer package')), count);
-  });
 
 const findDependency = ({ dependencies, devDependencies, peerDependencies }, predicate) => [
   Object.entries(dependencies || {}).find(predicate),
@@ -136,11 +129,23 @@ const findConfigFlags = async ({ options, packageJson }) => {
 export default async function getStorybookInfo(ctx) {
   let result;
   try {
-    result = await getInstalledStorybookInfo();
+    result = await getInstalledStorybookInfoYarn1(ctx);
   } catch (e) {
+    //
+  }
+  if (!result) {
+    try {
+      result = await getInstalledStorybookInfoYarnBerry(ctx);
+    } catch (e) {
+      //
+    }
+  }
+  if (!result) {
     const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
     result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
   }
-
+  if (!result) {
+    throw new Error(`Invalid`);
+  }
   return result;
 }
