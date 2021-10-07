@@ -13,9 +13,6 @@ const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
 export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
-  } else if (semver.lt(ctx.storybook.version, '5.0.0')) {
-    // Storybook v4 doesn't support absolute paths like tmp.dir would yield
-    ctx.sourceDir = 'storybook-static';
   } else {
     const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
     ctx.sourceDir = tmpDir.path;
@@ -23,10 +20,7 @@ export const setSourceDir = async (ctx) => {
 };
 
 export const setSpawnParams = async (ctx) => {
-  const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
-  if (ctx.git.changedFiles && !webpackStatsSupported) {
-    ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
-  }
+  const webpackStatsSupported = true;
 
   // Run either:
   //   node path/to/npm-cli.js run build-storybook

@@ -13,12 +13,7 @@ export const startStorybook = async (ctx) => {
     scriptName,
     commandName,
     url,
-    args: scriptName &&
-      ctx.storybook.version &&
-      semver.gte(ctx.storybook.version, ctx.env.STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && [
-        '--',
-        '--ci',
-      ],
+    args: scriptName && ['--', '--ci'],
     options: { stdio: 'pipe' },
   });
 

@@ -97,9 +97,9 @@ export const createBuild = async (ctx, task) => {
       patchHeadRef,
       preserveMissingSpecs,
       packageVersion: ctx.pkg.version,
-      storybookVersion: ctx.storybook.version,
-      viewLayer: ctx.storybook.viewLayer,
-      addons: ctx.storybook.addons,
+      // storybookVersion: ctx.storybook.version,
+      // viewLayer: ctx.storybook.viewLayer,
+      // addons: ctx.storybook.addons,
     },
     isolatorUrl,
   });
