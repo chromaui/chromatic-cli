@@ -6,13 +6,13 @@ import report from './report';
 import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
 import start from './start';
-import storybookInfo from './storybookInfo';
+// import storybookInfo from './storybookInfo';
 import tunnel from './tunnel';
 import upload from './upload';
 import verify from './verify';
 
-export const runUploadBuild = [auth, gitInfo, storybookInfo, build, upload, verify, snapshot];
-export const runTunnelBuild = [auth, gitInfo, storybookInfo, start, tunnel, verify, snapshot];
+export const runUploadBuild = [auth, gitInfo, build, upload, verify, snapshot];
+export const runTunnelBuild = [auth, gitInfo, start, tunnel, verify, snapshot];
 export const runPatchBuild = (runBuild) => [prepareWorkspace, ...runBuild, restoreWorkspace];
 
 export default (options) => {
