@@ -1,11 +1,5 @@
 import getStorybookInfo from './getStorybookInfo';
 
-jest.mock('./getInstalledStorybookPackages', () => ({
-  getInstalledStorybookPackages: () => {
-    throw new Error('no');
-  },
-}));
-
 jest.useFakeTimers();
 
 const log = { warn: jest.fn(), debug: jest.fn() };
