@@ -13,7 +13,7 @@ const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
 export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
-  } else if (semver.lt(ctx.storybook.version, '5.0.0')) {
+  } else if (ctx.storybook && ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
     // Storybook v4 doesn't support absolute paths like tmp.dir would yield
     ctx.sourceDir = 'storybook-static';
   } else {
@@ -23,7 +23,10 @@ export const setSourceDir = async (ctx) => {
 };
 
 export const setSpawnParams = async (ctx) => {
-  const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
+  const webpackStatsSupported =
+    ctx.storybook && ctx.storybook.version
+      ? semver.gte(semver.coerce(ctx.storybook.version), '6.2.0')
+      : true;
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
