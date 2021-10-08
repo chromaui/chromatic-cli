@@ -46,7 +46,11 @@ describe('getStorybookInfo', () => {
 
   it('throws on missing package', async () => {
     const ctx = { ...context, packageJson: { dependencies: VUE } };
-    await expect(getStorybookInfo(ctx)).rejects.toThrow('Storybook package not installed');
+    await expect(getStorybookInfo(ctx)).resolves.toEqual({
+      addons: [],
+      version: null,
+      viewLayer: null,
+    });
   });
 
   it('looks up package in node_modules on missing dependency', async () => {
@@ -76,12 +80,20 @@ describe('getStorybookInfo', () => {
 
     it('throws on invalid value', async () => {
       const ctx = { ...context, env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } };
-      await expect(getStorybookInfo(ctx)).rejects.toThrow('Invalid');
+      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+        addons: [],
+        version: null,
+        viewLayer: null,
+      });
     });
 
     it('throws on unsupported viewlayer', async () => {
       const ctx = { ...context, env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } };
-      await expect(getStorybookInfo(ctx)).rejects.toThrow('Unsupported');
+      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+        addons: [],
+        version: null,
+        viewLayer: null,
+      });
     });
   });
 

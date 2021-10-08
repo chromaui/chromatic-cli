@@ -13,7 +13,7 @@ const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
 export const setSourceDir = async (ctx) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
-  } else if (semver.lt(ctx.storybook.version, '5.0.0')) {
+  } else if (ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
     // Storybook v4 doesn't support absolute paths like tmp.dir would yield
     ctx.sourceDir = 'storybook-static';
   } else {
