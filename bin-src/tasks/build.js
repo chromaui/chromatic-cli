@@ -23,7 +23,9 @@ export const setSourceDir = async (ctx) => {
 };
 
 export const setSpawnParams = async (ctx) => {
-  const webpackStatsSupported = semver.gte(semver.coerce(ctx.storybook.version), '6.2.0');
+  const webpackStatsSupported = ctx.storybook.version
+    ? semver.gte(semver.coerce(ctx.storybook.version), '6.2.0')
+    : true;
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
