@@ -2,11 +2,6 @@ import fs from 'fs-extra';
 import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
-import {
-  getInstalledStorybookInfoYarn1,
-  getInstalledStorybookInfoYarnBerry,
-} from './getInstalledStorybookPackages';
-
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
 import { supportedAddons } from './supportedAddons';
@@ -128,24 +123,20 @@ const findConfigFlags = async ({ options, packageJson }) => {
 
 export default async function getStorybookInfo(ctx) {
   let result;
-  try {
-    result = await getInstalledStorybookInfoYarn1(ctx);
-  } catch (e) {
-    //
-  }
   if (!result) {
     try {
-      result = await getInstalledStorybookInfoYarnBerry(ctx);
+      const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+      result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
     } catch (e) {
       //
     }
   }
   if (!result) {
-    const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
-    result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
-  }
-  if (!result) {
-    throw new Error(`Invalid`);
+    result = {
+      viewLayer: null,
+      version: null,
+      addons: [],
+    };
   }
   return result;
 }
