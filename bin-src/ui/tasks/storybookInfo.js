@@ -5,7 +5,7 @@ const capitalize = (string) =>
     .join(' ');
 
 const infoMessage = ({ addons, version, viewLayer }) => {
-  const info = `Storybook v${version} for ${capitalize(viewLayer)}`;
+  const info = version && viewLayer ? `Storybook v${version} for ${capitalize(viewLayer)}` : '';
   return addons.length
     ? `${info}; supported addons found: ${addons.map((addon) => capitalize(addon.name)).join(', ')}`
     : `${info}; no supported addons found`;
