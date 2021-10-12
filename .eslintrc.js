@@ -5,14 +5,16 @@ module.exports = {
     'no-use-before-define': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     'eslint-comments/disable-enable-pair': 'off',
+    'import/no-extraneous-dependencies': 'off',
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: ['./tsconfig.eslint.json'],
+    extraFileExtensions: ['.cjs'],
   },
   overrides: [
     {
-      files: ['*.json'],
+      files: ['*.json', 'isChromatic.mjs', 'isChromatic.cjs', '.eslintrc.cjs'],
       parser: 'esprima',
       rules: {
         '@typescript-eslint/naming-convention': 'off',
