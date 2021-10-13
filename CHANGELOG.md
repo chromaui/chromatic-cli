@@ -1,21 +1,27 @@
+# 6.0.3 - unreleased
+
+- Fix `--only-changed` to bail on changes to `package.json`, `package-lock.json` or `yarn.lock` located at the repository root.
+
 # 6.0.0 - 2021-10-12
 
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Bundle the bin & action so it's dependency-less
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Add support for `workflow_run` event
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Make lookup of storybook version optional
 
-Remove the deprecated storybook addon
-Change the `isChromatic` to the main export of the package
+To migrate:
+- Remove the deprecated storybook addon
+- Change imports for `isChromatic` to use the main entry point
 
-before:
+Before:
 ```js
 import isChromatic from 'chromatic/isChromatic';
 ```
 
-after:
+After:
 ```js
 import isChromatic from 'chromatic';
 ```
+
 # 5.10.1 - 2021-09-21
 
 - [404](https://github.com/chromaui/chromatic-cli/pull/404) Fix the version of node-fetch to `2.6.0` due to a bug in `2.6.3`
