@@ -5,10 +5,17 @@ import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 
 // Bail whenever one of these was changed
-const GLOBALS = [/\/node_modules\//, /\/package\.json$/, /\/package-lock\.json$/, /\/yarn\.lock$/];
+const GLOBALS = [
+  /^package\.json$/,
+  /^package-lock\.json$/,
+  /^yarn\.lock$/,
+  /\/package\.json$/,
+  /\/package-lock\.json$/,
+  /\/yarn\.lock$/,
+];
 
 // Ignore these while tracing dependencies
-const EXTERNALS = [/\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
+const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
 const isGlobal = (name) => GLOBALS.some((re) => re.test(name));
 const isUserModule = ({ id, name, moduleName }) =>

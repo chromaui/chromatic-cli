@@ -109,6 +109,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
 
   const { flags } = meow({
     argv: parseArgsStringToArgv(scripts[options.buildScriptName]),
+    importMeta: import.meta,
     flags: {
       configDir: { type: 'string', alias: 'c' },
       staticDir: { type: 'string', alias: 's' },

@@ -40,6 +40,7 @@ export default function parseArgs(argv) {
     {
       argv,
       booleanDefault: undefined,
+      importMeta: import.meta,
       flags: {
         // Required options
         projectToken: { type: 'string', alias: 't', isMultiple: true },
