@@ -1,0 +1,20 @@
+name: "Chromatic (yarn berry)"
+on: [push]
+# do not use pull_request here, it report the wrong commit_sha and commit_ref
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    - uses: actions/checkout@v1
+    - name: install
+      run: yarn install
+    - name: switch to yarn berry
+      run: yarn set version berry
+    - name: run chromatic
+      run: npx -p . chromatic
+      env: 
+        CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo

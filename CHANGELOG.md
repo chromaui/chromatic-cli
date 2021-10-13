@@ -1,3 +1,41 @@
+# 6.0.3 - 2021-10-13
+
+- Fix `--only-changed` to bail on changes to `package.json`, `package-lock.json` or `yarn.lock` located at the repository root.
+
+# 6.0.0 - 2021-10-12
+
+- [393](https://github.com/chromaui/chromatic-cli/pull/393) Bundle the bin & action so it's dependency-less
+- [393](https://github.com/chromaui/chromatic-cli/pull/393) Add support for `workflow_run` event
+- [393](https://github.com/chromaui/chromatic-cli/pull/393) Make lookup of storybook version optional
+- Make `isChromatic` the package main entry point
+- Remove the deprecated Storybook addon
+
+Before:
+```js
+import isChromatic from 'chromatic/isChromatic';
+```
+
+After:
+```js
+import isChromatic from 'chromatic';
+```
+
+# 5.10.1 - 2021-09-21
+
+- [404](https://github.com/chromaui/chromatic-cli/pull/404) Fix the version of node-fetch to `2.6.0` due to a bug in `2.6.3`
+
+# 5.10.0 - 2021-09-17
+
+- [311](https://github.com/chromaui/chromatic-cli/pull/311) Support `workflow_dispatch` event in GitHub Action
+- [382](https://github.com/chromaui/chromatic-cli/pull/382) Support absolute paths in webpack stats
+- [370](https://github.com/chromaui/chromatic-cli/pull/370) Ignore `--only-changed` on rebuild
+- [381](https://github.com/chromaui/chromatic-cli/pull/381) Throw when specifying an invalid loglevel
+- [392](https://github.com/chromaui/chromatic-cli/pull/392) Better path handling for TurboSnap
+- [374](https://github.com/chromaui/chromatic-cli/pull/374) Fix handling of `NO_PROXY` environment variable
+- [397](https://github.com/chromaui/chromatic-cli/pull/397) Fix runtime issues with HTTP_PROXY / NO_PROXY
+- [380](https://github.com/chromaui/chromatic-cli/pull/380) Fix `isChromatic` for server-side rendering
+- [401](https://github.com/chromaui/chromatic-cli/pull/401) Update BuildHasChanges message to be clearer
+
 # 5.9.2 - 2021-06-15
 
 - [366](https://github.com/chromaui/chromatic-cli/pull/366) Fix resolving webpack stats in subdirectory

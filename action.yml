@@ -93,5 +93,5 @@ outputs:
     description: 'The exit code for the current run of the Chromatic CLI'
 
 runs:
-  main: action/register.js
+  main: action/main.js
   using: node14

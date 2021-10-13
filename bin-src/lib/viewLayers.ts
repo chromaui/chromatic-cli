@@ -1,0 +1,16 @@
+export const viewLayers = {
+  '@storybook/react': 'react',
+  '@storybook/vue': 'vue',
+  '@storybook/vue3': 'vue3',
+  '@storybook/angular': 'angular',
+  '@storybook/html': 'html',
+  '@storybook/web-components': 'web-components',
+  '@storybook/polymer': 'polymer',
+  '@storybook/ember': 'ember',
+  '@storybook/marko': 'marko',
+  '@storybook/mithril': 'mithril',
+  '@storybook/riot': 'riot',
+  '@storybook/svelte': 'svelte',
+  '@storybook/preact': 'preact',
+  '@storybook/rax': 'rax',
+} as Record<string, string>;

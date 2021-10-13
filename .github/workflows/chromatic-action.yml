@@ -1,5 +1,5 @@
 name: "Chromatic (action)"
-on: [push, pull_request, pull_request_review, pull_request_target]
+on: [push]
 
 jobs:
   chromatic:

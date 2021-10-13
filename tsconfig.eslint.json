@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    ".*.js",
+    "*.js",
+    "*.ts",
+    "bin-src/**/*.*",
+    "action-src/**/*.*",
+    "src/**/*.*",
+    ".storybook/*.*",
+    "stories/**/*.*",
+    "scripts/*.*"
+  ]
+}
