@@ -123,21 +123,10 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export default async function getStorybookInfo(ctx) {
-  let result;
-  if (!result) {
-    try {
-      const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
-      result = info.reduce((acc, obj) => Object.assign(acc, obj), {});
-    } catch (e) {
-      //
-    }
+  try {
+    const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
+    return info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  } catch (e) {
+    return { viewLayer: null, version: null, addons: [] };
   }
-  if (!result) {
-    result = {
-      viewLayer: null,
-      version: null,
-      addons: [],
-    };
-  }
-  return result;
 }
