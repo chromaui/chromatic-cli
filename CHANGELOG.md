@@ -1,3 +1,7 @@
+# 6.0.4 - 2021-10-13
+
+- Fix issue with `node:path` import caused by `meow` v10.
+
 # 6.0.3 - 2021-10-13
 
 - Fix `--only-changed` to bail on changes to `package.json`, `package-lock.json` or `yarn.lock` located at the repository root.

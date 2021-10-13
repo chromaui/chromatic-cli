@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -43,7 +43,7 @@
     "lint": "yarn lint:js .storybook bin-src stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "prepublish": "npm run build",
+    "prepack": "npm run build",
     "postpublish": "npm run publish-action",
     "publish-action": "node scripts/publish-action.js",
     "trim-stats": "node -r esm scripts/trim-stats-file.js",
@@ -113,7 +113,7 @@
     "junit-report-builder": "2.1.0",
     "lint-staged": "^11.1.2",
     "listr": "0.14.3",
-    "meow": "^10.1.1",
+    "meow": "^9.0.0",
     "no-proxy": "^1.0.3",
     "node-ask": "^1.0.1",
     "node-fetch": "3.0.0",

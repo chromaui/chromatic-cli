@@ -24,7 +24,7 @@ const tmp = require('tmp-promise');
   await cpy(['action/*.js', 'action/*.txt', 'action.yml', 'package.json'], path, { parents: true });
   await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
 
-  await run('git init');
+  await run('git init -b main');
   await run(`git remote add origin git@github.com:${repo}.git`);
   await run('git add .');
   await run(`git commit -m ${version}`);
