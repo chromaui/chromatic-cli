@@ -94,4 +94,4 @@ outputs:
 
 runs:
   main: action/main.js
-  using: node14
+  using: node12
