@@ -113,7 +113,7 @@
     "junit-report-builder": "2.1.0",
     "lint-staged": "^11.1.2",
     "listr": "0.14.3",
-    "meow": "^10.1.1",
+    "meow": "^9.0.0",
     "no-proxy": "^1.0.3",
     "node-ask": "^1.0.1",
     "node-fetch": "3.0.0",
