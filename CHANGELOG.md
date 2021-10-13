@@ -1,7 +1,8 @@
-# 6.0.0 - unreleased
+# 6.0.0 - 2021-10-12
 
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Bundle the bin & action so it's dependency-less
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Add support for `workflow_run` event
+- [393](https://github.com/chromaui/chromatic-cli/pull/393) Make lookup of storybook version optional
 
 Remove the deprecated storybook addon
 Change the `isChromatic` to the main export of the package
