@@ -7,10 +7,8 @@
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Bundle the bin & action so it's dependency-less
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Add support for `workflow_run` event
 - [393](https://github.com/chromaui/chromatic-cli/pull/393) Make lookup of storybook version optional
-
-To migrate:
-- Remove the deprecated storybook addon
-- Change imports for `isChromatic` to use the main entry point
+- Make `isChromatic` the package main entry point
+- Remove the deprecated Storybook addon
 
 Before:
 ```js
