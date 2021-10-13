@@ -1,4 +1,4 @@
-# 6.0.3 - unreleased
+# 6.0.3 - 2021-10-13
 
 - Fix `--only-changed` to bail on changes to `package.json`, `package-lock.json` or `yarn.lock` located at the repository root.
 
