@@ -65,6 +65,27 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('detects indirect changes to CSF files in a single module chunk', async () => {
+    const changedFiles = ['src/foo.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/foo.stories.js + 1 other',
+        modules: [{ name: './src/foo.stories.js' }, { name: './src/foo.js' }],
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    expect(res).toEqual({
+      1: 'src/foo.stories.js + 1 other',
+    });
+  });
+
   it('supports webpack projectRoot in git subdirectory', async () => {
     getWorkingDir.mockReturnValueOnce('services/webapp');
     const changedFiles = ['services/webapp/src/foo.js'];
