@@ -195,6 +195,47 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  it('bails on changed dependency of config file', async () => {
+    const changedFiles = ['src/styles.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/styles.js',
+        reasons: [{ moduleName: './path/to/storybook-config/file.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(
+      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
+      { modules },
+      changedFiles
+    );
+    expect(res).toEqual(false);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+    );
+  });
+
+  it('bails on changed dependency of config file if it is in a single module chunk', async () => {
+    const changedFiles = ['src/styles.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './path/to/storybook-config/file.js + 1 other',
+        modules: [{ name: './path/to/storybook-config/file.js' }, { name: './src/styles.js' }],
+        reasons: [],
+      },
+    ];
+    const res = await getDependentStoryFiles(
+      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
+      { modules },
+      changedFiles
+    );
+    expect(res).toEqual(false);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+    );
+  });
+
   it('bails on changed static file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/statics/image.png'];
     const modules = [
