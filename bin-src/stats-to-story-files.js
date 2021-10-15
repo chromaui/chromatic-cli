@@ -28,6 +28,8 @@ import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
  *
  * You can generate a preview-stats.json like so (requires Storybook >=6.3):
  *   yarn build-storybook --webpack-stats-json
+ *
+ * This script assumes your config directory is `./.storybook`, you can use `STORYBOOK_CONFIG_DIR` to change that
  */
 
 export async function main([statsFile, ...changedFiles]) {
@@ -35,7 +37,7 @@ export async function main([statsFile, ...changedFiles]) {
   const ctx = {
     log: console,
     storybook: {
-      configDir: '.storybook',
+      configDir: process.env.STORYBOOK_CONFIG_DIR || '.storybook',
       staticDir: ['static'],
     },
   };
