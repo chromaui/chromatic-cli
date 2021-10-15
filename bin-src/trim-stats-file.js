@@ -4,7 +4,7 @@ const dedupe = (arr) => [...new Set(arr)];
 const isUserCode = ({ name, moduleName = name }) =>
   moduleName &&
   !moduleName.startsWith('(webpack)') &&
-  !moduleName.match(/\/(node_modules|webpack\/runtime)\//);
+  !moduleName.match(/(node_modules|webpack\/runtime)\//);
 
 /**
  * Utility to trim down a `preview-stats.json` file to the bare minimum, so that it can be used to
