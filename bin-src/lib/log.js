@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import debug from 'debug';
 import nlb from 'node-loggly-bulk/lib/loggly/client';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
@@ -78,6 +79,8 @@ export const createLogger = (sessionId, env) => {
       enqueue = false;
     },
   };
+
+  debug.log = (...args) => log.debug(format(...args));
 
   // Redirect unhandled promise rejections
   process.off('unhandledRejection', handleRejection);
