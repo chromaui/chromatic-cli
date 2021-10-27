@@ -58,15 +58,24 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
-  const storiesEntryFile = `${storybookDir}/generated-stories-entry.js`;
+  const storiesEntryFiles = [
+    // Storybook 6.3-
+    `${storybookDir}/generated-stories-entry.js`,
+    // Storybook 6.4, v6 store
+    `generated-stories-entry.js`,
+    // Storybook 6.4, v7 store
+    `storybook-stories.js`,
+  ];
 
   const idsByName = {};
+  const namesById = {};
   const reasonsById = {};
   const csfGlobsByName = {};
 
   stats.modules.filter(isUserModule).forEach((mod) => {
     const normalizedName = normalize(mod.name);
     idsByName[normalizedName] = mod.id;
+    namesById[mod.id] = normalizedName;
 
     if (mod.modules) {
       mod.modules.forEach((m) => {
@@ -78,7 +87,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
       .map((reason) => normalize(reason.moduleName))
       .filter((reasonName) => reasonName && reasonName !== normalizedName);
 
-    if (reasonsById[mod.id].includes(storiesEntryFile)) {
+    if (reasonsById[mod.id].some((reason) => storiesEntryFiles.includes(reason))) {
       csfGlobsByName[normalizedName] = true;
     }
   });
@@ -87,7 +96,8 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   ctx.log.debug(`Found ${Object.keys(idsByName).length} user modules`);
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
-  const isConfigFile = (name) => name.startsWith(`${storybookDir}/`) && name !== storiesEntryFile;
+  const isConfigFile = (name) =>
+    name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
   const isStaticFile = (name) => staticDirs.some((dir) => name.startsWith(`${dir}/`));
 
   const changedCsfIds = new Set();
@@ -96,14 +106,22 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   let bail = changedFiles.find(isGlobal);
 
+  function shouldBail(name) {
+    if (isConfigFile(name) || isStaticFile(name)) {
+      bail = name;
+      return true;
+    }
+    return false;
+  }
+
   function traceName(normalizedName) {
     if (bail || isCsfGlob(normalizedName)) return;
-    if (isConfigFile(normalizedName) || isStaticFile(normalizedName)) {
-      bail = normalizedName;
-      return;
-    }
+    if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
+    const idNormalizedName = namesById[id];
+    if (shouldBail(idNormalizedName)) return;
+
     if (!id || !reasonsById[id] || checkedIds[id]) return;
     toCheck.push(id);
 

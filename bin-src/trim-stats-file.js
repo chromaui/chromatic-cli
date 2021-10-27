@@ -2,7 +2,9 @@ import { readJson, outputFile } from 'fs-extra';
 
 const dedupe = (arr) => [...new Set(arr)];
 const isUserCode = ({ name, moduleName = name }) =>
-  !moduleName.startsWith('(webpack)') && !moduleName.match(/\/(node_modules|webpack\/runtime)\//);
+  moduleName &&
+  !moduleName.startsWith('(webpack)') &&
+  !moduleName.match(/(node_modules|webpack\/runtime)\//);
 
 /**
  * Utility to trim down a `preview-stats.json` file to the bare minimum, so that it can be used to
@@ -23,7 +25,6 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
       const trimmedReasons = dedupe(reasons.filter(isUserCode).map((r) => r.moduleName))
         .filter((n) => n !== name)
         .map((moduleName) => ({ moduleName }));
-      if (!trimmedReasons.length) return null;
       return {
         id,
         name,
