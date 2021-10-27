@@ -80,8 +80,6 @@ export const createLogger = (sessionId, env) => {
     },
   };
 
-  // Intercept Localtunnel's logging
-  debug.enable('localtunnel:*');
   debug.log = (...args) => log.debug(format(...args));
 
   // Redirect unhandled promise rejections
