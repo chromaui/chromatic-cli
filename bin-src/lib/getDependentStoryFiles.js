@@ -85,7 +85,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
       .map((reason) => normalize(reason.moduleName))
       .filter((reasonName) => reasonName && reasonName !== normalizedName);
 
-    if (reasonsById[mod.id].find((reason) => storiesEntryFiles.includes(reason))) {
+    if (reasonsById[mod.id].some((reason) => storiesEntryFiles.includes(reason))) {
       csfGlobsByName[normalizedName] = true;
     }
   });
