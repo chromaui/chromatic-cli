@@ -61,12 +61,14 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const storiesEntryFile = `${storybookDir}/generated-stories-entry.js`;
 
   const idsByName = {};
+  const namesById = {};
   const reasonsById = {};
   const csfGlobsByName = {};
 
   stats.modules.filter(isUserModule).forEach((mod) => {
     const normalizedName = normalize(mod.name);
     idsByName[normalizedName] = mod.id;
+    namesById[mod.id] = normalizedName;
 
     if (mod.modules) {
       mod.modules.forEach((m) => {
@@ -104,6 +106,11 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
 
     const id = idsByName[normalizedName];
+    const idNormalizedName = namesById[id];
+    if (isConfigFile(idNormalizedName) || isStaticFile(idNormalizedName)) {
+      bail = idNormalizedName;
+      return;
+    }
     if (!id || !reasonsById[id] || checkedIds[id]) return;
     toCheck.push(id);
 
