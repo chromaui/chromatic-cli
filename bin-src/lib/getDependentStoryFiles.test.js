@@ -103,6 +103,27 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('detects indirect changes to CSF files in a single module chunk', async () => {
+    const changedFiles = ['src/foo.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/foo.stories.js + 1 other',
+        modules: [{ name: './src/foo.stories.js' }, { name: './src/foo.js' }],
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    expect(res).toEqual({
+      1: 'src/foo.stories.js + 1 other',
+    });
+  });
+
   it('supports webpack projectRoot in git subdirectory', async () => {
     getWorkingDir.mockReturnValueOnce('services/webapp');
     const changedFiles = ['services/webapp/src/foo.js'];
@@ -220,6 +241,47 @@ describe('getDependentStoryFiles', () => {
         id: 999,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(
+      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
+      { modules },
+      changedFiles
+    );
+    expect(res).toEqual(false);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+    );
+  });
+
+  it('bails on changed dependency of config file', async () => {
+    const changedFiles = ['src/styles.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/styles.js',
+        reasons: [{ moduleName: './path/to/storybook-config/file.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(
+      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
+      { modules },
+      changedFiles
+    );
+    expect(res).toEqual(false);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+    );
+  });
+
+  it('bails on changed dependency of config file if it is in a single module chunk', async () => {
+    const changedFiles = ['src/styles.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './path/to/storybook-config/file.js + 1 other',
+        modules: [{ name: './path/to/storybook-config/file.js' }, { name: './src/styles.js' }],
+        reasons: [],
       },
     ];
     const res = await getDependentStoryFiles(

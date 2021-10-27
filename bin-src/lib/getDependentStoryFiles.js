@@ -68,12 +68,14 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   ];
 
   const idsByName = {};
+  const namesById = {};
   const reasonsById = {};
   const csfGlobsByName = {};
 
   stats.modules.filter(isUserModule).forEach((mod) => {
     const normalizedName = normalize(mod.name);
     idsByName[normalizedName] = mod.id;
+    namesById[mod.id] = normalizedName;
 
     if (mod.modules) {
       mod.modules.forEach((m) => {
@@ -104,14 +106,22 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   let bail = changedFiles.find(isGlobal);
 
+  function shouldBail(name) {
+    if (isConfigFile(name) || isStaticFile(name)) {
+      bail = name;
+      return true;
+    }
+    return false;
+  }
+
   function traceName(normalizedName) {
     if (bail || isCsfGlob(normalizedName)) return;
-    if (isConfigFile(normalizedName) || isStaticFile(normalizedName)) {
-      bail = normalizedName;
-      return;
-    }
+    if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
+    const idNormalizedName = namesById[id];
+    if (shouldBail(idNormalizedName)) return;
+
     if (!id || !reasonsById[id] || checkedIds[id]) return;
     toCheck.push(id);
 
