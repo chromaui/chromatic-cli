@@ -98,19 +98,22 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   let bail = changedFiles.find(isGlobal);
 
+  function shouldBail(name) {
+    if (isConfigFile(name) || isStaticFile(name)) {
+      bail = name;
+      return true;
+    }
+    return false;
+  }
+
   function traceName(normalizedName) {
     if (bail || isCsfGlob(normalizedName)) return;
-    if (isConfigFile(normalizedName) || isStaticFile(normalizedName)) {
-      bail = normalizedName;
-      return;
-    }
+    if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
     const idNormalizedName = namesById[id];
-    if (isConfigFile(idNormalizedName) || isStaticFile(idNormalizedName)) {
-      bail = idNormalizedName;
-      return;
-    }
+    if (shouldBail(idNormalizedName)) return;
+
     if (!id || !reasonsById[id] || checkedIds[id]) return;
     toCheck.push(id);
 
