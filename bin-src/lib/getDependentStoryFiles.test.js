@@ -39,6 +39,44 @@ describe('getDependentStoryFiles', () => {
       1: 'src/foo.stories.js',
     });
   });
+  it('detects direct changes to CSF files, 6.4 v6 store', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './generated-stories-entry.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    expect(res).toEqual({
+      1: 'src/foo.stories.js',
+    });
+  });
+  it('detects direct changes to CSF files, 6.4 v7 store', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './storybook-stories.js' }],
+      },
+    ];
+    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    expect(res).toEqual({
+      1: 'src/foo.stories.js',
+    });
+  });
 
   it('detects indirect changes to CSF files', async () => {
     const changedFiles = ['src/foo.js'];
