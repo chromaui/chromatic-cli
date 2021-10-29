@@ -115,6 +115,14 @@ jest.mock('node-fetch', () =>
         };
       }
 
+      if (query.match('TesterSkipBuildMutation')) {
+        return {
+          data: {
+            skipBuild: true,
+          },
+        };
+      }
+
       throw new Error(`Unknown Query: ${query}`);
     },
   }))
@@ -240,6 +248,12 @@ it('returns 0 when the build is publish only', async () => {
     wasLimited: false,
   };
   const ctx = getContext(['--project-token=asdf1234']);
+  await runBuild(ctx);
+  expect(ctx.exitCode).toBe(0);
+});
+
+it('should exit with code 0 when the current branch is skipped', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--skip=branch']);
   await runBuild(ctx);
   expect(ctx.exitCode).toBe(0);
 });
