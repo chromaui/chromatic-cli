@@ -29,6 +29,7 @@ export default function parseArgs(argv) {
       --preserve-missing  Treat missing stories as unchanged rather than deleted when comparing to the baseline.
       --skip [branch]  Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
       --storybook-base-dir <dirname>  Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when your Storybook is located in a subdirectory of your repository.
+      --zip  Attempt to upload Storybook to Chromatic as a single zip file instead of individual content files.
 
     Debug options
       --ci  Mark this build as a CI build. Alternatively, set the CI environment variable (present in most CI systems). This option implies --no-interactive.
@@ -66,6 +67,7 @@ export default function parseArgs(argv) {
         preserveMissing: { type: 'boolean' },
         skip: { type: 'string' },
         storybookBaseDir: { type: 'string' },
+        zip: { type: 'boolean' },
 
         // Debug options
         ci: { type: 'boolean' },
