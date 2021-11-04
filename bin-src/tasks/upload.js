@@ -49,6 +49,8 @@ const TesterGetZipUploadUrlMutation = `
   }
 `;
 
+const UNPACK_WAIT = 2500;
+
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
 // paths will be like iframe.html rather than storybook-static/iframe.html
@@ -200,6 +202,8 @@ async function uploadAsZipFile(ctx, task) {
 
   ctx.uploadedBytes = total;
   ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
+
+  return new Promise((resolve, _) => setTimeout(resolve, UNPACK_WAIT));
 }
 
 export const uploadStorybook = async (ctx, task) => {
