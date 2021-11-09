@@ -47,8 +47,8 @@ export default function parseArgs(argv) {
 
         // Storybook options
         buildScriptName: { type: 'string', alias: 'b' },
-        outputDir: { type: 'string', alias: 'o' },
-        storybookBuildDir: { type: 'string', alias: 'd' },
+        outputDir: { type: 'string', alias: 'o', isMultiple: true },
+        storybookBuildDir: { type: 'string', alias: 'd', isMultiple: true },
 
         // Chromatic options
         allowConsoleErrors: { type: 'boolean' },

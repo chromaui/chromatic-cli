@@ -50,7 +50,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
-    outputDir: flags.outputDir,
+    outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: trueIfSet(flags.scriptName),
     exec: flags.exec,
@@ -64,7 +64,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     storybookBuildDir: flags.storybookBuildDir
       ? path.resolve(
           Array.isArray(flags.storybookBuildDir)
-            ? flags.storybookBuildDir[0]
+            ? takeLast(flags.storybookBuildDir)
             : flags.storybookBuildDir
         )
       : undefined,
