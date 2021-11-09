@@ -62,6 +62,7 @@ export const setGitInfo = async (ctx, task) => {
     if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);
+      ctx.exitCode = 0;
       return;
     }
     throw new Error(skipFailed(ctx).output);
