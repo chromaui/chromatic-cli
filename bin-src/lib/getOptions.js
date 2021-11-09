@@ -50,7 +50,9 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
-    outputDir: takeLast(flags.outputDir),
+    outputDir: flags.outputDir
+      ? path.resolve(Array.isArray(flags.outputDir) ? takeLast(flags.outputDir) : flags.outputDir)
+      : undefined,
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: trueIfSet(flags.scriptName),
     exec: flags.exec,

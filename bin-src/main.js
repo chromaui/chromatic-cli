@@ -70,7 +70,7 @@ export async function runBuild(ctx) {
     ctx.options = await getOptions(ctx);
   } catch (e) {
     ctx.log.info('');
-    ctx.log.error(e.message);
+    ctx.log.error(e.stack || e.message);
     ctx.exitCode = 254;
     return;
   }
