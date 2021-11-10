@@ -97,8 +97,8 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isConfigFile = (name) =>
-    name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
-  const isStaticFile = (name) => staticDirs.some((dir) => name.startsWith(`${dir}/`));
+    name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
+  const isStaticFile = (name) => staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
   const changedCsfIds = new Set();
   const checkedIds = {};
