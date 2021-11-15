@@ -126,8 +126,8 @@ export const traceChangedFiles = async (ctx, task) => {
         .join('\n')}`
     );
     transitionTo(traced)(ctx, task);
-  } catch (e) {
-    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
+  } catch (err) {
+    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
   }
 };
 
