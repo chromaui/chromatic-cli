@@ -1,3 +1,16 @@
+# 6.0.6 - 2021-11-10
+
+- [449](https://github.com/chromaui/chromatic-cli/pull/449) Fix TurboSnap for unnamed modules in Webpack 5 stats file
+- [442](https://github.com/chromaui/chromatic-cli/pull/442) Set exitCode to 0 when branch is skipped with skip flag
+
+# 6.0.5 - 2021-10-27
+
+- [440](https://github.com/chromaui/chromatic-cli/pull/440) Add TurboSnap support for 6.4 virtual story file locations
+- [440](https://github.com/chromaui/chromatic-cli/pull/440) Fix TurboSnap for files that are chunked with preview files
+- [436](https://github.com/chromaui/chromatic-cli/pull/436) Fix DEBUG env variable being set
+- [424](https://github.com/chromaui/chromatic-cli/pull/424) Update GitHub Action to use Node 14
+- [433](https://github.com/chromaui/chromatic-cli/pull/433) Add optional window arg to `isChromatic`
+
 # 6.0.4 - 2021-10-13
 
 - Fix issue with `node:path` import caused by `meow` v10.
