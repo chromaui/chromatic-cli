@@ -4,7 +4,7 @@ import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import { initial, pending, runOnly, runOnlyFiles, success } from '../ui/tasks/verify';
+import { initial, dryRun, pending, runOnly, runOnlyFiles, success } from '../ui/tasks/verify';
 
 const TesterCreateBuildMutation = `
   mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
@@ -138,6 +138,10 @@ export const createBuild = async (ctx, task) => {
 
 export default createTask({
   title: initial.title,
-  skip: (ctx) => ctx.skip,
+  skip: (ctx) => {
+    if (ctx.skip) return true;
+    if (ctx.options.dryRun) return dryRun(ctx).output;
+    return false;
+  },
   steps: [transitionTo(pending), setEnvironment, createBuild],
 });

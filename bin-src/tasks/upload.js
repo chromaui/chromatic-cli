@@ -12,6 +12,7 @@ import noStatsFile from '../ui/messages/warnings/noStatsFile';
 import {
   failed,
   initial,
+  dryRun,
   skipped,
   validating,
   invalid,
@@ -19,8 +20,8 @@ import {
   tracing,
   traced,
   starting,
-  success,
   uploading,
+  success,
 } from '../ui/tasks/upload';
 
 const TesterGetUploadUrlsMutation = `
@@ -170,6 +171,7 @@ export default createTask({
   title: initial.title,
   skip: (ctx) => {
     if (ctx.skip) return true;
+    if (ctx.options.dryRun) return dryRun(ctx).output;
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },
