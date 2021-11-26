@@ -148,10 +148,6 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
-      if (options.onlyChanged) {
-        // TurboSnap requires that we build the Storybook, otherwise absolute paths won't match up.
-        throw new Error(incompatibleOptions(['--storybook-build-dir (-d)', '--only-changed']));
-      }
       return { ...options, noStart: true, useTunnel: false };
     }
     const { scripts } = packageJson;
