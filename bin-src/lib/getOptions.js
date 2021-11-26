@@ -60,7 +60,6 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     key: flags.storybookKey,
     ca: flags.storybookCa,
     port: flags.storybookPort,
-    storybookUrl: trueIfSet(flags.storybookUrl),
     storybookBuildDir: flags.storybookBuildDir
       ? path.resolve(
           Array.isArray(flags.storybookBuildDir)
@@ -68,6 +67,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
             : flags.storybookBuildDir
         )
       : undefined,
+    storybookUrl: flags.storybookUrl,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
     ownerName,
