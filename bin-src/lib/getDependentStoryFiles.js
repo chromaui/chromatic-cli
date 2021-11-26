@@ -139,7 +139,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   if (bail) {
     ctx.log.warn(bailFile(bail));
-    return false;
+    return bail;
   }
 
   return stats.modules.reduce((acc, mod) => {

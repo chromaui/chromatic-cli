@@ -72,7 +72,7 @@ export const setEnvironment = async (ctx) => {
 };
 
 export const createBuild = async (ctx, task) => {
-  const { client, git, log, isolatorUrl, options, onlyStoryFiles } = ctx;
+  const { client, git, log, isolatorUrl, options, onlyStoryFiles, bailReason } = ctx;
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
   const { version, matchesBranch, changedFiles, ...commitInfo } = git; // omit some fields
   const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
@@ -90,6 +90,7 @@ export const createBuild = async (ctx, task) => {
       ...commitInfo,
       ...(only && { only }),
       ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+      ...(bailReason && { bailReason }),
       autoAcceptChanges,
       cachedUrl: ctx.cachedUrl,
       environment: ctx.environment,

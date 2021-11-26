@@ -17,6 +17,7 @@ import {
   invalid,
   preparing,
   tracing,
+  bailed,
   traced,
   starting,
   success,
@@ -109,6 +110,7 @@ export const validateFiles = async (ctx, task) => {
 export const traceChangedFiles = async (ctx, task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
+    ctx.bailReason = { noStatsFile: true };
     ctx.log.warn(noStatsFile());
     return;
   }
@@ -119,13 +121,19 @@ export const traceChangedFiles = async (ctx, task) => {
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
-    ctx.onlyStoryFiles = await getDependentStoryFiles(ctx, stats, changedFiles);
-    ctx.log.debug(
-      `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
-        .map(([id, f]) => `  ${f} [${id}]`)
-        .join('\n')}`
-    );
-    transitionTo(traced)(ctx, task);
+    const result = await getDependentStoryFiles(ctx, stats, changedFiles);
+    if (typeof result === 'string') {
+      ctx.bailReason = { changedFile: result };
+      transitionTo(bailed)(ctx, task);
+    } else {
+      ctx.onlyStoryFiles = result;
+      ctx.log.debug(
+        `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
+          .map(([id, f]) => `  ${f} [${id}]`)
+          .join('\n')}`
+      );
+      transitionTo(traced)(ctx, task);
+    }
   } catch (err) {
     ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
   }
