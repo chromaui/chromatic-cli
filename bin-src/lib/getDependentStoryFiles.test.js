@@ -39,6 +39,7 @@ describe('getDependentStoryFiles', () => {
       1: 'src/foo.stories.js',
     });
   });
+
   it('detects direct changes to CSF files, 6.4 v6 store', async () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
@@ -58,6 +59,7 @@ describe('getDependentStoryFiles', () => {
       1: 'src/foo.stories.js',
     });
   });
+
   it('detects direct changes to CSF files, 6.4 v7 store', async () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [

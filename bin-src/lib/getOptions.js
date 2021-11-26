@@ -67,6 +67,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
             : flags.storybookBuildDir
         )
       : undefined,
+    storybookBaseDir: flags.storybookBaseDir,
     storybookUrl: flags.storybookUrl,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
@@ -164,7 +165,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     throw new Error(missingBuildScriptName(buildScriptName));
   }
 
-  // TurboSnap requires generating a static build with a webpack stats file.
+  // TurboSnap requires a static build with a webpack stats file.
   if (options.onlyChanged) throw new Error(invalidOnlyChanged());
 
   // Start Storybook on localhost and generate the URL to it
