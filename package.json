@@ -36,6 +36,7 @@
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
     "build-storybook": "build-storybook -s static",
+    "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./bin/main.cjs",
     "chromatic-prebuilt": "./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./bin/main.cjs",
