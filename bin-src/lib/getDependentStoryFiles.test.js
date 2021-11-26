@@ -9,6 +9,7 @@ const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 
 const ctx = {
   log: { warn: jest.fn(), debug: jest.fn() },
+  options: {},
 };
 
 beforeEach(() => {
