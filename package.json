@@ -36,6 +36,7 @@
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
     "build-storybook": "build-storybook -s static",
+    "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./bin/main.cjs",
     "chromatic-prebuilt": "./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./bin/main.cjs",
@@ -46,8 +47,8 @@
     "prepublish": "npm run build",
     "postpublish": "npm run publish-action",
     "publish-action": "node scripts/publish-action.js",
-    "trim-stats": "node -r esm scripts/trim-stats-file.js",
-    "stats-to-story-files": "node -r esm scripts/stats-to-story-files.js",
+    "trim-stats": "node -r esm bin-src/trim-stats-file.js",
+    "stats-to-story-files": "node -r esm bin-src/stats-to-story-files.js",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install",
