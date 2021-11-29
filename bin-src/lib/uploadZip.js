@@ -26,7 +26,6 @@ export async function uploadZip(ctx, path, url, contentLength, onProgress) {
           headers: {
             'content-type': 'application/zip',
             'content-length': contentLength,
-            'cache-control': 'max-age=31536000',
           },
         },
         { retries: 0 } // already retrying the whole operation
