@@ -8,7 +8,7 @@ jest.mock('./utils');
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 
 const ctx = {
-  log: { warn: jest.fn(), debug: jest.fn() },
+  log: { info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
   options: {},
 };
 
