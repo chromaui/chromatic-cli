@@ -50,7 +50,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
-    outputDir: Array.isArray(flags.outputDir) ? takeLast(flags.outputDir) : undefined,
+    outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: trueIfSet(flags.scriptName),
     exec: flags.exec,
@@ -61,9 +61,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     ca: flags.storybookCa,
     port: flags.storybookPort,
     storybookUrl: trueIfSet(flags.storybookUrl),
-    storybookBuildDir: Array.isArray(flags.storybookBuildDir)
-      ? takeLast(flags.storybookBuildDir)
-      : undefined,
+    storybookBuildDir: takeLast(flags.storybookBuildDir),
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
     ownerName,
