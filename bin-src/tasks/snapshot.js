@@ -11,8 +11,9 @@ import {
   buildFailed,
   buildPassed,
   initial,
-  pending,
+  dryRun,
   skipped,
+  pending,
 } from '../ui/tasks/snapshot';
 
 const TesterBuildQuery = `
@@ -112,6 +113,7 @@ export default createTask({
   skip: (ctx) => {
     if (ctx.skip) return true;
     if (ctx.skipSnapshots) return skipped(ctx).output;
+    if (ctx.options.dryRun) return dryRun(ctx).output;
     return false;
   },
   steps: [transitionTo(pending), takeSnapshots],

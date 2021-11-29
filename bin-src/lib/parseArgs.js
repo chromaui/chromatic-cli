@@ -28,10 +28,12 @@ export default function parseArgs(argv) {
       --patch-build <headbranch...basebranch>  Create a patch build to fix a missing PR comparison.
       --preserve-missing  Treat missing stories as unchanged rather than deleted when comparing to the baseline.
       --skip [branch]  Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
+      --storybook-base-dir <dirname>  Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when your Storybook is located in a subdirectory of your repository.
 
     Debug options
       --ci  Mark this build as a CI build. Alternatively, set the CI environment variable (present in most CI systems). This option implies --no-interactive.
       --debug  Output verbose debugging information. This option implies --no-interactive.
+      --dry-run  Run without actually publishing to Chromatic.
       --junit-report [filepath]  Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
       --list  List available stories. This requires running a full build.
       --no-interactive  Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
@@ -63,10 +65,12 @@ export default function parseArgs(argv) {
         patchBuild: { type: 'string' },
         preserveMissing: { type: 'boolean' },
         skip: { type: 'string' },
+        storybookBaseDir: { type: 'string' },
 
         // Debug options
         ci: { type: 'boolean' },
         debug: { type: 'boolean' },
+        dryRun: { type: 'boolean' },
         junitReport: { type: 'string' },
         list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },

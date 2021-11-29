@@ -5,6 +5,7 @@ import {
   buildFailed,
   buildPassed,
   initial,
+  dryRun,
   pending,
   skipped,
 } from './snapshot';
@@ -31,6 +32,8 @@ const now = 0;
 const startedAt = -123456;
 
 export const Initial = () => initial;
+
+export const DryRun = () => dryRun();
 
 export const Pending = () =>
   pending({
