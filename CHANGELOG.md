@@ -1,3 +1,10 @@
+# 6.1.0 - 2021-11-29
+
+- [455](https://github.com/chromaui/chromatic-cli/pull/455) Add `--storybook-base-dir` to support TurboSnap with a prebuilt Storybook originating from a subdirectory
+- [456](https://github.com/chromaui/chromatic-cli/pull/456) Add `--dry-run` to skip publishing
+- [444](https://github.com/chromaui/chromatic-cli/pull/444) Add support for proxy authentication
+- [457](https://github.com/chromaui/chromatic-cli/pull/457) Throw error rather than bailing out of TurboSnap when tracing changed files fails
+
 # 6.0.6 - 2021-11-10
 
 - [449](https://github.com/chromaui/chromatic-cli/pull/449) Fix TurboSnap for unnamed modules in Webpack 5 stats file
@@ -28,11 +35,13 @@
 - Remove the deprecated Storybook addon
 
 Before:
+
 ```js
 import isChromatic from 'chromatic/isChromatic';
 ```
 
 After:
+
 ```js
 import isChromatic from 'chromatic';
 ```
