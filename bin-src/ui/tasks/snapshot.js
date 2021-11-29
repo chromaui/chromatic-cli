@@ -8,6 +8,12 @@ export const initial = {
   title: 'Test your stories',
 };
 
+export const dryRun = () => ({
+  status: 'skipped',
+  title: 'Test your stories',
+  output: 'Skipped due to --dry-run',
+});
+
 export const stats = (ctx) => {
   return {
     tests: pluralize('test', ctx.build.actualTestCount, true),

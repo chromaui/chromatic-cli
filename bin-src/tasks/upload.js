@@ -7,11 +7,13 @@ import { URL } from 'url';
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import uploadFiles from '../lib/uploadFiles';
+import { rewriteErrorMessage } from '../lib/utils';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import noStatsFile from '../ui/messages/warnings/noStatsFile';
 import {
   failed,
   initial,
+  dryRun,
   skipped,
   validating,
   invalid,
@@ -19,8 +21,8 @@ import {
   tracing,
   traced,
   starting,
-  success,
   uploading,
+  success,
 } from '../ui/tasks/upload';
 
 const TesterGetUploadUrlsMutation = `
@@ -126,8 +128,9 @@ export const traceChangedFiles = async (ctx, task) => {
         .join('\n')}`
     );
     transitionTo(traced)(ctx, task);
-  } catch (e) {
-    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles });
+  } catch (err) {
+    ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n\n${err.message}`);
   }
 };
 
@@ -170,6 +173,7 @@ export default createTask({
   title: initial.title,
   skip: (ctx) => {
     if (ctx.skip) return true;
+    if (ctx.options.dryRun) return dryRun(ctx).output;
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },

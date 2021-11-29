@@ -38,6 +38,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     list: flags.list,
     fromCI,
     skip: trueIfSet(flags.skip),
+    dryRun: !!flags.dryRun,
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
     junitReport: trueIfSet(flags.junitReport),
@@ -60,8 +61,9 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     key: flags.storybookKey,
     ca: flags.storybookCa,
     port: flags.storybookPort,
-    storybookUrl: trueIfSet(flags.storybookUrl),
     storybookBuildDir: takeLast(flags.storybookBuildDir),
+    storybookBaseDir: flags.storybookBaseDir,
+    storybookUrl: flags.storybookUrl,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
     ownerName,
@@ -142,10 +144,6 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
   // Build Storybook instead of starting it
   if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
-      if (options.onlyChanged) {
-        // TurboSnap requires that we build the Storybook, otherwise absolute paths won't match up.
-        throw new Error(incompatibleOptions(['--storybook-build-dir (-d)', '--only-changed']));
-      }
       return { ...options, noStart: true, useTunnel: false };
     }
     const { scripts } = packageJson;
@@ -162,7 +160,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     throw new Error(missingBuildScriptName(buildScriptName));
   }
 
-  // TurboSnap requires generating a static build with a webpack stats file.
+  // TurboSnap requires a static build with a webpack stats file.
   if (options.onlyChanged) throw new Error(invalidOnlyChanged());
 
   // Start Storybook on localhost and generate the URL to it

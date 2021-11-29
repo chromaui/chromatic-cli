@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { failed, initial, pending, runOnly, runOnlyFiles, success } from './verify';
+import { initial, dryRun, pending, runOnly, runOnlyFiles, success, failed } from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',
@@ -13,6 +13,8 @@ const build = {
 };
 
 export const Initial = () => initial;
+
+export const DryRun = () => dryRun();
 
 export const Pending = () => pending();
 

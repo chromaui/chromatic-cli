@@ -46,11 +46,12 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  */
 export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const { configDir = '.storybook', staticDir = [] } = ctx.storybook || {};
+  const { storybookBaseDir } = ctx.options;
 
   // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
   // up between the webpack stats and the git repo root.
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
-  const workingDir = getWorkingDir(rootPath); // e.g. `packages/storybook` or empty string
+  const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
   const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
 
   const storybookDir = normalize(posix(configDir));
@@ -92,13 +93,13 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
   });
 
-  ctx.log.debug(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
-  ctx.log.debug(`Found ${Object.keys(idsByName).length} user modules`);
+  ctx.log.info(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
+  ctx.log.info(`Found ${Object.keys(idsByName).length} user modules`);
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isConfigFile = (name) =>
-    name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
-  const isStaticFile = (name) => staticDirs.some((dir) => name.startsWith(`${dir}/`));
+    name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
+  const isStaticFile = (name) => staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
   const changedCsfIds = new Set();
   const checkedIds = {};
