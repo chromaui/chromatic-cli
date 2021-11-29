@@ -7,6 +7,7 @@ import { URL } from 'url';
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import uploadFiles from '../lib/uploadFiles';
+import { rewriteErrorMessage } from '../lib/utils';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import noStatsFile from '../ui/messages/warnings/noStatsFile';
 import {
@@ -128,7 +129,8 @@ export const traceChangedFiles = async (ctx, task) => {
     );
     transitionTo(traced)(ctx, task);
   } catch (err) {
-    ctx.log.warn('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n\n${err.message}`);
   }
 };
 

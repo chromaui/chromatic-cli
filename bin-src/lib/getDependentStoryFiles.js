@@ -93,8 +93,8 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
   });
 
-  ctx.log.debug(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
-  ctx.log.debug(`Found ${Object.keys(idsByName).length} user modules`);
+  ctx.log.info(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
+  ctx.log.info(`Found ${Object.keys(idsByName).length} user modules`);
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isConfigFile = (name) =>
