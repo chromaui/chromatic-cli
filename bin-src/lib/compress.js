@@ -9,14 +9,27 @@ export default async function makeZipFile(ctx) {
   const sink = fs.createWriteStream(null, { fd: tmp.fd });
   const { paths } = ctx.fileInfo;
 
-  return new Promise((resolve, _) => {
+  return new Promise((resolve, reject) => {
     sink.on('close', () => {
       resolve({ path: tmp.path, size: archive.pointer() });
     });
-    archive.pipe(sink);
-    paths.forEach((path) => {
-      archive.append(fs.createReadStream(join(ctx.sourceDir, path)), { name: path });
+
+    // 'warning' messages contain non-blocking errors
+    archive.on('warning', (err) => {
+      ctx.log.debug({ err }, 'Received warning when creating zip file');
     });
+    archive.on('error', (err) => {
+      reject(err);
+    });
+    archive.pipe(sink);
+
+    paths.forEach((path) => {
+      const fullPath = join(ctx.sourceDir, path);
+      ctx.log.debug({ fullPath }, 'Adding file to zip archive');
+      archive.append(fs.createReadStream(fullPath), { name: path });
+    });
+
+    ctx.log.debug('Finalizing zip archive');
     archive.finalize();
   });
 }
