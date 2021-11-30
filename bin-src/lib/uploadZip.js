@@ -2,6 +2,9 @@ import retry from 'async-retry';
 import fs from 'fs-extra';
 import progress from 'progress-stream';
 
+// A sentinel file is created by a zip-unpack lambda within the Chromatic infrastructure once the
+// uploaded zip is fully extracted. The contents of this file will consist of 'OK' if the process
+// completed successfully and 'ERROR' if an error occurred.
 const SENTINEL_SUCCESS_VALUE = 'OK';
 
 export async function uploadZip(ctx, path, url, contentLength, onProgress) {
