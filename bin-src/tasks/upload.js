@@ -213,7 +213,7 @@ export const uploadStorybook = async (ctx, task) => {
     try {
       await uploadAsZipFile(ctx, task);
     } catch (err) {
-      ctx.log.debug('error uploading zip file', err);
+      ctx.log.debug({ err }, 'Error uploading zip file');
       await uploadAsIndividualFiles(ctx, task);
     }
   } else {
