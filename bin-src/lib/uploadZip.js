@@ -61,7 +61,7 @@ export async function waitForUnpack(ctx, url) {
       }
 
       const result = await res.text();
-      if (SENTINEL_SUCCESS_VALUE !== result) {
+      if (result !== SENTINEL_SUCCESS_VALUE) {
         bail(new Error('Zip file failed to unpack remotely.'));
       } else {
         ctx.log.debug(`Sentinel file present, continuing.`);
