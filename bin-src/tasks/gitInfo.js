@@ -19,6 +19,7 @@ import {
   success,
 } from '../ui/tasks/gitInfo';
 import externalsChanged from '../ui/messages/warnings/externalsChanged';
+import ignoringChangedFiles from '../ui/messages/warnings/ignoringChangedFiles';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 
@@ -131,6 +132,23 @@ export const setGitInfo = async (ctx, task) => {
           break;
         }
       }
+    }
+
+    if (ctx.git.changedFiles && ctx.options.ignoreChanged) {
+      const changedCount = ctx.git.changedFiles.length;
+      // eslint-disable-next-line no-restricted-syntax
+      for (const glob of ctx.options.ignoreChanged) {
+        const isMatch = picomatch(glob, { contains: true });
+        ctx.git.changedFiles = ctx.git.changedFiles.filter((path) => {
+          if (isMatch(path)) {
+            ctx.log.debug(`Ignoring changed file: ${path}`);
+            return false;
+          }
+          return true;
+        });
+      }
+      const ignoredCount = changedCount - ctx.git.changedFiles.length;
+      if (ignoredCount) ctx.log.warn(ignoringChangedFiles({ changedCount, ignoredCount }));
     }
   }
 
