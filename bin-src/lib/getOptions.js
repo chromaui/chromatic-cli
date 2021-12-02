@@ -24,6 +24,7 @@ const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 const trueIfSet = (value) => (value === '' ? true : value);
+const undefinedIfEmpty = (array) => (array?.length ? array : undefined);
 
 export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
@@ -35,8 +36,8 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
 
     only: flags.only,
     onlyChanged: trueIfSet(flags.onlyChanged),
-    ignoreChanged: flags.ignoreChanged,
-    externals: flags.externals,
+    ignoreChanged: undefinedIfEmpty(flags.ignoreChanged),
+    externals: undefinedIfEmpty(flags.externals),
     list: flags.list,
     fromCI,
     skip: trueIfSet(flags.skip),
