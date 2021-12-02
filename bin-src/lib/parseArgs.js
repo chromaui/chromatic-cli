@@ -22,10 +22,10 @@ export default function parseArgs(argv) {
       --branch-name <branch>  Override the branch name. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Also accepts <owner>:<branch> format.
       --exit-once-uploaded [branch]  Exit with 0 once the built version has been published to Chromatic. Only for [branch], if specified. Globs are supported via picomatch.
       --exit-zero-on-changes [branch]  If all snapshots render but there are visual changes, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
-      --externals <filepath>  When any of these files have changed since the baseline build, ignore --only-changed. Globs are supported via picomatch. This flag can be specified multiple times.
-      --ignore-changed <filepath>  Continue with --only-changed regardless of changes to these files. Globs are supported via picomatch. This flag can be specified multiple times.
+      --externals <filepath>  Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
+      --ignore-changed <filepath>  Disregard these files when tracing dependent stories for TurboSnap. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --ignore-last-build-on-branch <branch>  Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
-      --only-changed [branch]  Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be inherited from the prior commit.
+      --only-changed [branch]  Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be inherited from the prior commit.
       --patch-build <headbranch...basebranch>  Create a patch build to fix a missing PR comparison.
       --preserve-missing  Treat missing stories as unchanged rather than deleted when comparing to the baseline.
       --skip [branch]  Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.

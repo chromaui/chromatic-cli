@@ -114,14 +114,19 @@ export const setGitInfo = async (ctx, task) => {
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())];
-      ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+      ctx.log.debug(
+        `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
+          .map((f) => `  ${f}`)
+          .join('\n')}`
+      );
     } catch (e) {
       ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
     }
 
-    if (ctx.git.changedFiles && ctx.options.externals) {
+    const changedCount = ctx.git.changedFiles?.length;
+    if (changedCount && ctx.options.externals) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
         const isMatch = picomatch(glob, { contains: true });
@@ -133,9 +138,7 @@ export const setGitInfo = async (ctx, task) => {
         }
       }
     }
-
-    if (ctx.git.changedFiles && ctx.options.ignoreChanged) {
-      const changedCount = ctx.git.changedFiles.length;
+    if (changedCount && ctx.options.ignoreChanged) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.ignoreChanged) {
         const isMatch = picomatch(glob, { contains: true });
