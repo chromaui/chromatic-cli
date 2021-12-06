@@ -6,8 +6,10 @@ import { URL } from 'url';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
+import makeZipFile from '../lib/compress';
 import uploadFiles from '../lib/uploadFiles';
 import { rewriteErrorMessage } from '../lib/utils';
+import { uploadZip, waitForUnpack } from '../lib/uploadZip';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import noStatsFile from '../ui/messages/warnings/noStatsFile';
 import {
@@ -34,6 +36,16 @@ const TesterGetUploadUrlsMutation = `
         url
         contentType
       }
+    }
+  }
+`;
+
+const TesterGetZipUploadUrlMutation = `
+  mutation TesterGetZipUploadUrlMutation {
+    getZipUploadUrl {
+      domain
+      url
+      sentinelUrl
     }
   }
 `;
@@ -134,10 +146,7 @@ export const traceChangedFiles = async (ctx, task) => {
   }
 };
 
-export const uploadStorybook = async (ctx, task) => {
-  if (ctx.skip) return;
-  transitionTo(preparing)(ctx, task);
-
+async function uploadAsIndividualFiles(ctx, task) {
   const { lengths, paths, total } = ctx.fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery(TesterGetUploadUrlsMutation, { paths });
   const { domain, urls } = getUploadUrls;
@@ -166,6 +175,51 @@ export const uploadStorybook = async (ctx, task) => {
 
   ctx.uploadedBytes = total;
   ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
+}
+
+async function uploadAsZipFile(ctx, task) {
+  const zipped = await makeZipFile(ctx);
+  const { path, size: total } = zipped;
+  const { getZipUploadUrl } = await ctx.client.runQuery(TesterGetZipUploadUrlMutation);
+  const { domain, url, sentinelUrl } = getZipUploadUrl;
+
+  task.output = starting(ctx).output;
+
+  try {
+    await uploadZip(ctx, path, url, total, (progress) => {
+      if (ctx.options.interactive) {
+        const percentage = Math.round((progress / total) * 100);
+        task.output = uploading({ percentage }).output;
+      }
+    });
+  } catch (e) {
+    if (path === e.message) {
+      throw new Error(failed({ path }).output);
+    }
+    throw e;
+  }
+
+  ctx.uploadedBytes = total;
+  ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
+
+  return waitForUnpack(ctx, sentinelUrl);
+}
+
+export const uploadStorybook = async (ctx, task) => {
+  if (ctx.skip) return;
+  transitionTo(preparing)(ctx, task);
+
+  if (ctx.options.zip) {
+    try {
+      await uploadAsZipFile(ctx, task);
+    } catch (err) {
+      ctx.log.debug({ err }, 'Error uploading zip file');
+      await uploadAsIndividualFiles(ctx, task);
+    }
+  } else {
+    await uploadAsIndividualFiles(ctx, task);
+  }
+
   transitionTo(success, true)(ctx, task);
 };
 
