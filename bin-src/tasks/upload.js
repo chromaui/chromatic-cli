@@ -8,7 +8,7 @@ import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import uploadFiles from '../lib/uploadFiles';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
-import noStatsFile from '../ui/messages/warnings/noStatsFile';
+import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
 import {
   failed,
   initial,
@@ -110,8 +110,8 @@ export const validateFiles = async (ctx, task) => {
 export const traceChangedFiles = async (ctx, task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
-    ctx.bailReason = { noStatsFile: true };
-    ctx.log.warn(noStatsFile());
+    ctx.bailReason = { missingStatsFile: true };
+    ctx.log.warn(missingStatsFile());
     return;
   }
 
@@ -121,12 +121,12 @@ export const traceChangedFiles = async (ctx, task) => {
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
-    const result = await getDependentStoryFiles(ctx, stats, changedFiles);
-    if (typeof result === 'string') {
-      ctx.bailReason = { changedFile: result };
+    const { bailReason, onlyStoryFiles } = await getDependentStoryFiles(ctx, stats, changedFiles);
+    if (bailReason) {
+      ctx.bailReason = bailReason;
       transitionTo(bailed)(ctx, task);
     } else {
-      ctx.onlyStoryFiles = result;
+      ctx.onlyStoryFiles = onlyStoryFiles;
       ctx.log.debug(
         `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
           .map(([id, f]) => `  ${f} [${id}]`)

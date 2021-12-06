@@ -17,7 +17,7 @@ const GLOBALS = [
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isGlobal = (name) => GLOBALS.some((re) => re.test(name));
+const isPackageFile = (name) => GLOBALS.some((re) => re.test(name));
 const isUserModule = ({ id, name, moduleName }) =>
   id !== undefined && id !== null && !EXTERNALS.some((re) => re.test(name || moduleName));
 
@@ -96,7 +96,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   ctx.log.debug(`Found ${Object.keys(idsByName).length} user modules`);
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
-  const isConfigFile = (name) =>
+  const isStorybookFile = (name) =>
     name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
   const isStaticFile = (name) => staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
@@ -104,18 +104,24 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const checkedIds = {};
   const toCheck = [];
 
-  let bail = changedFiles.find(isGlobal);
+  let bailReason;
+  const changedPackageFile = changedFiles.find(isPackageFile);
+  if (changedPackageFile) bailReason = { changedPackageFile };
 
   function shouldBail(name) {
-    if (isConfigFile(name) || isStaticFile(name)) {
-      bail = name;
+    if (isStorybookFile(name)) {
+      bailReason = { changedStorybookFile: name };
+      return true;
+    }
+    if (isStaticFile(name)) {
+      bailReason = { changedStaticFile: name };
       return true;
     }
     return false;
   }
 
   function traceName(normalizedName) {
-    if (bail || isCsfGlob(normalizedName)) return;
+    if (bailReason || isCsfGlob(normalizedName)) return;
     if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
@@ -137,14 +143,16 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     reasonsById[id].forEach(traceName);
   }
 
-  if (bail) {
-    ctx.log.warn(bailFile(bail));
-    return bail;
+  if (bailReason) {
+    ctx.log.warn(bailFile(bailReason));
+    return { bailReason };
   }
 
-  return stats.modules.reduce((acc, mod) => {
+  const onlyStoryFiles = stats.modules.reduce((acc, mod) => {
     if (changedCsfIds.has(mod.id))
       acc[String(mod.id)] = normalize(mod.name).replace(/ \+ \d+ modules$/, '');
     return acc;
   }, {});
+
+  return { onlyStoryFiles };
 }

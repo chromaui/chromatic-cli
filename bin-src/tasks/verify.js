@@ -72,10 +72,10 @@ export const setEnvironment = async (ctx) => {
 };
 
 export const createBuild = async (ctx, task) => {
-  const { client, git, log, isolatorUrl, options, onlyStoryFiles, bailReason } = ctx;
-  const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
+  const { git, log, isolatorUrl, rebuildForBuildId, onlyStoryFiles, bailReason } = ctx;
+  const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
   const { version, matchesBranch, changedFiles, ...commitInfo } = git; // omit some fields
-  const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
+  const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
 
   // It's not possible to set both --only and --only-changed
   if (only) {
@@ -85,12 +85,15 @@ export const createBuild = async (ctx, task) => {
     transitionTo(runOnlyFiles)(ctx, task);
   }
 
-  const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
+  const { createBuild: build } = await ctx.client.runQuery(TesterCreateBuildMutation, {
     input: {
       ...commitInfo,
+      rebuildForBuildId,
       ...(only && { only }),
       ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-      ...(bailReason && { bailReason }),
+      // GraphQL does not support union input types (yet), so we stringify the bailReason
+      // @see https://github.com/graphql/graphql-spec/issues/488
+      ...(bailReason && { turboSnapBailReason: JSON.stringify(bailReason) }),
       autoAcceptChanges,
       cachedUrl: ctx.cachedUrl,
       environment: ctx.environment,
@@ -130,7 +133,7 @@ export const createBuild = async (ctx, task) => {
 
   transitionTo(success, true)(ctx, task);
 
-  if (list || ctx.isPublishOnly || matchesBranch(options.exitOnceUploaded)) {
+  if (list || ctx.isPublishOnly || matchesBranch(ctx.options.exitOnceUploaded)) {
     ctx.exitCode = 0;
     ctx.skipSnapshots = true;
     ctx.log.info(storybookPublished(ctx));

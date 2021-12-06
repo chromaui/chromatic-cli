@@ -82,7 +82,7 @@ export const setGitInfo = async (ctx, task) => {
     const result = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
     const mostRecentAncestor = result?.app?.lastBuild;
     if (mostRecentAncestor) {
-      ctx.rebuildOf = mostRecentAncestor.id;
+      ctx.rebuildForBuildId = mostRecentAncestor.id;
       if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
         ctx.skip = true;
         transitionTo(skippedRebuild, true)(ctx, task);
@@ -96,8 +96,8 @@ export const setGitInfo = async (ctx, task) => {
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
   if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
-    if (ctx.rebuildOf) {
-      ctx.bailReason = { rebuildOf: ctx.rebuildOf };
+    if (ctx.rebuildForBuildId) {
+      ctx.bailReason = { rebuild: true };
       ctx.log.warn(isRebuild());
       transitionTo(success, true)(ctx, task);
       return;
@@ -129,7 +129,7 @@ export const setGitInfo = async (ctx, task) => {
         const isMatch = picomatch(glob, { contains: true });
         const match = ctx.git.changedFiles.find((path) => isMatch(path));
         if (match) {
-          ctx.bailReason = { changedExternal: match };
+          ctx.bailReason = { changedExternalFile: match };
           ctx.log.warn(externalsChanged(match));
           ctx.git.changedFiles = null;
           break;
