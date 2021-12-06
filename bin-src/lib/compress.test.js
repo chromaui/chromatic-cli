@@ -5,11 +5,14 @@ import TestLogger from './testLogger';
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
   mockFs.restore();
 });
 
 const testContext = {
-  sourceDir: '/tmp',
+  sourceDir: '/chromatic-tmp',
   fileInfo: { paths: ['file1'] },
   log: new TestLogger(),
 };
@@ -17,7 +20,7 @@ const testContext = {
 describe('makeZipFile', () => {
   it('adds files to an archive', async () => {
     mockFs({
-      '/tmp': {
+      '/chromatic-tmp': {
         file1: 'Storybook',
       },
     });
@@ -30,7 +33,7 @@ describe('makeZipFile', () => {
 
   it('rejects on error signals', () => {
     return expect(makeZipFile(testContext)).rejects.toThrow(
-      `ENOENT: no such file or directory, open '/tmp/file1'`
+      `ENOENT: no such file or directory, open '/chromatic-tmp/file1'`
     );
   });
 });
