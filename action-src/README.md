@@ -32,7 +32,6 @@ jobs:
         uses: chromaui/action@v1
         # Chromatic GitHub Action options
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           # 👇 Chromatic projectToken, refer to the manage page to obtain it.
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
@@ -46,7 +45,6 @@ Make sure to replace the value of `projectToken` with the project token provided
 ```yaml
 - uses: chromaui/action@v1
   with:
-    token: ${{ secrets.GITHUB_TOKEN }}
     projectToken: 'Your chromatic project token'
     buildScriptName: 'The npm script that builds your Storybook [build-storybook]'
     workingDir: 'Working directory for the package.json file'
@@ -58,14 +56,6 @@ Make sure to replace the value of `projectToken` with the project token provided
     ignoreLastBuildOnBranch: 'Ignores latest build on target branch as a baseline if branch is no longer present in history (i.e. branch was rebased): branchname'
 ```
 
-We suggest you use a secret to hide the project token:
-
-```yaml
-- uses: chromaui/action@v1
-  with:
-    token: ${{ secrets.GITHUB_TOKEN }}
-    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-```
 
 You can to configure secrets in the repository settings (`/<owner>/<repository>/settings/secrets`). However if you need to be able to run this action on pull requests from forks, because those can't access your secret.
 
@@ -91,7 +81,6 @@ jobs:
         with:
           # 👇 Runs Chromatic CLI in ./frontend
           workingDir: frontend
-          token: ${{ secrets.GITHUB_TOKEN }}
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 ```
 
