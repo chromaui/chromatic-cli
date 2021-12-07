@@ -25,8 +25,10 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
     packageVersion: pkg.version,
     ...(storybook ? { storybook } : {}),
     flags,
-    ...(options.buildScriptName ? { buildScript: scripts[options.buildScriptName] } : {}),
-    ...(options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
+    ...(options && options.buildScriptName
+      ? { buildScript: scripts[options.buildScriptName] }
+      : {}),
+    ...(options && options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     ...(spawnParams ? { spawnParams } : {}),
     exitCode,
     errorType: errors.map((err) => err.name).join('\n'),
