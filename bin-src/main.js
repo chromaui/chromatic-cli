@@ -69,8 +69,10 @@ export async function runBuild(ctx) {
   try {
     ctx.options = await getOptions(ctx);
   } catch (e) {
+    const errors = [].concat(e); // GraphQLClient might throw an array of errors
+
     ctx.log.info('');
-    ctx.log.error(e.stack || e.message);
+    ctx.log.error(fatalError(ctx, errors));
     ctx.exitCode = 254;
     return;
   }
