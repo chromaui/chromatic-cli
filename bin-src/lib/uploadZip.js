@@ -71,8 +71,8 @@ export async function waitForUnpack(ctx, url) {
       }
     },
     {
-      retries: 30,
-      minTimeout: 500,
+      retries: 185, // 3 minutes and some change (matches the lambda timeout with some extra buffer)
+      minTimeout: 1000,
       maxTimeout: 1000,
     }
   );
