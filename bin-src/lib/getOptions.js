@@ -42,6 +42,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
     junitReport: trueIfSet(flags.junitReport),
+    zip: trueIfSet(flags.zip),
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
