@@ -95,14 +95,14 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     }
   });
 
-  const globs = Object.keys(csfGlobsByName);
-  if (globs.length === 0) {
+  const globCount = Object.keys(csfGlobsByName).length;
+  if (globCount === 0) {
     ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 
-  const modules = Object.keys(idsByName);
-  ctx.log.info(csfGlobs({ globs, modules }));
+  const moduleCount = Object.keys(idsByName).length;
+  ctx.log.info(csfGlobs({ globCount, moduleCount }));
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isStorybookFile = (name) =>
