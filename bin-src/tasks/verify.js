@@ -6,6 +6,7 @@ import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
 import { initial, dryRun, pending, runOnly, runOnlyFiles, success } from '../ui/tasks/verify';
+import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 
 const TesterCreateBuildMutation = `
   mutation TesterCreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
@@ -17,6 +18,7 @@ const TesterCreateBuildMutation = `
       testCount
       actualTestCount: testCount(statuses: [IN_PROGRESS])
       actualCaptureCount
+      inheritedCaptureCount
       webUrl
       cachedUrl
       reportToken
@@ -75,7 +77,7 @@ export const setEnvironment = async (ctx) => {
 export const createBuild = async (ctx, task) => {
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
   const { version, matchesBranch, changedFiles, ...commitInfo } = ctx.git; // omit some fields
-  const { rebuildForBuildId, onlyStoryFiles, turboSnapEnabled, turboSnapBailReason } = ctx;
+  const { isolatorUrl, rebuildForBuildId, onlyStoryFiles, turboSnap } = ctx;
   const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
 
   // It's not possible to set both --only and --only-changed
@@ -92,10 +94,10 @@ export const createBuild = async (ctx, task) => {
       rebuildForBuildId,
       ...(only && { only }),
       ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-      turboSnapEnabled,
-      // GraphQL does not support union input types (yet), so we stringify the turboSnapBailReason
+      ...(turboSnap && { turboSnapEnabled: !turboSnap.bailReason }),
+      // GraphQL does not support union input types (yet), so we stringify the bailReason
       // @see https://github.com/graphql/graphql-spec/issues/488
-      ...(turboSnapBailReason && { turboSnapBailReason: JSON.stringify(turboSnapBailReason) }),
+      ...(turboSnap?.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
       autoAcceptChanges,
       cachedUrl: ctx.cachedUrl,
       environment: ctx.environment,
@@ -107,7 +109,7 @@ export const createBuild = async (ctx, task) => {
       viewLayer: ctx.storybook.viewLayer,
       addons: ctx.storybook.addons,
     },
-    isolatorUrl: ctx.isolatorUrl,
+    isolatorUrl,
   });
 
   ctx.build = build;
@@ -120,6 +122,10 @@ export const createBuild = async (ctx, task) => {
 
   if (!ctx.isOnboarding && !ctx.git.parentCommits) {
     ctx.log.warn(noAncestorBuild(ctx));
+  }
+
+  if (ctx.turboSnap && !ctx.turboSnap.bailReason) {
+    ctx.log.info(turboSnapEnabled(ctx));
   }
 
   if (build.wasLimited) {

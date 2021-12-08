@@ -124,7 +124,7 @@ export const validateFiles = async (ctx, task) => {
 export const traceChangedFiles = async (ctx, task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
-    ctx.turboSnapBailReason = { missingStatsFile: true };
+    ctx.turboSnap.bailReason = { missingStatsFile: true };
     ctx.log.warn(missingStatsFile());
     return;
   }
@@ -135,23 +135,17 @@ export const traceChangedFiles = async (ctx, task) => {
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
-    const { turboSnapBailReason, onlyStoryFiles } = await getDependentStoryFiles(
-      ctx,
-      stats,
-      statsPath,
-      changedFiles
-    );
-    if (turboSnapBailReason) {
-      ctx.turboSnapBailReason = turboSnapBailReason;
-      transitionTo(bailed)(ctx, task);
-    } else {
+    const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
+    if (onlyStoryFiles) {
       ctx.onlyStoryFiles = onlyStoryFiles;
       ctx.log.debug(
-        `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
+        `Found affected story files:\n${Object.entries(onlyStoryFiles)
           .map(([id, f]) => `  ${f} [${id}]`)
           .join('\n')}`
       );
       transitionTo(traced)(ctx, task);
+    } else {
+      transitionTo(bailed)(ctx, task);
     }
   } catch (err) {
     ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });

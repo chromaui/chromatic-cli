@@ -9,5 +9,4 @@ export default {
 
 export const NoAncestorBuild = (args) => noAncestorBuild(args);
 
-export const NoAncestorBuildTurboSnap = (args) =>
-  noAncestorBuild({ ...args, turboSnapEnabled: true });
+export const NoAncestorBuildTurboSnap = (args) => noAncestorBuild({ ...args, turboSnap: {} });

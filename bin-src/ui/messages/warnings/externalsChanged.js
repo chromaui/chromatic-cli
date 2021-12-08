@@ -8,7 +8,7 @@ const docsUrl = 'https://www.chromatic.com/docs/turbosnap#how-it-works';
 
 export default (file) =>
   dedent(chalk`
-    ${warning} {bold Ignoring --only-changed due to matching --externals}
+    ${warning} {bold TurboSnap disabled due to matching --externals}
     Found file with changes: {bold ${file}}
     ${info} Read more at ${link(docsUrl)}
   `);

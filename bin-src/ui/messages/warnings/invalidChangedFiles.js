@@ -8,7 +8,7 @@ const docsUrl = 'https://www.chromatic.com/docs/turbosnap#how-it-works';
 
 export default () =>
   dedent(chalk`
-    ${warning} {bold Ignoring --only-changed}
+    ${warning} {bold TurboSnap disabled}
     Could not retrieve changed files since baseline commit(s).
     This typically happens after rebasing, force pushing, or when running against an ephemeral merge commit.
     ${info} Read more at ${link(docsUrl)}

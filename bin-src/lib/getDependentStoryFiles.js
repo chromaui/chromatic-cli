@@ -3,7 +3,6 @@ import path from 'path';
 import { getWorkingDir } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
-import csfGlobs from '../ui/messages/info/csfGlobs';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 
 // Bail whenever one of these was changed
@@ -95,14 +94,13 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     }
   });
 
-  const globCount = Object.keys(csfGlobsByName).length;
-  if (globCount === 0) {
+  ctx.turboSnap.globs = Object.keys(csfGlobsByName);
+  ctx.turboSnap.modules = Object.keys(idsByName);
+
+  if (ctx.turboSnap.globs.length === 0) {
     ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
-
-  const moduleCount = Object.keys(idsByName).length;
-  ctx.log.info(csfGlobs({ globCount, moduleCount }));
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isStorybookFile = (name) =>
@@ -113,24 +111,23 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   const checkedIds = {};
   const toCheck = [];
 
-  let turboSnapBailReason;
   const changedPackageFile = changedFiles.find(isPackageFile);
-  if (changedPackageFile) turboSnapBailReason = { changedPackageFile };
+  if (changedPackageFile) ctx.turboSnap.bailReason = { changedPackageFile };
 
   function shouldBail(name) {
     if (isStorybookFile(name)) {
-      turboSnapBailReason = { changedStorybookFile: name };
+      ctx.turboSnap.bailReason = { changedStorybookFile: name };
       return true;
     }
     if (isStaticFile(name)) {
-      turboSnapBailReason = { changedStaticFile: name };
+      ctx.turboSnap.bailReason = { changedStaticFile: name };
       return true;
     }
     return false;
   }
 
   function traceName(normalizedName) {
-    if (turboSnapBailReason || isCsfGlob(normalizedName)) return;
+    if (ctx.turboSnap.bailReason || isCsfGlob(normalizedName)) return;
     if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
@@ -152,16 +149,14 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     reasonsById[id].forEach(traceName);
   }
 
-  if (turboSnapBailReason) {
-    ctx.log.warn(bailFile(turboSnapBailReason));
-    return { turboSnapBailReason };
+  if (ctx.turboSnap.bailReason) {
+    ctx.log.warn(bailFile(ctx));
+    return null;
   }
 
-  const onlyStoryFiles = stats.modules.reduce((acc, mod) => {
+  return stats.modules.reduce((acc, mod) => {
     if (changedCsfIds.has(mod.id))
       acc[String(mod.id)] = normalize(mod.name).replace(/ \+ \d+ modules$/, '');
     return acc;
   }, {});
-
-  return { onlyStoryFiles };
 }
