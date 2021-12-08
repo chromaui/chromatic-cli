@@ -10,7 +10,7 @@ const infoMessage = ({ commit, branch, parentCommits, changedFiles }, { ownerNam
     }
     return message;
   }
-  return `${message}; no parent commits found`;
+  return `${message}; no ancestor found`;
 };
 
 export const initial = {

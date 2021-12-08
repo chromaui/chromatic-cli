@@ -91,13 +91,22 @@ export const setGitInfo = async (ctx, task) => {
     }
   }
 
+  ctx.turboSnapEnabled = matchesBranch(ctx.options.onlyChanged);
+
   // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
   // to determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
-  if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
+  if (ctx.turboSnapEnabled) {
+    if (parentCommits.length === 0) {
+      ctx.turboSnapBailReason = { noAncestorBuild: true };
+      // Log warning after checking for isOnboarding
+      transitionTo(success, true)(ctx, task);
+      return;
+    }
+
     if (ctx.rebuildForBuildId) {
-      ctx.bailReason = { rebuild: true };
+      ctx.turboSnapBailReason = { rebuild: true };
       ctx.log.warn(isRebuild());
       transitionTo(success, true)(ctx, task);
       return;
@@ -117,7 +126,7 @@ export const setGitInfo = async (ctx, task) => {
       ctx.git.changedFiles = [...new Set(results.flat())];
       ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
     } catch (e) {
-      ctx.bailReason = { invalidChangedFiles: true };
+      ctx.turboSnapBailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
@@ -129,7 +138,7 @@ export const setGitInfo = async (ctx, task) => {
         const isMatch = picomatch(glob, { contains: true });
         const match = ctx.git.changedFiles.find((path) => isMatch(path));
         if (match) {
-          ctx.bailReason = { changedExternalFile: match };
+          ctx.turboSnapBailReason = { changedExternalFile: match };
           ctx.log.warn(externalsChanged(match));
           ctx.git.changedFiles = null;
           break;

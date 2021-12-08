@@ -2,6 +2,7 @@ import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
+import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
 import { initial, pending, runOnly, runOnlyFiles, success } from '../ui/tasks/verify';
@@ -72,9 +73,9 @@ export const setEnvironment = async (ctx) => {
 };
 
 export const createBuild = async (ctx, task) => {
-  const { git, log, isolatorUrl, rebuildForBuildId, onlyStoryFiles, bailReason } = ctx;
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
-  const { version, matchesBranch, changedFiles, ...commitInfo } = git; // omit some fields
+  const { version, matchesBranch, changedFiles, ...commitInfo } = ctx.git; // omit some fields
+  const { rebuildForBuildId, onlyStoryFiles, turboSnapEnabled, turboSnapBailReason } = ctx;
   const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
 
   // It's not possible to set both --only and --only-changed
@@ -91,9 +92,10 @@ export const createBuild = async (ctx, task) => {
       rebuildForBuildId,
       ...(only && { only }),
       ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-      // GraphQL does not support union input types (yet), so we stringify the bailReason
+      turboSnapEnabled,
+      // GraphQL does not support union input types (yet), so we stringify the turboSnapBailReason
       // @see https://github.com/graphql/graphql-spec/issues/488
-      ...(bailReason && { turboSnapBailReason: JSON.stringify(bailReason) }),
+      ...(turboSnapBailReason && { turboSnapBailReason: JSON.stringify(turboSnapBailReason) }),
       autoAcceptChanges,
       cachedUrl: ctx.cachedUrl,
       environment: ctx.environment,
@@ -105,7 +107,7 @@ export const createBuild = async (ctx, task) => {
       viewLayer: ctx.storybook.viewLayer,
       addons: ctx.storybook.addons,
     },
-    isolatorUrl,
+    isolatorUrl: ctx.isolatorUrl,
   });
 
   ctx.build = build;
@@ -113,20 +115,24 @@ export const createBuild = async (ctx, task) => {
   ctx.isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
 
   if (list) {
-    log.info(listingStories(build.tests));
+    ctx.log.info(listingStories(build.tests));
+  }
+
+  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
+    ctx.log.warn(noAncestorBuild(ctx));
   }
 
   if (build.wasLimited) {
     const { account } = build.app;
     if (account.exceededThreshold) {
-      log.warn(snapshotQuotaReached(account));
+      ctx.log.warn(snapshotQuotaReached(account));
       ctx.exitCode = 101;
     } else if (account.paymentRequired) {
-      log.warn(paymentRequired(account));
+      ctx.log.warn(paymentRequired(account));
       ctx.exitCode = 102;
     } else {
       // Future proofing for reasons we aren't aware of
-      log.warn(buildLimited(account));
+      ctx.log.warn(buildLimited(account));
       ctx.exitCode = 100;
     }
   }

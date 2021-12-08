@@ -38,7 +38,7 @@ export const tracing = (ctx) => ({
 export const bailed = (ctx) => ({
   status: 'pending',
   title: 'Ignoring --only-changed',
-  output: `Found a change in ${ctx.bailReason.changedFile}`,
+  output: `Found a change in ${ctx.turboSnapBailReason.changedFile}`,
 });
 
 export const traced = (ctx) => ({

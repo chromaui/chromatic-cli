@@ -110,7 +110,7 @@ export const validateFiles = async (ctx, task) => {
 export const traceChangedFiles = async (ctx, task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
-    ctx.bailReason = { missingStatsFile: true };
+    ctx.turboSnapBailReason = { missingStatsFile: true };
     ctx.log.warn(missingStatsFile());
     return;
   }
@@ -121,9 +121,13 @@ export const traceChangedFiles = async (ctx, task) => {
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
-    const { bailReason, onlyStoryFiles } = await getDependentStoryFiles(ctx, stats, changedFiles);
-    if (bailReason) {
-      ctx.bailReason = bailReason;
+    const { turboSnapBailReason, onlyStoryFiles } = await getDependentStoryFiles(
+      ctx,
+      stats,
+      changedFiles
+    );
+    if (turboSnapBailReason) {
+      ctx.turboSnapBailReason = turboSnapBailReason;
       transitionTo(bailed)(ctx, task);
     } else {
       ctx.onlyStoryFiles = onlyStoryFiles;

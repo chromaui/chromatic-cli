@@ -104,24 +104,24 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const checkedIds = {};
   const toCheck = [];
 
-  let bailReason;
+  let turboSnapBailReason;
   const changedPackageFile = changedFiles.find(isPackageFile);
-  if (changedPackageFile) bailReason = { changedPackageFile };
+  if (changedPackageFile) turboSnapBailReason = { changedPackageFile };
 
   function shouldBail(name) {
     if (isStorybookFile(name)) {
-      bailReason = { changedStorybookFile: name };
+      turboSnapBailReason = { changedStorybookFile: name };
       return true;
     }
     if (isStaticFile(name)) {
-      bailReason = { changedStaticFile: name };
+      turboSnapBailReason = { changedStaticFile: name };
       return true;
     }
     return false;
   }
 
   function traceName(normalizedName) {
-    if (bailReason || isCsfGlob(normalizedName)) return;
+    if (turboSnapBailReason || isCsfGlob(normalizedName)) return;
     if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
@@ -143,9 +143,9 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     reasonsById[id].forEach(traceName);
   }
 
-  if (bailReason) {
-    ctx.log.warn(bailFile(bailReason));
-    return { bailReason };
+  if (turboSnapBailReason) {
+    ctx.log.warn(bailFile(turboSnapBailReason));
+    return { turboSnapBailReason };
   }
 
   const onlyStoryFiles = stats.modules.reduce((acc, mod) => {
