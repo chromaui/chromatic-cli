@@ -1,10 +1,10 @@
-import chalk from 'chalk';
 import path from 'path';
 
 import { getWorkingDir } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import csfGlobs from '../ui/messages/info/csfGlobs';
+import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 
 // Bail whenever one of these was changed
 const GLOBALS = [
@@ -46,8 +46,8 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  * the changed git files. The result is a map of Module ID => file path. In the end we'll only send
  * the Module IDs to Chromatic, the file paths are only for logging purposes.
  */
-export async function getDependentStoryFiles(ctx, stats, changedFiles) {
-  const { configDir = '.storybook', staticDir = [] } = ctx.storybook || {};
+export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles) {
+  const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
   const { storybookBaseDir } = ctx.options;
 
   // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
@@ -97,9 +97,8 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
 
   const globs = Object.keys(csfGlobsByName);
   if (globs.length === 0) {
-    throw new Error(
-      chalk`Did not detect any CSF globs in {bold preview-stats.json}. Check your main Storybook configuration.`
-    );
+    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
+    throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 
   const modules = Object.keys(idsByName);

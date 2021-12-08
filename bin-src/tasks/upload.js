@@ -138,6 +138,7 @@ export const traceChangedFiles = async (ctx, task) => {
     const { turboSnapBailReason, onlyStoryFiles } = await getDependentStoryFiles(
       ctx,
       stats,
+      statsPath,
       changedFiles
     );
     if (turboSnapBailReason) {
@@ -154,7 +155,7 @@ export const traceChangedFiles = async (ctx, task) => {
     }
   } catch (err) {
     ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
-    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n\n${err.message}`);
+    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n${err.message}`);
   }
 };
 
