@@ -7,7 +7,7 @@ import link from '../../components/link';
 const docsUrl = 'https://www.chromatic.com/docs/turbosnap#how-it-works';
 
 export default ({ turboSnap }) => {
-  const { changedPackageFile, changedStaticFile, changedStorybookFile } = turboSnap;
+  const { changedPackageFile, changedStaticFile, changedStorybookFile } = turboSnap.bailReason;
   const file = changedPackageFile || changedStorybookFile || changedStaticFile;
   let type = changedPackageFile ? 'package' : 'static';
   if (changedStorybookFile) type = 'Storybook config';
