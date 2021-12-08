@@ -1,8 +1,10 @@
+import chalk from 'chalk';
 import path from 'path';
 
 import { getWorkingDir } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
+import csfGlobs from '../ui/messages/info/csfGlobs';
 
 // Bail whenever one of these was changed
 const GLOBALS = [
@@ -93,8 +95,15 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
   });
 
-  ctx.log.info(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
-  ctx.log.info(`Found ${Object.keys(idsByName).length} user modules`);
+  const globs = Object.keys(csfGlobsByName);
+  if (globs.length === 0) {
+    throw new Error(
+      chalk`Did not detect any CSF globs in {bold preview-stats.json}. Check your main Storybook configuration.`
+    );
+  }
+
+  const modules = Object.keys(idsByName);
+  ctx.log.info(csfGlobs({ globs, modules }));
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
   const isStorybookFile = (name) =>

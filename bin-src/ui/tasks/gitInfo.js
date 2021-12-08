@@ -4,7 +4,7 @@ const infoMessage = ({ commit, branch, parentCommits, changedFiles }, { ownerNam
   const branchName = ownerName ? `${ownerName}:${branch}` : branch;
   let message = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
   if (parentCommits.length > 0) {
-    message += `; found ${pluralize('parent commit', parentCommits.length, true)}`;
+    message += `; found ${pluralize('parent build', parentCommits.length, true)}`;
     if (changedFiles) {
       message += ` and ${pluralize('changed file', changedFiles.length, true)}`;
     }
