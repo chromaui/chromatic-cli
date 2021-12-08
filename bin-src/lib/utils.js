@@ -33,4 +33,5 @@ export const rewriteErrorMessage = (err, message) => {
   }
 };
 
-export const getWorkingDir = (basePath) => path.posix.relative(basePath, '.');
+export const getWorkingDir = (basePath, targetPath = '.') =>
+  path.posix.relative(basePath, targetPath);

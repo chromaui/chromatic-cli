@@ -6,6 +6,12 @@ export const initial = {
   title: 'Publish your built Storybook',
 };
 
+export const dryRun = () => ({
+  status: 'skipped',
+  title: 'Publish your built Storybook',
+  output: 'Skipped due to --dry-run',
+});
+
 export const skipped = (ctx) => ({
   status: 'skipped',
   title: 'Publish your built Storybook [skipped]',

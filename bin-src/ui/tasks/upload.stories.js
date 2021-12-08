@@ -1,6 +1,7 @@
 import task from '../components/task';
 import {
   initial,
+  dryRun,
   skipped,
   validating,
   invalid,
@@ -23,6 +24,8 @@ const isolatorUrl = 'https://5eb48280e78a12aeeaea33cf-kdypokzbrs.chromatic.com/i
 const storybookUrl = 'https://self-hosted-storybook.netlify.app';
 
 export const Initial = () => initial;
+
+export const DryRun = () => dryRun();
 
 export const Skipped = () => skipped({ options: { storybookUrl } });
 

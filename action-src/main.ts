@@ -121,7 +121,7 @@ async function run() {
   try {
     // Remember to keep this list in sync with ../action.yml
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
-    const workingDir = getInput('workingDir');
+    const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');

@@ -3,6 +3,12 @@ export const initial = {
   title: 'Verify your Storybook',
 };
 
+export const dryRun = () => ({
+  status: 'skipped',
+  title: 'Verify your Storybook',
+  output: 'Skipped due to --dry-run',
+});
+
 export const pending = (ctx) => ({
   status: 'pending',
   title: 'Verifying your Storybook',

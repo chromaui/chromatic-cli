@@ -8,7 +8,8 @@ jest.mock('./utils');
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 
 const ctx = {
-  log: { warn: jest.fn(), debug: jest.fn() },
+  log: { info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+  options: {},
 };
 
 beforeEach(() => {
@@ -39,6 +40,7 @@ describe('getDependentStoryFiles', () => {
       1: 'src/foo.stories.js',
     });
   });
+
   it('detects direct changes to CSF files, 6.4 v6 store', async () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
@@ -58,6 +60,7 @@ describe('getDependentStoryFiles', () => {
       1: 'src/foo.stories.js',
     });
   });
+
   it('detects direct changes to CSF files, 6.4 v7 store', async () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
