@@ -60,6 +60,10 @@ export async function waitForUnpack(ctx, url) {
       try {
         res = await ctx.http.fetch(url, {}, { retries: 0, noLogErrorBody: true });
       } catch (e) {
+        const { response = {} } = e;
+        if (response.status === 403) {
+          bail(new Error('Provided signature expired.'));
+        }
         throw new Error('Sentinel file not present.');
       }
 
