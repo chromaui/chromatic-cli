@@ -3,7 +3,7 @@ module.exports = {
     // CLI stories
     '../bin-src/ui/**/*.stories.js',
     // Test stories
-    // '../**/stories/*.stories.js',
+    '../**/stories/*.stories.js',
   ],
   features: {
     postcss: false,
