@@ -4,12 +4,11 @@ import { dedent } from 'ts-dedent';
 
 import { info } from '../../components/icons';
 
-export default ({ globs, modules }) => {
-  const globCount = pluralize('CSF glob', globs.length, true);
-  const moduleCount = pluralize('user module', modules.length, true);
+export default ({ globCount, moduleCount }) => {
+  const globs = pluralize('CSF glob', globCount.length, true);
+  const modules = pluralize('user module', moduleCount.length, true);
   return dedent(chalk`
     ${info} {bold TurboSnap enabled}
-    Traced ${moduleCount} from ${globCount}:
-    {dim - ${globs.join('\n- ')}}
+    Found ${globs} and traced ${modules}.
   `);
 };
