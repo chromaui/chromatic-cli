@@ -9,7 +9,6 @@ jobs:
     - run: yarn
     - uses: chromaui/action@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         projectToken: gcaw1ai2dgo
         exitZeroOnChanges: true
         exitOnceUploaded: true
