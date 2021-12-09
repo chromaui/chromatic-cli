@@ -1,4 +1,4 @@
-import HTTPClient from './HTTPClient';
+import HTTPClient, { HTTPClientError } from './HTTPClient';
 
 export default class GraphQLClient {
   constructor({ uri, ...httpClientOptions }) {
@@ -12,31 +12,44 @@ export default class GraphQLClient {
     this.headers.Authorization = `Bearer ${token}`;
   }
 
-  async runQuery(query, variables, headers) {
-    const response = await this.client.fetch(this.uri, {
-      body: JSON.stringify({ query, variables }),
-      headers: { ...this.headers, ...headers },
-      method: 'post',
-    });
-
-    const { data, errors } = await response.json();
-
-    if (errors) {
-      if (Array.isArray(errors)) {
-        errors.forEach((err) => {
-          // eslint-disable-next-line no-param-reassign
-          err.name = err.name || 'GraphQLError';
-          // eslint-disable-next-line no-param-reassign
-          err.at = `${err.path.join('.')} ${err.locations
-            .map((l) => `${l.line}:${l.column}`)
-            .join(', ')}`;
-        });
-        throw errors.length === 1 ? errors[0] : errors;
-      }
-      throw errors;
+  throwErrors(errors) {
+    if (Array.isArray(errors)) {
+      errors.forEach((err) => {
+        // eslint-disable-next-line no-param-reassign
+        err.name = err.name || 'GraphQLError';
+        // eslint-disable-next-line no-param-reassign
+        err.at = `${err.path.join('.')} ${err.locations
+          .map((l) => `${l.line}:${l.column}`)
+          .join(', ')}`;
+      });
+      throw errors.length === 1 ? errors[0] : errors;
     }
+    throw errors;
+  }
 
-    return data;
+  async runQuery(query, variables, headers) {
+    try {
+      const response = await this.client.fetch(
+        this.uri,
+        {
+          body: JSON.stringify({ query, variables }),
+          headers: { ...this.headers, ...headers },
+          method: 'post',
+        },
+        { noLogErrorBody: true }
+      );
+
+      const { data, errors } = await response.json();
+      return errors ? this.throwErrors(errors) : data;
+    } catch (err) {
+      if (!(err instanceof HTTPClientError)) throw err;
+      try {
+        const { errors } = await err.response.json();
+        return this.throwErrors(errors);
+      } catch (e) {
+        throw err;
+      }
+    }
   }
 
   // Convenience static method.
