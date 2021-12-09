@@ -1,6 +1,7 @@
 import pluralize from 'pluralize';
 
-const infoMessage = ({ commit, branch, parentCommits, changedFiles }, { ownerName }) => {
+const infoMessage = ({ commit, branch, parentCommits, changedFiles }, { ownerName }, turboSnap) => {
+  const turboSnapStatus = turboSnap?.bailReason ? '; TurboSnap disabled' : '';
   const branchName = ownerName ? `${ownerName}:${branch}` : branch;
   let message = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
   if (parentCommits.length > 0) {
@@ -8,9 +9,9 @@ const infoMessage = ({ commit, branch, parentCommits, changedFiles }, { ownerNam
     if (changedFiles) {
       message += ` and ${pluralize('changed file', changedFiles.length, true)}`;
     }
-    return message;
+    return `${message}${turboSnapStatus}`;
   }
-  return `${message}; no ancestor found`;
+  return `${message}; no ancestor found${turboSnapStatus}`;
 };
 
 export const initial = {
@@ -50,5 +51,5 @@ export const skippedRebuild = (ctx) => ({
 export const success = (ctx) => ({
   status: 'success',
   title: 'Retrieved git information',
-  output: infoMessage(ctx.git, ctx.options),
+  output: infoMessage(ctx.git, ctx.options, ctx.turboSnap),
 });
