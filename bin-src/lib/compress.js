@@ -1,0 +1,35 @@
+import archiver from 'archiver';
+import fs from 'fs-extra';
+import { join } from 'path';
+import { file as tempFile } from 'tmp-promise';
+
+export default async function makeZipFile(ctx) {
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const tmp = await tempFile({ postfix: '.zip' });
+  const sink = fs.createWriteStream(null, { fd: tmp.fd });
+  const { paths } = ctx.fileInfo;
+
+  return new Promise((resolve, reject) => {
+    sink.on('close', () => {
+      resolve({ path: tmp.path, size: archive.pointer() });
+    });
+
+    // 'warning' messages contain non-blocking errors
+    archive.on('warning', (err) => {
+      ctx.log.debug({ err }, 'Received warning when creating zip file');
+    });
+    archive.on('error', (err) => {
+      reject(err);
+    });
+    archive.pipe(sink);
+
+    paths.forEach((path) => {
+      const fullPath = join(ctx.sourceDir, path);
+      ctx.log.debug({ fullPath }, 'Adding file to zip archive');
+      archive.append(fs.createReadStream(fullPath), { name: path });
+    });
+
+    ctx.log.debug('Finalizing zip archive');
+    archive.finalize();
+  });
+}

@@ -11,6 +11,5 @@ jobs:
     - run: yarn build-storybook
     - uses: ./
       with: 
-        token: ${{ secrets.GITHUB_TOKEN }}
         projectToken: 5oy3iw6rkio
         storybookBuildDir: storybook-static

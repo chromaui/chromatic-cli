@@ -45,6 +45,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
     junitReport: trueIfSet(flags.junitReport),
+    zip: trueIfSet(flags.zip),
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
@@ -54,7 +55,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
-    outputDir: flags.outputDir,
+    outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: trueIfSet(flags.scriptName),
     exec: flags.exec,
@@ -64,13 +65,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     key: flags.storybookKey,
     ca: flags.storybookCa,
     port: flags.storybookPort,
-    storybookBuildDir: flags.storybookBuildDir
-      ? path.resolve(
-          Array.isArray(flags.storybookBuildDir)
-            ? flags.storybookBuildDir[0]
-            : flags.storybookBuildDir
-        )
-      : undefined,
+    storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookUrl: flags.storybookUrl,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
