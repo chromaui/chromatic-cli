@@ -60,6 +60,10 @@ export async function waitForUnpack(ctx, url) {
       try {
         res = await ctx.http.fetch(url, {}, { retries: 0, noLogErrorBody: true });
       } catch (e) {
+        const { response = {} } = e;
+        if (response.status === 403) {
+          bail(new Error('Provided signature expired.'));
+        }
         throw new Error('Sentinel file not present.');
       }
 
@@ -71,8 +75,8 @@ export async function waitForUnpack(ctx, url) {
       }
     },
     {
-      retries: 30,
-      minTimeout: 500,
+      retries: 185, // 3 minutes and some change (matches the lambda timeout with some extra buffer)
+      minTimeout: 1000,
       maxTimeout: 1000,
     }
   );
