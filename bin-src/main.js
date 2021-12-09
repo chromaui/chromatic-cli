@@ -95,16 +95,15 @@ export async function runBuild(ctx) {
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
-        ctx.log.info('');
-        ctx.log.error(fetchError(ctx, err));
-        return;
+        ctx.exitCode = 201;
+        throw rewriteErrorMessage(err, fetchError(ctx, err));
       }
       if (err.name === 'GraphQLError') {
-        ctx.log.info('');
-        ctx.log.error(graphqlError(ctx, err));
-        return;
+        ctx.exitCode = 202;
+        throw rewriteErrorMessage(err, graphqlError(ctx, err));
       }
       if (err.message.startsWith('Cannot run a build with no stories')) {
+        ctx.exitCode = 203;
         throw rewriteErrorMessage(err, missingStories(ctx));
       }
       throw rewriteErrorMessage(err, taskError(ctx, err));
