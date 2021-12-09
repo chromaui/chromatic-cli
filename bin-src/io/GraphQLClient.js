@@ -13,14 +13,17 @@ export default class GraphQLClient {
   }
 
   throwErrors(errors) {
+    this.client.log.debug({ errors }, 'GraphQL errors');
     if (Array.isArray(errors)) {
       errors.forEach((err) => {
         // eslint-disable-next-line no-param-reassign
         err.name = err.name || 'GraphQLError';
-        // eslint-disable-next-line no-param-reassign
-        err.at = `${err.path.join('.')} ${err.locations
-          .map((l) => `${l.line}:${l.column}`)
-          .join(', ')}`;
+        if (err.path) {
+          // eslint-disable-next-line no-param-reassign
+          err.at = `${err.path.join('.')} ${err.locations
+            .map((l) => `${l.line}:${l.column}`)
+            .join(', ')}`;
+        }
       });
       throw errors.length === 1 ? errors[0] : errors;
     }
@@ -43,12 +46,8 @@ export default class GraphQLClient {
       return errors ? this.throwErrors(errors) : data;
     } catch (err) {
       if (!(err instanceof HTTPClientError)) throw err;
-      try {
-        const { errors } = await err.response.json();
-        return this.throwErrors(errors);
-      } catch (e) {
-        throw err;
-      }
+      const { errors } = await err.response.json().catch(() => ({ errors: err }));
+      return this.throwErrors(errors);
     }
   }
 

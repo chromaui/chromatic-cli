@@ -16,6 +16,7 @@ import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
+import graphqlError from './ui/messages/errors/graphqlError';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
@@ -96,6 +97,11 @@ export async function runBuild(ctx) {
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         ctx.log.info('');
         ctx.log.error(fetchError(ctx, err));
+        return;
+      }
+      if (err.name === 'GraphQLError') {
+        ctx.log.info('');
+        ctx.log.error(graphqlError(ctx, err));
         return;
       }
       if (err.message.startsWith('Cannot run a build with no stories')) {
