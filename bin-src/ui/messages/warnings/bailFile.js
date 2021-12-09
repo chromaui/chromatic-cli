@@ -12,8 +12,8 @@ export default ({ turboSnap }) => {
   let type = changedPackageFile ? 'package' : 'static';
   if (changedStorybookFile) type = 'Storybook config';
   return dedent(chalk`
-    ${warning} {bold TurboSnap disabled}
-    Found a ${type} file change in ${file}
+    ${warning} {bold TurboSnap disabled due to file change}
+    Found a ${type} file change in {bold ${file}}
     A full build is required because this file cannot be linked to any specific stories.
     ${info} Read more at ${link(docsUrl)}
   `);
