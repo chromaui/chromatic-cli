@@ -39,7 +39,7 @@ export default function parseArgs(argv) {
       --junit-report [filepath]  Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
       --list  List available stories. This requires running a full build.
       --no-interactive  Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
-      --only <storypath>  Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. All other snapshots will be inherited from the prior commit. This option implies --preserve-missing.
+      --only <storypath>  Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This option implies --preserve-missing.
     `,
     {
       argv,

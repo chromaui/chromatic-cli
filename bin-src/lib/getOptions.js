@@ -19,12 +19,13 @@ import inferredOptions from '../ui/messages/info/inferredOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
 const takeLast = (input) => (Array.isArray(input) ? input[input.length - 1] : input);
+const ensureArray = (input) => (Array.isArray(input) ? input : [input]);
 
 const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 const trueIfSet = (value) => (value === '' ? true : value);
-const undefinedIfEmpty = (array) => (array?.length ? array : undefined);
+const undefinedIfEmpty = (array) => (array.length ? array : undefined);
 
 export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
@@ -36,8 +37,8 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
 
     only: flags.only,
     onlyChanged: trueIfSet(flags.onlyChanged),
-    untraced: undefinedIfEmpty(flags.untraced),
-    externals: undefinedIfEmpty(flags.externals),
+    untraced: undefinedIfEmpty(ensureArray(flags.untraced)),
+    externals: undefinedIfEmpty(ensureArray(flags.externals)),
     list: flags.list,
     fromCI,
     skip: trueIfSet(flags.skip),
