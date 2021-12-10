@@ -1,3 +1,4 @@
+import retry from 'async-retry';
 import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
@@ -55,6 +56,36 @@ const TesterCreateBuildMutation = `
   }
 `;
 
+// Some errors from the Chromatic backend are expected. This holds these values so the query can
+// retry as necessary.
+const retryableErrors = ['Build was not inserted in time'];
+
+// Calls the Chromatic backend to create a new build for verification
+const createBuildOnChromatic = async (ctx, createBuildOptions) => {
+  const { client, log } = ctx;
+
+  return retry(
+    async (bail) => {
+      let res;
+
+      try {
+        res = await client.runQuery(TesterCreateBuildMutation, createBuildOptions);
+      } catch (err) {
+        // if it's an expected error, simply retry
+        if (retryableErrors.includes(err.message)) {
+          log.debug({ err }, 'Received a retryable error, retrying');
+          throw err;
+        }
+
+        bail(err);
+      }
+
+      return res;
+    },
+    { retries: 3 }
+  );
+};
+
 export const setEnvironment = async (ctx) => {
   // We send up all environment variables provided by these complicated systems.
   // We don't want to send up *all* environment vars as they could include sensitive information
@@ -72,7 +103,7 @@ export const setEnvironment = async (ctx) => {
 };
 
 export const createBuild = async (ctx, task) => {
-  const { client, git, log, isolatorUrl, options, onlyStoryFiles } = ctx;
+  const { git, log, isolatorUrl, options, onlyStoryFiles } = ctx;
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = options;
   const { version, matchesBranch, changedFiles, ...commitInfo } = git; // omit some fields
   const autoAcceptChanges = matchesBranch(options.autoAcceptChanges);
@@ -85,7 +116,7 @@ export const createBuild = async (ctx, task) => {
     transitionTo(runOnlyFiles)(ctx, task);
   }
 
-  const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
+  const { createBuild: build } = await createBuildOnChromatic(ctx, {
     input: {
       ...commitInfo,
       ...(only && { only }),
