@@ -23,8 +23,8 @@ import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 
 const TesterSkipBuildMutation = `
-  mutation TesterSkipBuildMutation($commit: String!) {
-    skipBuild(commit: $commit)
+  mutation TesterSkipBuildMutation($commit: String!, $branch: String) {
+    skipBuild(commit: $commit, branch: $branch)
   }
 `;
 
@@ -59,7 +59,7 @@ export const setGitInfo = async (ctx, task) => {
   if (matchesBranch(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
     // The SkipBuildMutation ensures the commit is tagged properly.
-    if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
+    if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit, branch })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);
       ctx.exitCode = 0;
