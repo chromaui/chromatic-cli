@@ -42,7 +42,7 @@ const TesterLastBuildQuery = `
 `;
 
 export const setGitInfo = async (ctx, task) => {
-  const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
+  const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
   ctx.git = await getCommitAndBranch({ branchName, patchBaseRef, ci, log: ctx.log });
   ctx.git.version = await getVersion();
   if (!ctx.git.slug) {
@@ -115,11 +115,13 @@ export const setGitInfo = async (ctx, task) => {
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())];
-      ctx.log.debug(
-        `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
-          .map((f) => `  ${f}`)
-          .join('\n')}`
-      );
+      if (!interactive) {
+        ctx.log.info(
+          `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
+            .map((f) => `  ${f}`)
+            .join('\n')}`
+        );
+      }
     } catch (e) {
       ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
