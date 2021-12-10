@@ -130,6 +130,7 @@ async function run() {
     const onlyChanged = getInput('onlyChanged');
     const externals = getInput('externals');
     const doNotStart = getInput('doNotStart');
+    const report = getInput('report');
     const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
@@ -170,6 +171,7 @@ async function run() {
       storybookCa: maybe(storybookCa),
       fromCI: true,
       interactive: false,
+      report: maybe(report),
       preserveMissing: maybe(preserveMissing),
       autoAcceptChanges: maybe(autoAcceptChanges),
       exitZeroOnChanges: maybe(exitZeroOnChanges, true),

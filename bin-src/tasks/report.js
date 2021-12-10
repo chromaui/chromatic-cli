@@ -92,7 +92,7 @@ export const generateReport = async (ctx) => {
   });
 
   reportBuilder.writeTo(ctx.reportPath);
-  log.info(wroteReport(ctx.reportPath));
+  log.info(wroteReport(ctx.reportPath, 'JUnit XML'));
 };
 
 export default createTask({
