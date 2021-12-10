@@ -22,6 +22,7 @@ import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import ignoringChangedFiles from '../ui/messages/warnings/ignoringChangedFiles';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
+import { matchesFile } from '../lib/utils';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -129,8 +130,7 @@ export const setGitInfo = async (ctx, task) => {
     if (changedCount && ctx.options.externals) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
-        const isMatch = picomatch(glob, { contains: true });
-        const match = ctx.git.changedFiles.find((path) => isMatch(path));
+        const match = ctx.git.changedFiles.find((filepath) => matchesFile(glob, filepath));
         if (match) {
           ctx.log.warn(externalsChanged(match));
           ctx.git.changedFiles = null;
@@ -138,13 +138,12 @@ export const setGitInfo = async (ctx, task) => {
         }
       }
     }
-    if (changedCount && ctx.options.ignoreChanged) {
+    if (changedCount && ctx.options.untraced) {
       // eslint-disable-next-line no-restricted-syntax
-      for (const glob of ctx.options.ignoreChanged) {
-        const isMatch = picomatch(glob, { contains: true });
-        ctx.git.changedFiles = ctx.git.changedFiles.filter((path) => {
-          if (isMatch(path)) {
-            ctx.log.debug(`Ignoring changed file: ${path}`);
+      for (const glob of ctx.options.untraced) {
+        ctx.git.changedFiles = ctx.git.changedFiles.filter((filepath) => {
+          if (matchesFile(glob, filepath)) {
+            ctx.log.debug(`Ignoring changed file: ${filepath}`);
             return false;
           }
           return true;

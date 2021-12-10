@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { getWorkingDir } from './utils';
+import { getWorkingDir, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 
@@ -46,13 +46,16 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  */
 export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const { configDir = '.storybook', staticDir = [] } = ctx.storybook || {};
-  const { storybookBaseDir } = ctx.options;
+  const { storybookBaseDir, untraced = [] } = ctx.options;
+
+  const isTraceable = (filepath) => untraced.every((glob) => !matchesFile(glob, filepath));
+  const tracedFiles = changedFiles.filter(isTraceable);
 
   // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
   // up between the webpack stats and the git repo root.
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
-  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
+  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir); // e.g. `src/file.js` (no ./ prefix)
 
   const storybookDir = normalize(posix(configDir));
   const staticDirs = staticDir.map((dir) => normalize(posix(dir)));
@@ -105,7 +108,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const checkedIds = {};
   const toCheck = [];
 
-  let bail = changedFiles.find(isGlobal);
+  let bail = tracedFiles.find(isGlobal);
 
   function shouldBail(name) {
     if (isConfigFile(name) || isStaticFile(name)) {
@@ -131,11 +134,11 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
   }
 
-  changedFiles.forEach(traceName);
+  tracedFiles.forEach(traceName);
   while (toCheck.length > 0) {
     const id = toCheck.pop();
     checkedIds[id] = true;
-    reasonsById[id].forEach(traceName);
+    reasonsById[id].filter(isTraceable).forEach(traceName);
   }
 
   if (bail) {

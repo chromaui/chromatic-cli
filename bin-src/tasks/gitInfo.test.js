@@ -52,15 +52,15 @@ describe('setGitInfo', () => {
   it('drops changedFiles when matching --externals', async () => {
     getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' }]);
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
-    const ctx = { log, options: { onlyChanged: true, externals: ['*.scss'] } };
+    const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] } };
     await setGitInfo(ctx, {});
     expect(ctx.git.changedFiles).toBeNull();
   });
 
-  it('removes files matching --ignore-changed from changedFiles', async () => {
+  it('removes files matching --untraced from changedFiles', async () => {
     getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' }]);
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
-    const ctx = { log, options: { onlyChanged: true, ignoreChanged: ['*.scss'] } };
+    const ctx = { log, options: { onlyChanged: true, untraced: ['**/*.scss'] } };
     await setGitInfo(ctx, {});
     expect(ctx.git.changedFiles).toEqual(['lib/utils.js']);
   });

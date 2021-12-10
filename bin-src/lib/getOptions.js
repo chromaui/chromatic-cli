@@ -36,7 +36,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
 
     only: flags.only,
     onlyChanged: trueIfSet(flags.onlyChanged),
-    ignoreChanged: undefinedIfEmpty(flags.ignoreChanged),
+    untraced: undefinedIfEmpty(flags.untraced),
     externals: undefinedIfEmpty(flags.externals),
     list: flags.list,
     fromCI,
@@ -124,8 +124,8 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     throw new Error(invalidSingularOptions(['--only', '--only-changed']));
   }
 
-  if (options.ignoreChanged && !options.onlyChanged) {
-    throw new Error(dependentOption('--ignore-changed', '--only-changed'));
+  if (options.untraced && !options.onlyChanged) {
+    throw new Error(dependentOption('--untraced', '--only-changed'));
   }
 
   if (options.externals && !options.onlyChanged) {

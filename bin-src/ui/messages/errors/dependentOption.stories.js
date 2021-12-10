@@ -4,4 +4,4 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-export const DependentOption = () => dependentOption('--ignore-changed', '--only-changed');
+export const DependentOption = () => dependentOption('--untraced', '--only-changed');
