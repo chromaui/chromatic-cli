@@ -39,6 +39,7 @@ export default function parseArgs(argv) {
       --list  List available stories. This requires running a full build.
       --no-interactive  Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
       --only <storypath>  Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. All other snapshots will be inherited from the prior commit. This option implies --preserve-missing.
+      --report  Write process context information to chromatic-report.json.
     `,
     {
       argv,
@@ -76,6 +77,7 @@ export default function parseArgs(argv) {
         junitReport: { type: 'string' },
         list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
+        report: { type: 'boolean' },
 
         // Deprecated options for tunneled builds
         doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
