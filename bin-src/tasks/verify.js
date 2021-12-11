@@ -1,4 +1,3 @@
-import retry from 'async-retry';
 import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
