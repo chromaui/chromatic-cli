@@ -48,9 +48,6 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const { configDir = '.storybook', staticDir = [] } = ctx.storybook || {};
   const { storybookBaseDir, untraced = [] } = ctx.options;
 
-  const isTraceable = (filepath) => untraced.every((glob) => !matchesFile(glob, filepath));
-  const tracedFiles = changedFiles.filter(isTraceable);
-
   // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
   // up between the webpack stats and the git repo root.
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
@@ -104,6 +101,16 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
   const isStaticFile = (name) => staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
+  ctx.untracedFiles = [];
+  function untrace(filepath) {
+    if (untraced.some((glob) => matchesFile(glob, filepath))) {
+      ctx.untracedFiles.push(filepath);
+      return false;
+    }
+    return true;
+  }
+
+  const tracedFiles = changedFiles.filter(untrace);
   const changedCsfIds = new Set();
   const checkedIds = {};
   const toCheck = [];
@@ -138,7 +145,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   while (toCheck.length > 0) {
     const id = toCheck.pop();
     checkedIds[id] = true;
-    reasonsById[id].filter(isTraceable).forEach(traceName);
+    reasonsById[id].filter(untrace).forEach(traceName);
   }
 
   if (bail) {

@@ -139,6 +139,13 @@ export const traceChangedFiles = async (ctx, task) => {
         .map(([id, f]) => `  ${f} [${id}]`)
         .join('\n')}`
     );
+    if (ctx.untracedFiles?.length) {
+      ctx.log.debug(
+        `Encountered ${ctx.untracedFiles.length} untraced files:\n${ctx.untracedFiles
+          .map((f) => `  ${f}`)
+          .join('\n')}`
+      );
+    }
     transitionTo(traced)(ctx, task);
   } catch (err) {
     ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });

@@ -128,8 +128,7 @@ export const setGitInfo = async (ctx, task) => {
       ctx.log.debug(e);
     }
 
-    const changedCount = ctx.git.changedFiles?.length;
-    if (changedCount && ctx.options.externals) {
+    if (ctx.options.externals && ctx.git.changedFiles?.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
         const match = ctx.git.changedFiles.find((filepath) => matchesFile(glob, filepath));
@@ -139,20 +138,6 @@ export const setGitInfo = async (ctx, task) => {
           break;
         }
       }
-    }
-    if (changedCount && ctx.options.untraced) {
-      // eslint-disable-next-line no-restricted-syntax
-      for (const glob of ctx.options.untraced) {
-        ctx.git.changedFiles = ctx.git.changedFiles.filter((filepath) => {
-          if (matchesFile(glob, filepath)) {
-            ctx.log.debug(`Ignoring changed file: ${filepath}`);
-            return false;
-          }
-          return true;
-        });
-      }
-      const ignoredCount = changedCount - ctx.git.changedFiles.length;
-      if (ignoredCount) ctx.log.warn(ignoringChangedFiles({ changedCount, ignoredCount }));
     }
   }
 
