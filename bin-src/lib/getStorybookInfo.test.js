@@ -59,7 +59,7 @@ describe('getStorybookInfo', () => {
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({ viewLayer: 'react', version: expect.any(String) })
     );
-    expect(log.debug).toHaveBeenCalledWith(
+    expect(log.info).toHaveBeenCalledWith(
       expect.stringContaining('No viewlayer package listed in dependencies')
     );
   });

@@ -138,17 +138,21 @@ export const traceChangedFiles = async (ctx, task) => {
     const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
     if (onlyStoryFiles) {
       ctx.onlyStoryFiles = onlyStoryFiles;
-      ctx.log.debug(
-        `Found affected story files:\n${Object.entries(onlyStoryFiles)
-          .map(([id, f]) => `  ${f} [${id}]`)
-          .join('\n')}`
-      );
+      if (!ctx.options.interactive) {
+        ctx.log.info(
+          `Found affected story files:\n${Object.entries(onlyStoryFiles)
+            .map(([id, f]) => `  ${f} [${id}]`)
+            .join('\n')}`
+        );
+      }
       transitionTo(traced)(ctx, task);
     } else {
       transitionTo(bailed)(ctx, task);
     }
   } catch (err) {
-    ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    if (!ctx.options.interactive) {
+      ctx.log.info('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    }
     throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n${err.message}`);
   }
 };
