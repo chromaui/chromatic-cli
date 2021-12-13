@@ -2,11 +2,18 @@ import getStorybookInfo from './getStorybookInfo';
 
 jest.useFakeTimers();
 
-const log = { warn: jest.fn(), debug: jest.fn() };
+const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 const context = { env: {}, log, options: {}, packageJson: {} };
 
 const REACT = { '@storybook/react': '1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
+
+afterEach(() => {
+  log.info.mockReset();
+  log.warn.mockReset();
+  log.error.mockReset();
+  log.debug.mockReset();
+});
 
 describe('getStorybookInfo', () => {
   afterEach(() => {

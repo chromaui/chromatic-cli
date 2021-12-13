@@ -54,6 +54,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
   const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
+  const baseName = (name) => normalize(name).replace(/ \+ \d+ modules$/, '');
 
   const storybookDir = normalize(posix(configDir));
   const staticDirs = staticDir.map((dir) => normalize(posix(dir)));
@@ -116,11 +117,11 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
 
   function shouldBail(name) {
     if (isStorybookFile(name)) {
-      ctx.turboSnap.bailReason = { changedStorybookFile: name };
+      ctx.turboSnap.bailReason = { changedStorybookFile: baseName(name) };
       return true;
     }
     if (isStaticFile(name)) {
-      ctx.turboSnap.bailReason = { changedStaticFile: name };
+      ctx.turboSnap.bailReason = { changedStaticFile: baseName(name) };
       return true;
     }
     return false;
@@ -155,8 +156,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   }
 
   return stats.modules.reduce((acc, mod) => {
-    if (changedCsfIds.has(mod.id))
-      acc[String(mod.id)] = normalize(mod.name).replace(/ \+ \d+ modules$/, '');
+    if (changedCsfIds.has(mod.id)) acc[String(mod.id)] = baseName(mod.name);
     return acc;
   }, {});
 }
