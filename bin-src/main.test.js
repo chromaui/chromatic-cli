@@ -11,7 +11,7 @@ import TestLogger from './lib/testLogger';
 import openTunnel from './lib/tunnel';
 import uploadFiles from './lib/uploadFiles';
 import { runAll, runBuild } from './main';
-import { writeChromaticReport } from './lib/writeChromaticReport';
+import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 
 let lastBuild;
 let mockBuildFeatures;
@@ -570,25 +570,25 @@ describe('runAll', () => {
 
   it('ctx should be JSON serializable', async () => {
     const ctx = getContext(['--project-token=asdf1234']);
-    expect(() => writeChromaticReport(ctx)).not.toThrow();
+    expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
   });
 
-  it('should write context to chromatic-report.json if --report is passed', async () => {
-    const ctx = getContext(['--project-token=asdf1234', '--report']);
+  it('should write context to chromatic-diagnostics.json if --diagnostics is passed', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--diagnostics']);
     await runAll(ctx);
     expect(jsonfile.writeFile).toHaveBeenCalledWith(
-      'chromatic-report.json',
+      'chromatic-diagnostics.json',
       expect.objectContaining({
         options: expect.objectContaining({
           projectToken: 'asdf1234',
-          report: true,
+          diagnostics: true,
         }),
       }),
       { spaces: 2 }
     );
   });
 
-  it('should not write context to chromatic-report.json if --report is not passed', async () => {
+  it('should not write context to chromatic-diagnostics.json if --diagnostics is not passed', async () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runAll(ctx);
     expect(jsonfile.writeFile).not.toHaveBeenCalled();

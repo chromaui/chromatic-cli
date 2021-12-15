@@ -43,7 +43,7 @@ inputs:
     description: 'Do not attempt to start or build; use if your Storybook is already running'
     required: false
   report:
-    description: 'Write process context information to chromatic-report.json'
+    description: 'Write process context information to chromatic-diagnostics.json'
     required: false
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
