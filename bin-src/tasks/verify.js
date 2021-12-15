@@ -85,24 +85,28 @@ export const createBuild = async (ctx, task) => {
     transitionTo(runOnlyFiles)(ctx, task);
   }
 
-  const { createBuild: build } = await client.runQuery(TesterCreateBuildMutation, {
-    input: {
-      ...commitInfo,
-      ...(only && { only }),
-      ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-      autoAcceptChanges,
-      cachedUrl: ctx.cachedUrl,
-      environment: ctx.environment,
-      patchBaseRef,
-      patchHeadRef,
-      preserveMissingSpecs,
-      packageVersion: ctx.pkg.version,
-      storybookVersion: ctx.storybook.version,
-      viewLayer: ctx.storybook.viewLayer,
-      addons: ctx.storybook.addons,
+  const { createBuild: build } = await client.runQuery(
+    TesterCreateBuildMutation,
+    {
+      input: {
+        ...commitInfo,
+        ...(only && { only }),
+        ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        autoAcceptChanges,
+        cachedUrl: ctx.cachedUrl,
+        environment: ctx.environment,
+        patchBaseRef,
+        patchHeadRef,
+        preserveMissingSpecs,
+        packageVersion: ctx.pkg.version,
+        storybookVersion: ctx.storybook.version,
+        viewLayer: ctx.storybook.viewLayer,
+        addons: ctx.storybook.addons,
+      },
+      isolatorUrl,
     },
-    isolatorUrl,
-  });
+    { retries: 3 }
+  );
 
   ctx.build = build;
   ctx.isPublishOnly = !build.features.uiReview && !build.features.uiTests;
