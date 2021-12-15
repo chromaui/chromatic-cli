@@ -10,9 +10,11 @@ export async function writeChromaticReport(ctx) {
   const reportContext = Object.keys(restCtx)
     .sort((a, b) => a.localeCompare(b))
     .reduce((acc, key) => ({ ...acc, [key]: restCtx[key] }), {});
-  return writeFile(chromaticReportPath, reportContext, { spaces: 2 })
-    .then(() => ctx.log.info(wroteReport(chromaticReportPath, 'Chromatic')))
-    .catch((err) => {
-      ctx.log.error(err);
-    });
+  try {
+    await writeFile(chromaticReportPath, reportContext, { spaces: 2 });
+
+    ctx.log.info(wroteReport(chromaticReportPath, 'Chromatic'));
+  } catch (error) {
+    ctx.log.error(error);
+  }
 }
