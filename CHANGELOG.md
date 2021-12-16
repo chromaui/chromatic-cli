@@ -1,3 +1,9 @@
+# 6.2.0 - 2021-12-07
+
+- [459](https://github.com/chromaui/chromatic-cli/pull/459) Add --zip flag to upload files as zip archive
+- [463](https://github.com/chromaui/chromatic-cli/pull/463) Fix tests of makeZipFile
+- [447](https://github.com/chromaui/chromatic-cli/pull/447) Add support for passing the same flag multiple times
+
 # 6.1.0 - 2021-11-29
 
 - [455](https://github.com/chromaui/chromatic-cli/pull/455) Add `--storybook-base-dir` to support TurboSnap with a prebuilt Storybook originating from a subdirectory
