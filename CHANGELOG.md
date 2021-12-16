@@ -1,3 +1,10 @@
+# 6.2.1 - 2021-12-16
+
+- [477](https://github.com/chromaui/chromatic-cli/pull/477) Retry createBuild based on error messages
+- [468](https://github.com/chromaui/chromatic-cli/pull/468) Increase unpack wait timeout to 3 minutes
+- [466](https://github.com/chromaui/chromatic-cli/pull/466) Add workingDirectory input handler for action
+- [465](https://github.com/chromaui/chromatic-cli/pull/465) Remove the need to set a GitHub token
+
 # 6.2.0 - 2021-12-07
 
 - [459](https://github.com/chromaui/chromatic-cli/pull/459) Add --zip flag to upload files as zip archive
