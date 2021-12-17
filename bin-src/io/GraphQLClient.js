@@ -18,36 +18,31 @@ export default class GraphQLClient {
   async runQuery(query, variables, { headers = {}, retries = 0 } = {}) {
     return retry(
       async (bail) => {
-        const response = await this.client.fetch(this.uri, {
-          body: JSON.stringify({ query, variables }),
-          headers: { ...this.headers, ...headers },
-          method: 'post',
+        const { data, errors } = await this.client
+          .fetch(this.uri, {
+            body: JSON.stringify({ query, variables }),
+            headers: { ...this.headers, ...headers },
+            method: 'post',
+          })
+          .then((res) => res.json())
+          .catch(bail);
+
+        if (!errors) return data;
+        if (!Array.isArray(errors)) return bail(errors);
+
+        // GraphQL typically returns a list of errors
+        errors.forEach((err) => {
+          // Throw an error to retry the query if it's safe to do so, otherwise bail
+          if (err.extensions?.code === RETRYABLE_ERROR_CODE) throw err;
+
+          // eslint-disable-next-line no-param-reassign
+          err.name = err.name || 'GraphQLError';
+          // eslint-disable-next-line no-param-reassign
+          err.at = `${err.path.join('.')} ${err.locations
+            .map((l) => `${l.line}:${l.column}`)
+            .join(', ')}`;
         });
-
-        const { data, errors } = await response.json();
-
-        if (errors) {
-          if (Array.isArray(errors)) {
-            errors.forEach((err) => {
-              const { extensions = {} } = err;
-              if (extensions.code === RETRYABLE_ERROR_CODE) {
-                // throw an error to retry the query
-                throw err;
-              }
-
-              // eslint-disable-next-line no-param-reassign
-              err.name = err.name || 'GraphQLError';
-              // eslint-disable-next-line no-param-reassign
-              err.at = `${err.path.join('.')} ${err.locations
-                .map((l) => `${l.line}:${l.column}`)
-                .join(', ')}`;
-            });
-            bail(errors.length === 1 ? errors[0] : errors);
-          }
-          bail(errors);
-        }
-
-        return data;
+        return bail(errors.length === 1 ? errors[0] : errors);
       },
       { retries }
     );
