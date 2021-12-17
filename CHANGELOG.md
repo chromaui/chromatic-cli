@@ -1,3 +1,7 @@
+# 6.2.2 - 2021-12-17
+
+- Fix error handling in GraphQL client to not retry mutation on HTTP error
+
 # 6.2.1 - 2021-12-16
 
 - [477](https://github.com/chromaui/chromatic-cli/pull/477) Retry createBuild based on error messages
