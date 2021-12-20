@@ -42,7 +42,7 @@ inputs:
   doNotStart:
     description: 'Do not attempt to start or build; use if your Storybook is already running'
     required: false
-  report:
+  diagnostics:
     description: 'Write process context information to chromatic-diagnostics.json'
     required: false
   storybookBuildDir:
