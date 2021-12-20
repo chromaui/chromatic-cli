@@ -11,5 +11,5 @@ jobs:
     - run: yarn build-storybook
     - uses: ./
       with: 
-        projectToken: 5oy3iw6rkio
+        projectToken: gcaw1ai2dgo
         storybookBuildDir: storybook-static
