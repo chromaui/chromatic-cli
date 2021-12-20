@@ -88,29 +88,33 @@ export const createBuild = async (ctx, task) => {
     transitionTo(runOnlyFiles)(ctx, task);
   }
 
-  const { createBuild: build } = await ctx.client.runQuery(TesterCreateBuildMutation, {
-    input: {
-      ...commitInfo,
-      rebuildForBuildId,
-      ...(only && { only }),
-      ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-      ...(turboSnap && { turboSnapEnabled: !turboSnap.bailReason }),
-      // GraphQL does not support union input types (yet), so we stringify the bailReason
-      // @see https://github.com/graphql/graphql-spec/issues/488
-      ...(turboSnap?.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
-      autoAcceptChanges,
-      cachedUrl: ctx.cachedUrl,
-      environment: ctx.environment,
-      patchBaseRef,
-      patchHeadRef,
-      preserveMissingSpecs,
-      packageVersion: ctx.pkg.version,
-      storybookVersion: ctx.storybook.version,
-      viewLayer: ctx.storybook.viewLayer,
-      addons: ctx.storybook.addons,
+  const { createBuild: build } = await ctx.client.runQuery(
+    TesterCreateBuildMutation,
+    {
+      input: {
+        ...commitInfo,
+        rebuildForBuildId,
+        ...(only && { only }),
+        ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        ...(turboSnap && { turboSnapEnabled: !turboSnap.bailReason }),
+        // GraphQL does not support union input types (yet), so we stringify the bailReason
+        // @see https://github.com/graphql/graphql-spec/issues/488
+        ...(turboSnap?.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
+        autoAcceptChanges,
+        cachedUrl: ctx.cachedUrl,
+        environment: ctx.environment,
+        patchBaseRef,
+        patchHeadRef,
+        preserveMissingSpecs,
+        packageVersion: ctx.pkg.version,
+        storybookVersion: ctx.storybook.version,
+        viewLayer: ctx.storybook.viewLayer,
+        addons: ctx.storybook.addons,
+      },
+      isolatorUrl,
     },
-    isolatorUrl,
-  });
+    { retries: 3 }
+  );
 
   ctx.build = build;
   ctx.isPublishOnly = !build.features.uiReview && !build.features.uiTests;

@@ -1,4 +1,7 @@
-import HTTPClient, { HTTPClientError } from './HTTPClient';
+import retry from 'async-retry';
+import HTTPClient from './HTTPClient';
+
+const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 
 export default class GraphQLClient {
   constructor({ uri, ...httpClientOptions }) {
@@ -12,47 +15,42 @@ export default class GraphQLClient {
     this.headers.Authorization = `Bearer ${token}`;
   }
 
-  throwErrors(errors) {
-    this.client.log.debug({ errors }, 'GraphQL errors');
-    if (Array.isArray(errors)) {
-      errors.forEach((err) => {
-        // eslint-disable-next-line no-param-reassign
-        err.name = err.name || 'GraphQLError';
-        if (err.path) {
+  async runQuery(query, variables, { headers = {}, retries = 0 } = {}) {
+    return retry(
+      async (bail) => {
+        const { data, errors } = await this.client
+          .fetch(this.uri, {
+            body: JSON.stringify({ query, variables }),
+            headers: { ...this.headers, ...headers },
+            method: 'post',
+          })
+          .then((res) => res.json())
+          .catch(bail);
+
+        if (!errors) return data;
+        if (!Array.isArray(errors)) return bail(errors);
+
+        // GraphQL typically returns a list of errors
+        this.client.log.debug({ errors }, 'GraphQL errors');
+        errors.forEach((err) => {
+          // Throw an error to retry the query if it's safe to do so, otherwise bail
+          if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
+
+          // eslint-disable-next-line no-param-reassign
+          err.name = err.name || 'GraphQLError';
           // eslint-disable-next-line no-param-reassign
           err.at = `${err.path.join('.')} ${err.locations
             .map((l) => `${l.line}:${l.column}`)
             .join(', ')}`;
-        }
-      });
-      throw errors.length === 1 ? errors[0] : errors;
-    }
-    throw errors;
-  }
-
-  async runQuery(query, variables, headers) {
-    try {
-      const response = await this.client.fetch(
-        this.uri,
-        {
-          body: JSON.stringify({ query, variables }),
-          headers: { ...this.headers, ...headers },
-          method: 'post',
-        },
-        { noLogErrorBody: true }
-      );
-
-      const { data, errors } = await response.json();
-      return errors ? this.throwErrors(errors) : data;
-    } catch (err) {
-      if (!(err instanceof HTTPClientError)) throw err;
-      const { errors } = await err.response.json().catch(() => ({ errors: err }));
-      return this.throwErrors(errors);
-    }
+        });
+        return bail(errors.length === 1 ? errors[0] : errors);
+      },
+      { retries }
+    );
   }
 
   // Convenience static method.
-  static async runQuery(options, query, variables) {
-    return new GraphQLClient(options).runQuery(query, variables);
+  static async runQuery(options, query, variables, runQueryOptions) {
+    return new GraphQLClient(options).runQuery(query, variables, runQueryOptions);
   }
 }
