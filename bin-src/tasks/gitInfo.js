@@ -51,7 +51,7 @@ export const setGitInfo = async (ctx, task) => {
     ctx.git.slug = ctx.git.slug.replace(/[^/]+/, ctx.options.ownerName);
   }
 
-  const { branch, commit } = ctx.git;
+  const { branch, commit, slug } = ctx.git;
 
   const matchesBranch = (glob) => (glob && glob.length ? picomatch(glob)(branch) : !!glob);
   ctx.git.matchesBranch = matchesBranch;
@@ -59,7 +59,7 @@ export const setGitInfo = async (ctx, task) => {
   if (matchesBranch(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
     // The SkipBuildMutation ensures the commit is tagged properly.
-    if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit, branch })) {
+    if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit, branch, slug })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);
       ctx.exitCode = 0;
