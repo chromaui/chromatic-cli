@@ -99,7 +99,8 @@ export const createBuild = async (ctx, task) => {
         ...(turboSnap && { turboSnapEnabled: !turboSnap.bailReason }),
         // GraphQL does not support union input types (yet), so we stringify the bailReason
         // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnap?.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
+        ...(turboSnap &&
+          turboSnap.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
         autoAcceptChanges,
         cachedUrl: ctx.cachedUrl,
         environment: ctx.environment,
