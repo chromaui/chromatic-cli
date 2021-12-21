@@ -4,6 +4,7 @@ import { confirm } from 'node-ask';
 import kill from 'tree-kill';
 
 import jsonfile from 'jsonfile';
+import { getCommit } from './git/git';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import startApp, { checkResponse } from './lib/startStorybook';
@@ -158,13 +159,7 @@ fs.statSync = jest.fn((path) => {
 
 jest.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
-  getCommit: () =>
-    Promise.resolve({
-      commit: 'commit',
-      committedAt: 1234,
-      committerEmail: 'test@test.com',
-      committerName: 'tester',
-    }),
+  getCommit: jest.fn(),
   getBranch: () => Promise.resolve('branch'),
   getParentCommits: () => Promise.resolve(['baseline']),
   getSlug: () => Promise.resolve('user/repo'),
@@ -190,6 +185,14 @@ beforeEach(() => {
   };
   execa.mockReset();
   execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }));
+  getCommit.mockReturnValue(
+    Promise.resolve({
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+    })
+  );
 });
 afterEach(() => {
   process.env = processEnv;
@@ -505,6 +508,14 @@ describe('in CI', () => {
       TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
       DISABLE_LOGGING: 'true',
     };
+    getCommit.mockReturnValue(
+      Promise.resolve({
+        commit: 'travis-commit',
+        committedAt: 1234,
+        committerEmail: 'test@test.com',
+        committerName: 'tester',
+      })
+    );
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
@@ -530,6 +541,14 @@ describe('in CI', () => {
       TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
       DISABLE_LOGGING: 'true',
     };
+    getCommit.mockReturnValue(
+      Promise.resolve({
+        commit: 'travis-commit',
+        committedAt: 1234,
+        committerEmail: 'test@test.com',
+        committerName: 'tester',
+      })
+    );
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
