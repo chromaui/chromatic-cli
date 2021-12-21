@@ -13,6 +13,7 @@ import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
 import { rewriteErrorMessage } from './lib/utils';
+import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
@@ -60,6 +61,10 @@ export async function runAll(ctx) {
 
   if (!ctx.exitCode || ctx.exitCode === 1) {
     await checkPackageJson(ctx);
+  }
+
+  if (ctx.options.diagnostics) {
+    await writeChromaticDiagnostics(ctx);
   }
 }
 
