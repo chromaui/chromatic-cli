@@ -9,7 +9,7 @@ jest.mock('progress-stream');
 jest.mock('../lib/getDependentStoryFiles');
 
 const env = { CHROMATIC_RETRIES: 2 };
-const log = { warn: jest.fn(), debug: jest.fn() };
+const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 const http = { fetch: jest.fn() };
 
 describe('validateFiles', () => {
@@ -91,6 +91,7 @@ describe('traceChangedFiles', () => {
       env,
       log,
       http,
+      options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },

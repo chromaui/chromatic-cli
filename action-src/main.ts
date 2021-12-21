@@ -131,6 +131,7 @@ async function run() {
     const externals = getInput('externals');
     const untraced = getInput('untraced');
     const doNotStart = getInput('doNotStart');
+    const diagnostics = getInput('diagnostics');
     const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
@@ -156,6 +157,7 @@ async function run() {
       workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
+      diagnostics: maybe(diagnostics),
       exec: maybe(exec),
       skip: maybe(skip),
       only: maybe(only),

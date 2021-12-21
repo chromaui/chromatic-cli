@@ -6,6 +6,7 @@ import {
   validating,
   invalid,
   tracing,
+  bailed,
   traced,
   preparing,
   starting,
@@ -37,6 +38,8 @@ export const Invalid = () =>
   });
 
 export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } });
+
+export const Bailed = () => bailed({ turboSnap: { bailReason: { changedFile: 'package.json' } } });
 
 export const Traced = () =>
   traced({ onlyStoryFiles: Object.fromEntries(Array.from({ length: 5 }, (_, i) => [i])) });

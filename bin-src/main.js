@@ -13,9 +13,11 @@ import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
 import { rewriteErrorMessage } from './lib/utils';
+import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
+import graphqlError from './ui/messages/errors/graphqlError';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
@@ -60,6 +62,10 @@ export async function runAll(ctx) {
   if (!ctx.exitCode || ctx.exitCode === 1) {
     await checkPackageJson(ctx);
   }
+
+  if (ctx.options.diagnostics) {
+    await writeChromaticDiagnostics(ctx);
+  }
 }
 
 export async function runBuild(ctx) {
@@ -94,11 +100,15 @@ export async function runBuild(ctx) {
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
-        ctx.log.info('');
-        ctx.log.error(fetchError(ctx, err));
-        return;
+        ctx.exitCode = 201;
+        throw rewriteErrorMessage(err, fetchError(ctx, err));
+      }
+      if (err.name === 'GraphQLError') {
+        ctx.exitCode = 202;
+        throw rewriteErrorMessage(err, graphqlError(ctx, err));
       }
       if (err.message.startsWith('Cannot run a build with no stories')) {
+        ctx.exitCode = 203;
         throw rewriteErrorMessage(err, missingStories(ctx));
       }
       throw rewriteErrorMessage(err, taskError(ctx, err));
