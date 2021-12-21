@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = {
   mode: 'production',
-  target: 'node14',
+  target: 'node12',
   entry: './action-src/register.js',
   externalsPresets: { node: true },
   // devtool: 'source-map',
