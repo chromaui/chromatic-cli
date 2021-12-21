@@ -8,6 +8,7 @@ action/main.js
 storybook-static
 subdir-static
 chromatic-build-*.xml
+chromatic-diagnostics.json
 # the dist folder IS included so we can test every version in the CI without publishing
 bin
 action
