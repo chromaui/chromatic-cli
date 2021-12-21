@@ -91,6 +91,7 @@ describe('traceChangedFiles', () => {
       env,
       log,
       http,
+      options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },

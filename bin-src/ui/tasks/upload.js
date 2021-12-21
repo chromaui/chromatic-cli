@@ -1,3 +1,5 @@
+import pluralize from 'pluralize';
+
 import { getDuration } from '../../lib/tasks';
 import { baseStorybookUrl, progress as progressBar } from '../../lib/utils';
 
@@ -35,17 +37,29 @@ export const invalid = (ctx, error) => {
   };
 };
 
-export const tracing = (ctx) => ({
+export const tracing = (ctx) => {
+  const files = pluralize('file', ctx.git.changedFiles.length, true);
+  return {
+    status: 'pending',
+    title: 'Retrieving story files affected by recent changes',
+    output: `Traversing dependencies for ${files} that changed since the last build`,
+  };
+};
+
+export const bailed = (ctx) => ({
   status: 'pending',
-  title: 'Retrieving story files affected by recent changes',
-  output: `Traversing dependencies for ${ctx.git.changedFiles.length} files that changed since the last build`,
+  title: 'TurboSnap disabled',
+  output: `Found a change in ${ctx.turboSnap.bailReason.changedFile}`,
 });
 
-export const traced = (ctx) => ({
-  status: 'pending',
-  title: 'Retrieved story files affected by recent changes',
-  output: `Found ${Object.keys(ctx.onlyStoryFiles).length} story files affected by recent changes`,
-});
+export const traced = (ctx) => {
+  const files = pluralize('story file', Object.keys(ctx.onlyStoryFiles).length, true);
+  return {
+    status: 'pending',
+    title: 'Retrieved story files affected by recent changes',
+    output: `Found ${files} affected by recent changes`,
+  };
+};
 
 export const preparing = (ctx) => ({
   status: 'pending',

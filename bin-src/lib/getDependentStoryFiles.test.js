@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 import { getRepositoryRoot } from '../git/git';
 import { getWorkingDir } from './utils';
@@ -6,15 +8,16 @@ jest.mock('../git/git');
 jest.mock('./utils');
 
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
+const statsPath = 'preview-stats.json';
 
-const ctx = {
-  log: { info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
-  options: {},
-};
+const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const getContext = (ctx) => ({ log, options: {}, turboSnap: {}, ...ctx });
 
-beforeEach(() => {
-  ctx.log.warn.mockReset();
-  ctx.log.debug.mockReset();
+afterEach(() => {
+  log.info.mockReset();
+  log.warn.mockReset();
+  log.error.mockReset();
+  log.debug.mockReset();
 });
 
 getRepositoryRoot.mockResolvedValue('/path/to/project');
@@ -25,19 +28,20 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      1: 'src/foo.stories.js',
+      './src/foo.stories.js': 'src/foo.stories.js',
     });
   });
 
@@ -45,19 +49,20 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      1: 'src/foo.stories.js',
+      './src/foo.stories.js': 'src/foo.stories.js',
     });
   });
 
@@ -65,19 +70,20 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './storybook-stories.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      1: 'src/foo.stories.js',
+      './src/foo.stories.js': 'src/foo.stories.js',
     });
   });
 
@@ -85,24 +91,25 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.js',
         name: './src/foo.js',
         reasons: [{ moduleName: './src/foo.stories.js' }],
       },
       {
-        id: 2,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      2: 'src/foo.stories.js',
+      './src/foo.stories.js': 'src/foo.stories.js',
     });
   });
 
@@ -110,20 +117,21 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.js'];
     const modules = [
       {
-        id: 1,
-        name: './src/foo.stories.js + 1 other',
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js + 1 modules',
         modules: [{ name: './src/foo.stories.js' }, { name: './src/foo.js' }],
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      1: 'src/foo.stories.js + 1 other',
+      './src/foo.stories.js': 'src/foo.stories.js',
     });
   });
 
@@ -132,24 +140,25 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['services/webapp/src/foo.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.js',
         name: './src/foo.js',
         reasons: [{ moduleName: './src/foo.stories.js' }],
       },
       {
-        id: 2,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      2: 'services/webapp/src/foo.stories.js',
+      './src/foo.stories.js': 'services/webapp/src/foo.stories.js',
     });
   });
 
@@ -159,25 +168,26 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.js'];
     const modules = [
       {
-        id: 1,
+        id: '/path/to/project/src/foo.js',
         name: '/path/to/project/src/foo.js',
         reasons: [{ moduleName: '/path/to/project/src/foo.stories.js' }],
       },
       {
-        id: 2,
+        id: '/path/to/project/src/foo.stories.js',
         name: '/path/to/project/src/foo.stories.js',
         reasons: [{ moduleName: absoluteCsfGlob }],
       },
       {
-        id: 999,
+        id: absoluteCsfGlob,
         name: absoluteCsfGlob,
         // path to generated-stories-entry.js is always relative
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      2: 'src/foo.stories.js',
+      '/path/to/project/src/foo.stories.js': 'src/foo.stories.js',
     });
   });
 
@@ -189,71 +199,93 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['packages/webapp/src/foo.js'];
     const modules = [
       {
-        id: 1,
+        id: '/path/to/project/packages/webapp/src/foo.js',
         name: '/path/to/project/packages/webapp/src/foo.js',
         reasons: [{ moduleName: '/path/to/project/packages/webapp/src/foo.stories.js' }],
       },
       {
-        id: 2,
+        id: '/path/to/project/packages/webapp/src/foo.stories.js',
         name: '/path/to/project/packages/webapp/src/foo.stories.js',
         reasons: [{ moduleName: absoluteCsfGlob }],
       },
       {
-        id: 999,
+        id: absoluteCsfGlob,
         name: absoluteCsfGlob,
         // path to generated-stories-entry.js is always relative
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      2: 'packages/webapp/src/foo.stories.js',
+      '/path/to/project/packages/webapp/src/foo.stories.js': 'packages/webapp/src/foo.stories.js',
     });
+  });
+
+  it('throws on missing CSF glob', async () => {
+    const changedFiles = ['src/styles.js'];
+    const modules = [
+      {
+        id: './src/styles.js',
+        name: './src/styles.js',
+        reasons: [{ moduleName: './path/to/storybook-config/file.js' }],
+      },
+    ];
+    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    await expect(() =>
+      getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles)
+    ).rejects.toEqual(new Error('Did not find any CSF globs in preview-stats.json'));
   });
 
   it('bails on changed global file', async () => {
     const changedFiles = ['src/foo.stories.js', 'src/package.json'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(ctx, { modules }, changedFiles);
-    expect(res).toEqual(false);
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedPackageFile: 'src/package.json',
+    });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Found a change in src/package.json')
+      expect.stringContaining(chalk`Found a package file change in {bold src/package.json}`)
     );
   });
 
-  it('bails on changed config file', async () => {
+  it('bails on changed Storybook config file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/storybook-config/file.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
-        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(
-      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
-      { modules },
-      changedFiles
-    );
-    expect(res).toEqual(false);
+    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFile: 'path/to/storybook-config/file.js',
+    });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+      expect.stringContaining(
+        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+      )
     );
   });
 
@@ -261,19 +293,26 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/styles.js'];
     const modules = [
       {
-        id: 1,
+        id: './src/styles.js',
         name: './src/styles.js',
         reasons: [{ moduleName: './path/to/storybook-config/file.js' }],
       },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
     ];
-    const res = await getDependentStoryFiles(
-      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
-      { modules },
-      changedFiles
-    );
-    expect(res).toEqual(false);
+    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFile: 'path/to/storybook-config/file.js',
+    });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+      expect.stringContaining(
+        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+      )
     );
   });
 
@@ -281,20 +320,27 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/styles.js'];
     const modules = [
       {
-        id: 1,
-        name: './path/to/storybook-config/file.js + 1 other',
+        id: './path/to/storybook-config/file.js',
+        name: './path/to/storybook-config/file.js + 1 modules',
         modules: [{ name: './path/to/storybook-config/file.js' }, { name: './src/styles.js' }],
         reasons: [],
       },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
     ];
-    const res = await getDependentStoryFiles(
-      { ...ctx, storybook: { configDir: 'path/to/storybook-config' } },
-      { modules },
-      changedFiles
-    );
-    expect(res).toEqual(false);
+    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFile: 'path/to/storybook-config/file.js',
+    });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Found a change in path/to/storybook-config/file.js')
+      expect.stringContaining(
+        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+      )
     );
   });
 
@@ -302,24 +348,24 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/statics/image.png'];
     const modules = [
       {
-        id: 1,
+        id: './src/foo.stories.js',
         name: './src/foo.stories.js',
         reasons: [{ moduleName: CSF_GLOB }],
       },
       {
-        id: 999,
+        id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const res = await getDependentStoryFiles(
-      { ...ctx, storybook: { staticDir: ['path/to/statics'] } },
-      { modules },
-      changedFiles
-    );
-    expect(res).toEqual(false);
+    const ctx = getContext({ storybook: { staticDir: ['path/to/statics'] } });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStaticFile: 'path/to/statics/image.png',
+    });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Found a change in path/to/statics/image.png')
+      expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)
     );
   });
 });

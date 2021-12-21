@@ -1,4 +1,5 @@
 import fs from 'fs-extra';
+import { join } from 'path';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
 
 /**
@@ -42,5 +43,5 @@ export async function main([statsFile, ...changedFiles]) {
     },
   };
   // eslint-disable-next-line no-console
-  console.log(await getDependentStoryFiles(ctx, stats, changedFiles));
+  console.log(await getDependentStoryFiles(ctx, stats, statsFile, changedFiles));
 }

@@ -77,7 +77,9 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     ]);
   }
 
-  log.debug(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
+  if (!options.interactive) {
+    log.info(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
+  }
 
   // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
   // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,

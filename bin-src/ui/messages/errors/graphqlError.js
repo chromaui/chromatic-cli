@@ -6,16 +6,16 @@ import link from '../../components/link';
 
 const lcfirst = (str) => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
-export default function fetchError({ title }, { error, response, statusCode } = {}) {
-  const err = error ? chalk`\n{dim → ${error.message || error.toString()}}` : '';
-  const statusMessage = response && response.statusMessage ? ` ${response.statusMessage}` : '';
-  const status = statusCode ? chalk`\n{dim → Status: ${statusCode}${statusMessage}}` : '';
+export default function graphqlError({ title }, { message, extensions } = {}) {
+  const error = message
+    ? chalk`\n{dim → ${extensions?.code ? `${extensions.code}: ${message}` : message}}`
+    : '';
   return dedent(chalk`
     ${icon} {bold Failed to ${lcfirst(title)}}
 
-    Could not connect to the Chromatic API. Check your internet connection or try again later.
+    Error communicating with the Chromatic API. Check if your Chromatic client is up-to-date.
     In case of an outage, we provide status updates at ${link('https://twitter.com/chromaui')}
     Check ${link('http://status.chromatic.com')} for service uptime.
-    ${err}${status}
+    ${error}
   `);
 }
