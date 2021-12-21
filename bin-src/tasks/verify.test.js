@@ -55,7 +55,8 @@ describe('createBuild', () => {
           addons: ctx.storybook.addons,
         },
         isolatorUrl: ctx.isolatorUrl,
-      }
+      },
+      { retries: 3 }
     );
     expect(ctx.build).toEqual(build);
     expect(ctx.exitCode).toBe(undefined);

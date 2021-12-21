@@ -49,7 +49,7 @@ export const generateReport = async (ctx) => {
   } = await client.runQuery(
     ReportQuery,
     { buildNumber },
-    { Authorization: `Bearer ${reportToken}` }
+    { headers: { Authorization: `Bearer ${reportToken}` } }
   );
   const buildTime = (build.completedAt || Date.now()) - build.createdAt;
 
@@ -92,7 +92,7 @@ export const generateReport = async (ctx) => {
   });
 
   reportBuilder.writeTo(ctx.reportPath);
-  log.info(wroteReport(ctx.reportPath));
+  log.info(wroteReport(ctx.reportPath, 'JUnit XML'));
 };
 
 export default createTask({

@@ -3,6 +3,7 @@ import path from 'path';
 import { getWorkingDir } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
+import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 
 // Bail whenever one of these was changed
 const GLOBALS = [
@@ -17,7 +18,7 @@ const GLOBALS = [
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isGlobal = (name) => GLOBALS.some((re) => re.test(name));
+const isPackageFile = (name) => GLOBALS.some((re) => re.test(name));
 const isUserModule = ({ id, name, moduleName }) =>
   id !== undefined && id !== null && !EXTERNALS.some((re) => re.test(name || moduleName));
 
@@ -44,8 +45,8 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  * the changed git files. The result is a map of Module ID => file path. In the end we'll only send
  * the Module IDs to Chromatic, the file paths are only for logging purposes.
  */
-export async function getDependentStoryFiles(ctx, stats, changedFiles) {
-  const { configDir = '.storybook', staticDir = [] } = ctx.storybook || {};
+export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles) {
+  const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
   const { storybookBaseDir } = ctx.options;
 
   // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
@@ -53,6 +54,7 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
   const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
+  const baseName = (name) => normalize(name).replace(/ \+ \d+ modules$/, '');
 
   const storybookDir = normalize(posix(configDir));
   const staticDirs = staticDir.map((dir) => normalize(posix(dir)));
@@ -93,11 +95,16 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     }
   });
 
-  ctx.log.info(`Found ${Object.keys(csfGlobsByName).length} CSF globs`);
-  ctx.log.info(`Found ${Object.keys(idsByName).length} user modules`);
+  ctx.turboSnap.globs = Object.keys(csfGlobsByName);
+  ctx.turboSnap.modules = Object.keys(idsByName);
+
+  if (ctx.turboSnap.globs.length === 0) {
+    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
+    throw new Error('Did not find any CSF globs in preview-stats.json');
+  }
 
   const isCsfGlob = (name) => !!csfGlobsByName[name];
-  const isConfigFile = (name) =>
+  const isStorybookFile = (name) =>
     name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
   const isStaticFile = (name) => staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
@@ -105,18 +112,23 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
   const checkedIds = {};
   const toCheck = [];
 
-  let bail = changedFiles.find(isGlobal);
+  const changedPackageFile = changedFiles.find(isPackageFile);
+  if (changedPackageFile) ctx.turboSnap.bailReason = { changedPackageFile };
 
   function shouldBail(name) {
-    if (isConfigFile(name) || isStaticFile(name)) {
-      bail = name;
+    if (isStorybookFile(name)) {
+      ctx.turboSnap.bailReason = { changedStorybookFile: baseName(name) };
+      return true;
+    }
+    if (isStaticFile(name)) {
+      ctx.turboSnap.bailReason = { changedStaticFile: baseName(name) };
       return true;
     }
     return false;
   }
 
   function traceName(normalizedName) {
-    if (bail || isCsfGlob(normalizedName)) return;
+    if (ctx.turboSnap.bailReason || isCsfGlob(normalizedName)) return;
     if (shouldBail(normalizedName)) return;
 
     const id = idsByName[normalizedName];
@@ -138,14 +150,13 @@ export async function getDependentStoryFiles(ctx, stats, changedFiles) {
     reasonsById[id].forEach(traceName);
   }
 
-  if (bail) {
-    ctx.log.warn(bailFile(bail));
-    return false;
+  if (ctx.turboSnap.bailReason) {
+    ctx.log.warn(bailFile(ctx));
+    return null;
   }
 
   return stats.modules.reduce((acc, mod) => {
-    if (changedCsfIds.has(mod.id))
-      acc[String(mod.id)] = normalize(mod.name).replace(/ \+ \d+ modules$/, '');
+    if (changedCsfIds.has(mod.id)) acc[String(mod.id)] = baseName(mod.name);
     return acc;
   }, {});
 }
