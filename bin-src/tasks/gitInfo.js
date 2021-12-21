@@ -133,7 +133,6 @@ export const setGitInfo = async (ctx, task) => {
         );
       }
     } catch (e) {
-      console.log(e);
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
