@@ -31,6 +31,7 @@ export default class GraphQLClient {
         if (!Array.isArray(errors)) return bail(errors);
 
         // GraphQL typically returns a list of errors
+        this.client.log.debug({ errors }, 'GraphQL errors');
         errors.forEach((err) => {
           // Throw an error to retry the query if it's safe to do so, otherwise bail
           if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
