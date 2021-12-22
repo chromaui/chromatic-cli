@@ -54,13 +54,19 @@ export async function main(argv) {
 }
 
 export async function runAll(ctx) {
+  ctx.exitCode = 0;
   ctx.http = ctx.http || new HTTPClient({ env: ctx.env, log: ctx.log });
 
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
-  if (ctx.flags.diagnostics) await writeChromaticDiagnostics(ctx);
-  if (ctx.exitCode && ctx.exitCode !== 1) return;
-  await checkPackageJson(ctx);
+
+  if (ctx.exitCode === 0 || ctx.exitCode === 1) {
+    await checkPackageJson(ctx);
+  }
+
+  if (ctx.flags.diagnostics) {
+    await writeChromaticDiagnostics(ctx);
+  }
 }
 
 export async function runBuild(ctx) {
