@@ -41,7 +41,7 @@ const TesterLastBuildQuery = `
 
 export const setGitInfo = async (ctx, task) => {
   const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
-  ctx.git = await getCommitAndBranch({ branchName, patchBaseRef, ci, log: ctx.log });
+  ctx.git = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
   ctx.git.version = await getVersion();
   if (!ctx.git.slug) {
     ctx.git.slug = await getSlug().catch((e) => ctx.log.warn('Failed to retrieve slug', e));
