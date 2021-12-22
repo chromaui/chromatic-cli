@@ -80,7 +80,7 @@ export const setGitInfo = async (ctx, task) => {
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
     const result = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
-    const mostRecentAncestor = result?.app?.lastBuild;
+    const mostRecentAncestor = result && result.app && result.app.lastBuild;
     if (mostRecentAncestor) {
       ctx.rebuildForBuildId = mostRecentAncestor.id;
       if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {

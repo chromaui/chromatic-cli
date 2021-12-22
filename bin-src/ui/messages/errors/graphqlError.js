@@ -6,9 +6,9 @@ import link from '../../components/link';
 
 const lcfirst = (str) => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
-export default function graphqlError({ title }, { message, extensions } = {}) {
+export default function graphqlError({ title }, { message, extensions = {} } = {}) {
   const error = message
-    ? chalk`\n{dim → ${extensions?.code ? `${extensions.code}: ${message}` : message}}`
+    ? chalk`\n{dim → ${extensions.code ? `${extensions.code}: ${message}` : message}}`
     : '';
   return dedent(chalk`
     ${icon} {bold Failed to ${lcfirst(title)}}

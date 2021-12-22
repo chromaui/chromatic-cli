@@ -46,11 +46,14 @@ export const tracing = (ctx) => {
   };
 };
 
-export const bailed = (ctx) => ({
-  status: 'pending',
-  title: 'TurboSnap disabled',
-  output: `Found a change in ${ctx.turboSnap.bailReason.changedFile}`,
-});
+export const bailed = (ctx) => {
+  const { changedPackageFile, changedStorybookFile, changedStaticFile } = ctx.turboSnap.bailReason;
+  return {
+    status: 'pending',
+    title: 'TurboSnap disabled',
+    output: `Found a change in ${changedPackageFile || changedStorybookFile || changedStaticFile}`,
+  };
+};
 
 export const traced = (ctx) => {
   const files = pluralize('story file', Object.keys(ctx.onlyStoryFiles).length, true);
