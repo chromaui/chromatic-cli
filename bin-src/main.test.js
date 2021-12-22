@@ -598,9 +598,11 @@ describe('runAll', () => {
     expect(jsonfile.writeFile).toHaveBeenCalledWith(
       'chromatic-diagnostics.json',
       expect.objectContaining({
+        flags: expect.objectContaining({
+          diagnostics: true,
+        }),
         options: expect.objectContaining({
           projectToken: 'asdf1234',
-          diagnostics: true,
         }),
       }),
       { spaces: 2 }
