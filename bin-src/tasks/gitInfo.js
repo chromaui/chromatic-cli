@@ -140,7 +140,7 @@ export const setGitInfo = async (ctx, task) => {
       ctx.log.debug(e);
     }
 
-    if (ctx.options.externals && ctx.git.changedFiles?.length) {
+    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
         const match = ctx.git.changedFiles.find((filepath) => matchesFile(glob, filepath));
