@@ -2,7 +2,8 @@
 
 - [461](https://github.com/chromaui/chromatic-cli/pull/461) Add `--untraced` flag to avoid retesting stories that depend on certain files
 - [479](https://github.com/chromaui/chromatic-cli/pull/479) Add `--diagnostics` flag to write process context data to a file
-- [458](https://github.com/chromaui/chromatic-cli/pull/458) Track `bailReason`, improve TurboSnap messaging and throw on 0 CSF globs
+- [458](https://github.com/chromaui/chromatic-cli/pull/458) Track `bailReason`, improve TurboSnap messaging and throw on zero CSF globs
+- [482](https://github.com/chromaui/chromatic-cli/pull/482) Fix commit details when using env var and warn if the commit is missing
 
 # 6.2.3 - 2021-12-17
 
