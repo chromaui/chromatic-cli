@@ -25,7 +25,10 @@ const resolveHomeDir = (filepath) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 const trueIfSet = (value) => (value === '' ? true : value);
-const undefinedIfEmpty = (array) => (array.length ? array : undefined);
+const undefinedIfEmpty = (array) => {
+  const filtered = array.filter(Boolean);
+  return filtered.length ? filtered : undefined;
+};
 
 export default async function getOptions({ argv, env, flags, log, packageJson }) {
   const fromCI = !!flags.ci || !!process.env.CI;
