@@ -11,7 +11,7 @@ import { getBranch, getCommit, hasPreviousCommit } from './git';
 const ORIGIN_PREFIX_REGEXP = /^origin\//;
 const notHead = (branch) => (branch && branch !== 'HEAD' ? branch : false);
 
-export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } = {}) {
+export async function getCommitAndBranch({ log }, { branchName, patchBaseRef, ci } = {}) {
   let commit = await getCommit();
   let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch());
   let slug;
@@ -27,6 +27,7 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     GITHUB_REPOSITORY,
     GITHUB_BASE_REF,
     GITHUB_HEAD_REF,
+    GITHUB_SHA,
     CHROMATIC_SHA,
     CHROMATIC_BRANCH,
     CHROMATIC_SLUG,
@@ -78,10 +79,12 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     // GitHub PR builds run against a "virtual merge commit" with a SHA unknown to Chromatic and an
     // invalid branch name, so we override these using environment variables available in the action.
     // This does not apply to our GitHub Action, because it'll set CHROMATIC_SHA, -BRANCH and -SLUG.
+    // We intentionally use the GITHUB_HEAD_REF (branch name) here, to retrieve the last commit on
+    // the head branch rather than the merge commit (GITHUB_SHA).
     commit = await getCommit(GITHUB_HEAD_REF).catch((err) => {
       log.warn(noCommitDetails(GITHUB_HEAD_REF, 'GITHUB_HEAD_REF'));
       log.debug(err);
-      return { sha: GITHUB_HEAD_REF };
+      return { sha: GITHUB_SHA };
     });
     branch = GITHUB_HEAD_REF;
     slug = GITHUB_REPOSITORY;
