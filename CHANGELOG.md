@@ -1,4 +1,4 @@
-# 6.3.0 - unreleased
+# 6.3.0 - 2021-12-22
 
 - [461](https://github.com/chromaui/chromatic-cli/pull/461) Add `--untraced` flag to avoid retesting stories that depend on certain files
 - [479](https://github.com/chromaui/chromatic-cli/pull/479) Add `--diagnostics` flag to write process context data to a file
