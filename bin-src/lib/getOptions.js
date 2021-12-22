@@ -42,7 +42,6 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     list: flags.list,
     fromCI,
     skip: trueIfSet(flags.skip),
-    diagnostics: !!flags.diagnostics,
     dryRun: !!flags.dryRun,
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
