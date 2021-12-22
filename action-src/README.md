@@ -54,8 +54,7 @@ Make sure to replace the value of `projectToken` with the project token provided
     exitZeroOnChanges: 'Positive exit of action even when there are changes: boolean or branchname'
     exitOnceUploaded: 'Exit with 0 once the built version has been sent to chromatic: boolean or branchname'
     ignoreLastBuildOnBranch: 'Ignores latest build on target branch as a baseline if branch is no longer present in history (i.e. branch was rebased): branchname'
-    skip: 'Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks: boolean or branchname.
-'
+    skip: 'Skip Chromatic tests, but mark the commit as passing: boolean or branchname'
 ```
 
 
