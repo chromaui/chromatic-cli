@@ -4,6 +4,7 @@ import forksUnsupported from '../ui/messages/errors/forksUnsupported';
 import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
 import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
+import customGitHubAction from '../ui/messages/info/customGitHubAction';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import noCommitDetails from '../ui/messages/warnings/noCommitDetails';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
@@ -69,7 +70,9 @@ export async function getCommitAndBranch({ log }, { branchName, patchBaseRef, ci
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     slug = TRAVIS_PULL_REQUEST_SLUG;
   } else if (isGitHubPrBuild) {
-    if (!GITHUB_HEAD_REF) {
+    log.info(customGitHubAction());
+
+    if (!GITHUB_HEAD_REF || !GITHUB_SHA) {
       throw new Error(missingGitHubInfo({ GITHUB_EVENT_NAME }));
     }
     if (GITHUB_BASE_REF === GITHUB_HEAD_REF) {

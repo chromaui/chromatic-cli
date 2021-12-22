@@ -149,6 +149,7 @@ describe('getCommitAndBranch', () => {
       process.env.GITHUB_EVENT_NAME = 'pull_request';
       process.env.GITHUB_HEAD_REF = 'github';
       process.env.GITHUB_REPOSITORY = 'chromaui/github';
+      process.env.GITHUB_SHA = '3276c796';
       getCommit.mockResolvedValue({ commit: 'c11da9a9', ...commitInfo });
       const info = await getCommitAndBranch({ log });
       expect(getCommit).toHaveBeenCalledWith('github');
@@ -162,6 +163,12 @@ describe('getCommitAndBranch', () => {
 
     it('throws on missing variable', async () => {
       process.env.GITHUB_EVENT_NAME = 'pull_request';
+      process.env.GITHUB_HEAD_REF = 'github';
+      await expect(getCommitAndBranch({ log })).rejects.toThrow(
+        'Missing GitHub environment variable'
+      );
+      process.env.GITHUB_HEAD_REF = '';
+      process.env.GITHUB_SHA = '3276c796';
       await expect(getCommitAndBranch({ log })).rejects.toThrow(
         'Missing GitHub environment variable'
       );
@@ -171,6 +178,7 @@ describe('getCommitAndBranch', () => {
       process.env.GITHUB_EVENT_NAME = 'pull_request';
       process.env.GITHUB_BASE_REF = 'github';
       process.env.GITHUB_HEAD_REF = 'github';
+      process.env.GITHUB_SHA = '3276c796';
       await expect(getCommitAndBranch({ log })).rejects.toThrow('Cross-fork PR builds unsupported');
     });
   });
