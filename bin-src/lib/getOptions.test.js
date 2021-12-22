@@ -201,6 +201,11 @@ describe('await getOptions', () => {
       branchName: 'my/branch',
     });
   });
+
+  it('supports arrays, removing empty values', async () => {
+    const flags = ['--only-changed', '--externals', 'foo', '--externals', '', '--externals', 'bar'];
+    expect(await getOptions(getContext(flags))).toMatchObject({ externals: ['foo', 'bar'] });
+  });
 });
 
 describe('getStorybookConfiguration', () => {
