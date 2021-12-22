@@ -128,13 +128,13 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     throw new Error(invalidSingularOptions(['--only', '--only-changed']));
   }
 
-  // if (options.untraced && !options.onlyChanged) {
-  //   throw new Error(dependentOption('--untraced', '--only-changed'));
-  // }
+  if (options.untraced && !options.onlyChanged) {
+    throw new Error(dependentOption('--untraced', '--only-changed'));
+  }
 
-  // if (options.externals && !options.onlyChanged) {
-  //   throw new Error(dependentOption('--externals', '--only-changed'));
-  // }
+  if (options.externals && !options.onlyChanged) {
+    throw new Error(dependentOption('--externals', '--only-changed'));
+  }
 
   // No need to start or build Storybook if we're going to fetch from a URL
   if (storybookUrl) {
