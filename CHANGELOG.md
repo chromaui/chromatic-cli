@@ -1,3 +1,7 @@
+# 6.3.1 - 2021-12-22
+
+- Disable warning about --untraced requiring --only-changed
+
 # 6.3.0 - 2021-12-22
 
 - [461](https://github.com/chromaui/chromatic-cli/pull/461) Add `--untraced` flag to avoid retesting stories that depend on certain files
