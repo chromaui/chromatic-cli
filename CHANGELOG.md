@@ -1,3 +1,7 @@
+# 6.3.3 - 2021-12-22
+
+- Filter empty values in array flags and restore warnings
+
 # 6.3.2 - 2021-12-22
 
 - Disable warning about --externals requiring --only-changed
