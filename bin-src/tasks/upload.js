@@ -144,6 +144,13 @@ export const traceChangedFiles = async (ctx, task) => {
             .map(([id, f]) => `  ${f} [${id}]`)
             .join('\n')}`
         );
+        if (ctx.untracedFiles && ctx.untracedFiles.length) {
+          ctx.log.info(
+            `Encountered ${ctx.untracedFiles.length} untraced files:\n${ctx.untracedFiles
+              .map((f) => `  ${f}`)
+              .join('\n')}`
+          );
+        }
       }
       transitionTo(traced)(ctx, task);
     } else {

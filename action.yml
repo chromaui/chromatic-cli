@@ -34,10 +34,13 @@ inputs:
     description: 'Only run a single story or a subset of stories'
     required: false
   onlyChanged:
-    description: 'Only run stories affected by files changed since the baseline build'
+    description: 'Enables TurboSnap: Only run stories affected by files changed since the baseline build'
     required: false
   externals:
-    description: 'When any of these files have changed since the baseline build, ignore onlyChanged'
+    description: 'Disable TurboSnap when any of these files have changed since the baseline build'
+    required: false
+  untraced:
+    description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
     required: false
   doNotStart:
     description: 'Do not attempt to start or build; use if your Storybook is already running'

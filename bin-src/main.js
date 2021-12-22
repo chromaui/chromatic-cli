@@ -58,14 +58,9 @@ export async function runAll(ctx) {
 
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
-
-  if (!ctx.exitCode || ctx.exitCode === 1) {
-    await checkPackageJson(ctx);
-  }
-
-  if (ctx.options.diagnostics) {
-    await writeChromaticDiagnostics(ctx);
-  }
+  if (ctx.flags.diagnostics) await writeChromaticDiagnostics(ctx);
+  if (ctx.exitCode && ctx.exitCode !== 1) return;
+  await checkPackageJson(ctx);
 }
 
 export async function runBuild(ctx) {

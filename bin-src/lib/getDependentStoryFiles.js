@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { getWorkingDir } from './utils';
+import { getWorkingDir, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
@@ -47,13 +47,13 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  */
 export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles) {
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
-  const { storybookBaseDir } = ctx.options;
+  const { storybookBaseDir, untraced = [] } = ctx.options;
 
   // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
   // up between the webpack stats and the git repo root.
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
-  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
+  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir); // e.g. `src/file.js` (no ./ prefix)
   const baseName = (name) => normalize(name).replace(/ \+ \d+ modules$/, '');
 
   const storybookDir = normalize(posix(configDir));
@@ -108,6 +108,16 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
   const isStaticFile = (name) => staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
+  ctx.untracedFiles = [];
+  function untrace(filepath) {
+    if (untraced.some((glob) => matchesFile(glob, filepath))) {
+      ctx.untracedFiles.push(filepath);
+      return false;
+    }
+    return true;
+  }
+
+  const tracedFiles = changedFiles.filter(untrace);
   const changedCsfIds = new Set();
   const checkedIds = {};
   const toCheck = [];
@@ -143,11 +153,11 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     }
   }
 
-  changedFiles.forEach(traceName);
+  tracedFiles.forEach(traceName);
   while (toCheck.length > 0) {
     const id = toCheck.pop();
     checkedIds[id] = true;
-    reasonsById[id].forEach(traceName);
+    reasonsById[id].filter(untrace).forEach(traceName);
   }
 
   if (ctx.turboSnap.bailReason) {

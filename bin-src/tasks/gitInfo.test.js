@@ -11,7 +11,7 @@ import { setGitInfo } from './gitInfo';
 jest.mock('../git/getCommitAndBranch');
 jest.mock('../git/git');
 
-const log = { warn: jest.fn(), debug: jest.fn() };
+const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue({ commit: '123asdf', branch: 'something' });
@@ -52,7 +52,7 @@ describe('setGitInfo', () => {
   it('drops changedFiles when matching --externals', async () => {
     getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' }]);
     getChangedFiles.mockResolvedValue(['styles/main.scss', 'lib/utils.js']);
-    const ctx = { log, options: { onlyChanged: true, externals: ['*.scss'] } };
+    const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] } };
     await setGitInfo(ctx, {});
     expect(ctx.git.changedFiles).toBeNull();
   });

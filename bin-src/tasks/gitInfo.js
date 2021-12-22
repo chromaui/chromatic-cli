@@ -21,6 +21,7 @@ import {
 import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
+import { matchesFile } from '../lib/utils';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -40,7 +41,8 @@ const TesterLastBuildQuery = `
 `;
 
 export const setGitInfo = async (ctx, task) => {
-  const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
+  const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
+
   ctx.git = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
   ctx.git.version = await getVersion();
   if (!ctx.git.slug) {
@@ -124,7 +126,13 @@ export const setGitInfo = async (ctx, task) => {
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())];
-      ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+      if (!interactive) {
+        ctx.log.info(
+          `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
+            .map((f) => `  ${f}`)
+            .join('\n')}`
+        );
+      }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
@@ -132,11 +140,10 @@ export const setGitInfo = async (ctx, task) => {
       ctx.log.debug(e);
     }
 
-    if (ctx.git.changedFiles && ctx.options.externals) {
+    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
-        const isMatch = picomatch(glob, { contains: true });
-        const match = ctx.git.changedFiles.find((path) => isMatch(path));
+        const match = ctx.git.changedFiles.find((filepath) => matchesFile(glob, filepath));
         if (match) {
           ctx.turboSnap.bailReason = { changedExternalFile: match };
           ctx.log.warn(externalsChanged(match));

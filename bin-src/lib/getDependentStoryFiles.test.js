@@ -5,7 +5,10 @@ import { getRepositoryRoot } from '../git/git';
 import { getWorkingDir } from './utils';
 
 jest.mock('../git/git');
-jest.mock('./utils');
+jest.mock('./utils', () => {
+  const utils = jest.requireActual('./utils');
+  return { __esModule: true, ...utils, getWorkingDir: jest.fn() };
+});
 
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 const statsPath = 'preview-stats.json';
@@ -367,6 +370,38 @@ describe('getDependentStoryFiles', () => {
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)
     );
+  });
+
+  it('ignores untraced files', async () => {
+    const changedFiles = ['src/utils.js'];
+    const modules = [
+      {
+        id: 1,
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: 2,
+        name: './src/foo.js', // untraced
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: 3,
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      storybook: { staticDir: ['path/to/statics'] },
+      options: { untraced: ['**/foo.js'] },
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({});
   });
 });
 
