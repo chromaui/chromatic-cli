@@ -88,4 +88,3 @@ npm dist-tag rm chromatic canary
 ```
 
 This ensures we can safely do a new `canary` or `next` release later, without anyone getting an unexpected update.
-

@@ -1,4 +1,7 @@
+import retry from 'async-retry';
 import HTTPClient from './HTTPClient';
+
+const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 
 export default class GraphQLClient {
   constructor({ uri, ...httpClientOptions }) {
@@ -12,18 +15,27 @@ export default class GraphQLClient {
     this.headers.Authorization = `Bearer ${token}`;
   }
 
-  async runQuery(query, variables, headers) {
-    const response = await this.client.fetch(this.uri, {
-      body: JSON.stringify({ query, variables }),
-      headers: { ...this.headers, ...headers },
-      method: 'post',
-    });
+  async runQuery(query, variables, { headers = {}, retries = 0 } = {}) {
+    return retry(
+      async (bail) => {
+        const { data, errors } = await this.client
+          .fetch(this.uri, {
+            body: JSON.stringify({ query, variables }),
+            headers: { ...this.headers, ...headers },
+            method: 'post',
+          })
+          .then((res) => res.json())
+          .catch(bail);
 
-    const { data, errors } = await response.json();
+        if (!errors) return data;
+        if (!Array.isArray(errors)) return bail(errors);
 
-    if (errors) {
-      if (Array.isArray(errors)) {
+        // GraphQL typically returns a list of errors
+        this.client.log.debug({ errors }, 'GraphQL errors');
         errors.forEach((err) => {
+          // Throw an error to retry the query if it's safe to do so, otherwise bail
+          if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
+
           // eslint-disable-next-line no-param-reassign
           err.name = err.name || 'GraphQLError';
           // eslint-disable-next-line no-param-reassign
@@ -31,16 +43,14 @@ export default class GraphQLClient {
             .map((l) => `${l.line}:${l.column}`)
             .join(', ')}`;
         });
-        throw errors.length === 1 ? errors[0] : errors;
-      }
-      throw errors;
-    }
-
-    return data;
+        return bail(errors.length === 1 ? errors[0] : errors);
+      },
+      { retries }
+    );
   }
 
   // Convenience static method.
-  static async runQuery(options, query, variables) {
-    return new GraphQLClient(options).runQuery(query, variables);
+  static async runQuery(options, query, variables, runQueryOptions) {
+    return new GraphQLClient(options).runQuery(query, variables, runQueryOptions);
   }
 }

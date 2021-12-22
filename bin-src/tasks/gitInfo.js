@@ -21,6 +21,7 @@ import {
 import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
+import { matchesFile } from '../lib/utils';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -40,8 +41,9 @@ const TesterLastBuildQuery = `
 `;
 
 export const setGitInfo = async (ctx, task) => {
-  const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
-  ctx.git = await getCommitAndBranch({ branchName, patchBaseRef, ci, log: ctx.log });
+  const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
+
+  ctx.git = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
   ctx.git.version = await getVersion();
   if (!ctx.git.slug) {
     ctx.git.slug = await getSlug().catch((e) => ctx.log.warn('Failed to retrieve slug', e));
@@ -79,9 +81,10 @@ export const setGitInfo = async (ctx, task) => {
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
-    const mostRecentAncestor = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
+    const result = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
+    const mostRecentAncestor = result && result.app && result.app.lastBuild;
     if (mostRecentAncestor) {
-      ctx.rebuild = true;
+      ctx.rebuildForBuildId = mostRecentAncestor.id;
       if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
         ctx.skip = true;
         transitionTo(skippedRebuild, true)(ctx, task);
@@ -90,12 +93,22 @@ export const setGitInfo = async (ctx, task) => {
     }
   }
 
+  ctx.turboSnap = matchesBranch(ctx.options.onlyChanged) ? {} : false;
+
   // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
   // to determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
-  if (parentCommits.length && matchesBranch(ctx.options.onlyChanged)) {
-    if (ctx.rebuild) {
+  if (ctx.turboSnap) {
+    if (parentCommits.length === 0) {
+      ctx.turboSnap.bailReason = { noAncestorBuild: true };
+      // Log warning after checking for isOnboarding
+      transitionTo(success, true)(ctx, task);
+      return;
+    }
+
+    if (ctx.rebuildForBuildId) {
+      ctx.turboSnap.bailReason = { rebuild: true };
       ctx.log.warn(isRebuild());
       transitionTo(success, true)(ctx, task);
       return;
@@ -113,19 +126,26 @@ export const setGitInfo = async (ctx, task) => {
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())];
-      ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+      if (!interactive) {
+        ctx.log.info(
+          `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
+            .map((f) => `  ${f}`)
+            .join('\n')}`
+        );
+      }
     } catch (e) {
+      ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
     }
 
-    if (ctx.git.changedFiles && ctx.options.externals) {
+    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
-        const isMatch = picomatch(glob, { contains: true });
-        const match = ctx.git.changedFiles.find((path) => isMatch(path));
+        const match = ctx.git.changedFiles.find((filepath) => matchesFile(glob, filepath));
         if (match) {
+          ctx.turboSnap.bailReason = { changedExternalFile: match };
           ctx.log.warn(externalsChanged(match));
           ctx.git.changedFiles = null;
           break;

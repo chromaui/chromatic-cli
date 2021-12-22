@@ -1,9 +1,10 @@
 import execa from 'execa';
 import fs from 'fs-extra';
 import { confirm } from 'node-ask';
-import fetch from 'node-fetch';
 import kill from 'tree-kill';
 
+import jsonfile from 'jsonfile';
+import { getCommit } from './git/git';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import startApp, { checkResponse } from './lib/startStorybook';
@@ -11,6 +12,7 @@ import TestLogger from './lib/testLogger';
 import openTunnel from './lib/tunnel';
 import uploadFiles from './lib/uploadFiles';
 import { runAll, runBuild } from './main';
+import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 
 let lastBuild;
 let mockBuildFeatures;
@@ -20,10 +22,10 @@ jest.useFakeTimers();
 afterEach(() => {
   // This would clear all existing timer functions
   jest.clearAllTimers();
+  jest.clearAllMocks();
 });
 
 beforeEach(() => {
-  fetch.mockClear();
   mockBuildFeatures = {
     features: { uiTests: true, uiReview: true },
     wasLimited: false,
@@ -31,6 +33,18 @@ beforeEach(() => {
 });
 
 jest.mock('execa');
+
+jest.mock('jsonfile', () => {
+  const originalModule = jest.requireActual('jsonfile');
+  return {
+    __esModule: true,
+    ...originalModule,
+    default: {
+      ...originalModule.default,
+      writeFile: jest.fn(() => Promise.resolve()),
+    },
+  };
+});
 
 jest.mock('node-ask');
 
@@ -145,13 +159,7 @@ fs.statSync = jest.fn((path) => {
 
 jest.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
-  getCommit: () =>
-    Promise.resolve({
-      commit: 'commit',
-      committedAt: 1234,
-      committerEmail: 'test@test.com',
-      committerName: 'tester',
-    }),
+  getCommit: jest.fn(),
   getBranch: () => Promise.resolve('branch'),
   getParentCommits: () => Promise.resolve(['baseline']),
   getSlug: () => Promise.resolve('user/repo'),
@@ -177,6 +185,14 @@ beforeEach(() => {
   };
   execa.mockReset();
   execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }));
+  getCommit.mockReturnValue(
+    Promise.resolve({
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+    })
+  );
 });
 afterEach(() => {
   process.env = processEnv;
@@ -492,6 +508,14 @@ describe('in CI', () => {
       TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
       DISABLE_LOGGING: 'true',
     };
+    getCommit.mockReturnValue(
+      Promise.resolve({
+        commit: 'travis-commit',
+        committedAt: 1234,
+        committerEmail: 'test@test.com',
+        committerName: 'tester',
+      })
+    );
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
@@ -517,6 +541,14 @@ describe('in CI', () => {
       TRAVIS_PULL_REQUEST_BRANCH: 'travis-branch',
       DISABLE_LOGGING: 'true',
     };
+    getCommit.mockReturnValue(
+      Promise.resolve({
+        commit: 'travis-commit',
+        committedAt: 1234,
+        committerEmail: 'test@test.com',
+        committerName: 'tester',
+      })
+    );
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
@@ -534,22 +566,52 @@ describe('in CI', () => {
   });
 });
 
-it('checks for updates', async () => {
-  const ctx = getContext(['--project-token=asdf1234']);
-  ctx.pkg.version = '4.3.2';
-  ctx.http.fetch.mockReturnValueOnce(
-    Promise.resolve({ json: () => ({ 'dist-tags': { latest: '5.0.0' } }) })
-  );
-  await runAll(ctx);
-  expect(ctx.exitCode).toBe(1);
-  expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
-  expect(ctx.log.warnings[0]).toMatch('Using outdated package');
-});
+describe('runAll', () => {
+  it('checks for updates', async () => {
+    const ctx = getContext(['--project-token=asdf1234']);
+    ctx.pkg.version = '4.3.2';
+    ctx.http.fetch.mockReturnValueOnce(
+      Promise.resolve({ json: () => ({ 'dist-tags': { latest: '5.0.0' } }) })
+    );
+    await runAll(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
+    expect(ctx.log.warnings[0]).toMatch('Using outdated package');
+  });
 
-it('prompts you to add a script to your package.json', async () => {
-  process.stdout.isTTY = true; // enable interactive mode
-  const ctx = getContext(['--project-token=asdf1234']);
-  await runAll(ctx);
-  expect(ctx.exitCode).toBe(1);
-  expect(confirm).toHaveBeenCalled();
+  it('prompts you to add a script to your package.json', async () => {
+    process.stdout.isTTY = true; // enable interactive mode
+    const ctx = getContext(['--project-token=asdf1234']);
+    await runAll(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(confirm).toHaveBeenCalled();
+  });
+
+  it('ctx should be JSON serializable', async () => {
+    const ctx = getContext(['--project-token=asdf1234']);
+    expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
+  });
+
+  it('should write context to chromatic-diagnostics.json if --diagnostics is passed', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--diagnostics']);
+    await runAll(ctx);
+    expect(jsonfile.writeFile).toHaveBeenCalledWith(
+      'chromatic-diagnostics.json',
+      expect.objectContaining({
+        flags: expect.objectContaining({
+          diagnostics: true,
+        }),
+        options: expect.objectContaining({
+          projectToken: 'asdf1234',
+        }),
+      }),
+      { spaces: 2 }
+    );
+  });
+
+  it('should not write context to chromatic-diagnostics.json if --diagnostics is not passed', async () => {
+    const ctx = getContext(['--project-token=asdf1234']);
+    await runAll(ctx);
+    expect(jsonfile.writeFile).not.toHaveBeenCalled();
+  });
 });

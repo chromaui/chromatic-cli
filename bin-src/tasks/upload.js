@@ -11,7 +11,7 @@ import uploadFiles from '../lib/uploadFiles';
 import { rewriteErrorMessage } from '../lib/utils';
 import { uploadZip, waitForUnpack } from '../lib/uploadZip';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
-import noStatsFile from '../ui/messages/warnings/noStatsFile';
+import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
 import {
   failed,
   initial,
@@ -21,6 +21,7 @@ import {
   invalid,
   preparing,
   tracing,
+  bailed,
   traced,
   starting,
   uploading,
@@ -123,7 +124,8 @@ export const validateFiles = async (ctx, task) => {
 export const traceChangedFiles = async (ctx, task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
-    ctx.log.warn(noStatsFile());
+    ctx.turboSnap.bailReason = { missingStatsFile: true };
+    ctx.log.warn(missingStatsFile());
     return;
   }
 
@@ -133,16 +135,32 @@ export const traceChangedFiles = async (ctx, task) => {
   const { changedFiles } = ctx.git;
   try {
     const stats = await fs.readJson(statsPath);
-    ctx.onlyStoryFiles = await getDependentStoryFiles(ctx, stats, changedFiles);
-    ctx.log.debug(
-      `Found affected story files:\n${Object.entries(ctx.onlyStoryFiles)
-        .map(([id, f]) => `  ${f} [${id}]`)
-        .join('\n')}`
-    );
-    transitionTo(traced)(ctx, task);
+    const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
+    if (onlyStoryFiles) {
+      ctx.onlyStoryFiles = onlyStoryFiles;
+      if (!ctx.options.interactive) {
+        ctx.log.info(
+          `Found affected story files:\n${Object.entries(onlyStoryFiles)
+            .map(([id, f]) => `  ${f} [${id}]`)
+            .join('\n')}`
+        );
+        if (ctx.untracedFiles && ctx.untracedFiles.length) {
+          ctx.log.info(
+            `Encountered ${ctx.untracedFiles.length} untraced files:\n${ctx.untracedFiles
+              .map((f) => `  ${f}`)
+              .join('\n')}`
+          );
+        }
+      }
+      transitionTo(traced)(ctx, task);
+    } else {
+      transitionTo(bailed)(ctx, task);
+    }
   } catch (err) {
-    ctx.log.debug('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
-    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n\n${err.message}`);
+    if (!ctx.options.interactive) {
+      ctx.log.info('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    }
+    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n${err.message}`);
   }
 };
 

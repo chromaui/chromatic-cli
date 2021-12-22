@@ -3,7 +3,7 @@ const webpack = require('webpack');
 
 module.exports = {
   mode: 'production',
-  target: 'node14',
+  target: 'node12',
   entry: './bin-src/register.js',
   externalsPresets: { node: true },
   // devtool: 'source-map',
