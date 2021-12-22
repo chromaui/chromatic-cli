@@ -16,8 +16,8 @@ beforeEach(() => {
   getCommit.mockResolvedValue({
     commit: '48e0c83fadbf504c191bc868040b7a969a4f1feb',
     committedAt: 1640094096000,
-    committerEmail: 'noreply@github.com',
     committerName: 'GitHub',
+    committerEmail: 'noreply@github.com',
   });
   hasPreviousCommit.mockResolvedValue(true);
 });
@@ -28,6 +28,12 @@ afterEach(() => {
   getCommit.mockReset();
 });
 
+const commitInfo = {
+  committedAt: 1640131292,
+  committerName: 'Gert Hengeveld',
+  committerEmail: 'gert@chromatic.com',
+};
+
 describe('getCommitAndBranch', () => {
   it('returns commit and branch info', async () => {
     const info = await getCommitAndBranch({ log });
@@ -35,8 +41,8 @@ describe('getCommitAndBranch', () => {
       branch: 'main',
       commit: '48e0c83fadbf504c191bc868040b7a969a4f1feb',
       committedAt: 1640094096000,
-      committerEmail: 'noreply@github.com',
       committerName: 'GitHub',
+      committerEmail: 'noreply@github.com',
       slug: undefined,
     });
   });
@@ -111,11 +117,12 @@ describe('getCommitAndBranch', () => {
       process.env.CHROMATIC_SHA = 'f78db92d';
       process.env.CHROMATIC_BRANCH = 'feature';
       process.env.CHROMATIC_SLUG = 'chromaui/chromatic';
-      getCommit.mockImplementation((commit) => Promise.resolve({ commit }));
+      getCommit.mockImplementation((commit) => Promise.resolve({ commit, ...commitInfo }));
       const info = await getCommitAndBranch({ log });
       expect(info).toMatchObject({
         branch: 'feature',
         commit: 'f78db92d',
+        ...commitInfo,
         slug: 'chromaui/chromatic',
       });
     });
@@ -142,12 +149,13 @@ describe('getCommitAndBranch', () => {
       process.env.GITHUB_EVENT_NAME = 'pull_request';
       process.env.GITHUB_HEAD_REF = 'github';
       process.env.GITHUB_REPOSITORY = 'chromaui/github';
-      getCommit.mockResolvedValue({ commit: 'c11da9a9' });
+      getCommit.mockResolvedValue({ commit: 'c11da9a9', ...commitInfo });
       const info = await getCommitAndBranch({ log });
       expect(getCommit).toHaveBeenCalledWith('github');
       expect(info).toMatchObject({
         branch: 'github',
         commit: 'c11da9a9',
+        ...commitInfo,
         slug: 'chromaui/github',
       });
     });
@@ -173,11 +181,12 @@ describe('getCommitAndBranch', () => {
       process.env.TRAVIS_PULL_REQUEST_SHA = 'ef765ac7';
       process.env.TRAVIS_PULL_REQUEST_BRANCH = 'travis';
       process.env.TRAVIS_PULL_REQUEST_SLUG = 'chromaui/travis';
-      getCommit.mockImplementation((commit) => Promise.resolve({ commit }));
+      getCommit.mockImplementation((commit) => Promise.resolve({ commit, ...commitInfo }));
       const info = await getCommitAndBranch({ log });
       expect(info).toMatchObject({
         branch: 'travis',
         commit: 'ef765ac7',
+        ...commitInfo,
         slug: 'chromaui/travis',
       });
     });
