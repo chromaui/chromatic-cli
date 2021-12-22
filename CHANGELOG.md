@@ -1,3 +1,7 @@
+# 6.3.2 - 2021-12-22
+
+- Disable warning about --externals requiring --only-changed
+
 # 6.3.1 - 2021-12-22
 
 - Disable warning about --untraced requiring --only-changed
