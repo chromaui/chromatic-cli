@@ -8,7 +8,9 @@ import {
   getSlug,
   getVersion,
 } from '../git/git';
+import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
+import { matchesFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -21,7 +23,6 @@ import {
 import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
-import { matchesFile } from '../lib/utils';
 
 const TesterSkipBuildMutation = `
   mutation TesterSkipBuildMutation($commit: String!) {
@@ -64,7 +65,7 @@ export const setGitInfo = async (ctx, task) => {
     if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);
-      ctx.exitCode = 0;
+      setExitCode(ctx, exitCodes.OK);
       return;
     }
     throw new Error(skipFailed(ctx).output);

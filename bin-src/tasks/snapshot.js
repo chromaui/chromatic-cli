@@ -1,4 +1,5 @@
 /* eslint-disable no-param-reassign */
+import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { delay } from '../lib/utils';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
@@ -71,7 +72,7 @@ export const takeSnapshots = async (ctx, task) => {
 
   switch (build.status) {
     case 'PASSED':
-      ctx.exitCode = 0;
+      setExitCode(ctx, exitCodes.OK);
       ctx.log.info(buildPassedMessage(ctx));
       transitionTo(buildPassed, true)(ctx, task);
       break;
@@ -81,10 +82,10 @@ export const takeSnapshots = async (ctx, task) => {
     case 'PENDING':
     case 'DENIED': {
       if (build.autoAcceptChanges || ctx.git.matchesBranch(options.exitZeroOnChanges)) {
-        ctx.exitCode = 0;
+        setExitCode(ctx, exitCodes.OK);
         ctx.log.info(buildPassedMessage(ctx));
       } else {
-        ctx.exitCode = 1;
+        setExitCode(ctx, exitCodes.BUILD_HAS_CHANGES, true);
         ctx.log.error(buildHasChanges(ctx));
       }
       transitionTo(buildComplete, true)(ctx, task);
@@ -92,14 +93,14 @@ export const takeSnapshots = async (ctx, task) => {
     }
 
     case 'BROKEN':
-      ctx.exitCode = 2;
+      setExitCode(ctx, exitCodes.BUILD_HAS_ERRORS, true);
       ctx.log.error(buildHasErrors(ctx));
       transitionTo(buildFailed, true)(ctx, task);
       break;
 
     case 'FAILED':
     case 'CANCELLED':
-      ctx.exitCode = 3;
+      setExitCode(ctx, exitCodes.BUILD_FAILED, true);
       transitionTo(buildError, true)(ctx, task);
       break;
 
