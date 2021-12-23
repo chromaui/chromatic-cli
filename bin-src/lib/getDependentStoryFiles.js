@@ -122,7 +122,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   const checkedIds = {};
   const toCheck = [];
 
-  const changedPackageFile = changedFiles.find(isPackageFile);
+  const changedPackageFile = tracedFiles.find(isPackageFile);
   if (changedPackageFile) ctx.turboSnap.bailReason = { changedPackageFile };
 
   function shouldBail(name) {
