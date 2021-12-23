@@ -49,8 +49,6 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
   const { storybookBaseDir, untraced = [] } = ctx.options;
 
-  // Currently we enforce Storybook to be built by the Chromatic CLI, to ensure absolute paths match
-  // up between the webpack stats and the git repo root.
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
   const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir); // e.g. `src/file.js` (no ./ prefix)
