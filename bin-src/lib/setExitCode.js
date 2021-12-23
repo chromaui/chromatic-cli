@@ -1,3 +1,6 @@
+/**
+ * Keep this in sync with https://github.com/chromaui/chromatic-docs/blob/main/cli.md#exit-codes
+ */
 export const exitCodes = {
   // Generic results
   OK: 0,
