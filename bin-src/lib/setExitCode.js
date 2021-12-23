@@ -28,9 +28,9 @@ export const exitCodes = {
 };
 
 export const setExitCode = (ctx, exitCode, userError = false) => {
-  const [exitKey] = Object.entries(exitCodes).find(([_, code]) => code === exitCode) || [];
-  if (!exitKey) throw new Error(`Invalid exitCode: ${exitCode}`);
+  const [exitCodeKey] = Object.entries(exitCodes).find(([_, code]) => code === exitCode) || [];
+  if (!exitCodeKey) throw new Error(`Invalid exitCode: ${exitCode}`);
   ctx.exitCode = exitCode;
-  ctx.exitKey = exitKey;
+  ctx.exitCodeKey = exitCodeKey;
   ctx.userError = userError;
 };
