@@ -1,14 +1,19 @@
-name: "Chromatic (action)"
+name: 'Chromatic (action)'
 on: [push]
 
 jobs:
   chromatic:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - run: yarn
-    - uses: chromaui/action@v1
-      with:
-        projectToken: gcaw1ai2dgo
-        exitZeroOnChanges: true
-        exitOnceUploaded: true
+      - uses: actions/checkout@v1
+      - run: yarn
+      - uses: chromaui/action@v1
+        with:
+          projectToken: gcaw1ai2dgo
+          exitZeroOnChanges: true
+          exitOnceUploaded: true
+          diagnostics: true
+      - uses: actions/upload-artifact@v2
+        with:
+          name: chromatic-diagnostics
+          path: chromatic-diagnostics.json
