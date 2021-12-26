@@ -99,7 +99,9 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   ctx.turboSnap.modules = Object.keys(idsByName);
 
   if (ctx.turboSnap.globs.length === 0) {
-    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
+    const entry = stats.modules.find((m) => m.name.endsWith('generated-stories-entry.js'));
+    const entryFile = entry && normalize(entry.name);
+    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, entryFile, viewLayer }));
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 
