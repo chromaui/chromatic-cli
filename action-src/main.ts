@@ -126,6 +126,7 @@ async function run() {
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
     const skip = getInput('skip');
+    const storybookBaseDir = getInput('skip');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const externals = getInput('externals');
@@ -145,6 +146,7 @@ async function run() {
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const zip = getInput('zip');
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
@@ -160,6 +162,7 @@ async function run() {
       diagnostics: maybe(diagnostics),
       exec: maybe(exec),
       skip: maybe(skip),
+      storybookBaseDir: maybe(storybookBaseDir),
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
       externals: maybe(externals),
@@ -180,6 +183,7 @@ async function run() {
       exitOnceUploaded: maybe(exitOnceUploaded, false),
       allowConsoleErrors: maybe(allowConsoleErrors, false),
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+      zip: maybe(zip, false),
     });
 
     setOutput('url', output.url);
