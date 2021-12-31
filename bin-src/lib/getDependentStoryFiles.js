@@ -95,10 +95,10 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     }
   });
 
-  ctx.turboSnap.globs = Object.keys(csfGlobsByName);
-  ctx.turboSnap.modules = Object.keys(idsByName);
+  const globs = Object.keys(csfGlobsByName);
+  const modules = Object.keys(idsByName);
 
-  if (ctx.turboSnap.globs.length === 0) {
+  if (globs.length === 0) {
     ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
@@ -118,9 +118,22 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   }
 
   const tracedFiles = changedFiles.filter(untrace);
+  const tracedPaths = new Set();
   const changedCsfIds = new Set();
   const checkedIds = {};
   const toCheck = [];
+
+  ctx.turboSnap = {
+    rootPath,
+    workingDir,
+    storybookDir,
+    staticDirs,
+    globs,
+    modules,
+    tracedFiles,
+    tracedPaths,
+    changedCsfIds,
+  };
 
   const changedPackageFile = changedFiles.find(isPackageFile);
   if (changedPackageFile) ctx.turboSnap.bailReason = { changedPackageFile };
@@ -137,7 +150,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     return false;
   }
 
-  function traceName(normalizedName) {
+  function traceName(normalizedName, tracePath = []) {
     if (ctx.turboSnap.bailReason || isCsfGlob(normalizedName)) return;
     if (shouldBail(normalizedName)) return;
 
@@ -146,18 +159,19 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     if (shouldBail(idNormalizedName)) return;
 
     if (!id || !reasonsById[id] || checkedIds[id]) return;
-    toCheck.push(id);
+    toCheck.push([id, [...tracePath, id]]);
 
     if (reasonsById[id].some(isCsfGlob)) {
       changedCsfIds.add(id);
+      tracedPaths.add([...tracePath, id].map((pid) => namesById[pid]).join('\n'));
     }
   }
 
-  tracedFiles.forEach(traceName);
+  tracedFiles.forEach((file) => traceName(file));
   while (toCheck.length > 0) {
-    const id = toCheck.pop();
+    const [id, tracePath] = toCheck.pop();
     checkedIds[id] = true;
-    reasonsById[id].filter(untrace).forEach(traceName);
+    reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
 
   if (ctx.turboSnap.bailReason) {

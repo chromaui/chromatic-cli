@@ -1,5 +1,4 @@
 import fs from 'fs-extra';
-import { join } from 'path';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
 
 /**
