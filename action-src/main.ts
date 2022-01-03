@@ -126,7 +126,7 @@ async function run() {
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
     const skip = getInput('skip');
-    const storybookBaseDir = getInput('skip');
+    const storybookBaseDir = getInput('storybookBaseDir');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const externals = getInput('externals');
