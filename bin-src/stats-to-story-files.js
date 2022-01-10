@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import fs from 'fs-extra';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
 import { getDiagnostics } from './lib/writeChromaticDiagnostics';
