@@ -14,7 +14,16 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
   const website = link(pkg.docs);
   const errors = [].concat(error);
 
-  const { git = {}, storybook, spawnParams, exitCode, isolatorUrl, cachedUrl, build } = ctx;
+  const {
+    git = {},
+    storybook,
+    spawnParams,
+    exitCode,
+    exitCodeKey,
+    isolatorUrl,
+    cachedUrl,
+    build,
+  } = ctx;
   const debugInfo = {
     timestamp,
     sessionId,
@@ -31,6 +40,7 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
     ...(options && options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     ...(spawnParams ? { spawnParams } : {}),
     exitCode,
+    exitCodeKey,
     errorType: errors.map((err) => err.name).join('\n'),
     errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
     ...(isolatorUrl ? { isolatorUrl } : {}),

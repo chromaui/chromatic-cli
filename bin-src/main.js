@@ -12,6 +12,7 @@ import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
+import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
@@ -54,13 +55,20 @@ export async function main(argv) {
 }
 
 export async function runAll(ctx) {
+  setExitCode(ctx, exitCodes.OK);
+
   ctx.http = ctx.http || new HTTPClient({ env: ctx.env, log: ctx.log });
 
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
-  if (ctx.flags.diagnostics) await writeChromaticDiagnostics(ctx);
-  if (ctx.exitCode && ctx.exitCode !== 1) return;
-  await checkPackageJson(ctx);
+
+  if (ctx.exitCode === 0 || ctx.exitCode === 1) {
+    await checkPackageJson(ctx);
+  }
+
+  if (ctx.flags.diagnostics) {
+    await writeChromaticDiagnostics(ctx);
+  }
 }
 
 export async function runBuild(ctx) {
@@ -72,7 +80,7 @@ export async function runBuild(ctx) {
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));
-    ctx.exitCode = 254;
+    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     return;
   }
 
@@ -95,15 +103,15 @@ export async function runBuild(ctx) {
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
-        ctx.exitCode = 201;
+        setExitCode(ctx, exitCodes.FETCH_ERROR);
         throw rewriteErrorMessage(err, fetchError(ctx, err));
       }
       if (err.name === 'GraphQLError') {
-        ctx.exitCode = 202;
+        setExitCode(ctx, exitCodes.GRAPHQL_ERROR);
         throw rewriteErrorMessage(err, graphqlError(ctx, err));
       }
       if (err.message.startsWith('Cannot run a build with no stories')) {
-        ctx.exitCode = 203;
+        setExitCode(ctx, exitCodes.BUILD_NO_STORIES);
         throw rewriteErrorMessage(err, missingStories(ctx));
       }
       throw rewriteErrorMessage(err, taskError(ctx, err));
@@ -127,7 +135,8 @@ export async function runBuild(ctx) {
       ctx.log.error(fatalError(ctx, errors));
     }
 
-    // Not sure what exit code to use but this can mean error.
-    if (!ctx.exitCode) ctx.exitCode = 255;
+    if (!ctx.exitCode) {
+      setExitCode(ctx, exitCodes.UNKNOWN_ERROR);
+    }
   }
 }
