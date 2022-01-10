@@ -1,3 +1,4 @@
+import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
@@ -137,21 +138,21 @@ export const createBuild = async (ctx, task) => {
     const { account } = build.app;
     if (account.exceededThreshold) {
       ctx.log.warn(snapshotQuotaReached(account));
-      ctx.exitCode = 101;
+      setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
     } else if (account.paymentRequired) {
       ctx.log.warn(paymentRequired(account));
-      ctx.exitCode = 102;
+      setExitCode(ctx, exitCodes.ACCOUNT_PAYMENT_REQUIRED, true);
     } else {
       // Future proofing for reasons we aren't aware of
       ctx.log.warn(buildLimited(account));
-      ctx.exitCode = 100;
+      setExitCode(ctx, exitCodes.BUILD_WAS_LIMITED, true);
     }
   }
 
   transitionTo(success, true)(ctx, task);
 
   if (list || ctx.isPublishOnly || matchesBranch(ctx.options.exitOnceUploaded)) {
-    ctx.exitCode = 0;
+    setExitCode(ctx, exitCodes.OK);
     ctx.skipSnapshots = true;
     ctx.log.info(storybookPublished(ctx));
   }
