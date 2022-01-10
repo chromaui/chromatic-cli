@@ -1,6 +1,8 @@
+/* eslint-disable no-console */
+
 import fs from 'fs-extra';
-import { join } from 'path';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
+import { getDiagnostics } from './lib/writeChromaticDiagnostics';
 
 /**
  * Utility to trace a set of changed file paths to dependent story files using a Webpack stats file.
@@ -33,7 +35,7 @@ import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
  * This script assumes your config directory is `./.storybook`, you can use `STORYBOOK_CONFIG_DIR` to change that
  */
 
-export async function main([statsFile, ...changedFiles]) {
+export async function main([statsFile, ...inputFiles]) {
   const stats = await fs.readJson(statsFile);
   const ctx = {
     log: console,
@@ -41,7 +43,19 @@ export async function main([statsFile, ...changedFiles]) {
       configDir: process.env.STORYBOOK_CONFIG_DIR || '.storybook',
       staticDir: ['static'],
     },
+    options: {
+      storybookBaseDir: process.env.STORYBOOK_BASE_DIR,
+    },
+    turboSnap: {},
   };
-  // eslint-disable-next-line no-console
-  console.log(await getDependentStoryFiles(ctx, stats, statsFile, changedFiles));
+  const changedFiles = inputFiles.map((file) => file.replace(/^\.\//, ''));
+  await getDependentStoryFiles(ctx, stats, statsFile, changedFiles)
+    .then((result) => {
+      if (result) {
+        const files = Object.values(result);
+        console.log(`Found ${files.length} dependent story files:`);
+        files.forEach((file) => console.log(`- ${file}`));
+      }
+    })
+    .catch(() => console.dir(getDiagnostics(ctx)));
 }
