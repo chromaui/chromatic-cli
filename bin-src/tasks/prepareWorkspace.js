@@ -1,5 +1,6 @@
 import { checkout, findMergeBase, getUpdateMessage, isClean, isUpToDate } from '../git/git';
 import installDependencies from '../lib/installDependencies';
+import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import mergeBaseNotFound from '../ui/messages/errors/mergeBaseNotFound';
 import workspaceNotClean from '../ui/messages/errors/workspaceNotClean';
@@ -19,16 +20,14 @@ export const runPrepareWorkspace = async (ctx, task) => {
 
   // Make sure the git repo is in a clean state (no changes / untracked files).
   if (!(await isClean())) {
-    ctx.exitCode = 101;
-    ctx.userError = true;
+    setExitCode(ctx, exitCodes.GIT_NOT_CLEAN, true);
     ctx.log.error(workspaceNotClean());
     throw new Error('Working directory is not clean');
   }
 
   // Make sure both the head and base branches are up-to-date with the remote.
   if (!(await isUpToDate(ctx))) {
-    ctx.exitCode = 102;
-    ctx.userError = true;
+    setExitCode(ctx, exitCodes.GIT_OUT_OF_DATE, true);
     ctx.log.error(workspaceNotUpToDate(await getUpdateMessage()));
     throw new Error('Workspace not up-to-date with remote');
   }
@@ -38,8 +37,7 @@ export const runPrepareWorkspace = async (ctx, task) => {
   // Get the merge base commit hash.
   ctx.mergeBase = await findMergeBase(patchHeadRef, patchBaseRef);
   if (!ctx.mergeBase) {
-    ctx.exitCode = 103;
-    ctx.userError = true;
+    setExitCode(ctx, exitCodes.GIT_NO_MERGE_BASE, true);
     ctx.log.error(mergeBaseNotFound(ctx.options));
     throw new Error('Could not find a merge base');
   }
@@ -52,7 +50,7 @@ export const runPrepareWorkspace = async (ctx, task) => {
     await installDependencies(); // this might modify a lockfile
   } catch (err) {
     ctx.mergeBase = undefined;
-    ctx.exitCode = 104;
+    setExitCode(ctx, exitCodes.NPM_INSTALL_FAILED);
     ctx.log.error(err);
     await runRestoreWorkspace(); // make sure we clean up even when something breaks
     throw new Error('Failed to install dependencies');
