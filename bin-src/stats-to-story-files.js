@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
+import { getDiagnostics } from './lib/writeChromaticDiagnostics';
 
 /**
  * Utility to trace a set of changed file paths to dependent story files using a Webpack stats file.
@@ -19,12 +20,10 @@ import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
  * Example output:
  *   Found 2 CSF globs
  *   Found 218 user modules
- *   {
- *     '114': './bin/ui/messages/info/buildPassed.stories.js',
- *     '228': './bin/ui/messages/errors/buildHasChanges.stories.js',
- *     '229': './bin/ui/messages/info/storybookPublished.stories.js',
- *     ...
- *   }
+ *   Found 3 dependent story files:
+ *   - bin/ui/messages/info/buildPassed.stories.js
+ *   - bin/ui/messages/errors/buildHasChanges.stories.js
+ *   - bin/ui/messages/info/storybookPublished.stories.js
  *
  * You can generate a preview-stats.json like so (requires Storybook >=6.3):
  *   yarn build-storybook --webpack-stats-json
@@ -33,7 +32,7 @@ import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
  * Set `STORYBOOK_BASE_DIR` to change the location of your Storybook project relative to the Git repository root.
  */
 
-export async function main([statsFile, ...changedFiles]) {
+export async function main([statsFile, ...inputFiles]) {
   const stats = await fs.readJson(statsFile);
   const ctx = {
     log: console,
@@ -44,11 +43,22 @@ export async function main([statsFile, ...changedFiles]) {
       configDir: process.env.STORYBOOK_CONFIG_DIR || '.storybook',
       staticDir: ['static'],
     },
+    turboSnap: {},
   };
-  const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsFile, changedFiles);
-  if (onlyStoryFiles) {
+
+  try {
+    const changedFiles = inputFiles.map((file) => file.replace(/^\.\//, ''));
+    const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsFile, changedFiles);
+
     ctx.log.info(`Found ${ctx.turboSnap.globs.length} CSF globs`);
     ctx.log.info(`Found ${ctx.turboSnap.modules.length} user modules`);
-    ctx.log.info(onlyStoryFiles);
+
+    if (onlyStoryFiles) {
+      const files = Object.values(onlyStoryFiles);
+      ctx.log.info(`Found ${files.length} dependent story files:`);
+      files.forEach((file) => ctx.log.info(`- ${file}`));
+    }
+  } catch (e) {
+    ctx.log.info(getDiagnostics(ctx));
   }
 }
