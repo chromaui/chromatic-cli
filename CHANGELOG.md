@@ -1,3 +1,7 @@
+# 6.3.4 - 2022-01-10
+
+- [492](https://github.com/chromaui/chromatic-cli/pull/492) Fix missing exit code on rebuild
+
 # 6.3.3 - 2021-12-22
 
 - Filter empty values in array flags and restore warnings
