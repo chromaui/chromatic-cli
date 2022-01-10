@@ -30,6 +30,9 @@ inputs:
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false
+  storybookBaseDir:
+    description: 'Relative path from repository root to Storybook project root'
+    required: false
   only:
     description: 'Only run a single story or a subset of stories'
     required: false
@@ -86,6 +89,9 @@ inputs:
     required: false
   ignoreLastBuildOnBranch:
     description: 'Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)'
+    required: false
+  zip:
+    description: 'Publish your Storybook to Chromatic as a single zip file instead of individual content files'
     required: false
 
 outputs:

@@ -88,6 +88,7 @@ export const setGitInfo = async (ctx, task) => {
       if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
         ctx.skip = true;
         transitionTo(skippedRebuild, true)(ctx, task);
+        ctx.exitCode = 0;
         return;
       }
     }
