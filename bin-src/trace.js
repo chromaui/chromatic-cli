@@ -27,7 +27,7 @@ export async function main(argv) {
       --config-dir <dirname>, -c  Directory where to load Storybook configurations from. Alternatively, set STORYBOOK_CONFIG_DIR. (default: '.storybook')
       --stats-file <filepath>, -s  Path to preview-stats.json. Alternatively, set WEBPACK_STATS_FILE. (default: 'storybook-static/preview-stats.json')
       --untraced <filepath>, -u  Disregard these files and their dependencies. Globs are supported via picomatch. This flag can be specified multiple times.
-      --expand  Expand modules to their underlying list of files
+      --expanded  Expand bundles to their underlying list of files
     `,
     {
       argv,
@@ -52,7 +52,7 @@ export async function main(argv) {
           alias: 'u',
           isMultiple: true,
         },
-        expand: {
+        expanded: {
           type: 'boolean',
           default: false,
         },
@@ -68,7 +68,7 @@ export async function main(argv) {
     options: {
       storybookBaseDir: flags.baseDir,
       untraced: flags.untraced,
-      traceChanged: flags.expand ? 'expanded' : true,
+      traceChanged: flags.expanded ? 'expanded' : true,
     },
     turboSnap: {},
   };
