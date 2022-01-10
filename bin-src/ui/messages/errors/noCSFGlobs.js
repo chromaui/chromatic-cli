@@ -5,7 +5,7 @@ import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
 export default ({ statsPath, storybookDir, entryFile, viewLayer = 'react' }) =>
-  entryFile && !entryFile.startsWith(storybookDir)
+  entryFile
     ? dedent(chalk`
       ${error} Did not find any CSF globs in {bold ${statsPath}}
       Found an entry file at {bold ${entryFile}} but expected it at {bold ${storybookDir}/generated-stories-entry.js}.
