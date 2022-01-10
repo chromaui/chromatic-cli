@@ -29,18 +29,26 @@ import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
  * You can generate a preview-stats.json like so (requires Storybook >=6.3):
  *   yarn build-storybook --webpack-stats-json
  *
- * This script assumes your config directory is `./.storybook`, you can use `STORYBOOK_CONFIG_DIR` to change that
+ * This script assumes your config directory is `./.storybook`, you can use `STORYBOOK_CONFIG_DIR` to change that.
+ * Set `STORYBOOK_BASE_DIR` to change the location of your Storybook project relative to the Git repository root.
  */
 
 export async function main([statsFile, ...changedFiles]) {
   const stats = await fs.readJson(statsFile);
   const ctx = {
     log: console,
+    options: {
+      storybookBaseDir: process.env.STORYBOOK_BASE_DIR || '.',
+    },
     storybook: {
       configDir: process.env.STORYBOOK_CONFIG_DIR || '.storybook',
       staticDir: ['static'],
     },
   };
-  // eslint-disable-next-line no-console
-  console.log(await getDependentStoryFiles(ctx, stats, statsFile, changedFiles));
+  const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsFile, changedFiles);
+  if (onlyStoryFiles) {
+    ctx.log.info(`Found ${ctx.turboSnap.globs.length} CSF globs`);
+    ctx.log.info(`Found ${ctx.turboSnap.modules.length} user modules`);
+    ctx.log.info(onlyStoryFiles);
+  }
 }
