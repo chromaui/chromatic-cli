@@ -45,6 +45,9 @@ inputs:
   untraced:
     description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
     required: false
+  traceChanged:
+    description: 'Print dependency trace for changed files to affected story files; set to "expanded" to list individual modules'
+    required: false
   doNotStart:
     description: 'Do not attempt to start or build; use if your Storybook is already running'
     required: false
