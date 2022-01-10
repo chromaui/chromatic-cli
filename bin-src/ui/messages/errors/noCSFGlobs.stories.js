@@ -15,5 +15,5 @@ export const NoCSFGlobsFoundEntry = () =>
   noCSFGlobs({
     statsPath: '/tmp/storybook-static/preview-stats.json',
     storybookDir: '.storybook',
-    entryFile: 'config/dashboard/.storybook/generated-stories-entry.js',
+    entryFile: 'path/to/.storybook/generated-stories-entry.js',
   });
