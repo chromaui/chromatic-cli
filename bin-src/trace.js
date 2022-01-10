@@ -1,10 +1,6 @@
-/* eslint-disable no-console */
-
-import chalk from 'chalk';
 import fs from 'fs-extra';
 import meow from 'meow';
-import pluralize from 'pluralize';
-import { getDependentStoryFiles, normalizePath } from './lib/getDependentStoryFiles';
+import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
 
 /**
  * Utility to trace a set of changed file paths to dependent story files using a Webpack stats file.
@@ -72,6 +68,7 @@ export async function main(argv) {
     options: {
       storybookBaseDir: flags.baseDir,
       untraced: flags.untraced,
+      traceChanged: flags.expand ? 'expanded' : true,
     },
     turboSnap: {},
   };
@@ -79,51 +76,4 @@ export async function main(argv) {
   const changedFiles = input.map((f) => f.replace(/^\.\//, ''));
 
   await getDependentStoryFiles(ctx, stats, flags.statsFile, changedFiles);
-
-  const { rootPath, workingDir } = ctx.turboSnap;
-  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
-
-  const printPath = (filepath) => {
-    const { storybookBaseDir = '.' } = ctx.options;
-    const result =
-      storybookBaseDir === '.'
-        ? filepath
-        : filepath.replace(`${storybookBaseDir}/`, chalk.dim(`${storybookBaseDir}/`));
-    return result
-      .split('/')
-      .map((part, index, parts) => {
-        if (index < parts.length - 1) return part;
-        const [, file, suffix = ''] = part.match(/^(.+?)( \+ \d+ modules)?$/);
-        return chalk.bold(file) + (flags.expand ? chalk.magenta(suffix) : chalk.dim(suffix));
-      })
-      .join('/');
-  };
-
-  const modulesByName = stats.modules.reduce((acc, mod) =>
-    Object.assign(acc, { [normalize(mod.name)]: mod })
-  );
-  const printModules = (moduleName, indent = '') => {
-    if (!flags.expand) return '';
-    const { modules } = modulesByName[moduleName] || {};
-    return modules
-      ? modules.reduce((acc, mod) => chalk`${acc}\n${indent}  ⎸  {dim ${normalize(mod.name)}}`, '')
-      : '';
-  };
-
-  const traces = [...ctx.turboSnap.tracedPaths].map((path) => {
-    const parts = path.split('\n');
-    return parts
-      .reduce((acc, part, index) => {
-        if (index === 0) return chalk`— ${printPath(part)} {cyan [changed]}${printModules(part)}`;
-        const indent = '  '.repeat(index);
-        return chalk`${acc}\n${indent}∟ ${printPath(part)}${printModules(part, indent)}`;
-      }, '')
-      .concat(chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`);
-  });
-
-  const changed = pluralize('changed files', changedFiles.length, true);
-  const affected = pluralize('affected story files', traces.length, true);
-  console.log(chalk`\nTraced {bold ${changed}} to {bold ${affected}}:\n`);
-
-  console.log(traces.join('\n\n'));
 }

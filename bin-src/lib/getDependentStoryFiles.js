@@ -1,4 +1,6 @@
+import chalk from 'chalk';
 import path from 'path';
+import pluralize from 'pluralize';
 
 import { getWorkingDir, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
@@ -174,6 +176,10 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
 
+  if (ctx.options.traceChanged) {
+    printTrace(ctx, stats, changedFiles);
+  }
+
   if (ctx.turboSnap.bailReason) {
     ctx.log.warn(bailFile(ctx));
     return null;
@@ -183,4 +189,55 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     if (changedCsfIds.has(mod.id)) acc[String(mod.id)] = baseName(mod.name);
     return acc;
   }, {});
+}
+
+export function printTrace(ctx, stats, changedFiles) {
+  const expanded = ctx.options.traceChanged === 'expanded';
+
+  const { rootPath, workingDir } = ctx.turboSnap;
+  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
+
+  const printPath = (filepath) => {
+    const { storybookBaseDir = '.' } = ctx.options;
+    const result =
+      storybookBaseDir === '.'
+        ? filepath
+        : filepath.replace(`${storybookBaseDir}/`, chalk.dim(`${storybookBaseDir}/`));
+    return result
+      .split('/')
+      .map((part, index, parts) => {
+        if (index < parts.length - 1) return part;
+        const [, file, suffix = ''] = part.match(/^(.+?)( \+ \d+ modules)?$/);
+        return chalk.bold(file) + (expanded ? chalk.magenta(suffix) : chalk.dim(suffix));
+      })
+      .join('/');
+  };
+
+  const modulesByName = stats.modules.reduce((acc, mod) =>
+    Object.assign(acc, { [normalize(mod.name)]: mod })
+  );
+  const printModules = (moduleName, indent = '') => {
+    if (!expanded) return '';
+    const { modules } = modulesByName[moduleName] || {};
+    return modules
+      ? modules.reduce((acc, mod) => chalk`${acc}\n${indent}  ⎸  {dim ${normalize(mod.name)}}`, '')
+      : '';
+  };
+
+  const traces = [...ctx.turboSnap.tracedPaths].map((p) => {
+    const parts = p.split('\n');
+    return parts
+      .reduce((acc, part, index) => {
+        if (index === 0) return chalk`— ${printPath(part)} {cyan [changed]}${printModules(part)}`;
+        const indent = '  '.repeat(index);
+        return chalk`${acc}\n${indent}∟ ${printPath(part)}${printModules(part, indent)}`;
+      }, '')
+      .concat(chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`);
+  });
+
+  const changed = pluralize('changed files', changedFiles.length, true);
+  const affected = pluralize('affected story files', traces.length, true);
+  ctx.log.info(chalk`\nTraced {bold ${changed}} to {bold ${affected}}:\n`);
+  ctx.log.info(traces.join('\n\n'));
+  ctx.log.info('');
 }
