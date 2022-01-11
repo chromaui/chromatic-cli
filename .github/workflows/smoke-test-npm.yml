@@ -13,7 +13,7 @@ jobs:
         run: npm install && git status --porcelain
       - name: prep package
         run: ./scripts/rename.js storybook-chromatic
-        run: npm run bundle:bin
+      - run: npm run bundle:bin
       - name: run chromatic
         run: npm run chromatic -- --build-script-name build-test-storybook --exit-zero-on-changes
         env:
