@@ -12,7 +12,7 @@ jobs:
       - name: switch to yarn classic
         run: yarn set version 1.x.x
       - name: install
-        run: yarn install
+        run: rm yarn.lock && yarn install
       - name: run chromatic
         run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:

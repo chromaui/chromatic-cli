@@ -12,7 +12,7 @@ jobs:
       - name: switch to yarn berry
         run: yarn set version berry
       - name: install
-        run: yarn install
+        run: rm yarn.lock && yarn install
       - name: run chromatic
         run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:

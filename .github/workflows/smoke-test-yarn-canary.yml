@@ -14,7 +14,7 @@ jobs:
       - name: switch to yarn canary
         run: yarn set version canary
       - name: install
-        run: yarn install
+        run: rm yarn.lock && yarn install
       - name: run chromatic
         run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
