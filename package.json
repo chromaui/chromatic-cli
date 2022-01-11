@@ -42,7 +42,7 @@
     "chromatic-prebuilt": "./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./bin/main.cjs",
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./bin/main.cjs",
-    "lint": "yarn lint:js .storybook bin-src stories ./isChromatic.js ./isChromatic.mjs",
+    "lint": "yarn lint:js .storybook bin-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "prepublish": "npm run build",
