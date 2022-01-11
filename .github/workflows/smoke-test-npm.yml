@@ -10,7 +10,7 @@ jobs:
           node-version: '14.x'
       - uses: actions/checkout@v1
       - name: install
-        run: npm ci && git status --porcelain
+        run: npm install && git status --porcelain
       - name: prep package
         run: ./scripts/rename.js storybook-chromatic
       - name: run chromatic
