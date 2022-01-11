@@ -21,3 +21,4 @@ jobs:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
           CHROMATIC_PROJECT_TOKEN: 47c20821d2c2
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
