@@ -12,7 +12,6 @@ jobs:
       - run: yarn install
       - run: yarn set version berry
       - run: yarn set version canary
-      - run: yarn bundle:bin
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:

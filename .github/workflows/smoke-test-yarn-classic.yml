@@ -11,7 +11,6 @@ jobs:
       - uses: actions/checkout@v1
       - run: yarn install
       - run: yarn set version 1.x.x
-      - run: yarn bundle:bin
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
