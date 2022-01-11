@@ -19,7 +19,7 @@ jobs:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
       - run: yarn bundle:bin
       - name: run chromatic
-        run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
+        run: yarn exec node ./bin/main.cjs --build-script-name build-test-storybook --exit-zero-on-changes
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
