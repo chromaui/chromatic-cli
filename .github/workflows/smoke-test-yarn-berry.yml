@@ -9,12 +9,8 @@ jobs:
         with:
           node-version: '14.x'
       - uses: actions/checkout@v1
-      - name: switch to yarn berry
-        run: yarn set version berry
-      - name: install
-        run: rm yarn.lock && yarn install
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+      - run: yarn install
+      - run: yarn set version berry
       - run: yarn bundle:bin
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes
