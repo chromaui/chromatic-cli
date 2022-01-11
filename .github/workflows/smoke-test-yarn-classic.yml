@@ -14,7 +14,7 @@ jobs:
       - name: switch to yarn classic
         run: yarn set version 1.x.x
       - name: run chromatic
-        run: yarn chromatic --auto-accept-changes
+        run: yarn chromatic --build-script-name build-test-storybook
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
