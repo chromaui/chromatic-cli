@@ -1,0 +1,21 @@
+name: Smoke test via yarn classic
+on: push
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - uses: actions/checkout@v1
+      - name: install
+        run: yarn install
+      - name: switch to yarn classic
+        run: yarn set version 1.x.x
+      - name: run chromatic
+        run: yarn chromatic --auto-accept-changes
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: 47c20821d2c2

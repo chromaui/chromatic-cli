@@ -1,0 +1,21 @@
+name: Smoke test via npm
+on: push
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - uses: actions/checkout@v1
+      - name: install
+        run: npm ci && git status --porcelain
+      - name: prep package
+        run: ./scripts/rename.js storybook-chromatic
+      - name: run chromatic
+        run: npm run chromatic -- --auto-accept-changes
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: 47c20821d2c2
