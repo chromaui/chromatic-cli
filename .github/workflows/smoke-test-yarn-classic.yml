@@ -9,10 +9,10 @@ jobs:
         with:
           node-version: '14.x'
       - uses: actions/checkout@v1
-      - name: install
-        run: yarn install
       - name: switch to yarn classic
         run: yarn set version 1.x.x
+      - name: install
+        run: yarn install
       - name: run chromatic
         run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
