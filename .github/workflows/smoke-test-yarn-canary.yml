@@ -17,7 +17,7 @@ jobs:
         run: rm yarn.lock && yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
-      - run: yarn build
+      - run: yarn bundle:bin
       - name: run chromatic
         run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
