@@ -14,7 +14,7 @@ jobs:
       - name: switch to yarn berry
         run: yarn set version berry
       - name: run chromatic
-        run: yarn chromatic --build-script-name build-test-storybook
+        run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

@@ -16,7 +16,7 @@ jobs:
       - name: switch to yarn canary
         run: yarn set version canary
       - name: run chromatic
-        run: yarn chromatic --build-script-name build-test-storybook
+        run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

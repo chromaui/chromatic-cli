@@ -14,7 +14,7 @@ jobs:
       - name: prep package
         run: ./scripts/rename.js storybook-chromatic
       - name: run chromatic
-        run: npm run chromatic -- --build-script-name build-test-storybook
+        run: npm run chromatic -- --build-script-name build-test-storybook --exit-zero-on-changes
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
