@@ -16,7 +16,6 @@ jobs:
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes
         env:
-          SMOKE_TEST: true
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
           CHROMATIC_PROJECT_TOKEN: 47c20821d2c2
