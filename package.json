@@ -36,7 +36,7 @@
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
     "build-storybook": "build-storybook -s static",
-    "build-test-storybook": "SMOKE_TEST=true build-storybook -o test-storybook",
+    "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./bin/main.cjs",
     "chromatic-prebuilt": "./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
