@@ -49,14 +49,14 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  */
 export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles) {
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
-  const { storybookBaseDir, untraced = [] } = ctx.options;
+  const { storybookBaseDir, storybookConfigDir = configDir, untraced = [] } = ctx.options;
 
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
   const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir); // e.g. `src/file.js` (no ./ prefix)
   const baseName = (name) => normalize(name).replace(/ \+ \d+ modules$/, '');
 
-  const storybookDir = normalize(posix(configDir));
+  const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir) => normalize(posix(dir)));
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`

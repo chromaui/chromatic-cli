@@ -62,15 +62,12 @@ export async function main(argv) {
 
   const ctx = {
     log: console,
-    storybook: {
-      configDir: flags.configDir,
-    },
     options: {
       storybookBaseDir: flags.baseDir,
+      storybookConfigDir: flags.configDir,
       untraced: flags.untraced,
       traceChanged: flags.mode || true,
     },
-    turboSnap: {},
   };
   const stats = await fs.readJson(flags.statsFile);
   const changedFiles = input.map((f) => f.replace(/^\.\//, ''));

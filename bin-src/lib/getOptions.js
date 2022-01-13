@@ -72,6 +72,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     port: flags.storybookPort,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
+    storybookConfigDir: flags.storybookConfigDir,
     storybookUrl: flags.storybookUrl,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
