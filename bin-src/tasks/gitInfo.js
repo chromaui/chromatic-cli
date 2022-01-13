@@ -23,8 +23,8 @@ import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 
 const TesterSkipBuildMutation = `
-  mutation TesterSkipBuildMutation($commit: String!, $branch: String) {
-    skipBuild(commit: $commit, branch: $branch)
+  mutation TesterSkipBuildMutation($commit: String!, $branch: String, $slug: String) {
+    skipBuild(commit: $commit, branch: $branch, slug: $slug)
   }
 `;
 
