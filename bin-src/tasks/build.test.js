@@ -136,7 +136,7 @@ describe('buildStorybook', () => {
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
       log: { debug: jest.fn(), error: jest.fn() },
     };
-    execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 10)));
+    execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)));
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
   });
