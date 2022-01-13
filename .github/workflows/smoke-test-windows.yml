@@ -1,0 +1,22 @@
+name: Smoke test via yarn on Windows
+on: push
+
+jobs:
+  chromatic:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - uses: actions/checkout@v1
+      - name: install
+        run: yarn
+      - name: prep package
+        run: node ./scripts/rename.js storybook-chromatic
+      - run: yarn bundle:bin
+      - name: run chromatic
+        run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: 47c20821d2c2

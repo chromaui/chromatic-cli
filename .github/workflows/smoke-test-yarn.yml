@@ -1,0 +1,15 @@
+name: Smoke test via yarn
+on: push
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: yarn
+      - run: yarn bundle:bin
+      - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: 47c20821d2c2
