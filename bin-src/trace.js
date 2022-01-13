@@ -20,9 +20,10 @@ export async function main(argv) {
   const { flags, input } = meow(
     `
     Usage
-      $ chromatic trace [...changed file paths]
+      $ chromatic trace [-b|--base-dir] [-c|--config-dir] [-s|--stats-file] [-u|--untraced] [-m|--mode] [<files>...]
 
     Options
+      <files>...  List of changed files relative to repository root.
       --base-dir <dirname>, -b  Relative path from repository root to Storybook project root. Alternatively, set STORYBOOK_BASE_DIR. Use when your Storybook is located in a subdirectory of your repository.
       --config-dir <dirname>, -c  Directory where to load Storybook configurations from. Alternatively, set STORYBOOK_CONFIG_DIR. (default: '.storybook')
       --stats-file <filepath>, -s  Path to preview-stats.json. Alternatively, set WEBPACK_STATS_FILE. (default: 'storybook-static/preview-stats.json')

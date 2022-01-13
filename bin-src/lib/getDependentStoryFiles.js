@@ -1,11 +1,10 @@
-import chalk from 'chalk';
 import path from 'path';
-import pluralize from 'pluralize';
 
 import { getWorkingDir, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
+import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 
 // Bail whenever one of these was changed
 const GLOBALS = [
@@ -19,6 +18,8 @@ const GLOBALS = [
 
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
+
+const MULTI_MODULES = / \+ \d+ modules$/;
 
 const isPackageFile = (name) => GLOBALS.some((re) => re.test(name));
 const isUserModule = ({ id, name, moduleName }) =>
@@ -54,7 +55,6 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
   const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir); // e.g. `src/file.js` (no ./ prefix)
-  const baseName = (name) => normalize(name).replace(/ \+ \d+ modules$/, '');
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir) => normalize(posix(dir)));
@@ -70,19 +70,19 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     `storybook-stories.js`,
   ];
 
-  const idsByName = {};
+  const modulesByName = {};
   const namesById = {};
   const reasonsById = {};
   const csfGlobsByName = {};
 
   stats.modules.filter(isUserModule).forEach((mod) => {
     const normalizedName = normalize(mod.name);
-    idsByName[normalizedName] = mod.id;
+    modulesByName[normalizedName] = mod;
     namesById[mod.id] = normalizedName;
 
     if (mod.modules) {
       mod.modules.forEach((m) => {
-        idsByName[normalize(m.name)] = mod.id;
+        modulesByName[normalize(m.name)] = mod;
       });
     }
 
@@ -96,7 +96,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   });
 
   const globs = Object.keys(csfGlobsByName);
-  const modules = Object.keys(idsByName);
+  const modules = Object.keys(modulesByName);
 
   if (globs.length === 0) {
     ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
@@ -117,9 +117,17 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     return true;
   }
 
+  function files(moduleName) {
+    const mod = modulesByName[moduleName];
+    if (!mod) return [moduleName];
+    return mod.modules && MULTI_MODULES.test(mod.name)
+      ? mod.modules.map((m) => normalize(m.name))
+      : [normalize(mod.name)];
+  }
+
   const tracedFiles = changedFiles.filter(untrace);
   const tracedPaths = new Set();
-  const changedCsfIds = new Set();
+  const affectedModuleIds = new Set();
   const checkedIds = {};
   const toCheck = [];
 
@@ -132,50 +140,56 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     modules,
     tracedFiles,
     tracedPaths,
-    changedCsfIds,
+    affectedModuleIds,
   };
 
-  const changedPackageFile = tracedFiles.find(isPackageFile);
-  if (changedPackageFile) ctx.turboSnap.bailReason = { changedPackageFile };
+  const changedPackageFiles = tracedFiles.filter(isPackageFile);
+  if (changedPackageFiles.length) ctx.turboSnap.bailReason = { changedPackageFiles };
 
-  function shouldBail(name) {
-    if (isStorybookFile(name)) {
-      ctx.turboSnap.bailReason = { changedStorybookFile: baseName(name) };
+  function shouldBail(moduleName) {
+    if (isStorybookFile(moduleName)) {
+      ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
       return true;
     }
-    if (isStaticFile(name)) {
-      ctx.turboSnap.bailReason = { changedStaticFile: baseName(name) };
+    if (isStaticFile(moduleName)) {
+      ctx.turboSnap.bailReason = { changedStaticFiles: files(moduleName) };
       return true;
     }
     return false;
   }
 
-  function traceName(normalizedName, tracePath = []) {
-    if (ctx.turboSnap.bailReason || isCsfGlob(normalizedName)) return;
-    if (shouldBail(normalizedName)) return;
+  function traceName(name, tracePath = []) {
+    if (ctx.turboSnap.bailReason || isCsfGlob(name)) return;
+    if (shouldBail(name)) return;
 
-    const id = idsByName[normalizedName];
-    const idNormalizedName = namesById[id];
-    if (shouldBail(idNormalizedName)) return;
+    const { id } = modulesByName[name] || {};
+    const normalizedName = namesById[id];
+    if (shouldBail(normalizedName)) return;
 
     if (!id || !reasonsById[id] || checkedIds[id]) return;
     toCheck.push([id, [...tracePath, id]]);
 
     if (reasonsById[id].some(isCsfGlob)) {
-      changedCsfIds.add(id);
+      affectedModuleIds.add(id);
       tracedPaths.add([...tracePath, id].map((pid) => namesById[pid]).join('\n'));
     }
   }
 
-  tracedFiles.forEach((file) => traceName(file));
+  tracedFiles.forEach((posixPath) => traceName(posixPath));
   while (toCheck.length > 0) {
     const [id, tracePath] = toCheck.pop();
     checkedIds[id] = true;
     reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
+  const affectedModules = Object.fromEntries(
+    Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
+  );
 
   if (ctx.options.traceChanged) {
-    printTrace(ctx, stats, changedFiles);
+    ctx.log.info(
+      tracedAffectedFiles(ctx, { changedFiles, affectedModules, modulesByName, normalize })
+    );
+    ctx.log.info('');
   }
 
   if (ctx.turboSnap.bailReason) {
@@ -183,59 +197,5 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
     return null;
   }
 
-  return stats.modules.reduce((acc, mod) => {
-    if (changedCsfIds.has(mod.id)) acc[String(mod.id)] = baseName(mod.name);
-    return acc;
-  }, {});
-}
-
-export function printTrace(ctx, stats, changedFiles) {
-  const expanded = ctx.options.traceChanged === 'expanded';
-
-  const { rootPath, workingDir } = ctx.turboSnap;
-  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir);
-
-  const printPath = (filepath) => {
-    const { storybookBaseDir = '.' } = ctx.options;
-    const result =
-      storybookBaseDir === '.'
-        ? filepath
-        : filepath.replace(`${storybookBaseDir}/`, chalk.dim(`${storybookBaseDir}/`));
-    return result
-      .split('/')
-      .map((part, index, parts) => {
-        if (index < parts.length - 1) return part;
-        const [, file, suffix = ''] = part.match(/^(.+?)( \+ \d+ modules)?$/);
-        return chalk.bold(file) + (expanded ? chalk.magenta(suffix) : chalk.dim(suffix));
-      })
-      .join('/');
-  };
-
-  const modulesByName = stats.modules.reduce((acc, mod) =>
-    Object.assign(acc, { [normalize(mod.name)]: mod })
-  );
-  const printModules = (moduleName, indent = '') => {
-    if (!expanded) return '';
-    const { modules } = modulesByName[moduleName] || {};
-    return modules
-      ? modules.reduce((acc, mod) => chalk`${acc}\n${indent}  ⎸  {dim ${normalize(mod.name)}}`, '')
-      : '';
-  };
-
-  const traces = [...ctx.turboSnap.tracedPaths].map((p) => {
-    const parts = p.split('\n');
-    return parts
-      .reduce((acc, part, index) => {
-        if (index === 0) return chalk`— ${printPath(part)} {cyan [changed]}${printModules(part)}`;
-        const indent = '  '.repeat(index);
-        return chalk`${acc}\n${indent}∟ ${printPath(part)}${printModules(part, indent)}`;
-      }, '')
-      .concat(chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`);
-  });
-
-  const changed = pluralize('changed files', changedFiles.length, true);
-  const affected = pluralize('affected story files', traces.length, true);
-  ctx.log.info(chalk`\nTraced {bold ${changed}} to {bold ${affected}}:\n`);
-  ctx.log.info(traces.join('\n\n'));
-  ctx.log.info('');
+  return affectedModules;
 }
