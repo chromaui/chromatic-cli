@@ -49,7 +49,7 @@ export const tracing = (ctx) => {
 export const bailed = (ctx) => {
   const { changedPackageFiles, changedStorybookFiles, changedStaticFiles } =
     ctx.turboSnap.bailReason;
-  const [firstFile, otherFiles] =
+  const [firstFile, ...otherFiles] =
     changedPackageFiles || changedStorybookFiles || changedStaticFiles;
   const siblings = pluralize('sibling', otherFiles.length, true);
   let output = `Found a change in ${firstFile}`;
