@@ -81,11 +81,11 @@ export const buildFailed = (ctx) => {
   };
 };
 
-export const buildCancelled = (ctx) => {
+export const buildCanceled = (ctx) => {
   return {
     status: 'error',
-    title: `Build ${ctx.build.number} cancelled`,
-    output: `Someone cancelled the build before it completed`,
+    title: `Build ${ctx.build.number} canceled`,
+    output: `Someone canceled the build before it completed`,
   };
 };
 

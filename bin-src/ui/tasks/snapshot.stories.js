@@ -5,7 +5,7 @@ import {
   buildBroken,
   buildPassed,
   buildFailed,
-  buildCancelled,
+  buildCanceled,
   initial,
   dryRun,
   pending,
@@ -98,12 +98,12 @@ export const BuildFailed = () =>
     exitCode: exitCodes.BUILD_FAILED,
   });
 
-export const BuildCancelled = () =>
-  buildCancelled({
+export const BuildCanceled = () =>
+  buildCanceled({
     build,
     now,
     startedAt,
-    exitCode: exitCodes.BUILD_CANCELLED,
+    exitCode: exitCodes.BUILD_CANCELED,
   });
 
 export const SkippedPublishOnly = () =>

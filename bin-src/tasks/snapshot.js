@@ -11,7 +11,7 @@ import {
   buildPassed,
   buildBroken,
   buildFailed,
-  buildCancelled,
+  buildCanceled,
   initial,
   dryRun,
   skipped,
@@ -105,8 +105,8 @@ export const takeSnapshots = async (ctx, task) => {
       break;
 
     case 'CANCELLED':
-      setExitCode(ctx, exitCodes.BUILD_CANCELLED, true);
-      transitionTo(buildCancelled, true)(ctx, task);
+      setExitCode(ctx, exitCodes.BUILD_CANCELED, true);
+      transitionTo(buildCanceled, true)(ctx, task);
       break;
 
     default:
