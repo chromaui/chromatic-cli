@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
-import { dedent } from 'ts-dedent';
 
 import { info } from '../../components/icons';
 
