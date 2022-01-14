@@ -105,7 +105,7 @@ export const takeSnapshots = async (ctx, task) => {
       break;
 
     case 'CANCELLED':
-      setExitCode(ctx, exitCodes.BUILD_CANCELED, true);
+      setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED, true);
       transitionTo(buildCanceled, true)(ctx, task);
       break;
 

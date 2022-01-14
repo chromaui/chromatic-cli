@@ -103,7 +103,7 @@ export const BuildCanceled = () =>
     build,
     now,
     startedAt,
-    exitCode: exitCodes.BUILD_CANCELED,
+    exitCode: exitCodes.BUILD_WAS_CANCELED,
   });
 
 export const SkippedPublishOnly = () =>
