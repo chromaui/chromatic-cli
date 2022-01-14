@@ -8,9 +8,10 @@ import buildPassedMessage from '../ui/messages/info/buildPassed';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import {
   buildComplete,
-  buildError,
-  buildFailed,
   buildPassed,
+  buildBroken,
+  buildFailed,
+  buildCancelled,
   initial,
   dryRun,
   skipped,
@@ -95,13 +96,17 @@ export const takeSnapshots = async (ctx, task) => {
     case 'BROKEN':
       setExitCode(ctx, exitCodes.BUILD_HAS_ERRORS, true);
       ctx.log.error(buildHasErrors(ctx));
-      transitionTo(buildFailed, true)(ctx, task);
+      transitionTo(buildBroken, true)(ctx, task);
       break;
 
     case 'FAILED':
-    case 'CANCELLED':
       setExitCode(ctx, exitCodes.BUILD_FAILED, true);
-      transitionTo(buildError, true)(ctx, task);
+      transitionTo(buildFailed, true)(ctx, task);
+      break;
+
+    case 'CANCELLED':
+      setExitCode(ctx, exitCodes.BUILD_CANCELLED, true);
+      transitionTo(buildCancelled, true)(ctx, task);
       break;
 
     default:

@@ -12,6 +12,7 @@ export const exitCodes = {
   BUILD_FAILED: 3,
   BUILD_NO_STORIES: 4,
   BUILD_WAS_LIMITED: 5,
+  BUILD_CANCELLED: 6,
 
   // Chromatic account issues
   ACCOUNT_QUOTA_REACHED: 11,

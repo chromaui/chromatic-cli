@@ -1,9 +1,11 @@
+import { exitCodes } from '../../lib/setExitCode';
 import task from '../components/task';
 import {
   buildComplete,
-  buildError,
-  buildFailed,
+  buildBroken,
   buildPassed,
+  buildFailed,
+  buildCancelled,
   initial,
   dryRun,
   pending,
@@ -80,20 +82,28 @@ export const BuildAutoAccepted = () =>
     startedAt,
   });
 
+export const BuildBroken = () =>
+  buildBroken({
+    build,
+    now,
+    startedAt,
+    exitCode: exitCodes.BUILD_HAS_ERRORS,
+  });
+
 export const BuildFailed = () =>
   buildFailed({
     build,
     now,
     startedAt,
-    exitCode: 2,
+    exitCode: exitCodes.BUILD_FAILED,
   });
 
-export const BuildError = () =>
-  buildError({
+export const BuildCancelled = () =>
+  buildCancelled({
     build,
     now,
     startedAt,
-    exitCode: 3,
+    exitCode: exitCodes.BUILD_CANCELLED,
   });
 
 export const SkippedPublishOnly = () =>
