@@ -44,7 +44,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -65,7 +65,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -86,7 +86,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -112,7 +112,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -134,7 +134,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js + 1 modules',
+      './src/foo.stories.js': ['src/foo.stories.js', 'src/foo.js'],
     });
   });
 
@@ -161,7 +161,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'services/webapp/src/foo.stories.js',
+      './src/foo.stories.js': ['services/webapp/src/foo.stories.js'],
     });
   });
 
@@ -190,7 +190,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      '/path/to/project/src/foo.stories.js': 'src/foo.stories.js',
+      '/path/to/project/src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -221,7 +221,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      '/path/to/project/packages/webapp/src/foo.stories.js': 'packages/webapp/src/foo.stories.js',
+      '/path/to/project/packages/webapp/src/foo.stories.js': ['packages/webapp/src/foo.stories.js'],
     });
   });
 
