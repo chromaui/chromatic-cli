@@ -50,7 +50,12 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  */
 export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles) {
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
-  const { storybookBaseDir, storybookConfigDir = configDir, untraced = [] } = ctx.options;
+  const {
+    storybookBuildDir,
+    storybookBaseDir,
+    storybookConfigDir = configDir,
+    untraced = [],
+  } = ctx.options;
 
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
@@ -106,7 +111,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
       (mod) => storiesEntryRegExp.test(mod.name) && !storiesEntryFiles.includes(normalize(mod.name))
     );
     const entryFile = foundEntry && normalize(foundEntry.name);
-    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, entryFile, viewLayer }));
+    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLayer }));
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 

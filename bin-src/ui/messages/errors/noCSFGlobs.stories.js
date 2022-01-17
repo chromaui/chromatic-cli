@@ -17,3 +17,11 @@ export const NoCSFGlobsFoundEntry = () =>
     storybookDir: '.storybook',
     entryFile: 'path/to/.storybook/generated-stories-entry.js',
   });
+
+export const NoCSFGlobsFoundEntryPrebuilt = () =>
+  noCSFGlobs({
+    statsPath: '/tmp/storybook-static/preview-stats.json',
+    storybookDir: '.storybook',
+    storybookBuildDir: 'storybook-static',
+    entryFile: 'path/to/.storybook/generated-stories-entry.js',
+  });
