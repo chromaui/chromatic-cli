@@ -54,15 +54,10 @@ const getBuildInfo = (event: typeof context) => {
       };
     }
     case 'workflow_dispatch': {
-      const { ref, sha } = event.payload.inputs;
+      const { ref, sha } = event.payload.inputs || {};
 
-      if (!ref) {
-        setFailed(`When triggering via workflow_dispatch, ref is a required input.`);
-        return null;
-      }
-
-      if (!sha) {
-        setFailed(`When triggering via workflow_dispatch, sha is a required input.`);
+      if (!ref || !sha) {
+        setFailed(`When triggering via workflow_dispatch, ref & sha are required inputs.`);
         return null;
       }
 
