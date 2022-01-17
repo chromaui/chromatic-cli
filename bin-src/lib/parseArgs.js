@@ -30,6 +30,7 @@ export default function parseArgs(argv) {
       --preserve-missing  Treat missing stories as unchanged rather than deleted when comparing to the baseline.
       --skip [branch]  Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
       --storybook-base-dir <dirname>  Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when your Storybook is located in a subdirectory of your repository.
+      --storybook-config-dir <dirname>  Relative path from where you run Chromatic to your Storybook config directory ('.storybook'). Use with --only-changed and --storybook-build-dir when using a custom --config-dir (-c) flag for Storybook. [.storybook]
       --zip  Publish your Storybook to Chromatic as a single zip file instead of individual content files.
 
     Debug options
@@ -41,6 +42,7 @@ export default function parseArgs(argv) {
       --no-interactive  Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
       --only <storypath>  Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This option implies --preserve-missing.
       --diagnostics  Write process context information to chromatic-diagnostics.json.
+      --trace-changed [mode]  Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
     `,
     {
       argv,
@@ -70,6 +72,7 @@ export default function parseArgs(argv) {
         preserveMissing: { type: 'boolean' },
         skip: { type: 'string' },
         storybookBaseDir: { type: 'string' },
+        storybookConfigDir: { type: 'string' },
         zip: { type: 'boolean' },
 
         // Debug options
@@ -80,6 +83,7 @@ export default function parseArgs(argv) {
         junitReport: { type: 'string' },
         list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
+        traceChanged: { type: 'string' },
 
         // Deprecated options for tunneled builds
         doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started

@@ -12,7 +12,7 @@
     "action-src/**/*.*",
     "src/**/*.*",
     ".storybook/*.*",
-    "stories/**/*.*",
+    "test-stories/**/*.*",
     "scripts/*.*"
   ]
 }

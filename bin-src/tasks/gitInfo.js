@@ -145,10 +145,10 @@ export const setGitInfo = async (ctx, task) => {
     if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
-        const match = ctx.git.changedFiles.find((filepath) => matchesFile(glob, filepath));
-        if (match) {
-          ctx.turboSnap.bailReason = { changedExternalFile: match };
-          ctx.log.warn(externalsChanged(match));
+        const matches = ctx.git.changedFiles.filter((filepath) => matchesFile(glob, filepath));
+        if (matches.length) {
+          ctx.turboSnap.bailReason = { changedExternalFiles: matches };
+          ctx.log.warn(externalsChanged(matches));
           ctx.git.changedFiles = null;
           break;
         }

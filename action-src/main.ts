@@ -131,6 +131,7 @@ async function run() {
     const onlyChanged = getInput('onlyChanged');
     const externals = getInput('externals');
     const untraced = getInput('untraced');
+    const traceChanged = getInput('traceChanged');
     const doNotStart = getInput('doNotStart');
     const diagnostics = getInput('diagnostics');
     const storybookPort = getInput('storybookPort');
@@ -167,6 +168,7 @@ async function run() {
       onlyChanged: maybe(onlyChanged),
       externals: maybe(externals),
       untraced: maybe(untraced),
+      traceChanged: maybe(traceChanged),
       doNotStart: maybe(doNotStart),
       storybookPort: maybe(storybookPort),
       storybookUrl: maybe(storybookUrl),

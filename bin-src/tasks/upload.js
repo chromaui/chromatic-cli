@@ -139,11 +139,13 @@ export const traceChangedFiles = async (ctx, task) => {
     if (onlyStoryFiles) {
       ctx.onlyStoryFiles = onlyStoryFiles;
       if (!ctx.options.interactive) {
-        ctx.log.info(
-          `Found affected story files:\n${Object.entries(onlyStoryFiles)
-            .map(([id, f]) => `  ${f} [${id}]`)
-            .join('\n')}`
-        );
+        if (!ctx.options.traceChanged) {
+          ctx.log.info(
+            `Found affected story files:\n${Object.entries(onlyStoryFiles)
+              .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
+              .join('\n')}`
+          );
+        }
         if (ctx.untracedFiles && ctx.untracedFiles.length) {
           ctx.log.info(
             `Encountered ${ctx.untracedFiles.length} untraced files:\n${ctx.untracedFiles

@@ -44,7 +44,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -65,7 +65,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -86,7 +86,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -112,7 +112,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -134,7 +134,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'src/foo.stories.js',
+      './src/foo.stories.js': ['src/foo.stories.js', 'src/foo.js'],
     });
   });
 
@@ -161,7 +161,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      './src/foo.stories.js': 'services/webapp/src/foo.stories.js',
+      './src/foo.stories.js': ['services/webapp/src/foo.stories.js'],
     });
   });
 
@@ -190,7 +190,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      '/path/to/project/src/foo.stories.js': 'src/foo.stories.js',
+      '/path/to/project/src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
 
@@ -221,7 +221,7 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
-      '/path/to/project/packages/webapp/src/foo.stories.js': 'packages/webapp/src/foo.stories.js',
+      '/path/to/project/packages/webapp/src/foo.stories.js': ['packages/webapp/src/foo.stories.js'],
     });
   });
 
@@ -258,7 +258,7 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
-      changedPackageFile: 'src/package.json',
+      changedPackageFiles: ['src/package.json'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(chalk`Found a package file change in {bold src/package.json}`)
@@ -283,7 +283,7 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
-      changedStorybookFile: 'path/to/storybook-config/file.js',
+      changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -310,7 +310,7 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
-      changedStorybookFile: 'path/to/storybook-config/file.js',
+      changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -338,7 +338,7 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
-      changedStorybookFile: 'path/to/storybook-config/file.js',
+      changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -365,7 +365,7 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
-      changedStaticFile: 'path/to/statics/image.png',
+      changedStaticFiles: ['path/to/statics/image.png'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)

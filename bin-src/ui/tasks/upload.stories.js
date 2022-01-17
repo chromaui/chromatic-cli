@@ -40,7 +40,14 @@ export const Invalid = () =>
 export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } });
 
 export const Bailed = () =>
-  bailed({ turboSnap: { bailReason: { changedPackageFile: 'package.json' } } });
+  bailed({ turboSnap: { bailReason: { changedPackageFiles: ['package.json'] } } });
+
+export const BailedSiblings = () =>
+  bailed({
+    turboSnap: {
+      bailReason: { changedStorybookFiles: ['.storybook/preview.js', '.storybook/otherfile.js'] },
+    },
+  });
 
 export const Traced = () =>
   traced({ onlyStoryFiles: Object.fromEntries(Array.from({ length: 5 }, (_, i) => [i])) });
