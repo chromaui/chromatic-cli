@@ -1,10 +1,7 @@
 module.exports = {
-  stories: [
-    // CLI stories
-    '../bin-src/ui/**/*.stories.js',
-    // Test stories
-    '../**/stories/*.stories.js',
-  ],
+  stories: process.env.SMOKE_TEST
+    ? ['../test-stories/*.stories.js']
+    : ['../bin-src/**/*.stories.js'],
   features: {
     postcss: false,
   },

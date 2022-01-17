@@ -1,3 +1,26 @@
+# 6.3.4 - 2022-01-10
+
+- [492](https://github.com/chromaui/chromatic-cli/pull/492) Fix missing exit code on rebuild
+
+# 6.3.3 - 2021-12-22
+
+- Filter empty values in array flags and restore warnings
+
+# 6.3.2 - 2021-12-22
+
+- Disable warning about --externals requiring --only-changed
+
+# 6.3.1 - 2021-12-22
+
+- Disable warning about --untraced requiring --only-changed
+
+# 6.3.0 - 2021-12-22
+
+- [461](https://github.com/chromaui/chromatic-cli/pull/461) Add `--untraced` flag to avoid retesting stories that depend on certain files
+- [479](https://github.com/chromaui/chromatic-cli/pull/479) Add `--diagnostics` flag to write process context data to a file
+- [458](https://github.com/chromaui/chromatic-cli/pull/458) Track `bailReason`, improve TurboSnap messaging and throw on zero CSF globs
+- [482](https://github.com/chromaui/chromatic-cli/pull/482) Fix commit details when using env var and warn if the commit is missing
+
 # 6.2.3 - 2021-12-17
 
 - Avoid optional chaining which breaks in Node 12 (GitHub Actions)

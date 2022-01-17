@@ -126,9 +126,12 @@ async function run() {
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
     const skip = getInput('skip');
+    const storybookBaseDir = getInput('storybookBaseDir');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const externals = getInput('externals');
+    const untraced = getInput('untraced');
+    const traceChanged = getInput('traceChanged');
     const doNotStart = getInput('doNotStart');
     const diagnostics = getInput('diagnostics');
     const storybookPort = getInput('storybookPort');
@@ -144,6 +147,7 @@ async function run() {
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const zip = getInput('zip');
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
@@ -159,9 +163,12 @@ async function run() {
       diagnostics: maybe(diagnostics),
       exec: maybe(exec),
       skip: maybe(skip),
+      storybookBaseDir: maybe(storybookBaseDir),
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
       externals: maybe(externals),
+      untraced: maybe(untraced),
+      traceChanged: maybe(traceChanged),
       doNotStart: maybe(doNotStart),
       storybookPort: maybe(storybookPort),
       storybookUrl: maybe(storybookUrl),
@@ -178,6 +185,7 @@ async function run() {
       exitOnceUploaded: maybe(exitOnceUploaded, false),
       allowConsoleErrors: maybe(allowConsoleErrors, false),
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+      zip: maybe(zip, false),
     });
 
     setOutput('url', output.url);

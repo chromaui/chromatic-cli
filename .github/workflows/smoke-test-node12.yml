@@ -1,0 +1,23 @@
+name: Smoke test via Node 12
+on: push
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '12'
+      - run: yarn
+      - run: yarn build
+      - uses: ./
+        with:
+          buildScriptName: build-test-storybook
+          exitZeroOnChanges: true
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: 47c20821d2c2

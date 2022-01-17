@@ -9,7 +9,7 @@ jest.mock('progress-stream');
 jest.mock('../lib/getDependentStoryFiles');
 
 const env = { CHROMATIC_RETRIES: 2 };
-const log = { warn: jest.fn(), debug: jest.fn() };
+const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 const http = { fetch: jest.fn() };
 
 describe('validateFiles', () => {
@@ -84,7 +84,7 @@ describe('validateFiles', () => {
 
 describe('traceChangedFiles', () => {
   it('sets onlyStoryFiles on context', async () => {
-    const deps = { 123: './example.stories.js' };
+    const deps = { 123: ['./example.stories.js'] };
     getDependentStoryFiles.mockReturnValueOnce(deps);
 
     const ctx = {
@@ -98,7 +98,7 @@ describe('traceChangedFiles', () => {
     };
     await traceChangedFiles(ctx, {});
 
-    expect(ctx.onlyStoryFiles).toEqual(deps);
+    expect(ctx.onlyStoryFiles).toStrictEqual(deps);
   });
 });
 

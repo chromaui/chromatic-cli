@@ -1,4 +1,5 @@
 import path from 'path';
+import picomatch from 'picomatch';
 
 export const lcfirst = (str) => `${str.charAt(0).toLowerCase()}${str.substr(1)}`;
 
@@ -35,3 +36,9 @@ export const rewriteErrorMessage = (err, message) => {
 
 export const getWorkingDir = (basePath, targetPath = '.') =>
   path.posix.relative(basePath, targetPath);
+
+const fileMatchers = {};
+export const matchesFile = (glob, filepath) => {
+  if (!fileMatchers[glob]) fileMatchers[glob] = picomatch(glob, { dot: true });
+  return fileMatchers[glob](filepath.replace(/^\.\//, ''));
+};

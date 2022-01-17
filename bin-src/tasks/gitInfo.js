@@ -8,7 +8,9 @@ import {
   getSlug,
   getVersion,
 } from '../git/git';
+import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
+import { matchesFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -40,8 +42,9 @@ const TesterLastBuildQuery = `
 `;
 
 export const setGitInfo = async (ctx, task) => {
-  const { branchName, patchBaseRef, fromCI: ci } = ctx.options;
-  ctx.git = await getCommitAndBranch({ branchName, patchBaseRef, ci, log: ctx.log });
+  const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
+
+  ctx.git = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
   ctx.git.version = await getVersion();
   if (!ctx.git.slug) {
     ctx.git.slug = await getSlug().catch((e) => ctx.log.warn('Failed to retrieve slug', e));
@@ -62,7 +65,7 @@ export const setGitInfo = async (ctx, task) => {
     if (await ctx.client.runQuery(TesterSkipBuildMutation, { commit, branch, slug })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);
-      ctx.exitCode = 0;
+      setExitCode(ctx, exitCodes.OK);
       return;
     }
     throw new Error(skipFailed(ctx).output);
@@ -80,12 +83,13 @@ export const setGitInfo = async (ctx, task) => {
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
     const result = await ctx.client.runQuery(TesterLastBuildQuery, { commit, branch });
-    const mostRecentAncestor = result?.app?.lastBuild;
+    const mostRecentAncestor = result && result.app && result.app.lastBuild;
     if (mostRecentAncestor) {
       ctx.rebuildForBuildId = mostRecentAncestor.id;
       if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
         ctx.skip = true;
         transitionTo(skippedRebuild, true)(ctx, task);
+        ctx.exitCode = 0;
         return;
       }
     }
@@ -124,7 +128,13 @@ export const setGitInfo = async (ctx, task) => {
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
       ctx.git.changedFiles = [...new Set(results.flat())];
-      ctx.log.debug(`Found changedFiles:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`);
+      if (!interactive) {
+        ctx.log.info(
+          `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
+            .map((f) => `  ${f}`)
+            .join('\n')}`
+        );
+      }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
@@ -132,14 +142,13 @@ export const setGitInfo = async (ctx, task) => {
       ctx.log.debug(e);
     }
 
-    if (ctx.git.changedFiles && ctx.options.externals) {
+    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
-        const isMatch = picomatch(glob, { contains: true });
-        const match = ctx.git.changedFiles.find((path) => isMatch(path));
-        if (match) {
-          ctx.turboSnap.bailReason = { changedExternalFile: match };
-          ctx.log.warn(externalsChanged(match));
+        const matches = ctx.git.changedFiles.filter((filepath) => matchesFile(glob, filepath));
+        if (matches.length) {
+          ctx.turboSnap.bailReason = { changedExternalFiles: matches };
+          ctx.log.warn(externalsChanged(matches));
           ctx.git.changedFiles = null;
           break;
         }

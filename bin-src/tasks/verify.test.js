@@ -63,7 +63,7 @@ describe('createBuild', () => {
     expect(ctx.skipSnapshots).toBe(undefined);
   });
 
-  it('sets exitCode to 100 if build was limited', async () => {
+  it('sets exitCode to 5 if build was limited', async () => {
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({
       createBuild: {
@@ -77,10 +77,10 @@ describe('createBuild', () => {
 
     const ctx = { client, ...defaultContext };
     await createBuild(ctx, {});
-    expect(ctx.exitCode).toBe(100);
+    expect(ctx.exitCode).toBe(5);
   });
 
-  it('sets exitCode to 101 if snapshot quota was reached', async () => {
+  it('sets exitCode to 11 if snapshot quota was reached', async () => {
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({
       createBuild: {
@@ -94,10 +94,10 @@ describe('createBuild', () => {
 
     const ctx = { client, ...defaultContext };
     await createBuild(ctx, {});
-    expect(ctx.exitCode).toBe(101);
+    expect(ctx.exitCode).toBe(11);
   });
 
-  it('sets exitCode to 102 if payment is required', async () => {
+  it('sets exitCode to 12 if payment is required', async () => {
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({
       createBuild: {
@@ -111,7 +111,7 @@ describe('createBuild', () => {
 
     const ctx = { client, ...defaultContext };
     await createBuild(ctx, {});
-    expect(ctx.exitCode).toBe(102);
+    expect(ctx.exitCode).toBe(12);
   });
 
   it('sets exitCode to 0 and skips snapshotting for publish-only builds', async () => {

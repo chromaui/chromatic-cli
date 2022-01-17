@@ -4,6 +4,7 @@ import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
+import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
@@ -85,8 +86,7 @@ export const buildStorybook = async (ctx) => {
   } catch (e) {
     const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));
-    ctx.exitCode = 201;
-    ctx.userError = true;
+    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(failed(ctx).output);
   } finally {
     logFile.end();

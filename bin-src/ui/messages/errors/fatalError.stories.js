@@ -43,6 +43,7 @@ const context = {
     },
   },
   exitCode: 255,
+  exitCodeKey: 'UNKNOWN_ERROR',
   build: {
     id: '5ec5069ae0d35e0022b6a9cc',
     number: 1400,

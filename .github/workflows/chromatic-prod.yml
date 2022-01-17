@@ -1,0 +1,23 @@
+name: Chromatic
+on: push
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: install
+        run: yarn install --frozen-lockfile
+      - uses: chromaui/action@v1
+        with:
+          exitOnceUploaded: true
+          onlyChanged: true
+          diagnostics: true
+        env:
+          CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+      - uses: actions/upload-artifact@v2
+        with:
+          name: chromatic-diagnostics
+          path: chromatic-diagnostics.json

@@ -4,15 +4,16 @@ import forksUnsupported from '../ui/messages/errors/forksUnsupported';
 import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
 import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
+import customGitHubAction from '../ui/messages/info/customGitHubAction';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
+import noCommitDetails from '../ui/messages/warnings/noCommitDetails';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
 
 const ORIGIN_PREFIX_REGEXP = /^origin\//;
 const notHead = (branch) => (branch && branch !== 'HEAD' ? branch : false);
 
-export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } = {}) {
-  // eslint-disable-next-line prefer-const
-  let { commit, committedAt, committerEmail, committerName } = await getCommit();
+export async function getCommitAndBranch({ log }, { branchName, patchBaseRef, ci } = {}) {
+  let commit = await getCommit();
   let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch());
   let slug;
 
@@ -25,15 +26,15 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     GITHUB_ACTIONS,
     GITHUB_EVENT_NAME,
     GITHUB_REPOSITORY,
-    GITHUB_SHA,
     GITHUB_BASE_REF,
     GITHUB_HEAD_REF,
+    GITHUB_SHA,
     CHROMATIC_SHA,
     CHROMATIC_BRANCH,
     CHROMATIC_SLUG,
   } = process.env;
 
-  const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH;
+  const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
   const isGitHubAction = GITHUB_ACTIONS === 'true';
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
@@ -42,36 +43,52 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     throw new Error(gitOneCommit(isGitHubAction));
   }
 
-  if (isTravisPrBuild && TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
-    log.warn(travisInternalBuild());
-  }
-
   if (isFromEnvVariable) {
-    // Our GitHub Action will also set these
-    commit = CHROMATIC_SHA;
+    commit = await getCommit(CHROMATIC_SHA).catch((err) => {
+      log.warn(noCommitDetails(CHROMATIC_SHA, 'CHROMATIC_SHA'));
+      log.debug(err);
+      return { sha: CHROMATIC_SHA };
+    });
     branch = CHROMATIC_BRANCH;
     slug = CHROMATIC_SLUG;
   } else if (isTravisPrBuild) {
+    if (TRAVIS_PULL_REQUEST_SLUG === TRAVIS_REPO_SLUG) {
+      log.warn(travisInternalBuild());
+    }
+    if (!TRAVIS_PULL_REQUEST_SHA || !TRAVIS_PULL_REQUEST_BRANCH) {
+      throw new Error(missingTravisInfo({ TRAVIS_EVENT_TYPE }));
+    }
+
     // Travis PR builds are weird, we want to ensure we mark build against the commit that was
     // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
     // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
-    commit = TRAVIS_PULL_REQUEST_SHA;
+    commit = await getCommit(TRAVIS_PULL_REQUEST_SHA).catch((err) => {
+      log.warn(noCommitDetails(TRAVIS_PULL_REQUEST_SHA, 'TRAVIS_PULL_REQUEST_SHA'));
+      log.debug(err);
+      return { sha: TRAVIS_PULL_REQUEST_SHA };
+    });
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     slug = TRAVIS_PULL_REQUEST_SLUG;
-    if (!commit || !branch) {
-      throw new Error(missingTravisInfo({ TRAVIS_EVENT_TYPE }));
-    }
   } else if (isGitHubPrBuild) {
-    // GitHub PR builds run against a "virtual merge commit" with a SHA unknown to Chromatic and an
-    // invalid branch name, so we override these using environment variables available in the action.
-    // This does not apply to our GitHub Action, because it'll set CHROMATIC_SHA, -BRANCH and -SLUG.
-    if (!GITHUB_SHA || !GITHUB_HEAD_REF) {
+    log.info(customGitHubAction());
+
+    if (!GITHUB_HEAD_REF || !GITHUB_SHA) {
       throw new Error(missingGitHubInfo({ GITHUB_EVENT_NAME }));
     }
     if (GITHUB_BASE_REF === GITHUB_HEAD_REF) {
       throw new Error(forksUnsupported({ GITHUB_HEAD_REF }));
     }
-    commit = GITHUB_SHA;
+
+    // GitHub PR builds run against a "virtual merge commit" with a SHA unknown to Chromatic and an
+    // invalid branch name, so we override these using environment variables available in the action.
+    // This does not apply to our GitHub Action, because it'll set CHROMATIC_SHA, -BRANCH and -SLUG.
+    // We intentionally use the GITHUB_HEAD_REF (branch name) here, to retrieve the last commit on
+    // the head branch rather than the merge commit (GITHUB_SHA).
+    commit = await getCommit(GITHUB_HEAD_REF).catch((err) => {
+      log.warn(noCommitDetails(GITHUB_HEAD_REF, 'GITHUB_HEAD_REF'));
+      log.debug(err);
+      return { sha: GITHUB_SHA };
+    });
     branch = GITHUB_HEAD_REF;
     slug = GITHUB_REPOSITORY;
   }
@@ -89,7 +106,11 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
-    commit = ciCommit;
+    commit = await getCommit(ciCommit).catch((err) => {
+      log.warn(noCommitDetails(ciCommit));
+      log.debug(err);
+      return { sha: ciCommit };
+    });
     branch =
       notHead(prBranch) ||
       notHead(ciBranch) ||
@@ -116,9 +137,6 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
   log.debug(
     `git info: ${JSON.stringify({
       commit,
-      committedAt,
-      committerEmail,
-      committerName,
       branch,
       slug,
       isTravisPrBuild,
@@ -127,11 +145,10 @@ export async function getCommitAndBranch({ branchName, patchBaseRef, ci, log } =
     })}`
   );
 
+  const { sha, ...commitInfo } = commit;
   return {
-    commit,
-    committedAt,
-    committerEmail,
-    committerName,
+    commit: sha,
+    ...commitInfo,
     branch,
     slug,
     isTravisPrBuild,
