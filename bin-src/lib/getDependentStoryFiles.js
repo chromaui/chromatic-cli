@@ -50,7 +50,12 @@ export function normalizePath(posixPath, rootPath, workingDir = '') {
  */
 export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles) {
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
-  const { storybookBaseDir, storybookConfigDir = configDir, untraced = [] } = ctx.options;
+  const {
+    storybookBuildDir,
+    storybookBaseDir,
+    storybookConfigDir = configDir,
+    untraced = [],
+  } = ctx.options;
 
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
@@ -62,11 +67,11 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
   const storiesEntryFiles = [
-    // Storybook 6.3-
+    // v6 store (SB <= 6.3)
     `${storybookDir}/generated-stories-entry.js`,
-    // Storybook 6.4, v6 store
+    // v6 store with root as config dir (or SB 6.4)
     `generated-stories-entry.js`,
-    // Storybook 6.4, v7 store
+    // v7 store (SB >= 6.4)
     `storybook-stories.js`,
   ];
 
@@ -99,7 +104,14 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   const modules = Object.keys(modulesByName);
 
   if (globs.length === 0) {
-    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, viewLayer }));
+    // Check for misconfigured Storybook configDir. Only applicable to v6 store because v7 store
+    // does not use configDir in the entry file path so there's no fix to recommend there.
+    const storiesEntryRegExp = /^(.+\/)?generated-stories-entry\.js$/;
+    const foundEntry = stats.modules.find(
+      (mod) => storiesEntryRegExp.test(mod.name) && !storiesEntryFiles.includes(normalize(mod.name))
+    );
+    const entryFile = foundEntry && normalize(foundEntry.name);
+    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLayer }));
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 

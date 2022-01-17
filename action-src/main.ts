@@ -127,6 +127,7 @@ async function run() {
     const exec = getInput('exec');
     const skip = getInput('skip');
     const storybookBaseDir = getInput('storybookBaseDir');
+    const storybookConfigDir = getInput('storybookConfigDir');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const externals = getInput('externals');
@@ -163,11 +164,12 @@ async function run() {
       diagnostics: maybe(diagnostics),
       exec: maybe(exec),
       skip: maybe(skip),
-      storybookBaseDir: maybe(storybookBaseDir),
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
       externals: maybe(externals),
       untraced: maybe(untraced),
+      storybookBaseDir: maybe(storybookBaseDir),
+      storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
       doNotStart: maybe(doNotStart),
       storybookPort: maybe(storybookPort),
