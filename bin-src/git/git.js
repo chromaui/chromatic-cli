@@ -101,7 +101,7 @@ export async function getSlug() {
 export async function getCommit(revision = '') {
   const result = await execGitCommand(
     // Technically this yields the author info, not committer info
-    `git --no-pager log -n 1 --format="%H ## %at ## %ae ## %an" ${revision}`
+    `git --no-pager log -n 1 --format="%H ## %ct ## %ae ## %an" ${revision}`
   );
   const [commit, committedAtSeconds, committerEmail, committerName] = result.split(' ## ');
   return { commit, committedAt: committedAtSeconds * 1000, committerEmail, committerName };
