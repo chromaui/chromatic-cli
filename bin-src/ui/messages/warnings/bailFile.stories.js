@@ -6,15 +6,37 @@ export default {
 
 export const BailPackageFile = () =>
   bailFile({
-    turboSnap: { bailReason: { changedPackageFile: 'services/webapp/package.json' } },
+    turboSnap: { bailReason: { changedPackageFiles: ['services/webapp/package.json'] } },
   });
 
 export const BailStaticFile = () =>
   bailFile({
-    turboSnap: { bailReason: { changedStaticFile: 'static/assets/fonts/percolate.woff' } },
+    turboSnap: { bailReason: { changedStaticFiles: ['static/assets/fonts/percolate.woff'] } },
   });
 
 export const BailStorybookFile = () =>
   bailFile({
-    turboSnap: { bailReason: { changedStorybookFile: '.storybook/preview-head.html' } },
+    turboSnap: { bailReason: { changedStorybookFiles: ['.storybook/preview-head.html'] } },
+  });
+
+export const BailTwoFiles = () =>
+  bailFile({
+    turboSnap: {
+      bailReason: {
+        changedStorybookFiles: ['.storybook/preview-head.html', '.storybook/manager-head.html'],
+      },
+    },
+  });
+
+export const BailThreeFiles = () =>
+  bailFile({
+    turboSnap: {
+      bailReason: {
+        changedStorybookFiles: [
+          '.storybook/preview-head.html',
+          '.storybook/manager-head.html',
+          '.storybook/global-styles.css',
+        ],
+      },
+    },
   });

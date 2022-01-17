@@ -42,6 +42,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     onlyChanged: trueIfSet(flags.onlyChanged),
     untraced: undefinedIfEmpty(ensureArray(flags.untraced)),
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
+    traceChanged: trueIfSet(flags.traceChanged),
     list: flags.list,
     fromCI,
     skip: trueIfSet(flags.skip),
@@ -71,6 +72,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     port: flags.storybookPort,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
+    storybookConfigDir: flags.storybookConfigDir,
     storybookUrl: flags.storybookUrl,
     createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
@@ -134,6 +136,10 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
 
   if (options.externals && !options.onlyChanged) {
     throw new Error(dependentOption('--externals', '--only-changed'));
+  }
+
+  if (options.traceChanged && !options.onlyChanged) {
+    throw new Error(dependentOption('--trace-changed', '--only-changed'));
   }
 
   // No need to start or build Storybook if we're going to fetch from a URL
