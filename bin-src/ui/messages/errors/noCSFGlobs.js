@@ -7,8 +7,8 @@ import link from '../../components/link';
 export default ({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLayer = 'react' }) => {
   if (entryFile) {
     const hint = storybookBuildDir
-      ? `Configure {bold --storybook-config-dir} with the value for {bold --config-dir} or {bold -c} from your build-storybook script.`
-      : `Configure {bold --build-script-name} to point at the {bold build-storybook} script which has {bold --config-dir} or {bold -c} set.`;
+      ? chalk`Configure {bold --storybook-config-dir} with the value for {bold --config-dir} or {bold -c} from your build-storybook script.`
+      : chalk`Configure {bold --build-script-name} to point at the {bold build-storybook} script which has {bold --config-dir} or {bold -c} set.`;
     return dedent(chalk`
       ${error} Did not find any CSF globs in {bold ${statsPath}}
       Found an entry file at {bold ${entryFile}} but expected it at {bold ${storybookDir}/generated-stories-entry.js}.
