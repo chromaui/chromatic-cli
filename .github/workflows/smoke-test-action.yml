@@ -12,6 +12,7 @@ jobs:
         with:
           buildScriptName: build-test-storybook
           exitZeroOnChanges: true
+          forceRebuild: true
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
