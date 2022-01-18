@@ -126,6 +126,8 @@ async function run() {
     const scriptName = getInput('scriptName');
     const exec = getInput('exec');
     const skip = getInput('skip');
+    const dryRun = getInput('dryRun');
+    const forceRebuild = getInput('forceRebuild');
     const storybookBaseDir = getInput('storybookBaseDir');
     const storybookConfigDir = getInput('storybookConfigDir');
     const only = getInput('only');
@@ -164,6 +166,8 @@ async function run() {
       diagnostics: maybe(diagnostics),
       exec: maybe(exec),
       skip: maybe(skip),
+      dryRun: maybe(dryRun),
+      forceRebuild: maybe(forceRebuild),
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
       externals: maybe(externals),

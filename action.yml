@@ -30,6 +30,12 @@ inputs:
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false
+  dryRun:
+    description: 'Run without actually publishing to Chromatic'
+    required: false
+  forceRebuild:
+    description: 'Do not skip build when a rebuild is detected'
+    required: false
   storybookBaseDir:
     description: 'Relative path from repository root to Storybook project root'
     required: false
