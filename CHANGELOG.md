@@ -1,6 +1,15 @@
+# 6.4.0 - unreleased
+
+- [490](https://github.com/chromaui/chromatic-cli/pull/490) TurboSnap: Detect mismatching entry file and suggest a fix
+- [495](https://github.com/chromaui/chromatic-cli/pull/495) Allow tracing changed files to affected story files
+- [500](https://github.com/chromaui/chromatic-cli/pull/500) Use commit author info instead of committer info
+- [487](https://github.com/chromaui/chromatic-cli/pull/487) Improve how process exit code is set
+- [488](https://github.com/chromaui/chromatic-cli/pull/488) Fix `--untraced` for package files
+
 # 6.3.4 - 2022-01-10
 
 - [492](https://github.com/chromaui/chromatic-cli/pull/492) Fix missing exit code on rebuild
+- [491](https://github.com/chromaui/chromatic-cli/pull/491) Fix `storybookBaseDir` option in GitHub Action
 
 # 6.3.3 - 2021-12-22
 
@@ -8,11 +17,11 @@
 
 # 6.3.2 - 2021-12-22
 
-- Disable warning about --externals requiring --only-changed
+- Disable warning about `--externals` requiring `--only-changed`
 
 # 6.3.1 - 2021-12-22
 
-- Disable warning about --untraced requiring --only-changed
+- Disable warning about `--untraced` requiring `--only-changed`
 
 # 6.3.0 - 2021-12-22
 

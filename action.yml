@@ -33,6 +33,9 @@ inputs:
   storybookBaseDir:
     description: 'Relative path from repository root to Storybook project root'
     required: false
+  storybookConfigDir:
+    description: 'Relative path from where you run Chromatic to your Storybook config directory'
+    required: false
   only:
     description: 'Only run a single story or a subset of stories'
     required: false
