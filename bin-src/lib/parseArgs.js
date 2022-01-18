@@ -37,7 +37,7 @@ export default function parseArgs(argv) {
       --ci  Mark this build as a CI build. Alternatively, set the CI environment variable (present in most CI systems). This option implies --no-interactive.
       --debug  Output verbose debugging information. This option implies --no-interactive.
       --dry-run  Run without actually publishing to Chromatic.
-      --force-rebuild  Do not skip build when a rebuild is detected. Only for [branch], if specified. Globs are supported via picomatch.
+      --force-rebuild [branch]  Do not skip build when a rebuild is detected. Only for [branch], if specified. Globs are supported via picomatch.
       --junit-report [filepath]  Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
       --list  List available stories. This requires running a full build.
       --no-interactive  Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
