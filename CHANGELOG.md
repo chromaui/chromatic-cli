@@ -1,10 +1,11 @@
-# 6.4.0 - unreleased
+# 6.4.0 - 2022-01-18
 
+- [495](https://github.com/chromaui/chromatic-cli/pull/495) TurboSnap: Add `--trace-changed` flag and `trace` utility
 - [490](https://github.com/chromaui/chromatic-cli/pull/490) TurboSnap: Detect mismatching entry file and suggest a fix
-- [495](https://github.com/chromaui/chromatic-cli/pull/495) Allow tracing changed files to affected story files
 - [500](https://github.com/chromaui/chromatic-cli/pull/500) Use commit author info instead of committer info
 - [487](https://github.com/chromaui/chromatic-cli/pull/487) Improve how process exit code is set
 - [488](https://github.com/chromaui/chromatic-cli/pull/488) Fix `--untraced` for package files
+- [474](https://github.com/chromaui/chromatic-cli/pull/474) Fix commit status update for UI Review when using `--skip`
 
 # 6.3.4 - 2022-01-10
 
