@@ -13,7 +13,7 @@ jobs:
       - run: yarn set version berry
       - run: yarn set version canary
       - name: run chromatic
-        run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes
+        run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

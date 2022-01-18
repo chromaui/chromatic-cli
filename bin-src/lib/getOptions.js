@@ -47,6 +47,7 @@ export default async function getOptions({ argv, env, flags, log, packageJson })
     fromCI,
     skip: trueIfSet(flags.skip),
     dryRun: !!flags.dryRun,
+    forceRebuild: trueIfSet(flags.forceRebuild),
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
     junitReport: trueIfSet(flags.junitReport),

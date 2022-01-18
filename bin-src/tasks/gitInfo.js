@@ -86,7 +86,10 @@ export const setGitInfo = async (ctx, task) => {
     const mostRecentAncestor = result && result.app && result.app.lastBuild;
     if (mostRecentAncestor) {
       ctx.rebuildForBuildId = mostRecentAncestor.id;
-      if (['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status)) {
+      if (
+        ['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status) &&
+        !matchesBranch(ctx.options.forceRebuild)
+      ) {
         ctx.skip = true;
         transitionTo(skippedRebuild, true)(ctx, task);
         ctx.exitCode = 0;
