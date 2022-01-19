@@ -45,6 +45,7 @@ export async function main(argv) {
     `,
     {
       argv,
+      description: 'Trace utility for TurboSnap',
       flags: {
         statsFile: {
           type: 'string',
