@@ -48,6 +48,7 @@ export default function parseArgs(argv) {
       --trace-changed [mode]        Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
 
     Deprecated options
+      --app-code <token>            Renamed to --project-token.
       --allow-console-errors        Continue running Chromatic even if there are errors logged to console in your Storybook.
       --script-name, -s [name]      The npm script that starts your Storybook. [storybook]
       --exec, -e <command>          Alternatively, a shell command that starts your Storybook.
@@ -65,7 +66,6 @@ export default function parseArgs(argv) {
       description: false,
       flags: {
         // Required options
-        appCode: { type: 'string', alias: 'a', isMultiple: true }, // for backwards compatibility
         projectToken: { type: 'string', alias: 't', isMultiple: true },
 
         // Storybook options
@@ -103,6 +103,7 @@ export default function parseArgs(argv) {
 
         // Deprecated options (for JSDOM and tunneled builds)
         allowConsoleErrors: { type: 'boolean' },
+        appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
         doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
         exec: { type: 'string', alias: 'e' }, // aka commandName; start via spawn
         scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
