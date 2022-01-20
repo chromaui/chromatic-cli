@@ -17,6 +17,7 @@ const context = {
       url: 'https://github.com/chromaui/chromatic-cli',
       email: 'support@chromatic.com',
     },
+    ciService: 'travis',
   },
   packageJson: {
     scripts: {

@@ -27,6 +27,7 @@ export default function fatalError(ctx, error, timestamp = new Date().toISOStrin
   const debugInfo = {
     timestamp,
     sessionId,
+    ciService: git.ciService,
     gitVersion: git.version,
     nodePlatform: process.platform,
     nodeVersion: process.versions.node,
