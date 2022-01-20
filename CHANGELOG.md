@@ -1,3 +1,10 @@
+# 6.4.1 - 2022-01-20
+
+- [499](https://github.com/chromaui/chromatic-cli/pull/499) Fix handling of `CANCELLED` build status
+- [501](https://github.com/chromaui/chromatic-cli/pull/501) Fix handling of missing `ref` and/or `sha` inputs on `workflow_dispatch` event #501
+- [503](https://github.com/chromaui/chromatic-cli/pull/503) Reformat help text and move `allowConsoleErrors` to deprecated options
+- [504](https://github.com/chromaui/chromatic-cli/pull/504) Fix consistent naming of flags for `trace` util
+
 # 6.4.0 - 2022-01-18
 
 - [495](https://github.com/chromaui/chromatic-cli/pull/495) TurboSnap: Add `--trace-changed` flag and `trace` utility
