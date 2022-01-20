@@ -17,7 +17,7 @@ export const dryRun = () => ({
 export const stats = (ctx) => {
   return {
     tests: pluralize('test', ctx.build.actualTestCount, true),
-    errors: pluralize('error', ctx.build.errorCount, true),
+    errors: pluralize('component error', ctx.build.errorCount, true),
     changes: pluralize('change', ctx.build.changeCount, true),
     stories: pluralize('story', ctx.build.specCount, true),
     components: pluralize('component', ctx.build.componentCount, true),
@@ -64,7 +64,7 @@ export const buildComplete = (ctx) => {
   };
 };
 
-export const buildFailed = (ctx) => {
+export const buildBroken = (ctx) => {
   const { snapshots, components, stories, errors } = stats(ctx);
   return {
     status: 'error',
@@ -73,11 +73,19 @@ export const buildFailed = (ctx) => {
   };
 };
 
-export const buildError = (ctx) => {
+export const buildFailed = (ctx) => {
   return {
     status: 'error',
-    title: `Build ${ctx.build.number} errored`,
+    title: `Build ${ctx.build.number} failed due to system error`,
     output: `Please try again, or contact us if the problem persists`,
+  };
+};
+
+export const buildCanceled = (ctx) => {
+  return {
+    status: 'error',
+    title: `Build ${ctx.build.number} canceled`,
+    output: `Someone canceled the build before it completed`,
   };
 };
 
