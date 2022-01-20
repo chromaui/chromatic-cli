@@ -57,7 +57,9 @@ const getBuildInfo = (event: typeof context) => {
       const { ref, sha } = event.payload.inputs || {};
 
       if (!ref || !sha) {
-        setFailed(`When triggering via workflow_dispatch, ref & sha are required inputs. See https://github.com/chromaui/action#triggering-from-workflow_dispatch`);
+        setFailed(
+          `When triggering via workflow_dispatch, ref & sha are required inputs. See https://github.com/chromaui/action#triggering-from-workflow_dispatch`
+        );
         return null;
       }
 
