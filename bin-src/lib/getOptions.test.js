@@ -30,9 +30,9 @@ const getContext = (argv) => {
   return { env, log, packageJson, ...parseArgs(argv) };
 };
 
-describe('await getOptions', () => {
+describe('getOptions', () => {
   it('sets reasonable defaults', async () => {
-    expect(await getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
+    expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
       noStart: true,
@@ -48,14 +48,14 @@ describe('await getOptions', () => {
   });
 
   it('picks up project-token from environment', async () => {
-    expect(await getOptions(getContext([]))).toMatchObject({
+    expect(getOptions(getContext([]))).toMatchObject({
       projectToken: 'env-code',
     });
   });
 
   it('allows you to override defaults for boolean options', async () => {
     expect(
-      await getOptions(
+      getOptions(
         getContext([
           '--ci',
           '--auto-accept-changes',
@@ -79,7 +79,7 @@ describe('await getOptions', () => {
   });
 
   it('picks up default start script', async () => {
-    expect(await getOptions(getContext(['-s']))).toMatchObject({
+    expect(getOptions(getContext(['-s']))).toMatchObject({
       scriptName: 'storybook',
       url: 'http://localhost:1337/iframe.html',
       noStart: false,
@@ -87,15 +87,13 @@ describe('await getOptions', () => {
   });
 
   it('allows you to specify alternate build script', async () => {
-    expect(
-      await getOptions(getContext(['--build-script-name', 'otherBuildStorybook']))
-    ).toMatchObject({
+    expect(getOptions(getContext(['--build-script-name', 'otherBuildStorybook']))).toMatchObject({
       buildScriptName: 'otherBuildStorybook',
     });
   });
 
   it('allows you to specify alternate script, still picks up port', async () => {
-    expect(await getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
+    expect(getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
       scriptName: 'otherStorybook',
       url: 'http://localhost:7070/iframe.html',
       noStart: false,
@@ -104,7 +102,7 @@ describe('await getOptions', () => {
 
   it('allows you to specify alternate script, that does not start Storybook, if you set port', async () => {
     expect(
-      await getOptions(getContext(['--script-name', 'notStorybook', '--storybook-port', '6060']))
+      getOptions(getContext(['--script-name', 'notStorybook', '--storybook-port', '6060']))
     ).toMatchObject({
       scriptName: 'notStorybook',
       url: 'http://localhost:6060/iframe.html',
@@ -112,14 +110,14 @@ describe('await getOptions', () => {
   });
 
   it('throws if you try to specify a script name that is not a Storybook, if you do NOT set port', async () => {
-    await expect(getOptions(getContext(['--script-name', 'notStorybook']))).rejects.toThrow(
+    expect(() => getOptions(getContext(['--script-name', 'notStorybook']))).toThrow(
       /must pass a port/
     );
   });
 
   it('allows you to specify alternate command if you set port', async () => {
     expect(
-      await getOptions(getContext(['--exec', 'storybook-command', '--storybook-port', '6060']))
+      getOptions(getContext(['--exec', 'storybook-command', '--storybook-port', '6060']))
     ).toMatchObject({
       exec: 'storybook-command',
       url: 'http://localhost:6060/iframe.html',
@@ -127,49 +125,49 @@ describe('await getOptions', () => {
   });
 
   it('throws if you try to specify a command name, if you do NOT set port', async () => {
-    await expect(getOptions(getContext(['--exec', 'storybook-command']))).rejects.toThrow(
+    await expect(() => getOptions(getContext(['--exec', 'storybook-command']))).toThrow(
       /must pass a port/
     );
   });
 
   it('throws if you try to pass a script or command name and a url', async () => {
-    await expect(
+    await expect(() =>
       getOptions(getContext(['--exec', 'storybook-command', '--storybook-url', 'http://foo.bar']))
-    ).rejects.toThrow(/You can only use one of --exec, --storybook-url/);
+    ).toThrow(/You can only use one of --exec, --storybook-url/);
 
-    await expect(
+    await expect(() =>
       getOptions(getContext(['--script-name', 'storybook', '--storybook-url', 'http://foo.bar']))
-    ).rejects.toThrow(/You can only use one of --script-name, --storybook-url/);
+    ).toThrow(/You can only use one of --script-name, --storybook-url/);
   });
 
   it('throws if you try to pass a script or command name and a build script', async () => {
-    await expect(
+    await expect(() =>
       getOptions(getContext(['--exec', 'storybook-command', '-b', 'build-command']))
-    ).rejects.toThrow(/You can only use one of --build-script-name, --exec/);
+    ).toThrow(/You can only use one of --build-script-name, --exec/);
 
-    await expect(
+    await expect(() =>
       getOptions(getContext(['--script-name', 'storybook', '-b', 'build-command']))
-    ).rejects.toThrow(/You can only use one of --build-script-name, --script-name/);
+    ).toThrow(/You can only use one of --build-script-name, --script-name/);
   });
 
   it('throws if you try to pass a script or command name and a directory', async () => {
-    await expect(
+    await expect(() =>
       getOptions(getContext(['--exec', 'storybook-command', '--storybook-build-dir', '/tmp/dir']))
-    ).rejects.toThrow(/You can only use one of --exec, --storybook-build-dir/);
+    ).toThrow(/You can only use one of --exec, --storybook-build-dir/);
 
-    await expect(
+    await expect(() =>
       getOptions(getContext(['--script-name', 'storybook', '--storybook-build-dir', '/tmp/dir']))
-    ).rejects.toThrow(/You can only use one of --script-name, --storybook-build-dir/);
+    ).toThrow(/You can only use one of --script-name, --storybook-build-dir/);
   });
 
   it('throws if you try to pass a build script and a directory', async () => {
-    await expect(
+    await expect(() =>
       getOptions(getContext(['-b', '/tmp/dir', '--storybook-build-dir', '/tmp/dir']))
-    ).rejects.toThrow(/You can only use one of --build-script-name, --storybook-build-dir/);
+    ).toThrow(/You can only use one of --build-script-name, --storybook-build-dir/);
   });
 
   it('allows you to set a URL without path', async () => {
-    expect(await getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
+    expect(getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
       noStart: true,
       url: 'https://google.com/iframe.html',
       createTunnel: false,
@@ -177,9 +175,7 @@ describe('await getOptions', () => {
   });
 
   it('allows you to set a URL with a path', async () => {
-    expect(
-      await getOptions(getContext(['--storybook-url', 'https://google.com/foo']))
-    ).toMatchObject({
+    expect(getOptions(getContext(['--storybook-url', 'https://google.com/foo']))).toMatchObject({
       noStart: true,
       url: 'https://google.com/foo/iframe.html',
       createTunnel: false,
@@ -188,7 +184,7 @@ describe('await getOptions', () => {
 
   it('allows you to set a URL with iframe.html already set', async () => {
     expect(
-      await getOptions(getContext(['--storybook-url', 'https://google.com/iframe.html?param=foo']))
+      getOptions(getContext(['--storybook-url', 'https://google.com/iframe.html?param=foo']))
     ).toMatchObject({
       noStart: true,
       url: 'https://google.com/iframe.html?param=foo',
@@ -197,14 +193,14 @@ describe('await getOptions', () => {
   });
 
   it('allows you to specify the branch name', async () => {
-    expect(await getOptions(getContext(['--branch-name', 'my/branch']))).toMatchObject({
+    expect(getOptions(getContext(['--branch-name', 'my/branch']))).toMatchObject({
       branchName: 'my/branch',
     });
   });
 
   it('supports arrays, removing empty values', async () => {
     const flags = ['--only-changed', '--externals', 'foo', '--externals', '', '--externals', 'bar'];
-    expect(await getOptions(getContext(flags))).toMatchObject({ externals: ['foo', 'bar'] });
+    expect(getOptions(getContext(flags))).toMatchObject({ externals: ['foo', 'bar'] });
   });
 });
 
