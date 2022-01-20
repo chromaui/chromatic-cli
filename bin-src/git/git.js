@@ -1,4 +1,3 @@
-import path from 'path';
 import execa from 'execa';
 import gql from 'fake-tag';
 import { EOL } from 'os';
