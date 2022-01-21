@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { getWorkingDir, matchesFile } from './utils';
+import { matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
@@ -33,14 +33,14 @@ const posix = (localPath) => localPath.split(path.sep).filter(Boolean).join(path
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
- * stats may have been generated in a subdirectory, so we prepend the workingDir if necessary.
+ * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary.
  * The result is a relative POSIX path compatible with `git diff --name-only`.
  */
-export function normalizePath(posixPath, rootPath, workingDir = '') {
+export function normalizePath(posixPath, rootPath, baseDir = '') {
   if (!posixPath) return posixPath;
   return path.posix.isAbsolute(posixPath)
     ? path.posix.relative(rootPath, posixPath)
-    : path.posix.join(workingDir, posixPath);
+    : path.posix.join(baseDir, posixPath);
 }
 
 /**
@@ -58,8 +58,10 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
   } = ctx.options;
 
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
-  const workingDir = getWorkingDir(rootPath, storybookBaseDir); // e.g. `packages/storybook` or empty string
-  const normalize = (posixPath) => normalizePath(posixPath, rootPath, workingDir); // e.g. `src/file.js` (no ./ prefix)
+  const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
+
+  // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
+  const normalize = (posixPath) => normalizePath(posixPath, rootPath, baseDir); // e.g. `src/file.js` (no ./ prefix)
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir) => normalize(posix(dir)));
@@ -145,7 +147,7 @@ export async function getDependentStoryFiles(ctx, stats, statsPath, changedFiles
 
   ctx.turboSnap = {
     rootPath,
-    workingDir,
+    baseDir,
     storybookDir,
     staticDirs,
     globs,
