@@ -31,7 +31,7 @@ export default function parseArgs(argv) {
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.
       --preserve-missing                        Treat missing stories as unchanged rather than deleted when comparing to the baseline.
       --skip [branch]                           Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
-      --storybook-base-dir <dirname>            Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when your Storybook is located in a subdirectory of your repository.
+      --storybook-base-dir <dirname>            Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when running Chromatic from a different directory than your Storybook.
       --storybook-config-dir <dirname>          Relative path from where you run Chromatic to your Storybook config directory ('.storybook'). Use with --only-changed and --storybook-build-dir when using a custom --config-dir (-c) flag for Storybook. [.storybook]
       --untraced <filepath>                     Disregard these files and their dependencies when tracing dependent stories for TurboSnap. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --zip                                     Publish your Storybook to Chromatic as a single zip file instead of individual content files.
