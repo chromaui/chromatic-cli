@@ -2,19 +2,19 @@ import chalk from 'chalk';
 
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 import { getRepositoryRoot } from '../git/git';
-import { getWorkingDir } from './utils';
 
 jest.mock('../git/git');
-jest.mock('./utils', () => {
-  const utils = jest.requireActual('./utils');
-  return { __esModule: true, ...utils, getWorkingDir: jest.fn() };
-});
 
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 const statsPath = 'preview-stats.json';
 
 const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
-const getContext = (ctx) => ({ log, options: {}, turboSnap: {}, ...ctx });
+const getContext = ({ configDir, staticDir, ...options } = {}) => ({
+  log,
+  options: { storybookBaseDir: '.', ...options },
+  turboSnap: {},
+  storybook: { configDir, staticDir },
+});
 
 afterEach(() => {
   log.info.mockReset();
@@ -24,7 +24,6 @@ afterEach(() => {
 });
 
 getRepositoryRoot.mockResolvedValue('/path/to/project');
-getWorkingDir.mockReturnValue('');
 
 describe('getDependentStoryFiles', () => {
   it('detects direct changes to CSF files', async () => {
@@ -139,7 +138,6 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('supports webpack projectRoot in git subdirectory', async () => {
-    getWorkingDir.mockReturnValueOnce('services/webapp');
     const changedFiles = ['services/webapp/src/foo.js'];
     const modules = [
       {
@@ -158,7 +156,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext();
+    const ctx = getContext({ storybookBaseDir: 'services/webapp' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
       './src/foo.stories.js': ['services/webapp/src/foo.stories.js'],
@@ -196,7 +194,6 @@ describe('getDependentStoryFiles', () => {
 
   it('supports absolute module paths with deviating working dir', async () => {
     getRepositoryRoot.mockResolvedValueOnce('/path/to/project');
-    getWorkingDir.mockReturnValueOnce('packages/storybook'); // note this is a different workspace
 
     const absoluteCsfGlob = `/path/to/project/packages/webapp/${CSF_GLOB.slice(2)}`;
     const changedFiles = ['packages/webapp/src/foo.js'];
@@ -218,7 +215,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext();
+    const ctx = getContext({ storybookBaseDir: 'packages/storybook' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
       '/path/to/project/packages/webapp/src/foo.stories.js': ['packages/webapp/src/foo.stories.js'],
@@ -234,7 +231,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './path/to/storybook-config/file.js' }],
       },
     ];
-    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
     await expect(() =>
       getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles)
     ).rejects.toEqual(new Error('Did not find any CSF globs in preview-stats.json'));
@@ -279,7 +276,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
@@ -306,7 +303,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
@@ -334,7 +331,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ storybook: { configDir: 'path/to/storybook-config' } });
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
@@ -361,7 +358,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ storybook: { staticDir: ['path/to/statics'] } });
+    const ctx = getContext({ staticDir: ['path/to/statics'] });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
@@ -397,8 +394,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({
-      storybook: { staticDir: ['path/to/statics'] },
-      options: { untraced: ['**/foo.js'] },
+      staticDir: ['path/to/statics'],
+      untraced: ['**/foo.js'],
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({});
