@@ -20,7 +20,7 @@ const CreateBuildMutation = `
       componentCount
       testCount
       changeCount
-      errorCount
+      errorCount: testCount(statuses: [BROKEN])
       actualTestCount: testCount(statuses: [IN_PROGRESS])
       actualCaptureCount
       inheritedCaptureCount
