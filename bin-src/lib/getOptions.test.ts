@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { Context } from '../types';
 
 import getEnv from './getEnv';
 import getOptions from './getOptions';
@@ -14,7 +15,7 @@ jest.mock('./getEnv', () => () => ({
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
-const getContext = (argv: string[]) => {
+const getContext = (argv: string[]): Context => {
   const env = getEnv();
   const log = new TestLogger();
   const packageJson = {
@@ -26,7 +27,7 @@ const getContext = (argv: string[]) => {
       otherBuildStorybook: 'build-storybook',
     },
   };
-  return { env, log, packageJson, ...parseArgs(argv) };
+  return { env, log, packageJson, ...parseArgs(argv) } as any;
 };
 
 describe('getOptions', () => {

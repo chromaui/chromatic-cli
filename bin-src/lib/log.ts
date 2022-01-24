@@ -15,15 +15,17 @@ const handleRejection = (reason) => console.error('Unhandled promise rejection:'
 process.on('unhandledRejection', handleRejection);
 
 // Omits any JSON metadata, returning only the message string
-const logInteractive = (args) =>
+const logInteractive = (args: any[]) =>
   args.map((arg) => (arg && arg.message) || arg).filter((arg) => typeof arg === 'string');
 
 // Strips ANSI codes from messages and stringifies metadata to JSON
-const logVerbose = (type, args) => {
-  const stringify = type === 'error' ? (e) => JSON.stringify(errorSerializer(e)) : JSON.stringify;
+const logVerbose = (type: string, args: any[]) => {
+  const stringify =
+    type === 'error' ? (e: any) => JSON.stringify(errorSerializer(e)) : JSON.stringify;
   return args.map((arg) => (typeof arg === 'string' ? stripAnsi(arg) : stringify(arg)));
 };
 
+type LogType = 'error' | 'warn' | 'info' | 'debug';
 type LogFn = (...args: any[]) => void;
 export interface Logger {
   error: LogFn;
@@ -53,7 +55,7 @@ export const createLogger = (sessionId, env) => {
   });
 
   const log =
-    (type: 'error' | 'warn' | 'info' | 'debug') =>
+    (type: LogType) =>
     (...args) => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 

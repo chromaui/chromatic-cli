@@ -4,7 +4,7 @@ import { Context } from '../types';
 import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
 export const setStorybookInfo = async (ctx: Context) => {
-  ctx.storybook = await getStorybookInfo(ctx);
+  ctx.storybook = (await getStorybookInfo(ctx)) as Context['storybook'];
 };
 
 export default createTask({

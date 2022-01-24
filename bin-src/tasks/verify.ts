@@ -15,6 +15,7 @@ const CreateBuildMutation = `
     createBuild(input: $input, isolatorUrl: $isolatorUrl) {
       id
       number
+      status
       specCount
       componentCount
       testCount
@@ -66,6 +67,7 @@ interface CreateBuildMutationResult {
   createBuild: {
     id: string;
     number: number;
+    status: string;
     specCount: number;
     componentCount: number;
     testCount: number;
@@ -216,7 +218,7 @@ export default createTask({
   title: initial.title,
   skip: (ctx: Context) => {
     if (ctx.skip) return true;
-    if (ctx.options.dryRun) return dryRun(ctx).output;
+    if (ctx.options.dryRun) return dryRun().output;
     return false;
   },
   steps: [transitionTo(pending), setEnvironment, createBuild],

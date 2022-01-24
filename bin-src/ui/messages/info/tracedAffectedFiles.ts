@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
-import { Context } from '../../../types';
+import { Context, Module } from '../../../types';
 
 import { info } from '../../components/icons';
 
@@ -27,14 +27,14 @@ export default (
   }: {
     changedFiles: string[];
     affectedModules: Record<string, string[]>;
-    modulesByName: Record<string, { modules: { name: string }[] }>;
+    modulesByName: Record<string, Module>;
     normalize: (name: string) => string;
   }
 ) => {
-  const flag = ctx.log === console ? '--mode (-m)' : '--trace-changed';
+  const flag = ctx.log === (console as any) ? '--mode (-m)' : '--trace-changed';
   const basedir = ctx.options.storybookBaseDir || '.';
   const expanded = ctx.options.traceChanged === 'expanded';
-  const printPath = (filepath) => printFilePath(filepath, basedir, expanded);
+  const printPath = (filepath: string) => printFilePath(filepath, basedir, expanded);
 
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);

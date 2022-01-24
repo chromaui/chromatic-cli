@@ -1,5 +1,5 @@
 import * as git from '../git/git';
-import installDependencies from '../lib/installDependencies';
+import installDeps from '../lib/installDependencies';
 import { runPrepareWorkspace } from './prepareWorkspace';
 
 jest.mock('../git/git');
@@ -10,6 +10,7 @@ const checkout = <jest.MockedFunction<typeof git.checkout>>git.checkout;
 const isClean = <jest.MockedFunction<typeof git.isClean>>git.isClean;
 const isUpToDate = <jest.MockedFunction<typeof git.isUpToDate>>git.isUpToDate;
 const findMergeBase = <jest.MockedFunction<typeof git.findMergeBase>>git.findMergeBase;
+const installDependencies = <jest.MockedFunction<typeof installDeps>>installDeps;
 
 const log = { error: jest.fn() };
 
@@ -69,7 +70,7 @@ describe('runPrepareWorkspace', () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
-    installDependencies.mockRejectedValue();
+    installDependencies.mockRejectedValue(new Error(''));
     const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
 
     await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(

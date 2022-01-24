@@ -126,7 +126,9 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
-export default async function getStorybookInfo(ctx: Context) {
+export default async function getStorybookInfo(
+  ctx: Context
+): Promise<Partial<Context['storybook']>> {
   try {
     const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
     return info.reduce((acc, obj) => Object.assign(acc, obj), {});

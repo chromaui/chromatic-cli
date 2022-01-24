@@ -1,10 +1,11 @@
 import graphqlError from './graphqlError';
+import { GraphQLError } from '../../../io/GraphQLClient';
 
 export default {
   title: 'CLI/Messages/Errors',
 };
 
-const err = {
+const err: GraphQLError = {
   message:
     'Cannot query field "inheritedCaptureCount" on type "Build". Did you mean "potentialCaptureCount", "billableCaptureCount", or "actualCaptureCount"?',
   locations: [{ line: 11, column: 7 }],

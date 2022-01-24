@@ -14,6 +14,8 @@ const tracedPaths = [
 
 const modulesByName = {
   'src/app/dashboard/index.ts + 3 modules': {
+    id: 1,
+    name: 'src/app/dashboard/index.ts + 3 modules',
     modules: [
       { name: 'src/hooks/useTiming.ts' },
       { name: 'src/hooks/useMeasure.ts' },
@@ -21,12 +23,18 @@ const modulesByName = {
     ],
   },
   'src/app/settings/Settings.stories.tsx + 2 modules': {
+    id: 2,
+    name: 'src/app/settings/Settings.stories.tsx + 2 modules',
     modules: [{ name: 'src/app/settings/Settings.tsx' }, { name: 'src/app/settings/DarkMode.tsx' }],
   },
   'src/app/components/Login.story.tsx + 1 modules': {
+    id: 3,
+    name: 'src/app/components/Login.story.tsx + 1 modules',
     modules: [{ name: 'src/app/components/Login.tsx' }],
   },
   'src/actions/utils.ts + 5 modules': {
+    id: 4,
+    name: 'src/actions/utils.ts + 5 modules',
     modules: [
       { name: 'src/actions/state.ts' },
       { name: 'src/actions/iframe.ts' },
@@ -36,6 +44,8 @@ const modulesByName = {
     ],
   },
   'src/app/payment/Modal.tsx + 2 modules': {
+    id: 5,
+    name: 'src/app/payment/Modal.tsx + 2 modules',
     modules: [{ name: 'src/app/components/Modal.tsx' }, { name: 'src/actions/state.ts' }],
   },
 };

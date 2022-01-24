@@ -231,7 +231,7 @@ export interface Context {
   uploadedBytes?: number;
   turboSnap?: Partial<{
     rootPath: string;
-    workingDir: string;
+    baseDir: string;
     storybookDir: string;
     staticDirs: string[];
     globs: string[];
@@ -259,5 +259,18 @@ export interface Context {
 export interface Task {
   status: string;
   title: string;
-  output: string;
+  output?: string;
+}
+
+export interface Reason {
+  moduleName: string;
+}
+export interface Module {
+  id: string | number;
+  name: string;
+  modules?: Pick<Module, 'name'>[];
+  reasons?: Reason[];
+}
+export interface Stats {
+  modules: Module[];
 }

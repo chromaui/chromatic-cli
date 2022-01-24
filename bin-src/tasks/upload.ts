@@ -88,7 +88,7 @@ function getPathsInDir(ctx: Context, rootDir: string, dirname = '.'): PathSpec[]
     });
   } catch (e) {
     ctx.log.debug(e);
-    throw new Error(invalid({ sourceDir: rootDir }, e).output);
+    throw new Error(invalid({ sourceDir: rootDir } as any, e).output);
   }
 }
 
@@ -199,7 +199,7 @@ async function uploadAsIndividualFiles(ctx: Context, task: Task) {
     contentLength: lengths.find(({ knownAs }) => knownAs === path).contentLength,
   }));
 
-  task.output = starting(ctx).output;
+  task.output = starting().output;
 
   try {
     await uploadFiles(ctx, files, (progress: number) => {
@@ -227,7 +227,7 @@ async function uploadAsZipFile(ctx: Context, task: Task) {
   );
   const { domain, url, sentinelUrl } = getZipUploadUrl;
 
-  task.output = starting(ctx).output;
+  task.output = starting().output;
 
   try {
     await uploadZip(ctx, path, url, total, (progress) => {
@@ -271,7 +271,7 @@ export default createTask({
   title: initial.title,
   skip: (ctx: Context) => {
     if (ctx.skip) return true;
-    if (ctx.options.dryRun) return dryRun(ctx).output;
+    if (ctx.options.dryRun) return dryRun().output;
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },

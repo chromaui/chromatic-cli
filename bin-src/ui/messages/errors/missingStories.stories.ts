@@ -8,4 +8,4 @@ export const MissingStories = () =>
   missingStories({
     options: { buildScriptName: 'build:storybook' },
     buildLogFile: '/path/to/project/build-storybook.log',
-  });
+  } as any);

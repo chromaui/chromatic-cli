@@ -1,5 +1,5 @@
 import * as fs from 'fs-extra';
-import progress from 'progress-stream';
+import progressStream from 'progress-stream';
 
 import { getDependentStoryFiles as dependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
@@ -13,6 +13,7 @@ const createReadStream = <jest.MockedFunction<typeof fs.createReadStream>>fs.cre
 const readdirSync = <jest.MockedFunction<typeof fs.readdirSync>>fs.readdirSync;
 const readFileSync = <jest.MockedFunction<typeof fs.readFileSync>>fs.readFileSync;
 const statSync = <jest.MockedFunction<typeof fs.statSync>>fs.statSync;
+const progress = <jest.MockedFunction<typeof progressStream>>progressStream;
 
 const env = { CHROMATIC_RETRIES: 2 };
 const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
@@ -131,7 +132,7 @@ describe('uploadStorybook', () => {
 
     createReadStream.mockReturnValue({ pipe: jest.fn() } as any);
     http.fetch.mockReturnValue({ ok: true });
-    progress.mockReturnValue({ on: jest.fn() });
+    progress.mockReturnValue({ on: jest.fn() } as any);
 
     const fileInfo = {
       lengths: [

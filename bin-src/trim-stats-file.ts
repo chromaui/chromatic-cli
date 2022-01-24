@@ -1,5 +1,5 @@
 import { readJson, outputFile } from 'fs-extra';
-import { Stats } from './lib/getDependentStoryFiles';
+import { Stats } from './types';
 
 const dedupe = <T>(arr: T[]) => Array.from(new Set(arr));
 const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: string }) =>

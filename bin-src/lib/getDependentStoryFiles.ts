@@ -5,20 +5,7 @@ import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
-import { Context } from '../types';
-
-interface Reason {
-  moduleName: string;
-}
-interface Module {
-  id: string | number;
-  name: string;
-  modules?: Pick<Module, 'name'>[];
-  reasons?: Reason[];
-}
-export interface Stats {
-  modules: Module[];
-}
+import { Context, Module, Reason, Stats } from '../types';
 
 // Bail whenever one of these was changed
 const GLOBALS = [
@@ -232,7 +219,7 @@ export async function getDependentStoryFiles(
   }
 
   if (ctx.turboSnap.bailReason) {
-    ctx.log.warn(bailFile(ctx));
+    ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
     return null;
   }
 

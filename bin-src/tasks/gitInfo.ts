@@ -85,7 +85,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       setExitCode(ctx, exitCodes.OK);
       return;
     }
-    throw new Error(skipFailed(ctx).output);
+    throw new Error(skipFailed().output);
   }
 
   const parentCommits = await getParentCommits(ctx, {
@@ -145,8 +145,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
     // Use the most recent baseline to determine final CLI output if we end up skipping the build.
     // Note this will get overwritten if we end up not skipping the build.
-    // eslint-disable-next-line prefer-destructuring
-    ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0];
+    ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0] as any;
 
     try {
       const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));

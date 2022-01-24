@@ -10,7 +10,7 @@ export interface GraphQLError {
   locations?: { line: number; column: number }[];
   extensions: {
     code: string;
-    exception?: { stacktrace: string };
+    exception?: { stacktrace?: string[] };
   };
 }
 
@@ -45,7 +45,7 @@ export default class GraphQLClient {
             headers: { ...this.headers, ...headers },
             method: 'post',
           })
-          .then((res) => res.json())
+          .then((res) => res.json() as any)
           .catch(bail);
 
         if (!errors) return data;

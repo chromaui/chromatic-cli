@@ -1,8 +1,9 @@
+import { SpawnOptions } from 'child_process';
 import yon from 'yarn-or-npm';
 
 const { spawn } = yon;
 
-const installDependencies = (options) =>
+const installDependencies = (options?: SpawnOptions) =>
   new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';

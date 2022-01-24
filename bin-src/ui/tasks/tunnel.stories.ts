@@ -11,8 +11,8 @@ const cachedUrl = 'https://fdeulpymiq.tunnel.chromaticqa.com/iframe.html';
 
 export const Initial = () => initial;
 
-export const Pending = () => pending({ env: { CHROMATIC_TUNNEL_URL } });
+export const Pending = () => pending({ env: { CHROMATIC_TUNNEL_URL } } as any);
 
-export const Success = () => success({ cachedUrl });
+export const Success = () => success({ cachedUrl } as any);
 
-export const Failed = () => failed({ cachedUrl });
+export const Failed = () => failed({ cachedUrl } as any);
