@@ -14,6 +14,7 @@ jobs:
         with:
           exitOnceUploaded: true
           onlyChanged: true
+          traceChanged: true
           diagnostics: true
         env:
           CHROMATIC_PROJECT_TOKEN: 253df72b53d2
