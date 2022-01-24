@@ -90,7 +90,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, []);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, [], repository);
   });
 
@@ -100,7 +100,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['F', 'main']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['F'], repository);
   });
 
@@ -110,7 +110,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['B', 'main']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['B'], repository);
   });
 
@@ -123,7 +123,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
   });
 
@@ -137,7 +137,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['D', 'C', 'B'], repository);
   });
 
@@ -150,7 +150,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['C', 'B'], repository);
   });
 
@@ -163,7 +163,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['B'], repository);
   });
 
@@ -177,7 +177,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
   });
 
@@ -187,7 +187,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['C', 'main']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
   });
 
@@ -200,7 +200,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['D'], repository);
   });
 
@@ -213,7 +213,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
   });
 
@@ -223,7 +223,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['D', 'branch']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, [], repository);
   });
 
@@ -233,7 +233,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['E', 'branch']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, [], repository);
   });
 
@@ -243,7 +243,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['B', 'branch']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, [], repository);
   });
 
@@ -262,7 +262,7 @@ describe('getParentCommits', () => {
     );
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, [], repository);
   });
 
@@ -272,7 +272,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['D', 'main']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['D'], repository);
   });
 
@@ -282,7 +282,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['z', 'branch']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, [], repository);
   });
 
@@ -292,7 +292,7 @@ describe('getParentCommits', () => {
     const client = createClient(repository, [['A', 'branch']]);
     const git = { branch: 'main', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['A'], repository);
   });
 
@@ -302,7 +302,7 @@ describe('getParentCommits', () => {
 
     const mockIndex = createMockIndex(repository, [['A', 'main']]);
     const mockIndexWithNullFirstBuildCommittedAt = (queryName, variables) => {
-      if (queryName === 'TesterFirstCommittedAtQuery') {
+      if (queryName === 'FirstCommittedAtQuery') {
         return { app: { firstBuild: { committedAt: null } } };
       }
       return mockIndex(queryName, variables);
@@ -315,7 +315,7 @@ describe('getParentCommits', () => {
     };
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['A'], repository);
   });
 
@@ -328,7 +328,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['D'], repository);
   });
 
@@ -341,7 +341,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['D'], repository);
   });
 
@@ -354,7 +354,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
   });
 
@@ -367,10 +367,9 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits(
-      { client, log, git },
-      { ignoreLastBuildOnBranch: true }
-    );
+    const parentCommits = await getParentCommits({ client, log, git } as any, {
+      ignoreLastBuildOnBranch: true,
+    });
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
   });
 
@@ -393,7 +392,7 @@ describe('getParentCommits', () => {
     );
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expect(parentCommits).toEqual([Zhash, repository.commitMap.C.hash]);
   });
 
@@ -407,7 +406,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['B'], repository);
   });
 
@@ -420,7 +419,7 @@ describe('getParentCommits', () => {
     ]);
     const git = { branch: 'branch', ...(await getCommit()) };
 
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['E'], repository);
   });
 
@@ -434,7 +433,7 @@ describe('getParentCommits', () => {
     const git = { branch: 'HEAD', ...(await getCommit()) };
 
     // We can pass 'HEAD' as the branch if we fail to find any other branch info from another source
-    const parentCommits = await getParentCommits({ client, log, git });
+    const parentCommits = await getParentCommits({ client, log, git } as any);
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
   });
 
@@ -452,7 +451,7 @@ describe('getParentCommits', () => {
       );
       const git = { branch: 'main', ...(await getCommit()) };
 
-      const parentCommits = await getParentCommits({ client, log, git });
+      const parentCommits = await getParentCommits({ client, log, git } as any);
       // This doesn't include 'C' as D "covers" it.
       expectCommitsToEqualNames(parentCommits, ['D'], repository);
     });

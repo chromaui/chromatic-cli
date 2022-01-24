@@ -1,4 +1,5 @@
 import path from 'path';
+import { Context, Options } from '../types';
 
 import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
@@ -16,75 +17,22 @@ import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
 import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 import inferredOptions from '../ui/messages/info/inferredOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
-import { Flags } from './parseArgs';
 
-export interface Options {
-  projectToken: string;
+const takeLast = (input: string | string[]) =>
+  Array.isArray(input) ? input[input.length - 1] : input;
 
-  only: Flags['only'];
-  onlyChanged: true | string;
-  untraced: Flags['untraced'];
-  externals: Flags['externals'];
-  traceChanged: true | string;
-  list: Flags['list'];
-  fromCI: boolean;
-  skip: true | string;
-  dryRun: Flags['dryRun'];
-  forceRebuild: true | string;
-  verbose: boolean;
-  interactive: boolean;
-  junitReport: true | string;
-  zip: true | string;
+const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input : [input]);
 
-  autoAcceptChanges: true | string;
-  exitZeroOnChanges: true | string;
-  exitOnceUploaded: true | string;
-  ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
-  preserveMissingSpecs: boolean;
-  originalArgv: string[];
-
-  buildScriptName: Flags['buildScriptName'];
-  outputDir: string;
-  allowConsoleErrors: Flags['allowConsoleErrors'];
-  scriptName: true | string;
-  exec: Flags['exec'];
-  noStart: Flags['doNotStart'];
-  https: {
-    cert: string;
-    key: string;
-    ca: string;
-  };
-  cert: Flags['storybookCert'];
-  key: Flags['storybookKey'];
-  ca: Flags['storybookCa'];
-  url?: string;
-  port: Flags['storybookPort'];
-  storybookBuildDir: string;
-  storybookBaseDir: Flags['storybookBaseDir'];
-  storybookConfigDir: Flags['storybookConfigDir'];
-  storybookUrl: Flags['storybookUrl'];
-  createTunnel: boolean;
-  useTunnel?: boolean;
-
-  ownerName: string;
-  branchName: string;
-  patchHeadRef: string;
-  patchBaseRef: string;
-}
-
-const takeLast = (input) => (Array.isArray(input) ? input[input.length - 1] : input);
-const ensureArray = (input) => (Array.isArray(input) ? input : [input]);
-
-const resolveHomeDir = (filepath) =>
+const resolveHomeDir = (filepath: string) =>
   filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
-const trueIfSet = (value) => (value === '' ? true : value);
-const undefinedIfEmpty = (array) => {
+const trueIfSet = <T>(value: T) => ((value as unknown) === '' ? true : value);
+const undefinedIfEmpty = <T>(array: T[]) => {
   const filtered = array.filter(Boolean);
   return filtered.length ? filtered : undefined;
 };
 
-export default function getOptions({ argv, env, flags, log, packageJson }): Options {
+export default function getOptions({ argv, env, flags, log, packageJson }: Context): Options {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, ownerName] = (flags.branchName || '').split(':').reverse();
@@ -105,7 +53,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
     verbose: !!flags.debug,
     interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
     junitReport: trueIfSet(flags.junitReport),
-    zip: trueIfSet(flags.zip),
+    zip: flags.zip,
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
@@ -117,13 +65,14 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
     buildScriptName: flags.buildScriptName,
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
-    scriptName: trueIfSet(flags.scriptName),
+    scriptName: flags.scriptName,
     exec: flags.exec,
     noStart: !!flags.doNotStart,
-    https: flags.storybookHttps,
-    cert: flags.storybookCert,
-    key: flags.storybookKey,
-    ca: flags.storybookCa,
+    https: flags.storybookHttps && {
+      cert: flags.storybookCert,
+      key: flags.storybookKey,
+      ca: flags.storybookCa,
+    },
     port: flags.storybookPort,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
@@ -161,11 +110,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
 
   const { storybookBuildDir, exec } = options;
   let { port, storybookUrl, noStart, scriptName, buildScriptName } = options;
-  let https = options.https && {
-    cert: options.cert,
-    key: options.key,
-    ca: options.ca,
-  };
 
   // We can only have one of these arguments
   const singularOpts = {
@@ -219,7 +163,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
   }
 
   // Build Storybook instead of starting it
-  if (!scriptName && !exec && !noStart && !storybookUrl && !port) {
+  if (scriptName === undefined && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
       return { ...options, noStart: true, useTunnel: false };
     }
@@ -251,15 +195,15 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
 
     if (!exec && (!port || !noStart)) {
       // If you don't provide a port or we need to start the command, let's look up the script for it
-      scriptName = typeof scriptName === 'string' ? scriptName : 'storybook';
+      scriptName = scriptName || 'storybook';
       const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
 
       if (!storybookScript) {
         throw new Error(missingScriptName(scriptName));
       }
 
-      https =
-        https ||
+      options.https =
+        options.https ||
         (getStorybookConfiguration(storybookScript, '--https') && {
           cert: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-cert')),
           key: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-key')),
@@ -274,7 +218,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
       if (log) log.info('', inferredOptions({ scriptName, port }));
     }
 
-    storybookUrl = `${https ? 'https' : 'http'}://localhost:${port}`;
+    storybookUrl = `${options.https ? 'https' : 'http'}://localhost:${port}`;
   }
 
   const parsedUrl = new URL(storybookUrl);
@@ -290,7 +234,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }): Opti
     ...options,
     noStart,
     useTunnel: true,
-    https,
     url: parsedUrl.href,
     scriptName,
   };

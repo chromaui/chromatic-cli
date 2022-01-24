@@ -2,57 +2,6 @@ import meow from 'meow';
 
 import pkg from '../../package.json';
 
-export interface Flags {
-  // Required options
-  projectToken?: string[];
-
-  // Storybook options
-  buildScriptName?: string;
-  outputDir?: string[];
-  storybookBuildDir?: string[];
-
-  // Chromatic options
-  autoAcceptChanges?: string;
-  branchName?: string;
-  ci?: boolean;
-  exitOnceUploaded?: string;
-  exitZeroOnChanges?: string;
-  externals?: string[];
-  ignoreLastBuildOnBranch?: string;
-  only?: string;
-  onlyChanged?: string;
-  patchBuild?: string;
-  preserveMissing?: boolean;
-  skip?: string;
-  storybookBaseDir?: string;
-  storybookConfigDir?: string;
-  untraced?: string[];
-  zip?: boolean;
-
-  // Debug options
-  debug?: boolean;
-  diagnostics?: boolean;
-  dryRun?: boolean;
-  forceRebuild?: string;
-  junitReport?: string;
-  list?: boolean;
-  interactive?: boolean;
-  traceChanged?: string;
-
-  // Deprecated options (for JSDOM and tunneled builds)
-  allowConsoleErrors?: boolean;
-  appCode?: string[];
-  doNotStart?: boolean;
-  exec?: string;
-  scriptName?: string;
-  storybookPort?: string;
-  storybookUrl?: string;
-  storybookHttps?: boolean;
-  storybookCert?: string;
-  storybookKey?: string;
-  storybookCa?: string;
-}
-
 export default function parseArgs(argv: string[]) {
   const { input, flags, help } = meow(
     `
@@ -156,7 +105,7 @@ export default function parseArgs(argv: string[]) {
         allowConsoleErrors: { type: 'boolean' },
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
         doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
-        exec: { type: 'string', alias: 'e' }, // aka commandName; start via spawn
+        exec: { type: 'string', alias: 'e' }, // start via spawn
         scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
         storybookPort: { type: 'string', alias: 'p' },
         storybookUrl: { type: 'string', alias: 'u' },

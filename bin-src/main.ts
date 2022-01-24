@@ -79,7 +79,7 @@ export async function runAll(ctx) {
   }
 }
 
-export async function runBuild(ctx: Context & { client?: GraphQLClient }) {
+export async function runBuild(ctx: Context) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 

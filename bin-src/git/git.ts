@@ -1,6 +1,7 @@
 import execa from 'execa';
 import gql from 'fake-tag';
 import { EOL } from 'os';
+import { Context } from '../types';
 
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
@@ -36,8 +37,8 @@ async function execGitCommand(command: string) {
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
-const TesterFirstCommittedAtQuery = gql`
-  query TesterFirstCommittedAtQuery($commit: String!, $branch: String!) {
+const FirstCommittedAtQuery = gql`
+  query FirstCommittedAtQuery($commit: String!, $branch: String!) {
     app {
       firstBuild(sortByCommittedAt: true) {
         committedAt
@@ -54,29 +55,84 @@ const TesterFirstCommittedAtQuery = gql`
     }
   }
 `;
+interface FirstCommittedAtQueryResult {
+  app: {
+    firstBuild: {
+      committedAt: number;
+    };
+    lastBuild: {
+      commit: string;
+      committedAt: number;
+    };
+    pullRequest: {
+      lastHeadBuild: {
+        commit: string;
+      };
+    };
+  };
+}
 
-const TesterHasBuildsWithCommitsQuery = gql`
-  query TesterHasBuildsWithCommitsQuery($commits: [String!]!) {
+const HasBuildsWithCommitsQuery = gql`
+  query HasBuildsWithCommitsQuery($commits: [String!]!) {
     app {
       hasBuildsWithCommits(commits: $commits)
     }
   }
 `;
+interface HasBuildsWithCommitsQueryResult {
+  app: {
+    hasBuildsWithCommits: string[];
+  };
+}
 
-const TesterBaselineCommitsQuery = gql`
-  query TesterBaselineCommitsQuery($branch: String!, $parentCommits: [String!]!) {
+const BaselineCommitsQuery = gql`
+  query BaselineCommitsQuery($branch: String!, $parentCommits: [String!]!) {
     app {
       baselineBuilds(branch: $branch, parentCommits: $parentCommits) {
+        id
         number
         status
+        webUrl
+        cachedUrl
         commit
         committedAt
+        actualCaptureCount
+        actualTestCount
+        specCount
+        componentCount
+        testCount
         changeCount
-        webUrl
+        autoAcceptChanges
+        app {
+          setupUrl
+        }
       }
     }
   }
 `;
+interface BaselineCommitsQueryResult {
+  app: {
+    baselineBuilds: {
+      id: string;
+      number: number;
+      status: string;
+      webUrl: string;
+      cachedUrl: string;
+      commit: string;
+      committedAt: number;
+      actualCaptureCount: number;
+      actualTestCount: number;
+      specCount: number;
+      componentCount: number;
+      testCount: number;
+      changeCount: number;
+      autoAcceptChanges: boolean;
+      app: {
+        setupUrl: string;
+      };
+    }[];
+  };
+}
 
 export async function getVersion() {
   const result = await execGitCommand(`git --version`);
@@ -134,7 +190,7 @@ export async function hasPreviousCommit() {
 }
 
 // Check if a commit exists in the repository
-async function commitExists(commit) {
+async function commitExists(commit: string) {
   try {
     await execGitCommand(`git cat-file -e "${commit}^{commit}"`);
     return true;
@@ -164,9 +220,17 @@ function commitsForCLI(commits: string[]) {
 // `commitsWithBuilds`.
 //
 async function nextCommits(
-  { log },
-  limit,
-  { firstCommittedAtSeconds, commitsWithBuilds, commitsWithoutBuilds }
+  { log }: Pick<Context, 'log'>,
+  limit: number,
+  {
+    firstCommittedAtSeconds,
+    commitsWithBuilds,
+    commitsWithoutBuilds,
+  }: {
+    firstCommittedAtSeconds: number;
+    commitsWithBuilds: string[];
+    commitsWithoutBuilds: string[];
+  }
 ) {
   // We want the next limit commits that aren't "covered" by `commitsWithBuilds`
   // This will print out all commits in `commitsWithoutBuilds` (except if they are covered),
@@ -189,7 +253,7 @@ async function nextCommits(
 
 // Which of the listed commits are "maximally descendent":
 // ie c in commits such that there are no descendents of c in commits.
-async function maximallyDescendentCommits({ log }, commits) {
+async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits: string[]) {
   if (commits.length === 0) {
     return commits;
   }
@@ -208,10 +272,18 @@ async function maximallyDescendentCommits({ log }, commits) {
 
 // Exponentially iterate `limit` up to infinity to find a "covering" set of commits with builds
 async function step(
-  { client, log },
-  limit,
-  { firstCommittedAtSeconds, commitsWithBuilds, commitsWithoutBuilds }
-) {
+  { client, log }: Pick<Context, 'client' | 'log'>,
+  limit: number,
+  {
+    firstCommittedAtSeconds,
+    commitsWithBuilds,
+    commitsWithoutBuilds,
+  }: {
+    firstCommittedAtSeconds: number;
+    commitsWithBuilds: string[];
+    commitsWithoutBuilds: string[];
+  }
+): Promise<string[]> {
   log.debug(`step: checking ${limit} up to ${firstCommittedAtSeconds}`);
   log.debug(`step: commitsWithBuilds: ${commitsWithBuilds}`);
   log.debug(`step: commitsWithoutBuilds: ${commitsWithoutBuilds}`);
@@ -232,7 +304,7 @@ async function step(
 
   const {
     app: { hasBuildsWithCommits: newCommitsWithBuilds },
-  } = await client.runQuery(TesterHasBuildsWithCommitsQuery, {
+  } = await client.runQuery<HasBuildsWithCommitsQueryResult>(HasBuildsWithCommitsQuery, {
     commits: candidateCommits,
   });
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
@@ -249,13 +321,16 @@ async function step(
 }
 
 export async function getParentCommits(
-  { client, git, log },
+  { client, git, log }: Context,
   { ignoreLastBuildOnBranch = false } = {}
 ) {
   const { branch, commit, committedAt } = git;
 
   // Include the latest build from this branch as an ancestor of the current build
-  const { app } = await client.runQuery(TesterFirstCommittedAtQuery, { branch, commit });
+  const { app } = await client.runQuery<FirstCommittedAtQueryResult>(FirstCommittedAtQuery, {
+    branch,
+    commit,
+  });
   const { firstBuild, lastBuild, pullRequest } = app;
   log.debug(
     `App firstBuild: %o, lastBuild: %o, pullRequest: %o`,
@@ -269,8 +344,8 @@ export async function getParentCommits(
     return [];
   }
 
-  const initialCommitsWithBuilds = [];
-  const extraParentCommits = [];
+  const initialCommitsWithBuilds: string[] = [];
+  const extraParentCommits: string[] = [];
 
   // Add the most recent build on the branch as a parent build, unless:
   //   - the user opts out with `--ignore-last-build-on-branch`
@@ -330,12 +405,18 @@ export async function getParentCommits(
   return [...extraParentCommits, ...(await maximallyDescendentCommits({ log }, commitsWithBuilds))];
 }
 
-export async function getBaselineBuilds({ client }, { branch, parentCommits }) {
-  const { app } = await client.runQuery(TesterBaselineCommitsQuery, { branch, parentCommits });
+export async function getBaselineBuilds(
+  { client }: Pick<Context, 'client'>,
+  { branch, parentCommits }: { branch: string; parentCommits: string[] }
+) {
+  const { app } = await client.runQuery<BaselineCommitsQueryResult>(BaselineCommitsQuery, {
+    branch,
+    parentCommits,
+  });
   return app.baselineBuilds;
 }
 
-export async function getChangedFiles(baseCommit, headCommit = '') {
+export async function getChangedFiles(baseCommit: string, headCommit = '') {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
   const files = await execGitCommand(`git --no-pager diff --name-only ${baseCommit} ${headCommit}`);
   return files.split(EOL).filter(Boolean);
@@ -345,7 +426,7 @@ export async function getChangedFiles(baseCommit, headCommit = '') {
  * Returns a boolean indicating whether the workspace is up-to-date (neither ahead nor behind) with
  * the remote.
  */
-export async function isUpToDate({ log }) {
+export async function isUpToDate({ log }: Pick<Context, 'log'>) {
   execGitCommand(`git remote update`);
 
   let localCommit;
@@ -421,7 +502,7 @@ export async function getUpdateMessage() {
  * @param {string} headRef Name of the head branch
  * @param {string} baseRef Name of the base branch
  */
-export async function findMergeBase(headRef, baseRef) {
+export async function findMergeBase(headRef: string, baseRef: string) {
   const result = await execGitCommand(`git merge-base --all ${headRef} ${baseRef}`);
   const mergeBases = result.split(EOL).filter((line) => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
@@ -439,7 +520,7 @@ export async function findMergeBase(headRef, baseRef) {
   return mergeBases[baseRefIndex] || mergeBases[0];
 }
 
-export async function checkout(ref) {
+export async function checkout(ref: string) {
   return execGitCommand(`git checkout ${ref}`);
 }
 
