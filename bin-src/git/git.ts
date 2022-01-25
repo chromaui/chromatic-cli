@@ -92,20 +92,9 @@ const BaselineCommitsQuery = gql`
         id
         number
         status
-        webUrl
-        cachedUrl
         commit
         committedAt
-        actualCaptureCount
-        actualTestCount
-        specCount
-        componentCount
-        testCount
         changeCount
-        autoAcceptChanges
-        app {
-          setupUrl
-        }
       }
     }
   }
@@ -116,20 +105,9 @@ interface BaselineCommitsQueryResult {
       id: string;
       number: number;
       status: string;
-      webUrl: string;
-      cachedUrl: string;
       commit: string;
       committedAt: number;
-      actualCaptureCount: number;
-      actualTestCount: number;
-      specCount: number;
-      componentCount: number;
-      testCount: number;
       changeCount: number;
-      autoAcceptChanges: boolean;
-      app: {
-        setupUrl: string;
-      };
     }[];
   };
 }
