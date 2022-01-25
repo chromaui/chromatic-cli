@@ -18,7 +18,7 @@ const stacktrace = `Error: Oh no!
 
 const error = (message: string, stack?: string) => {
   const err = new Error(message);
-  if (stack) err.stack = stack;
+  err.stack = stack;
   return err;
 };
 
