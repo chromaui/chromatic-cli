@@ -1,6 +1,6 @@
 import retry from 'async-retry';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
-import fetch, { Response } from 'node-fetch';
+import fetch, { Response, RequestInit } from 'node-fetch';
 
 import { Context } from '../types';
 
@@ -29,7 +29,7 @@ export interface HTTPClientOptions {
   retries?: number;
 }
 
-export interface FetchOptions {
+export interface HTTPClientFetchOptions {
   noLogErrorBody?: boolean;
   proxy?: HttpsProxyAgentOptions;
   retries?: number;
@@ -53,7 +53,7 @@ export default class HTTPClient {
     this.retries = retries;
   }
 
-  async fetch(url: string, options: Record<string, any> = {}, opts: FetchOptions = {}) {
+  async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
     const agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
     // The user can override retries and set it to 0
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;

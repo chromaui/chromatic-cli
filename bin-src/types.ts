@@ -1,4 +1,4 @@
-import { Response } from 'node-fetch';
+import { Response, RequestInit } from 'node-fetch';
 import { Env } from './lib/getEnv';
 import { Logger } from './lib/log';
 
@@ -139,7 +139,7 @@ export interface Context {
   isOnboarding?: boolean;
 
   http: {
-    fetch: (url: string, options?: Record<string, any>, opts?: any) => Promise<Response>;
+    fetch: (url: string, options?: RequestInit, opts?: any) => Promise<Response>;
   };
   client: {
     runQuery: <T>(
