@@ -16,9 +16,16 @@ const getProxyAgent = (
   log.debug({ url, proxy, options }, 'Using proxy agent');
   const requestHost = new URL(url).host;
   if (!agents[requestHost]) {
-    const { hostname, port, protocol, username, password } = new URL(proxy);
+    const { hostname, port, protocol, username, password, pathname } = new URL(proxy);
     const auth = username && password ? `${username}:${password}` : undefined;
-    agents[requestHost] = createHttpsProxyAgent({ auth, hostname, port, protocol, ...options });
+    agents[requestHost] = createHttpsProxyAgent({
+      auth,
+      hostname,
+      port,
+      protocol,
+      pathname,
+      ...options,
+    });
   }
   return agents[requestHost];
 };

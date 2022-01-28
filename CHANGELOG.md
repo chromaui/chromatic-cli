@@ -1,3 +1,8 @@
+# 6.4.2 - 2022-01-28
+
+- [510](https://github.com/chromaui/chromatic-cli/pull/510) Fix `pathname` support in proxy URL
+- [0734f3a](https://github.com/chromaui/chromatic-cli/commit/e770baf117ff8fe5cb8ca0dc198302b890734f3a) Fix how paths are normalized for TurboSnap
+
 # 6.4.1 - 2022-01-20
 
 - [499](https://github.com/chromaui/chromatic-cli/pull/499) Fix handling of `CANCELLED` build status
