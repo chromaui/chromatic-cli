@@ -36,7 +36,7 @@ export async function uploadZip(
           body: fs.createReadStream(path).pipe(progressStream),
           headers: {
             'content-type': 'application/zip',
-            'content-length': contentLength,
+            'content-length': contentLength.toString(),
           },
         },
         { retries: 0 } // already retrying the whole operation

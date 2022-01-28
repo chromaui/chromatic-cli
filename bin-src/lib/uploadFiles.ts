@@ -43,7 +43,7 @@ export default async function uploadFiles(
                 body: fs.createReadStream(path).pipe(progressStream),
                 headers: {
                   'content-type': contentType,
-                  'content-length': contentLength,
+                  'content-length': contentLength.toString(),
                   'cache-control': 'max-age=31536000',
                 },
               },
