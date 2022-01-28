@@ -1,3 +1,7 @@
+# 6.4.3 - unreleased
+
+- [505](https://github.com/chromaui/chromatic-cli/pull/505) Migrate to TypeScript
+
 # 6.4.2 - 2022-01-28
 
 - [510](https://github.com/chromaui/chromatic-cli/pull/510) Fix `pathname` support in proxy URL
