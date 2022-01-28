@@ -154,7 +154,7 @@ describe('uploadStorybook', () => {
         method: 'PUT',
         headers: {
           'content-type': 'text/html',
-          'content-length': 42,
+          'content-length': '42',
           'cache-control': 'max-age=31536000',
         },
       }),
@@ -166,7 +166,7 @@ describe('uploadStorybook', () => {
         method: 'PUT',
         headers: {
           'content-type': 'text/html',
-          'content-length': 42,
+          'content-length': '42',
           'cache-control': 'max-age=31536000',
         },
       }),
