@@ -1,9 +1,11 @@
 {
   "exclude": ["node_modules"],
   "compilerOptions": {
+    "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "resolveJsonModule": true
   }
 }
