@@ -21,5 +21,6 @@ jobs:
           CHROMATIC_INDEX_URL: https://index.staging-chromatic.com
       - uses: actions/upload-artifact@v2
         with:
-          name: chromatic-diagnostics
-          path: chromatic-diagnostics.json
+          path: |
+            chromatic-diagnostics.json
+            **/build-storybook.log
