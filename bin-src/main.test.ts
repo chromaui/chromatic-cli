@@ -190,6 +190,8 @@ const openTunnel = <jest.MockedFunction<typeof tunnel>>tunnel;
 
 jest.mock('./lib/uploadFiles');
 
+jest.mock('./lib/spawn', () => () => Promise.resolve('https://npm.example.com'));
+
 let processEnv;
 beforeEach(() => {
   processEnv = process.env;
@@ -614,7 +616,7 @@ describe('runAll', () => {
     } as any);
     await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
+    expect(ctx.http.fetch).toHaveBeenCalledWith('https://npm.example.com/chromatic');
     expect(ctx.testLogger.warnings[0]).toMatch('Using outdated package');
   });
 
