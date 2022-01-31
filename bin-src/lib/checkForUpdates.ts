@@ -18,12 +18,14 @@ export default async function checkForUpdates(ctx: Context) {
 
   let latestVersion: string;
   try {
-    const registryUrl = await spawn(['config', 'get', 'registry']).catch(() => '');
+    const registryUrl = await spawn(['config', 'get', 'registry']).catch(
+      () => 'https://registry.npmjs.org/'
+    );
     if (!['https://registry.npmjs.org/', 'https://registry.yarnpkg.com'].includes(registryUrl)) {
       ctx.log.info(`Using custom npm registry: ${registryUrl}`);
     }
 
-    const pkgUrl = new URL(ctx.pkg.name, registryUrl || 'https://registry.npmjs.org').href;
+    const pkgUrl = new URL(ctx.pkg.name, registryUrl).href;
     const res = await withTimeout(ctx.http.fetch(pkgUrl), 5000); // If not fetched within 5 seconds, nevermind.
     const { 'dist-tags': distTags = {} } = (await res.json()) as any;
     if (!semver.valid(distTags.latest)) {
