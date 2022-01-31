@@ -1,4 +1,4 @@
-# 6.4.3 - unreleased
+# 6.4.3 - 2022-01-31
 
 - [505](https://github.com/chromaui/chromatic-cli/pull/505) Migrate to TypeScript
 
