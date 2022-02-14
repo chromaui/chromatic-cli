@@ -215,8 +215,8 @@ export async function getDependentStoryFiles(
     reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(
-    // Chromatic seems to require a `./path/to/story/file.js` format
-    Array.from(affectedModuleIds).map((id) => [`./${normalize(String(id))}`, files(namesById[id])])
+    // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
+    Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
   );
 
   if (ctx.options.traceChanged) {
