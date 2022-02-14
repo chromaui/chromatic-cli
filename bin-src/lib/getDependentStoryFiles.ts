@@ -20,8 +20,6 @@ const GLOBALS = [
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
-const MULTI_MODULES = / \+ \d+ modules$/;
-
 const isPackageFile = (name: string) => GLOBALS.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
@@ -33,6 +31,9 @@ const isUserModule = (mod: Module | Reason) =>
 // already contains forward slashes, because that's what git yields even on Windows.
 const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
 
+/** Strips off query params added by rollup/vite to ids, to make paths compatible for comparison with git */
+const stripQueryParams = (filePath: string): string => filePath.split('?')[0];
+
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
@@ -41,9 +42,11 @@ const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).j
  */
 export function normalizePath(posixPath: string, rootPath: string, baseDir = '') {
   if (!posixPath) return posixPath;
-  return path.posix.isAbsolute(posixPath)
-    ? path.posix.relative(rootPath, posixPath)
-    : path.posix.join(baseDir, posixPath);
+  // TODO: this might break webpack, which seems to send regex instead of posixPath...
+  const strippedPath = stripQueryParams(posixPath);
+  return path.posix.isAbsolute(strippedPath)
+    ? path.posix.relative(rootPath, strippedPath)
+    : path.posix.join(baseDir, strippedPath);
 }
 
 /**
@@ -69,7 +72,12 @@ export async function getDependentStoryFiles(
   const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
-  const normalize = (posixPath: string) => normalizePath(posixPath, rootPath, baseDir); // e.g. `src/file.js` (no ./ prefix)
+  const normalize = (posixPath: string) => {
+    // Do not try to normalize virtual paths
+    if (posixPath.startsWith('/virtual:')) return posixPath;
+
+    return normalizePath(posixPath, rootPath, baseDir); // e.g. `src/file.js` (no ./ prefix)
+  };
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
@@ -83,6 +91,8 @@ export async function getDependentStoryFiles(
     `generated-stories-entry.js`,
     // v7 store (SB >= 6.4)
     `storybook-stories.js`,
+    // vite builder
+    `/virtual:/@storybook/builder-vite/vite-app.js`,
   ];
 
   const modulesByName: Record<string, Module> = {};
@@ -145,9 +155,8 @@ export async function getDependentStoryFiles(
   function files(moduleName: string) {
     const mod = modulesByName[moduleName];
     if (!mod) return [moduleName];
-    return mod.modules && MULTI_MODULES.test(mod.name)
-      ? mod.modules.map((m) => normalize(m.name))
-      : [normalize(mod.name)];
+    // Normalize module names, if there are any
+    return mod.modules?.length ? mod.modules.map((m) => normalize(m.name)) : [normalize(mod.name)];
   }
 
   const tracedFiles = changedFiles.filter(untrace);
@@ -193,6 +202,7 @@ export async function getDependentStoryFiles(
     if (shouldBail(normalizedName)) return;
 
     if (!id || !reasonsById[id] || checkedIds[id]) return;
+    // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
 
     if (reasonsById[id].some(isCsfGlob)) {
@@ -201,14 +211,17 @@ export async function getDependentStoryFiles(
     }
   }
 
+  // First, check the files that have changed according to git
   tracedFiles.forEach((posixPath) => traceName(posixPath));
+  // If more were found during that process, check them too.
   while (toCheck.length > 0) {
     const [id, tracePath] = toCheck.pop();
     checkedIds[id] = true;
     reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(
-    Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
+    // Chromatic seems to require a `./path/to/story/file.js` format
+    Array.from(affectedModuleIds).map((id) => [`./${normalize(String(id))}`, files(namesById[id])])
   );
 
   if (ctx.options.traceChanged) {
