@@ -31,9 +31,6 @@ const isUserModule = (mod: Module | Reason) =>
 // already contains forward slashes, because that's what git yields even on Windows.
 const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
 
-/** Strips off query params added by rollup/vite to ids, to make paths compatible for comparison with git */
-const stripQueryParams = (filePath: string): string => filePath.split('?')[0];
-
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
@@ -42,11 +39,9 @@ const stripQueryParams = (filePath: string): string => filePath.split('?')[0];
  */
 export function normalizePath(posixPath: string, rootPath: string, baseDir = '') {
   if (!posixPath) return posixPath;
-  // TODO: this might break webpack, which seems to send regex instead of posixPath...
-  const strippedPath = stripQueryParams(posixPath);
-  return path.posix.isAbsolute(strippedPath)
-    ? path.posix.relative(rootPath, strippedPath)
-    : path.posix.join(baseDir, strippedPath);
+  return path.posix.isAbsolute(posixPath)
+    ? path.posix.relative(rootPath, posixPath)
+    : path.posix.join(baseDir, posixPath);
 }
 
 /**
