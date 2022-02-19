@@ -20,8 +20,6 @@ const GLOBALS = [
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
-const MULTI_MODULES = / \+ \d+ modules$/;
-
 const isPackageFile = (name: string) => GLOBALS.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
@@ -69,7 +67,9 @@ export async function getDependentStoryFiles(
   const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
-  const normalize = (posixPath: string) => normalizePath(posixPath, rootPath, baseDir); // e.g. `src/file.js` (no ./ prefix)
+  // e.g. `src/file.js` (no ./ prefix). Vite virtual paths are ignored.
+  const normalize = (posixPath: string) =>
+    posixPath.startsWith('/virtual:') ? posixPath : normalizePath(posixPath, rootPath, baseDir);
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
@@ -85,6 +85,8 @@ export async function getDependentStoryFiles(
     'generated-stories-entry.cjs',
     // v7 store (SB >= 6.4)
     `storybook-stories.js`,
+    // vite builder
+    `/virtual:/@storybook/builder-vite/vite-app.js`,
   ];
 
   const modulesByName: Record<string, Module> = {};
@@ -147,9 +149,8 @@ export async function getDependentStoryFiles(
   function files(moduleName: string) {
     const mod = modulesByName[moduleName];
     if (!mod) return [moduleName];
-    return mod.modules && MULTI_MODULES.test(mod.name)
-      ? mod.modules.map((m) => normalize(m.name))
-      : [normalize(mod.name)];
+    // Normalize module names, if there are any
+    return mod.modules?.length ? mod.modules.map((m) => normalize(m.name)) : [normalize(mod.name)];
   }
 
   const tracedFiles = changedFiles.filter(untrace);
@@ -195,6 +196,7 @@ export async function getDependentStoryFiles(
     if (shouldBail(normalizedName)) return;
 
     if (!id || !reasonsById[id] || checkedIds[id]) return;
+    // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
 
     if (reasonsById[id].some(isCsfGlob)) {
@@ -203,13 +205,16 @@ export async function getDependentStoryFiles(
     }
   }
 
+  // First, check the files that have changed according to git
   tracedFiles.forEach((posixPath) => traceName(posixPath));
+  // If more were found during that process, check them too.
   while (toCheck.length > 0) {
     const [id, tracePath] = toCheck.pop();
     checkedIds[id] = true;
     reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(
+    // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
     Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
   );
 
