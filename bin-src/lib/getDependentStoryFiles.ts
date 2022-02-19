@@ -81,6 +81,8 @@ export async function getDependentStoryFiles(
     `${storybookDir}/generated-stories-entry.js`,
     // v6 store with root as config dir (or SB 6.4)
     `generated-stories-entry.js`,
+    // v6 store with .cjs extension (SB 6.5)
+    'generated-stories-entry.cjs',
     // v7 store (SB >= 6.4)
     `storybook-stories.js`,
     // vite builder
