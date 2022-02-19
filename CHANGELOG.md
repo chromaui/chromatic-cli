@@ -1,4 +1,4 @@
-# 6.5.0 - 2022-02-19
+# 6.5.0 - unreleased
 
 - [513](https://github.com/chromaui/chromatic-cli/pull/513) Add support for custom npm registry url
 - [521](https://github.com/chromaui/chromatic-cli/pull/521) Add TurboSnap support for Vite
