@@ -67,12 +67,9 @@ export async function getDependentStoryFiles(
   const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
-  const normalize = (posixPath: string) => {
-    // Do not try to normalize virtual paths
-    if (posixPath.startsWith('/virtual:')) return posixPath;
-
-    return normalizePath(posixPath, rootPath, baseDir); // e.g. `src/file.js` (no ./ prefix)
-  };
+  // e.g. `src/file.js` (no ./ prefix). Vite virtual paths are ignored.
+  const normalize = (posixPath: string) =>
+    posixPath.startsWith('/virtual:') ? posixPath : normalizePath(posixPath, rootPath, baseDir);
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
