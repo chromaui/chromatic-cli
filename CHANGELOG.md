@@ -1,3 +1,7 @@
+# 6.5.1 - 2022-02-21
+
+- Fix: Cannot read property 'startsWith' of null
+
 # 6.5.0 - 2022-02-21
 
 - [513](https://github.com/chromaui/chromatic-cli/pull/513) Add support for custom npm registry url
