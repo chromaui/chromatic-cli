@@ -1,3 +1,9 @@
+# 6.5.0 - unreleased
+
+- [513](https://github.com/chromaui/chromatic-cli/pull/513) Add support for custom npm registry url
+- [521](https://github.com/chromaui/chromatic-cli/pull/521) Add TurboSnap support for Vite
+- [523](https://github.com/chromaui/chromatic-cli/pull/523) Fix TurboSnap support for Storybook 6.5 with `.cjs` extension
+
 # 6.4.3 - 2022-01-31
 
 - [505](https://github.com/chromaui/chromatic-cli/pull/505) Migrate to TypeScript

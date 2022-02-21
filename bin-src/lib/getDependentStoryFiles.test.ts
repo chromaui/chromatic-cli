@@ -6,6 +6,7 @@ import * as git from '../git/git';
 jest.mock('../git/git');
 
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
+const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
 const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
@@ -74,6 +75,27 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('detects direct changes to CSF files, 6.5 v6 store', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './generated-stories-entry.cjs' }],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
   it('detects direct changes to CSF files, 6.4 v7 store', async () => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
@@ -86,6 +108,27 @@ describe('getDependentStoryFiles', () => {
         id: CSF_GLOB,
         name: CSF_GLOB,
         reasons: [{ moduleName: './storybook-stories.js' }],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it('detects direct changes to CSF files, vite', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: VITE_ENTRY }],
+      },
+      {
+        id: VITE_ENTRY,
+        name: VITE_ENTRY,
+        reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
       },
     ];
     const ctx = getContext();
