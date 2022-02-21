@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import * as path from 'path';
 
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 import * as git from '../git/git';
@@ -72,6 +73,32 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it('detects direct changes to CSF files, 6.4 subdirectory', async () => {
+    const subDirectory = 'subdirectory';
+    const changedFiles = [`${subDirectory}/src/foo.stories.js`];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: 'generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ storybookBaseDir: '' });
+    const originRelative = path.posix.relative;
+    jest.mock('path');
+    path.posix.relative = jest.fn().mockImplementationOnce(() => subDirectory);
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    path.posix.relative = originRelative;
+    expect(res).toEqual({
+      './src/foo.stories.js': [`${subDirectory}/src/foo.stories.js`],
     });
   });
 
