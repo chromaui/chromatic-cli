@@ -1,8 +1,9 @@
-# 6.5.0 - unreleased
+# 6.5.0 - 2022-02-21
 
 - [513](https://github.com/chromaui/chromatic-cli/pull/513) Add support for custom npm registry url
 - [521](https://github.com/chromaui/chromatic-cli/pull/521) Add TurboSnap support for Vite
 - [523](https://github.com/chromaui/chromatic-cli/pull/523) Fix TurboSnap support for Storybook 6.5 with `.cjs` extension
+- [518](https://github.com/chromaui/chromatic-cli/pull/518) Fix `storybookUrl` output by removing `iframe.html` suffix
 
 # 6.4.3 - 2022-01-31
 
