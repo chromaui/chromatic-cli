@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 import * as git from '../git/git';
 
@@ -69,6 +68,48 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it('detects direct changes to CSF files, 6.4 v6 store with storybook config and baseDir', async () => {
+    const changedFiles = ['path/to/project/src/foo.stories.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ configDir: '.storybook', storybookBaseDir: 'path/to/project' });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({
+      './src/foo.stories.js': ['path/to/project/src/foo.stories.js'],
+    });
+  });
+
+  it('detects direct changes to CSF files, 6.4 v6 store with storybook config', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ configDir: '.storybook' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],

@@ -80,16 +80,16 @@ export async function getDependentStoryFiles(
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
   const storiesEntryFiles = [
     // v6 store (SB <= 6.3)
-    `${storybookDir}/generated-stories-entry.js`,
+    `${storybookConfigDir}/generated-stories-entry.js`,
     // v6 store with root as config dir (or SB 6.4)
-    `generated-stories-entry.js`,
+    `./generated-stories-entry.js`,
     // v6 store with .cjs extension (SB 6.5)
-    'generated-stories-entry.cjs',
+    `./generated-stories-entry.cjs`,
     // v7 store (SB >= 6.4)
-    `storybook-stories.js`,
+    `./storybook-stories.js`,
     // vite builder
     `/virtual:/@storybook/builder-vite/vite-app.js`,
-  ];
+  ].map((entryFile) => normalize(entryFile));
 
   const modulesByName: Record<string, Module> = {};
   const namesById: Record<number, string> = {};
