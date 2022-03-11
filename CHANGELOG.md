@@ -1,3 +1,7 @@
+# 6.5.2 - 2022-03-11
+
+- [527](https://github.com/chromaui/chromatic-cli/pull/527) [539](https://github.com/chromaui/chromatic-cli/pull/539) Fix TurboSnap support for Storybook in a subdirectory
+
 # 6.5.1 - 2022-02-21
 
 - Fix: Cannot read property 'startsWith' of null
