@@ -36,9 +36,10 @@ const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).j
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
  * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary.
  * The result is a relative POSIX path compatible with `git diff --name-only`.
+ * Virtual paths (e.g. Vite) are returned as-is.
  */
 export function normalizePath(posixPath: string, rootPath: string, baseDir = '') {
-  if (!posixPath) return posixPath;
+  if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
   return path.posix.isAbsolute(posixPath)
     ? path.posix.relative(rootPath, posixPath)
     : path.posix.join(baseDir, posixPath);
@@ -67,11 +68,8 @@ export async function getDependentStoryFiles(
   const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
-  // e.g. `src/file.js` (no ./ prefix). Vite virtual paths are ignored.
-  const normalize = (posixPath: string) =>
-    posixPath && posixPath.startsWith('/virtual:')
-      ? posixPath
-      : normalizePath(posixPath, rootPath, baseDir);
+  // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
+  const normalize = (posixPath: string) => normalizePath(posixPath, rootPath, baseDir);
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
@@ -81,7 +79,7 @@ export async function getDependentStoryFiles(
   const storiesEntryFiles = [
     // v6 store (SB <= 6.3)
     `${storybookConfigDir}/generated-stories-entry.js`,
-    // v6 store with root as config dir (or SB 6.4)
+    // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
     `./generated-stories-entry.js`,
     // v6 store with .cjs extension (SB 6.5)
     `./generated-stories-entry.cjs`,
@@ -89,7 +87,7 @@ export async function getDependentStoryFiles(
     `./storybook-stories.js`,
     // vite builder
     `/virtual:/@storybook/builder-vite/vite-app.js`,
-  ].map((entryFile) => normalize(entryFile));
+  ].map(normalize);
 
   const modulesByName: Record<string, Module> = {};
   const namesById: Record<number, string> = {};
