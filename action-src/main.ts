@@ -64,8 +64,7 @@ const getBuildInfo = (event: typeof context) => {
       }
 
       return {
-        owner: event.payload.repository.owner.login,
-        slug: event.payload.repository.name,
+        slug: event.payload.repository.full_name,
         branch: ref.replace('refs/heads/', ''),
         ref,
         sha,
