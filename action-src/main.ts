@@ -107,7 +107,7 @@ async function runChromatic(options): Promise<Output> {
     url: ctx.build?.webUrl,
     code: ctx.exitCode,
     buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.cachedUrl.replace(/iframe\.html.*$/, ''),
+    storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
   };
 }
 
