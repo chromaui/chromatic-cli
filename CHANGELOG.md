@@ -1,3 +1,8 @@
+# 6.5.3 - 2022-03-14
+
+- [536](https://github.com/chromaui/chromatic-cli/pull/536) Fix `slug` for GitHub's `workflow_dispatch` event
+- [547](https://github.com/chromaui/chromatic-cli/pull/547) Fix line splitting on Windows for Git output
+
 # 6.5.2 - 2022-03-11
 
 - [527](https://github.com/chromaui/chromatic-cli/pull/527) [539](https://github.com/chromaui/chromatic-cli/pull/539) Fix TurboSnap support for Storybook in a subdirectory
