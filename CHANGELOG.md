@@ -2,6 +2,9 @@
 
 - [536](https://github.com/chromaui/chromatic-cli/pull/536) Fix `slug` for GitHub's `workflow_dispatch` event
 - [547](https://github.com/chromaui/chromatic-cli/pull/547) Fix line splitting on Windows for Git output
+- [538](https://github.com/chromaui/chromatic-cli/pull/538) Bump url-parse from 1.5.3 to 1.5.10
+- [545](https://github.com/chromaui/chromatic-cli/pull/545) Bump ansi-html from 0.0.7 to 0.0.8
+- [528](https://github.com/chromaui/chromatic-cli/pull/528) Bump follow-redirects from 1.14.7 to 1.14.9
 
 # 6.5.2 - 2022-03-11
 
