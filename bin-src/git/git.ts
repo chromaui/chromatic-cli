@@ -7,6 +7,8 @@ import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
+const newline = /(\r\n|\r|\n)/; // Git may return \n even on Windows, so we can't use EOL
+
 async function execGitCommand(command: string) {
   try {
     const { all } = await execa.command(command, {
@@ -397,7 +399,7 @@ export async function getBaselineBuilds(
 export async function getChangedFiles(baseCommit: string, headCommit = '') {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
   const files = await execGitCommand(`git --no-pager diff --name-only ${baseCommit} ${headCommit}`);
-  return files.split(EOL).filter(Boolean);
+  return files.split(newline).filter(Boolean);
 }
 
 /**
@@ -443,8 +445,8 @@ export async function isClean() {
 export async function getUpdateMessage() {
   const status = await execGitCommand('git status');
   return status
-    .split(EOL + EOL)[0] // drop the 'nothing to commit' part
-    .split(EOL)
+    .split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
+    .split(newline)
     .filter((line) => !line.startsWith('On branch')) // drop the 'On branch x' part
     .join(EOL)
     .trim();
@@ -482,7 +484,7 @@ export async function getUpdateMessage() {
  */
 export async function findMergeBase(headRef: string, baseRef: string) {
   const result = await execGitCommand(`git merge-base --all ${headRef} ${baseRef}`);
-  const mergeBases = result.split(EOL).filter((line) => line && !line.startsWith('warning: '));
+  const mergeBases = result.split(newline).filter((line) => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
 
