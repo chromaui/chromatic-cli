@@ -446,7 +446,7 @@ export async function getUpdateMessage() {
   const status = await execGitCommand('git status');
   return status
     .split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
-    .split(/(\r\n|\r|\n)/)
+    .split(newline)
     .filter((line) => !line.startsWith('On branch')) // drop the 'On branch x' part
     .join(EOL)
     .trim();
