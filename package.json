@@ -130,7 +130,7 @@
     "mock-fs": "^5.1.2",
     "no-proxy": "^1.0.3",
     "node-ask": "^1.0.1",
-    "node-fetch": "3.0.0",
+    "node-fetch": "^3.2.3",
     "node-loggly-bulk": "^2.2.4",
     "npm-run-all": "^4.0.2",
     "observable": "^2.1.4",
