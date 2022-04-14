@@ -114,7 +114,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       break;
 
     case 'FAILED':
-      setExitCode(ctx, exitCodes.BUILD_FAILED, true);
+      setExitCode(ctx, exitCodes.BUILD_FAILED, false);
       transitionTo(buildFailed, true)(ctx, task);
       break;
 
