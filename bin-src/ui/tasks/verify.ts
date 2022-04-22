@@ -17,6 +17,12 @@ export const pending = () => ({
   output: 'This may take a few minutes',
 });
 
+export const publishFailed = () => ({
+  status: 'error',
+  title: 'Verifying your Storybook',
+  output: 'Failed to publish build',
+});
+
 export const runOnly = (ctx: Context) => ({
   status: 'pending',
   title: 'Starting partial build',

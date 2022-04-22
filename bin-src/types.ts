@@ -156,6 +156,7 @@ export interface Context {
     commit: string;
     committedAt: number;
     slug?: string;
+    mergeCommit?: string;
     parentCommits?: string[];
     changedFiles?: string[];
     matchesBranch?: (glob: true | string) => boolean;
@@ -182,6 +183,13 @@ export interface Context {
   };
   isolatorUrl: string;
   cachedUrl: string;
+  announcedBuild: {
+    id: string;
+    number: number;
+    status: string;
+    autoAcceptChanges: boolean;
+    reportToken: string;
+  };
   build: {
     id: string;
     number: number;
@@ -199,16 +207,26 @@ export interface Context {
     errorCount: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
+    wasLimited?: boolean;
     app: {
       setupUrl: string;
+      account?: {
+        exceededThreshold: boolean;
+        paymentRequired: boolean;
+        billingUrl: string;
+      };
       repository?: {
         provider: string;
       };
     };
+    features?: {
+      uiTests: boolean;
+      uiReview: boolean;
+    };
     tests?: {
       spec: {
         name: string;
-        component: { displayName: string };
+        component: { name: string; displayName: string };
       };
       parameters: {
         viewport: number;

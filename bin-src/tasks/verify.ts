@@ -3,139 +3,68 @@ import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
 import storybookPublished from '../ui/messages/info/storybookPublished';
 import buildLimited from '../ui/messages/warnings/buildLimited';
-import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
 import paymentRequired from '../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import { initial, dryRun, pending, runOnly, runOnlyFiles, success } from '../ui/tasks/verify';
+import {
+  initial,
+  dryRun,
+  pending,
+  runOnly,
+  runOnlyFiles,
+  success,
+  publishFailed,
+} from '../ui/tasks/verify';
 import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { Context, Task } from '../types';
+import { waitForBuild } from '../lib/waitForBuild';
 
-const CreateBuildMutation = `
-  mutation CreateBuildMutation($input: CreateBuildInput!, $isolatorUrl: String!) {
-    createBuild(input: $input, isolatorUrl: $isolatorUrl) {
-      id
-      number
+const PublishBuildMutation = `
+  mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
+    publishBuild(id: $id, input: $input) {
       status
-      specCount
-      componentCount
-      testCount
-      changeCount
-      errorCount: testCount(statuses: [BROKEN])
-      actualTestCount: testCount(statuses: [IN_PROGRESS])
-      actualCaptureCount
-      inheritedCaptureCount
-      webUrl
-      cachedUrl
-      reportToken
-      browsers {
-        browser
-      }
-      features {
-        uiTests
-        uiReview
-      }
-      autoAcceptChanges
-      wasLimited
-      app {
-        account {
-          exceededThreshold
-          paymentRequired
-          billingUrl
-        }
-        repository {
-          provider
-        }
-        setupUrl
-      }
-      tests {
-        spec {
-          name
-          component {
-            name
-            displayName
-          }
-        }
-        parameters {
-          viewport
-          viewportIsDefault
-        }
-      }
     }
   }
 `;
-interface CreateBuildMutationResult {
-  createBuild: {
-    id: string;
-    number: number;
-    status: string;
-    specCount: number;
-    componentCount: number;
-    testCount: number;
-    changeCount: number;
-    errorCount: number;
-    actualTestCount: number;
-    actualCaptureCount: number;
-    inheritedCaptureCount: number;
-    webUrl: string;
-    cachedUrl: string;
-    reportToken: string;
-    browsers: {
-      browser: string;
-    }[];
-    features: {
-      uiTests: boolean;
-      uiReview: boolean;
-    };
-    autoAcceptChanges: boolean;
-    wasLimited: boolean;
-    app: {
-      account: {
-        exceededThreshold: boolean;
-        paymentRequired: boolean;
-        billingUrl: string;
-      };
-      repository: {
-        provider: string;
-      };
-      setupUrl: string;
-    };
-    tests: {
-      spec: {
-        name: string;
-        component: {
-          name: string;
-          displayName: string;
-        };
-      };
-      parameters: {
-        viewport: number;
-        viewportIsDefault: boolean;
-      };
-    }[];
-  };
+
+interface PublishBuildMutationResult {
+  publishBuild: Context['announcedBuild'];
 }
 
-export const setEnvironment = async (ctx: Context) => {
-  // We send up all environment variables provided by these complicated systems.
-  // We don't want to send up *all* environment vars as they could include sensitive information
-  // about the user's build environment
-  ctx.environment = JSON.stringify(
-    Object.entries(process.env).reduce((acc, [key, value]) => {
-      if (ctx.env.ENVIRONMENT_WHITELIST.find((regex) => key.match(regex))) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {})
+export const publishBuild = async (ctx: Context) => {
+  const { cachedUrl, isolatorUrl, onlyStoryFiles, turboSnap } = ctx;
+  const { only } = ctx.options;
+
+  const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
+    PublishBuildMutation,
+    {
+      id: ctx.announcedBuild.id,
+      input: {
+        cachedUrl,
+        isolatorUrl,
+        ...(only && { onlyStoryNames: [].concat(only) }),
+        ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        // GraphQL does not support union input types (yet), so we stringify the bailReason
+        // @see https://github.com/graphql/graphql-spec/issues/488
+        ...(turboSnap &&
+          turboSnap.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
+      },
+    },
+    { retries: 3 }
   );
 
-  ctx.log.debug(`Got environment ${ctx.environment}`);
+  ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
+
+  // Queueing the extract may have failed
+  if (publishedBuild.status === 'FAILED') {
+    setExitCode(ctx, exitCodes.BUILD_FAILED, false);
+    throw new Error(publishFailed().output);
+  }
 };
 
-export const createBuild = async (ctx: Context, task: Task) => {
-  const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
-  const { version, matchesBranch, changedFiles, mergeCommit, ...commitInfo } = ctx.git; // omit some fields
-  const { isolatorUrl, rebuildForBuildId, onlyStoryFiles, turboSnap } = ctx;
-  const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
+export const verifyBuild = async (ctx: Context, task: Task) => {
+  const { onlyStoryFiles } = ctx;
+  const { list, only } = ctx.options;
+  const { matchesBranch } = ctx.git;
 
   // It's not possible to set both --only and --only-changed
   if (only) {
@@ -145,53 +74,19 @@ export const createBuild = async (ctx: Context, task: Task) => {
     transitionTo(runOnlyFiles)(ctx, task);
   }
 
-  const { createBuild: build } = await ctx.client.runQuery<CreateBuildMutationResult>(
-    CreateBuildMutation,
-    {
-      input: {
-        ...commitInfo,
-        rebuildForBuildId,
-        ...(only && { only }),
-        ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-        ...(turboSnap && { turboSnapEnabled: !turboSnap.bailReason }),
-        // GraphQL does not support union input types (yet), so we stringify the bailReason
-        // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnap &&
-          turboSnap.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
-        autoAcceptChanges,
-        cachedUrl: ctx.cachedUrl,
-        environment: ctx.environment,
-        patchBaseRef,
-        patchHeadRef,
-        preserveMissingSpecs,
-        packageVersion: ctx.pkg.version,
-        storybookVersion: ctx.storybook.version,
-        viewLayer: ctx.storybook.viewLayer,
-        addons: ctx.storybook.addons,
-      },
-      isolatorUrl,
-    },
-    { retries: 3 }
-  );
-
-  ctx.build = build;
-  ctx.isPublishOnly = !build.features.uiReview && !build.features.uiTests;
-  ctx.isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
+  ctx.build = await waitForBuild(ctx, 'Verify', ({ status }) => status === 'IN_PROGRESS');
+  ctx.isPublishOnly = !ctx.build.features.uiReview && !ctx.build.features.uiTests;
 
   if (list) {
-    ctx.log.info(listingStories(build.tests));
-  }
-
-  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
-    ctx.log.warn(noAncestorBuild(ctx));
+    ctx.log.info(listingStories(ctx.build.tests));
   }
 
   if (ctx.turboSnap && !ctx.turboSnap.bailReason) {
     ctx.log.info(turboSnapEnabled(ctx));
   }
 
-  if (build.wasLimited) {
-    const { account } = build.app;
+  if (ctx.build.wasLimited) {
+    const { account } = ctx.build.app;
     if (account.exceededThreshold) {
       ctx.log.warn(snapshotQuotaReached(account));
       setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
@@ -221,5 +116,5 @@ export default createTask({
     if (ctx.options.dryRun) return dryRun().output;
     return false;
   },
-  steps: [transitionTo(pending), setEnvironment, createBuild],
+  steps: [transitionTo(pending), publishBuild, verifyBuild],
 });

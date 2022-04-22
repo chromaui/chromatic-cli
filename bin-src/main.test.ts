@@ -15,7 +15,8 @@ import { runAll, runBuild } from './main';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
 
-let lastBuild;
+let announcedBuild;
+let publishedBuild;
 let mockBuildFeatures;
 
 jest.useFakeTimers();
@@ -62,45 +63,72 @@ jest.mock('node-fetch', () =>
         return { data: { createAppToken: 'token' } };
       }
 
-      if (query.match('CreateBuildMutation')) {
-        if (variables.isolatorUrl.startsWith('http://throw-an-error')) {
-          throw new Error('fetch error');
-        }
-        lastBuild = variables;
+      if (query.match('AnnounceBuildMutation')) {
+        announcedBuild = variables.input;
         return {
           data: {
-            createBuild: {
+            announceBuild: {
+              id: 'build-id',
               number: 1,
-              specCount: 1,
-              componentCount: 1,
-              webUrl: 'http://test.com',
-              cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
-              ...mockBuildFeatures,
-              app: {
-                account: {
-                  billingUrl: 'https://foo.bar',
-                  exceededThreshold: false,
-                  paymentRequired: false,
-                },
-              },
-              tests: [
-                {
-                  spec: { name: 'name', component: { displayName: 'component' } },
-                  parameters: { viewport: 320, viewportIsDefault: false },
-                },
-              ],
+              status: 'ANNOUNCED',
             },
           },
         };
       }
 
-      if (query.match('BuildQuery')) {
+      if (query.match('PublishBuildMutation')) {
+        if (variables.input.isolatorUrl.startsWith('http://throw-an-error')) {
+          throw new Error('fetch error');
+        }
+        publishedBuild = { id: variables.id, ...variables.input };
         return {
           data: {
-            app: { build: { status: 'PENDING', changeCount: 1 } },
+            publishBuild: {
+              status: 'PUBLISHED',
+            },
           },
         };
       }
+
+      const [, prefix] = query.match(/(\w+)(Build|Update)Query/) || [];
+      if (prefix) {
+        return {
+          data: {
+            app: {
+              build: {
+                number: 1,
+                status: prefix === 'Verify' ? 'IN_PROGRESS' : 'PENDING',
+                specCount: 1,
+                componentCount: 1,
+                webUrl: 'http://test.com',
+                cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
+                ...mockBuildFeatures,
+                app: {
+                  account: {
+                    billingUrl: 'https://foo.bar',
+                    exceededThreshold: false,
+                    paymentRequired: false,
+                  },
+                },
+                tests: [
+                  {
+                    spec: { name: 'name', component: { displayName: 'component' } },
+                    parameters: { viewport: 320, viewportIsDefault: false },
+                  },
+                ],
+              },
+            },
+          },
+        };
+      }
+
+      // if (query.match('BuildQuery')) {
+      //   return {
+      //     data: {
+      //       app: { build: { status: 'PENDING', changeCount: 1 } },
+      //     },
+      //   };
+      // }
 
       if (query.match('FirstCommittedAtQuery')) {
         return { data: { app: { firstBuild: { committedAt: null } } } };
@@ -254,20 +282,18 @@ it('runs in simple situations', async () => {
   await runBuild(ctx);
 
   expect(ctx.exitCode).toBe(1);
-  expect(lastBuild).toMatchObject({
-    input: {
-      branch: 'branch',
-      commit: 'commit',
-      committedAt: 1234,
-      parentCommits: ['baseline'],
-      fromCI: false,
-      isTravisPrBuild: false,
-      packageVersion: expect.any(String),
-      storybookVersion: '5.1.0',
-      viewLayer: 'viewLayer',
-      committerEmail: 'test@test.com',
-      committerName: 'tester',
-    },
+  expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
+    branch: 'branch',
+    commit: 'commit',
+    committedAt: 1234,
+    parentCommits: ['baseline'],
+    fromCI: false,
+    isTravisPrBuild: false,
+    packageVersion: expect.any(String),
+    storybookVersion: '5.1.0',
+    storybookViewLayer: 'viewLayer',
+    committerEmail: 'test@test.com',
+    committerName: 'tester',
     isolatorUrl: `https://chromatic.com/iframe.html`,
   });
 });
@@ -352,15 +378,15 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
 it('passes autoAcceptChanges to the index', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--auto-accept-changes']);
   await runBuild(ctx);
-  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
+  expect(announcedBuild).toMatchObject({ autoAcceptChanges: true });
 });
 
 it('passes autoAcceptChanges to the index based on branch', async () => {
   await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=branch']));
-  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
+  expect(announcedBuild).toMatchObject({ autoAcceptChanges: true });
 
   await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
-  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: false } });
+  expect(announcedBuild).toMatchObject({ autoAcceptChanges: false });
 });
 
 describe('tunneled build', () => {
@@ -385,8 +411,8 @@ describe('tunneled build', () => {
 
     expect(ctx.exitCode).toBe(1);
     expect(ctx.closeTunnel).toBeDefined();
-    expect(lastBuild).toMatchObject({
-      input: { cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar' },
+    expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
+      cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar',
       isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
     });
   });
@@ -462,7 +488,7 @@ describe('tunneled build', () => {
     expect(ctx.exitCode).toBe(1);
     expect(ctx.closeTunnel).toBeUndefined();
     expect(openTunnel).not.toHaveBeenCalled();
-    expect(lastBuild).toMatchObject({
+    expect(publishedBuild).toMatchObject({
       isolatorUrl: 'http://localhost:1337/iframe.html?foo=bar#hash',
     });
   });
@@ -500,11 +526,9 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        fromCI: true,
-        isTravisPrBuild: false,
-      },
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
+      isTravisPrBuild: false,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -514,11 +538,9 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234', '--ci']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        fromCI: true,
-        isTravisPrBuild: false,
-      },
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
+      isTravisPrBuild: false,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -528,11 +550,9 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        fromCI: true,
-        isTravisPrBuild: false,
-      },
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
+      isTravisPrBuild: false,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -558,13 +578,11 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        commit: 'travis-commit',
-        branch: 'travis-branch',
-        fromCI: true,
-        isTravisPrBuild: true,
-      },
+    expect(announcedBuild).toMatchObject({
+      commit: 'travis-commit',
+      branch: 'travis-branch',
+      fromCI: true,
+      isTravisPrBuild: true,
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.testLogger.warnings.length).toBe(0);
@@ -591,13 +609,11 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        commit: 'travis-commit',
-        branch: 'travis-branch',
-        fromCI: true,
-        isTravisPrBuild: true,
-      },
+    expect(announcedBuild).toMatchObject({
+      commit: 'travis-commit',
+      branch: 'travis-branch',
+      fromCI: true,
+      isTravisPrBuild: true,
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.testLogger.warnings.length).toBe(1);
