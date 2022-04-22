@@ -1,3 +1,7 @@
+# 6.5.4 - 2022-04-7
+
+- [554](https://github.com/chromaui/chromatic-cli/pull/554) downcase the slug so we don't accidentally treat origin as fork
+
 # 6.5.3 - 2022-03-14
 
 - [536](https://github.com/chromaui/chromatic-cli/pull/536) Fix `slug` for GitHub's `workflow_dispatch` event
