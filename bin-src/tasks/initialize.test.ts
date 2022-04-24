@@ -10,12 +10,10 @@ describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
     const ctx = { env, log } as any;
     await setEnvironment(ctx);
-    expect(ctx.environment).toBe(
-      JSON.stringify({
-        GERRIT_BRANCH: 'foo/bar',
-        TRAVIS_EVENT_TYPE: 'pull_request',
-      })
-    );
+    expect(ctx.environment).toEqual({
+      GERRIT_BRANCH: 'foo/bar',
+      TRAVIS_EVENT_TYPE: 'pull_request',
+    });
   });
 });
 
@@ -25,7 +23,7 @@ describe('announceBuild', () => {
     log,
     options: {},
     environment: ':environment',
-    git: { version: 'whatever', matchesBranch: () => false },
+    git: { version: 'whatever', matchesBranch: () => false, committedAt: 0 },
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
   };
@@ -46,8 +44,10 @@ describe('announceBuild', () => {
           patchBaseRef: undefined,
           patchHeadRef: undefined,
           ciVariables: ctx.environment,
+          committedAt: new Date(0),
           preserveMissingSpecs: undefined,
           packageVersion: ctx.pkg.version,
+          rebuildForBuildId: undefined,
           storybookAddons: ctx.storybook.addons,
           storybookVersion: ctx.storybook.version,
           storybookViewLayer: ctx.storybook.viewLayer,

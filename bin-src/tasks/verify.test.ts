@@ -6,7 +6,7 @@ const http = { fetch: jest.fn() };
 
 describe('publishBuild', () => {
   it('updates the build on the index and updates context', async () => {
-    const announcedBuild = { number: 1, status: 'ANNOUNCED' };
+    const announcedBuild = { number: 1, status: 'ANNOUNCED', reportToken: 'report-token' };
     const publishedBuild = { status: 'PUBLISHED' };
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({ publishBuild: publishedBuild });
@@ -27,7 +27,7 @@ describe('publishBuild', () => {
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/PublishBuildMutation/),
       { input: { cachedUrl: ctx.cachedUrl, isolatorUrl: ctx.isolatorUrl } },
-      { retries: 3 }
+      { headers: { Authorization: `Bearer report-token` }, retries: 3 }
     );
     expect(ctx.announcedBuild).toEqual({ ...announcedBuild, ...publishedBuild });
   });
@@ -47,8 +47,13 @@ describe('verifyBuild', () => {
   };
 
   it('waits for the build to start', async () => {
-    const build = { status: 'IN_PROGRESS', features: { uiTests: true, uiReview: false }, app: {} };
-    const publishedBuild = { ...build, status: 'PUBLISHED' };
+    const build = {
+      status: 'IN_PROGRESS',
+      features: { uiTests: true, uiReview: false },
+      app: {},
+      startedAt: Date.now(),
+    };
+    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: null };
     const client = { runQuery: jest.fn() };
     client.runQuery
       .mockReturnValueOnce({ app: { build: publishedBuild } })
@@ -60,24 +65,30 @@ describe('verifyBuild', () => {
 
     expect(client.runQuery).nthCalledWith(
       1,
-      expect.stringMatching(/BuildQuery/),
+      expect.stringMatching(/StartedBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
     expect(client.runQuery).nthCalledWith(
       2,
-      expect.stringMatching(/UpdateQuery/),
+      expect.stringMatching(/StartedBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
     expect(client.runQuery).nthCalledWith(
       3,
-      expect.stringMatching(/UpdateQuery/),
+      expect.stringMatching(/StartedBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
-    expect(client.runQuery).toHaveBeenCalledTimes(3);
-    expect(ctx.build).toEqual(build);
+    expect(client.runQuery).nthCalledWith(
+      4,
+      expect.stringMatching(/VerifyBuildQuery/),
+      { number: 1 },
+      { headers: { Authorization: `Bearer report-token` } }
+    );
+    expect(client.runQuery).toHaveBeenCalledTimes(4);
+    expect(ctx.build).toMatchObject(build);
     expect(ctx.exitCode).toBe(undefined);
     expect(ctx.skipSnapshots).toBe(undefined);
   });
@@ -93,6 +104,7 @@ describe('verifyBuild', () => {
           features: { uiTests: true, uiReview: false },
           app: { account: {} },
           wasLimited: true,
+          startedAt: Date.now(),
         },
       },
     });
@@ -113,6 +125,7 @@ describe('verifyBuild', () => {
           features: { uiTests: true, uiReview: false },
           app: { account: { exceededThreshold: true } },
           wasLimited: true,
+          startedAt: Date.now(),
         },
       },
     });
@@ -133,6 +146,7 @@ describe('verifyBuild', () => {
           features: { uiTests: true, uiReview: false },
           app: { account: { paymentRequired: true } },
           wasLimited: true,
+          startedAt: Date.now(),
         },
       },
     });
@@ -153,6 +167,7 @@ describe('verifyBuild', () => {
           features: { uiTests: false, uiReview: false },
           app: { account: { paymentRequired: true } },
           wasLimited: true,
+          startedAt: Date.now(),
         },
       },
     });

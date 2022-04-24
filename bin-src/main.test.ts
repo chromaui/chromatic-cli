@@ -90,14 +90,25 @@ jest.mock('node-fetch', () =>
         };
       }
 
-      const [, prefix] = query.match(/(\w+)(Build|Update)Query/) || [];
-      if (prefix) {
+      if (query.match('StartedBuildQuery')) {
+        return {
+          data: {
+            app: {
+              build: {
+                startedAt: Date.now(),
+              },
+            },
+          },
+        };
+      }
+
+      if (query.match('VerifyBuildQuery')) {
         return {
           data: {
             app: {
               build: {
                 number: 1,
-                status: prefix === 'Verify' ? 'IN_PROGRESS' : 'PENDING',
+                status: 'IN_PROGRESS',
                 specCount: 1,
                 componentCount: 1,
                 webUrl: 'http://test.com',
@@ -116,19 +127,20 @@ jest.mock('node-fetch', () =>
                     parameters: { viewport: 320, viewportIsDefault: false },
                   },
                 ],
+                startedAt: Date.now(),
               },
             },
           },
         };
       }
 
-      // if (query.match('BuildQuery')) {
-      //   return {
-      //     data: {
-      //       app: { build: { status: 'PENDING', changeCount: 1 } },
-      //     },
-      //   };
-      // }
+      if (query.match('SnapshotBuildQuery')) {
+        return {
+          data: {
+            app: { build: { status: 'PENDING', changeCount: 1 } },
+          },
+        };
+      }
 
       if (query.match('FirstCommittedAtQuery')) {
         return { data: { app: { firstBuild: { committedAt: null } } } };
@@ -285,10 +297,9 @@ it('runs in simple situations', async () => {
   expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
     branch: 'branch',
     commit: 'commit',
-    committedAt: 1234,
+    committedAt: new Date(1234).toISOString(),
     parentCommits: ['baseline'],
     fromCI: false,
-    isTravisPrBuild: false,
     packageVersion: expect.any(String),
     storybookVersion: '5.1.0',
     storybookViewLayer: 'viewLayer',
@@ -528,7 +539,6 @@ describe('in CI', () => {
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       fromCI: true,
-      isTravisPrBuild: false,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -540,7 +550,6 @@ describe('in CI', () => {
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       fromCI: true,
-      isTravisPrBuild: false,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -552,7 +561,6 @@ describe('in CI', () => {
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       fromCI: true,
-      isTravisPrBuild: false,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -582,7 +590,6 @@ describe('in CI', () => {
       commit: 'travis-commit',
       branch: 'travis-branch',
       fromCI: true,
-      isTravisPrBuild: true,
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.testLogger.warnings.length).toBe(0);
@@ -613,7 +620,6 @@ describe('in CI', () => {
       commit: 'travis-commit',
       branch: 'travis-branch',
       fromCI: true,
-      isTravisPrBuild: true,
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.testLogger.warnings.length).toBe(1);

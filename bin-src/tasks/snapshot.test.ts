@@ -7,7 +7,12 @@ const matchesBranch = () => false;
 describe('takeSnapshots', () => {
   it('waits for the build to complete and sets it on context', async () => {
     const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
-    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const build = {
+      app: { repository: { provider: 'github' } },
+      number: 1,
+      features: {},
+      reportToken: 'report-token',
+    };
     const ctx = {
       client,
       env,
@@ -15,7 +20,6 @@ describe('takeSnapshots', () => {
       log,
       options: {},
       build,
-      announcedBuild: { number: 1, reportToken: 'report-token' },
     } as any;
 
     client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
@@ -24,15 +28,8 @@ describe('takeSnapshots', () => {
     });
 
     await takeSnapshots(ctx, {} as any);
-    expect(client.runQuery).nthCalledWith(
-      1,
-      expect.stringMatching(/BuildQuery/),
-      { number: 1 },
-      { headers: { Authorization: `Bearer report-token` } }
-    );
-    expect(client.runQuery).nthCalledWith(
-      2,
-      expect.stringMatching(/UpdateQuery/),
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/SnapshotBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
