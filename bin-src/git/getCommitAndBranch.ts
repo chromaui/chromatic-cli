@@ -159,7 +159,6 @@ export default async function getCommitAndBranch(
       commit,
       branch,
       slug,
-      isTravisPrBuild,
       fromCI,
       ciService,
     })}`
@@ -169,7 +168,6 @@ export default async function getCommitAndBranch(
     ...commit,
     branch,
     slug,
-    isTravisPrBuild,
     fromCI,
     ciService,
   };

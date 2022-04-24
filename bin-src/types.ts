@@ -131,7 +131,7 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
-  environment?: string;
+  environment?: Record<string, string>;
   reportPath?: string;
   stopApp?: () => void;
   closeTunnel?: () => void;

@@ -23,21 +23,19 @@ export const setEnvironment = async (ctx: Context) => {
   // We send up all environment variables provided by these complicated systems.
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
-  ctx.environment = JSON.stringify(
-    Object.entries(process.env).reduce((acc, [key, value]) => {
-      if (ctx.env.ENVIRONMENT_WHITELIST.find((regex) => key.match(regex))) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {})
-  );
+  ctx.environment = Object.entries(process.env).reduce((acc, [key, value]) => {
+    if (ctx.env.ENVIRONMENT_WHITELIST.find((regex) => key.match(regex))) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
 
   ctx.log.debug(`Got environment ${ctx.environment}`);
 };
 
 export const announceBuild = async (ctx: Context) => {
   const { patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
-  const { version, matchesBranch, changedFiles, ...commitInfo } = ctx.git; // omit some fields
+  const { version, matchesBranch, changedFiles, committedAt, ...commitInfo } = ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
   const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
 
@@ -50,6 +48,7 @@ export const announceBuild = async (ctx: Context) => {
         patchHeadRef,
         preserveMissingSpecs,
         ...commitInfo,
+        committedAt: new Date(committedAt),
         ciVariables: ctx.environment,
         packageVersion: ctx.pkg.version,
         rebuildForBuildId,
