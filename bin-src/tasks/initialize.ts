@@ -8,6 +8,7 @@ const AnnounceBuildMutation = `
     announceBuild(input: $input) {
       id
       number
+      # no need for legacy:false on AnnouncedBuild.status
       status
       autoAcceptChanges
       reportToken

@@ -1,3 +1,4 @@
+import { delay } from '../lib/utils';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import listingStories from '../ui/messages/info/listingStories';
@@ -16,28 +17,28 @@ import {
 } from '../ui/tasks/verify';
 import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { Context, Task } from '../types';
-import { waitForBuild } from '../lib/waitForBuild';
 
 const PublishBuildMutation = `
   mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
     publishBuild(id: $id, input: $input) {
+      # no need for legacy:false on PublishedBuild.status
       status
     }
   }
 `;
-
 interface PublishBuildMutationResult {
   publishBuild: Context['announcedBuild'];
 }
 
 export const publishBuild = async (ctx: Context) => {
   const { cachedUrl, isolatorUrl, onlyStoryFiles, turboSnap } = ctx;
+  const { id, reportToken } = ctx.announcedBuild;
   const { only } = ctx.options;
 
   const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
     PublishBuildMutation,
     {
-      id: ctx.announcedBuild.id,
+      id,
       input: {
         cachedUrl,
         isolatorUrl,
@@ -49,7 +50,7 @@ export const publishBuild = async (ctx: Context) => {
           turboSnap.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
       },
     },
-    { retries: 3 }
+    { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }
   );
 
   ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
@@ -61,8 +62,85 @@ export const publishBuild = async (ctx: Context) => {
   }
 };
 
+const StartedBuildQuery = `
+  query StartedBuildQuery($number: Int!) {
+    app {
+      build(number: $number) {
+        startedAt
+      }
+    }
+  }
+`;
+interface StartedBuildQueryResult {
+  app: {
+    build: {
+      startedAt: number;
+    };
+  };
+}
+
+const VerifyBuildQuery = `
+  query VerifyBuildQuery($number: Int!) {
+    app {
+      build(number: $number) {
+        id
+        number
+        status(legacy: false)
+        specCount
+        componentCount
+        testCount
+        changeCount
+        errorCount: testCount(statuses: [BROKEN])
+        actualTestCount: testCount(statuses: [IN_PROGRESS])
+        actualCaptureCount
+        inheritedCaptureCount
+        webUrl
+        cachedUrl
+        browsers {
+          browser
+        }
+        features {
+          uiTests
+          uiReview
+        }
+        autoAcceptChanges
+        wasLimited
+        app {
+          account {
+            exceededThreshold
+            paymentRequired
+            billingUrl
+          }
+          repository {
+            provider
+          }
+          setupUrl
+        }
+        tests {
+          spec {
+            name
+            component {
+              name
+              displayName
+            }
+          }
+          parameters {
+            viewport
+            viewportIsDefault
+          }
+        }
+      }
+    }
+  }
+`;
+interface VerifyBuildQueryResult {
+  app: {
+    build: Context['build'];
+  };
+}
+
 export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { onlyStoryFiles } = ctx;
+  const { client, onlyStoryFiles } = ctx;
   const { list, only } = ctx.options;
   const { matchesBranch } = ctx.git;
 
@@ -74,7 +152,28 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     transitionTo(runOnlyFiles)(ctx, task);
   }
 
-  ctx.build = await waitForBuild(ctx, 'Verify', ({ status }) => status === 'IN_PROGRESS');
+  const waitForBuildToStart = async () => {
+    const { number, reportToken } = ctx.announcedBuild;
+    const variables = { number };
+    const options = { headers: { Authorization: `Bearer ${reportToken}` } };
+
+    const {
+      app: { build },
+    } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
+    if (!build.startedAt) {
+      await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
+      await waitForBuildToStart();
+      return;
+    }
+
+    const {
+      app: { build: startedBuild },
+    } = await client.runQuery<VerifyBuildQueryResult>(VerifyBuildQuery, variables, options);
+    ctx.build = { ...ctx.announcedBuild, ...ctx.build, ...startedBuild };
+  };
+
+  await waitForBuildToStart();
+
   ctx.isPublishOnly = !ctx.build.features.uiReview && !ctx.build.features.uiTests;
 
   if (list) {

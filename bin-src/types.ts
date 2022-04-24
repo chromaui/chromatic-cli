@@ -208,6 +208,7 @@ export interface Context {
     inProgressCount?: number;
     autoAcceptChanges: boolean;
     wasLimited?: boolean;
+    startedAt?: number;
     app: {
       setupUrl: string;
       account?: {

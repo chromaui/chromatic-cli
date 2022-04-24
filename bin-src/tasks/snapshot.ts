@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { waitForBuild } from '../lib/waitForBuild';
+import { delay } from '../lib/utils';
 import { Context, Task } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
@@ -19,37 +19,74 @@ import {
   pending,
 } from '../ui/tasks/snapshot';
 
-export const takeSnapshots = async (ctx: Context, task: Task) => {
-  const { log, options, uploadedBytes } = ctx;
-  const { app, tests, testCount, actualTestCount } = ctx.build;
+const SnapshotBuildQuery = `
+  query SnapshotBuildQuery($number: Int!) {
+    app {
+      build(number: $number) {
+        id
+        status(legacy: false)
+        autoAcceptChanges
+        inProgressCount: testCount(statuses: [IN_PROGRESS])
+        testCount
+        changeCount
+        errorCount: testCount(statuses: [BROKEN])
+      }
+    }
+  }
+`;
+interface BuildQueryResult {
+  app: {
+    build: {
+      id: string;
+      status: string;
+      autoAcceptChanges: boolean;
+      inProgressCount: number;
+      testCount: number;
+      changeCount: number;
+      errorCount: number;
+    };
+  };
+}
 
-  if (app.repository && uploadedBytes && !options.junitReport) {
+export const takeSnapshots = async (ctx: Context, task: Task) => {
+  const { client, log, uploadedBytes } = ctx;
+  const { app, number, tests, testCount, actualTestCount, reportToken } = ctx.build;
+
+  if (app.repository && uploadedBytes && !ctx.options.junitReport) {
     log.info(speedUpCI(app.repository.provider));
   }
 
   const testLabels =
-    options.interactive &&
+    ctx.options.interactive &&
     testCount === actualTestCount &&
     tests.map(({ spec, parameters }) => {
       const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
       return `${spec.component.displayName} › ${spec.name}${suffix}`;
     });
 
-  await waitForBuild(ctx, 'Snapshot', (build: Context['build']) => {
-    ctx.build = build;
-    if (build.status !== 'IN_PROGRESS') {
-      return true;
+  const waitForBuild = async (): Promise<Context['build']> => {
+    const options = { headers: { Authorization: `Bearer ${reportToken}` } };
+    const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
+    ctx.build = { ...ctx.build, ...data.app.build };
+
+    if (ctx.build.status !== 'IN_PROGRESS') {
+      return ctx.build;
     }
-    if (options.interactive) {
+
+    if (ctx.options.interactive) {
       const { inProgressCount } = ctx.build;
       const cursor = actualTestCount - inProgressCount + 1;
       const label = testLabels && testLabels[cursor - 1];
       task.output = pending(ctx, { cursor, label }).output;
     }
-    return false;
-  });
 
-  switch (ctx.build.status) {
+    await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
+    return waitForBuild();
+  };
+
+  const build = await waitForBuild();
+
+  switch (build.status) {
     case 'PASSED':
       setExitCode(ctx, exitCodes.OK);
       ctx.log.info(buildPassedMessage(ctx));
@@ -60,7 +97,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     case 'ACCEPTED':
     case 'PENDING':
     case 'DENIED': {
-      if (ctx.build.autoAcceptChanges || ctx.git.matchesBranch(options.exitZeroOnChanges)) {
+      if (build.autoAcceptChanges || ctx.git.matchesBranch(ctx.options.exitZeroOnChanges)) {
         setExitCode(ctx, exitCodes.OK);
         ctx.log.info(buildPassedMessage(ctx));
       } else {
@@ -88,7 +125,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       break;
 
     default:
-      throw new Error(`Unexpected build status: ${ctx.build.status}`);
+      throw new Error(`Unexpected build status: ${build.status}`);
   }
 };
 
