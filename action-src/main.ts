@@ -151,8 +151,10 @@ async function run() {
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
-    process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
     process.env.CHROMATIC_SLUG = slug;
+    if (mergeCommit) {
+      process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
+    }
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 

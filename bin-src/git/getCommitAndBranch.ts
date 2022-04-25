@@ -66,7 +66,9 @@ export default async function getCommitAndBranch(
       log.debug(err);
       return { commit: CHROMATIC_SHA, committedAt: Date.now() };
     });
-    commit.mergeCommit = CHROMATIC_PULL_REQUEST_SHA;
+    if (CHROMATIC_PULL_REQUEST_SHA) {
+      commit.mergeCommit = CHROMATIC_PULL_REQUEST_SHA;
+    }
     branch = CHROMATIC_BRANCH;
     slug = CHROMATIC_SLUG;
   } else if (isTravisPrBuild) {
@@ -85,7 +87,9 @@ export default async function getCommitAndBranch(
       log.debug(err);
       return { commit: TRAVIS_PULL_REQUEST_SHA, committedAt: Date.now() };
     });
-    commit.mergeCommit = TRAVIS_COMMIT;
+    if (TRAVIS_COMMIT) {
+      commit.mergeCommit = TRAVIS_COMMIT;
+    }
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     slug = TRAVIS_PULL_REQUEST_SLUG;
   } else if (isGitHubPrBuild) {
