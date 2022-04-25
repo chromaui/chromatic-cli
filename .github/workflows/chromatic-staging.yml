@@ -19,7 +19,9 @@ jobs:
         env:
           CHROMATIC_PROJECT_TOKEN: 253df72b53d2
           CHROMATIC_INDEX_URL: https://index.staging-chromatic.com
+          LOG_LEVEL: debug
       - uses: actions/upload-artifact@v2
+        if: always()
         with:
           path: |
             chromatic-diagnostics.json
