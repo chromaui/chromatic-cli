@@ -44,10 +44,9 @@ export const publishBuild = async (ctx: Context) => {
         isolatorUrl,
         ...(only && { onlyStoryNames: [].concat(only) }),
         ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
-        // GraphQL does not support union input types (yet), so we stringify the bailReason
+        // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnap &&
-          turboSnap.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
+        ...(turboSnap && turboSnap.bailReason && { turboSnapBailReason: turboSnap.bailReason }),
       },
     },
     { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }

@@ -56,10 +56,9 @@ export const announceBuild = async (ctx: Context) => {
         storybookAddons: ctx.storybook.addons,
         storybookVersion: ctx.storybook.version,
         storybookViewLayer: ctx.storybook.viewLayer,
-        // GraphQL does not support union input types (yet), so we stringify the bailReason
+        // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnap &&
-          turboSnap.bailReason && { turboSnapBailReason: JSON.stringify(turboSnap.bailReason) }),
+        ...(turboSnap && turboSnap.bailReason && { turboSnapBailReason: turboSnap.bailReason }),
       },
     },
     { retries: 3 }
