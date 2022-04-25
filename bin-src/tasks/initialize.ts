@@ -31,7 +31,7 @@ export const setEnvironment = async (ctx: Context) => {
     return acc;
   }, {});
 
-  ctx.log.debug(`Got environment ${ctx.environment}`);
+  ctx.log.debug(`Got environment:\n${JSON.stringify(ctx.environment, null, 2)}`);
 };
 
 export const announceBuild = async (ctx: Context) => {
