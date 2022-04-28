@@ -1,6 +1,6 @@
 import { publishBuild, verifyBuild } from './verify';
 
-const env = {};
+const env = { STORYBOOK_VERIFY_TIMEOUT: 1000 };
 const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 const http = { fetch: jest.fn() };
 
