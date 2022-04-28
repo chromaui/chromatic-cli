@@ -17,6 +17,7 @@ import {
 } from '../ui/tasks/verify';
 import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { Context, Task } from '../types';
+import brokenStorybook from '../ui/messages/errors/brokenStorybook';
 
 const PublishBuildMutation = `
   mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
@@ -66,6 +67,7 @@ const StartedBuildQuery = `
     app {
       build(number: $number) {
         startedAt
+        failureReason
       }
     }
   }
@@ -74,6 +76,7 @@ interface StartedBuildQueryResult {
   app: {
     build: {
       startedAt: number;
+      failureReason: string;
     };
   };
 }
@@ -139,7 +142,7 @@ interface VerifyBuildQueryResult {
 }
 
 export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { client, onlyStoryFiles } = ctx;
+  const { client, isolatorUrl, onlyStoryFiles } = ctx;
   const { list, only } = ctx.options;
   const { matchesBranch } = ctx.git;
 
@@ -159,6 +162,11 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     const {
       app: { build },
     } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
+    if (build.failureReason) {
+      ctx.log.warn(brokenStorybook({ ...build, isolatorUrl }));
+      setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
+      throw new Error(publishFailed().output);
+    }
     if (!build.startedAt) {
       await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
       await waitForBuildToStart();
@@ -171,7 +179,16 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     ctx.build = { ...ctx.announcedBuild, ...ctx.build, ...startedBuild };
   };
 
-  await waitForBuildToStart();
+  await Promise.race([
+    waitForBuildToStart(),
+    new Promise((_, reject) =>
+      setTimeout(
+        reject,
+        ctx.env.STORYBOOK_VERIFY_TIMEOUT,
+        new Error('Build verification timed out')
+      )
+    ),
+  ]);
 
   ctx.isPublishOnly = !ctx.build.features.uiReview && !ctx.build.features.uiTests;
 
