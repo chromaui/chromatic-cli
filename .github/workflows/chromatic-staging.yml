@@ -23,6 +23,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: always()
         with:
+          name: chromatic-build-artifacts-${{ github.run_id }}
           path: |
             chromatic-diagnostics.json
             **/build-storybook.log
