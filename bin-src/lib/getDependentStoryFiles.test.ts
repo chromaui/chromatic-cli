@@ -470,6 +470,90 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({});
   });
+
+  it('does not bail on untraced global files', async () => {
+    const changedFiles = [
+      'src/utils.js',
+      'src/package.json',
+      'src/package-lock.json',
+      'src/yarn.lock',
+    ];
+    const modules = [
+      {
+        id: './src/utils.js',
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: './src/foo.js',
+        name: './src/foo.js', // untraced
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 997,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      staticDir: ['path/to/statics'],
+      untraced: ['**/package.json', '**/package-lock.json', '**/yarn.lock'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it('does not bail on changed dependency of untraced config file and untraced dependency', async () => {
+    const changedFiles = ['src/utils.js', 'src/docs-decorator.jsx'];
+    const modules = [
+      {
+        id: './path/to/storybook-config/preview.js',
+        name: './path/to/storybook-config/preview.js',
+        modules: [
+          { name: './path/to/storybook-config/preview.js' },
+          { name: './src/docs-decorator.jsx' },
+        ],
+        reasons: [],
+      },
+      {
+        id: './src/utils.js',
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: './src/foo.js',
+        name: './src/foo.js', // untraced
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      configDir: 'path/to/storybook-config',
+      untraced: ['**/docs-decorator.jsx', '**/path/to/storybook-config/preview.js'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
 });
 
 describe('normalizePath', () => {
