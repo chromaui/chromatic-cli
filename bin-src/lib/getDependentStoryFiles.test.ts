@@ -515,10 +515,10 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/utils.js', 'src/docs-decorator.jsx'];
     const modules = [
       {
-        id: './path/to/storybook-config/preview.js',
-        name: './path/to/storybook-config/preview.js',
+        id: './path/to/storybook-config/preview.js-generated-config-entry.js',
+        name: './path/to/storybook-config/preview.js-generated-config-entry.js + 1 modules',
         modules: [
-          { name: './path/to/storybook-config/preview.js' },
+          { name: './path/to/storybook-config/preview.js-generated-config-entry.js' },
           { name: './src/docs-decorator.jsx' },
         ],
         reasons: [],
@@ -546,7 +546,10 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({
       configDir: 'path/to/storybook-config',
-      untraced: ['**/docs-decorator.jsx', '**/path/to/storybook-config/preview.js'],
+      untraced: [
+        '**/docs-decorator.jsx',
+        '**/path/to/storybook-config/preview.js-generated-config-entry.js',
+      ],
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
