@@ -501,8 +501,41 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({
-      staticDir: ['path/to/statics'],
       untraced: ['**/package.json', '**/package-lock.json', '**/yarn.lock'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it('does not bail on untraced Storybook config files', async () => {
+    const changedFiles = ['src/utils.js', '.storybook/preview.js'];
+    const modules = [
+      {
+        id: './src/utils.js',
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: './src/foo.js',
+        name: './src/foo.js', // untraced
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 997,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      untraced: ['**/preview.js'],
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
@@ -617,7 +650,7 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('does not bail on changed dynamic import of untraced config file', async () => {
+  it('does not bail on changed dependency in dynamic import of untraced config file', async () => {
     const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
     const modules = [
       {
@@ -632,11 +665,11 @@ describe('getDependentStoryFiles', () => {
       {
         id: './src/docs-wrapper.jsx',
         name: './src/docs-wrapper.jsx',
-        reasons: [{ moduleName: './src/packages/design-system/component/src/component.jsx' }],
+        reasons: [{ moduleName: './src/packages/website/containers/ weak ^\\.\\/.*\\/index$' }],
       },
       {
-        id: './src/packages/design-system/component/src/component.jsx',
-        name: './src/packages/design-system/component/src/component.jsx',
+        id: './packages/website/containers/ weak ^\\.\\/.*\\/index$',
+        name: './packages/website/containers/ weak ^\\.\\/.*\\/index$',
         reasons: [{ moduleName: './src/packages/design-system/components/button.jsx' }],
       },
       {
