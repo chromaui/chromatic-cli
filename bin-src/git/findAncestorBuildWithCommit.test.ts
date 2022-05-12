@@ -60,4 +60,11 @@ describe('findAncestorBuildWithCommit', () => {
     expect(client.runQuery.mock.calls[0][1]).toMatchObject({ buildNumber: 1, skip: 0, limit: 2 });
     expect(client.runQuery.mock.calls[1][1]).toMatchObject({ buildNumber: 1, skip: 2, limit: 1 });
   });
+
+  it('stops querying when the results run out', async () => {
+    client.runQuery.mockReturnValueOnce(makeResult([makeBuild()]));
+
+    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 2, limit: 3 })).toBeNull();
+    expect(client.runQuery).toHaveBeenCalledTimes(1);
+  });
 });
