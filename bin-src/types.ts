@@ -158,6 +158,7 @@ export interface Context {
     slug?: string;
     parentCommits?: string[];
     changedFiles?: string[];
+    replacementCommits?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
   };
   storybook: {
