@@ -45,6 +45,7 @@ export interface AncestorBuildsQueryResult {
  *
  * The purpose here is to allow us to substitute a build with a known commit when doing TurboSnap.
  *
+ * @param {Context} context
  * @param {int} number The build number to start searching from
  * @param {object} options Page size and limit options
  * @param {int} options.page How many builds to fetch each time
