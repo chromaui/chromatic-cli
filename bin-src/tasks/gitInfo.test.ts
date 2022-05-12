@@ -1,16 +1,25 @@
 import * as getCommitInfo from '../git/getCommitAndBranch';
 import * as git from '../git/git';
+import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
+import { getBaselineBuilds as getBaselineBuildsUnmocked } from '../git/getBaselineBuilds';
 import { setGitInfo } from './gitInfo';
 
 jest.mock('../git/getCommitAndBranch');
 jest.mock('../git/git');
+jest.mock('../git/getParentCommits');
+jest.mock('../git/getBaselineBuilds');
 
 const getCommitAndBranch = <jest.MockedFunction<typeof getCommitInfo.default>>getCommitInfo.default;
-const getBaselineBuilds = <jest.MockedFunction<typeof git.getBaselineBuilds>>git.getBaselineBuilds;
 const getChangedFiles = <jest.MockedFunction<typeof git.getChangedFiles>>git.getChangedFiles;
-const getParentCommits = <jest.MockedFunction<typeof git.getParentCommits>>git.getParentCommits;
 const getSlug = <jest.MockedFunction<typeof git.getSlug>>git.getSlug;
 const getVersion = <jest.MockedFunction<typeof git.getVersion>>git.getVersion;
+
+const getBaselineBuilds = <jest.MockedFunction<typeof getBaselineBuildsUnmocked>>(
+  getBaselineBuildsUnmocked
+);
+const getParentCommits = <jest.MockedFunction<typeof getParentCommitsUnmocked>>(
+  getParentCommitsUnmocked
+);
 
 const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 
