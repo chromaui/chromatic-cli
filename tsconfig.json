@@ -6,6 +6,9 @@
     "moduleResolution": "node",
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": [
+      "jest"
+    ]
   }
 }
