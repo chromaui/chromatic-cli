@@ -39,13 +39,20 @@ To facilitate upgrading in the future, removing and adding features, this is the
 
 1. Ensure all dependencies are installed with `yarn install`
 2. Build + watch the code locally: `yarn dev`
-3. Run a build of a small test Storybook against a Chromatic project: `yarn chromatic -t <token>`.
+3. Run a build of all the CLI's stories against a Chromatic project: `yarn chromatic -t <token>`.
 
 To test against a local development version of the Chromatic stack, use
 
 ```
 CHROMATIC_INDEX_URL=https://www.dev-chromatic.com/graphql yarn chromatic -t <token>
 ```
+
+To only test a small number of test stories as a smoke test, use:
+
+```
+SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://www.dev-chromatic.com/graphql yarn chromatic -t <token>
+```
+
 
 ### Publishing a new version to npm
 
