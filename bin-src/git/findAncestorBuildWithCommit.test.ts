@@ -11,10 +11,7 @@ type Build = AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0];
 const makeBuild = (build: Partial<Build> = {}): Build => ({
   id: 'id',
   number: 1,
-  status: 'PASSED',
   commit: 'missing',
-  committedAt: Date.now(),
-  changeCount: 100,
   ...build,
 });
 const makeResult = (ancestorBuilds: Build[]): AncestorBuildsQueryResult => ({

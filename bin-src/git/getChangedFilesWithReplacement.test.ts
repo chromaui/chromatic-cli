@@ -5,9 +5,7 @@ import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement
 jest.mock('./git', () => ({
   getChangedFiles: (hash) => {
     if (hash.match(/exists/)) return ['changed', 'files'];
-    throw new Error(
-      `fatal: ambiguous argument '${hash}': unknown revision or path not in the working tree.`
-    );
+    throw new Error(`fatal: bad object ${hash}`);
   },
   commitExists: (hash) => hash.match(/exists/),
 }));
@@ -49,8 +47,6 @@ describe('getChangedFilesWithReplacements', () => {
 
     await expect(
       getChangedFilesWithReplacement(context, { id: 'id', number: 3, commit: 'missing' })
-    ).rejects.toThrow(
-      /fatal: ambiguous argument 'missing': unknown revision or path not in the working tree/
-    );
+    ).rejects.toThrow(/fatal: bad object missing/);
   });
 });

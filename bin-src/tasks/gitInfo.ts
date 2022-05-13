@@ -152,9 +152,9 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         }))
       );
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
-      ctx.git.replacementCommits = results
+      ctx.git.replacementBuildIds = results
         .filter((r) => !!r.replacementBuild)
-        .map(({ build, replacementBuild }) => [build.commit, replacementBuild.commit]);
+        .map(({ build, replacementBuild }) => [build.id, replacementBuild.id]);
       if (!interactive) {
         ctx.log.info(
           `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles

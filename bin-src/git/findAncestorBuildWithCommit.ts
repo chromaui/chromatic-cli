@@ -10,10 +10,7 @@ const AncestorBuildsQuery = gql`
         ancestorBuilds(skip: $skip, limit: $limit) {
           id
           number
-          status
           commit
-          committedAt
-          changeCount
         }
       }
     }
@@ -26,10 +23,7 @@ export interface AncestorBuildsQueryResult {
       ancestorBuilds: {
         id: string;
         number: number;
-        status: string;
         commit: string;
-        committedAt: number;
-        changeCount: number;
       }[];
     };
   };

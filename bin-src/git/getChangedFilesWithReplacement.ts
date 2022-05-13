@@ -24,13 +24,21 @@ export async function getChangedFilesWithReplacement(
     const changedFiles = await getChangedFiles(build.commit);
     return { changedFiles };
   } catch (err) {
-    if (err.message.match(/unknown revision/)) {
+    context.log.debug(
+      `Got error fetching commit for #${build.number}(${build.commit}): ${err.message}`
+    );
+
+    if (err.message.match(/bad object/)) {
       const replacementBuild = await findAncestorBuildWithCommit(context, build.number);
 
       if (replacementBuild) {
+        context.log.debug(
+          `Found replacement build for #${build.number}(${build.commit}): #${replacementBuild.number}(${replacementBuild.commit})`
+        );
         const changedFiles = await getChangedFiles(replacementBuild.commit);
         return { changedFiles, replacementBuild };
       }
+      context.log.debug(`Couldn't find replacement for #${build.number}(${build.commit})`);
     }
 
     // If we can't find a replacement or the error doesn't match, just throw

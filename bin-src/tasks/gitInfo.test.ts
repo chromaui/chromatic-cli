@@ -75,15 +75,15 @@ describe('setGitInfo', () => {
     const ctx = { log, options: { onlyChanged: true } } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
-    expect(ctx.git.replacementCommits).toEqual([]);
+    expect(ctx.git.replacementBuildIds).toEqual([]);
   });
 
-  it('sets replacementCommits when found', async () => {
-    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
+  it('sets replacementBuildIds when found', async () => {
+    getBaselineBuilds.mockResolvedValue([{ id: 'rebased', commit: '012qwes' } as any]);
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
       replacementBuild: {
-        id: 'old',
+        id: 'parent',
         number: 1,
         commit: '987bca',
       },
@@ -91,7 +91,7 @@ describe('setGitInfo', () => {
     const ctx = { log, options: { onlyChanged: true } } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
-    expect(ctx.git.replacementCommits).toEqual([['012qwes', '987bca']]);
+    expect(ctx.git.replacementBuildIds).toEqual([['rebased', 'parent']]);
   });
 
   it('drops changedFiles when matching --externals', async () => {

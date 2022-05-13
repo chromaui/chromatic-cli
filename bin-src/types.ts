@@ -158,7 +158,7 @@ export interface Context {
     slug?: string;
     parentCommits?: string[];
     changedFiles?: string[];
-    replacementCommits?: [string, string][];
+    replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
   };
   storybook: {
