@@ -41,6 +41,14 @@ To facilitate upgrading in the future, removing and adding features, this is the
 2. Build + watch the code locally: `yarn dev`
 3. Run a build of all the CLI's stories against a Chromatic project: `yarn chromatic -t <token>`.
 
+#### Running against staging
+
+```bash
+CHROMATIC_INDEX_URL=https://www.staging-chromatic.com/graphql yarn chromatic -t 253df72b53d2
+```
+
+#### Running against development
+
 To test against a local development version of the Chromatic stack, use
 
 ```
