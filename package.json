@@ -160,6 +160,10 @@
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "docs": "https://www.chromatic.com/docs/cli",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
