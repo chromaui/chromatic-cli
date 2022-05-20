@@ -18,6 +18,9 @@ const bumpVersion = async ({ bump, tag, currentTag, dryRun }) => {
   } else if (tag === currentTag) {
     console.log(`✅ Incrementing ${tag} prerelease version`);
     await command(`npm version prerelease --preid=${tag}`);
+  } else if (tag === 'next' && currentTag === 'canary') {
+    console.log(`✅ Promoting canary prerelease version to next`);
+    await command(`npm version prerelease --preid=${tag}`);
   } else {
     console.log(`✅ Creating ${bump} ${tag} prerelease version`);
     await command(`npm version pre${bump} --preid=${tag}`);
