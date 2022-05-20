@@ -21,6 +21,7 @@ import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
+import replacedBuild from '../ui/messages/info/replacedBuild';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -154,7 +155,11 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
       ctx.git.replacementBuildIds = results
         .filter((r) => !!r.replacementBuild)
-        .map(({ build, replacementBuild }) => [build.id, replacementBuild.id]);
+        .map(({ build, replacementBuild }) => {
+          ctx.log.info('');
+          ctx.log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
+          return [build.id, replacementBuild.id];
+        });
       if (!interactive) {
         ctx.log.info(
           `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles

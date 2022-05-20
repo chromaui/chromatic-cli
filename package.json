@@ -88,7 +88,7 @@
     "@chromaui/localtunnel": "^2.0.3",
     "@storybook/eslint-config-storybook": "^3.1.2",
     "@storybook/linter-config": "^3.1.2",
-    "@storybook/react": "^6.4.14",
+    "@storybook/react": "^6.5.3",
     "@types/archiver": "^5.3.1",
     "@types/async-retry": "^1.4.3",
     "@types/cross-spawn": "^6.0.2",
