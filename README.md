@@ -39,52 +39,37 @@ To facilitate upgrading in the future, removing and adding features, this is the
 
 Before publishing, make sure you've done the following:
 
-- `yarn build`
 - Updated CHANGELOG.md
-- Committed and pushed everything
+- Committed and pushed everything (clean working directory)
 - Decide on the proper semver bump (major/minor/patch)
+- Decide on the proper tag (canary/next/latest)
 
-#### Doing a `canary` or `next` release
+We have three types of releases:
 
-We have two types of pre-releases: `canary` and `next`. `canary` releases are intended for development purposes and should not be used in production, as they may only work against a staging or dev environment. `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
+- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment.
+- `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
+- `latest` releases are the general audience production releases, used by most people.
 
-> As a consumer, **you should not specify a tag** (e.g. `chromatic@next`) in your package dependencies, but rather a specific version number (e.g. `chromatic@5.6.2-next.0`). Otherwise you'll end up with a broken build when we remove or update the tag.
+> For GitHub Actions, we publish `chromaui/action-canary` and `chromaui/action-next`, which contain the latest `canary` or `next` release, respectively. A `latest` release will also automatically update `chromaui/action-next` (besides `chromaui/action`), in order to keep users who happen to depend on `chromaui/action-next` up to date with the `latest` release.
 
-For the first `canary` (or `next`) release, bump the version like so (depending on the semver bump):
-
-```sh
-npm version <premajor|preminor|prepatch> --preid canary
-```
-
-For consecutive `canary` releases on the same version:
+A script is provided to create new releases:
 
 ```sh
-npm version prerelease --preid=canary
+yarn release <major|minor|patch> <canary|next|latest> [--dry-run]
 ```
 
-Then push and publish:
+This script ensures the version is bumped properly, the tag is set correctly and the corresponding GitHub Action is updated.
+
+#### Examples:
 
 ```sh
-git push --follow-tags
-npm publish --tag canary
+yarn release patch canary
 ```
 
-Make sure to replace `canary` with `next` if appropriate.
-
-#### Doing a `latest` release
-
-A final release is automatically tagged `latest` by npm.
+Releases e.g. `6.6.1-canary.0`.
 
 ```sh
-npm version <major|minor|patch>
-git push --follow-tags
-npm publish
+yarn release major latest
 ```
 
-And finally, remove the `canary` and/or `next` tag, if any:
-
-```
-npm dist-tag rm chromatic canary
-```
-
-This ensures we can safely do a new `canary` or `next` release later, without anyone getting an unexpected update.
+Releases e.g. `7.0.0`.
