@@ -1,6 +1,10 @@
+# 6.6.0 - TBD
+
+- [566](https://github.com/chromaui/chromatic-cli/pull/566) Handle commits that are missing from the repository (i.e. rebased) when doing TurboSnap
+
 # 6.5.4 - 2022-04-7
 
-- [554](https://github.com/chromaui/chromatic-cli/pull/554) downcase the slug so we don't accidentally treat origin as fork
+- [554](https://github.com/chromaui/chromatic-cli/pull/554) Downcase the slug so we don't accidentally treat origin as fork
 
 # 6.5.3 - 2022-03-14
 
