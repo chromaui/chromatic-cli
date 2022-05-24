@@ -43,5 +43,3 @@ export const decorators = [
     return storyFn();
   },
 ];
-
-export const render = (args, { component }) => console.log(args, component) || component(args);
