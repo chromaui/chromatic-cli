@@ -94,7 +94,7 @@ async function nextCommits(
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
   log.debug(`running ${command}`);
-  const commits = (await execGitCommand(command)).split('\n').filter((c) => !!c);
+  const commits = (await execGitCommand(command)).split('\n').filter(Boolean);
   log.debug(`command output: ${commits}`);
 
   return (
@@ -119,7 +119,7 @@ async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
   log.debug(`running ${command}`);
-  const maxCommits = (await execGitCommand(command)).split('\n').filter((c) => !!c);
+  const maxCommits = (await execGitCommand(command)).split('\n').filter(Boolean);
   log.debug(`command output: ${maxCommits}`);
 
   return maxCommits;
@@ -165,7 +165,7 @@ async function step(
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
   const newCommitsWithoutBuilds = candidateCommits.filter(
-    (commit) => !newCommitsWithBuilds.find((c) => c === commit)
+    (commit) => !newCommitsWithBuilds.includes(commit)
   );
 
   return step({ client, log }, limit * 2, {
@@ -257,5 +257,6 @@ export async function getParentCommits(
   log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
 
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
-  return [...extraParentCommits, ...(await maximallyDescendentCommits({ log }, commitsWithBuilds))];
+  const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
+  return extraParentCommits.concat(descendentCommits);
 }
