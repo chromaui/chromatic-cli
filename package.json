@@ -74,6 +74,9 @@
   "resolutions": {
     "any-observable": "^0.5.1"
   },
+  "dependencies": {
+    "@types/webpack-env": "^1.17.0"
+  },
   "devDependencies": {
     "@actions/core": "^1.5.0",
     "@actions/github": "^5.0.0",
@@ -154,7 +157,7 @@
     "typescript": "^4.3.5",
     "util-deprecate": "^1.0.2",
     "uuid": "^8.3.2",
-    "webpack": "^5.51.1",
+    "webpack": "^5.72.1",
     "webpack-cli": "^4.8.0",
     "why-is-node-running": "^2.1.2",
     "yarn-or-npm": "^3.0.1",
