@@ -133,7 +133,7 @@ export const setEnvironment = async (ctx: Context) => {
 
 export const createBuild = async (ctx: Context, task: Task) => {
   const { list, only, patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
-  const { version, matchesBranch, changedFiles, ...commitInfo } = ctx.git; // omit some fields
+  const { version, matchesBranch, changedFiles, replacementBuildIds, ...commitInfo } = ctx.git; // omit some fields
   const { isolatorUrl, rebuildForBuildId, onlyStoryFiles, turboSnap } = ctx;
   const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
 
@@ -153,6 +153,7 @@ export const createBuild = async (ctx: Context, task: Task) => {
         rebuildForBuildId,
         ...(only && { only }),
         ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        ...(replacementBuildIds && { replacementBuildIds }),
         ...(turboSnap && { turboSnapEnabled: !turboSnap.bailReason }),
         // GraphQL does not support union input types (yet), so we stringify the bailReason
         // @see https://github.com/graphql/graphql-spec/issues/488
