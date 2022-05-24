@@ -205,9 +205,12 @@ jest.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
   getCommit: jest.fn(),
   getBranch: () => Promise.resolve('branch'),
-  getParentCommits: () => Promise.resolve(['baseline']),
   getSlug: () => Promise.resolve('user/repo'),
   getVersion: () => Promise.resolve('2.24.1'),
+}));
+
+jest.mock('./git/getParentCommits', () => ({
+  getParentCommits: () => Promise.resolve(['baseline']),
 }));
 
 const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;

@@ -159,6 +159,7 @@ export interface Context {
     mergeCommit?: string;
     parentCommits?: string[];
     changedFiles?: string[];
+    replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
   };
   storybook: {

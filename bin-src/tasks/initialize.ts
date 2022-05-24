@@ -36,7 +36,8 @@ export const setEnvironment = async (ctx: Context) => {
 
 export const announceBuild = async (ctx: Context) => {
   const { patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
-  const { version, matchesBranch, changedFiles, committedAt, ...commitInfo } = ctx.git; // omit some fields;
+  const { version, matchesBranch, changedFiles, replacementBuildIds, committedAt, ...commitInfo } =
+    ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
   const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
 

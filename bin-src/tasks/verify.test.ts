@@ -17,6 +17,7 @@ describe('publishBuild', () => {
       http,
       client,
       announcedBuild,
+      git: {},
       sourceDir: '/static/',
       buildLogFile: 'build-storybook.log',
       options: {},

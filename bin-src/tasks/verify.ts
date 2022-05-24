@@ -34,6 +34,7 @@ interface PublishBuildMutationResult {
 export const publishBuild = async (ctx: Context) => {
   const { cachedUrl, isolatorUrl, onlyStoryFiles, turboSnap } = ctx;
   const { id, reportToken } = ctx.announcedBuild;
+  const { replacementBuildIds } = ctx.git;
   const { only } = ctx.options;
 
   const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
@@ -45,6 +46,7 @@ export const publishBuild = async (ctx: Context) => {
         isolatorUrl,
         ...(only && { onlyStoryNames: [].concat(only) }),
         ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        ...(replacementBuildIds && { replacementBuildIds }),
         // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
         ...(turboSnap && turboSnap.bailReason && { turboSnapBailReason: turboSnap.bailReason }),
