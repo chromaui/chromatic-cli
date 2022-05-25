@@ -17,6 +17,38 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md#readme)
 
+## Using a `next` version
+
+From time to time we pre-publish a `next` version of the package to test new features. To use the
+next branch you can either:
+
+### Using `npx`
+
+Change your script to use the `next` dist-tag:
+
+```bash
+npx chromatic@next --project-token ...
+```
+
+### Using a dependency in `package.json`
+
+Update to the latest `next` version with:
+
+```bash
+yarn add --dev chromatic@next
+
+# or
+npm i --save-dev chromatic@next
+```
+
+### Using the github action
+
+Use our `chromatic-next` action:
+
+```yaml
+- uses: chromaui/action-next@v1
+```
+
 ## Contributing
 
 Contributions of any kind are welcome! We're available to chat via the Intercom widget on the documentation site.
