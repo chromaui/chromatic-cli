@@ -1,15 +1,19 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
-import { info, success } from '../../components/icons';
+import { info } from '../../components/icons';
 
-function formatBuild(build: { number: number; commit: string }) {
-  return `#${build.number}(${build.commit.substring(0, 6)})`;
+function commit(build) {
+  return build.commit.substring(0, 6);
 }
 
 export default ({ replacedBuild, replacementBuild }) =>
   dedent(chalk`
-    ${info} As the parent build ${formatBuild(replacedBuild)} did not exist in the git repository,
-    we've replaced it (for TurboSnap calculations) with the nearest ancestor
-    which does exist in the git history: ${formatBuild(replacementBuild)}.
+    ${info} {bold Missing commit detected:}
+    When detecting git changes for TurboSnap, we couldn't find the commit (${commit(
+      replacedBuild
+    )}) for the most recent build (#${replacedBuild.number}).
+    To avoid re-snapshotting stories we know haven't changed, we copied from the most recent build (#${
+      replacementBuild.number
+    }) that did have a commit (${commit(replacementBuild)}) instead.
   `);

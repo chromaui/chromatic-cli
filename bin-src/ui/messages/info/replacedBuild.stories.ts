@@ -7,7 +7,7 @@ export default {
 
 export const ReplacedBuild = {
   args: {
-    replacedBuild: { number: 4, commit: '123abcd' },
-    replacementBuild: { number: 2, commit: '7890pqrs' },
+    replacedBuild: { number: 4, commit: 'ae376da36bf2a5846e5543de97a8f0c7abce7dd9' },
+    replacementBuild: { number: 2, commit: 'f70da5a947035877c85eee5cb6588aaf4ef2c481' },
   },
 };
