@@ -27,7 +27,7 @@ next branch you can either:
 Change your script to use the `next` dist-tag:
 
 ```bash
-npx chromatic@next --token ...
+npx chromatic@next --project-token ...
 ```
 
 ### Using a dependency in `package.json`
@@ -35,10 +35,10 @@ npx chromatic@next --token ...
 Update to the latest `next` version with:
 
 ```bash
-yarn add --dev chromatic#next
+yarn add --dev chromatic@next
 
 # or
-npm i --dev chromatic-next
+npm i --save-dev chromatic@next
 ```
 
 ### Using the github action
