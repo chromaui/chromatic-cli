@@ -35,7 +35,8 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
-    const version = semver.valid(v); // ensures we get a specific version, not a range
+    const version = semver.valid(v) || semver.validRange(v); // ensures we get a specific version, not a range
+
     if (!p || !version) {
       throw new Error(
         'Invalid CHROMATIC_STORYBOOK_VERSION; expecting something like "@storybook/react@6.2.0".'

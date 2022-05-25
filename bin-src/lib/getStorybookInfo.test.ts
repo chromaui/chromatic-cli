@@ -7,7 +7,7 @@ const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
 const getContext = (ctx: any): Context => ({ ...context, ...ctx });
 
-const REACT = { '@storybook/react': '1.2.3' };
+const REACT = { '@storybook/react': '^1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
 
 afterEach(() => {
@@ -75,6 +75,24 @@ describe('getStorybookInfo', () => {
       });
       await expect(getStorybookInfo(ctx)).resolves.toEqual(
         expect.objectContaining({ viewLayer: 'react', version: '3.2.1' })
+      );
+    });
+
+    it('returns viewLayer and version from with env with caret in version', async () => {
+      const ctx = getContext({
+        env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@^3.2.1' },
+      });
+      await expect(getStorybookInfo(ctx)).resolves.toEqual(
+        expect.objectContaining({ viewLayer: 'react', version: '>=3.2.1 <4.0.0-0' })
+      );
+    });
+
+    it('returns viewLayer and version from with env with tilda in version', async () => {
+      const ctx = getContext({
+        env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@~3.2.1' },
+      });
+      await expect(getStorybookInfo(ctx)).resolves.toEqual(
+        expect.objectContaining({ viewLayer: 'react', version: '>=3.2.1 <3.3.0-0' })
       );
     });
 
