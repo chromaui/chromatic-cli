@@ -35,7 +35,7 @@
   ],
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
-    "build-storybook": "build-storybook -s static",
+    "build-storybook": "build-storybook",
     "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./bin/main.cjs",
@@ -49,7 +49,7 @@
     "release": "node scripts/release.js",
     "trace": "node -r esm bin-src/trace.js",
     "trim-stats": "node -r esm bin-src/trim-stats-file.js",
-    "storybook": "start-storybook -p 9009 -s static",
+    "storybook": "start-storybook -p 9009",
     "test": "jest",
     "prepare": "husky install",
     "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",

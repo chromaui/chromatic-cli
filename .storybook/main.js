@@ -6,6 +6,7 @@ module.exports = {
   core: {
     builder: 'webpack5',
   },
+  staticDirs: ['../static'],
   webpackFinal: async (config, { configType }) => {
     config.resolve = {
       ...config.resolve,
