@@ -3,6 +3,7 @@ import { BuildPassed } from '../messages/info/buildPassed.stories';
 import { Intro } from '../messages/info/intro.stories';
 import * as auth from '../tasks/auth.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
+import * as initialize from '../tasks/initialize.stories';
 import * as snapshot from '../tasks/snapshot.stories';
 import * as start from '../tasks/start.stories';
 import * as storybookInfo from '../tasks/storybookInfo.stories';
@@ -22,6 +23,7 @@ export const Initial = () => [
     auth.Initial,
     gitInfo.Initial,
     storybookInfo.Initial,
+    initialize.Initial,
     start.Initial,
     tunnel.Initial,
     verify.Initial,
@@ -35,6 +37,7 @@ export const Authenticating = () => [
     auth.Authenticating,
     gitInfo.Initial,
     storybookInfo.Initial,
+    initialize.Initial,
     start.Initial,
     tunnel.Initial,
     verify.Initial,
@@ -48,6 +51,7 @@ export const RetrievingGitInfo = () => [
     auth.Authenticated,
     gitInfo.Pending,
     storybookInfo.Initial,
+    initialize.Initial,
     start.Initial,
     tunnel.Initial,
     verify.Initial,
@@ -61,6 +65,21 @@ export const RetrievingStorybookInfo = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Pending,
+    initialize.Initial,
+    start.Initial,
+    tunnel.Initial,
+    verify.Initial,
+    snapshot.Initial
+  ),
+];
+
+export const Initializing = () => [
+  Intro(),
+  steps(
+    auth.Authenticated,
+    gitInfo.Success,
+    storybookInfo.Success,
+    initialize.Pending,
     start.Initial,
     tunnel.Initial,
     verify.Initial,
@@ -74,6 +93,7 @@ export const Starting = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     start.Starting,
     tunnel.Initial,
     verify.Initial,
@@ -87,6 +107,7 @@ export const OpeningTunnel = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     start.Started,
     tunnel.Pending,
     verify.Initial,
@@ -100,6 +121,7 @@ export const Verifying = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     start.Started,
     tunnel.Success,
     verify.Pending,
@@ -113,6 +135,7 @@ export const Snapshotting = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     start.Started,
     tunnel.Success,
     verify.Published,
@@ -126,6 +149,7 @@ export const Passed = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     start.Started,
     tunnel.Success,
     verify.Published,

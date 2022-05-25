@@ -1,6 +1,5 @@
-import { Context } from '../types';
-import { AncestorBuildsQueryResult } from './findAncestorBuildWithCommit';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
+import TestLogger from '../lib/testLogger';
 
 jest.mock('./git', () => ({
   getChangedFiles: (hash) => {
@@ -15,7 +14,7 @@ describe('getChangedFilesWithReplacements', () => {
   beforeEach(() => {
     client.runQuery.mockReset();
   });
-  const context = { client } as Context;
+  const context = { client, log: new TestLogger() } as any;
 
   it('passes changedFiles on through on the happy path', async () => {
     expect(
