@@ -9,7 +9,7 @@ function commit(build) {
 
 export default ({ replacedBuild, replacementBuild }) =>
   dedent(chalk`
-    ${info} {bold Missing commit detected:}
+    ${info} {bold Missing commit detected}
     When detecting git changes for TurboSnap, we couldn't find the commit (${commit(
       replacedBuild
     )}) for the most recent build (#${replacedBuild.number}).
