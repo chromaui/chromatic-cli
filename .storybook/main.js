@@ -8,6 +8,7 @@ module.exports = {
   },
   staticDirs: ['../static'],
   webpackFinal: async (config, { configType }) => {
+    // eslint-disable-next-line no-param-reassign
     config.resolve = {
       ...config.resolve,
       fallback: {
