@@ -104,24 +104,6 @@ describe('getStorybookInfo', () => {
       );
     });
 
-    it('returns viewLayer and version from with env with caret in version', async () => {
-      const ctx = getContext({
-        env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@^3.2.1' },
-      });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({ viewLayer: 'react', version: '>=3.2.1 <4.0.0-0' })
-      );
-    });
-
-    it('returns viewLayer and version from with env with tilda in version', async () => {
-      const ctx = getContext({
-        env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@~3.2.1' },
-      });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({ viewLayer: 'react', version: '>=3.2.1 <3.3.0-0' })
-      );
-    });
-
     it('supports unscoped package name', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: 'react@3.2.1' } });
       await expect(getStorybookInfo(ctx)).resolves.toEqual(
