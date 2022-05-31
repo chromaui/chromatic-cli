@@ -136,10 +136,7 @@ export default async function getStorybookInfo(
     const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
     return info.reduce((acc, obj) => Object.assign(acc, obj), {});
   } catch (e) {
-    const result = await getInstalledStorybookInfo();
-    if (result.viewLayer) {
-      return result;
-    }
+    ctx.log.debug(e);
     return { viewLayer: null, version: null, addons: [] };
   }
 }
