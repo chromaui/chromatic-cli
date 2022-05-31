@@ -2,6 +2,7 @@ import jsonfile from 'jsonfile';
 import Listr from 'listr';
 import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
+import readPkgUp from 'read-pkg-up';
 
 import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
@@ -34,13 +35,13 @@ export async function main(argv: string[]) {
   const env = getEnv();
   const log = createLogger(sessionId, env);
 
-  const packagePath = await pkgUp(); // the user's own package.json
-  if (!packagePath) {
+  const pkgInfo = readPkgUp.sync({ cwd: process.cwd() });
+  if (!pkgInfo) {
     log.error(noPackageJson());
     process.exit(253);
   }
 
-  const packageJson: { [key: string]: any } = await readFile(packagePath);
+  const { path: packagePath, packageJson } = pkgInfo;
   if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
     log.error(invalidPackageJson(packagePath));
     process.exit(252);
