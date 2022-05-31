@@ -8,7 +8,7 @@ import link from '../../components/link';
 const docsUrl =
   'https://www.chromatic.com/docs/test#why-do-i-see-build-x-is-based-on-a-commit-without-ancestor-build';
 
-export default ({ announcedBuild, turboSnap }: Pick<Context, 'announcedBuild' | 'turboSnap'>) =>
+export default ({ build, turboSnap }: Pick<Context, 'build' | 'turboSnap'>) =>
   turboSnap
     ? dedent(chalk`
       ${warning} {bold TurboSnap disabled due to missing ancestor build}
@@ -18,7 +18,7 @@ export default ({ announcedBuild, turboSnap }: Pick<Context, 'announcedBuild' | 
     `)
     : dedent(chalk`
       ${warning} {bold No ancestor build found}
-      Build ${announcedBuild.number} is based on a commit without ancestor builds, which is unusual.
+      Build ${build.number} is based on a commit without ancestor builds, which is unusual.
       This usually happens when rebasing, force-pushing, squash-merging or running against an ephemeral merge commit.
       ${info} Read more at ${link(docsUrl)}
     `);

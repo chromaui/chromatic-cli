@@ -131,7 +131,7 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
-  environment?: Record<string, string>;
+  environment?: string;
   reportPath?: string;
   stopApp?: () => void;
   closeTunnel?: () => void;
@@ -156,7 +156,6 @@ export interface Context {
     commit: string;
     committedAt: number;
     slug?: string;
-    mergeCommit?: string;
     parentCommits?: string[];
     changedFiles?: string[];
     replacementBuildIds?: [string, string][];
@@ -184,13 +183,6 @@ export interface Context {
   };
   isolatorUrl: string;
   cachedUrl: string;
-  announcedBuild: {
-    id: string;
-    number: number;
-    status: string;
-    autoAcceptChanges: boolean;
-    reportToken: string;
-  };
   build: {
     id: string;
     number: number;
@@ -208,27 +200,16 @@ export interface Context {
     errorCount: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
-    wasLimited?: boolean;
-    startedAt?: number;
     app: {
       setupUrl: string;
-      account?: {
-        exceededThreshold: boolean;
-        paymentRequired: boolean;
-        billingUrl: string;
-      };
       repository?: {
         provider: string;
       };
     };
-    features?: {
-      uiTests: boolean;
-      uiReview: boolean;
-    };
     tests?: {
       spec: {
         name: string;
-        component: { name: string; displayName: string };
+        component: { displayName: string };
       };
       parameters: {
         viewport: number;

@@ -8,7 +8,7 @@ const BaselineCommitsQuery = gql`
       baselineBuilds(branch: $branch, parentCommits: $parentCommits) {
         id
         number
-        status(legacy: false)
+        status
         commit
         committedAt
         changeCount

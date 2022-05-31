@@ -3,7 +3,7 @@ import noAncestorBuild from './noAncestorBuild';
 export default {
   title: 'CLI/Messages/Warnings',
   args: {
-    announcedBuild: { number: 123 },
+    build: { number: 123 },
   },
 };
 

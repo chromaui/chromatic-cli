@@ -28,7 +28,6 @@ import {
   success,
 } from '../ui/tasks/upload';
 import { Context, Task } from '../types';
-import { exitCodes, setExitCode } from '../lib/setExitCode';
 
 const GetUploadUrlsMutation = `
   mutation GetUploadUrlsMutation($paths: [String!]!) {
@@ -264,6 +263,8 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   } else {
     await uploadAsIndividualFiles(ctx, task);
   }
+
+  transitionTo(success, true)(ctx, task);
 };
 
 export default createTask({
@@ -274,11 +275,5 @@ export default createTask({
     if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },
-  steps: [
-    transitionTo(validating),
-    validateFiles,
-    traceChangedFiles,
-    uploadStorybook,
-    transitionTo(success, true),
-  ],
+  steps: [transitionTo(validating), validateFiles, traceChangedFiles, uploadStorybook],
 });

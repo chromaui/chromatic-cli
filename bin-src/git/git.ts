@@ -7,7 +7,7 @@ import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
-const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
+const newline = /(\r\n|\r|\n)/; // Git may return \n even on Windows, so we can't use EOL
 
 export async function execGitCommand(command: string) {
   try {
