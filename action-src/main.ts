@@ -32,7 +32,6 @@ const getBuildInfo = (event: typeof context) => {
         sha: head.sha,
         branch: head.ref,
         slug: head.repo.full_name,
-        mergeCommit: event.sha,
       };
     }
     case 'push': {
@@ -112,7 +111,7 @@ async function runChromatic(options): Promise<Output> {
 }
 
 async function run() {
-  const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
+  const { sha, branch, slug } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
 
   try {
@@ -152,9 +151,6 @@ async function run() {
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
     process.env.CHROMATIC_SLUG = slug;
-    if (mergeCommit) {
-      process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
-    }
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
