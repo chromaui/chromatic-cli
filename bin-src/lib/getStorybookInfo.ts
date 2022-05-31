@@ -2,11 +2,13 @@ import fs from 'fs-extra';
 import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
+
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
 import { supportedAddons } from './supportedAddons';
 import { timeout, raceFulfilled } from './promises';
 import { Context } from '../types';
+import { getInstalledStorybookInfo } from './getInstalledStorybookPackages';
 
 const resolvePackageJson = (pkg: string) => {
   try {
@@ -36,6 +38,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
     const version = semver.valid(v); // ensures we get a specific version, not a range
+
     if (!p || !version) {
       throw new Error(
         'Invalid CHROMATIC_STORYBOOK_VERSION; expecting something like "@storybook/react@6.2.0".'
@@ -133,6 +136,10 @@ export default async function getStorybookInfo(
     const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
     return info.reduce((acc, obj) => Object.assign(acc, obj), {});
   } catch (e) {
+    const result = await getInstalledStorybookInfo();
+    if (result.viewLayer) {
+      return result;
+    }
     return { viewLayer: null, version: null, addons: [] };
   }
 }
