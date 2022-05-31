@@ -1,33 +1,13 @@
 import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
-import { getInstalledStorybookInfo } from './getInstalledStorybookPackages';
 
 jest.useFakeTimers();
-
-jest.mock('./getInstalledStorybookPackages', () => {
-  const original = jest.requireActual('./getInstalledStorybookPackages'); // Step 2.
-  return {
-    __esModule: true,
-    ...original,
-    getInstalledStorybookInfo: jest.fn(() => ({
-      addons: [
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '6.5.5',
-        },
-      ],
-      version: '6.5.5',
-      viewLayer: 'react',
-    })),
-  };
-});
 
 const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
 const getContext = (ctx: any): Context => ({ ...context, ...ctx });
 
-const REACT = { '@storybook/react': '^1.2.3' };
+const REACT = { '@storybook/react': '1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
 
 afterEach(() => {
@@ -72,15 +52,9 @@ describe('getStorybookInfo', () => {
   it('throws on missing package', async () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual({
-      addons: [
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '6.5.5',
-        },
-      ],
-      version: '6.5.5',
-      viewLayer: 'react',
+      addons: [],
+      version: null,
+      viewLayer: null,
     });
   });
 
@@ -114,30 +88,18 @@ describe('getStorybookInfo', () => {
     it('throws on invalid value', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: '6.5.5',
-          },
-        ],
-        version: '6.5.5',
-        viewLayer: 'react',
+        addons: [],
+        version: null,
+        viewLayer: null,
       });
     });
 
     it('throws on unsupported viewlayer', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: '6.5.5',
-          },
-        ],
-        version: '6.5.5',
-        viewLayer: 'react',
+        addons: [],
+        version: null,
+        viewLayer: null,
       });
     });
   });
@@ -149,24 +111,8 @@ describe('getStorybookInfo', () => {
         packageJson: { dependencies: REACT },
       });
       await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({ viewLayer: 'react', version: '^1.2.3' })
+        expect.objectContaining({ viewLayer: 'react', version: '1.2.3' })
       );
-    });
-  });
-
-  it('cannot find packages via either method', async () => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    getInstalledStorybookInfo.mockImplementation(() => ({
-      viewLayer: '',
-      version: undefined,
-      addons: [],
-    }));
-    const ctx = getContext({ packageJson: { dependencies: VUE } });
-    await expect(getStorybookInfo(ctx)).resolves.toEqual({
-      addons: [],
-      version: null,
-      viewLayer: null,
     });
   });
 });
