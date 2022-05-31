@@ -72,15 +72,9 @@ describe('getStorybookInfo', () => {
   it('throws on missing package', async () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual({
-      addons: [
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '6.5.5',
-        },
-      ],
-      version: '6.5.5',
-      viewLayer: 'react',
+      addons: [],
+      version: null,
+      viewLayer: null,
     });
   });
 
@@ -114,30 +108,18 @@ describe('getStorybookInfo', () => {
     it('throws on invalid value', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: '6.5.5',
-          },
-        ],
-        version: '6.5.5',
-        viewLayer: 'react',
+        addons: [],
+        version: null,
+        viewLayer: null,
       });
     });
 
     it('throws on unsupported viewlayer', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: '6.5.5',
-          },
-        ],
-        version: '6.5.5',
-        viewLayer: 'react',
+        addons: [],
+        version: null,
+        viewLayer: null,
       });
     });
   });
