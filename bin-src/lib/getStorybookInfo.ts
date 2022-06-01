@@ -135,13 +135,14 @@ export default async function getStorybookInfo(
     if (ctx.options.storybookBuildDir) {
       const projectJsonPath = path.resolve(ctx.options.storybookBuildDir, 'project.json');
       // This test makes sure we fall through if the file does not exist.
-      if (fs.existsSync(projectJsonPath)) {
-        return await getStorybookMetadateFromProjectJson(ctx.options.storybookBuildDir);
+      if (fs.pathExistsSync(projectJsonPath)) {
+        return await getStorybookMetadateFromProjectJson(projectJsonPath);
       }
     }
     const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
     return info.reduce((acc, obj) => Object.assign(acc, obj), {});
   } catch (e) {
-    return { viewLayer: null, version: null, addons: [] };
+    ctx.log.debug(e);
+    return { viewLayer: null, version: null, addons: [], builder: null };
   }
 }

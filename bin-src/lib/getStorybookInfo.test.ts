@@ -18,6 +18,7 @@ jest.mock('./getStorybookMetadata', () => {
           packageVersion: '6.5.5',
         },
       ],
+      builder: 'webpack5',
       version: '6.5.5',
       viewLayer: 'react',
     })),
@@ -76,6 +77,7 @@ describe('getStorybookInfo', () => {
       addons: [],
       version: null,
       viewLayer: null,
+      builder: null,
     });
   });
 
@@ -112,6 +114,7 @@ describe('getStorybookInfo', () => {
         addons: [],
         version: null,
         viewLayer: null,
+        builder: null,
       });
     });
 
@@ -121,6 +124,7 @@ describe('getStorybookInfo', () => {
         addons: [],
         version: null,
         viewLayer: null,
+        builder: null,
       });
     });
   });
@@ -144,19 +148,18 @@ describe('getStorybookInfo', () => {
         options: { storybookBuildDir: 'storybook-static' },
         packageJson: { dependencies: REACT },
       });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({
-          addons: [
-            {
-              name: 'essentials',
-              packageName: '@storybook/addon-essentials',
-              packageVersion: '6.5.5',
-            },
-          ],
-          version: '6.5.5',
-          viewLayer: 'react',
-        })
-      );
+      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+        addons: [
+          {
+            name: 'essentials',
+            packageName: '@storybook/addon-essentials',
+            packageVersion: '6.5.5',
+          },
+        ],
+        builder: 'webpack5',
+        version: '6.5.5',
+        viewLayer: 'react',
+      });
     });
 
     it('returns no metadata if cannot find project.json', async () => {
@@ -170,11 +173,13 @@ describe('getStorybookInfo', () => {
         addons: [],
         version: null,
         viewLayer: null,
+        builder: null,
       }));
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
         addons: [],
         version: null,
         viewLayer: null,
+        builder: null,
       });
     });
   });
