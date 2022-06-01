@@ -7,10 +7,7 @@ const capitalize = (string: string) =>
     .join(' ');
 
 const infoMessage = ({ addons, version, viewLayer, builder }: Context['storybook']) => {
-  const info =
-    version && viewLayer
-      ? `Storybook ${version} for ${capitalize(viewLayer)} using the ${builder} builder`
-      : '';
+  const info = version && viewLayer ? `Storybook ${version} for ${capitalize(viewLayer)}` : '';
   const builderInfo = builder ? `${info}; using the ${builder} builder` : info;
   return addons.length
     ? `${builderInfo}; supported addons found: ${addons

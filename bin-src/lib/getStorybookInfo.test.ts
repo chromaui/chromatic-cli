@@ -1,16 +1,16 @@
 import mock from 'mock-fs';
 import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
-import { getStorybookMetadateFromProjectJson } from './getStorybookMetadata';
+import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 
 jest.useFakeTimers();
 
-jest.mock('./getStorybookMetadata', () => {
-  const original = jest.requireActual('./getStorybookMetadata'); // Step 2.
+jest.mock('./getPrebuiltStorybookMetadata', () => {
+  const original = jest.requireActual('./getPrebuiltStorybookMetadata'); // Step 2.
   return {
     __esModule: true,
     ...original,
-    getStorybookMetadateFromProjectJson: jest.fn(() => ({
+    getStorybookMetadataFromProjectJson: jest.fn(() => ({
       addons: [
         {
           name: 'essentials',
@@ -169,7 +169,7 @@ describe('getStorybookInfo', () => {
       });
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      getStorybookMetadateFromProjectJson.mockImplementation(() => ({
+      getStorybookMetadataFromProjectJson.mockImplementation(() => ({
         addons: [],
         version: null,
         viewLayer: null,
