@@ -2,11 +2,13 @@ import fs from 'fs-extra';
 import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
+import path from 'path';
 import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
 import { supportedAddons } from './supportedAddons';
 import { timeout, raceFulfilled } from './promises';
 import { Context } from '../types';
+import { getStorybookMetadateFromProjectJson } from './getStorybookMetadata';
 
 const resolvePackageJson = (pkg: string) => {
   try {
@@ -15,8 +17,8 @@ const resolvePackageJson = (pkg: string) => {
     // webpack will provide a '__non_webpack_require__' function to do this with,
     // but this will obviously not be present during tests, hence the check and fallback to the normal require
     const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
-    const path = r.resolve(`${pkg}/package.json`);
-    return fs.readJson(path);
+    const packagePath = r.resolve(`${pkg}/package.json`);
+    return fs.readJson(packagePath);
   } catch (error) {
     return Promise.reject(error);
   }
@@ -130,6 +132,13 @@ export default async function getStorybookInfo(
   ctx: Context
 ): Promise<Partial<Context['storybook']>> {
   try {
+    if (ctx.options.storybookBuildDir) {
+      const projectJsonPath = path.resolve(ctx.options.storybookBuildDir, 'project.json');
+      // This test makes sure we fall through if the file does not exist.
+      if (fs.existsSync(projectJsonPath)) {
+        return await getStorybookMetadateFromProjectJson(ctx.options.storybookBuildDir);
+      }
+    }
     const info = await Promise.all([findAddons(ctx), findConfigFlags(ctx), findViewlayer(ctx)]);
     return info.reduce((acc, obj) => Object.assign(acc, obj), {});
   } catch (e) {

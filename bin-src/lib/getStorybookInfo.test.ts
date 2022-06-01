@@ -1,7 +1,27 @@
 import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
+import { getStorybookMetadateFromProjectJson } from './getStorybookMetadata';
 
 jest.useFakeTimers();
+
+jest.mock('./getStorybookMetadata', () => {
+  const original = jest.requireActual('./getStorybookMetadata'); // Step 2.
+  return {
+    __esModule: true,
+    ...original,
+    getStorybookMetadateFromProjectJson: jest.fn(() => ({
+      addons: [
+        {
+          name: 'essentials',
+          packageName: '@storybook/addon-essentials',
+          packageVersion: '6.5.5',
+        },
+      ],
+      version: '6.5.5',
+      viewLayer: 'react',
+    })),
+  };
+});
 
 const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
@@ -111,8 +131,37 @@ describe('getStorybookInfo', () => {
         packageJson: { dependencies: REACT },
       });
       await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({ viewLayer: 'react', version: '1.2.3' })
+        expect.objectContaining({
+          addons: [
+            {
+              name: 'essentials',
+              packageName: '@storybook/addon-essentials',
+              packageVersion: '6.5.5',
+            },
+          ],
+          version: '6.5.5',
+          viewLayer: 'react',
+        })
       );
+    });
+
+    it('returns no metadata if cannot find project.json', async () => {
+      const ctx = getContext({
+        options: { storybookBuildDir: 'storybook-static' },
+        packageJson: { dependencies: REACT },
+      });
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      getStorybookMetadateFromProjectJson.mockImplementation(() => ({
+        addons: [],
+        version: null,
+        viewLayer: null,
+      }));
+      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+        addons: [],
+        version: null,
+        viewLayer: null,
+      });
     });
   });
 });

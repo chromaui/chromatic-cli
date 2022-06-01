@@ -1,8 +1,10 @@
 module.exports = {
-  stories: process.env.SMOKE_TEST ? ['../test-stories/*.stories.*'] : ['../bin-src/**/*.stories.*'],
+  stories: process.env.SMOKE_TEST ? ['../test-stories/*.stories.*'] : ['../**/*.stories.*'],
+  addons: ['@storybook/addon-viewport'],
   features: {
     postcss: false,
   },
+  framework: '@storybook/react',
   core: {
     builder: 'webpack5',
   },
