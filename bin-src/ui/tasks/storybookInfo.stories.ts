@@ -9,7 +9,7 @@ export default {
 const storybook = {
   version: '5.3.0',
   viewLayer: 'web-components',
-  builder: 'webpack4',
+  builder: { name: 'webpack4', packageVersion: '5.3.0' },
   addons: [],
 };
 const addons = [{ name: 'actions' }, { name: 'docs' }, { name: 'design-assets' }];

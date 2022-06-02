@@ -11,7 +11,7 @@ import { timeout, raceFulfilled } from './promises';
 import { supportedAddons } from './supportedAddons';
 import { builders } from './builders';
 
-const resolvePackageJson = (pkg: string) => {
+export const resolvePackageJson = (pkg: string) => {
   try {
     // we bundle this app for node, meaning all require calls are replaced by webpack.
     // in this case we want to use node's actual require functionality!
@@ -108,8 +108,13 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-const findAddons = async (deps, mainConfig) => {
+const findAddons = async (ctx, mainConfig) => {
   if (mainConfig?.addons) {
+    const allDependencies = {
+      ...ctx.packageJson?.dependencies,
+      ...ctx.packageJson?.devDependencies,
+      ...ctx.packageJson?.peerDependencies,
+    };
     return {
       addons: mainConfig.addons.map((addon) => {
         let name: string;
@@ -122,7 +127,7 @@ const findAddons = async (deps, mainConfig) => {
         return {
           name: supportedAddons[name],
           packageName: name,
-          version: deps[name],
+          packageVersion: allDependencies[name],
         };
       }),
     };
@@ -150,7 +155,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
-const findBuilder = async (mainConfig) => {
+export const findBuilder = async (mainConfig) => {
   let name: string;
   if (mainConfig?.core.builder) {
     const { builder } = mainConfig.core;
@@ -161,7 +166,7 @@ const findBuilder = async (mainConfig) => {
 
   return Promise.race([
     resolvePackageJson(builders[name])
-      .then((json) => ({ builder: { name, version: json.version } }))
+      .then((json) => ({ builder: { name, packageVersion: json.version } }))
       .catch(() => Promise.reject(new Error(packageDoesNotExist(builders[name])))),
     timeout(10000),
   ]);
@@ -171,14 +176,9 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
   const mainConfig = await r(path.resolve(configDir, 'main'));
-  const allDependencies = {
-    ...ctx.packageJson?.dependencies,
-    ...ctx.packageJson?.devDependencies,
-    ...ctx.packageJson?.peerDependencies,
-  };
 
   const info = await Promise.all([
-    findAddons(allDependencies, mainConfig),
+    findAddons(ctx, mainConfig),
     findConfigFlags(ctx),
     findViewlayer(ctx),
     findBuilder(mainConfig),

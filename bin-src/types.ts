@@ -172,6 +172,8 @@ export interface Context {
     }[];
     builder: {
       name: string;
+      packageName?: string;
+      packageVersion?: string;
     };
   };
   spawnParams: {

@@ -18,7 +18,7 @@ jest.mock('./getPrebuiltStorybookMetadata', () => {
           packageVersion: '6.5.5',
         },
       ],
-      builder: { name: 'webpack5' },
+      builder: { name: 'webpack5', packageVersion: '6.5.6' },
       version: '6.5.5',
       viewLayer: 'react',
     })),
@@ -52,7 +52,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', version: '6.5.6' },
+        builder: { name: 'webpack5', packageVersion: '6.5.6' },
       })
     );
   });
@@ -91,7 +91,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', version: '6.5.6' },
+        builder: { name: 'webpack5', packageVersion: '6.5.6' },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -108,7 +108,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', version: '6.5.6' },
+          builder: { name: 'webpack5', packageVersion: '6.5.6' },
         })
       );
     });
@@ -119,7 +119,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', version: '6.5.6' },
+          builder: { name: 'webpack5', packageVersion: '6.5.6' },
         })
       );
     });
@@ -172,7 +172,7 @@ describe('getStorybookInfo', () => {
             packageVersion: '6.5.5',
           },
         ],
-        builder: { name: 'webpack5' },
+        builder: { name: 'webpack5', packageVersion: '6.5.6' },
         version: '6.5.5',
         viewLayer: 'react',
       });
