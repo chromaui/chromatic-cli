@@ -2,11 +2,14 @@ import fs from 'fs-extra';
 import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
-import { loadMainConfig } from '@storybook/core-common';
+
+import path from 'path';
 import { Context } from '../types';
-import noViewLayerPackage from '../ui/messages/errors/noViewLayerPackage';
+import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
 import { timeout, raceFulfilled } from './promises';
+import { supportedAddons } from './supportedAddons';
+import { builders } from './builders';
 
 const resolvePackageJson = (pkg: string) => {
   try {
@@ -82,7 +85,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     return Promise.race([
       resolvePackageJson(pkg)
         .then((json) => ({ viewLayer, version: json.version }))
-        .catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
+        .catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
       timeout(10000),
     ]);
   }
@@ -100,27 +103,25 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
         const json = await resolvePackageJson(key);
         return { viewLayer: value, version: json.version };
       })
-    ).catch(() => Promise.reject(new Error(noViewLayerPackage(pkg)))),
+    ).catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
     timeout(10000),
   ]);
 };
 
 const findAddons = async (deps, mainConfig) => {
-  if (mainConfig.addons) {
+  if (mainConfig?.addons) {
     return {
       addons: mainConfig.addons.map((addon) => {
         let name: string;
-        let options: any;
         if (typeof addon === 'string') {
           name = addon.replace('/register', '');
         } else {
-          options = addon.options;
           name = addon.name;
         }
 
         return {
-          name,
-          options,
+          name: supportedAddons[name],
+          packageName: name,
           version: deps[name],
         };
       }),
@@ -150,25 +151,26 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 const findBuilder = async (mainConfig) => {
-  if (mainConfig.core?.builder) {
+  let name: string;
+  if (mainConfig?.core.builder) {
     const { builder } = mainConfig.core;
-
-    return {
-      name: typeof builder === 'string' ? builder : builder.name,
-      options: typeof builder === 'string' ? undefined : builder?.options ?? undefined,
-    };
+    name = typeof builder === 'string' ? builder : builder.name;
+  } else {
+    name = 'webpack4';
   }
-  return {
-    builder: {
-      name: 'webpack4',
-      options: undefined,
-    },
-  };
+
+  return Promise.race([
+    resolvePackageJson(builders[name])
+      .then((json) => ({ builder: { name, version: json.version } }))
+      .catch(() => Promise.reject(new Error(packageDoesNotExist(builders[name])))),
+    timeout(10000),
+  ]);
 };
 
 export const getStorybookMetadata = async (ctx: Context) => {
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
-  const mainConfig = loadMainConfig({ configDir });
+  const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
+  const mainConfig = await r(path.resolve(configDir, 'main'));
   const allDependencies = {
     ...ctx.packageJson?.dependencies,
     ...ctx.packageJson?.devDependencies,

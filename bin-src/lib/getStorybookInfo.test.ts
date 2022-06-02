@@ -18,7 +18,7 @@ jest.mock('./getPrebuiltStorybookMetadata', () => {
           packageVersion: '6.5.5',
         },
       ],
-      builder: 'webpack5',
+      builder: { name: 'webpack5' },
       version: '6.5.5',
       viewLayer: 'react',
     })),
@@ -49,7 +49,11 @@ describe('getStorybookInfo', () => {
     const ctx = getContext({ packageJson: { dependencies: REACT } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
-      expect.objectContaining({ viewLayer: 'react', version: expect.any(String) })
+      expect.objectContaining({
+        viewLayer: 'react',
+        version: expect.any(String),
+        builder: { name: 'webpack5', version: '6.5.6' },
+      })
     );
   });
 
@@ -84,7 +88,11 @@ describe('getStorybookInfo', () => {
   it('looks up package in node_modules on missing dependency', async () => {
     await expect(getStorybookInfo(context)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
-      expect.objectContaining({ viewLayer: 'react', version: expect.any(String) })
+      expect.objectContaining({
+        viewLayer: 'react',
+        version: expect.any(String),
+        builder: { name: 'webpack5', version: '6.5.6' },
+      })
     );
     expect(log.info).toHaveBeenCalledWith(
       expect.stringContaining('No viewlayer package listed in dependencies')
@@ -97,14 +105,22 @@ describe('getStorybookInfo', () => {
         env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@3.2.1' },
       });
       await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({ viewLayer: 'react', version: '3.2.1' })
+        expect.objectContaining({
+          viewLayer: 'react',
+          version: '3.2.1',
+          builder: { name: 'webpack5', version: '6.5.6' },
+        })
       );
     });
 
     it('supports unscoped package name', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: 'react@3.2.1' } });
       await expect(getStorybookInfo(ctx)).resolves.toEqual(
-        expect.objectContaining({ viewLayer: 'react', version: '3.2.1' })
+        expect.objectContaining({
+          viewLayer: 'react',
+          version: '3.2.1',
+          builder: { name: 'webpack5', version: '6.5.6' },
+        })
       );
     });
 
@@ -156,7 +172,7 @@ describe('getStorybookInfo', () => {
             packageVersion: '6.5.5',
           },
         ],
-        builder: 'webpack5',
+        builder: { name: 'webpack5' },
         version: '6.5.5',
         viewLayer: 'react',
       });
