@@ -12,15 +12,12 @@ import { timeout } from './promises';
   containing metadata (sb builder, addons, viewLayer and viewLayer version) for the 
   particular setup.
 */
-type BuilderConfig =
-  | string
-  | {
-      name: string;
-    };
 
 export interface SBProjectJson {
   addons: Record<string, { version: string; options: any }>;
-  builder?: BuilderConfig;
+  builder?: {
+    name: string;
+  };
   framework: {
     name: string;
   };
@@ -32,7 +29,7 @@ const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersio
   let name: string;
   if (sbProjectJson.builder) {
     const { builder } = sbProjectJson;
-    name = typeof builder === 'string' ? sbProjectJson.builder : sbProjectJson.builder.name;
+    name = sbProjectJson.builder.name;
     return {
       name,
       packageVersion: sbProjectJson.storybookPackages[builders[name]].version,
