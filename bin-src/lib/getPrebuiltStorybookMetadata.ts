@@ -54,7 +54,7 @@ export const getStorybookMetadataFromProjectJson = async (
 
   return {
     viewLayer: sbProjectJson.framework.name ?? null,
-    version: sbProjectJson.storybookPackages[viewLayerPackage].version,
+    version: sbProjectJson.storybookPackages[viewLayerPackage].version ?? null,
     builder,
     addons: Object.keys(sbProjectJson.addons).map((addon) => ({
       name: supportedAddons[addon],

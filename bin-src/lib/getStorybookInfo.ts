@@ -14,9 +14,14 @@ export default async function getStorybookInfo(
       const projectJsonPath = path.resolve(ctx.options.storybookBuildDir, 'project.json');
       // This test makes sure we fall through if the file does not exist.
       if (fs.pathExistsSync(projectJsonPath)) {
+        /* 
+          This await is needed in order to for the catch block 
+          to get the result in the case that this function fails.
+        */
         return await getStorybookMetadataFromProjectJson(projectJsonPath);
       }
     }
+    // Same for this await.
     return await getStorybookMetadata(ctx);
   } catch (e) {
     ctx.log.debug(e);

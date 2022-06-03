@@ -1,29 +1,8 @@
 import mock from 'mock-fs';
 import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
-import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 
 jest.useFakeTimers();
-
-jest.mock('./getPrebuiltStorybookMetadata', () => {
-  const original = jest.requireActual('./getPrebuiltStorybookMetadata'); // Step 2.
-  return {
-    __esModule: true,
-    ...original,
-    getStorybookMetadataFromProjectJson: jest.fn(() => ({
-      addons: [
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '6.5.5',
-        },
-      ],
-      builder: { name: 'webpack5', packageVersion: '6.5.6' },
-      version: '6.5.5',
-      viewLayer: 'react',
-    })),
-  };
-});
 
 const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
@@ -39,6 +18,7 @@ afterEach(() => {
   log.debug.mockReset();
 });
 
+jest.setTimeout(10000);
 describe('getStorybookInfo', () => {
   afterEach(() => {
     // This would clear all existing timer functions
@@ -146,51 +126,30 @@ describe('getStorybookInfo', () => {
   });
 
   describe('with --storybook-build-dir', () => {
-    beforeAll(() => {
-      mock({
-        'storybook-static': {
-          'project.json':
-            '{"generatedAt":1654054690474,"builder":{"name":"webpack5"},"hasCustomBabel":false,"hasCustomWebpack":true,"hasStaticDirs":false,"hasStorybookEslint":false,"refCount":0,"packageManager":{"type":"yarn","version":"1.22.18"},"features":{"postcss":false},"storybookVersion":"6.5.6","language":"typescript","storybookPackages":{"@storybook/addon-essentials":{"version":"6.5.6"},"@storybook/builder-webpack5":{"version":"6.5.6"},"@storybook/eslint-config-storybook":{"version":"3.1.2"},"@storybook/linter-config":{"version":"3.1.2"},"@storybook/manager-webpack5":{"version":"6.5.6"},"@storybook/react":{"version":"6.5.6"}},"framework":{"name":"react"},"addons":{"@storybook/addon-viewport":{"version":"6.5.6"}}}',
-        },
-      });
-    });
-
-    afterAll(() => {
-      mock.restore();
-    });
-
     it('returns viewLayer and version from packageJson', async () => {
       const ctx = getContext({
-        options: { storybookBuildDir: 'storybook-static' },
+        options: { storybookBuildDir: 'bin-src/__mocks__/normalProjectJson' },
         packageJson: { dependencies: REACT },
       });
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
         addons: [
           {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: '6.5.5',
+            name: 'viewport',
+            packageName: '@storybook/addon-viewport',
+            packageVersion: '6.5.6',
           },
         ],
         builder: { name: 'webpack5', packageVersion: '6.5.6' },
-        version: '6.5.5',
+        version: '6.5.6',
         viewLayer: 'react',
       });
     });
 
     it('returns no metadata if cannot find project.json', async () => {
       const ctx = getContext({
-        options: { storybookBuildDir: 'storybook-static' },
+        options: { storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson' },
         packageJson: { dependencies: REACT },
       });
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      getStorybookMetadataFromProjectJson.mockImplementation(() => ({
-        addons: [],
-        version: null,
-        viewLayer: null,
-        builder: null,
-      }));
       await expect(getStorybookInfo(ctx)).resolves.toEqual({
         addons: [],
         version: null,

@@ -31,7 +31,7 @@ export async function main(argv: string[]) {
   const env = getEnv();
   const log = createLogger(sessionId, env);
 
-  const pkgInfo = readPkgUp.sync({ cwd: process.cwd() });
+  const pkgInfo = await readPkgUp({ cwd: process.cwd() });
   if (!pkgInfo) {
     log.error(noPackageJson());
     process.exit(253);
