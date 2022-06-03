@@ -36,7 +36,7 @@ const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersio
     };
   }
 
-  // Stroybook uses Webpack4 if no builder is explicitly set.
+  // Storybook uses Webpack4 if no builder is explicitly set.
   return {
     name: 'webpack4',
     packageVersion: sbProjectJson.storybookVersion,
