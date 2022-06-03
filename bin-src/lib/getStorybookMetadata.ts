@@ -156,12 +156,10 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export const findBuilder = async (mainConfig) => {
-  let name: string;
+  let name = 'webpack4'; // default builder in Storybook v6
   if (mainConfig?.core.builder) {
     const { builder } = mainConfig.core;
     name = typeof builder === 'string' ? builder : builder.name;
-  } else {
-    name = 'webpack4';
   }
 
   return Promise.race([
