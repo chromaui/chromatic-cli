@@ -26,21 +26,16 @@ export interface SBProjectJson {
 }
 
 const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersion: string } => {
-  let name: string;
-  if (sbProjectJson.builder) {
-    const { builder } = sbProjectJson;
-    name = sbProjectJson.builder.name;
-    return {
-      name,
-      packageVersion: sbProjectJson.storybookPackages[builders[name]].version,
-    };
-  }
-
-  // Storybook uses Webpack4 if no builder is explicitly set.
-  return {
-    name: 'webpack4',
-    packageVersion: sbProjectJson.storybookVersion,
-  };
+  const { builder, storybookPackages, storybookVersion } = sbProjectJson;
+  return builder
+    ? {
+        name: builder.name,
+        packageVersion: storybookPackages[builders[builder.name]].version,
+      }
+    : {
+        name: 'webpack4', // the default builder for Storybook v6
+        packageVersion: storybookVersion,
+      };
 };
 
 export const getStorybookMetadataFromProjectJson = async (
