@@ -46,8 +46,7 @@
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "prepublish": "npm run build",
-    "postpublish": "npm run publish-action",
-    "publish-action": "node scripts/publish-action.js",
+    "release": "node scripts/release.js",
     "trace": "node -r esm bin-src/trace.js",
     "trim-stats": "node -r esm bin-src/trim-stats-file.js",
     "storybook": "start-storybook -p 9009 -s static",
@@ -160,6 +159,10 @@
     "why-is-node-running": "^2.1.2",
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "docs": "https://www.chromatic.com/docs/cli",
   "storybook": {
