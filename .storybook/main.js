@@ -1,19 +1,20 @@
 module.exports = {
   stories: process.env.SMOKE_TEST ? ['../test-stories/*.stories.*'] : ['../bin-src/**/*.stories.*'],
+  addons: ['@storybook/addon-viewport'],
   features: {
     postcss: false,
   },
+  framework: '@storybook/react',
   core: {
     builder: 'webpack5',
   },
-  staticDirs: ['../static'],
   webpackFinal: async (config, { configType }) => {
     // eslint-disable-next-line no-param-reassign
     config.resolve = {
       ...config.resolve,
       fallback: {
         ...config.resolve.fallback,
-        os: false,
+        os: require.resolve('os-browserify/browser'),
       },
     };
 
