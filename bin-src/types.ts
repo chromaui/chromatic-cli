@@ -170,6 +170,11 @@ export interface Context {
       packageName?: string;
       packageVersion?: string;
     }[];
+    builder: {
+      name: string;
+      packageName?: string;
+      packageVersion?: string;
+    };
   };
   spawnParams: {
     client: 'yarn' | 'npm';
