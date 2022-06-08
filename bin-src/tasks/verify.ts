@@ -37,6 +37,13 @@ export const publishBuild = async (ctx: Context) => {
   const { replacementBuildIds } = ctx.git;
   const { only } = ctx.options;
 
+  let turboSnapBailReason;
+  let turboSnapStatus = 'UNUSED';
+  if (turboSnap) {
+    turboSnapBailReason = turboSnap.bailReason;
+    turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
+  }
+
   const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
     PublishBuildMutation,
     {
@@ -49,7 +56,8 @@ export const publishBuild = async (ctx: Context) => {
         ...(replacementBuildIds && { replacementBuildIds }),
         // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnap && turboSnap.bailReason && { turboSnapBailReason: turboSnap.bailReason }),
+        ...(turboSnapBailReason && { turboSnapBailReason }),
+        turboSnapStatus,
       },
     },
     { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }

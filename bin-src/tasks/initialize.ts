@@ -52,12 +52,12 @@ export const announceBuild = async (ctx: Context) => {
         ...commitInfo,
         committedAt: new Date(committedAt),
         ciVariables: ctx.environment,
+        needsBaselines: !!turboSnap && !turboSnap.bailReason,
         packageVersion: ctx.pkg.version,
         rebuildForBuildId,
         storybookAddons: ctx.storybook.addons,
         storybookVersion: ctx.storybook.version,
         storybookViewLayer: ctx.storybook.viewLayer,
-        turboSnapEnabled: !!turboSnap,
       },
     },
     { retries: 3 }

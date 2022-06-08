@@ -27,7 +27,13 @@ describe('publishBuild', () => {
 
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/PublishBuildMutation/),
-      { input: { cachedUrl: ctx.cachedUrl, isolatorUrl: ctx.isolatorUrl } },
+      {
+        input: {
+          cachedUrl: ctx.cachedUrl,
+          isolatorUrl: ctx.isolatorUrl,
+          turboSnapStatus: 'UNUSED',
+        },
+      },
       { headers: { Authorization: `Bearer report-token` }, retries: 3 }
     );
     expect(ctx.announcedBuild).toEqual({ ...announcedBuild, ...publishedBuild });

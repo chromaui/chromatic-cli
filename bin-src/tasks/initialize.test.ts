@@ -45,6 +45,7 @@ describe('announceBuild', () => {
           patchHeadRef: undefined,
           ciVariables: ctx.environment,
           committedAt: new Date(0),
+          needsBaselines: false,
           preserveMissingSpecs: undefined,
           packageVersion: ctx.pkg.version,
           rebuildForBuildId: undefined,
@@ -57,5 +58,35 @@ describe('announceBuild', () => {
     );
     expect(ctx.announcedBuild).toEqual(build);
     expect(ctx.isOnboarding).toBe(true);
+  });
+
+  it('requires baselines for TurboSnap-enabled builds', async () => {
+    const build = { number: 1, status: 'ANNOUNCED' };
+    const client = { runQuery: jest.fn() };
+    client.runQuery.mockReturnValue({ announceBuild: build });
+
+    const ctx = { client, ...defaultContext, turboSnap: {} } as any;
+    await announceBuild(ctx);
+
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/AnnounceBuildMutation/),
+      { input: expect.objectContaining({ needsBaselines: true }) },
+      { retries: 3 }
+    );
+  });
+
+  it('does not require baselines for TurboSnap bailed builds', async () => {
+    const build = { number: 1, status: 'ANNOUNCED' };
+    const client = { runQuery: jest.fn() };
+    client.runQuery.mockReturnValue({ announceBuild: build });
+
+    const ctx = { client, ...defaultContext, turboSnap: { bailReason: {} } } as any;
+    await announceBuild(ctx);
+
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/AnnounceBuildMutation/),
+      { input: expect.objectContaining({ needsBaselines: false }) },
+      { retries: 3 }
+    );
   });
 });
