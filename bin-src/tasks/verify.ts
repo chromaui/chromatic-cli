@@ -176,7 +176,6 @@ export const createBuild = async (ctx: Context, task: Task) => {
 
   ctx.build = build;
   ctx.isPublishOnly = !build.features.uiReview && !build.features.uiTests;
-  ctx.isOnboarding = build.number === 1 || (build.autoAcceptChanges && !autoAcceptChanges);
 
   if (list) {
     ctx.log.info(listingStories(build.tests));

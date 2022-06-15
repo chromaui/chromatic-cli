@@ -8,8 +8,21 @@ const CreateAppTokenMutation = `
     createAppToken(code: $projectToken)
   }
 `;
+
+const AppByCodeQuery = `
+  query AppyByCodeQuery($code: String!) {
+    appByCode(code: $code) {
+      isOnboarding
+    }
+  }
+`;
 interface CreateAppTokenMutationResult {
   createAppToken: string;
+}
+interface AppyByCodeQueryResult {
+  appByCode: {
+    isOnboarding: boolean;
+  };
 }
 
 export const setAuthorizationToken = async (ctx: Context) => {
@@ -22,6 +35,10 @@ export const setAuthorizationToken = async (ctx: Context) => {
       variables
     );
     client.setAuthorization(appToken);
+    const { appByCode: app } = await ctx.client.runQuery<AppyByCodeQueryResult>(AppByCodeQuery, {
+      code: ctx.options.projectToken,
+    });
+    ctx.isOnboarding = app.isOnboarding;
   } catch (errors) {
     if (errors[0] && errors[0].message && errors[0].message.match('No app with code')) {
       throw new Error(invalidProjectToken(variables));

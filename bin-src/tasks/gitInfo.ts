@@ -164,6 +164,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       ctx.log.debug(e);
     }
 
+    if (ctx.isOnboarding && ctx.git.changedFiles && ctx.git.changedFiles.length) {
+      ctx.options.forceRebuild = true;
+    }
+
     if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
       // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
