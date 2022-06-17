@@ -1,4 +1,4 @@
-# 6.6.0 - 2022-06-17
+# 6.6.1 - 2022-06-17
 
 - [566](https://github.com/chromaui/chromatic-cli/pull/566) Handle commits that are missing from the repository (i.e. rebased) when doing TurboSnap
 - [562](https://github.com/chromaui/chromatic-cli/pull/562) Implement async build creation process
