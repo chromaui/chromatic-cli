@@ -28,13 +28,14 @@ const bumpVersion = async ({ bump, tag, currentTag, dryRun }) => {
 };
 
 const publishPackage = async ({ tag, dryRun }) => {
+  const { version } = await readJSON(join(__dirname, '../package.json'));
   const dry = dryRun ? '--dry-run' : '';
-  console.log(`✅ Publishing ${tag} version ${dry && `(${dry})`}`);
+  console.log(`✅ Publishing ${tag} version ${version} ${dry && `(${dry})`}`);
   await command(`npm publish --tag ${tag} ${dry}`);
-  if (tag === 'latest') {
-    await command(`npm publish --tag next ${dry}`);
-  }
   if (!dryRun) {
+    if (tag === 'latest') {
+      await command(`npm dist-tag add chromatic@${version} next`);
+    }
     await command(`git push --follow-tags`);
   }
 };
