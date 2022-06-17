@@ -141,7 +141,7 @@ jest.mock('node-fetch', () =>
         };
       }
 
-      if (query.match('AppQuery')) {
+      if (query.match('LastBuildQuery')) {
         return {
           data: {
             app: {

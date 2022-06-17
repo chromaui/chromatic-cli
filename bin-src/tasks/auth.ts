@@ -9,20 +9,8 @@ const CreateAppTokenMutation = `
   }
 `;
 
-const AppQuery = `
-  query AppQuery {
-    app {
-      isOnboarding
-    }
-  }
-`;
 interface CreateAppTokenMutationResult {
   createAppToken: string;
-}
-interface AppQueryResult {
-  app: {
-    isOnboarding: boolean;
-  };
 }
 
 export const setAuthorizationToken = async (ctx: Context) => {
@@ -43,20 +31,7 @@ export const setAuthorizationToken = async (ctx: Context) => {
   }
 };
 
-export const getAppInfo = async (ctx: Context) => {
-  const { client, options } = ctx;
-  const variables = { code: options.projectToken };
-
-  const { app } = await client.runQuery<AppQueryResult>(AppQuery, variables);
-  ctx.isOnboarding = app.isOnboarding;
-};
-
 export default createTask({
   title: initial.title,
-  steps: [
-    transitionTo(authenticating),
-    setAuthorizationToken,
-    getAppInfo,
-    transitionTo(authenticated, true),
-  ],
+  steps: [transitionTo(authenticating), setAuthorizationToken, transitionTo(authenticated, true)],
 });
