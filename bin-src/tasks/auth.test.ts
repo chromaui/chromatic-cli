@@ -13,7 +13,7 @@ describe('setAuthorizationToken', () => {
 describe('getAppInfo', () => {
   it('retreives onboarding info using project token', async () => {
     const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
-    client.runQuery.mockReturnValue({ appByCode: { isOnboarding: true } });
+    client.runQuery.mockReturnValue({ app: { isOnboarding: true } });
 
     const ctx = {
       client,

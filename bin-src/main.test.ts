@@ -141,10 +141,10 @@ jest.mock('node-fetch', () =>
         };
       }
 
-      if (query.match('AppyByCodeQuery')) {
+      if (query.match('AppQuery')) {
         return {
           data: {
-            appByCode: {
+            app: {
               isOnboarding: true,
             },
           },
