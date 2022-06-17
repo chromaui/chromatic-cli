@@ -81,6 +81,7 @@ jest.mock('node-fetch', () =>
                   billingUrl: 'https://foo.bar',
                   exceededThreshold: false,
                   paymentRequired: false,
+                  setupUrl: 'https://setup.com',
                 },
               },
               tests: [
@@ -136,6 +137,16 @@ jest.mock('node-fetch', () =>
         return {
           data: {
             skipBuild: true,
+          },
+        };
+      }
+
+      if (query.match('AppyByCodeQuery')) {
+        return {
+          data: {
+            appByCode: {
+              isOnboarding: true,
+            },
           },
         };
       }

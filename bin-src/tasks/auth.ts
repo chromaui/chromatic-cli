@@ -9,9 +9,9 @@ const CreateAppTokenMutation = `
   }
 `;
 
-const AppByCodeQuery = `
-  query AppyByCodeQuery($code: String!) {
-    appByCode(code: $code) {
+const AppQuery = `
+  query AppQuery {
+    app {
       isOnboarding
     }
   }
@@ -19,8 +19,8 @@ const AppByCodeQuery = `
 interface CreateAppTokenMutationResult {
   createAppToken: string;
 }
-interface AppyByCodeQueryResult {
-  appByCode: {
+interface AppQueryResult {
+  app: {
     isOnboarding: boolean;
   };
 }
@@ -35,10 +35,6 @@ export const setAuthorizationToken = async (ctx: Context) => {
       variables
     );
     client.setAuthorization(appToken);
-    const { appByCode: app } = await ctx.client.runQuery<AppyByCodeQueryResult>(AppByCodeQuery, {
-      code: ctx.options.projectToken,
-    });
-    ctx.isOnboarding = app.isOnboarding;
   } catch (errors) {
     if (errors[0] && errors[0].message && errors[0].message.match('No app with code')) {
       throw new Error(invalidProjectToken(variables));
@@ -47,7 +43,20 @@ export const setAuthorizationToken = async (ctx: Context) => {
   }
 };
 
+export const getAppInfo = async (ctx: Context) => {
+  const { client, options } = ctx;
+  const variables = { code: options.projectToken };
+
+  const { app } = await client.runQuery<AppQueryResult>(AppQuery, variables);
+  ctx.isOnboarding = app.isOnboarding;
+};
+
 export default createTask({
   title: initial.title,
-  steps: [transitionTo(authenticating), setAuthorizationToken, transitionTo(authenticated, true)],
+  steps: [
+    transitionTo(authenticating),
+    setAuthorizationToken,
+    getAppInfo,
+    transitionTo(authenticated, true),
+  ],
 });

@@ -94,6 +94,9 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
+  if (ctx.isOnboarding) {
+    ctx.options.forceRebuild = true;
+  }
   // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
@@ -162,10 +165,6 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       ctx.git.changedFiles = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
-    }
-
-    if (ctx.isOnboarding && ctx.git.changedFiles && ctx.git.changedFiles.length) {
-      ctx.options.forceRebuild = true;
     }
 
     if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {

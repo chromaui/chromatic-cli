@@ -136,7 +136,7 @@ export interface Context {
   stopApp?: () => void;
   closeTunnel?: () => void;
   isPublishOnly?: boolean;
-  isOnboarding?: boolean;
+  isOnboarding: boolean;
 
   http: {
     fetch: (url: string, options?: RequestInit, opts?: any) => Promise<Response>;

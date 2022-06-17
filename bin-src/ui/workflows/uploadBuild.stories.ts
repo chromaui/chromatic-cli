@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { BuildHasChanges } from '../messages/errors/buildHasChanges.stories';
+import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
 import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassed.stories';
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublished.stories';
@@ -147,7 +147,7 @@ export const ChangesFound = () => [
     verify.Published,
     snapshot.BuildComplete
   ),
-  BuildHasChanges(),
+  BuildHasChangesNotOnboarding(),
 ];
 
 export const FirstBuild = () => [
