@@ -52,11 +52,11 @@ export const getStorybookMetadataFromProjectJson = async (
     version: sbProjectJson.storybookPackages[viewLayerPackage].version ?? null,
     builder,
     addons: Object.entries(sbProjectJson.addons)
+      .filter(([packageName]) => supportedAddons[packageName])
       .map(([packageName, addon]) => ({
         name: supportedAddons[packageName],
         packageName,
         packageVersion: addon.version,
-      }))
-      .filter((addon) => addon.name),
+      })),
   };
 };
