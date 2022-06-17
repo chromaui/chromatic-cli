@@ -157,5 +157,24 @@ describe('getStorybookInfo', () => {
         builder: null,
       });
     });
+
+    it('does not return unsupported addons in metadata', async () => {
+      const ctx = getContext({
+        options: { storybookBuildDir: 'bin-src/__mocks__/unsupportedAddons' },
+        packageJson: { dependencies: REACT },
+      });
+      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+        addons: [
+          {
+            name: 'viewport',
+            packageName: '@storybook/addon-viewport',
+            packageVersion: '6.5.6',
+          },
+        ],
+        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        version: '6.5.6',
+        viewLayer: 'react',
+      });
+    });
   });
 });
