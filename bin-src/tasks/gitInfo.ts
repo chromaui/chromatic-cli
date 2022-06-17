@@ -1,13 +1,9 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import {
-  getParentCommits,
-  getBaselineBuilds,
-  getChangedFiles,
-  getSlug,
-  getVersion,
-} from '../git/git';
+import { getSlug, getVersion } from '../git/git';
+import { getParentCommits } from '../git/getParentCommits';
+import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { matchesFile } from '../lib/utils';
@@ -24,6 +20,8 @@ import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 import { Context, Task } from '../types';
+import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
+import replacedBuild from '../ui/messages/info/replacedBuild';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -154,8 +152,20 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0] as any;
 
     try {
-      const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
-      ctx.git.changedFiles = Array.from(new Set(results.flat()));
+      const results = await Promise.all(
+        baselineBuilds.map(async (build) => ({
+          build,
+          ...(await getChangedFilesWithReplacement(ctx, build)),
+        }))
+      );
+      ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
+      ctx.git.replacementBuildIds = results
+        .filter((r) => !!r.replacementBuild)
+        .map(({ build, replacementBuild }) => {
+          ctx.log.info('');
+          ctx.log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
+          return [build.id, replacementBuild.id];
+        });
       if (!interactive) {
         ctx.log.info(
           `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
