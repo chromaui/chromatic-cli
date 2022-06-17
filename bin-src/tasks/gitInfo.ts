@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getChangedFiles, getSlug, getVersion } from '../git/git';
+import { getSlug, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';

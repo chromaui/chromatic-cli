@@ -6,6 +6,7 @@ import { StorybookPublished } from '../messages/info/storybookPublished.stories'
 import * as auth from '../tasks/auth.stories';
 import * as build from '../tasks/build.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
+import * as initialize from '../tasks/initialize.stories';
 import * as snapshot from '../tasks/snapshot.stories';
 import * as storybookInfo from '../tasks/storybookInfo.stories';
 import * as upload from '../tasks/upload.stories';
@@ -24,6 +25,7 @@ export const Initial = () => [
     auth.Initial,
     gitInfo.Initial,
     storybookInfo.Initial,
+    initialize.Initial,
     build.Initial,
     upload.Initial,
     verify.Initial,
@@ -37,6 +39,7 @@ export const Authenticating = () => [
     auth.Authenticating,
     gitInfo.Initial,
     storybookInfo.Initial,
+    initialize.Initial,
     build.Initial,
     upload.Initial,
     verify.Initial,
@@ -50,6 +53,7 @@ export const RetrievingGitInfo = () => [
     auth.Authenticated,
     gitInfo.Pending,
     storybookInfo.Initial,
+    initialize.Initial,
     build.Initial,
     upload.Initial,
     verify.Initial,
@@ -63,6 +67,21 @@ export const RetrievingStorybookInfo = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Pending,
+    initialize.Initial,
+    build.Initial,
+    upload.Initial,
+    verify.Initial,
+    snapshot.Initial
+  ),
+];
+
+export const Initializing = () => [
+  Intro(),
+  steps(
+    auth.Authenticated,
+    gitInfo.Success,
+    storybookInfo.Success,
+    initialize.Pending,
     build.Initial,
     upload.Initial,
     verify.Initial,
@@ -76,6 +95,7 @@ export const Building = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Building,
     upload.Initial,
     verify.Initial,
@@ -89,6 +109,7 @@ export const Uploading = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Uploading,
     verify.Initial,
@@ -102,6 +123,7 @@ export const Verifying = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Success,
     verify.Pending,
@@ -115,6 +137,7 @@ export const Snapshotting = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Success,
     verify.Published,
@@ -128,6 +151,7 @@ export const Passed = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Success,
     verify.Published,
@@ -142,6 +166,7 @@ export const ChangesFound = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Success,
     verify.Published,
@@ -156,6 +181,7 @@ export const FirstBuild = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Success,
     verify.Published,
@@ -170,6 +196,7 @@ export const Published = () => [
     auth.Authenticated,
     gitInfo.Success,
     storybookInfo.Success,
+    initialize.Success,
     build.Built,
     upload.Success,
     verify.Published,
