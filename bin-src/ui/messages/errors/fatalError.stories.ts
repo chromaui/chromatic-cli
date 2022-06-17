@@ -46,7 +46,7 @@ const context = {
   exitCodeKey: 'UNKNOWN_ERROR',
   build: {
     id: '5ec5069ae0d35e0022b6a9cc',
-    number: 1400,
+    number: 42,
     webUrl: 'https://www.chromatic.com/build?appId=5d67dc0374b2e300209c41e7&number=1400',
   },
   isolatorUrl: 'https://pfkaemtlit.tunnel.chromaticqa.com/iframe.html',
