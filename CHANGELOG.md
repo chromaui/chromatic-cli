@@ -1,3 +1,7 @@
+# 6.6.3 - 2022-06-18
+
+- [8be428f](https://github.com/chromaui/chromatic-cli/commit/8be428f4601f24921cf4bbeee889be853ed78bf7) Prevent split on undefined
+
 # 6.6.2 - 2022-06-17
 
 - [592](https://github.com/chromaui/chromatic-cli/pull/592) Filter out unsupported addons from Storybook metadata
