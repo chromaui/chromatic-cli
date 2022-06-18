@@ -1,3 +1,7 @@
+# 6.6.2 - 2022-06-17
+
+- [592](https://github.com/chromaui/chromatic-cli/pull/592) Filter out unsupported addons from Storybook metadata
+
 # 6.6.1 - 2022-06-17
 
 - [566](https://github.com/chromaui/chromatic-cli/pull/566) Handle commits that are missing from the repository (i.e. rebased) when doing TurboSnap

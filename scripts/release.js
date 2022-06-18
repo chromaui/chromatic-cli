@@ -33,10 +33,11 @@ const publishPackage = async ({ tag, dryRun }) => {
   console.log(`✅ Publishing ${tag} version ${version} ${dry && `(${dry})`}`);
   await command(`npm publish --tag ${tag} ${dry}`);
   if (!dryRun) {
-    if (tag === 'latest') {
-      await command(`npm dist-tag add chromatic@${version} next`);
-    }
     await command(`git push --follow-tags`);
+    if (tag === 'latest') {
+      console.log(`Run this command to update the 'next' tag to be in line with latest:`);
+      console.log(`  npm dist-tag add chromatic@${version} next`);
+    }
   }
 };
 
