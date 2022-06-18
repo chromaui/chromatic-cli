@@ -11,8 +11,9 @@ const infoMessage = ({ addons, version, viewLayer, builder }: Context['storybook
   const builderInfo = builder
     ? `${info}; using the ${builder.name} builder (${builder.packageVersion})`
     : info;
-  return addons?.length
-    ? `${builderInfo}; supported addons found: ${addons
+  const supportedAddons = addons.filter((addon) => addon && addon.name);
+  return supportedAddons?.length
+    ? `${builderInfo}; supported addons found: ${supportedAddons
         .map((addon) => capitalize(addon.name))
         .join(', ')}`
     : `${builderInfo}; no supported addons found`;
