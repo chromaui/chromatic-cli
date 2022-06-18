@@ -27,16 +27,15 @@ const bumpVersion = async ({ bump, tag, currentTag, dryRun }) => {
   }
 };
 
-const publishPackage = async ({ tag, dryRun }) => {
+const publishPackage = async ({ tag, otp, dryRun }) => {
   const { version } = await readJSON(join(__dirname, '../package.json'));
   const dry = dryRun ? '--dry-run' : '';
   console.log(`✅ Publishing ${tag} version ${version} ${dry && `(${dry})`}`);
-  await command(`npm publish --tag ${tag} ${dry}`);
+  await command(`npm publish --tag ${tag} --otp ${otp} ${dry}`);
   if (!dryRun) {
     await command(`git push --follow-tags`);
     if (tag === 'latest') {
-      console.log(`Run this command to update the 'next' tag to be in line with latest:`);
-      console.log(`  npm dist-tag add chromatic@${version} next`);
+      await command(`npm dist-tag add chromatic@${version} next --otp ${otp}`);
     }
   }
 };
@@ -65,11 +64,12 @@ const publishAction = async ({ repo, tag, version }) => {
 
 /**
  * Usage:
- *  release <major | minor | patch> <canary | next | latest> [--dry-run]
+ *  release <major | minor | patch> <canary | next | latest> --otp <otp> [--dry-run]
  */
 (async () => {
   const [bump, tag, ...rest] = process.argv.slice(2);
   const dryRun = rest.includes('--dry-run');
+  const [, otp] = rest.find((arg) => arg.startsWith('--otp'))?.match(/[=\s"'](\d{6})["']?$/);
 
   if (!['patch', 'minor', 'major'].includes(bump)) {
     throw new Error("Invalid bump, expecting one of 'patch', 'minor', 'major'");
@@ -77,12 +77,15 @@ const publishAction = async ({ repo, tag, version }) => {
   if (!['canary', 'next', 'latest'].includes(tag)) {
     throw new Error("Invalid tag, expecting one of 'canary', 'next', 'latest'");
   }
+  if (!otp) {
+    throw new Error('Missing --otp flag, expecting 6 digits');
+  }
 
   const { version: currentVersion } = await readJSON(join(__dirname, '../package.json'));
   const [, , , currentTag] = currentVersion.match(/^([0-9]+\.[0-9]+\.[0-9]+)(-(\w+)\.\d+)?$/);
 
   await bumpVersion({ bump, tag, currentTag, dryRun });
-  await publishPackage({ tag, dryRun });
+  await publishPackage({ tag, otp, dryRun });
 
   if (dryRun) {
     console.log(`✅ Not publishing action due to --dry-run`);
