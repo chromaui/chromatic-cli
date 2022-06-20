@@ -5,10 +5,12 @@ import { dedent } from 'ts-dedent';
 import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ build, exitCode }) => {
+export default ({ build, exitCode, isOnboarding }) => {
   const changes = pluralize('visual changes', build.changeCount, true);
   return dedent(chalk`
-    ${error} {bold Found ${changes}}: Review the changes at ${link(build.webUrl)}
+    ${error} {bold Found ${changes}}: Review the changes at ${link(
+    isOnboarding ? build.app.setupUrl : build.webUrl
+  )}
     
     ${info} For CI/CD use cases, this command failed with exit code ${exitCode}
     Pass {bold --exit-zero-on-changes} to succeed this command regardless of changes.
