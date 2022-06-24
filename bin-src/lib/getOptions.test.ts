@@ -81,7 +81,7 @@ describe('getOptions', () => {
   it('picks up default start script', async () => {
     expect(getOptions(getContext(['-s']))).toMatchObject({
       scriptName: 'storybook',
-      url: 'http://localhost:1337/iframe.html',
+      url: 'http://localhost:1337',
       noStart: false,
     });
   });
@@ -95,7 +95,7 @@ describe('getOptions', () => {
   it('allows you to specify alternate script, still picks up port', async () => {
     expect(getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
       scriptName: 'otherStorybook',
-      url: 'http://localhost:7070/iframe.html',
+      url: 'http://localhost:7070',
       noStart: false,
     });
   });
@@ -105,7 +105,7 @@ describe('getOptions', () => {
       getOptions(getContext(['--script-name', 'notStorybook', '--storybook-port', '6060']))
     ).toMatchObject({
       scriptName: 'notStorybook',
-      url: 'http://localhost:6060/iframe.html',
+      url: 'http://localhost:6060',
     });
   });
 
@@ -120,7 +120,7 @@ describe('getOptions', () => {
       getOptions(getContext(['--exec', 'storybook-command', '--storybook-port', '6060']))
     ).toMatchObject({
       exec: 'storybook-command',
-      url: 'http://localhost:6060/iframe.html',
+      url: 'http://localhost:6060',
     });
   });
 
@@ -169,7 +169,7 @@ describe('getOptions', () => {
   it('allows you to set a URL without path', async () => {
     expect(getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
       noStart: true,
-      url: 'https://google.com/iframe.html',
+      url: 'https://google.com',
       createTunnel: false,
     });
   });
@@ -177,7 +177,7 @@ describe('getOptions', () => {
   it('allows you to set a URL with a path', async () => {
     expect(getOptions(getContext(['--storybook-url', 'https://google.com/foo']))).toMatchObject({
       noStart: true,
-      url: 'https://google.com/foo/iframe.html',
+      url: 'https://google.com/foo',
       createTunnel: false,
     });
   });

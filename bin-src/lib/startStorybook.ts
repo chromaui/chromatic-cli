@@ -3,11 +3,11 @@ import { spawn } from 'cross-spawn';
 import path from 'path';
 import { Context } from '../types';
 
-export async function resolveIsolatorUrl(ctx: Context, url: string) {
+export async function resolveIsolatorUrl(ctx: Context, storybookUrl: string) {
   try {
     // Allow invalid certificates, because we might be running against localhost.
     const options = { proxy: { rejectUnauthorized: false } };
-    const { url: resolvedUrl } = await ctx.http.fetch(url, {}, options);
+    const { url: resolvedUrl } = await ctx.http.fetch(storybookUrl, {}, options);
     const isolatorUrl = resolvedUrl.replace(/index\.html$/, '').replace(/\/?$/, '/iframe.html');
     await ctx.http.fetch(isolatorUrl, {}, options);
     return isolatorUrl;
