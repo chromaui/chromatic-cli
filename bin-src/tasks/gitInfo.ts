@@ -32,6 +32,7 @@ const SkipBuildMutation = `
 const LastBuildQuery = `
   query LastBuildQuery($commit: String!, $branch: String!) {
     app {
+      isOnboarding
       lastBuild(ref: $commit, branch: $branch) {
         id
         status(legacy: false)
@@ -41,6 +42,7 @@ const LastBuildQuery = `
 `;
 interface LastBuildQueryResult {
   app: {
+    isOnboarding: boolean;
     lastBuild: {
       id: string;
       status: string;
@@ -92,15 +94,19 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
+  const result = await ctx.client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
+    commit,
+    branch,
+  });
+  ctx.isOnboarding = result.app.isOnboarding;
+  if (result.app.isOnboarding) {
+    ctx.options.forceRebuild = true;
+  }
   // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
-    const result = await ctx.client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
-      commit,
-      branch,
-    });
     const mostRecentAncestor = result && result.app && result.app.lastBuild;
     if (mostRecentAncestor) {
       ctx.rebuildForBuildId = mostRecentAncestor.id;

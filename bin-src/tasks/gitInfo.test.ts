@@ -38,6 +38,7 @@ const commitInfo = {
   fromCI: false,
   ciService: undefined,
 };
+const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
 
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
@@ -46,11 +47,12 @@ beforeEach(() => {
   getChangedFilesWithReplacement.mockResolvedValue({ changedFiles: [] });
   getVersion.mockResolvedValue('Git v1.0.0');
   getSlug.mockResolvedValue('user/repo');
+  client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
 
 describe('setGitInfo', () => {
   it('sets the git info on context', async () => {
-    const ctx = { log, options: {} } as any;
+    const ctx = { log, options: {}, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({
       commit: '123asdf',
@@ -62,7 +64,7 @@ describe('setGitInfo', () => {
   });
 
   it('supports overriding the owner name in the slug', async () => {
-    const ctx = { log, options: { ownerName: 'org' } } as any;
+    const ctx = { log, options: { ownerName: 'org' }, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({ slug: 'org/repo' });
   });
@@ -72,7 +74,7 @@ describe('setGitInfo', () => {
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: true } } as any;
+    const ctx = { log, options: { onlyChanged: true }, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
     expect(ctx.git.replacementBuildIds).toEqual([]);
@@ -88,7 +90,7 @@ describe('setGitInfo', () => {
         commit: '987bca',
       },
     });
-    const ctx = { log, options: { onlyChanged: true } } as any;
+    const ctx = { log, options: { onlyChanged: true }, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
     expect(ctx.git.replacementBuildIds).toEqual([['rebased', 'parent']]);
@@ -99,8 +101,15 @@ describe('setGitInfo', () => {
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] } } as any;
+    const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] }, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toBeNull();
+  });
+
+  it('forces rebuild automatically if app is onboarding', async () => {
+    client.runQuery.mockReturnValue({ app: { isOnboarding: true } });
+    const ctx = { log, options: { ownerName: 'org' }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.options.forceRebuild).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ const CreateAppTokenMutation = `
     createAppToken(code: $projectToken)
   }
 `;
+
 interface CreateAppTokenMutationResult {
   createAppToken: string;
 }
