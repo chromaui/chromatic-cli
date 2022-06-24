@@ -3,11 +3,14 @@ import { spawn } from 'cross-spawn';
 import path from 'path';
 import { Context } from '../types';
 
-export async function checkResponse(ctx: Context, url: string) {
+export async function resolveIsolatorUrl(ctx: Context, url: string) {
   try {
-    // Allow invalid certificates, because we're running against localhost
-    await ctx.http.fetch(url, {}, { proxy: { rejectUnauthorized: false } });
-    return true;
+    // Allow invalid certificates, because we might be running against localhost.
+    const options = { proxy: { rejectUnauthorized: false } };
+    const { url: resolvedUrl } = await ctx.http.fetch(url, {}, options);
+    const isolatorUrl = resolvedUrl.replace(/index\.html$/, '').replace(/\/?$/, '/iframe.html');
+    await ctx.http.fetch(isolatorUrl, {}, options);
+    return isolatorUrl;
   } catch (e) {
     return false;
   }
@@ -15,7 +18,7 @@ export async function checkResponse(ctx: Context, url: string) {
 
 async function waitForResponse(ctx: Context, child: ReturnType<typeof spawn>, url: string) {
   const timeoutAt = Date.now() + ctx.env.CHROMATIC_TIMEOUT;
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     let resolved = false;
     async function check() {
       if (Date.now() > timeoutAt) {
@@ -28,9 +31,10 @@ async function waitForResponse(ctx: Context, child: ReturnType<typeof spawn>, ur
         return;
       }
 
-      if (await checkResponse(ctx, url)) {
+      const isolatorUrl = await resolveIsolatorUrl(ctx, url);
+      if (isolatorUrl) {
         resolved = true;
-        resolve();
+        resolve(isolatorUrl);
         return;
       }
       setTimeout(check, ctx.env.CHROMATIC_POLL_INTERVAL);
@@ -61,7 +65,7 @@ export default async function startApp(
 ) {
   let child: ReturnType<typeof spawn>;
   if (ctx.options.scriptName) {
-    if (await checkResponse(ctx, ctx.options.url)) {
+    if (await resolveIsolatorUrl(ctx, ctx.options.url)) {
       // We assume the process that is already running on the url is indeed our Storybook
       return null;
     }
@@ -84,7 +88,7 @@ export default async function startApp(
   }
 
   if (ctx.options.url) {
-    await waitForResponse(ctx, child, ctx.options.url);
+    ctx.isolatorUrl = await waitForResponse(ctx, child, ctx.options.url);
   }
 
   return child;
