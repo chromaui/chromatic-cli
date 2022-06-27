@@ -69,7 +69,7 @@ const publishAction = async ({ repo, tag, version }) => {
 (async () => {
   const [bump, tag, ...rest] = process.argv.slice(2);
   const dryRun = rest.includes('--dry-run');
-  const [, otp] = rest.find((arg) => arg.startsWith('--otp'))?.match(/[=\s"'](\d{6})["']?$/);
+  const [, otp] = rest.find((arg) => arg.startsWith('--otp'))?.match(/[=\s"'](\d{6})["']?$/) || [];
 
   if (!['patch', 'minor', 'major'].includes(bump)) {
     throw new Error("Invalid bump, expecting one of 'patch', 'minor', 'major'");
