@@ -229,8 +229,8 @@ const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
 jest.mock('./lib/startStorybook');
 
 const startApp = <jest.MockedFunction<typeof startStorybook.default>>startStorybook.default;
-const checkResponse = <jest.MockedFunction<typeof startStorybook.checkResponse>>(
-  startStorybook.checkResponse
+const resolveIsolatorUrl = <jest.MockedFunction<typeof startStorybook.resolveIsolatorUrl>>(
+  startStorybook.resolveIsolatorUrl
 );
 
 jest.mock('./lib/getStorybookInfo', () => () => ({
@@ -416,12 +416,15 @@ it('passes autoAcceptChanges to the index based on branch', async () => {
 
 describe('tunneled build', () => {
   beforeEach(() => {
-    startApp.mockReset().mockResolvedValue({
-      on: jest.fn(),
-      stderr: { on: jest.fn(), resume: jest.fn() },
-      stdout: { on: jest.fn(), resume: jest.fn() },
-    } as any);
-    checkResponse.mockReset();
+    resolveIsolatorUrl.mockReset().mockResolvedValue(false);
+    startApp.mockReset().mockImplementation((ctx) => {
+      ctx.isolatorUrl = ctx.options.url;
+      return {
+        on: jest.fn(),
+        stderr: { on: jest.fn(), resume: jest.fn() },
+        stdout: { on: jest.fn(), resume: jest.fn() },
+      } as any;
+    });
     openTunnel.mockReset().mockResolvedValue({
       url: 'http://tunnel.com/?clientId=foo',
       cachedUrl: 'http://cached.tunnel.com?foo=bar#hash',
@@ -431,6 +434,7 @@ describe('tunneled build', () => {
   });
 
   it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
 
@@ -449,7 +453,7 @@ describe('tunneled build', () => {
       expect.objectContaining({
         options: expect.objectContaining({
           scriptName: 'storybook',
-          url: 'http://localhost:1337/iframe.html',
+          url: 'http://localhost:1337',
         }),
       }),
       expect.objectContaining({
@@ -469,7 +473,7 @@ describe('tunneled build', () => {
       expect.objectContaining({
         options: expect.objectContaining({
           exec: './run.sh',
-          url: 'http://localhost:9001/iframe.html',
+          url: 'http://localhost:9001',
         }),
       }),
       expect.objectContaining({})
@@ -481,7 +485,7 @@ describe('tunneled build', () => {
   });
 
   it('skips start when already running', async () => {
-    checkResponse.mockResolvedValue(true);
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(startApp).not.toHaveBeenCalled();
@@ -492,7 +496,7 @@ describe('tunneled build', () => {
   });
 
   it('fails when trying to use --do-not-start while not running', async () => {
-    checkResponse.mockResolvedValueOnce(false);
+    resolveIsolatorUrl.mockResolvedValueOnce(false);
     const ctx = getContext([
       '--project-token=asdf1234',
       '--script-name=storybook',
@@ -504,7 +508,7 @@ describe('tunneled build', () => {
   });
 
   it('skips tunnel when using --storybook-url', async () => {
-    checkResponse.mockResolvedValue(true);
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
     const ctx = getContext([
       '--project-token=asdf1234',
       '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
@@ -514,7 +518,19 @@ describe('tunneled build', () => {
     expect(ctx.closeTunnel).toBeUndefined();
     expect(openTunnel).not.toHaveBeenCalled();
     expect(publishedBuild).toMatchObject({
-      isolatorUrl: 'http://localhost:1337/iframe.html?foo=bar#hash',
+      isolatorUrl: 'http://localhost:1337/iframe.html',
+    });
+  });
+
+  it('supports redirects in --storybook-url', async () => {
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/some/other/path/iframe.html');
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
+    ]);
+    await runBuild(ctx);
+    expect(publishedBuild).toMatchObject({
+      isolatorUrl: 'http://localhost:1337/some/other/path/iframe.html',
     });
   });
 
@@ -522,7 +538,10 @@ describe('tunneled build', () => {
     openTunnel.mockImplementation(() => {
       throw new Error('tunnel error');
     });
-    startApp.mockResolvedValueOnce({ pid: 12345 } as any);
+    startApp.mockReset().mockImplementation((ctx) => {
+      ctx.isolatorUrl = ctx.options.url;
+      return { pid: 12345 } as any;
+    });
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(255);

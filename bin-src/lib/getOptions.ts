@@ -221,20 +221,11 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     storybookUrl = `${options.https ? 'https' : 'http'}://localhost:${port}`;
   }
 
-  const parsedUrl = new URL(storybookUrl);
-  const suffix = 'iframe.html';
-  if (!parsedUrl.pathname.endsWith(suffix)) {
-    if (!parsedUrl.pathname.endsWith('/')) {
-      parsedUrl.pathname += '/';
-    }
-    parsedUrl.pathname += suffix;
-  }
-
   return {
     ...options,
     noStart,
     useTunnel: true,
-    url: parsedUrl.href,
+    url: storybookUrl,
     scriptName,
   };
 }
