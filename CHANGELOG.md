@@ -1,3 +1,8 @@
+# 6.6.4 - 2022-06-27
+
+- [590](https://github.com/chromaui/chromatic-cli/pull/590) Better onboarding support
+- [596](https://github.com/chromaui/chromatic-cli/pull/596) Handle redirects when using `--storybook-url`
+
 # 6.6.3 - 2022-06-18
 
 - [8be428f](https://github.com/chromaui/chromatic-cli/commit/8be428f4601f24921cf4bbeee889be853ed78bf7) Prevent split on undefined
