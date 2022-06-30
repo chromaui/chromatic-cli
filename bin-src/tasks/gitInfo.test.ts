@@ -80,6 +80,21 @@ describe('setGitInfo', () => {
     expect(ctx.git.replacementBuildIds).toEqual([]);
   });
 
+  it('sets changedFiles on a branch name containing a slash', async () => {
+    getCommitAndBranch.mockResolvedValue({
+      ...commitInfo,
+      branch: 'something/else',
+    });
+    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
+    getChangedFilesWithReplacement.mockResolvedValue({
+      changedFiles: ['styles/main.scss', 'lib/utils.js'],
+    });
+    const ctx = { log, options: { onlyChanged: '!(main)' }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
+    expect(ctx.git.replacementBuildIds).toEqual([]);
+  });
+
   it('sets replacementBuildIds when found', async () => {
     getBaselineBuilds.mockResolvedValue([{ id: 'rebased', commit: '012qwes' } as any]);
     getChangedFilesWithReplacement.mockResolvedValue({

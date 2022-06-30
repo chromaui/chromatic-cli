@@ -74,7 +74,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   const { branch, commit, slug } = ctx.git;
 
   ctx.git.matchesBranch = (glob: true | string) =>
-    typeof glob === 'string' && glob.length ? picomatch(glob)(branch) : !!glob;
+    typeof glob === 'string' && glob.length ? picomatch(glob, { bash: true })(branch) : !!glob;
 
   if (ctx.git.matchesBranch(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
