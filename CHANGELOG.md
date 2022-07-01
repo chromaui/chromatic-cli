@@ -1,4 +1,4 @@
-# 6.6.5 - 2022-06-30
+# 6.7.0 - 2022-06-30
 
 - [598](https://github.com/chromaui/chromatic-cli/pull/598) Enable bash mode for globs when matching branches with picomatch
 
