@@ -61,7 +61,7 @@ const publishAction = async ({ repo, tag, version }) => {
 
 /**
  * Usage:
- *  release <major | minor | patch> <canary | next | latest> --otp <otp> [--dry-run]
+ *  release <major | minor | patch> <canary | next | latest> [--dry-run]
  */
 (async () => {
   const [bump, tag, ...rest] = process.argv.slice(2);
