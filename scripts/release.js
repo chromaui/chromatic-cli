@@ -62,30 +62,36 @@ const publishAction = async ({ repo, tag, version }) => {
 /**
  * Usage:
  *  release <major | minor | patch> <canary | next | latest> [--dry-run]
+ *  release action <canary | next | latest> [--dry-run]
  */
 (async () => {
   const [bump, tag, ...rest] = process.argv.slice(2);
   const dryRun = rest.includes('--dry-run');
 
-  if (!['patch', 'minor', 'major'].includes(bump)) {
+  if (!['patch', 'minor', 'major', 'action'].includes(bump)) {
     throw new Error("Invalid bump, expecting one of 'patch', 'minor', 'major'");
   }
   if (!['canary', 'next', 'latest'].includes(tag)) {
     throw new Error("Invalid tag, expecting one of 'canary', 'next', 'latest'");
   }
 
-  const { version: currentVersion } = await readJSON(join(__dirname, '../package.json'));
-  const [, , , currentTag] = currentVersion.match(/^([0-9]+\.[0-9]+\.[0-9]+)(-(\w+)\.\d+)?$/);
+  if (bump !== 'action') {
+    const { version: currentVersion } = await readJSON(join(__dirname, '../package.json'));
+    const [, , , currentTag] = currentVersion.match(/^([0-9]+\.[0-9]+\.[0-9]+)(-(\w+)\.\d+)?$/);
 
-  await bumpVersion({ bump, tag, currentTag, dryRun });
-  await publishPackage({ tag, dryRun });
+    await bumpVersion({ bump, tag, currentTag, dryRun });
+    await publishPackage({ tag, dryRun });
+  }
+
+  // Get the version we bumped to (or whichever is current, if we're only publishing the action)
+  const { version } = await readJSON(join(__dirname, '../package.json'));
 
   if (dryRun) {
     console.log(`✅ Not publishing action due to --dry-run`);
+    console.log(`Running without --dry-run would publish ${version} as ${tag} action`);
+    if (tag === 'latest') console.log(`This would also update action-next to ${version}`);
     return;
   }
-
-  const { version } = await readJSON(join(__dirname, '../package.json'));
 
   if (tag === 'canary') {
     await publishAction({ repo: 'chromaui/action-canary', tag, version });
@@ -96,7 +102,7 @@ const publishAction = async ({ repo, tag, version }) => {
     await publishAction({ repo: 'chromaui/action', tag, version });
   }
 
-  if (tag === 'latest') {
+  if (tag === 'latest' && bump !== 'action') {
     const tagCommand = `npm dist-tag add chromatic@${version} next`;
     console.log(`⚠️ Don't forget to update the 'next' tag by running:\n  ${tagCommand}`);
   }

@@ -45,7 +45,7 @@
     "lint": "yarn lint:js .storybook bin-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "prepublish": "npm run build",
+    "prerelease": "npm run build",
     "release": "node scripts/release.js",
     "trace": "node -r esm bin-src/trace.js",
     "trim-stats": "node -r esm bin-src/trim-stats-file.js",
