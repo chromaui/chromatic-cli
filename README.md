@@ -44,23 +44,22 @@ To facilitate upgrading in the future, removing and adding features, this is the
 #### Running against staging
 
 ```bash
-CHROMATIC_INDEX_URL=https://www.staging-chromatic.com/graphql yarn chromatic -t 253df72b53d2
+CHROMATIC_INDEX_URL=https://index.staging-chromatic.com yarn chromatic -t 253df72b53d2
 ```
 
 #### Running against development
 
 To test against a local development version of the Chromatic stack, use
 
-```
-CHROMATIC_INDEX_URL=https://www.dev-chromatic.com/graphql yarn chromatic -t <token>
+```bash
+CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
 ```
 
 To only test a small number of test stories as a smoke test, use:
 
+```bash
+SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
 ```
-SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://www.dev-chromatic.com/graphql yarn chromatic -t <token>
-```
-
 
 ### Publishing a new version to npm
 
