@@ -75,7 +75,10 @@ const publishAction = async ({ repo, tag, version }) => {
     throw new Error("Invalid tag, expecting one of 'canary', 'next', 'latest'");
   }
 
-  if (bump !== 'action') {
+  if (bump === 'action') {
+    // We need to build the action manually if we're not publishing to npm
+    await command('npm run bundle:action');
+  } else {
     const { version: currentVersion } = await readJSON(join(__dirname, '../package.json'));
     const [, , , currentTag] = currentVersion.match(/^([0-9]+\.[0-9]+\.[0-9]+)(-(\w+)\.\d+)?$/);
 
