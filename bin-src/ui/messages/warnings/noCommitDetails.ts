@@ -20,7 +20,7 @@ export default ({ ref, sha, env }: BranchRef | CommitRef) => {
   }
   if (env) {
     return dedent(chalk`
-      ${warning} {bold Commit ${sha.slice(0, 7)}} does not exist}
+      ${warning} {bold Commit ${sha.slice(0, 7)} does not exist}
       We tried to retrieve the commit details but couldn't find it in your Git history.
       Check your {bold ${env}} environment variable.
       Using it anyway, but commit details (date, author) will be missing.
