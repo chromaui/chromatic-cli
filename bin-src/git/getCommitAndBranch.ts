@@ -62,7 +62,7 @@ export default async function getCommitAndBranch(
 
   if (isFromEnvVariable) {
     commit = await getCommit(CHROMATIC_SHA).catch((err) => {
-      log.warn(noCommitDetails(CHROMATIC_SHA, 'CHROMATIC_SHA'));
+      log.warn(noCommitDetails({ sha: CHROMATIC_SHA, env: 'CHROMATIC_SHA' }));
       log.debug(err);
       return { commit: CHROMATIC_SHA, committedAt: Date.now() };
     });
@@ -83,7 +83,7 @@ export default async function getCommitAndBranch(
     // merged from, rather than the resulting "ephemeral" merge commit that doesn't stick around in the
     // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
     commit = await getCommit(TRAVIS_PULL_REQUEST_SHA).catch((err) => {
-      log.warn(noCommitDetails(TRAVIS_PULL_REQUEST_SHA, 'TRAVIS_PULL_REQUEST_SHA'));
+      log.warn(noCommitDetails({ sha: TRAVIS_PULL_REQUEST_SHA, env: 'TRAVIS_PULL_REQUEST_SHA' }));
       log.debug(err);
       return { commit: TRAVIS_PULL_REQUEST_SHA, committedAt: Date.now() };
     });
@@ -108,7 +108,7 @@ export default async function getCommitAndBranch(
     // We intentionally use the GITHUB_HEAD_REF (branch name) here, to retrieve the last commit on
     // the head branch rather than the merge commit (GITHUB_SHA).
     commit = await getCommit(GITHUB_HEAD_REF).catch((err) => {
-      log.warn(noCommitDetails(GITHUB_HEAD_REF, 'GITHUB_HEAD_REF'));
+      log.warn(noCommitDetails({ ref: GITHUB_HEAD_REF, sha: GITHUB_SHA, env: 'GITHUB_HEAD_REF' }));
       log.debug(err);
       return { commit: GITHUB_SHA, committedAt: Date.now() };
     });
@@ -131,7 +131,7 @@ export default async function getCommitAndBranch(
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
     commit = await getCommit(ciCommit).catch((err) => {
-      log.warn(noCommitDetails(ciCommit));
+      log.warn(noCommitDetails({ sha: ciCommit }));
       log.debug(err);
       return { commit: ciCommit, committedAt: Date.now() };
     });
