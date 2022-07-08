@@ -6,11 +6,17 @@ const capitalize = (string: string) =>
     .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
     .join(' ');
 
-const infoMessage = ({ addons, version, viewLayer }: Context['storybook']) => {
+const infoMessage = ({ addons, version, viewLayer, builder }: Context['storybook']) => {
   const info = version && viewLayer ? `Storybook ${version} for ${capitalize(viewLayer)}` : '';
-  return addons.length
-    ? `${info}; supported addons found: ${addons.map((addon) => capitalize(addon.name)).join(', ')}`
-    : `${info}; no supported addons found`;
+  const builderInfo = builder
+    ? `${info}; using the ${builder.name} builder (${builder.packageVersion})`
+    : info;
+  const supportedAddons = addons.filter((addon) => addon && addon.name);
+  return supportedAddons?.length
+    ? `${builderInfo}; supported addons found: ${supportedAddons
+        .map((addon) => capitalize(addon.name))
+        .join(', ')}`
+    : `${builderInfo}; no supported addons found`;
 };
 
 export const initial = {

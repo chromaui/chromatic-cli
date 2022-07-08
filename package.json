@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "6.5.4",
+  "version": "6.7.0",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -46,8 +46,7 @@
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "prepublish": "npm run build",
-    "postpublish": "npm run publish-action",
-    "publish-action": "node scripts/publish-action.js",
+    "release": "node scripts/release.js",
     "trace": "node -r esm bin-src/trace.js",
     "trim-stats": "node -r esm bin-src/trim-stats-file.js",
     "storybook": "start-storybook -p 9009 -s static",
@@ -75,6 +74,9 @@
   "resolutions": {
     "any-observable": "^0.5.1"
   },
+  "dependencies": {
+    "@types/webpack-env": "^1.17.0"
+  },
   "devDependencies": {
     "@actions/core": "^1.5.0",
     "@actions/github": "^5.0.0",
@@ -86,14 +88,17 @@
     "@babel/preset-typescript": "^7.15.0",
     "@babel/runtime": "^7.15.3",
     "@chromaui/localtunnel": "^2.0.3",
+    "@storybook/addon-essentials": "^6.5.6",
+    "@storybook/builder-webpack5": "^6.5.6",
     "@storybook/eslint-config-storybook": "^3.1.2",
     "@storybook/linter-config": "^3.1.2",
-    "@storybook/react": "^6.4.14",
+    "@storybook/manager-webpack5": "^6.5.6",
+    "@storybook/react": "^6.5.6",
     "@types/archiver": "^5.3.1",
     "@types/async-retry": "^1.4.3",
     "@types/cross-spawn": "^6.0.2",
     "@types/fs-extra": "^9.0.13",
-    "@types/jest": "^27.4.0",
+    "@types/jest": "^27.5.0",
     "@types/jsonfile": "^6.0.1",
     "@types/listr": "^0.14.4",
     "@types/node": "^14.14.25",
@@ -134,6 +139,7 @@
     "node-loggly-bulk": "^2.2.4",
     "npm-run-all": "^4.0.2",
     "observable": "^2.1.4",
+    "os-browserify": "^0.3.0",
     "p-limit": "3.1.0",
     "picomatch": "2.2.2",
     "pkg-up": "^3.1.0",
@@ -143,6 +149,7 @@
     "prop-types": "^15.7.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "read-pkg-up": "^7.0.1",
     "semver": "^7.3.5",
     "slash": "^3.0.0",
     "sort-package-json": "1.50.0",
@@ -155,11 +162,15 @@
     "typescript": "^4.3.5",
     "util-deprecate": "^1.0.2",
     "uuid": "^8.3.2",
-    "webpack": "^5.51.1",
+    "webpack": "^5.72.1",
     "webpack-cli": "^4.8.0",
     "why-is-node-running": "^2.1.2",
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "docs": "https://www.chromatic.com/docs/cli",
   "storybook": {

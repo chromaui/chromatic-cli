@@ -20,6 +20,11 @@ export const exitCodes = {
   ACCOUNT_QUOTA_REACHED: 11,
   ACCOUNT_PAYMENT_REQUIRED: 12,
 
+  // Storybook issues
+  STORYBOOK_BUILD_FAILED: 21,
+  STORYBOOK_START_FAILED: 22,
+  STORYBOOK_BROKEN: 23,
+
   // Subprocess errors
   GIT_NOT_CLEAN: 101,
   GIT_OUT_OF_DATE: 102,

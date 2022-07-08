@@ -1,5 +1,14 @@
 import task from '../components/task';
-import { initial, dryRun, pending, runOnly, runOnlyFiles, success, failed } from './verify';
+import {
+  initial,
+  dryRun,
+  pending,
+  runOnly,
+  runOnlyFiles,
+  success,
+  failed,
+  publishFailed,
+} from './verify';
 
 export default {
   title: 'CLI/Tasks/Verify',
@@ -17,6 +26,8 @@ export const Initial = () => initial;
 export const DryRun = () => dryRun();
 
 export const Pending = () => pending();
+
+export const PublishFailed = () => publishFailed();
 
 export const RunOnly = () => runOnly({ options: { only: 'MyComponent/MyStory' } } as any);
 

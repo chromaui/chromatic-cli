@@ -1,16 +1,14 @@
 import semver from 'semver';
 import treeKill from 'tree-kill';
 
-import startApp, { checkResponse } from '../lib/startStorybook';
+import startApp, { resolveIsolatorUrl } from '../lib/startStorybook';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import { initial, pending, skipFailed, skipped, success } from '../ui/tasks/start';
 
 export const startStorybook = async (ctx: Context) => {
-  const { scriptName, url } = ctx.options;
-
   const child = await startApp(ctx, {
-    args: scriptName &&
+    args: ctx.options.scriptName &&
       ctx.storybook.version &&
       semver.gte(ctx.storybook.version, ctx.env.STORYBOOK_CLI_FLAGS_BY_VERSION['--ci']) && [
         '--',
@@ -19,7 +17,6 @@ export const startStorybook = async (ctx: Context) => {
     options: { stdio: 'pipe' },
   });
 
-  ctx.isolatorUrl = url;
   ctx.stopApp = () =>
     child &&
     new Promise((resolve, reject) =>
@@ -31,8 +28,9 @@ export default createTask({
   title: initial.title,
   skip: async (ctx: Context) => {
     if (ctx.skip) return true;
-    if (await checkResponse(ctx, ctx.options.url)) {
-      ctx.isolatorUrl = ctx.options.url;
+    const isolatorUrl = await resolveIsolatorUrl(ctx, ctx.options.url);
+    if (isolatorUrl) {
+      ctx.isolatorUrl = isolatorUrl;
       return skipped(ctx).output;
     }
     if (ctx.options.noStart) {

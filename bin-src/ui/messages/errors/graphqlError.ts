@@ -18,8 +18,7 @@ export default function graphqlError(
     ${icon} {bold Failed to ${lcfirst(title)}}
 
     Error communicating with the Chromatic API. Check if your Chromatic client is up-to-date.
-    In case of an outage, we provide status updates at ${link('https://twitter.com/chromaui')}
-    Check ${link('http://status.chromatic.com')} for service uptime.
+    Service status updates are provided at ${link('https://status.chromatic.com')}
     ${error}
   `);
 }

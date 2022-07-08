@@ -1,13 +1,9 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import {
-  getParentCommits,
-  getBaselineBuilds,
-  getChangedFiles,
-  getSlug,
-  getVersion,
-} from '../git/git';
+import { getSlug, getVersion } from '../git/git';
+import { getParentCommits } from '../git/getParentCommits';
+import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { matchesFile } from '../lib/utils';
@@ -24,6 +20,8 @@ import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 import { Context, Task } from '../types';
+import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
+import replacedBuild from '../ui/messages/info/replacedBuild';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -34,6 +32,7 @@ const SkipBuildMutation = `
 const LastBuildQuery = `
   query LastBuildQuery($commit: String!, $branch: String!) {
     app {
+      isOnboarding
       lastBuild(ref: $commit, branch: $branch) {
         id
         status(legacy: false)
@@ -43,6 +42,7 @@ const LastBuildQuery = `
 `;
 interface LastBuildQueryResult {
   app: {
+    isOnboarding: boolean;
     lastBuild: {
       id: string;
       status: string;
@@ -74,7 +74,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   const { branch, commit, slug } = ctx.git;
 
   ctx.git.matchesBranch = (glob: true | string) =>
-    typeof glob === 'string' && glob.length ? picomatch(glob)(branch) : !!glob;
+    typeof glob === 'string' && glob.length ? picomatch(glob, { bash: true })(branch) : !!glob;
 
   if (ctx.git.matchesBranch(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
@@ -94,15 +94,19 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
+  const result = await ctx.client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
+    commit,
+    branch,
+  });
+  ctx.isOnboarding = result.app.isOnboarding;
+  if (result.app.isOnboarding) {
+    ctx.options.forceRebuild = true;
+  }
   // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
-    const result = await ctx.client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
-      commit,
-      branch,
-    });
     const mostRecentAncestor = result && result.app && result.app.lastBuild;
     if (mostRecentAncestor) {
       ctx.rebuildForBuildId = mostRecentAncestor.id;
@@ -148,8 +152,20 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0] as any;
 
     try {
-      const results = await Promise.all(baselineCommits.map((c) => getChangedFiles(c)));
-      ctx.git.changedFiles = Array.from(new Set(results.flat()));
+      const results = await Promise.all(
+        baselineBuilds.map(async (build) => ({
+          build,
+          ...(await getChangedFilesWithReplacement(ctx, build)),
+        }))
+      );
+      ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
+      ctx.git.replacementBuildIds = results
+        .filter((r) => !!r.replacementBuild)
+        .map(({ build, replacementBuild }) => {
+          ctx.log.info('');
+          ctx.log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
+          return [build.id, replacementBuild.id];
+        });
       if (!interactive) {
         ctx.log.info(
           `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles

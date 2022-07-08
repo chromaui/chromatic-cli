@@ -14,7 +14,6 @@ describe('startStorybook', () => {
       },
     } as any;
     await startStorybook(ctx);
-    expect(ctx.isolatorUrl).toBe(ctx.options.url);
     expect(startApp).toHaveBeenCalledWith(ctx, {
       args: undefined,
       options: { stdio: 'pipe' },
