@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
+import pluralize from 'pluralize';
 import { Context } from '../../../types';
 
 import { info, success } from '../../components/icons';
@@ -8,6 +9,7 @@ import { stats } from '../../tasks/snapshot';
 
 export default ({ build, isOnboarding }: Context) => {
   const { changes, snapshots, components, stories } = stats({ build });
+  const visualChanges = pluralize('visual changes', build.changeCount, true);
   if (isOnboarding) {
     return dedent(chalk`
       ${success} {bold Build passed. Welcome to Chromatic!}
@@ -23,7 +25,7 @@ export default ({ build, isOnboarding }: Context) => {
     `)
     : dedent(chalk`
       ${success} {bold Build ${build.number} passed!}
-      No visual changes were found in this build.
+      ${build.changeCount === 0 ? 'No visual changes' : visualChanges} were found in this build.
       ${info} View build details at ${link(build.webUrl)}
     `);
 };
