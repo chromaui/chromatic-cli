@@ -25,7 +25,7 @@ export default ({ build, isOnboarding }: Context) => {
     `)
     : dedent(chalk`
       ${success} {bold Build ${build.number} passed!}
-      ${build.changeCount === 0 ? 'No visual changes' : visualChanges} were found in this build.
+      ${build.changeCount > 0 ? visualChanges : 'No visual changes'} were found in this build.
       ${info} View build details at ${link(build.webUrl)}
     `);
 };
