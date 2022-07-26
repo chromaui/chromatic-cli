@@ -35,7 +35,7 @@
   ],
   "scripts": {
     "build": "npm-run-all --serial -l bundle:**",
-    "build-storybook": "build-storybook -s static",
+    "build-storybook": "build-storybook -s static --webpack-stats-json",
     "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./bin/main.cjs",
@@ -51,6 +51,7 @@
     "trim-stats": "node -r esm bin-src/trim-stats-file.js",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
+    "test:file": "jest -t",
     "prepare": "husky install",
     "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",
     "bundle:action": "webpack --config=webpack-action.config.js",
@@ -75,6 +76,7 @@
     "any-observable": "^0.5.1"
   },
   "dependencies": {
+    "@discoveryjs/json-ext": "^0.5.7",
     "@types/webpack-env": "^1.17.0"
   },
   "devDependencies": {
