@@ -1,3 +1,7 @@
+# 6.7.1 - 2002-07-22
+
+- [612](https://github.com/chromaui/chromatic-cli/pull/612) Add change count to buildPassed message if changes exist.
+
 # 6.7.0 - 2022-06-30
 
 - [598](https://github.com/chromaui/chromatic-cli/pull/598) Enable bash mode for globs when matching branches with picomatch
