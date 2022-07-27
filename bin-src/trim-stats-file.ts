@@ -21,6 +21,7 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
 
 export async function main([statsFile = './storybook-static/preview-stats.json']) {
   try {
+    console.log(statsFile);
     const stats: Stats = await parseChunked(createReadStream(statsFile));
     const trimmedModules = stats.modules
       .filter(isUserCode)
