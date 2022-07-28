@@ -75,6 +75,7 @@
     "any-observable": "^0.5.1"
   },
   "dependencies": {
+    "@discoveryjs/json-ext": "^0.5.7",
     "@types/webpack-env": "^1.17.0"
   },
   "devDependencies": {

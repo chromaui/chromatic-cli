@@ -1,0 +1,2915 @@
+{
+    "modules": [
+        {
+            "id": "./storybook-init-framework-entry.js",
+            "name": "./storybook-init-framework-entry.js",
+            "reasons": []
+        },
+        {
+            "id": "./.storybook/preview.js-generated-config-entry.js",
+            "name": "./.storybook/preview.js-generated-config-entry.js + 1 modules",
+            "modules": [
+                {
+                    "name": "./.storybook/preview.js-generated-config-entry.js"
+                },
+                {
+                    "name": "./.storybook/preview.js"
+                }
+            ],
+            "reasons": []
+        },
+        {
+            "id": "./generated-stories-entry.cjs",
+            "name": "./generated-stories-entry.cjs",
+            "reasons": []
+        },
+        {
+            "id": null,
+            "name": "./.storybook/preview.js",
+            "reasons": [
+                {
+                    "moduleName": "./.storybook/preview.js-generated-config-entry.js"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src sync recursive ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$",
+            "name": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$",
+            "reasons": [
+                {
+                    "moduleName": "./generated-stories-entry.cjs"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/components/icons.stories.ts",
+            "name": "./bin-src/ui/components/icons.stories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/components/link.stories.ts",
+            "name": "./bin-src/ui/components/link.stories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/components/task.stories.ts",
+            "name": "./bin-src/ui/components/task.stories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts",
+            "name": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/brokenStorybook.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/buildFailed.stories.ts",
+            "name": "./bin-src/ui/messages/errors/buildFailed.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/buildFailed.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/buildFailed.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/buildHasChanges.stories.ts",
+            "name": "./bin-src/ui/messages/errors/buildHasChanges.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/buildHasChanges.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/buildHasChanges.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/buildHasErrors.stories.ts",
+            "name": "./bin-src/ui/messages/errors/buildHasErrors.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/buildHasErrors.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/buildHasErrors.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/dependentOption.stories.ts",
+            "name": "./bin-src/ui/messages/errors/dependentOption.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/dependentOption.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/dependentOption.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/duplicatePatchBuild.stories.ts",
+            "name": "./bin-src/ui/messages/errors/duplicatePatchBuild.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/duplicatePatchBuild.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/duplicatePatchBuild.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/fatalError.stories.ts",
+            "name": "./bin-src/ui/messages/errors/fatalError.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/fatalError.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/fatalError.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/fetchError.stories.ts",
+            "name": "./bin-src/ui/messages/errors/fetchError.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/fetchError.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/fetchError.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/forksUnsupported.stories.ts",
+            "name": "./bin-src/ui/messages/errors/forksUnsupported.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/forksUnsupported.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/forksUnsupported.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/gitNoCommits.stories.ts",
+            "name": "./bin-src/ui/messages/errors/gitNoCommits.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/gitNoCommits.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/gitNoCommits.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/gitNotInitialized.stories.ts",
+            "name": "./bin-src/ui/messages/errors/gitNotInitialized.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/gitNotInitialized.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/gitNotInitialized.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/gitNotInstalled.stories.ts",
+            "name": "./bin-src/ui/messages/errors/gitNotInstalled.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/gitNotInstalled.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/gitNotInstalled.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/gitOneCommit.stories.ts",
+            "name": "./bin-src/ui/messages/errors/gitOneCommit.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/gitOneCommit.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/gitOneCommit.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/graphqlError.stories.ts",
+            "name": "./bin-src/ui/messages/errors/graphqlError.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/graphqlError.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/graphqlError.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/incompatibleOptions.stories.ts",
+            "name": "./bin-src/ui/messages/errors/incompatibleOptions.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/incompatibleOptions.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/incompatibleOptions.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidOnly.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidOnly.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidOnly.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidOnly.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidOnlyChanged.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidOnlyChanged.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidOnlyChanged.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidOnlyChanged.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidPackageJson.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidPackageJson.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidPackageJson.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidPackageJson.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidPatchBuild.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidPatchBuild.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidPatchBuild.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidPatchBuild.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidProjectToken.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidProjectToken.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidProjectToken.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidProjectToken.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidReportPath.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidReportPath.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidReportPath.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidReportPath.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/invalidSingularOptions.stories.ts",
+            "name": "./bin-src/ui/messages/errors/invalidSingularOptions.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidSingularOptions.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/invalidSingularOptions.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/mergeBaseNotFound.stories.ts",
+            "name": "./bin-src/ui/messages/errors/mergeBaseNotFound.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/mergeBaseNotFound.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/mergeBaseNotFound.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingBuildScriptName.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingBuildScriptName.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingBuildScriptName.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingBuildScriptName.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingGitHubInfo.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingGitHubInfo.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingGitHubInfo.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingGitHubInfo.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingProjectToken.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingProjectToken.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingProjectToken.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingProjectToken.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingScriptName.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingScriptName.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingScriptName.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingScriptName.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingStories.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingStories.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingStories.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingStories.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingStorybookPort.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingStorybookPort.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingStorybookPort.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingStorybookPort.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/missingTravisInfo.stories.ts",
+            "name": "./bin-src/ui/messages/errors/missingTravisInfo.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/missingTravisInfo.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/missingTravisInfo.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/noCSFGlobs.stories.ts",
+            "name": "./bin-src/ui/messages/errors/noCSFGlobs.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/noCSFGlobs.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/noCSFGlobs.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/noPackageJson.stories.ts",
+            "name": "./bin-src/ui/messages/errors/noPackageJson.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/noPackageJson.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/noPackageJson.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/noViewLayerPackage.stories.ts",
+            "name": "./bin-src/ui/messages/errors/noViewLayerPackage.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/noViewLayerPackage.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/noViewLayerPackage.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/runtimeError.stories.ts",
+            "name": "./bin-src/ui/messages/errors/runtimeError.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/runtimeError.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/runtimeError.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/taskError.stories.ts",
+            "name": "./bin-src/ui/messages/errors/taskError.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/taskError.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/taskError.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/unknownStorybookPort.stories.ts",
+            "name": "./bin-src/ui/messages/errors/unknownStorybookPort.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/unknownStorybookPort.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/unknownStorybookPort.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/workspaceNotClean.stories.ts",
+            "name": "./bin-src/ui/messages/errors/workspaceNotClean.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/workspaceNotClean.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/workspaceNotClean.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/errors/workspaceNotUpToDate.stories.ts",
+            "name": "./bin-src/ui/messages/errors/workspaceNotUpToDate.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/errors/workspaceNotUpToDate.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/errors/workspaceNotUpToDate.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/addedScript.stories.ts",
+            "name": "./bin-src/ui/messages/info/addedScript.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/addedScript.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/addedScript.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/buildPassed.stories.ts",
+            "name": "./bin-src/ui/messages/info/buildPassed.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/buildPassed.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/buildPassed.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/customGitHubAction.stories.ts",
+            "name": "./bin-src/ui/messages/info/customGitHubAction.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/customGitHubAction.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/customGitHubAction.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/intro.stories.ts",
+            "name": "./bin-src/ui/messages/info/intro.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/intro.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/intro.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/listingStories.stories.ts",
+            "name": "./bin-src/ui/messages/info/listingStories.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/listingStories.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/listingStories.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/notAddedScript.stories.ts",
+            "name": "./bin-src/ui/messages/info/notAddedScript.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/notAddedScript.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/notAddedScript.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/replacedBuild.stories.ts",
+            "name": "./bin-src/ui/messages/info/replacedBuild.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/replacedBuild.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/replacedBuild.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/speedUpCI.stories.ts",
+            "name": "./bin-src/ui/messages/info/speedUpCI.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/speedUpCI.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/speedUpCI.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/storybookPublished.stories.ts",
+            "name": "./bin-src/ui/messages/info/storybookPublished.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/storybookPublished.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/storybookPublished.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/tracedAffectedFiles.stories.ts",
+            "name": "./bin-src/ui/messages/info/tracedAffectedFiles.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/tracedAffectedFiles.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/tracedAffectedFiles.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/turboSnapEnabled.stories.ts",
+            "name": "./bin-src/ui/messages/info/turboSnapEnabled.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/turboSnapEnabled.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/turboSnapEnabled.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/info/wroteReport.stories.ts",
+            "name": "./bin-src/ui/messages/info/wroteReport.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/info/wroteReport.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/info/wroteReport.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/bailFile.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/bailFile.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/bailFile.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/bailFile.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/buildLimited.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/buildLimited.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/buildLimited.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/buildLimited.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/deviatingOutputDir.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/deviatingOutputDir.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/deviatingOutputDir.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/deviatingOutputDir.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/externalsChanged.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/externalsChanged.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/externalsChanged.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/externalsChanged.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/invalidChangedFiles.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/invalidChangedFiles.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/invalidChangedFiles.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/invalidChangedFiles.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/isRebuild.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/isRebuild.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/isRebuild.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/isRebuild.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/missingStatsFile.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/missingStatsFile.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/missingStatsFile.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/missingStatsFile.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/noAncestorBuild.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/noAncestorBuild.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/noAncestorBuild.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/noAncestorBuild.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/noCommitDetails.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/noCommitDetails.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/noCommitDetails.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/noCommitDetails.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/outdatedPackage.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/outdatedPackage.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/outdatedPackage.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/outdatedPackage.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/paymentRequired.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/paymentRequired.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/paymentRequired.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/paymentRequired.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/scriptNotFound.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/scriptNotFound.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/scriptNotFound.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/scriptNotFound.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/snapshotQuotaReached.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/snapshotQuotaReached.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/snapshotQuotaReached.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/snapshotQuotaReached.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/messages/warnings/travisInternalBuild.stories.ts",
+            "name": "./bin-src/ui/messages/warnings/travisInternalBuild.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/messages/warnings/travisInternalBuild.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/messages/warnings/travisInternalBuild.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/auth.stories.ts",
+            "name": "./bin-src/ui/tasks/auth.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/auth.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/auth.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/build.stories.ts",
+            "name": "./bin-src/ui/tasks/build.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/build.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/build.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/gitInfo.stories.ts",
+            "name": "./bin-src/ui/tasks/gitInfo.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/gitInfo.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/gitInfo.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/initialize.stories.ts",
+            "name": "./bin-src/ui/tasks/initialize.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/initialize.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/initialize.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/prepareWorkspace.stories.ts",
+            "name": "./bin-src/ui/tasks/prepareWorkspace.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/prepareWorkspace.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/prepareWorkspace.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/report.stories.ts",
+            "name": "./bin-src/ui/tasks/report.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/report.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/report.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/restoreWorkspace.stories.ts",
+            "name": "./bin-src/ui/tasks/restoreWorkspace.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/restoreWorkspace.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/restoreWorkspace.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/snapshot.stories.ts",
+            "name": "./bin-src/ui/tasks/snapshot.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/snapshot.stories.ts"
+                },
+                {
+                    "name": "./bin-src/lib/setExitCode.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/start.stories.ts",
+            "name": "./bin-src/ui/tasks/start.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/start.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/start.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/storybookInfo.stories.ts",
+            "name": "./bin-src/ui/tasks/storybookInfo.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/storybookInfo.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/storybookInfo.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/tunnel.stories.ts",
+            "name": "./bin-src/ui/tasks/tunnel.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/tunnel.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/tunnel.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/upload.stories.ts",
+            "name": "./bin-src/ui/tasks/upload.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/upload.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/upload.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/verify.stories.ts",
+            "name": "./bin-src/ui/tasks/verify.stories.ts + 1 modules",
+            "modules": [
+                {
+                    "name": "./bin-src/ui/tasks/verify.stories.ts"
+                },
+                {
+                    "name": "./bin-src/ui/tasks/verify.ts"
+                }
+            ],
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/workflows/tunnelBuild.stories.ts",
+            "name": "./bin-src/ui/workflows/tunnelBuild.stories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/workflows/uploadBuild.stories.ts",
+            "name": "./bin-src/ui/workflows/uploadBuild.stories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ sync ^\\.(?:(?:^%7C\\/%7C(?:(?:(?%21(?:^%7C\\/)\\.).)*?)\\/)(?%21\\.)(?=.)[^/]*?\\.stories\\.[^/]*?\\/?)$"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/components/icons.ts",
+            "name": "./bin-src/ui/components/icons.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/components/icons.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/components/task.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildFailed.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildFailed.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasChanges.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasChanges.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasErrors.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasErrors.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/dependentOption.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/dependentOption.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/duplicatePatchBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/duplicatePatchBuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/forksUnsupported.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/forksUnsupported.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNoCommits.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNoCommits.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNotInitialized.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNotInitialized.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNotInstalled.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNotInstalled.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitOneCommit.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitOneCommit.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/graphqlError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/graphqlError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/incompatibleOptions.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/incompatibleOptions.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidOnly.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidOnly.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidOnlyChanged.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidOnlyChanged.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPackageJson.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPackageJson.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPatchBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPatchBuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidProjectToken.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidProjectToken.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidReportPath.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidReportPath.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidSingularOptions.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidSingularOptions.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/mergeBaseNotFound.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/mergeBaseNotFound.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingBuildScriptName.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingBuildScriptName.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingGitHubInfo.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingGitHubInfo.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingProjectToken.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingProjectToken.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingScriptName.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingScriptName.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStories.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStorybookPort.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStorybookPort.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingTravisInfo.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingTravisInfo.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noCSFGlobs.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noCSFGlobs.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noPackageJson.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noPackageJson.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noViewLayerPackage.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noViewLayerPackage.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/runtimeError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/runtimeError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/taskError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/taskError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/unknownStorybookPort.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/unknownStorybookPort.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/workspaceNotClean.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/workspaceNotClean.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/workspaceNotUpToDate.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/workspaceNotUpToDate.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/addedScript.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/addedScript.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/customGitHubAction.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/customGitHubAction.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/listingStories.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/listingStories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/notAddedScript.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/notAddedScript.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/replacedBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/replacedBuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/speedUpCI.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/speedUpCI.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/tracedAffectedFiles.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/tracedAffectedFiles.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/turboSnapEnabled.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/turboSnapEnabled.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/wroteReport.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/wroteReport.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/bailFile.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/bailFile.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/buildLimited.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/buildLimited.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/deviatingOutputDir.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/deviatingOutputDir.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/externalsChanged.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/externalsChanged.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/invalidChangedFiles.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/invalidChangedFiles.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/isRebuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/isRebuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/missingStatsFile.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/missingStatsFile.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noAncestorBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noAncestorBuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noCommitDetails.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noCommitDetails.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/outdatedPackage.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/outdatedPackage.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/paymentRequired.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/paymentRequired.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/scriptNotFound.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/scriptNotFound.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/snapshotQuotaReached.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/snapshotQuotaReached.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/travisInternalBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/travisInternalBuild.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/components/link.ts",
+            "name": "./bin-src/ui/components/link.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/components/link.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildFailed.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildFailed.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasChanges.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasChanges.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasErrors.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasErrors.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fatalError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fatalError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/forksUnsupported.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/forksUnsupported.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitOneCommit.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitOneCommit.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/graphqlError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/graphqlError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPatchBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPatchBuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidProjectToken.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidProjectToken.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/mergeBaseNotFound.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/mergeBaseNotFound.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingGitHubInfo.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingGitHubInfo.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingProjectToken.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingProjectToken.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStories.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingTravisInfo.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingTravisInfo.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noCSFGlobs.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noCSFGlobs.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/customGitHubAction.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/customGitHubAction.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/speedUpCI.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/speedUpCI.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/bailFile.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/bailFile.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/buildLimited.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/buildLimited.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/externalsChanged.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/externalsChanged.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/invalidChangedFiles.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/invalidChangedFiles.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noAncestorBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noAncestorBuild.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noCommitDetails.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noCommitDetails.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/paymentRequired.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/paymentRequired.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/snapshotQuotaReached.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/snapshotQuotaReached.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/travisInternalBuild.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/travisInternalBuild.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/components/task.ts",
+            "name": "./bin-src/ui/components/task.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/components/task.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/auth.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/build.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/gitInfo.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/initialize.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/prepareWorkspace.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/report.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/restoreWorkspace.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/snapshot.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/start.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/storybookInfo.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/tunnel.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/upload.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/verify.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/tunnelBuild.stories.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/workflows/uploadBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/brokenStorybook.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/buildFailed.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildFailed.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/buildHasChanges.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasChanges.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/buildHasErrors.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/buildHasErrors.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/dependentOption.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/dependentOption.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/duplicatePatchBuild.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/duplicatePatchBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/fatalError.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fatalError.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/fetchError.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/forksUnsupported.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/forksUnsupported.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/gitNoCommits.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNoCommits.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/gitNotInitialized.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNotInitialized.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/gitNotInstalled.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitNotInstalled.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/gitOneCommit.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/gitOneCommit.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/graphqlError.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/graphqlError.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/incompatibleOptions.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/incompatibleOptions.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidExitOnceUploaded.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidOnly.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidOnly.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidOnlyChanged.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidOnlyChanged.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidPackageJson.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPackageJson.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidPatchBuild.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidPatchBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidProjectToken.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidProjectToken.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidReportPath.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidReportPath.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/invalidSingularOptions.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/invalidSingularOptions.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/mergeBaseNotFound.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/mergeBaseNotFound.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingBuildScriptName.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingBuildScriptName.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingGitHubInfo.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingGitHubInfo.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingProjectToken.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingProjectToken.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingScriptName.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingScriptName.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingStories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStories.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingStorybookPort.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingStorybookPort.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/missingTravisInfo.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/missingTravisInfo.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/noCSFGlobs.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noCSFGlobs.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/noPackageJson.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noPackageJson.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/noViewLayerPackage.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/noViewLayerPackage.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/runtimeError.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/runtimeError.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/taskError.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/taskError.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/unknownStorybookPort.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/unknownStorybookPort.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/workspaceNotClean.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/workspaceNotClean.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/errors/workspaceNotUpToDate.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/workspaceNotUpToDate.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/addedScript.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/addedScript.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/buildPassed.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/ui/tasks/snapshot.ts",
+            "name": "./bin-src/ui/tasks/snapshot.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/buildPassed.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/snapshot.stories.ts + 1 modules"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/customGitHubAction.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/customGitHubAction.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/intro.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/intro.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/listingStories.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/listingStories.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/notAddedScript.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/notAddedScript.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/replacedBuild.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/replacedBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/speedUpCI.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/speedUpCI.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/storybookPublished.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/tracedAffectedFiles.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/tracedAffectedFiles.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/turboSnapEnabled.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/turboSnapEnabled.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/info/wroteReport.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/info/wroteReport.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/bailFile.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/bailFile.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/buildLimited.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/buildLimited.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/deviatingOutputDir.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/deviatingOutputDir.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/externalsChanged.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/externalsChanged.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/invalidChangedFiles.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/invalidChangedFiles.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/isRebuild.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/isRebuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/missingStatsFile.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/missingStatsFile.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/noAncestorBuild.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noAncestorBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/noCommitDetails.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/noCommitDetails.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/outdatedPackage.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/outdatedPackage.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/paymentRequired.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/paymentRequired.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/scriptNotFound.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/scriptNotFound.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/snapshotQuotaReached.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/snapshotQuotaReached.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/messages/warnings/travisInternalBuild.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/warnings/travisInternalBuild.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/auth.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/auth.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/build.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/build.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/gitInfo.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/gitInfo.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/initialize.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/initialize.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/prepareWorkspace.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/prepareWorkspace.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/report.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/report.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/restoreWorkspace.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/restoreWorkspace.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/lib/setExitCode.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/snapshot.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/start.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/start.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/storybookInfo.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/storybookInfo.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/tunnel.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/tunnel.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/upload.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/upload.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": null,
+            "name": "./bin-src/ui/tasks/verify.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/verify.stories.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/lib/utils.ts",
+            "name": "./bin-src/lib/utils.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/brokenStorybook.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/errors/fetchError.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/messages/info/storybookPublished.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/snapshot.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/start.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/start.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/tunnel.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/tunnel.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/upload.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/upload.ts"
+                }
+            ]
+        },
+        {
+            "id": "./bin-src/lib/tasks.ts",
+            "name": "./bin-src/lib/tasks.ts",
+            "reasons": [
+                {
+                    "moduleName": "./bin-src/ui/tasks/build.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/build.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/snapshot.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/start.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/start.ts"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/upload.stories.ts + 1 modules"
+                },
+                {
+                    "moduleName": "./bin-src/ui/tasks/upload.ts"
+                }
+            ]
+        },
+        {
+            "id": "?4f7e",
+            "name": "./util.inspect (ignored)",
+            "reasons": []
+        }
+    ]
+}
