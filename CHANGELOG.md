@@ -1,6 +1,33 @@
+# 6.7.1 - 2002-07-22
+
+- [612](https://github.com/chromaui/chromatic-cli/pull/612) Add change count to buildPassed message if changes exist.
+
+# 6.7.0 - 2022-06-30
+
+- [598](https://github.com/chromaui/chromatic-cli/pull/598) Enable bash mode for globs when matching branches with picomatch
+
+# 6.6.4 - 2022-06-27
+
+- [590](https://github.com/chromaui/chromatic-cli/pull/590) Better onboarding support
+- [596](https://github.com/chromaui/chromatic-cli/pull/596) Handle redirects when using `--storybook-url`
+
+# 6.6.3 - 2022-06-18
+
+- [8be428f](https://github.com/chromaui/chromatic-cli/commit/8be428f4601f24921cf4bbeee889be853ed78bf7) Prevent split on undefined
+
+# 6.6.2 - 2022-06-17
+
+- [592](https://github.com/chromaui/chromatic-cli/pull/592) Filter out unsupported addons from Storybook metadata
+
+# 6.6.1 - 2022-06-17
+
+- [566](https://github.com/chromaui/chromatic-cli/pull/566) Handle commits that are missing from the repository (i.e. rebased) when doing TurboSnap
+- [562](https://github.com/chromaui/chromatic-cli/pull/562) Implement async build creation process
+- [585](https://github.com/chromaui/chromatic-cli/pull/585) Fix Storybook metadata retrieval
+
 # 6.5.4 - 2022-04-7
 
-- [554](https://github.com/chromaui/chromatic-cli/pull/554) downcase the slug so we don't accidentally treat origin as fork
+- [554](https://github.com/chromaui/chromatic-cli/pull/554) Downcase the slug so we don't accidentally treat origin as fork
 
 # 6.5.3 - 2022-03-14
 

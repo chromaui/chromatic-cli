@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0
       - name: install
         run: yarn install --frozen-lockfile
-      - uses: chromaui/action@v1
+      - uses: chromaui/action-next@v1
         with:
           exitOnceUploaded: true
           onlyChanged: true
@@ -19,7 +19,9 @@ jobs:
         env:
           CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
       - uses: actions/upload-artifact@v2
+        if: always()
         with:
+          name: chromatic-build-artifacts-${{ github.run_id }}
           path: |
             chromatic-diagnostics.json
             **/build-storybook.log

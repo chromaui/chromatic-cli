@@ -17,6 +17,7 @@ interface CommitInfo {
   committedAt: number;
   committerEmail?: string;
   committerName?: string;
+  mergeCommit?: string;
 }
 
 export default async function getCommitAndBranch(
@@ -32,6 +33,7 @@ export default async function getCommitAndBranch(
   let slug;
 
   const {
+    TRAVIS_COMMIT,
     TRAVIS_EVENT_TYPE,
     TRAVIS_PULL_REQUEST_SLUG,
     TRAVIS_REPO_SLUG,
@@ -45,6 +47,7 @@ export default async function getCommitAndBranch(
     GITHUB_SHA,
     CHROMATIC_SHA,
     CHROMATIC_BRANCH,
+    CHROMATIC_PULL_REQUEST_SHA,
     CHROMATIC_SLUG,
   } = process.env;
 
@@ -59,10 +62,13 @@ export default async function getCommitAndBranch(
 
   if (isFromEnvVariable) {
     commit = await getCommit(CHROMATIC_SHA).catch((err) => {
-      log.warn(noCommitDetails(CHROMATIC_SHA, 'CHROMATIC_SHA'));
+      log.warn(noCommitDetails({ sha: CHROMATIC_SHA, env: 'CHROMATIC_SHA' }));
       log.debug(err);
       return { commit: CHROMATIC_SHA, committedAt: Date.now() };
     });
+    if (CHROMATIC_PULL_REQUEST_SHA) {
+      commit.mergeCommit = CHROMATIC_PULL_REQUEST_SHA;
+    }
     branch = CHROMATIC_BRANCH;
     slug = CHROMATIC_SLUG;
   } else if (isTravisPrBuild) {
@@ -74,13 +80,16 @@ export default async function getCommitAndBranch(
     }
 
     // Travis PR builds are weird, we want to ensure we mark build against the commit that was
-    // merged from, rather than the resulting "psuedo" merge commit that doesn't stick around in the
+    // merged from, rather than the resulting "ephemeral" merge commit that doesn't stick around in the
     // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
     commit = await getCommit(TRAVIS_PULL_REQUEST_SHA).catch((err) => {
-      log.warn(noCommitDetails(TRAVIS_PULL_REQUEST_SHA, 'TRAVIS_PULL_REQUEST_SHA'));
+      log.warn(noCommitDetails({ sha: TRAVIS_PULL_REQUEST_SHA, env: 'TRAVIS_PULL_REQUEST_SHA' }));
       log.debug(err);
       return { commit: TRAVIS_PULL_REQUEST_SHA, committedAt: Date.now() };
     });
+    if (TRAVIS_COMMIT) {
+      commit.mergeCommit = TRAVIS_COMMIT;
+    }
     branch = TRAVIS_PULL_REQUEST_BRANCH;
     slug = TRAVIS_PULL_REQUEST_SLUG;
   } else if (isGitHubPrBuild) {
@@ -99,10 +108,11 @@ export default async function getCommitAndBranch(
     // We intentionally use the GITHUB_HEAD_REF (branch name) here, to retrieve the last commit on
     // the head branch rather than the merge commit (GITHUB_SHA).
     commit = await getCommit(GITHUB_HEAD_REF).catch((err) => {
-      log.warn(noCommitDetails(GITHUB_HEAD_REF, 'GITHUB_HEAD_REF'));
+      log.warn(noCommitDetails({ ref: GITHUB_HEAD_REF, sha: GITHUB_SHA, env: 'GITHUB_HEAD_REF' }));
       log.debug(err);
       return { commit: GITHUB_SHA, committedAt: Date.now() };
     });
+    commit.mergeCommit = GITHUB_SHA;
     branch = GITHUB_HEAD_REF;
     slug = GITHUB_REPOSITORY;
   }
@@ -121,7 +131,7 @@ export default async function getCommitAndBranch(
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
     commit = await getCommit(ciCommit).catch((err) => {
-      log.warn(noCommitDetails(ciCommit));
+      log.warn(noCommitDetails({ sha: ciCommit }));
       log.debug(err);
       return { commit: ciCommit, committedAt: Date.now() };
     });
@@ -153,7 +163,6 @@ export default async function getCommitAndBranch(
       commit,
       branch,
       slug,
-      isTravisPrBuild,
       fromCI,
       ciService,
     })}`
@@ -163,7 +172,6 @@ export default async function getCommitAndBranch(
     ...commit,
     branch,
     slug,
-    isTravisPrBuild,
     fromCI,
     ciService,
   };

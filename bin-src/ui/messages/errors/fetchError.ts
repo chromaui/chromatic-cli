@@ -21,8 +21,7 @@ export default function fetchError(
     ${icon} {bold Failed to ${lcfirst(title)}}
 
     Could not connect to the Chromatic API. Check your internet connection or try again later.
-    In case of an outage, we provide status updates at ${link('https://twitter.com/chromaui')}
-    Check ${link('http://status.chromatic.com')} for service uptime.
+    Service status updates are provided at ${link('https://status.chromatic.com')}
     ${err}${status}
   `);
 }

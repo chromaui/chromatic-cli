@@ -3,6 +3,7 @@ node_modules
 .env
 *.log
 *.tgz
+.editorconfig
 
 action/main.js
 storybook-static
