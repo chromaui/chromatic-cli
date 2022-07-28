@@ -8,6 +8,9 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
   !moduleName.startsWith('(webpack)') &&
   !moduleName.match(/(node_modules|webpack\/runtime)\//);
 
+export const readStatsFile = async (filePath: string): Promise<Stats> =>
+  parseChunked(createReadStream(filePath));
+
 /**
  * Utility to trim down a `preview-stats.json` file to the bare minimum, so that it can be used to
  * trace dependent story files while being (somewhat) human readable. By default it looks in the
@@ -21,8 +24,7 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
 
 export async function main([statsFile = './storybook-static/preview-stats.json']) {
   try {
-    console.log(statsFile);
-    const stats: Stats = await parseChunked(createReadStream(statsFile));
+    const stats = await readStatsFile(statsFile);
     const trimmedModules = stats.modules
       .filter(isUserCode)
       .map(({ id, name, modules, reasons }) => {
