@@ -57,12 +57,11 @@ Make sure to replace the value of `projectToken` with the project token provided
     skip: 'Skip Chromatic tests, but mark the commit as passing: boolean or branchname'
 ```
 
-
 You can to configure secrets in the repository settings (`/<owner>/<repository>/settings/secrets`). However if you need to be able to run this action on pull requests from forks, because those can't access your secret.
 
 ### Monorepo Support
 
-The `workingDir` input can be used to direct Chromatic to a subdirectory where your Storybook exists.  You will also need to provide this directory to other steps in your job, as needed.  This can be done per-step, or with top-level defaults for `run` steps using [defaults.run](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#defaultsrun) or [jobs.<job_id>.defaults.run](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun)
+The `workingDir` input can be used to direct Chromatic to a subdirectory where your Storybook exists. You will also need to provide this directory to other steps in your job, as needed. This can be done per-step, or with top-level defaults for `run` steps using [defaults.run](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#defaultsrun) or [jobs.<job_id>.defaults.run](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun)
 
 ```yaml
 jobs:
@@ -92,7 +91,8 @@ jobs:
 | `url`          | string | An alias for the build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)`                |
 | `buildUrl`     | string | The build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>`)                             |
 | `storybookUrl` | string | The Storybook preview URL for your current branch / Pull Request (e.g. `https://<app id goes here>-<branch hash>.chromatic.com/`) |
-| `code`         | string | The exit code for the current run of the Chromatic CLI                                                                            |
+| `changeCount`  | number | Number of visual changes contained in the build                                                                                   |
+| `code`         | number | The exit code for the current run of the Chromatic CLI                                                                            |
 
 ### Triggering from `workflow_dispatch`
 

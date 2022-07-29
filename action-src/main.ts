@@ -83,6 +83,7 @@ interface Output {
   buildUrl: string;
   storybookUrl: string;
   code: number;
+  changeCount: number;
 }
 
 async function runChromatic(options): Promise<Output> {
@@ -108,6 +109,7 @@ async function runChromatic(options): Promise<Output> {
     code: ctx.exitCode,
     buildUrl: ctx.build?.webUrl,
     storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
+    changeCount: ctx.build?.changeCount,
   };
 }
 
