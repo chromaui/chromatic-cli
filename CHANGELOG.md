@@ -1,4 +1,4 @@
-# 6.7.2 - 2022-08-1
+# 6.7.3 - 2022-08-1
 
 - [621](https://github.com/chromaui/chromatic-cli/pull/621) Add addon-interactions to supportedAddons.
 
