@@ -1,8 +1,12 @@
+# 6.7.3 - 2022-08-01
+
+- [621](https://github.com/chromaui/chromatic-cli/pull/621) Add addon-interactions to supportedAddons.
+
 # 6.7.2 - 2022-07-28
 
 - [615](https://github.com/chromaui/chromatic-cli/pull/615) Changed trim stats to stream and added test.
 
-# 6.7.1 - 2002-07-22
+# 6.7.1 - 2022-07-22
 
 - [612](https://github.com/chromaui/chromatic-cli/pull/612) Add change count to buildPassed message if changes exist.
 
