@@ -1,3 +1,7 @@
+# 6.7.2 - 2002-08-1
+
+- [621](https://github.com/chromaui/chromatic-cli/pull/621) Add addon-interactions to supportedAddons.
+
 # 6.7.1 - 2002-07-22
 
 - [612](https://github.com/chromaui/chromatic-cli/pull/612) Add change count to buildPassed message if changes exist.
