@@ -1,7 +1,7 @@
 import retry from 'async-retry';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import https from 'https';
-import { lookup } from 'dns';
+import dns from 'dns';
 import fetch, { Response, RequestInit } from 'node-fetch';
 
 import { Context } from '../types';
@@ -58,11 +58,20 @@ export default class HTTPClient {
   async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
     // const agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
     // The user can override retries and set it to 0
-    function lookupSpy(hostname, dnsOptions, callback) {
-      return lookup(hostname, { family: 4 }, callback);
-    }
     // @ts-ignore
-    const agent = new https.Agent({ lookup: lookupSpy });
+    const agent = new https.Agent({
+      lookup: (hostname, dnsOptions, callback) => {
+        /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
+        return dns.lookup(
+          hostname,
+          { hints: dns.ADDRCONFIG | dns.V4MAPPED },
+          (err, address, family) => {
+            this.log.debug('DNS lookup callback results:', { hostname, err, address, family });
+            callback(err, address, family);
+          }
+        );
+      },
+    });
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
     const onRetry = (err, n) =>
       this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
