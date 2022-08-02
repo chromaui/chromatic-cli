@@ -438,6 +438,79 @@ describe('getDependentStoryFiles', () => {
       expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)
     );
   });
+  it('ignores untraced files and dependencies', async () => {
+    const changedFiles = ['src/stories/Button.jsx', 'src/stories/Page.jsx', 'build-storybook.log'];
+    const modules = [
+      {
+        id: './src/stories/Button.jsx', // changed
+        name: './src/stories/Button.jsx + 1 modules',
+        reasons: [
+          { moduleName: './src/stories/Button.stories.jsx' },
+          { moduleName: './src/stories/Header.jsx + 1 modules' },
+        ],
+      },
+      {
+        id: './src/stories/Header.jsx',
+        name: './src/stories/Header.jsx + 1 modules',
+        reasons: [
+          { moduleName: './src/stories/Header.stories.jsx' },
+          { moduleName: './src/stories/Page.stories.jsx + 2 modules' },
+          { moduleName: './src/stories/Page.jsx' },
+        ],
+      },
+      {
+        id: null,
+        name: './src/stories/Page.jsx', // changed
+        reasons: [{ moduleName: './src/stories/Page.stories.jsx' }],
+      },
+      {
+        id: null,
+        name: './src/stories/button.css',
+        reasons: [{ moduleName: './src/stories/Button.jsx' }],
+      },
+      {
+        id: null,
+        name: './src/stories/header.css',
+        reasons: [{ moduleName: './src/stories/Header.jsx' }],
+      },
+      {
+        id: null,
+        name: './src/stories/page.css',
+        reasons: [{ moduleName: './src/stories/Page.jsx' }],
+      },
+      {
+        id: './src/stories/Button.stories.jsx',
+        name: './src/stories/Button.stories.jsx',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './src/stories/Header.stories.jsx',
+        name: './src/stories/Header.stories.jsx',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './src/stories/Page.stories.jsx',
+        name: './src/stories/Page.stories.jsx + 2 modules',
+        modules: [
+          { name: './src/stories/Page.stories.jsx' },
+          { name: './src/stories/Page.jsx' },
+          { name: './src/stories/page.css' },
+        ],
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      staticDir: ['public'],
+      untraced: ['**/stories/**'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({});
+  });
 
   it('ignores untraced files', async () => {
     const changedFiles = ['src/utils.js'];
