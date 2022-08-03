@@ -1,5 +1,6 @@
 import retry from 'async-retry';
 import CacheableLookup from 'cacheable-lookup';
+import dns from 'dns';
 import { Agent, AgentOptions } from 'https';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import fetch, { Response, RequestInit } from 'node-fetch';
@@ -66,7 +67,13 @@ export default class HTTPClient {
       options.agent ||
       getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy) ||
       new Agent({
-        lookup: this.dnsLookup.lookup,
+        lookup: (hostname, dnsOptions, callback) => {
+          dns.resolve(hostname, (err, addresses) => {
+            dns.setServers(['1.1.1.1', '4.4.4.4']);
+            const address = addresses?.shift();
+            callback(err, address, 4);
+          });
+        },
       } as AgentOptions);
     // The user can override retries and set it to 0
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
