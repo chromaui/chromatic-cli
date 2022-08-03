@@ -76,7 +76,8 @@
   },
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
-    "@types/webpack-env": "^1.17.0"
+    "@types/webpack-env": "^1.17.0",
+    "cacheable-lookup": "^6.0.4"
   },
   "devDependencies": {
     "@actions/core": "^1.5.0",

@@ -1,4 +1,6 @@
 import retry from 'async-retry';
+import CacheableLookup from 'cacheable-lookup';
+import { Agent, AgentOptions } from 'https';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import fetch, { Response, RequestInit } from 'node-fetch';
 
@@ -45,16 +47,27 @@ export default class HTTPClient {
 
   retries: number;
 
+  dnsLookup: CacheableLookup;
+
   constructor({ env, log }: Context, { headers, retries = 0 }: HTTPClientOptions = {}) {
     if (!log) throw new Error(`Missing required option in HTTPClient: log`);
     this.env = env;
     this.log = log;
     this.headers = headers;
     this.retries = retries;
+    this.dnsLookup = new CacheableLookup({
+      errorTtl: 30,
+      lookup: false,
+    });
   }
 
   async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
-    const agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
+    const agent =
+      options.agent ||
+      getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy) ||
+      new Agent({
+        lookup: this.dnsLookup.lookup,
+      } as AgentOptions);
     // The user can override retries and set it to 0
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
     const onRetry = (err, n) =>
