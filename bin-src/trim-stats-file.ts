@@ -1,5 +1,5 @@
 import { parseChunked } from '@discoveryjs/json-ext';
-import { createReadStream, outputFile } from 'fs-extra';
+import { createReadStream, outputFile, existsSync } from 'fs-extra';
 import { Stats } from './types';
 
 const dedupe = <T>(arr: T[]) => Array.from(new Set(arr));
@@ -8,8 +8,12 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
   !moduleName.startsWith('(webpack)') &&
   !moduleName.match(/(node_modules|webpack\/runtime)\//);
 
-export const readStatsFile = async (filePath: string): Promise<Stats> =>
-  parseChunked(createReadStream(filePath));
+export const readStatsFile = async (filePath: string): Promise<Stats> => {
+  if (existsSync(filePath)) {
+    return parseChunked(createReadStream(filePath));
+  }
+  return undefined;
+};
 
 /**
  * Utility to trim down a `preview-stats.json` file to the bare minimum, so that it can be used to
