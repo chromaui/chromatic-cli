@@ -9,10 +9,7 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
   !moduleName.match(/(node_modules|webpack\/runtime)\//);
 
 export const readStatsFile = async (filePath: string): Promise<Stats> => {
-  if (existsSync(filePath)) {
-    return parseChunked(createReadStream(filePath));
-  }
-  return undefined;
+  return parseChunked(createReadStream(filePath));
 };
 
 /**

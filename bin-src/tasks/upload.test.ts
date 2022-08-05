@@ -1,6 +1,7 @@
 import * as fs from 'fs-extra';
 import progressStream from 'progress-stream';
 
+import * as trimStatsFile from '../trim-stats-file';
 import { getDependentStoryFiles as dependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
@@ -90,6 +91,8 @@ describe('validateFiles', () => {
 });
 
 describe('traceChangedFiles', () => {
+  jest.spyOn(trimStatsFile, 'readStatsFile').mockReturnValueOnce(Promise.resolve(undefined));
+
   it('sets onlyStoryFiles on context', async () => {
     const deps = { 123: ['./example.stories.js'] };
     getDependentStoryFiles.mockResolvedValueOnce(deps);
