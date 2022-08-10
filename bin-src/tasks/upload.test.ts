@@ -1,13 +1,13 @@
 import * as fs from 'fs-extra';
 import progressStream from 'progress-stream';
 
-import * as readStatsFile from './read-stats-file';
 import { getDependentStoryFiles as dependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
 jest.mock('fs-extra');
 jest.mock('progress-stream');
 jest.mock('../lib/getDependentStoryFiles');
+jest.mock('./read-stats-file');
 
 const getDependentStoryFiles = <jest.MockedFunction<typeof dependentStoryFiles>>dependentStoryFiles;
 const createReadStream = <jest.MockedFunction<typeof fs.createReadStream>>fs.createReadStream;
@@ -91,8 +91,6 @@ describe('validateFiles', () => {
 });
 
 describe('traceChangedFiles', () => {
-  jest.spyOn(readStatsFile, 'readStatsFile').mockReturnValueOnce(Promise.resolve(undefined));
-
   it('sets onlyStoryFiles on context', async () => {
     const deps = { 123: ['./example.stories.js'] };
     getDependentStoryFiles.mockResolvedValueOnce(deps);
