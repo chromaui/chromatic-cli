@@ -28,6 +28,7 @@ export default function parseArgs(argv: string[]) {
       --externals <filepath>                    Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --ignore-last-build-on-branch <branch>    Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
       --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be inherited from the prior commit.
+      --only-story-names <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This flag can be specified multiple times.
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.
       --skip [branch]                           Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
       --storybook-base-dir <dirname>            Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when running Chromatic from a different directory than your Storybook.
@@ -43,7 +44,6 @@ export default function parseArgs(argv: string[]) {
       --junit-report [filepath]     Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
       --list                        List available stories. This requires running a full build.
       --no-interactive              Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
-      --only <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This option implies --preserve-missing.
       --trace-changed [mode]        Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
 
     Deprecated options
@@ -58,6 +58,7 @@ export default function parseArgs(argv: string[]) {
       --storybook-key <path>        Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-ca <ca>           Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-url, -u <url>     Run against an online Storybook at some URL. This implies --do-not-start.
+      --only                        Superceded by --only-story-names.
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
     `,
     {
@@ -81,8 +82,8 @@ export default function parseArgs(argv: string[]) {
         exitZeroOnChanges: { type: 'string' },
         externals: { type: 'string', isMultiple: true },
         ignoreLastBuildOnBranch: { type: 'string' },
-        only: { type: 'string' },
         onlyChanged: { type: 'string' },
+        onlyStoryNames: { type: 'string', isMultiple: true },
         patchBuild: { type: 'string' },
         skip: { type: 'string' },
         storybookBaseDir: { type: 'string' },
@@ -112,6 +113,7 @@ export default function parseArgs(argv: string[]) {
         storybookCert: { type: 'string' },
         storybookKey: { type: 'string' },
         storybookCa: { type: 'string' },
+        only: { type: 'string' },
         preserveMissing: { type: 'boolean' },
       },
     }

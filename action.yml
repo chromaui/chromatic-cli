@@ -43,10 +43,13 @@ inputs:
     description: 'Relative path from where you run Chromatic to your Storybook config directory'
     required: false
   only:
-    description: 'Only run a single story or a subset of stories'
+    description: 'Deprecated, use onlyStoryNames instead'
     required: false
   onlyChanged:
     description: 'Enables TurboSnap: Only run stories affected by files changed since the baseline build'
+    required: false
+  onlyStoryNames:
+    description: 'Only run a single story or a subset of stories by their name'
     required: false
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'

@@ -43,15 +43,16 @@ export const Pending = () =>
     label: 'ComponentName › StoryName',
   });
 
-export const PendingOnly = () =>
-  pending({ build: { ...build, actualTestCount: 8 }, options: { only: 'Pages/**' } } as any, {
-    cursor: 6,
-  });
-
 export const PendingOnlyChanged = () =>
   pending({ build: { ...build, actualTestCount: 8 }, options, onlyStoryFiles: {} } as any, {
     cursor: 6,
   });
+
+export const PendingOnlyStoryNames = () =>
+  pending(
+    { build: { ...build, actualTestCount: 8 }, options: { onlyStoryNames: 'Pages/**' } } as any,
+    { cursor: 6 }
+  );
 
 export const BuildPassed = () => buildPassed({ build, now, startedAt } as any);
 

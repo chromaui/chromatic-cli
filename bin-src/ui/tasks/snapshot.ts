@@ -42,7 +42,9 @@ export const stats = ({
 export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
   const { build, options, onlyStoryFiles } = ctx;
   const { errors, tests, skips } = stats(ctx);
-  const matching = options.only ? ` for stories matching '${options.only}'` : '';
+  const matching = options.onlyStoryNames
+    ? ` for stories matching '${options.onlyStoryNames}'`
+    : '';
   const affected = onlyStoryFiles ? ' affected by recent changes' : '';
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
   const percentage = Math.round((cursor / build.actualTestCount) * 100);

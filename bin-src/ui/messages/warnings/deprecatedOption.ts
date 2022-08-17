@@ -7,9 +7,13 @@ import link from '../../components/link';
 
 const changelogUrl = 'https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md';
 
-export default ({ flag }: { flag: keyof Flags }) =>
+const snakify = (option: string) => `--${option.replace(/[A-Z]/g, '-$&').toLowerCase()}`;
+
+export default ({ flag, replacement }: { flag: keyof Flags; replacement?: keyof Flags }) =>
   dedent(chalk`
-    ${warning} {bold Using deprecated option: ${flag}}
-    This option is deprecated and may be removed in a future release.
+    ${warning} {bold Using deprecated option: ${snakify(flag)}}
+    This option ${
+      replacement ? chalk`was superceded by {bold ${snakify(replacement)}}` : 'is deprecated'
+    } and may be removed in a future release.
     Refer to the changelog for more information: ${link(changelogUrl)}
   `);
