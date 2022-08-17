@@ -85,7 +85,7 @@ inputs:
     description: 'Storybook is already running at (external) url (implies -S)'
     required: false
   preserveMissing:
-    description: 'Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them'
+    description: '[Deprecated] Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them'
     required: false
   autoAcceptChanges:
     description: 'Automatically accept all changes in chromatic: boolean or branchname'

@@ -22,7 +22,6 @@ export interface Flags {
   only?: string;
   onlyChanged?: string;
   patchBuild?: string;
-  preserveMissing?: boolean;
   skip?: string;
   storybookBaseDir?: string;
   storybookConfigDir?: string;
@@ -39,7 +38,7 @@ export interface Flags {
   interactive?: boolean;
   traceChanged?: string;
 
-  // Deprecated options (for JSDOM and tunneled builds)
+  // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
   doNotStart?: boolean;
@@ -51,6 +50,7 @@ export interface Flags {
   storybookCert?: string;
   storybookKey?: string;
   storybookCa?: string;
+  preserveMissing?: boolean;
 }
 
 export interface Options {
