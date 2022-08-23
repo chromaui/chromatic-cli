@@ -43,7 +43,7 @@ const publishAction = async ({ repo, tag, version }) => {
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd) => command(cmd, { cwd: path });
 
-  await cpy(['action/*.js', 'action/*.txt', 'action.yml', 'package.json'], path, {
+  await cpy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
     parents: true,
   });
   await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
