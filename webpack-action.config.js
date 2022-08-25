@@ -1,4 +1,7 @@
 const path = require('path');
+const { BannerPlugin } = require('webpack');
+const LicensePlugin = require('webpack-license-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -8,6 +11,7 @@ module.exports = {
   // devtool: 'source-map',
   output: {
     path: path.resolve(__dirname, 'action'),
+    clean: true,
   },
   module: {
     rules: [
@@ -29,8 +33,25 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js', '.json'],
     fullySpecified: false,
   },
+  plugins: [
+    new BannerPlugin(
+      'Compiled distribution. Source code resides at https://github.com/chromaui/chromatic-cli\n'
+    ),
+    new LicensePlugin({
+      licenseOverrides: { 'json-schema@0.2.3': 'AFL-2.1' },
+    }),
+  ],
   optimization: {
-    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false,
+        terserOptions: {
+          format: {
+            comments: false,
+          },
+        },
+      }),
+    ],
   },
   node: {
     global: false,
