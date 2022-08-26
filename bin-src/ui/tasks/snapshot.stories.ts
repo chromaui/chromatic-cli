@@ -50,7 +50,7 @@ export const PendingOnlyChanged = () =>
 
 export const PendingOnlyStoryNames = () =>
   pending(
-    { build: { ...build, actualTestCount: 8 }, options: { onlyStoryNames: 'Pages/**' } } as any,
+    { build: { ...build, actualTestCount: 8 }, options: { onlyStoryNames: ['Pages/**'] } } as any,
     { cursor: 6 }
   );
 

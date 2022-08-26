@@ -35,7 +35,7 @@ export const RunOnlyFiles = () =>
   } as any);
 
 export const RunOnlyNames = () =>
-  runOnlyNames({ options: { onlyStoryNames: 'MyComponent/MyStory' } } as any);
+  runOnlyNames({ options: { onlyStoryNames: ['MyComponent/**'] } } as any);
 
 export const Started = () => success({ build } as any);
 
@@ -46,4 +46,4 @@ export const ContinueSetup = () => success({ isOnboarding: true, build } as any)
 export const NoStories = () => failed({ options: {} } as any);
 
 export const NoMatches = () =>
-  failed({ options: { onlyStoryNames: 'MyComponent/MyStory' } } as any);
+  failed({ options: { onlyStoryNames: ['MyComponent/MyStory'] } } as any);
