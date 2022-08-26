@@ -1,3 +1,8 @@
+# 6.8.0 - 2022-08-26
+
+- [630](https://github.com/chromaui/chromatic-cli/pull/630) Rename `--only` to `--only-story-names` but keep it as a deprecated alias
+- [629](https://github.com/chromaui/chromatic-cli/pull/629) Deprecate `--preserve-missing` and raise a warning if it's being used
+
 # 6.7.4 - 2022-08-11
 
 - [624](https://github.com/chromaui/chromatic-cli/pull/624) Read Webpack stats file as stream to support very large projects
