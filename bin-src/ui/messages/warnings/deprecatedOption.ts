@@ -12,8 +12,8 @@ const snakify = (option: string) => `--${option.replace(/[A-Z]/g, '-$&').toLower
 export default ({ flag, replacement }: { flag: keyof Flags; replacement?: keyof Flags }) =>
   dedent(chalk`
     ${warning} {bold Using deprecated option: ${snakify(flag)}}
-    This option ${
-      replacement ? chalk`was superceded by {bold ${snakify(replacement)}}` : 'is deprecated'
+    This option is ${
+      replacement ? chalk`superceded by {bold ${snakify(replacement)}}` : 'deprecated'
     } and may be removed in a future release.
     Refer to the changelog for more information: ${link(changelogUrl)}
   `);
