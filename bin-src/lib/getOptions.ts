@@ -16,6 +16,7 @@ import missingScriptName from '../ui/messages/errors/missingScriptName';
 import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
 import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 import inferredOptions from '../ui/messages/info/inferredOptions';
+import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
 const takeLast = (input: string | string[]) =>
@@ -59,7 +60,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
+    preserveMissingSpecs: flags.preserveMissing || !!flags.only, // deprecated
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
@@ -160,6 +161,11 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   if (typeof options.junitReport === 'string' && path.extname(options.junitReport) !== '.xml') {
     throw new Error(invalidReportPath());
+  }
+
+  if (options.preserveMissingSpecs) {
+    log.info('');
+    log.info(deprecatedOption({ flag: 'preserveMissing' }));
   }
 
   // Build Storybook instead of starting it

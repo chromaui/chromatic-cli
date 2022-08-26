@@ -29,7 +29,6 @@ export default function parseArgs(argv: string[]) {
       --ignore-last-build-on-branch <branch>    Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
       --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be inherited from the prior commit.
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.
-      --preserve-missing                        Treat missing stories as unchanged rather than deleted when comparing to the baseline.
       --skip [branch]                           Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
       --storybook-base-dir <dirname>            Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when running Chromatic from a different directory than your Storybook.
       --storybook-config-dir <dirname>          Relative path from where you run Chromatic to your Storybook config directory ('.storybook'). Use with --only-changed and --storybook-build-dir when using a custom --config-dir (-c) flag for Storybook. [.storybook]
@@ -59,6 +58,7 @@ export default function parseArgs(argv: string[]) {
       --storybook-key <path>        Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-ca <ca>           Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-url, -u <url>     Run against an online Storybook at some URL. This implies --do-not-start.
+      --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
     `,
     {
       argv,
@@ -84,7 +84,6 @@ export default function parseArgs(argv: string[]) {
         only: { type: 'string' },
         onlyChanged: { type: 'string' },
         patchBuild: { type: 'string' },
-        preserveMissing: { type: 'boolean' },
         skip: { type: 'string' },
         storybookBaseDir: { type: 'string' },
         storybookConfigDir: { type: 'string' },
@@ -101,7 +100,7 @@ export default function parseArgs(argv: string[]) {
         interactive: { type: 'boolean', default: true },
         traceChanged: { type: 'string' },
 
-        // Deprecated options (for JSDOM and tunneled builds)
+        // Deprecated options (for JSDOM and tunneled builds, among others)
         allowConsoleErrors: { type: 'boolean' },
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
         doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
@@ -113,6 +112,7 @@ export default function parseArgs(argv: string[]) {
         storybookCert: { type: 'string' },
         storybookKey: { type: 'string' },
         storybookCa: { type: 'string' },
+        preserveMissing: { type: 'boolean' },
       },
     }
   );
