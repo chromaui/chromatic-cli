@@ -19,8 +19,8 @@ export interface Flags {
   exitZeroOnChanges?: string;
   externals?: string[];
   ignoreLastBuildOnBranch?: string;
-  only?: string;
   onlyChanged?: string;
+  onlyStoryNames?: string[];
   patchBuild?: string;
   skip?: string;
   storybookBaseDir?: string;
@@ -50,14 +50,15 @@ export interface Flags {
   storybookCert?: string;
   storybookKey?: string;
   storybookCa?: string;
+  only?: string;
   preserveMissing?: boolean;
 }
 
 export interface Options {
   projectToken: string;
 
-  only: Flags['only'];
   onlyChanged: true | string;
+  onlyStoryNames: Flags['onlyStoryNames'];
   untraced: Flags['untraced'];
   externals: Flags['externals'];
   traceChanged: true | string;
