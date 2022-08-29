@@ -64,7 +64,7 @@ export const bailed = (ctx: Context) => {
 };
 
 export const traced = (ctx: Context) => {
-  const files = pluralize('story file', Object.keys(ctx.onlyStoryFiles).length, true);
+  const files = pluralize('story file', ctx.onlyStoryFiles.length, true);
   return {
     status: 'pending',
     title: 'Retrieved story files affected by recent changes',

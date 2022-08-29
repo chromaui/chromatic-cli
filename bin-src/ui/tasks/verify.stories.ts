@@ -29,13 +29,20 @@ export const Pending = () => pending();
 
 export const PublishFailed = () => publishFailed();
 
-export const RunOnlyFiles = () =>
+export const RunOnlyChangedFiles = () =>
   runOnlyFiles({
     onlyStoryFiles: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i])),
   } as any);
 
+export const RunOnlyFiles = () =>
+  runOnlyFiles({
+    options: { onlyStoryFiles: ['./src/**/*.stories.js'] },
+  } as any);
+
 export const RunOnlyNames = () =>
-  runOnlyNames({ options: { onlyStoryNames: ['MyComponent/**'] } } as any);
+  runOnlyNames({
+    options: { onlyStoryNames: ['MyComponent/**'] },
+  } as any);
 
 export const Started = () => success({ build } as any);
 

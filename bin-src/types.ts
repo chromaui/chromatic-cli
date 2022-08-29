@@ -20,6 +20,7 @@ export interface Flags {
   externals?: string[];
   ignoreLastBuildOnBranch?: string;
   onlyChanged?: string;
+  onlyStoryFiles?: string[];
   onlyStoryNames?: string[];
   patchBuild?: string;
   skip?: string;
@@ -58,6 +59,7 @@ export interface Options {
   projectToken: string;
 
   onlyChanged: true | string;
+  onlyStoryFiles: Flags['onlyStoryFiles'];
   onlyStoryNames: Flags['onlyStoryNames'];
   untraced: Flags['untraced'];
   externals: Flags['externals'];
@@ -277,7 +279,7 @@ export interface Context {
     };
   }>;
   mergeBase?: string;
-  onlyStoryFiles?: Record<string, string[]>;
+  onlyStoryFiles?: string[];
   untracedFiles?: string[];
   rebuildForBuildId?: string;
 }
