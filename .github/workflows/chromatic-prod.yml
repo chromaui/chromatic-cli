@@ -25,3 +25,6 @@ jobs:
           path: |
             chromatic-diagnostics.json
             **/build-storybook.log
+
+      - name: "Chromatic outputs"
+        run: echo ${{steps.chromatic.outputs.buildStatus}}
