@@ -29,6 +29,7 @@ import {
 } from '../ui/tasks/upload';
 import { Context, Task } from '../types';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
+import { readStatsFile } from './read-stats-file';
 
 const GetUploadUrlsMutation = `
   mutation GetUploadUrlsMutation($paths: [String!]!) {
@@ -154,7 +155,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
   const { changedFiles } = ctx.git;
   try {
-    const stats = await fs.readJson(statsPath);
+    const stats = await readStatsFile(statsPath);
     const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
     if (onlyStoryFiles) {
       ctx.onlyStoryFiles = onlyStoryFiles;

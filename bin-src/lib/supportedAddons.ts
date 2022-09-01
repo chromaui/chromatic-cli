@@ -25,4 +25,5 @@ export const supportedAddons = {
   '@storybook/addon-storyshots': 'storyshots',
   '@storybook/addon-storysource': 'storysource',
   '@storybook/addon-viewport': 'viewport',
+  '@storybook/addon-interactions': 'interactions',
 } as Record<string, string>;

@@ -1,5 +1,7 @@
 const path = require('path');
-const webpack = require('webpack');
+const { BannerPlugin } = require('webpack');
+const LicensePlugin = require('webpack-license-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -10,6 +12,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'bin'),
     filename: 'main.cjs',
+    clean: true,
   },
   module: {
     rules: [
@@ -31,9 +34,26 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js', '.json'],
     fullySpecified: false,
   },
-  plugins: [new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })],
+  plugins: [
+    new BannerPlugin({
+      banner: '#!/usr/bin/env node',
+      raw: true,
+    }),
+    new LicensePlugin({
+      licenseOverrides: { 'json-schema@0.2.3': 'AFL-2.1' },
+    }),
+  ],
   optimization: {
-    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false,
+        terserOptions: {
+          format: {
+            comments: false,
+          },
+        },
+      }),
+    ],
   },
   node: {
     global: false,

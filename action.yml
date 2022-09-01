@@ -43,10 +43,13 @@ inputs:
     description: 'Relative path from where you run Chromatic to your Storybook config directory'
     required: false
   only:
-    description: 'Only run a single story or a subset of stories'
+    description: 'Deprecated, replaced by onlyStoryNames'
     required: false
   onlyChanged:
     description: 'Enables TurboSnap: Only run stories affected by files changed since the baseline build'
+    required: false
+  onlyStoryNames:
+    description: 'Only run a single story or a subset of stories by their name'
     required: false
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'
@@ -85,7 +88,7 @@ inputs:
     description: 'Storybook is already running at (external) url (implies -S)'
     required: false
   preserveMissing:
-    description: 'Pass the baselines forward and treat all missing stories as “preserved” without re-capturing them'
+    description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'
     required: false
   autoAcceptChanges:
     description: 'Automatically accept all changes in chromatic: boolean or branchname'

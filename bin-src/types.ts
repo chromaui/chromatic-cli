@@ -19,10 +19,9 @@ export interface Flags {
   exitZeroOnChanges?: string;
   externals?: string[];
   ignoreLastBuildOnBranch?: string;
-  only?: string;
   onlyChanged?: string;
+  onlyStoryNames?: string[];
   patchBuild?: string;
-  preserveMissing?: boolean;
   skip?: string;
   storybookBaseDir?: string;
   storybookConfigDir?: string;
@@ -39,7 +38,7 @@ export interface Flags {
   interactive?: boolean;
   traceChanged?: string;
 
-  // Deprecated options (for JSDOM and tunneled builds)
+  // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
   doNotStart?: boolean;
@@ -51,13 +50,15 @@ export interface Flags {
   storybookCert?: string;
   storybookKey?: string;
   storybookCa?: string;
+  only?: string;
+  preserveMissing?: boolean;
 }
 
 export interface Options {
   projectToken: string;
 
-  only: Flags['only'];
   onlyChanged: true | string;
+  onlyStoryNames: Flags['onlyStoryNames'];
   untraced: Flags['untraced'];
   externals: Flags['externals'];
   traceChanged: true | string;

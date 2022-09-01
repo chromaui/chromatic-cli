@@ -10,8 +10,8 @@ import {
   initial,
   dryRun,
   pending,
-  runOnly,
   runOnlyFiles,
+  runOnlyNames,
   success,
   publishFailed,
 } from '../ui/tasks/verify';
@@ -35,7 +35,7 @@ export const publishBuild = async (ctx: Context) => {
   const { cachedUrl, isolatorUrl, onlyStoryFiles, turboSnap } = ctx;
   const { id, reportToken } = ctx.announcedBuild;
   const { replacementBuildIds } = ctx.git;
-  const { only } = ctx.options;
+  const { onlyStoryNames } = ctx.options;
 
   let turboSnapBailReason;
   let turboSnapStatus = 'UNUSED';
@@ -51,8 +51,8 @@ export const publishBuild = async (ctx: Context) => {
       input: {
         cachedUrl,
         isolatorUrl,
-        ...(only && { onlyStoryNames: [].concat(only) }),
         ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        ...(onlyStoryNames && { onlyStoryNames: [].concat(onlyStoryNames) }),
         ...(replacementBuildIds && { replacementBuildIds }),
         // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
@@ -153,15 +153,15 @@ interface VerifyBuildQueryResult {
 
 export const verifyBuild = async (ctx: Context, task: Task) => {
   const { client, isolatorUrl, onlyStoryFiles } = ctx;
-  const { list, only } = ctx.options;
+  const { list, onlyStoryNames } = ctx.options;
   const { matchesBranch } = ctx.git;
 
-  // It's not possible to set both --only and --only-changed
-  if (only) {
-    transitionTo(runOnly)(ctx, task);
-  }
+  // It's not possible to set both --only-changed and --only-story-names
   if (onlyStoryFiles) {
     transitionTo(runOnlyFiles)(ctx, task);
+  }
+  if (onlyStoryNames) {
+    transitionTo(runOnlyNames)(ctx, task);
   }
 
   const waitForBuildToStart = async () => {
