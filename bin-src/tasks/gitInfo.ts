@@ -22,6 +22,7 @@ import isRebuild from '../ui/messages/warnings/isRebuild';
 import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
+import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -116,6 +117,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       ) {
         ctx.skip = true;
         transitionTo(skippedRebuild, true)(ctx, task);
+        ctx.log.info(forceRebuildHint());
         ctx.exitCode = 0;
         return;
       }
