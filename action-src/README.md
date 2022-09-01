@@ -86,13 +86,19 @@ jobs:
 
 ### Outputs
 
-| Name           | Type   | Description                                                                                                                       |
-| -------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `url`          | string | An alias for the build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)`                |
-| `buildUrl`     | string | The build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>`)                             |
-| `storybookUrl` | string | The Storybook preview URL for your current branch / Pull Request (e.g. `https://<app id goes here>-<branch hash>.chromatic.com/`) |
-| `changeCount`  | number | Number of visual changes contained in the build                                                                                   |
-| `code`         | number | The exit code for the current run of the Chromatic CLI                                                                            |
+| Name                    | Type   | Description                                                                                                                       |
+| ----------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `code`                  | number | The exit code for the current run of the Chromatic CLI                                                                            |
+| `url`                   | string | An alias for the build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)`                |
+| `buildUrl`              | string | The build URL (e.g. `https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>`)                             |
+| `storybookUrl`          | string | The Storybook preview URL for your current branch / Pull Request (e.g. `https://<app id goes here>-<branch hash>.chromatic.com/`) |
+| `specCount`             | number | The number of stories in the published Storybook                                                                                  |
+| `componentCount`        | number | The number of components in the published Storybook                                                                               |
+| `testCount`             | number | The number of tests on the build                                                                                                  |
+| `changeCount`           | number | The number of tests with visual changes, including any inherited changes (e.g. due to TurboSnap)                                  |
+| `errorCount`            | number | The number of tests with error(s), including any inherited errors (e.g. due to TurboSnap)                                         |
+| `actualCaptureCount`    | number | The number of captured snapshots                                                                                                  |
+| `inheritedCaptureCount` | number | The number of inherited (not captured) snapshots (e.g. due to TurboSnap)                                                          |
 
 ### Triggering from `workflow_dispatch`
 
