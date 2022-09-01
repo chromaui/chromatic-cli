@@ -7,7 +7,7 @@ import { skippedRebuild } from '../../tasks/gitInfo';
 export default () =>
   dedent(chalk`
     ${info} {bold ${skippedRebuild().output}}
-    Running a build on the same commit as the last build on the branch is considered a rebuild.
+    A build for the same commit as the last build on the branch is considered a rebuild.
     If the last build is passed or accepted, the rebuild is skipped because it shouldn't change anything.
     You can override this using the {bold --force-rebuild} flag.
   `);
