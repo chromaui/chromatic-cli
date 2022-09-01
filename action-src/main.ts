@@ -32,6 +32,7 @@ const getBuildInfo = (event: typeof context) => {
         sha: head.sha,
         branch: head.ref,
         slug: head.repo.full_name,
+        mergeCommit: event.sha,
       };
     }
     case 'push': {
@@ -111,7 +112,7 @@ async function runChromatic(options): Promise<Output> {
 }
 
 async function run() {
-  const { sha, branch, slug } = getBuildInfo(context) || {};
+  const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
 
   try {
@@ -128,6 +129,7 @@ async function run() {
     const storybookConfigDir = getInput('storybookConfigDir');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
+    const onlyStoryNames = getInput('onlyStoryNames');
     const externals = getInput('externals');
     const untraced = getInput('untraced');
     const traceChanged = getInput('traceChanged');
@@ -151,6 +153,9 @@ async function run() {
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
     process.env.CHROMATIC_SLUG = slug;
+    if (mergeCommit) {
+      process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
+    }
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
@@ -166,6 +171,7 @@ async function run() {
       forceRebuild: maybe(forceRebuild),
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
+      onlyStoryNames: maybe(onlyStoryNames),
       externals: maybe(externals),
       untraced: maybe(untraced),
       storybookBaseDir: maybe(storybookBaseDir),

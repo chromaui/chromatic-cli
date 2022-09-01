@@ -17,10 +17,10 @@ export const pending = () => ({
   output: 'This may take a few minutes',
 });
 
-export const runOnly = (ctx: Context) => ({
-  status: 'pending',
-  title: 'Starting partial build',
-  output: `Snapshots will be limited to stories matching '${ctx.options.only}'`,
+export const publishFailed = () => ({
+  status: 'error',
+  title: 'Verifying your Storybook',
+  output: 'Failed to publish build',
 });
 
 export const runOnlyFiles = (ctx: Context) => ({
@@ -29,6 +29,12 @@ export const runOnlyFiles = (ctx: Context) => ({
   output: `Snapshots will be limited to ${
     Object.keys(ctx.onlyStoryFiles).length
   } story files affected by recent changes`,
+});
+
+export const runOnlyNames = (ctx: Context) => ({
+  status: 'pending',
+  title: 'Starting partial build',
+  output: `Snapshots will be limited to stories matching ${ctx.options.onlyStoryNames.join(', ')}`,
 });
 
 export const success = (ctx: Context) => ({
@@ -42,7 +48,7 @@ export const success = (ctx: Context) => ({
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: 'Verifying your Storybook',
-  output: ctx.options.only
-    ? 'Cannot run a build with no stories. Change or omit the --only predicate.'
+  output: ctx.options.onlyStoryNames
+    ? 'Cannot run a build with no stories. Change or omit the --only-story-names predicate.'
     : 'Cannot run a build with no stories. Please add some stories!',
 });

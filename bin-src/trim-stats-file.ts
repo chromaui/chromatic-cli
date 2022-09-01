@@ -1,5 +1,5 @@
-import { readJson, outputFile } from 'fs-extra';
-import { Stats } from './types';
+import { outputFile } from 'fs-extra';
+import { readStatsFile } from './tasks/read-stats-file';
 
 const dedupe = <T>(arr: T[]) => Array.from(new Set(arr));
 const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: string }) =>
@@ -19,30 +19,34 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
  */
 
 export async function main([statsFile = './storybook-static/preview-stats.json']) {
-  const stats: Stats = await readJson(statsFile);
-  const trimmedModules = stats.modules
-    .filter(isUserCode)
-    .map(({ id, name, modules, reasons }) => {
-      const trimmedReasons = dedupe(reasons.filter(isUserCode).map((r) => r.moduleName))
-        .filter((n) => n !== name)
-        .map((moduleName) => ({ moduleName }));
-      return {
-        id,
-        name,
-        modules: modules && modules.map((m) => ({ name: m.name })),
-        reasons: trimmedReasons,
-      };
-    })
-    .filter(Boolean);
+  try {
+    const stats = await readStatsFile(statsFile);
+    const trimmedModules = stats.modules
+      .filter(isUserCode)
+      .map(({ id, name, modules, reasons }) => {
+        const trimmedReasons = dedupe(reasons.filter(isUserCode).map((r) => r.moduleName))
+          .filter((n) => n !== name)
+          .map((moduleName) => ({ moduleName }));
+        return {
+          id,
+          name,
+          modules: modules && modules.map((m) => ({ name: m.name })),
+          reasons: trimmedReasons,
+        };
+      })
+      .filter(Boolean);
 
-  const targetFile = statsFile.replace('.json', '.trimmed.json');
-  await outputFile(
-    targetFile,
-    JSON.stringify({ modules: trimmedModules }, null, 2)
-      .replace(/{\n {10}/g, '{ ')
-      .replace(/\n {8}}/g, ' }')
-  );
+    const targetFile = statsFile.replace('.json', '.trimmed.json');
+    await outputFile(
+      targetFile,
+      JSON.stringify({ modules: trimmedModules }, null, 2)
+        .replace(/{\n {10}/g, '{ ')
+        .replace(/\n {8}}/g, ' }')
+    );
 
-  // eslint-disable-next-line no-console
-  console.log(`Wrote ${targetFile}`);
+    // eslint-disable-next-line no-console
+    console.log(`Wrote ${targetFile}`);
+  } catch (err) {
+    console.error(err);
+  }
 }

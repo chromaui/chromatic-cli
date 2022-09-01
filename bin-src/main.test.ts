@@ -15,7 +15,8 @@ import { runAll, runBuild } from './main';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
 
-let lastBuild;
+let announcedBuild;
+let publishedBuild;
 let mockBuildFeatures;
 
 jest.useFakeTimers();
@@ -62,39 +63,79 @@ jest.mock('node-fetch', () =>
         return { data: { createAppToken: 'token' } };
       }
 
-      if (query.match('CreateBuildMutation')) {
-        if (variables.isolatorUrl.startsWith('http://throw-an-error')) {
-          throw new Error('fetch error');
-        }
-        lastBuild = variables;
+      if (query.match('AnnounceBuildMutation')) {
+        announcedBuild = variables.input;
         return {
           data: {
-            createBuild: {
+            announceBuild: {
+              id: 'build-id',
               number: 1,
-              specCount: 1,
-              componentCount: 1,
-              webUrl: 'http://test.com',
-              cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
-              ...mockBuildFeatures,
-              app: {
-                account: {
-                  billingUrl: 'https://foo.bar',
-                  exceededThreshold: false,
-                  paymentRequired: false,
-                },
-              },
-              tests: [
-                {
-                  spec: { name: 'name', component: { displayName: 'component' } },
-                  parameters: { viewport: 320, viewportIsDefault: false },
-                },
-              ],
+              status: 'ANNOUNCED',
             },
           },
         };
       }
 
-      if (query.match('BuildQuery')) {
+      if (query.match('PublishBuildMutation')) {
+        if (variables.input.isolatorUrl.startsWith('http://throw-an-error')) {
+          throw new Error('fetch error');
+        }
+        publishedBuild = { id: variables.id, ...variables.input };
+        return {
+          data: {
+            publishBuild: {
+              status: 'PUBLISHED',
+            },
+          },
+        };
+      }
+
+      if (query.match('StartedBuildQuery')) {
+        return {
+          data: {
+            app: {
+              build: {
+                startedAt: Date.now(),
+              },
+            },
+          },
+        };
+      }
+
+      if (query.match('VerifyBuildQuery')) {
+        return {
+          data: {
+            app: {
+              build: {
+                number: 1,
+                status: 'IN_PROGRESS',
+                specCount: 1,
+                componentCount: 1,
+                webUrl: 'http://test.com',
+                cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
+                ...mockBuildFeatures,
+                app: {
+                  account: {
+                    billingUrl: 'https://foo.bar',
+                    exceededThreshold: false,
+                    paymentRequired: false,
+                    setupUrl: 'https://setup.com',
+                  },
+                },
+                tests: [
+                  {
+                    spec: { name: 'name', component: { displayName: 'component' } },
+                    parameters: { viewport: 320, viewportIsDefault: false },
+                  },
+                ],
+                startedAt: Date.now(),
+              },
+            },
+          },
+        };
+      }
+
+      if (query.match('SnapshotBuildQuery')) {
         return {
           data: {
             app: { build: { status: 'PENDING', changeCount: 1 } },
@@ -140,6 +181,16 @@ jest.mock('node-fetch', () =>
         };
       }
 
+      if (query.match('LastBuildQuery')) {
+        return {
+          data: {
+            app: {
+              isOnboarding: true,
+            },
+          },
+        };
+      }
+
       throw new Error(`Unknown Query: ${query}`);
     },
   }))
@@ -165,9 +216,12 @@ jest.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
   getCommit: jest.fn(),
   getBranch: () => Promise.resolve('branch'),
-  getParentCommits: () => Promise.resolve(['baseline']),
   getSlug: () => Promise.resolve('user/repo'),
   getVersion: () => Promise.resolve('2.24.1'),
+}));
+
+jest.mock('./git/getParentCommits', () => ({
+  getParentCommits: () => Promise.resolve(['baseline']),
 }));
 
 const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
@@ -175,8 +229,8 @@ const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
 jest.mock('./lib/startStorybook');
 
 const startApp = <jest.MockedFunction<typeof startStorybook.default>>startStorybook.default;
-const checkResponse = <jest.MockedFunction<typeof startStorybook.checkResponse>>(
-  startStorybook.checkResponse
+const resolveIsolatorUrl = <jest.MockedFunction<typeof startStorybook.resolveIsolatorUrl>>(
+  startStorybook.resolveIsolatorUrl
 );
 
 jest.mock('./lib/getStorybookInfo', () => () => ({
@@ -254,20 +308,17 @@ it('runs in simple situations', async () => {
   await runBuild(ctx);
 
   expect(ctx.exitCode).toBe(1);
-  expect(lastBuild).toMatchObject({
-    input: {
-      branch: 'branch',
-      commit: 'commit',
-      committedAt: 1234,
-      parentCommits: ['baseline'],
-      fromCI: false,
-      isTravisPrBuild: false,
-      packageVersion: expect.any(String),
-      storybookVersion: '5.1.0',
-      viewLayer: 'viewLayer',
-      committerEmail: 'test@test.com',
-      committerName: 'tester',
-    },
+  expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
+    branch: 'branch',
+    commit: 'commit',
+    committedAt: new Date(1234).toISOString(),
+    parentCommits: ['baseline'],
+    fromCI: false,
+    packageVersion: expect.any(String),
+    storybookVersion: '5.1.0',
+    storybookViewLayer: 'viewLayer',
+    committerEmail: 'test@test.com',
+    committerName: 'tester',
     isolatorUrl: `https://chromatic.com/iframe.html`,
   });
 });
@@ -352,25 +403,28 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
 it('passes autoAcceptChanges to the index', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--auto-accept-changes']);
   await runBuild(ctx);
-  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
+  expect(announcedBuild).toMatchObject({ autoAcceptChanges: true });
 });
 
 it('passes autoAcceptChanges to the index based on branch', async () => {
   await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=branch']));
-  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: true } });
+  expect(announcedBuild).toMatchObject({ autoAcceptChanges: true });
 
   await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
-  expect(lastBuild).toMatchObject({ input: { autoAcceptChanges: false } });
+  expect(announcedBuild).toMatchObject({ autoAcceptChanges: false });
 });
 
 describe('tunneled build', () => {
   beforeEach(() => {
-    startApp.mockReset().mockResolvedValue({
-      on: jest.fn(),
-      stderr: { on: jest.fn(), resume: jest.fn() },
-      stdout: { on: jest.fn(), resume: jest.fn() },
-    } as any);
-    checkResponse.mockReset();
+    resolveIsolatorUrl.mockReset().mockResolvedValue(false);
+    startApp.mockReset().mockImplementation((ctx) => {
+      ctx.isolatorUrl = ctx.options.url;
+      return {
+        on: jest.fn(),
+        stderr: { on: jest.fn(), resume: jest.fn() },
+        stdout: { on: jest.fn(), resume: jest.fn() },
+      } as any;
+    });
     openTunnel.mockReset().mockResolvedValue({
       url: 'http://tunnel.com/?clientId=foo',
       cachedUrl: 'http://cached.tunnel.com?foo=bar#hash',
@@ -380,13 +434,14 @@ describe('tunneled build', () => {
   });
 
   it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
 
     expect(ctx.exitCode).toBe(1);
     expect(ctx.closeTunnel).toBeDefined();
-    expect(lastBuild).toMatchObject({
-      input: { cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar' },
+    expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
+      cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar',
       isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
     });
   });
@@ -398,7 +453,7 @@ describe('tunneled build', () => {
       expect.objectContaining({
         options: expect.objectContaining({
           scriptName: 'storybook',
-          url: 'http://localhost:1337/iframe.html',
+          url: 'http://localhost:1337',
         }),
       }),
       expect.objectContaining({
@@ -418,7 +473,7 @@ describe('tunneled build', () => {
       expect.objectContaining({
         options: expect.objectContaining({
           exec: './run.sh',
-          url: 'http://localhost:9001/iframe.html',
+          url: 'http://localhost:9001',
         }),
       }),
       expect.objectContaining({})
@@ -430,7 +485,7 @@ describe('tunneled build', () => {
   });
 
   it('skips start when already running', async () => {
-    checkResponse.mockResolvedValue(true);
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(startApp).not.toHaveBeenCalled();
@@ -441,7 +496,7 @@ describe('tunneled build', () => {
   });
 
   it('fails when trying to use --do-not-start while not running', async () => {
-    checkResponse.mockResolvedValueOnce(false);
+    resolveIsolatorUrl.mockResolvedValueOnce(false);
     const ctx = getContext([
       '--project-token=asdf1234',
       '--script-name=storybook',
@@ -453,7 +508,7 @@ describe('tunneled build', () => {
   });
 
   it('skips tunnel when using --storybook-url', async () => {
-    checkResponse.mockResolvedValue(true);
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
     const ctx = getContext([
       '--project-token=asdf1234',
       '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
@@ -462,8 +517,20 @@ describe('tunneled build', () => {
     expect(ctx.exitCode).toBe(1);
     expect(ctx.closeTunnel).toBeUndefined();
     expect(openTunnel).not.toHaveBeenCalled();
-    expect(lastBuild).toMatchObject({
-      isolatorUrl: 'http://localhost:1337/iframe.html?foo=bar#hash',
+    expect(publishedBuild).toMatchObject({
+      isolatorUrl: 'http://localhost:1337/iframe.html',
+    });
+  });
+
+  it('supports redirects in --storybook-url', async () => {
+    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/some/other/path/iframe.html');
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
+    ]);
+    await runBuild(ctx);
+    expect(publishedBuild).toMatchObject({
+      isolatorUrl: 'http://localhost:1337/some/other/path/iframe.html',
     });
   });
 
@@ -471,7 +538,10 @@ describe('tunneled build', () => {
     openTunnel.mockImplementation(() => {
       throw new Error('tunnel error');
     });
-    startApp.mockResolvedValueOnce({ pid: 12345 } as any);
+    startApp.mockReset().mockImplementation((ctx) => {
+      ctx.isolatorUrl = ctx.options.url;
+      return { pid: 12345 } as any;
+    });
     const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(255);
@@ -500,11 +570,8 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        fromCI: true,
-        isTravisPrBuild: false,
-      },
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -514,11 +581,8 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234', '--ci']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        fromCI: true,
-        isTravisPrBuild: false,
-      },
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -528,11 +592,8 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        fromCI: true,
-        isTravisPrBuild: false,
-      },
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
     });
     expect(ctx.options.interactive).toBe(false);
   });
@@ -558,13 +619,10 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        commit: 'travis-commit',
-        branch: 'travis-branch',
-        fromCI: true,
-        isTravisPrBuild: true,
-      },
+    expect(announcedBuild).toMatchObject({
+      commit: 'travis-commit',
+      branch: 'travis-branch',
+      fromCI: true,
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.testLogger.warnings.length).toBe(0);
@@ -591,13 +649,10 @@ describe('in CI', () => {
     const ctx = getContext(['--project-token=asdf1234']);
     await runBuild(ctx);
     expect(ctx.exitCode).toBe(1);
-    expect(lastBuild).toMatchObject({
-      input: {
-        commit: 'travis-commit',
-        branch: 'travis-branch',
-        fromCI: true,
-        isTravisPrBuild: true,
-      },
+    expect(announcedBuild).toMatchObject({
+      commit: 'travis-commit',
+      branch: 'travis-branch',
+      fromCI: true,
     });
     expect(ctx.options.interactive).toBe(false);
     expect(ctx.testLogger.warnings.length).toBe(1);

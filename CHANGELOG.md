@@ -1,6 +1,63 @@
+# 6.8.0 - 2022-08-26
+
+- [630](https://github.com/chromaui/chromatic-cli/pull/630) Rename `--only` to `--only-story-names` but keep it as a deprecated alias
+- [629](https://github.com/chromaui/chromatic-cli/pull/629) Deprecate `--preserve-missing` and raise a warning if it's being used
+
+### Use TurboSnap instead of `preserveMissing`
+
+In order to support advanced use cases where only a subset of stories would be included in a Storybook, the `--preserve-missing` flag could be used to prevent excluded stories from being marked as "removed" in Chromatic. This behavior could lead to problematic situations regarding infrastructure upgrades and cause truly removed stories to never be removed from Chromatic. That's why we are sunsetting the "preserve missing" behavior. As of v6.8.0, using this flag will raise a warning message in the CLI. In a future major version, the flag will be removed completely, and continuing to use it with an older CLI version will start to fail your build.
+
+To upgrade, you should remove the `--preserve-missing` flag from your CI and/or `package.json` scripts. If you use our GitHub Action, you should remove the `preserveMissing` input (`with: ...`) from your workflow config file. Furthermore, you should make sure that your `build-storybook` script builds _all_ stories, not just a subset. Check your `stories` configuration in `.storybook/main.js` so it doesn't omit any stories (e.g. based on an environment variable).
+
+Most likely you were using `preserveMissing` to cut down on the number of snapshots taken by Chromatic. To achieve the same goal, you have three options:
+- Recommended: Use [TurboSnap](https://www.chromatic.com/docs/turbosnap) to automatically only snapshot stories for which related source files have changed.
+- Use [`--only-story-names`](https://www.chromatic.com/docs/cli#chromatic-options) to only snapshot stories matching a glob pattern by component/story name.
+- (Soon) Use [`--only-story-files`](https://www.chromatic.com/docs/cli#chromatic-options) to only snapshot stories matching a glob pattern by story filename.
+
+In each of these cases, any stories that aren't captured are "inherited" from their baseline.
+
+# 6.7.4 - 2022-08-11
+
+- [624](https://github.com/chromaui/chromatic-cli/pull/624) Read Webpack stats file as stream to support very large projects
+
+# 6.7.3 - 2022-08-01
+
+- [621](https://github.com/chromaui/chromatic-cli/pull/621) Add `addon-interactions` to list of supported addons
+
+# 6.7.2 - 2022-07-28
+
+- [615](https://github.com/chromaui/chromatic-cli/pull/615) Changed trim stats to stream and added test
+
+# 6.7.1 - 2022-07-22
+
+- [612](https://github.com/chromaui/chromatic-cli/pull/612) Add change count to buildPassed message if changes exist
+
+# 6.7.0 - 2022-06-30
+
+- [598](https://github.com/chromaui/chromatic-cli/pull/598) Enable bash mode for globs when matching branches with picomatch
+
+# 6.6.4 - 2022-06-27
+
+- [590](https://github.com/chromaui/chromatic-cli/pull/590) Better onboarding support
+- [596](https://github.com/chromaui/chromatic-cli/pull/596) Handle redirects when using `--storybook-url`
+
+# 6.6.3 - 2022-06-18
+
+- [8be428f](https://github.com/chromaui/chromatic-cli/commit/8be428f4601f24921cf4bbeee889be853ed78bf7) Prevent split on undefined
+
+# 6.6.2 - 2022-06-17
+
+- [592](https://github.com/chromaui/chromatic-cli/pull/592) Filter out unsupported addons from Storybook metadata
+
+# 6.6.1 - 2022-06-17
+
+- [566](https://github.com/chromaui/chromatic-cli/pull/566) Handle commits that are missing from the repository (i.e. rebased) when doing TurboSnap
+- [562](https://github.com/chromaui/chromatic-cli/pull/562) Implement async build creation process
+- [585](https://github.com/chromaui/chromatic-cli/pull/585) Fix Storybook metadata retrieval
+
 # 6.5.4 - 2022-04-7
 
-- [554](https://github.com/chromaui/chromatic-cli/pull/554) downcase the slug so we don't accidentally treat origin as fork
+- [554](https://github.com/chromaui/chromatic-cli/pull/554) Downcase the slug so we don't accidentally treat origin as fork
 
 # 6.5.3 - 2022-03-14
 

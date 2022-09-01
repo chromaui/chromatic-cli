@@ -1,0 +1,51 @@
+{
+  "generatedAt": 1654054690474,
+  "builder": {
+    "name": "webpack5"
+  },
+  "hasCustomBabel": false,
+  "hasCustomWebpack": true,
+  "hasStaticDirs": false,
+  "hasStorybookEslint": false,
+  "refCount": 0,
+  "packageManager": {
+    "type": "yarn",
+    "version": "1.22.18"
+  },
+  "features": {
+    "postcss": false
+  },
+  "storybookVersion": "6.5.6",
+  "language": "typescript",
+  "storybookPackages": {
+    "@storybook/addon-essentials": {
+      "version": "6.5.6"
+    },
+    "@storybook/builder-webpack5": {
+      "version": "6.5.6"
+    },
+    "@storybook/eslint-config-storybook": {
+      "version": "3.1.2"
+    },
+    "@storybook/linter-config": {
+      "version": "3.1.2"
+    },
+    "@storybook/manager-webpack5": {
+      "version": "6.5.6"
+    },
+    "@storybook/react": {
+      "version": "6.5.6"
+    }
+  },
+  "framework": {
+    "name": "react"
+  },
+  "addons": {
+    "@storybook/addon-viewport": {
+      "version": "6.5.6"
+    },
+    "storybook-addon-apollo-client": {
+      "version": "4.0.11"
+    }
+  }
+}

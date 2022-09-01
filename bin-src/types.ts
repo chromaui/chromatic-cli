@@ -19,10 +19,9 @@ export interface Flags {
   exitZeroOnChanges?: string;
   externals?: string[];
   ignoreLastBuildOnBranch?: string;
-  only?: string;
   onlyChanged?: string;
+  onlyStoryNames?: string[];
   patchBuild?: string;
-  preserveMissing?: boolean;
   skip?: string;
   storybookBaseDir?: string;
   storybookConfigDir?: string;
@@ -39,7 +38,7 @@ export interface Flags {
   interactive?: boolean;
   traceChanged?: string;
 
-  // Deprecated options (for JSDOM and tunneled builds)
+  // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
   doNotStart?: boolean;
@@ -51,13 +50,15 @@ export interface Flags {
   storybookCert?: string;
   storybookKey?: string;
   storybookCa?: string;
+  only?: string;
+  preserveMissing?: boolean;
 }
 
 export interface Options {
   projectToken: string;
 
-  only: Flags['only'];
   onlyChanged: true | string;
+  onlyStoryNames: Flags['onlyStoryNames'];
   untraced: Flags['untraced'];
   externals: Flags['externals'];
   traceChanged: true | string;
@@ -131,12 +132,12 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
-  environment?: string;
+  environment?: Record<string, string>;
   reportPath?: string;
   stopApp?: () => void;
   closeTunnel?: () => void;
   isPublishOnly?: boolean;
-  isOnboarding?: boolean;
+  isOnboarding: boolean;
 
   http: {
     fetch: (url: string, options?: RequestInit, opts?: any) => Promise<Response>;
@@ -156,8 +157,10 @@ export interface Context {
     commit: string;
     committedAt: number;
     slug?: string;
+    mergeCommit?: string;
     parentCommits?: string[];
     changedFiles?: string[];
+    replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
   };
   storybook: {
@@ -170,6 +173,11 @@ export interface Context {
       packageName?: string;
       packageVersion?: string;
     }[];
+    builder: {
+      name: string;
+      packageName?: string;
+      packageVersion?: string;
+    };
   };
   spawnParams: {
     client: 'yarn' | 'npm';
@@ -182,6 +190,13 @@ export interface Context {
   };
   isolatorUrl: string;
   cachedUrl: string;
+  announcedBuild: {
+    id: string;
+    number: number;
+    status: string;
+    autoAcceptChanges: boolean;
+    reportToken: string;
+  };
   build: {
     id: string;
     number: number;
@@ -199,16 +214,27 @@ export interface Context {
     errorCount: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
+    wasLimited?: boolean;
+    startedAt?: number;
     app: {
       setupUrl: string;
+      account?: {
+        exceededThreshold: boolean;
+        paymentRequired: boolean;
+        billingUrl: string;
+      };
       repository?: {
         provider: string;
       };
     };
+    features?: {
+      uiTests: boolean;
+      uiReview: boolean;
+    };
     tests?: {
       spec: {
         name: string;
-        component: { displayName: string };
+        component: { name: string; displayName: string };
       };
       parameters: {
         viewport: number;

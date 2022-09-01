@@ -5,7 +5,7 @@ import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
 import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
-import invalidOnly from '../ui/messages/errors/invalidOnly';
+import invalidOnlyStoryNames from '../ui/messages/errors/invalidOnlyStoryNames';
 import invalidOnlyChanged from '../ui/messages/errors/invalidOnlyChanged';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
@@ -16,6 +16,7 @@ import missingScriptName from '../ui/messages/errors/missingScriptName';
 import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
 import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 import inferredOptions from '../ui/messages/info/inferredOptions';
+import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
 const takeLast = (input: string | string[]) =>
@@ -40,8 +41,8 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   const options: Options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
 
-    only: flags.only,
     onlyChanged: trueIfSet(flags.onlyChanged),
+    onlyStoryNames: undefinedIfEmpty(ensureArray(flags.onlyStoryNames || flags.only)),
     untraced: undefinedIfEmpty(ensureArray(flags.untraced)),
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
     traceChanged: trueIfSet(flags.traceChanged),
@@ -59,7 +60,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
+    preserveMissingSpecs: flags.preserveMissing || !!flags.only, // deprecated
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
@@ -104,8 +105,8 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     }
   }
 
-  if (flags.only && !/[\w*]\/[\w*]/.test(flags.only)) {
-    throw new Error(invalidOnly());
+  if (options.onlyStoryNames?.some((glob) => !/[\w*]\/[\w*]/.test(glob))) {
+    throw new Error(invalidOnlyStoryNames());
   }
 
   const { storybookBuildDir, exec } = options;
@@ -125,8 +126,8 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     throw new Error(invalidSingularOptions(foundSingularOpts.map((key) => singularOpts[key])));
   }
 
-  if (options.only && options.onlyChanged) {
-    throw new Error(invalidSingularOptions(['--only', '--only-changed']));
+  if (options.onlyChanged && options.onlyStoryNames) {
+    throw new Error(invalidSingularOptions(['--only-changed', '--only-story-names']));
   }
 
   if (options.untraced && !options.onlyChanged) {
@@ -160,6 +161,16 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   if (typeof options.junitReport === 'string' && path.extname(options.junitReport) !== '.xml') {
     throw new Error(invalidReportPath());
+  }
+
+  if (flags.only) {
+    log.info('');
+    log.info(deprecatedOption({ flag: 'only', replacement: 'onlyStoryNames' }));
+  }
+
+  if (flags.preserveMissing) {
+    log.info('');
+    log.info(deprecatedOption({ flag: 'preserveMissing' }));
   }
 
   // Build Storybook instead of starting it
@@ -221,20 +232,11 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     storybookUrl = `${options.https ? 'https' : 'http'}://localhost:${port}`;
   }
 
-  const parsedUrl = new URL(storybookUrl);
-  const suffix = 'iframe.html';
-  if (!parsedUrl.pathname.endsWith(suffix)) {
-    if (!parsedUrl.pathname.endsWith('/')) {
-      parsedUrl.pathname += '/';
-    }
-    parsedUrl.pathname += suffix;
-  }
-
   return {
     ...options,
     noStart,
     useTunnel: true,
-    url: parsedUrl.href,
+    url: storybookUrl,
     scriptName,
   };
 }

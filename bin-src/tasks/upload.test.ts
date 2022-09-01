@@ -7,6 +7,7 @@ import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 jest.mock('fs-extra');
 jest.mock('progress-stream');
 jest.mock('../lib/getDependentStoryFiles');
+jest.mock('./read-stats-file');
 
 const getDependentStoryFiles = <jest.MockedFunction<typeof dependentStoryFiles>>dependentStoryFiles;
 const createReadStream = <jest.MockedFunction<typeof fs.createReadStream>>fs.createReadStream;
