@@ -438,6 +438,79 @@ describe('getDependentStoryFiles', () => {
       expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)
     );
   });
+  it('ignores untraced files and dependencies with a glob pattern match', async () => {
+    const changedFiles = ['src/stories/Button.jsx', 'src/stories/Page.jsx'];
+    const modules = [
+      {
+        id: './src/stories/Button.jsx', // changed
+        name: './src/stories/Button.jsx + 1 modules',
+        reasons: [
+          { moduleName: './src/stories/Button.stories.jsx' },
+          { moduleName: './src/stories/Header.jsx + 1 modules' },
+        ],
+      },
+      {
+        id: './src/stories/Header.jsx',
+        name: './src/stories/Header.jsx + 1 modules',
+        reasons: [
+          { moduleName: './src/stories/Header.stories.jsx' },
+          { moduleName: './src/stories/Page.stories.jsx + 2 modules' },
+          { moduleName: './src/stories/Page.jsx' },
+        ],
+      },
+      {
+        id: null,
+        name: './src/stories/Page.jsx', // changed
+        reasons: [{ moduleName: './src/stories/Page.stories.jsx' }],
+      },
+      {
+        id: null,
+        name: './src/stories/button.css',
+        reasons: [{ moduleName: './src/stories/Button.jsx' }],
+      },
+      {
+        id: null,
+        name: './src/stories/header.css',
+        reasons: [{ moduleName: './src/stories/Header.jsx' }],
+      },
+      {
+        id: null,
+        name: './src/stories/page.css',
+        reasons: [{ moduleName: './src/stories/Page.jsx' }],
+      },
+      {
+        id: './src/stories/Button.stories.jsx',
+        name: './src/stories/Button.stories.jsx',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './src/stories/Header.stories.jsx',
+        name: './src/stories/Header.stories.jsx',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './src/stories/Page.stories.jsx',
+        name: './src/stories/Page.stories.jsx + 2 modules',
+        modules: [
+          { name: './src/stories/Page.stories.jsx' },
+          { name: './src/stories/Page.jsx' },
+          { name: './src/stories/page.css' },
+        ],
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 999,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      staticDir: ['public'],
+      untraced: ['**/stories/**'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({});
+  });
 
   it('ignores untraced files', async () => {
     const changedFiles = ['src/utils.js'];
@@ -469,6 +542,151 @@ describe('getDependentStoryFiles', () => {
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual({});
+  });
+
+  it('does not bail on untraced global files', async () => {
+    const changedFiles = [
+      'src/utils.js',
+      'src/package.json',
+      'src/package-lock.json',
+      'src/yarn.lock',
+    ];
+    const modules = [
+      {
+        id: './src/utils.js',
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: './src/foo.js',
+        name: './src/foo.js',
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 997,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      untraced: ['**/(package**.json|yarn.lock)'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it('does not bail on untraced Storybook config files that change due to a module sibling', async () => {
+    const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
+    const modules = [
+      {
+        id: './src/utils.js',
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: './src/foo.js',
+        name: './src/foo.js',
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './src/packages/design-system/components/button.jsx',
+        name: './src/packages/design-system/components/button.jsx', // changed
+        reasons: [{ moduleName: './src/decorator.jsx' }],
+      },
+      {
+        id: './src/packages/design-system/components/button.stories.js',
+        name: './src/packages/design-system/components/button.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './storybook/decorator.jsx',
+        name: './storybook/decorator.jsx', // untraced
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: 997,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      untraced: ['**/decorator.jsx'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+  it('does not bail on changed dependency in dynamic import of untraced config file', async () => {
+    const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
+    const modules = [
+      {
+        id: './packages/website/containers/ weak ^\\.\\/.*\\/index$',
+        name: './packages/website/containers/ weak ^\\.\\/.*\\/index$',
+        reasons: [{ moduleName: './src/packages/design-system/components/button.jsx' }],
+      },
+      {
+        id: './src/packages/design-system/components/button.jsx',
+        name: './src/packages/design-system/components/button.jsx + 1 modules', // changed
+        reasons: [
+          { moduleName: './src/decorator.jsx' },
+          { moduleName: './src/packages/design-system/components/button.stories.js' },
+        ],
+      },
+      {
+        id: './src/packages/design-system/components/button.stories.js',
+        name: './src/packages/design-system/components/button.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './storybook/decorator.jsx',
+        name: './storybook/decorator.jsx', // untraced
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: './src/utils.js',
+        name: './src/utils.js', // changed
+        reasons: [{ moduleName: './src/foo.js' }],
+      },
+      {
+        id: './src/foo.js',
+        name: './src/foo.js',
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({
+      configDir: 'path/to/storybook-config',
+      untraced: ['**/decorator.jsx'],
+    });
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
   });
 });
 
