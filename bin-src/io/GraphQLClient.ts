@@ -35,7 +35,7 @@ export default class GraphQLClient {
   async runQuery(
     query: string,
     variables: Record<string, any>,
-    { headers = {}, retries = 0 } = {}
+    { headers = {}, retries = 2 } = {}
   ) {
     return retry(
       async (bail) => {

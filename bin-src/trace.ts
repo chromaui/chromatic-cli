@@ -1,7 +1,7 @@
-import fs from 'fs-extra';
 import meow from 'meow';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
 import { Context } from './types';
+import { readStatsFile } from './tasks/read-stats-file';
 
 /**
  * Utility to trace a set of changed file paths to dependent story files using a Webpack stats file.
@@ -85,7 +85,7 @@ export async function main(argv: string[]) {
       traceChanged: flags.mode || true,
     },
   } as any;
-  const stats = await fs.readJson(flags.statsFile);
+  const stats = await readStatsFile(flags.statsFile);
   const changedFiles = input.map((f) => f.replace(/^\.\//, ''));
 
   await getDependentStoryFiles(ctx, stats, flags.statsFile, changedFiles);

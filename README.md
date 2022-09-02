@@ -67,6 +67,32 @@ To facilitate upgrading in the future, removing and adding features, this is the
 - We can add feature flags to be able to test new functionality
 - Chromatic production can not remove any features this package depends on until after the usage has been removed from this package in addition to a grace period to allow users to upgrade
 
+### Building and running locally
+
+1. Ensure all dependencies are installed with `yarn install`
+2. Build + watch the code locally: `yarn dev`
+3. Run a build of all the CLI's stories against a Chromatic project: `yarn chromatic -t <token>`.
+
+#### Running against staging
+
+```bash
+CHROMATIC_INDEX_URL=https://index.staging-chromatic.com yarn chromatic -t 253df72b53d2
+```
+
+#### Running against development
+
+To test against a local development version of the Chromatic stack, use
+
+```bash
+CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
+```
+
+To only test a small number of test stories as a smoke test, use:
+
+```bash
+SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
+```
+
 ### Publishing a new version to npm
 
 Before publishing, make sure you've done the following:

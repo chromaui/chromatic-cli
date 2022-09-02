@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import mockfs from 'mock-fs'
 
-import { readStatsFile } from './trim-stats-file';
+import { readStatsFile } from './tasks/read-stats-file';
 // eslint-disable-next-line jest/no-mocks-import
 import * as trimmedFile from './__mocks__/previewStatsJson/preview-stats.trimmed.json';
 
