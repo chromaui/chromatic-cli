@@ -31,7 +31,8 @@ export const PublishFailed = () => publishFailed();
 
 export const RunOnlyChangedFiles = () =>
   runOnlyFiles({
-    onlyStoryFiles: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i])),
+    onlyStoryFiles: Array.from({ length: 12 }),
+    options: {},
   } as any);
 
 export const RunOnlyFiles = () =>
