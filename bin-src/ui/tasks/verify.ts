@@ -27,14 +27,18 @@ export const runOnlyFiles = (ctx: Context) => ({
   status: 'pending',
   title: 'Starting partial build',
   output: ctx.options.onlyStoryFiles
-    ? `Snapshots will be limited to story files matching ${ctx.options.onlyStoryFiles.join(', ')}`
+    ? `Snapshots will be limited to story files matching ${ctx.options.onlyStoryFiles
+        .map((v) => `'${v}'`)
+        .join(', ')}`
     : `Snapshots will be limited to ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
 });
 
 export const runOnlyNames = (ctx: Context) => ({
   status: 'pending',
   title: 'Starting partial build',
-  output: `Snapshots will be limited to stories matching ${ctx.options.onlyStoryNames.join(', ')}`,
+  output: `Snapshots will be limited to stories matching ${ctx.options.onlyStoryNames
+    .map((v) => `'${v}'`)
+    .join(', ')}`,
 });
 
 export const success = (ctx: Context) => ({
