@@ -1,3 +1,9 @@
+# 6.9.0 - 2022-09-02
+
+- [634](https://github.com/chromaui/chromatic-cli/pull/634) Add `--only-story-files` flag
+- [565](https://github.com/chromaui/chromatic-cli/pull/565) Add tests for `--untraced` flag validation
+- [636](https://github.com/chromaui/chromatic-cli/pull/636) Suggest using `--force-rebuild` when skipping rebuild
+
 # 6.8.1 - 2022-09-01
 
 - [635](https://github.com/chromaui/chromatic-cli/pull/635) Retry queries by default and allow even more retries for `FirstCommittedAtQuery`
