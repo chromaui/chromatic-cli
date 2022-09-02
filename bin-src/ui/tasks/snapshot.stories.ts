@@ -44,7 +44,7 @@ export const Pending = () =>
   });
 
 export const PendingOnlyChanged = () =>
-  pending({ build: { ...build, actualTestCount: 8 }, options, onlyStoryFiles: {} } as any, {
+  pending({ build: { ...build, actualTestCount: 8 }, options, onlyStoryFiles: [] } as any, {
     cursor: 6,
   });
 
