@@ -75,7 +75,8 @@
   },
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
-    "@types/webpack-env": "^1.17.0"
+    "@types/webpack-env": "^1.17.0",
+    "parse-diff": "^0.9.0"
   },
   "devDependencies": {
     "@actions/core": "^1.5.0",

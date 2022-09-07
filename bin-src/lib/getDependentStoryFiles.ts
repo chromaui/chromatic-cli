@@ -1,26 +1,16 @@
 import path from 'path';
-
+import parseDiff from 'parse-diff';
+import fs from 'fs-extra';
 import { matchesFile } from './utils';
-import { getRepositoryRoot } from '../git/git';
+import { getRepositoryRoot, execGitCommand } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import { Context, Module, Reason, Stats } from '../types';
 
-// Bail whenever one of these was changed
-const GLOBALS = [
-  /^package\.json$/,
-  /^package-lock\.json$/,
-  /^yarn\.lock$/,
-  /\/package\.json$/,
-  /\/package-lock\.json$/,
-  /\/yarn\.lock$/,
-];
-
 // Ignore these while tracing dependencies
-const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
+const EXTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isPackageFile = (name: string) => GLOBALS.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
   (mod as Module).id !== null &&
@@ -30,6 +20,55 @@ const isUserModule = (mod: Module | Reason) =>
 // Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
 // already contains forward slashes, because that's what git yields even on Windows.
 const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
+
+// put this in file with same name
+const getExternalChangedDirectDependencies = async (changedFiles) => {
+  const dependenciesChanged = [];
+  // const changedPackageFiles = changedFiles.filter(changedFile => /(^package\.json$)|(\/package\.json$)/.test(changedFile))
+  const changedPackageFiles = ['package.json'];
+  try {
+    await Promise.all(
+      changedPackageFiles.map(async (packageFilePath) => {
+        // do same build trick to get old commit
+        const changes = await execGitCommand(`git --no-pager diff ${packageFilePath}`);
+        const filez = parseDiff(changes);
+        filez[0].chunks.forEach((chunk) => {
+          const theChanges = chunk.changes.filter((item) => item.type === 'add');
+          // make sure this change is a proper change... should be easy enough...
+          // honestly just pull out the package name
+          // (later check that it is in proper format, maybe just using semver)
+          const refinedChanges = theChanges.map((aChange) =>
+            aChange.content.split('+')[1].split(':')[0].trim().replace(/"/g, '')
+          );
+
+          const jsonFile = fs.readFileSync(packageFilePath, 'utf-8');
+          const parsedJsonFile = JSON.parse(jsonFile);
+          // get it out of there, if it exists...
+          refinedChanges.forEach((change) => {
+            const key = change;
+            const value =
+              parsedJsonFile.dependencies?.[key] ||
+              parsedJsonFile.devDependencies?.[key] ||
+              parsedJsonFile.peerDependencies?.[key];
+
+            // if this value exists there, we do want to mark things as needing changes
+            if (value) {
+              dependenciesChanged.push(key);
+            } else {
+              console.log('not this changed...');
+            }
+          });
+        });
+      })
+    );
+
+    console.log('changed', dependenciesChanged);
+  } catch (err) {
+    console.error(err);
+  }
+
+  return dependenciesChanged;
+};
 
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
@@ -64,6 +103,8 @@ export async function getDependentStoryFiles(
     untraced = [],
   } = ctx.options;
 
+  const changedModules = await getExternalChangedDirectDependencies(changedFiles);
+
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
   const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
 
@@ -73,6 +114,16 @@ export async function getDependentStoryFiles(
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
+
+  const getPackageName = (modulePath) => {
+    const [, scopedName] = modulePath.match(/\/node_modules\/(@[\w-]+\/[\w-]+)\//) || [];
+    if (scopedName) {
+      return scopedName;
+    }
+
+    const [, unscopedName] = modulePath.match(/\/node_modules\/([\w-]+)\//) || [];
+    return unscopedName;
+  };
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
@@ -90,6 +141,11 @@ export async function getDependentStoryFiles(
   ].map(normalize);
 
   const modulesByName: Record<string, Module> = {};
+  // stores the normalized paths (like modulesByName does), but groups all package files under the same package name.
+  // Why? In monorepo, may have multiple node_modules directories, but we want to update any components using an updated dependency
+  // (regardless of where it's used). So we use the package name as the key, and the value is all files of that package name,
+  // regardless of where they are.
+  const thirdPartyModules: Record<string, string[]> = {};
   const namesById: Record<number, string> = {};
   const reasonsById: Record<number, string[]> = {};
   const csfGlobsByName: Record<string, true> = {};
@@ -98,8 +154,16 @@ export async function getDependentStoryFiles(
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
       const normalizedName = normalize(mod.name);
+      const packageName = getPackageName(mod.name);
+
       modulesByName[normalizedName] = mod;
       namesById[mod.id] = normalizedName;
+
+      if (packageName) {
+        // broaden here the list of actual files for all instances of the package, even if it's not exactly the package that changed
+        if (!thirdPartyModules[packageName]) thirdPartyModules[packageName] = [];
+        thirdPartyModules[packageName].push(normalizedName);
+      }
 
       if (mod.modules) {
         mod.modules.forEach((m) => {
@@ -153,7 +217,11 @@ export async function getDependentStoryFiles(
     return mod.modules?.length ? mod.modules.map((m) => normalize(m.name)) : [normalize(mod.name)];
   }
 
-  const tracedFiles = changedFiles.filter(untrace);
+  // append the third-party modules (respecting any untraced rules)
+  const tracedFiles = changedModules
+    .reduce((acc, mod) => acc.concat(thirdPartyModules[mod]), changedFiles)
+    .filter(untrace);
+
   const tracedPaths = new Set<string>();
   const affectedModuleIds = new Set<string | number>();
   const checkedIds = {};
@@ -171,9 +239,6 @@ export async function getDependentStoryFiles(
     affectedModuleIds,
     bailReason: undefined,
   };
-
-  const changedPackageFiles = tracedFiles.filter(isPackageFile);
-  if (changedPackageFiles.length) ctx.turboSnap.bailReason = { changedPackageFiles };
 
   function shouldBail(moduleName: string) {
     if (isStorybookFile(moduleName)) {
@@ -213,6 +278,7 @@ export async function getDependentStoryFiles(
     checkedIds[id] = true;
     reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
   }
+  // TODO: should rename (this is webpack modules) -- maybe affectedStoryFiles?
   const affectedModules = Object.fromEntries(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
     Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
