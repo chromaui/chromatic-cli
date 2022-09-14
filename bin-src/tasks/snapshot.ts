@@ -76,7 +76,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     if (ctx.options.interactive) {
       const { inProgressCount } = ctx.build;
       const cursor = actualTestCount - inProgressCount + 1;
-      const label = testLabels && testLabels[cursor - 1];
+      const label = (testLabels && testLabels[cursor - 1]) || '';
       task.output = pending(ctx, { cursor, label }).output;
     }
 
