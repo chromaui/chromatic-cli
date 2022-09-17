@@ -110,14 +110,28 @@ inputs:
     required: false
 
 outputs:
+  code:
+    description: 'The exit code for the current run of the Chromatic CLI'
   url:
     description: 'An alias for the build URL (e.g. https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)'
   buildUrl:
     description: 'The build URL (e.g. https://www.chromatic.com/build?appId=<app id goes here>&number=<build number>)'
   storybookUrl:
     description: 'The Storybook preview URL for your current branch / Pull Request (e.g. https://<app id goes here>-<branch hash>.chromatic.com/)'
-  code:
-    description: 'The exit code for the current run of the Chromatic CLI'
+  specCount:
+    description: 'The number of stories in the published Storybook'
+  componentCount:
+    description: 'The number of components in the published Storybook'
+  testCount:
+    description: 'The number of tests on the build'
+  changeCount:
+    description: 'The number of tests with visual changes, including any inherited changes (e.g. due to TurboSnap)'
+  errorCount:
+    description: 'The number of tests with error(s), including any inherited errors (e.g. due to TurboSnap)'
+  actualCaptureCount:
+    description: 'The number of captured snapshots'
+  inheritedCaptureCount:
+    description: 'The number of inherited (not captured) snapshots (e.g. due to TurboSnap)'
 
 runs:
   main: action/main.js

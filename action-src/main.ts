@@ -79,10 +79,18 @@ const getBuildInfo = (event: typeof context) => {
 };
 
 interface Output {
+  code: number;
   url: string;
   buildUrl: string;
   storybookUrl: string;
-  code: number;
+  specCount: number;
+  componentCount: number;
+  testCount: number;
+  changeCount: number;
+  errorCount: number;
+  actualTestCount: number;
+  actualCaptureCount: number;
+  inheritedCaptureCount: number;
 }
 
 async function runChromatic(options): Promise<Output> {
@@ -104,10 +112,18 @@ async function runChromatic(options): Promise<Output> {
   await runAll(ctx);
 
   return {
-    url: ctx.build?.webUrl,
     code: ctx.exitCode,
+    url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
     storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
+    specCount: ctx.build?.specCount,
+    componentCount: ctx.build?.componentCount,
+    testCount: ctx.build?.testCount,
+    changeCount: ctx.build?.changeCount,
+    errorCount: ctx.build?.errorCount,
+    actualTestCount: ctx.build?.actualTestCount,
+    actualCaptureCount: ctx.build?.actualCaptureCount,
+    inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
   };
 }
 
