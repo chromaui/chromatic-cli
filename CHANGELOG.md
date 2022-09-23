@@ -1,3 +1,8 @@
+# 6.10.0 - 2022-09-23
+
+- [620](https://github.com/chromaui/chromatic-cli/pull/620) Add various counts as GitHub Action outputs
+- [643](https://github.com/chromaui/chromatic-cli/pull/643) Fix implied `--preserve-missing` for `--only-story-names`
+
 # 6.9.0 - 2022-09-02
 
 - [634](https://github.com/chromaui/chromatic-cli/pull/634) Add `--only-story-files` flag
