@@ -62,7 +62,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     // deprecated
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only || flags.onlyStoryNames.length > 0,
+    preserveMissingSpecs: flags.preserveMissing || !!flags.only || !!flags.onlyStoryNames?.length,
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
