@@ -1,3 +1,7 @@
+# 6.10.1 - 2022-09-27
+- [645](https://github.com/chromaui/chromatic-cli/pull/645) Check onlyStoryNames is non-empty
+
+
 # 6.10.0 - 2022-09-23
 
 - [620](https://github.com/chromaui/chromatic-cli/pull/620) Add various counts as GitHub Action outputs
