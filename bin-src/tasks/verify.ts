@@ -32,10 +32,10 @@ interface PublishBuildMutationResult {
 }
 
 export const publishBuild = async (ctx: Context) => {
-  const { cachedUrl, isolatorUrl, onlyStoryFiles, turboSnap } = ctx;
+  const { cachedUrl, isolatorUrl, turboSnap } = ctx;
   const { id, reportToken } = ctx.announcedBuild;
   const { replacementBuildIds } = ctx.git;
-  const { onlyStoryNames } = ctx.options;
+  const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
 
   let turboSnapBailReason;
   let turboSnapStatus = 'UNUSED';
@@ -51,7 +51,7 @@ export const publishBuild = async (ctx: Context) => {
       input: {
         cachedUrl,
         isolatorUrl,
-        ...(onlyStoryFiles && { onlyStoryFiles: Object.keys(onlyStoryFiles) }),
+        ...(onlyStoryFiles && { onlyStoryFiles }),
         ...(onlyStoryNames && { onlyStoryNames: [].concat(onlyStoryNames) }),
         ...(replacementBuildIds && { replacementBuildIds }),
         // GraphQL does not support union input types (yet), so we send an object
@@ -152,11 +152,12 @@ interface VerifyBuildQueryResult {
 }
 
 export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { client, isolatorUrl, onlyStoryFiles } = ctx;
-  const { list, onlyStoryNames } = ctx.options;
+  const { client, isolatorUrl } = ctx;
+  const { list, onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
   const { matchesBranch } = ctx.git;
 
-  // It's not possible to set both --only-changed and --only-story-names
+  // It's not possible to set both --only-changed and --only-story-files and/or --only-story-names
+  // onlyStoryFiles may be passed directly, or calculated via --only-changed
   if (onlyStoryFiles) {
     transitionTo(runOnlyFiles)(ctx, task);
   }

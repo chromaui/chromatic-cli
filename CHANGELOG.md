@@ -1,3 +1,27 @@
+# 6.10.1 - 2022-09-27
+- [645](https://github.com/chromaui/chromatic-cli/pull/645) Check onlyStoryNames is non-empty
+
+
+# 6.10.0 - 2022-09-23
+
+- [620](https://github.com/chromaui/chromatic-cli/pull/620) Add various counts as GitHub Action outputs
+- [643](https://github.com/chromaui/chromatic-cli/pull/643) Fix implied `--preserve-missing` for `--only-story-names`
+
+# 6.9.0 - 2022-09-02
+
+- [634](https://github.com/chromaui/chromatic-cli/pull/634) Add `--only-story-files` flag
+- [565](https://github.com/chromaui/chromatic-cli/pull/565) Add tests for `--untraced` flag validation
+- [636](https://github.com/chromaui/chromatic-cli/pull/636) Suggest using `--force-rebuild` when skipping rebuild
+
+# 6.8.1 - 2022-09-01
+
+- [635](https://github.com/chromaui/chromatic-cli/pull/635) Retry queries by default and allow even more retries for `FirstCommittedAtQuery`
+- [607](https://github.com/chromaui/chromatic-cli/pull/607) Bump terser from 4.8.0 to 4.8.1
+- [601](https://github.com/chromaui/chromatic-cli/pull/601) Bump moment from 2.29.1 to 2.29.4
+- [594](https://github.com/chromaui/chromatic-cli/pull/594) Bump shell-quote from 1.7.2 to 1.7.3
+- [553](https://github.com/chromaui/chromatic-cli/pull/553) Bump minimist from 1.2.5 to 1.2.6
+- [631](https://github.com/chromaui/chromatic-cli/pull/631) Bump @actions/core from 1.5.0 to 1.9.1
+
 # 6.8.0 - 2022-08-26
 
 - [630](https://github.com/chromaui/chromatic-cli/pull/630) Rename `--only` to `--only-story-names` but keep it as a deprecated alias
@@ -10,6 +34,7 @@ In order to support advanced use cases where only a subset of stories would be i
 To upgrade, you should remove the `--preserve-missing` flag from your CI and/or `package.json` scripts. If you use our GitHub Action, you should remove the `preserveMissing` input (`with: ...`) from your workflow config file. Furthermore, you should make sure that your `build-storybook` script builds _all_ stories, not just a subset. Check your `stories` configuration in `.storybook/main.js` so it doesn't omit any stories (e.g. based on an environment variable).
 
 Most likely you were using `preserveMissing` to cut down on the number of snapshots taken by Chromatic. To achieve the same goal, you have three options:
+
 - Recommended: Use [TurboSnap](https://www.chromatic.com/docs/turbosnap) to automatically only snapshot stories for which related source files have changed.
 - Use [`--only-story-names`](https://www.chromatic.com/docs/cli#chromatic-options) to only snapshot stories matching a glob pattern by component/story name.
 - (Soon) Use [`--only-story-files`](https://www.chromatic.com/docs/cli#chromatic-options) to only snapshot stories matching a glob pattern by story filename.

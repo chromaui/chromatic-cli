@@ -106,7 +106,7 @@ describe('traceChangedFiles', () => {
     } as any;
     await traceChangedFiles(ctx, {} as any);
 
-    expect(ctx.onlyStoryFiles).toStrictEqual(deps);
+    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
   });
 });
 

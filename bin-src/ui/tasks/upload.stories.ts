@@ -49,8 +49,7 @@ export const BailedSiblings = () =>
     },
   } as any);
 
-export const Traced = () =>
-  traced({ onlyStoryFiles: Object.fromEntries(Array.from({ length: 5 }, (_, i) => [i])) } as any);
+export const Traced = () => traced({ onlyStoryFiles: Array.from({ length: 5 }) } as any);
 
 export const Preparing = () => preparing();
 

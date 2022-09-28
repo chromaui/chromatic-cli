@@ -182,10 +182,11 @@ export async function getParentCommits(
   const { branch, commit, committedAt } = git;
 
   // Include the latest build from this branch as an ancestor of the current build
-  const { app } = await client.runQuery<FirstCommittedAtQueryResult>(FirstCommittedAtQuery, {
-    branch,
-    commit,
-  });
+  const { app } = await client.runQuery<FirstCommittedAtQueryResult>(
+    FirstCommittedAtQuery,
+    { branch, commit },
+    { retries: 5 } // This query requires a request to an upstream provider which may fail
+  );
   const { firstBuild, lastBuild, pullRequest } = app;
   log.debug(
     `App firstBuild: %o, lastBuild: %o, pullRequest: %o`,

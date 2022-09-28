@@ -42,6 +42,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
 
     onlyChanged: trueIfSet(flags.onlyChanged),
+    onlyStoryFiles: undefinedIfEmpty(ensureArray(flags.onlyStoryFiles)),
     onlyStoryNames: undefinedIfEmpty(ensureArray(flags.onlyStoryNames || flags.only)),
     untraced: undefinedIfEmpty(ensureArray(flags.untraced)),
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
@@ -60,7 +61,8 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only, // deprecated
+    // deprecated
+    preserveMissingSpecs: flags.preserveMissing || !!flags.only || !!flags.onlyStoryNames?.length,
     originalArgv: argv,
 
     buildScriptName: flags.buildScriptName,
@@ -126,8 +128,14 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     throw new Error(invalidSingularOptions(foundSingularOpts.map((key) => singularOpts[key])));
   }
 
+  if (options.onlyChanged && options.onlyStoryFiles) {
+    throw new Error(invalidSingularOptions(['--only-changed', '--only-story-files']));
+  }
   if (options.onlyChanged && options.onlyStoryNames) {
     throw new Error(invalidSingularOptions(['--only-changed', '--only-story-names']));
+  }
+  if (options.onlyStoryNames && options.onlyStoryFiles) {
+    throw new Error(invalidSingularOptions(['--only-story-files', '--only-story-names']));
   }
 
   if (options.untraced && !options.onlyChanged) {

@@ -158,7 +158,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     const stats = await readStatsFile(statsPath);
     const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
     if (onlyStoryFiles) {
-      ctx.onlyStoryFiles = onlyStoryFiles;
+      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
       if (!ctx.options.interactive) {
         if (!ctx.options.traceChanged) {
           ctx.log.info(
