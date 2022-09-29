@@ -115,6 +115,7 @@ const findAddons = async (ctx, mainConfig) => {
       ...ctx.packageJson?.devDependencies,
       ...ctx.packageJson?.peerDependencies,
     };
+    ctx.log.debug('addons, ', mainConfig.addons);
     return {
       addons: mainConfig.addons.map((addon) => {
         let name: string;
