@@ -11,7 +11,7 @@ import { timeout, raceFulfilled } from './promises';
 import { supportedAddons } from './supportedAddons';
 import { builders } from './builders';
 
-export const resolvePackageJson = (log, pkg: string) => {
+export const resolvePackageJson = (pkg: string) => {
   try {
     const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
     return fs.readJson(packagePath);
@@ -79,7 +79,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
 
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
-      resolvePackageJson(log, pkg)
+      resolvePackageJson(pkg)
         .then((json) => ({ viewLayer, version: json.version }))
         .catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
       timeout(10000),
@@ -96,7 +96,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   return Promise.race([
     raceFulfilled(
       Object.entries(viewLayers).map(async ([key, value]) => {
-        const json = await resolvePackageJson(log, key);
+        const json = await resolvePackageJson(key);
         return { viewLayer: value, version: json.version };
       })
     ).catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
@@ -152,7 +152,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
-export const findBuilder = async ({ log }, mainConfig) => {
+export const findBuilder = async (mainConfig) => {
   let name = 'webpack4'; // default builder in Storybook v6
   if (mainConfig?.core?.builder) {
     const { builder } = mainConfig.core;
@@ -160,7 +160,7 @@ export const findBuilder = async ({ log }, mainConfig) => {
   }
 
   return Promise.race([
-    resolvePackageJson(log, builders[name])
+    resolvePackageJson(builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
       .catch(() => Promise.reject(new Error(packageDoesNotExist(builders[name])))),
     timeout(10000),
@@ -176,8 +176,8 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findAddons(ctx, mainConfig),
     findConfigFlags(ctx),
     findViewlayer(ctx),
-    findBuilder(ctx, mainConfig),
+    findBuilder(mainConfig),
   ]);
   ctx.log.debug(info);
-  return Object.assign({}, ...info);
+  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 };
