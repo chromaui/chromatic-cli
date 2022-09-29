@@ -172,12 +172,12 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
   const mainConfig = await r(path.resolve(configDir, 'main'));
 
-  const info = await Promise.allSettled([
+  const info = await Promise.all([
     findAddons(ctx, mainConfig),
     findConfigFlags(ctx),
     findViewlayer(ctx),
     findBuilder(ctx, mainConfig),
   ]);
   ctx.log.debug(info);
-  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  return Object.assign({}, ...info);
 };
