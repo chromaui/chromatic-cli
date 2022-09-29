@@ -18,8 +18,12 @@ export const resolvePackageJson = (log, pkg: string) => {
     // webpack will provide a '__non_webpack_require__' function to do this with,
     // but this will obviously not be present during tests, hence the check and fallback to the normal require
     const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
-    log.debug(pkg);
-    const packagePath = r.resolve(`${pkg}/package.json`);
+    const pkgPath =
+      typeof __non_webpack_require__ !== 'undefined'
+        ? `./node_modules/${pkg}/package.json`
+        : `${pkg}/package.json`;
+    log.debug(pkgPath);
+    const packagePath = r.resolve(pkgPath);
     return fs.readJson(packagePath);
   } catch (error) {
     return Promise.reject(error);
