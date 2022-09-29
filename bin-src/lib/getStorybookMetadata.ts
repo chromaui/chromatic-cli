@@ -81,11 +81,15 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
       // Note that `version` can be a semver range in this case.
       return { viewLayer, version };
     }
-    log.debug('viewLayer, ', `${viewLayer}`);
+    log.debug('viewLayer, ', `${viewLayer}: ${pkg}`);
+
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
       resolvePackageJson(pkg)
-        .then((json) => ({ viewLayer, version: json.version }))
+        .then((json) => {
+          log.debug(json);
+          return { viewLayer, version: json.version };
+        })
         .catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
       timeout(10000),
     ]);

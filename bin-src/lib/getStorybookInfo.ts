@@ -22,8 +22,7 @@ export default async function getStorybookInfo(
       }
     }
     // Same for this await.
-    const sbMetadata = await getStorybookMetadata(ctx);
-    return sbMetadata;
+    return await getStorybookMetadata(ctx);
   } catch (e) {
     ctx.log.debug(e);
     return { viewLayer: null, version: null, addons: [], builder: null };
