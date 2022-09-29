@@ -13,12 +13,6 @@ import { builders } from './builders';
 
 export const resolvePackageJson = (log, pkg: string) => {
   try {
-    // we bundle this app for node, meaning all require calls are replaced by webpack.
-    // in this case we want to use node's actual require functionality!
-    // webpack will provide a '__non_webpack_require__' function to do this with,
-    // but this will obviously not be present during tests, hence the check and fallback to the normal require
-    // const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
-    log.debug(pkg);
     const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
     return fs.readJson(packagePath);
   } catch (error) {
@@ -82,19 +76,12 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
       // Note that `version` can be a semver range in this case.
       return { viewLayer, version };
     }
-    log.debug('viewLayer, ', `${viewLayer}: ${pkg}`);
 
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
       resolvePackageJson(log, pkg)
-        .then((json) => {
-          log.debug(json);
-          return { viewLayer, version: json.version };
-        })
-        .catch((e) => {
-          log.debug(e);
-          return Promise.reject(new Error(packageDoesNotExist(pkg)));
-        }),
+        .then((json) => ({ viewLayer, version: json.version }))
+        .catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
       timeout(10000),
     ]);
   }
@@ -172,15 +159,10 @@ export const findBuilder = async ({ log }, mainConfig) => {
     name = typeof builder === 'string' ? builder : builder.name;
   }
 
-  log.debug('builder, ', name);
-
   return Promise.race([
     resolvePackageJson(log, builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
-      .catch((e) => {
-        log.debug(e);
-        return Promise.reject(new Error(packageDoesNotExist(builders[name])));
-      }),
+      .catch(() => Promise.reject(new Error(packageDoesNotExist(builders[name])))),
     timeout(10000),
   ]);
 };
