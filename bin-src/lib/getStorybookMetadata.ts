@@ -11,13 +11,14 @@ import { timeout, raceFulfilled } from './promises';
 import { supportedAddons } from './supportedAddons';
 import { builders } from './builders';
 
-export const resolvePackageJson = (pkg: string) => {
+export const resolvePackageJson = (log, pkg: string) => {
   try {
     // we bundle this app for node, meaning all require calls are replaced by webpack.
     // in this case we want to use node's actual require functionality!
     // webpack will provide a '__non_webpack_require__' function to do this with,
     // but this will obviously not be present during tests, hence the check and fallback to the normal require
     const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
+    log.debug(pkg);
     const packagePath = r.resolve(`${pkg}/package.json`);
     return fs.readJson(packagePath);
   } catch (error) {
@@ -85,7 +86,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
 
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
-      resolvePackageJson(pkg)
+      resolvePackageJson(log, pkg)
         .then((json) => {
           log.debug(json);
           return { viewLayer, version: json.version };
@@ -108,7 +109,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   return Promise.race([
     raceFulfilled(
       Object.entries(viewLayers).map(async ([key, value]) => {
-        const json = await resolvePackageJson(key);
+        const json = await resolvePackageJson(log, key);
         return { viewLayer: value, version: json.version };
       })
     ).catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
@@ -164,20 +165,20 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
-export const findBuilder = async (ctx, mainConfig) => {
+export const findBuilder = async ({ log }, mainConfig) => {
   let name = 'webpack4'; // default builder in Storybook v6
   if (mainConfig?.core?.builder) {
     const { builder } = mainConfig.core;
     name = typeof builder === 'string' ? builder : builder.name;
   }
 
-  ctx.log.debug('builder, ', name);
+  log.debug('builder, ', name);
 
   return Promise.race([
-    resolvePackageJson(builders[name])
+    resolvePackageJson(log, builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
       .catch((e) => {
-        ctx.log.debug(e);
+        log.debug(e);
         return Promise.reject(new Error(packageDoesNotExist(builders[name])));
       }),
     timeout(10000),
