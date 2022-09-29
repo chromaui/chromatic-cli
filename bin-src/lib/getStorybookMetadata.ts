@@ -176,6 +176,5 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findViewlayer(ctx),
     findBuilder(mainConfig),
   ]);
-  ctx.log.debug(info);
   return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 };
