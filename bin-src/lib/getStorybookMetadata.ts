@@ -90,7 +90,10 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
           log.debug(json);
           return { viewLayer, version: json.version };
         })
-        .catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
+        .catch((e) => {
+          log.debug(e);
+          return Promise.reject(new Error(packageDoesNotExist(pkg)));
+        }),
       timeout(10000),
     ]);
   }
@@ -173,7 +176,10 @@ export const findBuilder = async (ctx, mainConfig) => {
   return Promise.race([
     resolvePackageJson(builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
-      .catch(() => Promise.reject(new Error(packageDoesNotExist(builders[name])))),
+      .catch((e) => {
+        ctx.log.debug(e);
+        return Promise.reject(new Error(packageDoesNotExist(builders[name])));
+      }),
     timeout(10000),
   ]);
 };
