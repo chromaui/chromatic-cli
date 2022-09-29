@@ -81,6 +81,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
       // Note that `version` can be a semver range in this case.
       return { viewLayer, version };
     }
+    log.debug('viewLayer, ', `${viewLayer}`);
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
       resolvePackageJson(pkg)
@@ -115,7 +116,7 @@ const findAddons = async (ctx, mainConfig) => {
       ...ctx.packageJson?.devDependencies,
       ...ctx.packageJson?.peerDependencies,
     };
-    ctx.log.debug('addons, ', mainConfig.addons);
+
     return {
       addons: mainConfig.addons.map((addon) => {
         let name: string;
@@ -156,12 +157,14 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
-export const findBuilder = async (mainConfig) => {
+export const findBuilder = async (ctx, mainConfig) => {
   let name = 'webpack4'; // default builder in Storybook v6
   if (mainConfig?.core?.builder) {
     const { builder } = mainConfig.core;
     name = typeof builder === 'string' ? builder : builder.name;
   }
+
+  ctx.log.debug('builder, ', name);
 
   return Promise.race([
     resolvePackageJson(builders[name])
@@ -180,7 +183,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findAddons(ctx, mainConfig),
     findConfigFlags(ctx),
     findViewlayer(ctx),
-    findBuilder(mainConfig),
+    findBuilder(ctx, mainConfig),
   ]);
   ctx.log.debug(info);
   return info.reduce((acc, obj) => Object.assign(acc, obj), {});
