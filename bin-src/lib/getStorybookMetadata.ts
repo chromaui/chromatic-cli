@@ -11,19 +11,9 @@ import { timeout, raceFulfilled } from './promises';
 import { supportedAddons } from './supportedAddons';
 import { builders } from './builders';
 
-export const resolvePackageJson = (log, pkg: string) => {
+export const resolvePackageJson = (pkg: string) => {
   try {
-    // we bundle this app for node, meaning all require calls are replaced by webpack.
-    // in this case we want to use node's actual require functionality!
-    // webpack will provide a '__non_webpack_require__' function to do this with,
-    // but this will obviously not be present during tests, hence the check and fallback to the normal require
-    const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
-    const pkgPath =
-      typeof __non_webpack_require__ !== 'undefined'
-        ? `./node_modules/${pkg}/package.json`
-        : `${pkg}/package.json`;
-    log.debug(pkgPath);
-    const packagePath = r.resolve(pkgPath);
+    const packagePath = path.join(__dirname, `./node_modules/${pkg}/package.json`);
     return fs.readJson(packagePath);
   } catch (error) {
     return Promise.reject(error);
@@ -90,7 +80,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
 
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
-      resolvePackageJson(log, pkg)
+      resolvePackageJson(pkg)
         .then((json) => {
           log.debug(json);
           return { viewLayer, version: json.version };
@@ -113,7 +103,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   return Promise.race([
     raceFulfilled(
       Object.entries(viewLayers).map(async ([key, value]) => {
-        const json = await resolvePackageJson(log, key);
+        const json = await resolvePackageJson(key);
         return { viewLayer: value, version: json.version };
       })
     ).catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
@@ -179,7 +169,7 @@ export const findBuilder = async ({ log }, mainConfig) => {
   log.debug('builder, ', name);
 
   return Promise.race([
-    resolvePackageJson(log, builders[name])
+    resolvePackageJson(builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
       .catch((e) => {
         log.debug(e);
