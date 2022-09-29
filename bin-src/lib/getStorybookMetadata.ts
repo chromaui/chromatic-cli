@@ -76,7 +76,6 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
       // Note that `version` can be a semver range in this case.
       return { viewLayer, version };
     }
-
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
       resolvePackageJson(pkg)
@@ -111,7 +110,6 @@ const findAddons = async (ctx, mainConfig) => {
       ...ctx.packageJson?.devDependencies,
       ...ctx.packageJson?.peerDependencies,
     };
-
     return {
       addons: mainConfig.addons.map((addon) => {
         let name: string;
