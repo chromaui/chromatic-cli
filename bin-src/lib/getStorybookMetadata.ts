@@ -13,12 +13,7 @@ import { builders } from './builders';
 
 export const resolvePackageJson = (pkg: string) => {
   try {
-    // we bundle this app for node, meaning all require calls are replaced by webpack.
-    // in this case we want to use node's actual require functionality!
-    // webpack will provide a '__non_webpack_require__' function to do this with,
-    // but this will obviously not be present during tests, hence the check and fallback to the normal require
-    const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
-    const packagePath = r.resolve(`${pkg}/package.json`);
+    const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
     return fs.readJson(packagePath);
   } catch (error) {
     return Promise.reject(error);
@@ -157,7 +152,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
 
 export const findBuilder = async (mainConfig) => {
   let name = 'webpack4'; // default builder in Storybook v6
-  if (mainConfig?.core.builder) {
+  if (mainConfig?.core?.builder) {
     const { builder } = mainConfig.core;
     name = typeof builder === 'string' ? builder : builder.name;
   }
@@ -181,5 +176,6 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findViewlayer(ctx),
     findBuilder(mainConfig),
   ]);
+  ctx.log.debug(info);
   return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 };
