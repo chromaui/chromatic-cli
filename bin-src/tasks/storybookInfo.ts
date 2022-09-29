@@ -5,7 +5,6 @@ import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
 export const setStorybookInfo = async (ctx: Context) => {
   ctx.storybook = (await getStorybookInfo(ctx)) as Context['storybook'];
-  ctx.log.debug(ctx.storybook);
 };
 
 export default createTask({
