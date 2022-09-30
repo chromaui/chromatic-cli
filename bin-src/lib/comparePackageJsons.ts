@@ -7,14 +7,21 @@ const comparePackageJsons = (packageFileA, packageFileB) => {
   }
 
   // depends on always having consistent ordering of keys
-  // eslint-disable-next-line consistent-return
-  entriesA.forEach((entryA, index) => {
-    const entryB = entriesB[index];
+  // eslint-disable-next-line no-plusplus
+  for (let i = 0; i < entriesA.length; i++) {
+    const entryA = entriesA[i];
+    const entryB = entriesB[i];
 
+    // do keys match?
     if (entryA[0] !== entryB[0]) {
       return false;
     }
-  });
+
+    // do values match?
+    if (entryA[1] !== entryB[1]) {
+      return false;
+    }
+  }
 
   return true;
 };
