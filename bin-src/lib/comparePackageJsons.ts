@@ -1,6 +1,10 @@
-const comparePackageJsons = (packageFileA, packageFileB) => {
-  const entriesA = Object.entries(packageFileA);
-  const entriesB = Object.entries(packageFileB);
+const comparePackageJsons = (packageObjA, packageObjB) => {
+  const entriesA = Object.entries(packageObjA.dependencies).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  );
+  const entriesB = Object.entries(packageObjB.dependencies).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  );
 
   if (entriesA.length !== entriesB.length) {
     return false;
