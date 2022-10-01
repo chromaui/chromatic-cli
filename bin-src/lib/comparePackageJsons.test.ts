@@ -69,3 +69,21 @@ it('returns true for dependencies objects with same keys and values, even if pro
     )
   ).toBe(true);
 });
+
+it('returns false if devDependencies are different', () => {
+  expect(
+    comparePackageJsons(
+      { devDependencies: { a: '1', b: '2' } },
+      { devDependencies: { a: '1', b: '2.2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if peerDependencies are different', () => {
+  expect(
+    comparePackageJsons(
+      { peerDependencies: { a: '1', b: '2' } },
+      { peerDependencies: { a: '1', b: '2.2' } }
+    )
+  ).toBe(false);
+});

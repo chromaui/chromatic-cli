@@ -1,8 +1,12 @@
 const comparePackageJsons = (packageObjA, packageObjB) => {
-  return compareObjectsShallowly(packageObjA.dependencies, packageObjB.dependencies);
+  return [
+    compareObjectsShallowly(packageObjA.dependencies, packageObjB.dependencies),
+    compareObjectsShallowly(packageObjA.devDependencies, packageObjB.devDependencies),
+    compareObjectsShallowly(packageObjA.peerDependencies, packageObjB.peerDependencies),
+  ].every((isEqual) => isEqual === true);
 };
 
-const compareObjectsShallowly = (objA, objB) => {
+const compareObjectsShallowly = (objA = {}, objB = {}) => {
   const entriesA = Object.entries(objA).sort((a, b) => a[0].localeCompare(b[0]));
   const entriesB = Object.entries(objB).sort((a, b) => a[0].localeCompare(b[0]));
 
