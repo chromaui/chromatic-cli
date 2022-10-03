@@ -7,6 +7,14 @@ const comparePackageJsons = (packageObjA, packageObjB) => {
 };
 
 const compareObjectsShallowly = (objA = {}, objB = {}) => {
+  if (typeof objA !== typeof objB) {
+    return false;
+  }
+
+  if (typeof objA !== 'object' && typeof objB !== 'object') {
+    return objA === objB;
+  }
+
   const entriesA = Object.entries(objA).sort((a, b) => a[0].localeCompare(b[0]));
   const entriesB = Object.entries(objB).sort((a, b) => a[0].localeCompare(b[0]));
 

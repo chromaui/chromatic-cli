@@ -88,5 +88,40 @@ it('returns false if peerDependencies are different', () => {
   ).toBe(false);
 });
 
+it("returns true if differing object fields aren't dependency-related", () => {
+  expect(
+    comparePackageJsons(
+      {
+        scripts: {
+          test: 'yarn jest --watch',
+        },
+        dependencies: { a: '1' },
+      },
+      {
+        scripts: {
+          test: 'yarn jest --watch',
+          build: 'yarn esbuild',
+        },
+        dependencies: { a: '1' },
+      }
+    )
+  ).toBe(true);
+});
+
+it("returns true if differing non-object fields aren't dependency-related", () => {
+  expect(
+    comparePackageJsons(
+      {
+        name: 'foo',
+        dependencies: { a: '1' },
+      },
+      {
+        name: 'bar',
+        dependencies: { a: '1' },
+      }
+    )
+  ).toBe(true);
+});
+
 // mult dep fields differ
 // no dep fields differ
