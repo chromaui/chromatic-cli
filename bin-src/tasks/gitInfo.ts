@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getSlug, getVersion } from '../git/git';
+import { execGitCommand, getSlug, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -23,6 +23,7 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
+import arePackageDependenciesEqual from '../lib/comparePackageJsons';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -175,6 +176,11 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
             .join('\n')}`
         );
       }
+
+      // TODO: do for nested package.jsons
+      if (ctx.git.changedFiles.includes('package.json')) {
+        ctx.git.packageControlDependenciesHaveChanged = await getPackageManagerChanges(ctx.build);
+      }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
@@ -197,6 +203,13 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   }
 
   transitionTo(success, true)(ctx, task);
+};
+
+const getPackageManagerChanges = async (build) => {
+  const fileA = await execGitCommand(`git show ${build.commit}:package.json`);
+  const fileB = await execGitCommand(`git show HEAD:package.json`);
+
+  return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
 };
 
 export default createTask({
