@@ -154,4 +154,28 @@ it('returns true if all dependency fields are the same', () => {
     )
   ).toBe(true);
 });
-// new field added/removed, both dep and non dep
+
+it('returns true if non-dependency fields are added or removed', () => {
+  expect(
+    comparePackageJsons(
+      {
+        name: 'foo',
+        scripts: { test: 'yarn jest --watch' },
+        dependencies: { a: '1' },
+      },
+      {
+        name: 'foo',
+        license: 'MIT',
+        dependencies: { a: '1' },
+      }
+    )
+  ).toBe(true);
+});
+
+it('returns false if dependency objects are added', () => {
+  expect(comparePackageJsons({}, { dependencies: { a: '1' } })).toBe(false);
+});
+
+it('returns false if dependency objects are removed', () => {
+  expect(comparePackageJsons({ dependencies: { a: '1' } }, {})).toBe(false);
+});
