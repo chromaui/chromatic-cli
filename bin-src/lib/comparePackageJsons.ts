@@ -1,9 +1,9 @@
 const comparePackageJsons = (packageObjA, packageObjB) => {
-  return [
-    compareObjectsShallowly(packageObjA.dependencies, packageObjB.dependencies),
-    compareObjectsShallowly(packageObjA.devDependencies, packageObjB.devDependencies),
-    compareObjectsShallowly(packageObjA.peerDependencies, packageObjB.peerDependencies),
-  ].every((isEqual) => isEqual === true);
+  const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
+
+  return fields
+    .map((field) => compareObjectsShallowly(packageObjA[field], packageObjB[field]))
+    .every((isEqual) => isEqual === true);
 };
 
 const compareObjectsShallowly = (objA = {}, objB = {}) => {

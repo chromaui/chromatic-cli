@@ -37,7 +37,7 @@ it("returns false if dependencies objects don't have same number of keys", () =>
   ).toBe(false);
 });
 
-it('returns false if dependencies have same number of keys but keys not the same', () => {
+it('returns false if dependencies have same number of keys but keys not the same keys', () => {
   expect(
     comparePackageJsons({ dependencies: { a: '1', b: '2' } }, { dependencies: { a: '1', c: '3' } })
   ).toBe(false);
@@ -87,3 +87,6 @@ it('returns false if peerDependencies are different', () => {
     )
   ).toBe(false);
 });
+
+// mult dep fields differ
+// no dep fields differ
