@@ -1,4 +1,4 @@
-const comparePackageJsons = (packageObjA, packageObjB) => {
+const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
   const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
 
   return fields
@@ -42,4 +42,4 @@ const compareObjectsShallowly = (objA = {}, objB = {}) => {
   return true;
 };
 
-export default comparePackageJsons;
+export default arePackageDependenciesEqual;

@@ -1,8 +1,8 @@
-import comparePackageJsons from './comparePackageJsons';
+import arePackageDependenciesEqual from './comparePackageJsons';
 
 it('returns true if dependencies objects have same number of keys', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         dependencies: {
           a: '1',
@@ -21,7 +21,7 @@ it('returns true if dependencies objects have same number of keys', () => {
 
 it("returns false if dependencies objects don't have same number of keys", () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         dependencies: {
           a: '1',
@@ -39,13 +39,16 @@ it("returns false if dependencies objects don't have same number of keys", () =>
 
 it('returns false if dependencies have same number of keys but keys not the same keys', () => {
   expect(
-    comparePackageJsons({ dependencies: { a: '1', b: '2' } }, { dependencies: { a: '1', c: '3' } })
+    arePackageDependenciesEqual(
+      { dependencies: { a: '1', b: '2' } },
+      { dependencies: { a: '1', c: '3' } }
+    )
   ).toBe(false);
 });
 
 it('returns false if values of dependencies entries are not the same', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       { dependencies: { a: '1', b: '2' } },
       { dependencies: { a: '1', b: '1.1' } }
     )
@@ -54,7 +57,7 @@ it('returns false if values of dependencies entries are not the same', () => {
 
 it('returns true if dependencies objects have same number of keys, same keys, and same values', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       { dependencies: { a: '1', b: '2', c: '3' } },
       { dependencies: { a: '1', b: '2', c: '3' } }
     )
@@ -63,7 +66,7 @@ it('returns true if dependencies objects have same number of keys, same keys, an
 
 it('returns true for dependencies objects with same keys and values, even if properties are in different order', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       { dependencies: { a: '1', b: '2', c: '3' } },
       { dependencies: { c: '3', a: '1', b: '2' } }
     )
@@ -72,7 +75,7 @@ it('returns true for dependencies objects with same keys and values, even if pro
 
 it('returns false if devDependencies are different', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       { devDependencies: { a: '1', b: '2' } },
       { devDependencies: { a: '1', b: '2.2' } }
     )
@@ -81,7 +84,7 @@ it('returns false if devDependencies are different', () => {
 
 it('returns false if peerDependencies are different', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       { peerDependencies: { a: '1', b: '2' } },
       { peerDependencies: { a: '1', b: '2.2' } }
     )
@@ -90,7 +93,7 @@ it('returns false if peerDependencies are different', () => {
 
 it("returns true if differing object fields aren't dependency-related", () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         scripts: {
           test: 'yarn jest --watch',
@@ -110,7 +113,7 @@ it("returns true if differing object fields aren't dependency-related", () => {
 
 it("returns true if differing non-object fields aren't dependency-related", () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         version: '1.0',
         dependencies: { a: '1' },
@@ -125,7 +128,7 @@ it("returns true if differing non-object fields aren't dependency-related", () =
 
 it('returns false if multiple dependency fields differ', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         dependencies: { a: '1' },
         devDependencies: { c: '3' },
@@ -140,7 +143,7 @@ it('returns false if multiple dependency fields differ', () => {
 
 it('returns true if all dependency fields are the same', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         dependencies: { a: '1', b: '2', c: '3' },
         devDependencies: { d: '4', e: '5', f: '6' },
@@ -157,7 +160,7 @@ it('returns true if all dependency fields are the same', () => {
 
 it('returns true if non-dependency fields are added or removed', () => {
   expect(
-    comparePackageJsons(
+    arePackageDependenciesEqual(
       {
         name: 'foo',
         scripts: { test: 'yarn jest --watch' },
@@ -173,9 +176,9 @@ it('returns true if non-dependency fields are added or removed', () => {
 });
 
 it('returns false if dependency objects are added', () => {
-  expect(comparePackageJsons({}, { dependencies: { a: '1' } })).toBe(false);
+  expect(arePackageDependenciesEqual({}, { dependencies: { a: '1' } })).toBe(false);
 });
 
 it('returns false if dependency objects are removed', () => {
-  expect(comparePackageJsons({ dependencies: { a: '1' } }, {})).toBe(false);
+  expect(arePackageDependenciesEqual({ dependencies: { a: '1' } }, {})).toBe(false);
 });
