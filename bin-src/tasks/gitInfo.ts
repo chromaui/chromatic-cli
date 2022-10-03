@@ -177,9 +177,15 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
-      // TODO: do for nested package.jsons
-      if (ctx.git.changedFiles.includes('package.json')) {
-        ctx.git.packageControlDependenciesHaveChanged = await getPackageManagerChanges(ctx.build);
+      const changedPackageFiles = ctx.git.changedFiles.filter((fileName) =>
+        [/^package\.json$/, /\/package\.json$/].some((re) => re.test(fileName))
+      );
+
+      if (changedPackageFiles.length > 0) {
+        ctx.git.packageControlDependenciesHaveChanged = await getPackageManagerChanges(
+          ctx.build,
+          changedPackageFiles
+        );
       }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
@@ -205,11 +211,17 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   transitionTo(success, true)(ctx, task);
 };
 
-const getPackageManagerChanges = async (build) => {
-  const fileA = await execGitCommand(`git show ${build.commit}:package.json`);
-  const fileB = await execGitCommand(`git show HEAD:package.json`);
+const getPackageManagerChanges = async (build, changedPackageFiles) => {
+  const allChanges = await Promise.all(
+    changedPackageFiles.map(async (fileName) => {
+      const fileA = await execGitCommand(`git show ${build.commit}:${fileName}`);
+      const fileB = await execGitCommand(`git show HEAD:${fileName}`);
 
-  return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
+      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
+    })
+  );
+
+  return allChanges.some((item) => item === false);
 };
 
 export default createTask({
