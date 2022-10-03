@@ -8,19 +8,12 @@ import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import { Context, Module, Reason, Stats } from '../types';
 
 // Bail whenever one of these was changed
-const GLOBALS = [
-  /^package\.json$/,
-  /^package-lock\.json$/,
-  /^yarn\.lock$/,
-  /\/package\.json$/,
-  /\/package-lock\.json$/,
-  /\/yarn\.lock$/,
-];
+const GLOBALS = [/^package-lock\.json$/, /^yarn\.lock$/, /\/package-lock\.json$/, /\/yarn\.lock$/];
 
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isPackageFile = (name: string) => GLOBALS.some((re) => re.test(name));
+const isPackageLockFile = (name: string) => GLOBALS.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
   (mod as Module).id !== null &&
@@ -172,8 +165,10 @@ export async function getDependentStoryFiles(
     bailReason: undefined,
   };
 
-  const changedPackageFiles = tracedFiles.filter(isPackageFile);
-  if (changedPackageFiles.length) ctx.turboSnap.bailReason = { changedPackageFiles };
+  const changedPackageFiles = tracedFiles.filter(isPackageLockFile);
+  if (changedPackageFiles.length || ctx.git.packageControlDependenciesHaveChanged) {
+    ctx.turboSnap.bailReason = { changedPackageFiles };
+  }
 
   function shouldBail(moduleName: string) {
     if (isStorybookFile(moduleName)) {
