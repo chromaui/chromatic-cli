@@ -112,16 +112,46 @@ it("returns true if differing non-object fields aren't dependency-related", () =
   expect(
     comparePackageJsons(
       {
-        name: 'foo',
+        version: '1.0',
         dependencies: { a: '1' },
       },
       {
-        name: 'bar',
+        name: '1.1',
         dependencies: { a: '1' },
       }
     )
   ).toBe(true);
 });
 
-// mult dep fields differ
-// no dep fields differ
+it('returns false if multiple dependency fields differ', () => {
+  expect(
+    comparePackageJsons(
+      {
+        dependencies: { a: '1' },
+        devDependencies: { c: '3' },
+      },
+      {
+        dependencies: { a: '1', b: '2' },
+        devDependencies: { c: '3', d: '4' },
+      }
+    )
+  ).toBe(false);
+});
+
+it('returns true if all dependency fields are the same', () => {
+  expect(
+    comparePackageJsons(
+      {
+        dependencies: { a: '1', b: '2', c: '3' },
+        devDependencies: { d: '4', e: '5', f: '6' },
+        peerDependencies: { g: '7', h: '8', i: '9' },
+      },
+      {
+        dependencies: { a: '1', b: '2', c: '3' },
+        devDependencies: { d: '4', e: '5', f: '6' },
+        peerDependencies: { g: '7', h: '8', i: '9' },
+      }
+    )
+  ).toBe(true);
+});
+// new field added/removed, both dep and non dep
