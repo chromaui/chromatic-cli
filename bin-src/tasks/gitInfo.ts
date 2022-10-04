@@ -182,7 +182,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       if (changedPackageFiles.length > 0) {
-        ctx.git.packageControlDependenciesHaveChanged = await getPackageManagerChanges(
+        ctx.git.packageControlFilesWithDependencyChanges = await getPackageManagerChanges(
           ctx.build,
           changedPackageFiles
         );
@@ -213,15 +213,15 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
 const getPackageManagerChanges = async (build, changedPackageFiles) => {
   const allChanges = await Promise.all(
-    changedPackageFiles.map(async (fileName) => {
+    changedPackageFiles.filter(async (fileName) => {
       const fileA = await execGitCommand(`git show ${build.commit}:${fileName}`);
       const fileB = await execGitCommand(`git show HEAD:${fileName}`);
 
-      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
+      return !arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
     })
   );
 
-  return allChanges.some((item) => item === false);
+  return allChanges;
 };
 
 export default createTask({

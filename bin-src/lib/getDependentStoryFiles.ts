@@ -166,8 +166,12 @@ export async function getDependentStoryFiles(
   };
 
   const changedPackageFiles = tracedFiles.filter(isPackageLockFile);
-  if (changedPackageFiles.length || ctx.git.packageControlDependenciesHaveChanged) {
+  if (changedPackageFiles.length) {
     ctx.turboSnap.bailReason = { changedPackageFiles };
+  } else if (ctx.git.packageControlFilesWithDependencyChanges?.length) {
+    ctx.turboSnap.bailReason = {
+      changedPackageFiles: ctx.git.packageControlFilesWithDependencyChanges,
+    };
   }
 
   function shouldBail(moduleName: string) {
