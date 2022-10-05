@@ -50,10 +50,18 @@ export const tracing = (ctx: Context) => {
 export const bailed = (ctx: Context) => {
   const { changedPackageFiles, changedStorybookFiles, changedStaticFiles } =
     ctx.turboSnap.bailReason;
-  const [firstFile, ...otherFiles] =
-    changedPackageFiles || changedStorybookFiles || changedStaticFiles;
+  const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
+
+  // if all changed files are package.json, message this as a dependency change.
+  const allChangedFilesArePackageJson = changedFiles.every(
+    (changedFile) => changedFile === 'package.json'
+  );
+
+  const type = allChangedFilesArePackageJson ? 'dependency' : '';
+
+  const [firstFile, ...otherFiles] = changedFiles;
   const siblings = pluralize('sibling', otherFiles.length, true);
-  let output = `Found a change in ${firstFile}`;
+  let output = `Found a ${type} change in ${firstFile}`;
   if (otherFiles.length === 1) output += ' or its sibling';
   if (otherFiles.length > 1) output += ` or one of its ${siblings}`;
   return {

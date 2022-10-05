@@ -211,17 +211,24 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   transitionTo(success, true)(ctx, task);
 };
 
-const getPackageManagerChanges = async (build, changedPackageFiles) => {
+const getPackageManagerChanges = async (
+  // TODO: type of build
+  build,
+  changedPackageFiles: string[]
+): Promise<string[]> => {
   const allChanges = await Promise.all(
-    changedPackageFiles.filter(async (fileName) => {
+    changedPackageFiles.map(async (fileName) => {
       const fileA = await execGitCommand(`git show ${build.commit}:${fileName}`);
       const fileB = await execGitCommand(`git show HEAD:${fileName}`);
 
-      return !arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
+      return {
+        fileName,
+        sameDependencies: arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)),
+      };
     })
   );
 
-  return allChanges;
+  return allChanges.filter((change) => !change.sameDependencies).map((change) => change.fileName);
 };
 
 export default createTask({

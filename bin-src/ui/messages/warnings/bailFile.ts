@@ -9,9 +9,17 @@ const docsUrl = 'https://www.chromatic.com/docs/turbosnap#how-it-works';
 
 export default ({ turboSnap }: { turboSnap: Pick<Context['turboSnap'], 'bailReason'> }) => {
   const { changedPackageFiles, changedStaticFiles, changedStorybookFiles } = turboSnap.bailReason;
-  const [firstFile, ...files] = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
+  const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
 
-  let type = changedPackageFiles ? 'package' : 'static';
+  // if all changed files are package.json, message this as a dependency change.
+  const allChangedFilesArePackageJson = changedFiles.every(
+    (changedFile) => changedFile === 'package.json'
+  );
+
+  const [firstFile, ...files] = changedFiles;
+
+  let type = changedPackageFiles ? 'package file' : 'static file';
+  if (allChangedFilesArePackageJson) type = 'dependency';
   if (changedStorybookFiles) type = 'Storybook config';
 
   let siblings = '';
@@ -23,7 +31,7 @@ export default ({ turboSnap }: { turboSnap: Pick<Context['turboSnap'], 'bailReas
 
   return dedent(chalk`
     ${warning} {bold TurboSnap disabled due to file change}
-    Found a ${type} file change in {bold ${firstFile}}${siblings}
+    Found a ${type} change in {bold ${firstFile}}${siblings}
     A full build is required because this file cannot be linked to any specific stories.
     ${info} Read more at ${link(docsUrl)}
   `);
