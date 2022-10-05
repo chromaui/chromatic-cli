@@ -147,8 +147,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     }
 
     const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
-    const baselineCommits = baselineBuilds.map((build) => build.commit);
-    ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+    ctx.git.baselineCommits = baselineBuilds.map((build) => build.commit);
+    ctx.log.debug(`Found baselineCommits: ${ctx.git.baselineCommits.join(', ')}`);
 
     // Use the most recent baseline to determine final CLI output if we end up skipping the build.
     // Note this will get overwritten if we end up not skipping the build.

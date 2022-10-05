@@ -161,6 +161,7 @@ export interface Context {
     slug?: string;
     mergeCommit?: string;
     parentCommits?: string[];
+    baselineCommits?: string[];
     changedFiles?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;

@@ -211,6 +211,15 @@ export async function checkout(ref: string) {
   return execGitCommand(`git checkout ${ref}`);
 }
 
+export async function checkoutFile(
+  ref: string,
+  fileName: string,
+  targetFileName = `${ref}.${fileName}`
+) {
+  await execGitCommand(`git show ${ref}:${fileName} > ${targetFileName}`);
+  return targetFileName;
+}
+
 export async function checkoutPrevious() {
   return execGitCommand(`git checkout -`);
 }
