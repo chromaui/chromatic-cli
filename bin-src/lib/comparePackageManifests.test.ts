@@ -1,4 +1,4 @@
-import arePackageDependenciesEqual from './comparePackageJsons';
+import arePackageDependenciesEqual from './comparePackageManifests';
 
 it('returns true if dependencies objects have same number of keys', () => {
   expect(
