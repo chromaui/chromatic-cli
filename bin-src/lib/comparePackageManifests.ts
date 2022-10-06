@@ -1,17 +1,9 @@
-const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
-  const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
-
-  return fields
-    .map((field) => compareObjectsShallowly(packageObjA[field], packageObjB[field]))
-    .every((isEqual) => isEqual === true);
-};
-
 const compareObjectsShallowly = (objA = {}, objB = {}) => {
   if (typeof objA !== typeof objB) {
     return false;
   }
 
-  if (typeof objA !== 'object' && typeof objB !== 'object') {
+  if (typeof objA !== 'object' || typeof objB !== 'object' || objA === null || objB === null) {
     return objA === objB;
   }
 
@@ -25,16 +17,10 @@ const compareObjectsShallowly = (objA = {}, objB = {}) => {
   // depends on always having consistent ordering of keys
   // eslint-disable-next-line no-plusplus
   for (let i = 0; i < entriesA.length; i++) {
-    const entryA = entriesA[i];
-    const entryB = entriesB[i];
+    const [keyA, valueA] = entriesA[i];
+    const [keyB, valueB] = entriesB[i];
 
-    // do keys match?
-    if (entryA[0] !== entryB[0]) {
-      return false;
-    }
-
-    // do values match?
-    if (entryA[1] !== entryB[1]) {
+    if (keyA !== keyB || valueA !== valueB) {
       return false;
     }
   }
@@ -42,4 +28,10 @@ const compareObjectsShallowly = (objA = {}, objB = {}) => {
   return true;
 };
 
-export default arePackageDependenciesEqual;
+export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
+  const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
+
+  return fields
+    .map((field) => compareObjectsShallowly(packageObjA[field], packageObjB[field]))
+    .every((isEqual) => isEqual === true);
+};

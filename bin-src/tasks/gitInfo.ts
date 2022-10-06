@@ -23,7 +23,7 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
-import arePackageDependenciesEqual from '../lib/comparePackageManifests';
+import { arePackageDependenciesEqual } from '../lib/comparePackageManifests';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {

@@ -1,4 +1,4 @@
-import arePackageDependenciesEqual from './comparePackageManifests';
+import { arePackageDependenciesEqual } from './comparePackageManifests';
 
 it('returns true if dependencies objects have same number of keys', () => {
   expect(
@@ -158,6 +158,16 @@ it('returns true if all dependency fields are the same', () => {
   ).toBe(true);
 });
 
+it('returns false if dependency moves from one dependency object to the other', () => {
+  expect(
+    arePackageDependenciesEqual(
+      // same number of keys, but move between
+      { dependencies: { a: '1' }, devDependencies: { b: '2' } },
+      { dependencies: { b: '2' }, devDependencies: { a: '1' } }
+    )
+  ).toBe(false);
+});
+
 it('returns true if non-dependency fields are added or removed', () => {
   expect(
     arePackageDependenciesEqual(
@@ -181,4 +191,8 @@ it('returns false if dependency objects are added', () => {
 
 it('returns false if dependency objects are removed', () => {
   expect(arePackageDependenciesEqual({ dependencies: { a: '1' } }, {})).toBe(false);
+});
+
+it('Returns true if dependencies are null', () => {
+  expect(arePackageDependenciesEqual({ dependencies: null }, { dependencies: null })).toBe(true);
 });
