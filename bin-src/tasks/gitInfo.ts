@@ -211,11 +211,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   transitionTo(success, true)(ctx, task);
 };
 
-const getPackageManagerChanges = async (
-  // TODO: type of build
-  build,
-  changedPackageFiles: string[]
-): Promise<string[]> => {
+const getPackageManagerChanges = async (build, changedPackageFiles): Promise<string[]> => {
   const allChanges = await Promise.all(
     changedPackageFiles.map(async (fileName) => {
       const fileA = await execGitCommand(`git show ${build.commit}:${fileName}`);
