@@ -177,14 +177,14 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
-      const changedPackageFiles = ctx.git.changedFiles.filter((fileName) =>
+      const changedPackageManifests = ctx.git.changedFiles.filter((fileName) =>
         [/^package\.json$/, /\/package\.json$/].some((re) => re.test(fileName))
       );
 
-      if (changedPackageFiles.length > 0) {
-        ctx.git.packageControlFilesWithDependencyChanges = await getPackageManagerChanges(
+      if (changedPackageManifests.length > 0) {
+        ctx.git.packageManifestsWithDependencyChanges = await getPackageManagerChanges(
           ctx.build,
-          changedPackageFiles
+          changedPackageManifests
         );
       }
     } catch (e) {

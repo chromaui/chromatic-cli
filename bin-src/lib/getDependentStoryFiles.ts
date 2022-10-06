@@ -170,9 +170,9 @@ export async function getDependentStoryFiles(
     ctx.turboSnap.bailReason = { changedPackageFiles };
     // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
     // for now.
-  } else if (ctx.git.packageControlFilesWithDependencyChanges?.length) {
+  } else if (ctx.git.packageManifestsWithDependencyChanges?.length) {
     ctx.turboSnap.bailReason = {
-      changedPackageFiles: ctx.git.packageControlFilesWithDependencyChanges,
+      changedPackageFiles: ctx.git.packageManifestsWithDependencyChanges,
     };
   }
 
