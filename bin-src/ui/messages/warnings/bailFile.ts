@@ -12,8 +12,8 @@ export default ({ turboSnap }: { turboSnap: Pick<Context['turboSnap'], 'bailReas
   const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
 
   // if all changed files are package.json, message this as a dependency change.
-  const allChangedFilesArePackageJson = changedFiles.every(
-    (changedFile) => changedFile === 'package.json'
+  const allChangedFilesArePackageJson = changedFiles.every((changedFile) =>
+    [/^package\.json$/, /\/package\.json$/].some((re) => re.test(changedFile))
   );
 
   const [firstFile, ...files] = changedFiles;
