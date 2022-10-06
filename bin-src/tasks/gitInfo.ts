@@ -6,7 +6,7 @@ import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesFile } from '../lib/utils';
+import { matchesFile, isPackageManifestFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -178,7 +178,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       }
 
       const changedPackageManifests = ctx.git.changedFiles.filter((fileName) =>
-        [/^package\.json$/, /\/package\.json$/].some((re) => re.test(fileName))
+        isPackageManifestFile(fileName)
       );
 
       if (changedPackageManifests.length > 0) {
@@ -217,14 +217,12 @@ const getPackageManagerChanges = async (build, changedPackageFiles): Promise<str
       const fileA = await execGitCommand(`git show ${build.commit}:${fileName}`);
       const fileB = await execGitCommand(`git show HEAD:${fileName}`);
 
-      return {
-        fileName,
-        sameDependencies: arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)),
-      };
+      // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones
+      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)) ? [] : [fileName];
     })
   );
 
-  return allChanges.filter((change) => !change.sameDependencies).map((change) => change.fileName);
+  return allChanges.flat();
 };
 
 export default createTask({

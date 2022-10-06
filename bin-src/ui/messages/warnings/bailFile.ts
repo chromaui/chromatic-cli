@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 import { Context } from '../../../types';
+import { isPackageManifestFile } from '../../../lib/utils';
 
 import { warning, info } from '../../components/icons';
 import link from '../../components/link';
@@ -13,7 +14,7 @@ export default ({ turboSnap }: { turboSnap: Pick<Context['turboSnap'], 'bailReas
 
   // if all changed files are package.json, message this as a dependency change.
   const allChangedFilesArePackageJson = changedFiles.every((changedFile) =>
-    [/^package\.json$/, /\/package\.json$/].some((re) => re.test(changedFile))
+    isPackageManifestFile(changedFile)
   );
 
   const [firstFile, ...files] = changedFiles;
