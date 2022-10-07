@@ -93,13 +93,14 @@ export async function getDependentStoryFiles(
   const namesById: Record<number, string> = {};
   const reasonsById: Record<number, string[]> = {};
   const csfGlobsByName: Record<string, true> = {};
-
+  const CSF_REGEX = /.\/src.*?sync/g;
+  const URL_PARAM_REGEX = /(\?.*)|(#.*)/g;
   stats.modules
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
       let { name } = mod;
-      if (mod.name.includes('?ngResource')) {
-        [name] = mod.name.split('?');
+      if (URL_PARAM_REGEX.test(mod.name) && !CSF_REGEX.test(mod.name)) {
+        [name] = mod.name.replace(URL_PARAM_REGEX, '');
       }
       const normalizedName = normalize(name);
       modulesByName[normalizedName] = mod;
@@ -107,8 +108,13 @@ export async function getDependentStoryFiles(
 
       if (mod.modules) {
         mod.modules.forEach((m) => {
-          modulesByName[normalize(m.name.includes('?ngResource') ? m.name.split('?')[0] : m.name)] =
-            mod;
+          modulesByName[
+            normalize(
+              URL_PARAM_REGEX.test(m.name) && !CSF_REGEX.test(m.name)
+                ? m.name.replace(URL_PARAM_REGEX, '')
+                : m.name
+            )
+          ] = mod;
         });
       }
 

@@ -1,15 +1,12 @@
 {
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "target": "es5",
+    "target": "ES6",
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": [
-      "jest",
-      "webpack-env"
-    ]
+    "types": ["jest", "webpack-env"]
   }
 }
