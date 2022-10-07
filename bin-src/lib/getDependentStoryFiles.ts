@@ -99,6 +99,10 @@ export async function getDependentStoryFiles(
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
       let { name } = mod;
+      // This regex test is to ensure file names do not include url parmeters
+      // or match the CSF glob we get back in the stats file. We added this because
+      // CSS/SCSS files were getting ?ngResource appended on the end of file names
+      // in the stats file.
       if (URL_PARAM_REGEX.test(mod.name) && !CSF_REGEX.test(mod.name)) {
         [name] = mod.name.replace(URL_PARAM_REGEX, '');
       }
