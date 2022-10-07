@@ -69,7 +69,20 @@ export async function getDependentStoryFiles(
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
-  const normalize = (posixPath: string) => normalizePath(posixPath, rootPath, baseDir);
+  const normalize = (posixPath: string) => {
+    const CSF_REGEX = /.\/src.*?sync/g;
+    const URL_PARAM_REGEX = /(\?.*)|(#.*)/g;
+    let newPath = normalizePath(posixPath, rootPath, baseDir);
+    // This regex test is to ensure file names do not include url parmeters
+    // or match the CSF glob we get back in the stats file. We added this because
+    // CSS/SCSS files were getting ?ngResource appended on the end of file names
+    // in the stats file.
+    if (URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)) {
+      newPath = newPath.replace(URL_PARAM_REGEX, '');
+    }
+
+    return newPath;
+  };
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
@@ -93,32 +106,18 @@ export async function getDependentStoryFiles(
   const namesById: Record<number, string> = {};
   const reasonsById: Record<number, string[]> = {};
   const csfGlobsByName: Record<string, true> = {};
-  const CSF_REGEX = /.\/src.*?sync/g;
-  const URL_PARAM_REGEX = /(\?.*)|(#.*)/g;
+
   stats.modules
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
-      let { name } = mod;
-      // This regex test is to ensure file names do not include url parmeters
-      // or match the CSF glob we get back in the stats file. We added this because
-      // CSS/SCSS files were getting ?ngResource appended on the end of file names
-      // in the stats file.
-      if (URL_PARAM_REGEX.test(mod.name) && !CSF_REGEX.test(mod.name)) {
-        [name] = mod.name.replace(URL_PARAM_REGEX, '');
-      }
+      const { name } = mod;
       const normalizedName = normalize(name);
       modulesByName[normalizedName] = mod;
       namesById[mod.id] = normalizedName;
 
       if (mod.modules) {
         mod.modules.forEach((m) => {
-          modulesByName[
-            normalize(
-              URL_PARAM_REGEX.test(m.name) && !CSF_REGEX.test(m.name)
-                ? m.name.replace(URL_PARAM_REGEX, '')
-                : m.name
-            )
-          ] = mod;
+          modulesByName[normalize(m.name)] = mod;
         });
       }
 
