@@ -162,6 +162,20 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         }))
       );
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
+      const changedPackageManifestsByCommit: Record<string, string[]> = {};
+
+      results.forEach((resultItem) => {
+        resultItem.changedFiles.forEach((changedFile) => {
+          if (isPackageManifestFile(changedFile)) {
+            if (!changedPackageManifestsByCommit[resultItem.build.commit]) {
+              changedPackageManifestsByCommit[resultItem.build.commit] = [changedFile];
+            } else {
+              changedPackageManifestsByCommit[resultItem.build.commit].push(changedFile);
+            }
+          }
+        });
+      });
+
       ctx.git.replacementBuildIds = results
         .filter((r) => !!r.replacementBuild)
         .map(({ build, replacementBuild }) => {
@@ -177,16 +191,14 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
-      const changedPackageManifests = ctx.git.changedFiles.filter((fileName) =>
-        isPackageManifestFile(fileName)
+      ctx.git.changedPackageManifests = await Promise.all(
+        Object.entries(changedPackageManifestsByCommit).map(async ([key, value]) => {
+          return {
+            commit: key,
+            fileNames: await getPackageManagerChanges(key, value),
+          };
+        })
       );
-
-      if (changedPackageManifests.length > 0) {
-        ctx.git.packageManifestsWithDependencyChanges = await getPackageManagerChanges(
-          ctx.build,
-          changedPackageManifests
-        );
-      }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
@@ -211,10 +223,13 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   transitionTo(success, true)(ctx, task);
 };
 
-const getPackageManagerChanges = async (build, changedPackageFiles): Promise<string[]> => {
+const getPackageManagerChanges = async (
+  commit: string,
+  changedPackageFiles: string[]
+): Promise<string[]> => {
   const allChanges = await Promise.all(
     changedPackageFiles.map(async (fileName) => {
-      const fileA = await execGitCommand(`git show ${build.commit}:${fileName}`);
+      const fileA = await execGitCommand(`git show ${commit}:${fileName}`);
       const fileB = await execGitCommand(`git show HEAD:${fileName}`);
 
       // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones

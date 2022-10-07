@@ -164,7 +164,7 @@ export interface Context {
     changedFiles?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
-    packageManifestsWithDependencyChanges?: string[];
+    changedPackageManifests?: { fileNames: string[]; commit: string }[];
   };
   storybook: {
     version: string;

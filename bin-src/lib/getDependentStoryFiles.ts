@@ -175,10 +175,12 @@ export async function getDependentStoryFiles(
     ctx.turboSnap.bailReason = { changedPackageFiles };
     // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
     // for now.
-  } else if (ctx.git.packageManifestsWithDependencyChanges?.length) {
-    ctx.turboSnap.bailReason = {
-      changedPackageFiles: ctx.git.packageManifestsWithDependencyChanges,
-    };
+  } else {
+    const changedManifests = ctx.git.changedPackageManifests || [];
+    const flattenedManifests = changedManifests.map((item) => item.fileNames).flat();
+    if (flattenedManifests.length) {
+      ctx.turboSnap.bailReason = { changedPackageFiles: flattenedManifests };
+    }
   }
 
   function shouldBail(moduleName: string) {
