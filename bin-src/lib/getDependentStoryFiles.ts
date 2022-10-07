@@ -97,13 +97,18 @@ export async function getDependentStoryFiles(
   stats.modules
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
-      const normalizedName = normalize(mod.name);
+      let { name } = mod;
+      if (mod.name.includes('?ngResource')) {
+        [name] = mod.name.split('?');
+      }
+      const normalizedName = normalize(name);
       modulesByName[normalizedName] = mod;
       namesById[mod.id] = normalizedName;
 
       if (mod.modules) {
         mod.modules.forEach((m) => {
-          modulesByName[normalize(m.name)] = mod;
+          modulesByName[normalize(m.name.includes('?ngResource') ? m.name.split('?')[0] : m.name)] =
+            mod;
         });
       }
 
