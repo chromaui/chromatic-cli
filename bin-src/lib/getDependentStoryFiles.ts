@@ -110,8 +110,7 @@ export async function getDependentStoryFiles(
   stats.modules
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
-      const { name } = mod;
-      const normalizedName = normalize(name);
+      const normalizedName = normalize(mod.name);
       modulesByName[normalizedName] = mod;
       namesById[mod.id] = normalizedName;
 
