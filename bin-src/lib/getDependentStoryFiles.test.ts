@@ -185,6 +185,38 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('detects indirect changes to CSF files, angular css resource', async () => {
+    const changedFiles = ['src/foo.css'];
+    const modules = [
+      {
+        id: null,
+        name: './src/foo.css?ngResource ',
+        reasons: [{ moduleName: './src/foo.component.ts' }],
+      },
+      {
+        id: './src/foo.component.ts',
+        name: './src/foo.component.ts + 1 modules',
+        modules: [{ name: './src/foo.component.ts' }, { name: './src/foo.css?ngResource' }],
+        reasons: [{ moduleName: './src/foo.stories.ts' }],
+      },
+      {
+        id: './src/foo.stories.ts',
+        name: './src/foo.stories.ts',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({
+      './src/foo.stories.ts': ['src/foo.stories.ts'],
+    });
+  });
+
   it('detects indirect changes to CSF files in a single module chunk', async () => {
     const changedFiles = ['src/foo.js'];
     const modules = [
