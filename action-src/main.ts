@@ -112,6 +112,7 @@ async function runChromatic(options): Promise<Output> {
   await runAll(ctx);
 
   return {
+    // Keep this in sync with the configured outputs in action.yml
     code: ctx.exitCode,
     url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
@@ -212,10 +213,7 @@ async function run() {
       zip: maybe(zip, false),
     });
 
-    setOutput('url', output.url);
-    setOutput('buildUrl', output.buildUrl);
-    setOutput('storybookUrl', output.storybookUrl);
-    setOutput('code', output.code.toString());
+    Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
 
     if (output.code !== 0) {
       setFailed('non-zero exit code');
