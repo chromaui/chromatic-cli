@@ -73,7 +73,7 @@ export async function getDependentStoryFiles(
     const CSF_REGEX = /\s+sync\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
     let newPath = normalizePath(posixPath, rootPath, baseDir);
-    // This regex test is to ensure file names do not include url parmeters
+    // This regex test is to ensure file names do not include url parameters
     // or match the CSF glob we get back in the stats file. We added this because
     // CSS/SCSS files were getting ?ngResource appended on the end of file names
     // in the stats file.
