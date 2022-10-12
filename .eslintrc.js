@@ -1,6 +1,6 @@
 module.exports = {
   root: true,
-  extends: ['@storybook/eslint-config-storybook'],
+  extends: ['@storybook/eslint-config-storybook', 'plugin:storybook/recommended'],
   rules: {
     'no-use-before-define': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',

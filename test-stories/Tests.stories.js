@@ -1,7 +1,9 @@
 /* eslint-env browser */
 
 import React from 'react';
+import { expect } from '@storybook/jest';
 
+import { within } from '@storybook/testing-library';
 import isChromatic from '..';
 import AComponent from './A';
 
@@ -34,6 +36,12 @@ export const WithDelay = () => (
 
 WithDelay.story = {
   parameters: { chromatic: { delay: 1000 } },
+};
+
+WithDelay.play = async ({ canvasElement, args }) => {
+  const canvas = within(canvasElement);
+  const name = await canvas.getByTestId('av');
+  await expect(name).toHaveTextContent('User 1');
 };
 
 export const DisabledStory = () => <AComponent thing={() => {}}>Disabled story</AComponent>;
