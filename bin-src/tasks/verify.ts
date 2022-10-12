@@ -106,6 +106,7 @@ const VerifyBuildQuery = `
         actualTestCount: testCount(statuses: [IN_PROGRESS])
         actualCaptureCount
         inheritedCaptureCount
+        interactionTestFailuresCount
         webUrl
         cachedUrl
         browsers {
