@@ -91,6 +91,7 @@ interface StartedBuildQueryResult {
   };
 }
 
+// these fields must be part of authorizedBuildFieldsViaAppCode in the public api
 const VerifyBuildQuery = `
   query VerifyBuildQuery($number: Int!) {
     app {
