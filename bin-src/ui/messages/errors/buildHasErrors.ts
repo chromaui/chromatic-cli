@@ -9,19 +9,15 @@ export default ({ build, exitCode }) => {
   const { errorCount, interactionTestFailuresCount, webUrl } = build;
   const hasInteractionTestFailures = interactionTestFailuresCount > 0;
   const hasOtherErrors = errorCount - interactionTestFailuresCount > 0;
+  const failedTests = pluralize('failed test', interactionTestFailuresCount, true);
 
   let errorMessage;
 
   if (hasInteractionTestFailures && hasOtherErrors) {
     const errors = pluralize('build error', errorCount - interactionTestFailuresCount, true);
-
-    errorMessage = `Encountered ${errors} and ${pluralize(
-      'failed test',
-      interactionTestFailuresCount,
-      true
-    )}`;
+    errorMessage = `Encountered ${errors} and ${failedTests}`;
   } else if (hasInteractionTestFailures) {
-    errorMessage = `Encountered ${pluralize('failed test', interactionTestFailuresCount, true)}`;
+    errorMessage = `Encountered ${failedTests}`;
   } else {
     const errors = pluralize('build error', errorCount, true);
     errorMessage = `Encountered ${errors}`;
