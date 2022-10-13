@@ -162,18 +162,20 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         }))
       );
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
-      const changedPackageManifestsByCommit: Record<string, string[]> = {};
+
+      const packageManifestChanges: { commit: string; changedFiles: string[] }[] = [];
 
       results.forEach((resultItem) => {
-        resultItem.changedFiles.forEach((changedFile) => {
-          if (isPackageManifestFile(changedFile)) {
-            if (!changedPackageManifestsByCommit[resultItem.build.commit]) {
-              changedPackageManifestsByCommit[resultItem.build.commit] = [changedFile];
-            } else {
-              changedPackageManifestsByCommit[resultItem.build.commit].push(changedFile);
-            }
-          }
-        });
+        const changedPackageFiles = resultItem.changedFiles.filter((changedFile) =>
+          isPackageManifestFile(changedFile)
+        );
+
+        if (changedPackageFiles.length) {
+          packageManifestChanges.push({
+            commit: resultItem.build.commit,
+            changedFiles: changedPackageFiles,
+          });
+        }
       });
 
       ctx.git.replacementBuildIds = results
@@ -191,14 +193,15 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
-      ctx.git.changedPackageManifests = await Promise.all(
-        Object.entries(changedPackageManifestsByCommit).map(async ([key, value]) => {
-          return {
-            commit: key,
-            fileNames: await getPackageManagerChanges(key, value),
-          };
+      const packageManifestDependencyChanges = await Promise.all(
+        packageManifestChanges.map(async ({ commit: buildCommit, changedFiles }) => {
+          return getPackageManagerChanges(buildCommit, changedFiles);
         })
       );
+
+      const flattenedChanges = packageManifestDependencyChanges.flat();
+      // remove duplicate entries (if have multiple ancestors and both changed the same package.json, for example)
+      ctx.git.changedPackageManifests = Array.from(new Set(flattenedChanges));
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
