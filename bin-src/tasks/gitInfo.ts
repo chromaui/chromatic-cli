@@ -52,6 +52,23 @@ interface LastBuildQueryResult {
   };
 }
 
+const getPackageManagerChanges = async (
+  commit: string,
+  changedPackageFiles: string[]
+): Promise<string[]> => {
+  const allChanges = await Promise.all(
+    changedPackageFiles.map(async (fileName) => {
+      const fileA = await execGitCommand(`git show ${commit}:${fileName}`);
+      const fileB = await execGitCommand(`git show HEAD:${fileName}`);
+
+      // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones
+      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)) ? [] : [fileName];
+    })
+  );
+
+  return allChanges.flat();
+};
+
 export const setGitInfo = async (ctx: Context, task: Task) => {
   const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
 
@@ -224,23 +241,6 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   }
 
   transitionTo(success, true)(ctx, task);
-};
-
-const getPackageManagerChanges = async (
-  commit: string,
-  changedPackageFiles: string[]
-): Promise<string[]> => {
-  const allChanges = await Promise.all(
-    changedPackageFiles.map(async (fileName) => {
-      const fileA = await execGitCommand(`git show ${commit}:${fileName}`);
-      const fileB = await execGitCommand(`git show HEAD:${fileName}`);
-
-      // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones
-      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)) ? [] : [fileName];
-    })
-  );
-
-  return allChanges.flat();
 };
 
 export default createTask({
