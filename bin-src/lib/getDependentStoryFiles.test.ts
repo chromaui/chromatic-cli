@@ -19,6 +19,7 @@ const getContext: any = ({
   options: { storybookBaseDir: '.', ...options },
   turboSnap: {},
   storybook: { configDir, staticDir },
+  git: {},
 });
 
 afterEach(() => {
@@ -340,7 +341,7 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('bails on changed global file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'src/package.json'];
+    const changedFiles = ['src/foo.stories.js', 'src/yarn.lock'];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -357,10 +358,10 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
-      changedPackageFiles: ['src/package.json'],
+      changedPackageFiles: ['src/yarn.lock'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(chalk`Found a package file change in {bold src/package.json}`)
+      expect.stringContaining(chalk`Found a package file change in {bold src/yarn.lock}`)
     );
   });
 
@@ -386,7 +387,7 @@ describe('getDependentStoryFiles', () => {
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
       )
     );
   });
@@ -413,7 +414,7 @@ describe('getDependentStoryFiles', () => {
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
       )
     );
   });
@@ -441,7 +442,7 @@ describe('getDependentStoryFiles', () => {
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
       )
     );
   });
