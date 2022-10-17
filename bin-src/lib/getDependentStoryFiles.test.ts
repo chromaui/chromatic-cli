@@ -365,6 +365,35 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  it('bails on dependency changes to package manifest file', async () => {
+    const changedFiles = ['src/foo.stories.js', 'src/package.json'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const rawContext = getContext();
+    const ctx = {
+      ...rawContext,
+      git: { ...rawContext.git, changedPackageManifests: ['src/package.json'] },
+    };
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedPackageFiles: ['src/package.json'],
+    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(chalk`Found a dependency change in {bold src/package.json}`)
+    );
+  });
+
   it('bails on changed Storybook config file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/storybook-config/file.js'];
     const modules = [
