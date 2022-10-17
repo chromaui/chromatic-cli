@@ -34,6 +34,8 @@ export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
     'dependencies',
     'devDependencies',
     'peerDependencies',
+    'dependenciesMeta',
+    'peerDependenciesMeta',
     'overrides',
     'optionalDependencies',
     'resolutions',

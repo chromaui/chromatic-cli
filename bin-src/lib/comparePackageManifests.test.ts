@@ -145,6 +145,24 @@ it('returns false if resolutions are different', () => {
   ).toBe(false);
 });
 
+it('returns false if peerDependenciesMeta are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { peerDependenciesMeta: { a: { optional: true } } },
+      { peerDependenciesMeta: { a: { optional: false } } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if dependenciesMeta are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { dependenciesMeta: { a: { optional: true } } },
+      { dependenciesMeta: { a: { optional: false } } }
+    )
+  ).toBe(false);
+});
+
 it("returns true if differing object fields aren't dependency-related", () => {
   expect(
     arePackageDependenciesEqual(
