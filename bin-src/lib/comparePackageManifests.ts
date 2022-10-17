@@ -39,6 +39,8 @@ export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
     'overrides',
     'optionalDependencies',
     'resolutions',
+    // most pnpm.* configs are dependency-related: https://pnpm.io/package_json#pnpmoverrides
+    'pnpm',
   ];
 
   return fields

@@ -163,6 +163,15 @@ it('returns false if dependenciesMeta are different', () => {
   ).toBe(false);
 });
 
+it('returns false if pnpm-specific fields are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { pnpm: { overrides: { foo: '1' } } },
+      { pnpm: { overrides: { foo: '2' } } }
+    )
+  ).toBe(false);
+});
+
 it("returns true if differing object fields aren't dependency-related", () => {
   expect(
     arePackageDependenciesEqual(
@@ -220,11 +229,47 @@ it('returns true if all dependency fields are the same', () => {
         dependencies: { a: '1', b: '2', c: '3' },
         devDependencies: { d: '4', e: '5', f: '6' },
         peerDependencies: { g: '7', h: '8', i: '9' },
+        overrides: { a: '1', b: { c: '1' } },
+        optionalDependencies: { a: '1', b: '1' },
+        resolutions: { a: '1', b: '2' },
+        peerDependenciesMeta: { a: { optional: true } },
+        dependenciesMeta: { a: { optional: true } },
+        pnpm: {
+          overrides: { foo: '1' },
+          packageExtensions: {
+            c: {
+              peerDependencies: {
+                d: '*',
+              },
+            },
+          },
+          allowedDeprecatedVersions: {
+            g: '1',
+          },
+        },
       },
       {
         dependencies: { a: '1', b: '2', c: '3' },
         devDependencies: { d: '4', e: '5', f: '6' },
         peerDependencies: { g: '7', h: '8', i: '9' },
+        overrides: { a: '1', b: { c: '1' } },
+        optionalDependencies: { a: '1', b: '1' },
+        resolutions: { a: '1', b: '2' },
+        peerDependenciesMeta: { a: { optional: true } },
+        dependenciesMeta: { a: { optional: true } },
+        pnpm: {
+          overrides: { foo: '1' },
+          packageExtensions: {
+            c: {
+              peerDependencies: {
+                d: '*',
+              },
+            },
+          },
+          allowedDeprecatedVersions: {
+            g: '1',
+          },
+        },
       }
     )
   ).toBe(true);
