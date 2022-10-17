@@ -1,4 +1,4 @@
-name: Chromatic
+name: Chromatic Main and Active PRs only
 on:
   push:
     branches:
