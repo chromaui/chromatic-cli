@@ -8,12 +8,17 @@ import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import { Context, Module, Reason, Stats } from '../types';
 
 // Bail whenever one of these was changed
-const GLOBALS = [/^package-lock\.json$/, /^yarn\.lock$/, /\/package-lock\.json$/, /\/yarn\.lock$/];
+const LOCKFILES = [
+  /^package-lock\.json$/,
+  /^yarn\.lock$/,
+  /\/package-lock\.json$/,
+  /\/yarn\.lock$/,
+];
 
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isPackageLockFile = (name: string) => GLOBALS.some((re) => re.test(name));
+const isPackageLockFile = (name: string) => LOCKFILES.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
   (mod as Module).id !== null &&
@@ -62,7 +67,20 @@ export async function getDependentStoryFiles(
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
-  const normalize = (posixPath: string) => normalizePath(posixPath, rootPath, baseDir);
+  const normalize = (posixPath: string) => {
+    const CSF_REGEX = /\s+sync\s+/g;
+    const URL_PARAM_REGEX = /(\?.*)/g;
+    let newPath = normalizePath(posixPath, rootPath, baseDir);
+    // This regex test is to ensure file names do not include url parameters
+    // or match the CSF glob we get back in the stats file. We added this because
+    // CSS/SCSS files were getting ?ngResource appended on the end of file names
+    // in the stats file.
+    if (URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)) {
+      newPath = newPath.replace(URL_PARAM_REGEX, '');
+    }
+
+    return newPath;
+  };
 
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
@@ -170,10 +188,8 @@ export async function getDependentStoryFiles(
     ctx.turboSnap.bailReason = { changedPackageFiles };
     // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
     // for now.
-  } else if (ctx.git.packageControlFilesWithDependencyChanges?.length) {
-    ctx.turboSnap.bailReason = {
-      changedPackageFiles: ctx.git.packageControlFilesWithDependencyChanges,
-    };
+  } else if (ctx.git.changedPackageManifests?.length) {
+    ctx.turboSnap.bailReason = { changedPackageFiles: ctx.git.changedPackageManifests };
   }
 
   function shouldBail(moduleName: string) {

@@ -1,6 +1,11 @@
-# 6.10.1 - 2022-09-27
-- [645](https://github.com/chromaui/chromatic-cli/pull/645) Check onlyStoryNames is non-empty
+# 6.10.2 - 2022-10-11
 
+- [649](https://github.com/chromaui/chromatic-cli/pull/649) Fix TurboSnap for module names containing URL params in stats file
+- [650](https://github.com/chromaui/chromatic-cli/pull/650) Ensure all GitHub Action outputs are exposed
+
+# 6.10.1 - 2022-09-27
+
+- [645](https://github.com/chromaui/chromatic-cli/pull/645) Check onlyStoryNames is non-empty
 
 # 6.10.0 - 2022-09-23
 

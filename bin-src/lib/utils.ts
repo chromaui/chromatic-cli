@@ -38,3 +38,6 @@ export const matchesFile = (glob: string, filepath: string) => {
   if (!fileMatchers[glob]) fileMatchers[glob] = picomatch(glob, { dot: true });
   return fileMatchers[glob](filepath.replace(/^\.\//, ''));
 };
+
+export const isPackageManifestFile = (filePath) =>
+  [/^package\.json$/, /\/package\.json$/].some((re) => re.test(filePath));

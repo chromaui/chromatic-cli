@@ -1,4 +1,4 @@
-import arePackageDependenciesEqual from './comparePackageJsons';
+import { arePackageDependenciesEqual } from './comparePackageManifests';
 
 it('returns true if dependencies objects have same number of keys', () => {
   expect(
@@ -91,6 +91,87 @@ it('returns false if peerDependencies are different', () => {
   ).toBe(false);
 });
 
+it('returns false if overrides are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: '2' } },
+      { overrides: { a: '1', b: '2.2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns true if nested overrides are same', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: { c: '1' } } },
+      { overrides: { a: '1', b: { c: '1' } } }
+    )
+  ).toBe(true);
+});
+
+it('returns false if nested overrides values have different values', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: { c: '1' } } },
+      { overrides: { a: '1', b: { c: '2' } } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if nested overrides are not same type', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: { c: '1' } } },
+      { overrides: { a: '1', b: '2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if optionalDependencies are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { optionalDependencies: { a: '1', b: '1' } },
+      { optionalDependencies: { a: '1', b: '2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if resolutions are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { resolutions: { a: '1', b: '1' } },
+      { resolutions: { a: '1', b: '2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if peerDependenciesMeta are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { peerDependenciesMeta: { a: { optional: true } } },
+      { peerDependenciesMeta: { a: { optional: false } } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if dependenciesMeta are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { dependenciesMeta: { a: { optional: true } } },
+      { dependenciesMeta: { a: { optional: false } } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if pnpm-specific fields are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { pnpm: { overrides: { foo: '1' } } },
+      { pnpm: { overrides: { foo: '2' } } }
+    )
+  ).toBe(false);
+});
+
 it("returns true if differing object fields aren't dependency-related", () => {
   expect(
     arePackageDependenciesEqual(
@@ -148,14 +229,60 @@ it('returns true if all dependency fields are the same', () => {
         dependencies: { a: '1', b: '2', c: '3' },
         devDependencies: { d: '4', e: '5', f: '6' },
         peerDependencies: { g: '7', h: '8', i: '9' },
+        overrides: { a: '1', b: { c: '1' } },
+        optionalDependencies: { a: '1', b: '1' },
+        resolutions: { a: '1', b: '2' },
+        peerDependenciesMeta: { a: { optional: true } },
+        dependenciesMeta: { a: { optional: true } },
+        pnpm: {
+          overrides: { foo: '1' },
+          packageExtensions: {
+            c: {
+              peerDependencies: {
+                d: '*',
+              },
+            },
+          },
+          allowedDeprecatedVersions: {
+            g: '1',
+          },
+        },
       },
       {
         dependencies: { a: '1', b: '2', c: '3' },
         devDependencies: { d: '4', e: '5', f: '6' },
         peerDependencies: { g: '7', h: '8', i: '9' },
+        overrides: { a: '1', b: { c: '1' } },
+        optionalDependencies: { a: '1', b: '1' },
+        resolutions: { a: '1', b: '2' },
+        peerDependenciesMeta: { a: { optional: true } },
+        dependenciesMeta: { a: { optional: true } },
+        pnpm: {
+          overrides: { foo: '1' },
+          packageExtensions: {
+            c: {
+              peerDependencies: {
+                d: '*',
+              },
+            },
+          },
+          allowedDeprecatedVersions: {
+            g: '1',
+          },
+        },
       }
     )
   ).toBe(true);
+});
+
+it('returns false if dependency moves from one dependency object to the other', () => {
+  expect(
+    arePackageDependenciesEqual(
+      // same number of keys, but move between
+      { dependencies: { a: '1' }, devDependencies: { b: '2' } },
+      { dependencies: { b: '2' }, devDependencies: { a: '1' } }
+    )
+  ).toBe(false);
 });
 
 it('returns true if non-dependency fields are added or removed', () => {
@@ -181,4 +308,8 @@ it('returns false if dependency objects are added', () => {
 
 it('returns false if dependency objects are removed', () => {
   expect(arePackageDependenciesEqual({ dependencies: { a: '1' } }, {})).toBe(false);
+});
+
+it('Returns true if dependencies are null', () => {
+  expect(arePackageDependenciesEqual({ dependencies: null }, { dependencies: null })).toBe(true);
 });
