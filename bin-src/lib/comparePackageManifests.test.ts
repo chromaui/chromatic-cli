@@ -91,6 +91,42 @@ it('returns false if peerDependencies are different', () => {
   ).toBe(false);
 });
 
+it('returns false if overrides are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: '2' } },
+      { overrides: { a: '1', b: '2.2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns true if nested overrides are same', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: { c: '1' } } },
+      { overrides: { a: '1', b: { c: '1' } } }
+    )
+  ).toBe(true);
+});
+
+it('returns false if nested overrides values have different values', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: { c: '1' } } },
+      { overrides: { a: '1', b: { c: '2' } } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if nested overrides are not same type', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { overrides: { a: '1', b: { c: '1' } } },
+      { overrides: { a: '1', b: '2' } }
+    )
+  ).toBe(false);
+});
+
 it("returns true if differing object fields aren't dependency-related", () => {
   expect(
     arePackageDependenciesEqual(

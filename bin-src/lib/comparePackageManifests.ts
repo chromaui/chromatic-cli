@@ -1,4 +1,4 @@
-const compareObjectsShallowly = (objA = {}, objB = {}) => {
+const compareObjects = (objA = {}, objB = {}) => {
   if (typeof objA !== typeof objB) {
     return false;
   }
@@ -20,7 +20,8 @@ const compareObjectsShallowly = (objA = {}, objB = {}) => {
     const [keyA, valueA] = entriesA[i];
     const [keyB, valueB] = entriesB[i];
 
-    if (keyA !== keyB || valueA !== valueB) {
+    // values might be objects, so recursively compare
+    if (keyA !== keyB || !compareObjects(valueA, valueB)) {
       return false;
     }
   }
@@ -29,9 +30,9 @@ const compareObjectsShallowly = (objA = {}, objB = {}) => {
 };
 
 export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
-  const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
+  const fields = ['dependencies', 'devDependencies', 'peerDependencies', 'overrides'];
 
   return fields
-    .map((field) => compareObjectsShallowly(packageObjA[field], packageObjB[field]))
+    .map((field) => compareObjects(packageObjA[field], packageObjB[field]))
     .every((isEqual) => isEqual === true);
 };
