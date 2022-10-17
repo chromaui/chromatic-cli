@@ -30,7 +30,14 @@ const compareObjects = (objA = {}, objB = {}) => {
 };
 
 export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
-  const fields = ['dependencies', 'devDependencies', 'peerDependencies', 'overrides'];
+  const fields = [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'overrides',
+    'optionalDependencies',
+    'resolutions',
+  ];
 
   return fields
     .map((field) => compareObjects(packageObjA[field], packageObjB[field]))

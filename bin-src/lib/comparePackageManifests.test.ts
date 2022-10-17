@@ -127,6 +127,24 @@ it('returns false if nested overrides are not same type', () => {
   ).toBe(false);
 });
 
+it('returns false if optionalDependencies are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { optionalDependencies: { a: '1', b: '1' } },
+      { optionalDependencies: { a: '1', b: '2' } }
+    )
+  ).toBe(false);
+});
+
+it('returns false if resolutions are different', () => {
+  expect(
+    arePackageDependenciesEqual(
+      { resolutions: { a: '1', b: '1' } },
+      { resolutions: { a: '1', b: '2' } }
+    )
+  ).toBe(false);
+});
+
 it("returns true if differing object fields aren't dependency-related", () => {
   expect(
     arePackageDependenciesEqual(
