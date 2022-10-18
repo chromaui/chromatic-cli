@@ -15,20 +15,15 @@ jobs:
           fetch-depth: 0
       - name: install
         run: yarn install --frozen-lockfile
-      - uses: chromaui/action-next@v1
+      - uses: chromaui/action@v1
         with:
+          # 👇 Chromatic projectToken, refer to the manage page to obtain it.
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           exitOnceUploaded: true
           onlyChanged: true
           traceChanged: true
           diagnostics: true
-          # Only use this if you notice too many builds with TurboSnap exiting due to a global package.json, package-lock.json, yarn.lock
-          # Typically for use when you have an active repository with lots of rebasing or squash and merge commits
-          # Documentation https://www.chromatic.com/docs/turbosnap#avoid-re-testing-on-changes-to-package-control-files
-          # This pattern will ignore all of the following files (package.json src/app/package.json yarn.lock app/yarn.lock)
-          untraced: |
-            - '**/(package**.json|yarn.lock)'
-        env:
-          CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+          skip: ${{ github.event.pull_request.draft == true }}
       - uses: actions/upload-artifact@v2
         if: always()
         with:
