@@ -53,6 +53,7 @@ interface LastBuildQueryResult {
 }
 
 const getPackageManagerChanges = async (
+  ctx: Context,
   commit: string,
   changedPackageFiles: string[]
 ): Promise<string[]> => {
@@ -61,8 +62,16 @@ const getPackageManagerChanges = async (
       const fileA = await execGitCommand(`git show ${commit}:${fileName}`);
       const fileB = await execGitCommand(`git show HEAD:${fileName}`);
 
+      let areDependenciesEqual = false;
+
+      try {
+        areDependenciesEqual = arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB));
+      } catch (err) {
+        ctx.log.debug(err);
+      }
+
       // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones
-      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)) ? [] : [fileName];
+      return areDependenciesEqual ? [] : [fileName];
     })
   );
 
@@ -212,7 +221,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
       const packageManifestDependencyChanges = await Promise.all(
         packageManifestChanges.map(async ({ commit: buildCommit, changedFiles }) => {
-          return getPackageManagerChanges(buildCommit, changedFiles);
+          return getPackageManagerChanges(ctx, buildCommit, changedFiles);
         })
       );
 

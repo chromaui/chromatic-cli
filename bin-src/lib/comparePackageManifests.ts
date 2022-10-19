@@ -43,7 +43,5 @@ export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
     'pnpm',
   ];
 
-  return fields
-    .map((field) => compareObjects(packageObjA[field], packageObjB[field]))
-    .every((isEqual) => isEqual === true);
+  return fields.every((field) => compareObjects(packageObjA[field], packageObjB[field]));
 };
