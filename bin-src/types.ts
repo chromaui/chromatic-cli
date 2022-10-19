@@ -215,6 +215,7 @@ export interface Context {
     testCount: number;
     changeCount: number;
     errorCount: number;
+    interactionTestFailuresCount: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
     wasLimited?: boolean;
