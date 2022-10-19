@@ -1,4 +1,4 @@
-# 6.10.2 - 2022-10-11
+# 6.10.2 - 2022-10-19
 
 - [651](https://github.com/chromaui/chromatic-cli/pull/651) Update buildHasErrors with interaction test failure specific messaging
 
