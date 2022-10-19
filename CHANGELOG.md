@@ -1,5 +1,9 @@
 # 6.10.2 - 2022-10-11
 
+- [651](https://github.com/chromaui/chromatic-cli/pull/651) Update buildHasErrors with interaction test failure specific messaging
+
+# 6.10.2 - 2022-10-11
+
 - [649](https://github.com/chromaui/chromatic-cli/pull/649) Fix TurboSnap for module names containing URL params in stats file
 - [650](https://github.com/chromaui/chromatic-cli/pull/650) Ensure all GitHub Action outputs are exposed
 
