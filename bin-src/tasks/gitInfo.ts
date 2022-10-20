@@ -6,7 +6,7 @@ import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesFile, isPackageManifestFile } from '../lib/utils';
+import { matchesFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -23,7 +23,10 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
-import { getChangedPackageManifests } from '../lib/getChangedPackageManifests';
+import {
+  getChangedPackageManifests,
+  getRawChangedManifests,
+} from '../lib/getChangedPackageManifests';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -163,21 +166,6 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
 
-      const packageManifestChanges: { commit: string; changedFiles: string[] }[] = [];
-
-      results.forEach((resultItem) => {
-        const changedPackageFiles = resultItem.changedFiles.filter((changedFile) =>
-          isPackageManifestFile(changedFile)
-        );
-
-        if (changedPackageFiles.length) {
-          packageManifestChanges.push({
-            commit: resultItem.build.commit,
-            changedFiles: changedPackageFiles,
-          });
-        }
-      });
-
       ctx.git.replacementBuildIds = results
         .filter((r) => !!r.replacementBuild)
         .map(({ build, replacementBuild }) => {
@@ -193,6 +181,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
+      const packageManifestChanges = getRawChangedManifests(results);
       ctx.git.changedPackageManifests = await getChangedPackageManifests(packageManifestChanges);
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };

@@ -1,6 +1,7 @@
 import {
   arePackageDependenciesEqual,
   getChangedPackageManifests,
+  getRawChangedManifests,
 } from './getChangedPackageManifests';
 import * as git from '../git/git';
 
@@ -22,6 +23,60 @@ const mockFileContents = (packagesCommitsByFile) => {
 
 beforeEach(() => {
   execGitCommand.mockReset();
+});
+
+describe('getRawChangedManifests', () => {
+  it('Returns empty array when there are no changed package files', () => {
+    expect(
+      getRawChangedManifests([{ changedFiles: ['src/button.jsx'], build: { commit: 'A' } }])
+    ).toStrictEqual([]);
+  });
+
+  it('Returns array with single item when there is one package file', () => {
+    expect(
+      getRawChangedManifests([
+        { changedFiles: ['src/button.jsx', 'package.json'], build: { commit: 'A' } },
+      ])
+    ).toStrictEqual([{ commit: 'A', changedFiles: ['package.json'] }]);
+  });
+
+  it('Returns array with single item when package file is nested', () => {
+    expect(
+      getRawChangedManifests([
+        { changedFiles: ['src/button.jsx', 'src/somedir/package.json'], build: { commit: 'A' } },
+      ])
+    ).toStrictEqual([{ commit: 'A', changedFiles: ['src/somedir/package.json'] }]);
+  });
+
+  it('Returns array with multiple items when there are multiple package files in single commit', () => {
+    expect(
+      getRawChangedManifests([
+        {
+          changedFiles: ['src/button.jsx', 'package.json', 'src/package.json'],
+          build: { commit: 'A' },
+        },
+      ])
+    ).toStrictEqual([{ commit: 'A', changedFiles: ['package.json', 'src/package.json'] }]);
+  });
+
+  it('Returns array with multiple items when there are package files in multiple commits', () => {
+    expect(
+      getRawChangedManifests([
+        {
+          changedFiles: ['src/button.jsx', 'package.json'],
+          build: { commit: 'A' },
+        },
+        {
+          changedFiles: ['package.json'],
+          build: { commit: 'B' },
+        },
+      ])
+    ).toStrictEqual([
+      // it's OK to have duplicate file names at this point
+      { commit: 'A', changedFiles: ['package.json'] },
+      { commit: 'B', changedFiles: ['package.json'] },
+    ]);
+  });
 });
 
 describe('getChangedPackageManifests', () => {

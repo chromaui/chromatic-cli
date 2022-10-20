@@ -1,4 +1,24 @@
 import { execGitCommand } from '../git/git';
+import { isPackageManifestFile } from './utils';
+
+export const getRawChangedManifests = (results) => {
+  const packageManifestChanges: { commit: string; changedFiles: string[] }[] = [];
+
+  results.forEach((resultItem) => {
+    const changedPackageFiles = resultItem.changedFiles.filter((changedFile) =>
+      isPackageManifestFile(changedFile)
+    );
+
+    if (changedPackageFiles.length) {
+      packageManifestChanges.push({
+        commit: resultItem.build.commit,
+        changedFiles: changedPackageFiles,
+      });
+    }
+  });
+
+  return packageManifestChanges;
+};
 
 const compareObjects = (objA = {}, objB = {}) => {
   if (typeof objA !== typeof objB) {
