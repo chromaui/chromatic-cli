@@ -1,7 +1,7 @@
 import { execGitCommand } from '../git/git';
 import { isPackageManifestFile } from './utils';
 
-export const getRawChangedManifests = (results) => {
+export const getChangedPackageManifests = (results) => {
   const packageManifestChanges: { commit: string; changedFiles: string[] }[] = [];
 
   results.forEach((resultItem) => {

@@ -25,7 +25,7 @@ import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
 import {
   getDependencyChangedPackageManifests,
-  getRawChangedManifests,
+  getChangedPackageManifests,
 } from '../lib/getDependencyChangedPackageManifests';
 
 const SkipBuildMutation = `
@@ -181,7 +181,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
-      const packageManifestChanges = getRawChangedManifests(results);
+      const packageManifestChanges = getChangedPackageManifests(results);
       ctx.git.changedPackageManifests = await getDependencyChangedPackageManifests(
         packageManifestChanges
       );

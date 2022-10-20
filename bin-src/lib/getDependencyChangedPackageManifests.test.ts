@@ -1,7 +1,7 @@
 import {
   arePackageDependenciesEqual,
   getDependencyChangedPackageManifests,
-  getRawChangedManifests,
+  getChangedPackageManifests,
 } from './getDependencyChangedPackageManifests';
 import * as git from '../git/git';
 
@@ -25,16 +25,16 @@ beforeEach(() => {
   execGitCommand.mockReset();
 });
 
-describe('getRawChangedManifests', () => {
+describe('getChangedPackageManifests', () => {
   it('Returns empty array when there are no changed package files', () => {
     expect(
-      getRawChangedManifests([{ changedFiles: ['src/button.jsx'], build: { commit: 'A' } }])
+      getChangedPackageManifests([{ changedFiles: ['src/button.jsx'], build: { commit: 'A' } }])
     ).toStrictEqual([]);
   });
 
   it('Returns array with single item when there is one package file', () => {
     expect(
-      getRawChangedManifests([
+      getChangedPackageManifests([
         { changedFiles: ['src/button.jsx', 'package.json'], build: { commit: 'A' } },
       ])
     ).toStrictEqual([{ commit: 'A', changedFiles: ['package.json'] }]);
@@ -42,7 +42,7 @@ describe('getRawChangedManifests', () => {
 
   it('Returns array with single item when package file is nested', () => {
     expect(
-      getRawChangedManifests([
+      getChangedPackageManifests([
         { changedFiles: ['src/button.jsx', 'src/somedir/package.json'], build: { commit: 'A' } },
       ])
     ).toStrictEqual([{ commit: 'A', changedFiles: ['src/somedir/package.json'] }]);
@@ -50,7 +50,7 @@ describe('getRawChangedManifests', () => {
 
   it('Returns array with multiple items when there are multiple package files in single commit', () => {
     expect(
-      getRawChangedManifests([
+      getChangedPackageManifests([
         {
           changedFiles: ['src/button.jsx', 'package.json', 'src/package.json'],
           build: { commit: 'A' },
@@ -61,7 +61,7 @@ describe('getRawChangedManifests', () => {
 
   it('Returns array with multiple items when there are package files in multiple commits', () => {
     expect(
-      getRawChangedManifests([
+      getChangedPackageManifests([
         {
           changedFiles: ['src/button.jsx', 'package.json'],
           build: { commit: 'A' },
