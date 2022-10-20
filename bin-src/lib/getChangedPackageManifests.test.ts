@@ -1,4 +1,7 @@
-import { arePackageDependenciesEqual, getChangedPackageManifests } from './comparePackageManifests';
+import {
+  arePackageDependenciesEqual,
+  getChangedPackageManifests,
+} from './getChangedPackageManifests';
 import * as git from '../git/git';
 
 jest.mock('../git/git');
