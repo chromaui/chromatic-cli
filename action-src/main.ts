@@ -152,6 +152,7 @@ async function run() {
     const traceChanged = getInput('traceChanged');
     const doNotStart = getInput('doNotStart');
     const diagnostics = getInput('diagnostics');
+    const debug = getInput('debug');
     const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
@@ -182,6 +183,7 @@ async function run() {
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       diagnostics: maybe(diagnostics),
+      debug: maybe(debug),
       exec: maybe(exec),
       skip: maybe(skip),
       dryRun: maybe(dryRun),
