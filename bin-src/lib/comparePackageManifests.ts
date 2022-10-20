@@ -1,3 +1,5 @@
+import { execGitCommand } from '../git/git';
+
 const compareObjects = (objA = {}, objB = {}) => {
   if (typeof objA !== typeof objB) {
     return false;
@@ -44,4 +46,38 @@ export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
   ];
 
   return fields.every((field) => compareObjects(packageObjA[field], packageObjB[field]));
+};
+
+const getSingleCommitChangedPackageManifests = async (
+  commit: string,
+  changedPackageFiles: string[]
+): Promise<string[]> => {
+  const allChanges = await Promise.all(
+    changedPackageFiles.map(async (fileName) => {
+      const fileA = await execGitCommand(`git show ${commit}:${fileName}`);
+      const fileB = await execGitCommand(`git show HEAD:${fileName}`);
+
+      const areDependenciesEqual = arePackageDependenciesEqual(
+        JSON.parse(fileA),
+        JSON.parse(fileB)
+      );
+
+      // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones
+      return areDependenciesEqual ? [] : [fileName];
+    })
+  );
+
+  return allChanges.flat();
+};
+
+export const getChangedPackageManifests = async (packageManifestChanges) => {
+  const changedFileNames = await Promise.all(
+    packageManifestChanges.map(async ({ commit, changedFiles }) => {
+      return getSingleCommitChangedPackageManifests(commit, changedFiles);
+    })
+  );
+
+  const flattenedChanges = changedFileNames.flat();
+  // remove duplicate entries (if have multiple ancestors and both changed the same package.json, for example)
+  return Array.from(new Set(flattenedChanges));
 };
