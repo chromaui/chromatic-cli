@@ -1,8 +1,8 @@
 import {
   arePackageDependenciesEqual,
-  getChangedPackageManifests,
+  getDependencyChangedPackageManifests,
   getRawChangedManifests,
-} from './getChangedPackageManifests';
+} from './getDependencyChangedPackageManifests';
 import * as git from '../git/git';
 
 jest.mock('../git/git');
@@ -79,9 +79,9 @@ describe('getRawChangedManifests', () => {
   });
 });
 
-describe('getChangedPackageManifests', () => {
+describe('getDependencyChangedPackageManifests', () => {
   it('Returns empty array when there are no changed package files', async () => {
-    expect(await getChangedPackageManifests([])).toStrictEqual([]);
+    expect(await getDependencyChangedPackageManifests([])).toStrictEqual([]);
   });
 
   it('Returns empty array when there are package files with no changed dependencies', async () => {
@@ -90,7 +90,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
+      await getDependencyChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual([]);
   });
 
@@ -100,7 +100,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
+      await getDependencyChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual(['package.json']);
   });
 
@@ -114,7 +114,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([
+      await getDependencyChangedPackageManifests([
         { commit: 'A', changedFiles: ['package.json', 'src/another/package.json'] },
       ])
     ).toStrictEqual(['package.json', 'src/another/package.json']);
@@ -132,7 +132,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([
+      await getDependencyChangedPackageManifests([
         { commit: 'A', changedFiles: ['package.json', 'src/another/package.json'] },
       ])
     ).toStrictEqual(['src/another/package.json']);
@@ -148,7 +148,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([
+      await getDependencyChangedPackageManifests([
         { commit: 'A', changedFiles: [] },
         { commit: 'B', changedFiles: ['package.json'] },
       ])
@@ -165,7 +165,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([
+      await getDependencyChangedPackageManifests([
         { commit: 'A', changedFiles: ['package.json'] },
         { commit: 'B', changedFiles: [] },
       ])
@@ -182,7 +182,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     expect(
-      await getChangedPackageManifests([
+      await getDependencyChangedPackageManifests([
         { commit: 'A', changedFiles: ['package.json'] },
         { commit: 'B', changedFiles: ['package.json'] },
       ])
@@ -198,7 +198,7 @@ describe('getChangedPackageManifests', () => {
     });
 
     await expect(
-      getChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
+      getDependencyChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
     ).rejects.toThrowError();
   });
 });

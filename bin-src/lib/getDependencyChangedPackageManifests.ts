@@ -68,7 +68,7 @@ export const arePackageDependenciesEqual = (packageObjA, packageObjB) => {
   return fields.every((field) => compareObjects(packageObjA[field], packageObjB[field]));
 };
 
-const getSingleCommitChangedPackageManifests = async (
+const getDependencyChangedPackageManifestsByCommit = async (
   commit: string,
   changedPackageFiles: string[]
 ): Promise<string[]> => {
@@ -90,10 +90,10 @@ const getSingleCommitChangedPackageManifests = async (
   return allChanges.flat();
 };
 
-export const getChangedPackageManifests = async (packageManifestChanges) => {
+export const getDependencyChangedPackageManifests = async (packageManifestChanges) => {
   const changedFileNames = await Promise.all(
     packageManifestChanges.map(async ({ commit, changedFiles }) => {
-      return getSingleCommitChangedPackageManifests(commit, changedFiles);
+      return getDependencyChangedPackageManifestsByCommit(commit, changedFiles);
     })
   );
 
