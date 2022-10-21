@@ -90,7 +90,9 @@ const getDependencyChangedPackageManifestsByCommit = async (
   return allChanges.flat();
 };
 
-export const getDependencyChangedPackageManifests = async (packageManifestChanges) => {
+export const getDependencyChangedPackageManifests = async (
+  packageManifestChanges
+): Promise<string[]> => {
   const changedFileNames = await Promise.all(
     packageManifestChanges.map(async ({ commit, changedFiles }) => {
       return getDependencyChangedPackageManifestsByCommit(commit, changedFiles);
