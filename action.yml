@@ -66,6 +66,9 @@ inputs:
   diagnostics:
     description: 'Write process context information to chromatic-diagnostics.json'
     required: false
+  debug:
+    description: 'Output verbose debugging information.'
+    required: false
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
     required: false
