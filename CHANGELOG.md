@@ -1,4 +1,4 @@
-# 6.10.4 - 2022-10-20
+# 6.10.5 - 2022-10-20
 
 - [661](https://github.com/chromaui/chromatic-cli/pull/661) Add `debug` as an option to the GH action
 
