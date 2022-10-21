@@ -93,7 +93,7 @@ const getDependencyChangedPackageManifestsByCommit = async (
 export const getDependencyChangedPackageManifests = async (
   packageManifestChanges
 ): Promise<string[]> => {
-  const changedFileNames = await Promise.all(
+  const changedFileNames: string[][] = await Promise.all(
     packageManifestChanges.map(async ({ commit, changedFiles }) => {
       return getDependencyChangedPackageManifestsByCommit(commit, changedFiles);
     })
