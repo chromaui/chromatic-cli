@@ -1,3 +1,7 @@
+# 6.10.4 - 2022-10-20
+
+- [661](https://github.com/chromaui/chromatic-cli/pull/661) Add `debug` as an option to the GH action
+
 # 6.10.3 - 2022-10-19
 
 - [651](https://github.com/chromaui/chromatic-cli/pull/651) Update buildHasErrors with interaction test failure specific messaging
