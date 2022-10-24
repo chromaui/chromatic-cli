@@ -39,8 +39,11 @@ export const Invalid = () =>
 
 export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } } as any);
 
-export const Bailed = () =>
+export const BailedPackageFile = () =>
   bailed({ turboSnap: { bailReason: { changedPackageFiles: ['package.json'] } } } as any);
+
+export const BailedLockfile = () =>
+  bailed({ turboSnap: { bailReason: { changedPackageFiles: ['yarn.lock'] } } } as any);
 
 export const BailedSiblings = () =>
   bailed({

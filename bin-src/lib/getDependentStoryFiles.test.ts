@@ -19,6 +19,7 @@ const getContext: any = ({
   options: { storybookBaseDir: '.', ...options },
   turboSnap: {},
   storybook: { configDir, staticDir },
+  git: {},
 });
 
 afterEach(() => {
@@ -340,7 +341,7 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('bails on changed global file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'src/package.json'];
+    const changedFiles = ['src/foo.stories.js', 'src/yarn.lock'];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -357,11 +358,63 @@ describe('getDependentStoryFiles', () => {
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(res).toEqual(null);
     expect(ctx.turboSnap.bailReason).toEqual({
+      changedPackageFiles: ['src/yarn.lock'],
+    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(chalk`Found a package file change in {bold src/yarn.lock}`)
+    );
+  });
+
+  it('bails on dependency changes to package manifest file', async () => {
+    const changedFiles = ['src/foo.stories.js', 'src/package.json'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const rawContext = getContext();
+    const ctx = {
+      ...rawContext,
+      // signifying the package.json file had dependency changes
+      git: { ...rawContext.git, changedPackageManifests: ['src/package.json'] },
+    };
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual(null);
+    expect(ctx.turboSnap.bailReason).toEqual({
       changedPackageFiles: ['src/package.json'],
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(chalk`Found a package file change in {bold src/package.json}`)
+      expect.stringContaining(chalk`Found a dependency change in {bold src/package.json}`)
     );
+  });
+
+  it('does not bail when package.json change has no dependency changes', async () => {
+    const changedFiles = ['src/foo.stories.js', 'src/package.json'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
   });
 
   it('bails on changed Storybook config file', async () => {
@@ -386,7 +439,7 @@ describe('getDependentStoryFiles', () => {
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
       )
     );
   });
@@ -413,7 +466,7 @@ describe('getDependentStoryFiles', () => {
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
       )
     );
   });
@@ -441,7 +494,7 @@ describe('getDependentStoryFiles', () => {
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config file change in {bold path/to/storybook-config/file.js}`
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
       )
     );
   });
