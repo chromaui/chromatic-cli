@@ -1,3 +1,7 @@
+# 6.11.0 - 2022-10-24
+
+- [648](https://github.com/chromaui/chromatic-cli/pull/648) TurboSnap not bailed if package manifest change isn't dependency-related
+
 # 6.10.5 - 2022-10-20
 
 - [661](https://github.com/chromaui/chromatic-cli/pull/661) Add `debug` as an option to the GH action
