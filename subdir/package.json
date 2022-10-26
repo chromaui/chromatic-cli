@@ -4,7 +4,8 @@
   "scripts": {
     "start": "start-storybook",
     "build": "build-storybook --webpack-stats-json --output-dir ../subdir-static",
-    "postbuild": "node -r esm ../bin-src/trim-stats-file.js ../subdir-static/preview-stats.json"
+    "postbuild": "node -r esm ../bin-src/trim-stats-file.js ../subdir-static/preview-stats.json",
+    "test": "jest"
   },
   "dependencies": {
     "@storybook/react": "^6.3.7",

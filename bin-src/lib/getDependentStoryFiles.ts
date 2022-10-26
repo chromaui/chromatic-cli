@@ -15,10 +15,13 @@ const LOCKFILES = [
   /\/yarn\.lock$/,
 ];
 
+const GLOBALS = [/^package\.json$/, /\/package\.json$/];
+
 // Ignore these while tracing dependencies
 const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
 
 const isPackageLockFile = (name: string) => LOCKFILES.some((re) => re.test(name));
+const isPackageFile = (name: string) => GLOBALS.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
   (mod as Module).id !== null &&
@@ -183,7 +186,7 @@ export async function getDependentStoryFiles(
     bailReason: undefined,
   };
 
-  const changedPackageFiles = tracedFiles.filter(isPackageLockFile);
+  const changedPackageFiles = tracedFiles.filter(isPackageLockFile || isPackageFile);
   if (changedPackageFiles.length) {
     ctx.turboSnap.bailReason = { changedPackageFiles };
     // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
