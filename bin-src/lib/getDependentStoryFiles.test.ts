@@ -395,6 +395,33 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  it('does not bail on dependency changes to package manifest file when untraced', async () => {
+    const changedFiles = ['src/foo.stories.js', 'src/package.json', 'src/package-lock.json'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const rawContext = getContext({ untraced: ['**/(package.json|package-lock.json|yarn.lock)'] });
+    const ctx = {
+      ...rawContext,
+      // signifying the package.json file had dependency changes
+      git: { ...rawContext.git, changedPackageManifests: ['src/package.json'] },
+    };
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
   it('does not bail when package.json change has no dependency changes', async () => {
     const changedFiles = ['src/foo.stories.js', 'src/package.json'];
     const modules = [
