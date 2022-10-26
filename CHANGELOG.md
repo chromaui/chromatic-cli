@@ -1,3 +1,7 @@
+# 6.11.1 - 2022-10-25
+
+- [665](https://github.com/chromaui/chromatic-cli/pull/665) Added onlyStoryFiles to the github action
+
 # 6.11.0 - 2022-10-24
 
 - [648](https://github.com/chromaui/chromatic-cli/pull/648) TurboSnap not bailed if package manifest change isn't dependency-related
