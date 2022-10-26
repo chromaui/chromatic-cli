@@ -191,6 +191,7 @@ export async function getDependentStoryFiles(
     ctx.turboSnap.bailReason = { changedPackageFiles };
     // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
     // for now.
+    // if package.jsons are untraced, don't bail, even when its dependency fields have changed
   } else if (ctx.git.changedPackageManifests?.length && tracedFiles.filter(isPackageFile).length) {
     ctx.turboSnap.bailReason = { changedPackageFiles: ctx.git.changedPackageManifests };
   }
