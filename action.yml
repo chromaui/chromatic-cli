@@ -51,6 +51,9 @@ inputs:
   onlyStoryNames:
     description: 'Only run a single story or a subset of stories by their name'
     required: false
+  onlyStoryFiles:
+    description: 'Only run a single story or a subset of stories by their filename(s)'
+    required: false
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'
     required: false

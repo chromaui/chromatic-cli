@@ -147,6 +147,7 @@ async function run() {
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryNames = getInput('onlyStoryNames');
+    const onlyStoryFiles = getInput('onlyStoryFiles');
     const externals = getInput('externals');
     const untraced = getInput('untraced');
     const traceChanged = getInput('traceChanged');
@@ -191,6 +192,7 @@ async function run() {
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
       onlyStoryNames: maybe(onlyStoryNames),
+      onlyStoryFiles: maybe(onlyStoryFiles),
       externals: maybe(externals),
       untraced: maybe(untraced),
       storybookBaseDir: maybe(storybookBaseDir),
