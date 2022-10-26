@@ -7,8 +7,7 @@
     "storybook",
     "addon",
     "test",
-    "popular",
-    "automation"
+    "popular"
   ],
   "homepage": "https://www.chromatic.com",
   "bugs": {
