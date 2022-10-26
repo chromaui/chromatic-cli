@@ -1,3 +1,7 @@
+# 6.11.2 - 2022-10-26
+
+- [667](https://github.com/chromaui/chromatic-cli/pull/667) Edit package file detection process for the untraced flag
+
 # 6.11.1 - 2022-10-25
 
 - [665](https://github.com/chromaui/chromatic-cli/pull/665) Added onlyStoryFiles to the github action
