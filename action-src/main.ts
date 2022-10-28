@@ -88,6 +88,7 @@ interface Output {
   testCount: number;
   changeCount: number;
   errorCount: number;
+  interactionTestFailuresCount: number;
   actualTestCount: number;
   actualCaptureCount: number;
   inheritedCaptureCount: number;
@@ -112,6 +113,7 @@ async function runChromatic(options): Promise<Output> {
   await runAll(ctx);
 
   return {
+    // Keep this in sync with the configured outputs in action.yml
     code: ctx.exitCode,
     url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
@@ -121,6 +123,7 @@ async function runChromatic(options): Promise<Output> {
     testCount: ctx.build?.testCount,
     changeCount: ctx.build?.changeCount,
     errorCount: ctx.build?.errorCount,
+    interactionTestFailuresCount: ctx.build?.interactionTestFailuresCount,
     actualTestCount: ctx.build?.actualTestCount,
     actualCaptureCount: ctx.build?.actualCaptureCount,
     inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
@@ -146,11 +149,13 @@ async function run() {
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryNames = getInput('onlyStoryNames');
+    const onlyStoryFiles = getInput('onlyStoryFiles');
     const externals = getInput('externals');
     const untraced = getInput('untraced');
     const traceChanged = getInput('traceChanged');
     const doNotStart = getInput('doNotStart');
     const diagnostics = getInput('diagnostics');
+    const debug = getInput('debug');
     const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
@@ -181,6 +186,7 @@ async function run() {
       buildScriptName: maybe(buildScriptName),
       scriptName: maybe(scriptName),
       diagnostics: maybe(diagnostics),
+      debug: maybe(debug),
       exec: maybe(exec),
       skip: maybe(skip),
       dryRun: maybe(dryRun),
@@ -188,6 +194,7 @@ async function run() {
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
       onlyStoryNames: maybe(onlyStoryNames),
+      onlyStoryFiles: maybe(onlyStoryFiles),
       externals: maybe(externals),
       untraced: maybe(untraced),
       storybookBaseDir: maybe(storybookBaseDir),
@@ -212,10 +219,7 @@ async function run() {
       zip: maybe(zip, false),
     });
 
-    setOutput('url', output.url);
-    setOutput('buildUrl', output.buildUrl);
-    setOutput('storybookUrl', output.storybookUrl);
-    setOutput('code', output.code.toString());
+    Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
 
     if (output.code !== 0) {
       setFailed('non-zero exit code');

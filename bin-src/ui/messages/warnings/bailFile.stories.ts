@@ -9,6 +9,11 @@ export const BailPackageFile = () =>
     turboSnap: { bailReason: { changedPackageFiles: ['services/webapp/package.json'] } },
   });
 
+export const BailLockfile = () =>
+  bailFile({
+    turboSnap: { bailReason: { changedPackageFiles: ['services/webapp/yarn.lock'] } },
+  });
+
 export const BailStaticFile = () =>
   bailFile({
     turboSnap: { bailReason: { changedStaticFiles: ['static/assets/fonts/percolate.woff'] } },

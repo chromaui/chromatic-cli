@@ -23,6 +23,10 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
+import {
+  getDependencyChangedPackageManifests,
+  getChangedPackageManifests,
+} from '../lib/getDependencyChangedPackageManifests';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -161,6 +165,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         }))
       );
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
+
       ctx.git.replacementBuildIds = results
         .filter((r) => !!r.replacementBuild)
         .map(({ build, replacementBuild }) => {
@@ -175,6 +180,11 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
             .join('\n')}`
         );
       }
+
+      const packageManifestChanges = getChangedPackageManifests(results);
+      ctx.git.changedPackageManifests = await getDependencyChangedPackageManifests(
+        packageManifestChanges
+      );
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;

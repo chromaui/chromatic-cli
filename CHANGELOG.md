@@ -1,6 +1,31 @@
-# 6.10.1 - 2022-09-27
-- [645](https://github.com/chromaui/chromatic-cli/pull/645) Check onlyStoryNames is non-empty
+# 6.11.2 - 2022-10-26
 
+- [667](https://github.com/chromaui/chromatic-cli/pull/667) Edit package file detection process for the untraced flag
+
+# 6.11.1 - 2022-10-25
+
+- [665](https://github.com/chromaui/chromatic-cli/pull/665) Added onlyStoryFiles to the github action
+
+# 6.11.0 - 2022-10-24
+
+- [648](https://github.com/chromaui/chromatic-cli/pull/648) TurboSnap not bailed if package manifest change isn't dependency-related
+
+# 6.10.5 - 2022-10-20
+
+- [661](https://github.com/chromaui/chromatic-cli/pull/661) Add `debug` as an option to the GH action
+
+# 6.10.3 - 2022-10-19
+
+- [651](https://github.com/chromaui/chromatic-cli/pull/651) Update buildHasErrors with interaction test failure specific messaging
+
+# 6.10.2 - 2022-10-11
+
+- [649](https://github.com/chromaui/chromatic-cli/pull/649) Fix TurboSnap for module names containing URL params in stats file
+- [650](https://github.com/chromaui/chromatic-cli/pull/650) Ensure all GitHub Action outputs are exposed
+
+# 6.10.1 - 2022-09-27
+
+- [645](https://github.com/chromaui/chromatic-cli/pull/645) Check onlyStoryNames is non-empty
 
 # 6.10.0 - 2022-09-23
 

@@ -51,6 +51,9 @@ inputs:
   onlyStoryNames:
     description: 'Only run a single story or a subset of stories by their name'
     required: false
+  onlyStoryFiles:
+    description: 'Only run a single story or a subset of stories by their filename(s)'
+    required: false
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'
     required: false
@@ -65,6 +68,9 @@ inputs:
     required: false
   diagnostics:
     description: 'Write process context information to chromatic-diagnostics.json'
+    required: false
+  debug:
+    description: 'Output verbose debugging information.'
     required: false
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
@@ -128,6 +134,8 @@ outputs:
     description: 'The number of tests with visual changes, including any inherited changes (e.g. due to TurboSnap)'
   errorCount:
     description: 'The number of tests with error(s), including any inherited errors (e.g. due to TurboSnap)'
+  interactionTestFailuresCount:
+    description: 'The number of stories with interaction test failures'
   actualCaptureCount:
     description: 'The number of captured snapshots'
   inheritedCaptureCount:
@@ -135,4 +143,4 @@ outputs:
 
 runs:
   main: action/main.js
-  using: node12
+  using: node16

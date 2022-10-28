@@ -1,4 +1,4 @@
-import { matchesFile } from './utils';
+import { matchesFile, isPackageManifestFile } from './utils';
 
 describe('matchesFile', () => {
   it('matches file names', () => {
@@ -32,5 +32,23 @@ describe('matchesFile', () => {
 
   it('matches ./ prefix', () => {
     expect(matchesFile('src/*', './src/file.js')).toStrictEqual(true);
+  });
+});
+
+describe('isPackageManifestFile', () => {
+  it('returns true for package manifest file at root', () => {
+    expect(isPackageManifestFile('package.json')).toBe(true);
+  });
+
+  it('returns true for package manifest file in directory', () => {
+    expect(isPackageManifestFile('path/to/package.json')).toBe(true);
+  });
+
+  it('returns false for non-package-manifest files at root', () => {
+    expect(isPackageManifestFile('something.json')).toBe(false);
+  });
+
+  it('returns false for non-package-manifest files in directory', () => {
+    expect(isPackageManifestFile('path/to/something.json')).toBe(false);
   });
 });
