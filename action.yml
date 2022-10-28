@@ -134,6 +134,8 @@ outputs:
     description: 'The number of tests with visual changes, including any inherited changes (e.g. due to TurboSnap)'
   errorCount:
     description: 'The number of tests with error(s), including any inherited errors (e.g. due to TurboSnap)'
+  interactionTestFailuresCount:
+    description: 'The number of stories with interaction test failures'
   actualCaptureCount:
     description: 'The number of captured snapshots'
   inheritedCaptureCount:

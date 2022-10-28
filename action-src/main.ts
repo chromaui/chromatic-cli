@@ -88,6 +88,7 @@ interface Output {
   testCount: number;
   changeCount: number;
   errorCount: number;
+  interactionTestFailuresCount: number;
   actualTestCount: number;
   actualCaptureCount: number;
   inheritedCaptureCount: number;
@@ -122,6 +123,7 @@ async function runChromatic(options): Promise<Output> {
     testCount: ctx.build?.testCount,
     changeCount: ctx.build?.changeCount,
     errorCount: ctx.build?.errorCount,
+    interactionTestFailuresCount: ctx.build?.interactionTestFailuresCount,
     actualTestCount: ctx.build?.actualTestCount,
     actualCaptureCount: ctx.build?.actualCaptureCount,
     inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
