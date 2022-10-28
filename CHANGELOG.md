@@ -1,6 +1,10 @@
 # 6.11.2 - 2022-10-26
 
 - [667](https://github.com/chromaui/chromatic-cli/pull/667) Edit package file detection process for the untraced flag
+- [644](https://github.com/chromaui/chromatic-cli/pull/644) Bump node-fetch from 3.0.0 to 3.2.10
+- [666](https://github.com/chromaui/chromatic-cli/pull/666) Bump @actions/core from ^1.5.0 to ^1.10.0
+- [660](https://github.com/chromaui/chromatic-cli/pull/660) Update action to Node 16
+- [659](https://github.com/chromaui/chromatic-cli/pull/659) add interactionTestFailuresCount to github action output
 
 # 6.11.1 - 2022-10-25
 
