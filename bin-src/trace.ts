@@ -92,7 +92,7 @@ export async function main(argv: string[]) {
   const packageManifestFile = changedFiles.find((item) => isPackageManifestFile(item));
   if (packageManifestFile) {
     throw new Error(
-      'Unable to trace package manifest file as that would require diffing file contents.'
+      `Unable to trace package manifest file (${packageManifestFile}) as that would require diffing file contents.`
     );
   }
 
