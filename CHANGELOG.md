@@ -1,3 +1,7 @@
+# 6.11.3 - 2022-10-31
+
+- [670](https://github.com/chromaui/chromatic-cli/pull/670) Trace command errors for package manifest change
+
 # 6.11.2 - 2022-10-26
 
 - [667](https://github.com/chromaui/chromatic-cli/pull/667) Edit package file detection process for the untraced flag

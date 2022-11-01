@@ -2,6 +2,7 @@ import meow from 'meow';
 import { getDependentStoryFiles } from './lib/getDependentStoryFiles';
 import { Context } from './types';
 import { readStatsFile } from './tasks/read-stats-file';
+import { isPackageManifestFile } from './lib/utils';
 
 /**
  * Utility to trace a set of changed file paths to dependent story files using a Webpack stats file.
@@ -87,6 +88,13 @@ export async function main(argv: string[]) {
   } as any;
   const stats = await readStatsFile(flags.statsFile);
   const changedFiles = input.map((f) => f.replace(/^\.\//, ''));
+
+  const packageManifestFile = changedFiles.find((item) => isPackageManifestFile(item));
+  if (packageManifestFile) {
+    throw new Error(
+      `Unable to trace package manifest file (${packageManifestFile}) as that would require diffing file contents.`
+    );
+  }
 
   await getDependentStoryFiles(ctx, stats, flags.statsFile, changedFiles);
 }
