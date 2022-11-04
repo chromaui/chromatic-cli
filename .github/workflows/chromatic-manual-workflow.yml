@@ -1,0 +1,56 @@
+name: Chromatic Branch Update
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: The SHA-1 hash referring to the commit to check.
+        required: true
+      ref:
+        description: The head branch associated with the pull request. Branch name only (ex. test-chromatic)
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # permissions:
+    #   contents: read
+    #   packages: write
+    steps:
+      # - uses: actions/setup-node@v3
+      #   with:
+      #     registry-url: "https://npm.pkg.github.com"
+      #     scope: "@pfizer"
+      #     node-version: 16
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: 0
+      # - name: Install dependencies
+      #   run: npm ci --legacy-peer-deps
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.HELIX_GITHUB_TOKEN }}
+      # - name: Generate Component Definitions
+      #   continue-on-error: true
+      #   run: npm run build
+      # - name: Build the components
+      #   run: npm run build
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: install
+        run: yarn install --frozen-lockfile
+      - uses: chromaui/action@v1
+        # Chromatic GitHub Action options
+        with:
+          token: ${{ secrets.HELIX_GITHUB_TOKEN }}
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitOnceUploaded: true
+          onlyStoryFiles: "src/components/**/*.stories.*"
+          diagnostics: true
+          forceRebuild: ${{ github.event.inputs.target_branch }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: chromatic-build-artifacts-${{ github.run_id }}
+          path: |
+            chromatic-diagnostics.json
+            **/build-storybook.log
