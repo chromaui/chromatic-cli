@@ -1,4 +1,4 @@
-name: Chromatic Branch Update
+name: Chromatic Manual Trigger Update
 on:
   workflow_dispatch:
     inputs:
