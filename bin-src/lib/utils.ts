@@ -11,6 +11,17 @@ export const tick = async (times: number, interval: number, fn: (i: number) => a
   }
 };
 
+export const throttle = (fn: (...args: any[]) => void, wait: number) => {
+  let prev = 0;
+  return (...args: any[]) => {
+    const now = Date.now();
+    if (now - prev >= wait) {
+      prev = now;
+      fn(...args);
+    }
+  };
+};
+
 export const repeat = (n: number, char: string) => [...new Array(Math.round(n))].map(() => char);
 export const progress = (percentage: number, size = 20) => {
   const track = repeat(size, ' ');
