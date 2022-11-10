@@ -29,6 +29,16 @@ const isUserModule = (mod: Module | Reason) =>
 // already contains forward slashes, because that's what git yields even on Windows.
 const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
 
+const getPackageName = (modulePath) => {
+  const [, scopedName] = modulePath.match(/\/node_modules\/(@[\w-]+\/[\w-]+)\//) || [];
+  if (scopedName) {
+    return scopedName;
+  }
+
+  const [, unscopedName] = modulePath.match(/\/node_modules\/([\w-]+)\//) || [];
+  return unscopedName;
+};
+
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
@@ -52,7 +62,8 @@ export async function getDependentStoryFiles(
   ctx: Context,
   stats: Stats,
   statsPath: string,
-  changedFiles: string[]
+  changedFiles: string[],
+  changedDependencies?: string[]
 ) {
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
   const {
@@ -101,16 +112,29 @@ export async function getDependentStoryFiles(
   ].map(normalize);
 
   const modulesByName: Record<string, Module> = {};
+  // stores the normalized paths (like modulesByName does), but groups all package files under the same package name.
+  // Why? In monorepo, may have multiple node_modules directories, but we want to update any components using an updated dependency
+  // (regardless of where it's used). So we use the package name as the key, and the value is all files of that package name,
+  // regardless of where they are.
+  const packageDependencies: Record<string, string[]> = {};
   const namesById: Record<number, string> = {};
   const reasonsById: Record<number, string[]> = {};
   const csfGlobsByName: Record<string, true> = {};
 
   stats.modules
-    .filter((mod) => isUserModule(mod))
+    // .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
       const normalizedName = normalize(mod.name);
+      const packageName = getPackageName(mod.name);
+
       modulesByName[normalizedName] = mod;
       namesById[mod.id] = normalizedName;
+
+      if (packageName) {
+        // broaden here the list of actual files for all instances of the package, even if it's not exactly the package that changed
+        if (!packageDependencies[packageName]) packageDependencies[packageName] = [];
+        packageDependencies[packageName].push(normalizedName);
+      }
 
       if (mod.modules) {
         mod.modules.forEach((m) => {
@@ -129,6 +153,7 @@ export async function getDependentStoryFiles(
 
   const globs = Object.keys(csfGlobsByName);
   const modules = Object.keys(modulesByName);
+  // check if no modules have node_modules (if lockfile has changed)
 
   if (globs.length === 0) {
     // Check for misconfigured Storybook configDir. Only applicable to v6 store because v7 store
@@ -164,7 +189,10 @@ export async function getDependentStoryFiles(
     return mod.modules?.length ? mod.modules.map((m) => normalize(m.name)) : [normalize(mod.name)];
   }
 
-  const tracedFiles = changedFiles.filter(untrace);
+  const tracedFiles = [
+    ...changedDependencies.flatMap((mod) => packageDependencies[mod]),
+    ...changedFiles,
+  ].filter(untrace);
   const tracedPaths = new Set<string>();
   const affectedModuleIds = new Set<string | number>();
   const checkedIds = {};
@@ -183,14 +211,14 @@ export async function getDependentStoryFiles(
     bailReason: undefined,
   };
 
-  const changedPackageFiles = tracedFiles.filter(isPackageLockFile);
-  if (changedPackageFiles.length) {
-    ctx.turboSnap.bailReason = { changedPackageFiles };
-    // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
-    // for now.
-  } else if (ctx.git.changedPackageManifests?.length) {
-    ctx.turboSnap.bailReason = { changedPackageFiles: ctx.git.changedPackageManifests };
-  }
+  // const changedPackageFiles = tracedFiles.filter(isPackageLockFile);
+  // if (changedPackageFiles.length) {
+  //   ctx.turboSnap.bailReason = { changedPackageFiles };
+  //   // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
+  //   // for now.
+  // } else if (ctx.git.changedPackageManifests?.length) {
+  //   ctx.turboSnap.bailReason = { changedPackageFiles: ctx.git.changedPackageManifests };
+  // }
 
   function shouldBail(moduleName: string) {
     if (isStorybookFile(moduleName)) {
@@ -207,9 +235,9 @@ export async function getDependentStoryFiles(
   function traceName(name: string, tracePath: string[] = []) {
     if (ctx.turboSnap.bailReason || isCsfGlob(name)) return;
     if (shouldBail(name)) return;
-
     const { id } = modulesByName[name] || {};
     const normalizedName = namesById[id];
+    console.log({ name, normalizedName });
     if (shouldBail(normalizedName)) return;
 
     if (!id || !reasonsById[id] || checkedIds[id]) return;
@@ -234,6 +262,8 @@ export async function getDependentStoryFiles(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
     Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
   );
+
+  console.log('affectedModules:', Object.entries(affectedModules));
 
   if (ctx.options.traceChanged) {
     ctx.log.info(

@@ -394,6 +394,39 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  it('only runs tests for stories affected by dependency changes', async () => {
+    const changedFiles = [];
+    const changedDependencies = ['@adobe/css-tools'];
+    const modules = [
+      {
+        id: './node_modules/@adobe/css-tools/dist/index.js',
+        name: './node_modules/@adobe/css-tools/dist/index.js',
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(
+      ctx,
+      { modules },
+      statsPath,
+      changedFiles,
+      changedDependencies
+    );
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
   it('bails on changed Storybook config file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/storybook-config/file.js'];
     const modules = [

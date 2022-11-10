@@ -161,8 +161,11 @@ const flattenDependencyTree = (
 
 const xor = (left: Set<string>, right: Set<string>) => {
   Array.from(right.values()).forEach((pkg) => {
-    if (left.has(pkg)) left.delete(pkg);
-    else left.add(pkg);
+    if (left.has(pkg)) {
+      left.delete(pkg);
+    } else {
+      left.add(pkg);
+    }
   });
   return left;
 };
@@ -184,11 +187,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
     // build the current dep tree
     const newDepTree = await buildDepTreeFromFiles('.', 'package.json', 'package-lock.json', true);
-    const dependencies = flattenDependencyTree((newDepTree as any).dependencies);
-
-    return;
-    // diff two sets (looking only for what's added + removed)
-    const res = xor(new Set(['lodash@1.2.3', 'lodash@2.3.4']), new Set(['lodash@1.2.3']));
+    const headDependencySet = flattenDependencyTree((newDepTree as any).dependencies);
 
     // for both branches (if merge commit), diff with our most-recent thing
     const baselineChanges = await Promise.all(
@@ -196,16 +195,23 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
         const manifestFile = await checkoutFile(commit, 'package.json');
         const lockfileName = await checkoutFile(commit, 'package-lock.json');
         const depTree = await buildDepTreeFromFiles('.', manifestFile, lockfileName, true);
-        const depSet = flattenDependencyTree((depTree as any).dependencies);
-        return Array.from(xor(depSet, dependencies));
+        const baselineDependencySet = flattenDependencyTree((depTree as any).dependencies);
+        return Array.from(xor(baselineDependencySet, headDependencySet));
       })
     );
+
     // combine all the diffs into one place
     // we only need unique package names, so we can dedupe after we remove the version from the package name
     const changedDependencies = new Set(baselineChanges.flat().map((pkg) => pkg.split('@@')[0]));
 
     // throw this list of diffs into here!
-    const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
+    const onlyStoryFiles = await getDependentStoryFiles(
+      ctx,
+      stats,
+      statsPath,
+      changedFiles,
+      Array.from(changedDependencies)
+    );
     if (onlyStoryFiles) {
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
       if (!ctx.options.interactive) {
