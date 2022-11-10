@@ -69,7 +69,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       task.output = pending(ctx, { cursor, label }).output;
     },
     // Avoid spamming the logs with progress updates in non-interactive mode
-    ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : 30000
+    ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
   );
 
   const waitForBuild = async (): Promise<Context['build']> => {
