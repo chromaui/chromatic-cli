@@ -218,9 +218,11 @@ export interface Context {
     interactionTestFailuresCount: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
+    turboSnapEnabled?: boolean;
     wasLimited?: boolean;
     startedAt?: number;
     app: {
+      manageUrl: string;
       setupUrl: string;
       account?: {
         exceededThreshold: boolean;
