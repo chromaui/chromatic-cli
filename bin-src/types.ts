@@ -140,6 +140,7 @@ export interface Context {
   closeTunnel?: () => void;
   isPublishOnly?: boolean;
   isOnboarding: boolean;
+  turboSnapAvailability?: string;
 
   http: {
     fetch: (url: string, options?: RequestInit, opts?: any) => Promise<Response>;
@@ -199,6 +200,10 @@ export interface Context {
     status: string;
     autoAcceptChanges: boolean;
     reportToken: string;
+    app: {
+      id: string;
+      turboSnapAvailability: string;
+    };
   };
   build: {
     id: string;
@@ -262,6 +267,7 @@ export interface Context {
   };
   uploadedBytes?: number;
   turboSnap?: Partial<{
+    unavailable?: boolean;
     rootPath: string;
     baseDir: string;
     storybookDir: string;

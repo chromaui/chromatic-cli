@@ -12,6 +12,10 @@ const AnnounceBuildMutation = `
       status
       autoAcceptChanges
       reportToken
+      app {
+        id
+        turboSnapAvailability
+      }
     }
   }
 `;
@@ -73,6 +77,10 @@ export const announceBuild = async (ctx: Context) => {
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
     announcedBuild.number === 1 || (announcedBuild.autoAcceptChanges && !autoAcceptChanges);
+
+  if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
+    ctx.turboSnap.unavailable = true;
+  }
 
   if (!ctx.isOnboarding && !ctx.git.parentCommits) {
     ctx.log.warn(noAncestorBuild(ctx));

@@ -212,11 +212,12 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     ctx.log.info(listingStories(ctx.build.tests));
   }
 
-  // `turboSnapEnabled` is null if we TurboSnap wasn't used/attempted
-  if (ctx.build.turboSnapEnabled === false) {
-    ctx.log.warn(turboSnapUnavailable(ctx));
-  } else if (ctx.build.turboSnapEnabled) {
-    ctx.log.info(turboSnapEnabled(ctx));
+  if (ctx.turboSnap) {
+    if (ctx.turboSnap.unavailable) {
+      ctx.log.warn(turboSnapUnavailable(ctx));
+    } else if (ctx.build.turboSnapEnabled) {
+      ctx.log.info(turboSnapEnabled(ctx));
+    }
   }
 
   if (ctx.build.wasLimited) {
