@@ -91,6 +91,7 @@ interface StartedBuildQueryResult {
   };
 }
 
+// these fields must be part of authorizedBuildFieldsViaAppCode in the public api
 const VerifyBuildQuery = `
   query VerifyBuildQuery($number: Int!) {
     app {
@@ -106,6 +107,7 @@ const VerifyBuildQuery = `
         actualTestCount: testCount(statuses: [IN_PROGRESS])
         actualCaptureCount
         inheritedCaptureCount
+        interactionTestFailuresCount
         webUrl
         cachedUrl
         browsers {

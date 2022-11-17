@@ -1,12 +1,12 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { execGitCommand, getSlug, getVersion } from '../git/git';
+import { getSlug, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesFile, isPackageManifestFile } from '../lib/utils';
+import { matchesFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -23,7 +23,10 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
-import { arePackageDependenciesEqual } from '../lib/comparePackageManifests';
+import {
+  getDependencyChangedPackageManifests,
+  getChangedPackageManifests,
+} from '../lib/getDependencyChangedPackageManifests';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -51,23 +54,6 @@ interface LastBuildQueryResult {
     };
   };
 }
-
-const getPackageManagerChanges = async (
-  commit: string,
-  changedPackageFiles: string[]
-): Promise<string[]> => {
-  const allChanges = await Promise.all(
-    changedPackageFiles.map(async (fileName) => {
-      const fileA = await execGitCommand(`git show ${commit}:${fileName}`);
-      const fileB = await execGitCommand(`git show HEAD:${fileName}`);
-
-      // put in empty entry for equal-dependency packages so we only have fileNames for the non-equal ones
-      return arePackageDependenciesEqual(JSON.parse(fileA), JSON.parse(fileB)) ? [] : [fileName];
-    })
-  );
-
-  return allChanges.flat();
-};
 
 export const setGitInfo = async (ctx: Context, task: Task) => {
   const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
@@ -180,21 +166,6 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
       ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
 
-      const packageManifestChanges: { commit: string; changedFiles: string[] }[] = [];
-
-      results.forEach((resultItem) => {
-        const changedPackageFiles = resultItem.changedFiles.filter((changedFile) =>
-          isPackageManifestFile(changedFile)
-        );
-
-        if (changedPackageFiles.length) {
-          packageManifestChanges.push({
-            commit: resultItem.build.commit,
-            changedFiles: changedPackageFiles,
-          });
-        }
-      });
-
       ctx.git.replacementBuildIds = results
         .filter((r) => !!r.replacementBuild)
         .map(({ build, replacementBuild }) => {
@@ -210,15 +181,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         );
       }
 
-      const packageManifestDependencyChanges = await Promise.all(
-        packageManifestChanges.map(async ({ commit: buildCommit, changedFiles }) => {
-          return getPackageManagerChanges(buildCommit, changedFiles);
-        })
+      const packageManifestChanges = getChangedPackageManifests(results);
+      ctx.git.changedPackageManifests = await getDependencyChangedPackageManifests(
+        packageManifestChanges
       );
-
-      const flattenedChanges = packageManifestDependencyChanges.flat();
-      // remove duplicate entries (if have multiple ancestors and both changed the same package.json, for example)
-      ctx.git.changedPackageManifests = Array.from(new Set(flattenedChanges));
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;

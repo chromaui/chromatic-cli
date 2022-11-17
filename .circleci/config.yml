@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: cimg/node:lts
+      - image: cimg/node:16.18.0
 
     working_directory: ~/repo
 

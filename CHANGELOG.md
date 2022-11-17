@@ -1,3 +1,31 @@
+# 6.11.3 - 2022-10-31
+
+- [670](https://github.com/chromaui/chromatic-cli/pull/670) Trace command errors for package manifest change
+- [659](https://github.com/chromaui/chromatic-cli/pull/659) Add interactionTestFailuresCount to GitHub Action output
+- [660](https://github.com/chromaui/chromatic-cli/pull/660) Update GitHub Action to Node 16
+- [644](https://github.com/chromaui/chromatic-cli/pull/644) Bump node-fetch from 3.0.0 to 3.2.10
+- [666](https://github.com/chromaui/chromatic-cli/pull/666) Bump @actions/core from ^1.5.0 to ^1.10.0
+
+# 6.11.2 - 2022-10-26
+
+- [667](https://github.com/chromaui/chromatic-cli/pull/667) Edit package file detection process for the untraced flag
+
+# 6.11.1 - 2022-10-25
+
+- [665](https://github.com/chromaui/chromatic-cli/pull/665) Added onlyStoryFiles to the github action
+
+# 6.11.0 - 2022-10-24
+
+- [648](https://github.com/chromaui/chromatic-cli/pull/648) TurboSnap not bailed if package manifest change isn't dependency-related
+
+# 6.10.5 - 2022-10-20
+
+- [661](https://github.com/chromaui/chromatic-cli/pull/661) Add `debug` as an option to the GH action
+
+# 6.10.3 - 2022-10-19
+
+- [651](https://github.com/chromaui/chromatic-cli/pull/651) Update buildHasErrors with interaction test failure specific messaging
+
 # 6.10.2 - 2022-10-11
 
 - [649](https://github.com/chromaui/chromatic-cli/pull/649) Fix TurboSnap for module names containing URL params in stats file
