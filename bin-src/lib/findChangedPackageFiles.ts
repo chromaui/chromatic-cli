@@ -56,6 +56,7 @@ const readGitFile = async (fileName: string, commit = 'HEAD') => {
   fileCache.set(key, contents);
   return contents;
 };
+export const clearFileCache = () => fileCache.clear();
 
 // Filters a list of manifest files by whether they have dependency-related changes compared to
 // their counterpart from another (baseline) commit.

@@ -1,4 +1,8 @@
-import { arePackageDependenciesEqual, findChangedPackageFiles } from './findChangedPackageFiles';
+import {
+  arePackageDependenciesEqual,
+  clearFileCache,
+  findChangedPackageFiles,
+} from './findChangedPackageFiles';
 import * as git from '../git/git';
 
 jest.mock('../git/git');
@@ -19,6 +23,7 @@ const mockFileContents = (packagesCommitsByFile) => {
 
 beforeEach(() => {
   execGitCommand.mockReset();
+  clearFileCache();
 });
 
 describe('findChangedPackageFiles', () => {
@@ -114,7 +119,7 @@ describe('findChangedPackageFiles', () => {
     ).toStrictEqual(['package.json']);
   });
 
-  it('Dedupes when both commits have the same file as package dependency change', async () => {
+  it('dedupes when both commits have the same file as package dependency change', async () => {
     mockFileContents({
       'package.json': {
         A: { dependencies: { a: '1' } },
@@ -131,7 +136,7 @@ describe('findChangedPackageFiles', () => {
     ).toStrictEqual(['package.json']);
   });
 
-  it('Throws an error if one of the files is incomplete', async () => {
+  it('considers the file changed if it fails to parse', async () => {
     mockFileContents({
       'package.json': {
         A: null,
@@ -139,9 +144,9 @@ describe('findChangedPackageFiles', () => {
       },
     });
 
-    await expect(
-      findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
-    ).rejects.toThrowError();
+    expect(
+      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
+    ).toStrictEqual(['package.json']);
   });
 });
 
