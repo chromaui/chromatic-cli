@@ -1,15 +1,21 @@
 import * as fs from 'fs-extra';
 import progressStream from 'progress-stream';
 
-import { getDependentStoryFiles as dependentStoryFiles } from '../lib/getDependentStoryFiles';
+import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
+import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
+import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
 import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
 jest.mock('fs-extra');
 jest.mock('progress-stream');
 jest.mock('../lib/getDependentStoryFiles');
+jest.mock('../lib/findChangedDependencies');
+jest.mock('../lib/findChangedPackageFiles');
 jest.mock('./read-stats-file');
 
-const getDependentStoryFiles = <jest.MockedFunction<typeof dependentStoryFiles>>dependentStoryFiles;
+const findChangedDependencies = <jest.MockedFunction<typeof findChangedDep>>findChangedDep;
+const findChangedPackageFiles = <jest.MockedFunction<typeof findChangedPkg>>findChangedPkg;
+const getDependentStoryFiles = <jest.MockedFunction<typeof getDepStoryFiles>>getDepStoryFiles;
 const createReadStream = <jest.MockedFunction<typeof fs.createReadStream>>fs.createReadStream;
 const readdirSync = <jest.MockedFunction<typeof fs.readdirSync>>fs.readdirSync;
 const readFileSync = <jest.MockedFunction<typeof fs.readFileSync>>fs.readFileSync;
@@ -91,9 +97,17 @@ describe('validateFiles', () => {
 });
 
 describe('traceChangedFiles', () => {
+  beforeEach(() => {
+    findChangedDependencies.mockReset();
+    findChangedPackageFiles.mockReset();
+    getDependentStoryFiles.mockReset();
+  });
+
   it('sets onlyStoryFiles on context', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    getDependentStoryFiles.mockResolvedValueOnce(deps);
+    findChangedDependencies.mockResolvedValue([]);
+    findChangedPackageFiles.mockResolvedValue([]);
+    getDependentStoryFiles.mockResolvedValue(deps);
 
     const ctx = {
       env,
@@ -107,6 +121,26 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+  });
+
+  it('bails on package.json changes if it fails to retrieve lockfile changes', async () => {
+    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
+    findChangedPackageFiles.mockResolvedValue(['./package.json']);
+
+    const ctx = {
+      env,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx, {} as any);
+
+    expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
+    expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 });
 

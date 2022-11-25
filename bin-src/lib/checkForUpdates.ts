@@ -40,6 +40,6 @@ export default async function checkForUpdates(ctx: Context) {
   }
 
   if (semver.major(ctx.pkg.version) < semver.major(latestVersion)) {
-    ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn));
+    ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn()));
   }
 }

@@ -240,6 +240,39 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('detects changes in module dependencies', async () => {
+    const changedFiles = [];
+    const changedDependencies = ['react'];
+    const modules = [
+      {
+        id: './node_modules/react/index.js',
+        name: './node_modules/react/index.js',
+        reasons: [{ moduleName: './src/foo.stories.js' }],
+      },
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(
+      ctx,
+      { modules },
+      statsPath,
+      changedFiles,
+      changedDependencies
+    );
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
   it('supports webpack projectRoot in git subdirectory', async () => {
     const changedFiles = ['services/webapp/src/foo.js'];
     const modules = [
@@ -340,8 +373,8 @@ describe('getDependentStoryFiles', () => {
     ).rejects.toEqual(new Error('Did not find any CSF globs in preview-stats.json'));
   });
 
-  it('bails on changed global file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'src/yarn.lock'];
+  it('does not bail on changed global file', async () => {
+    const changedFiles = ['src/foo.stories.js', 'package.json', 'package-lock.json', 'yarn.lock'];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -356,43 +389,10 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
-    expect(ctx.turboSnap.bailReason).toEqual({
-      changedPackageFiles: ['src/yarn.lock'],
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
     });
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(chalk`Found a package file change in {bold src/yarn.lock}`)
-    );
-  });
-
-  it('bails on dependency changes to package manifest file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'src/package.json'];
-    const modules = [
-      {
-        id: './src/foo.stories.js',
-        name: './src/foo.stories.js',
-        reasons: [{ moduleName: CSF_GLOB }],
-      },
-      {
-        id: CSF_GLOB,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
-      },
-    ];
-    const rawContext = getContext();
-    const ctx = {
-      ...rawContext,
-      // signifying the package.json file had dependency changes
-      git: { ...rawContext.git, changedPackageManifests: ['src/package.json'] },
-    };
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
-    expect(ctx.turboSnap.bailReason).toEqual({
-      changedPackageFiles: ['src/package.json'],
-    });
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(chalk`Found a dependency change in {bold src/package.json}`)
-    );
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
   });
 
   it('only runs tests for stories affected by dependency changes', async () => {

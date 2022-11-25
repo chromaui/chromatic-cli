@@ -4,10 +4,8 @@ import { join } from 'path';
 import slash from 'slash';
 import { URL } from 'url';
 
-import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
-import { checkoutFile } from '../git/git';
 import makeZipFile from '../lib/compress';
 import uploadFiles from '../lib/uploadFiles';
 import { rewriteErrorMessage } from '../lib/utils';
@@ -30,8 +28,10 @@ import {
   success,
 } from '../ui/tasks/upload';
 import { Context, Task } from '../types';
-import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { readStatsFile } from './read-stats-file';
+import bailFile from '../ui/messages/warnings/bailFile';
+import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
+import { findChangedDependencies } from '../lib/findChangedDependencies';
 
 const GetUploadUrlsMutation = `
   mutation GetUploadUrlsMutation($paths: [String!]!) {
@@ -144,32 +144,6 @@ export const validateFiles = async (ctx: Context) => {
   }
 };
 
-// at each step, put the dependency on the set
-// (so duplicates are replaced)
-const flattenDependencyTree = (
-  dependencies: Record<string, any>,
-  flattenedResults = new Set<string>()
-) => {
-  Object.values(dependencies).forEach((dep) => {
-    flattenedResults.add(`${dep.name}@@${dep.version}`);
-    if (dep.dependencies) {
-      flattenDependencyTree(dep.dependencies, flattenedResults);
-    }
-  });
-  return flattenedResults;
-};
-
-const xor = (left: Set<string>, right: Set<string>) => {
-  Array.from(right.values()).forEach((pkg) => {
-    if (left.has(pkg)) {
-      left.delete(pkg);
-    } else {
-      left.add(pkg);
-    }
-  });
-  return left;
-};
-
 export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
@@ -181,36 +155,27 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   transitionTo(tracing)(ctx, task);
 
   const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
-  const { changedFiles } = ctx.git;
+  const { baselineCommits, changedFiles, packageManifestChanges } = ctx.git;
   try {
+    const changedDependencyNames = await findChangedDependencies(baselineCommits).catch((e) => {
+      ctx.log.debug(e);
+    });
+    if (!changedDependencyNames) {
+      ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
+      const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
+      if (changedPackageFiles.length > 0) {
+        ctx.turboSnap.bailReason = { changedPackageFiles };
+        ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
+        return;
+      }
+    }
     const stats = await readStatsFile(statsPath);
-
-    // build the current dep tree
-    const newDepTree = await buildDepTreeFromFiles('.', 'package.json', 'package-lock.json', true);
-    const headDependencySet = flattenDependencyTree((newDepTree as any).dependencies);
-
-    // for both branches (if merge commit), diff with our most-recent thing
-    const baselineChanges = await Promise.all(
-      ctx.git.baselineCommits.map(async (commit) => {
-        const manifestFile = await checkoutFile(commit, 'package.json');
-        const lockfileName = await checkoutFile(commit, 'package-lock.json');
-        const depTree = await buildDepTreeFromFiles('.', manifestFile, lockfileName, true);
-        const baselineDependencySet = flattenDependencyTree((depTree as any).dependencies);
-        return Array.from(xor(baselineDependencySet, headDependencySet));
-      })
-    );
-
-    // combine all the diffs into one place
-    // we only need unique package names, so we can dedupe after we remove the version from the package name
-    const changedDependencies = new Set(baselineChanges.flat().map((pkg) => pkg.split('@@')[0]));
-
-    // throw this list of diffs into here!
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,
       stats,
       statsPath,
       changedFiles,
-      Array.from(changedDependencies)
+      changedDependencyNames || []
     );
     if (onlyStoryFiles) {
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);

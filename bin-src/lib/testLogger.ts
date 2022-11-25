@@ -1,31 +1,36 @@
 export default class TestLogger {
+  entries: any[];
+
   errors: any[];
 
   warnings: any[];
 
   constructor() {
+    this.entries = [];
     this.errors = [];
     this.warnings = [];
   }
 
   error(...args) {
+    this.entries.push(...args);
     this.errors.push(...args);
   }
 
   warn(...args) {
+    this.entries.push(...args);
     this.warnings.push(...args);
   }
 
-  info() {
-    // do nothing
+  info(...args) {
+    this.entries.push(...args);
   }
 
-  log() {
-    // do nothing
+  log(...args) {
+    this.entries.push(...args);
   }
 
-  debug() {
-    // do nothing
+  debug(...args) {
+    this.entries.push(...args);
   }
 
   queue() {

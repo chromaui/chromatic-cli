@@ -4,5 +4,5 @@ declare module 'yarn-or-npm' {
 
   export function spawn(args: string[], options: SpawnOptions): ReturnType<typeof crossSpawn>;
 
-  export const hasYarn: boolean;
+  export const hasYarn: () => boolean;
 }

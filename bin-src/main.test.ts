@@ -1,3 +1,4 @@
+import { Readable } from 'stream';
 import execaDefault from 'execa';
 import { confirm } from 'node-ask';
 import treeKill from 'tree-kill';
@@ -151,6 +152,25 @@ jest.mock('node-fetch', () =>
         return { data: { app: { hasBuildsWithCommits: [] } } };
       }
 
+      if (query.match('BaselineCommitsQuery')) {
+        return {
+          data: {
+            app: {
+              baselineBuilds: [
+                {
+                  id: 'build-id',
+                  number: 1,
+                  status: 'PASSED',
+                  commit: 'baseline',
+                  committedAt: 1234,
+                  changeCount: 1,
+                },
+              ],
+            },
+          },
+        };
+      }
+
       if (query.match('GetUploadUrlsMutation')) {
         return {
           data: {
@@ -200,11 +220,29 @@ jest.mock('tree-kill');
 
 const kill = <jest.MockedFunction<typeof treeKill>>treeKill;
 
+const mockStatsFile = Readable.from([
+  JSON.stringify({
+    modules: [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$' }],
+      },
+      {
+        id: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+        name: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+        reasons: [{ moduleName: './storybook-stories.js' }],
+      },
+    ],
+  }),
+]);
+
 jest.mock('fs-extra', () => ({
   pathExists: async () => true,
   readFileSync: jest.requireActual('fs-extra').readFileSync,
+  createReadStream: jest.fn(() => mockStatsFile),
   createWriteStream: jest.requireActual('fs-extra').createWriteStream,
-  readdirSync: jest.fn(() => ['iframe.html', 'index.html']),
+  readdirSync: jest.fn(() => ['iframe.html', 'index.html', 'preview-stats.json']),
   statSync: jest.fn((path) => {
     const fsStatSync = jest.requireActual('fs-extra').createWriteStream;
     if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
@@ -218,6 +256,8 @@ jest.mock('./git/git', () => ({
   getBranch: () => Promise.resolve('branch'),
   getSlug: () => Promise.resolve('user/repo'),
   getVersion: () => Promise.resolve('2.24.1'),
+  getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
+  getRepositoryRoot: () => Promise.resolve(process.cwd()),
 }));
 
 jest.mock('./git/getParentCommits', () => ({
@@ -291,6 +331,7 @@ const getContext = (
       },
     },
     packagePath: '',
+    statsPath: 'preview-stats.json',
     ...parseArgs(argv),
   } as any;
 };
@@ -412,6 +453,17 @@ it('passes autoAcceptChanges to the index based on branch', async () => {
 
   await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
   expect(announcedBuild).toMatchObject({ autoAcceptChanges: false });
+});
+
+describe('with TurboSnap', () => {
+  it('provides onlyStoryFiles to build', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--only-changed']);
+    await runBuild(ctx);
+
+    expect(ctx.exitCode).toBe(1);
+    expect(ctx.onlyStoryFiles).toEqual(['./src/foo.stories.js']);
+    expect(publishedBuild.onlyStoryFiles).toEqual(['./src/foo.stories.js']);
+  });
 });
 
 describe('tunneled build', () => {
