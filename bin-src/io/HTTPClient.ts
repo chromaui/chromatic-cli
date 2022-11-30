@@ -1,10 +1,20 @@
 import retry from 'async-retry';
+import dns from 'dns';
+import { Agent, AgentOptions } from 'https';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import fetch, { Response, RequestInit } from 'node-fetch';
 
 import { Context } from '../types';
 
 import getProxyAgent from './getProxyAgent';
+
+const getCustomDNSAgent = () => {
+  return new Agent({
+    lookup: (hostname, dnsOptions, callback) => {
+      dns.resolve(hostname, (err, addresses) => callback(err, addresses?.[0], 4));
+    },
+  } as AgentOptions);
+};
 
 export class HTTPClientError extends Error {
   response: Response;
@@ -54,11 +64,28 @@ export default class HTTPClient {
   }
 
   async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
-    const agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
+    let agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
+
+    if (this.env.CHROMATIC_DNS_IP.length) {
+      this.log.debug(`Using custom DNS IP: ${this.env.CHROMATIC_DNS_IP.join(', ')}`);
+      dns.setServers(this.env.CHROMATIC_DNS_IP);
+      agent = getCustomDNSAgent();
+    }
+
     // The user can override retries and set it to 0
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
-    const onRetry = (err, n) =>
+    const onRetry = (err, n) => {
       this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
+      if (err.message.includes('ENOTFOUND')) {
+        if (!agent) {
+          this.log.warn('Fetch failed due to DNS lookup; switching to custom DNS resolver');
+          agent = getCustomDNSAgent();
+        } else if (this.env.CHROMATIC_DNS_FAILOVER_IP.length) {
+          this.log.warn('Fetch failed due to DNS lookup; switching to failover DNS IP');
+          dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_IP);
+        }
+      }
+    };
 
     return retry(
       async () => {
