@@ -1,5 +1,6 @@
 import execa from 'execa';
 import { EOL } from 'os';
+import { file as tmpFile } from 'tmp-promise';
 
 import { Context } from '../types';
 
@@ -211,11 +212,8 @@ export async function checkout(ref: string) {
   return execGitCommand(`git checkout ${ref}`);
 }
 
-export async function checkoutFile(
-  ref: string,
-  fileName: string,
-  targetFileName = `${ref}.${fileName}`
-) {
+export async function checkoutFile(ref: string, fileName: string) {
+  const { path: targetFileName } = await tmpFile();
   await execGitCommand(`git show ${ref}:${fileName} > ${targetFileName}`);
   return targetFileName;
 }
