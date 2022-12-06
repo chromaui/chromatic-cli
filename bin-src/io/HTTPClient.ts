@@ -8,13 +8,12 @@ import { Context } from '../types';
 
 import getProxyAgent from './getProxyAgent';
 
-const getCustomDNSAgent = () => {
-  return new Agent({
-    lookup: (hostname, dnsOptions, callback) => {
+const getCustomDNSAgent = () =>
+  new Agent({
+    lookup: (hostname, _, callback) => {
       dns.resolve(hostname, (err, addresses) => callback(err, addresses?.[0], 4));
     },
   } as AgentOptions);
-};
 
 export class HTTPClientError extends Error {
   response: Response;
@@ -66,9 +65,9 @@ export default class HTTPClient {
   async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
     let agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
 
-    if (this.env.CHROMATIC_DNS_IP.length) {
-      this.log.debug(`Using custom DNS IP: ${this.env.CHROMATIC_DNS_IP.join(', ')}`);
-      dns.setServers(this.env.CHROMATIC_DNS_IP);
+    if (this.env.CHROMATIC_DNS_SERVERS.length) {
+      this.log.debug(`Using custom DNS servers: ${this.env.CHROMATIC_DNS_SERVERS.join(', ')}`);
+      dns.setServers(this.env.CHROMATIC_DNS_SERVERS);
       agent = getCustomDNSAgent();
     }
 
@@ -80,9 +79,9 @@ export default class HTTPClient {
         if (!agent) {
           this.log.warn('Fetch failed due to DNS lookup; switching to custom DNS resolver');
           agent = getCustomDNSAgent();
-        } else if (this.env.CHROMATIC_DNS_FAILOVER_IP.length) {
-          this.log.warn('Fetch failed due to DNS lookup; switching to failover DNS IP');
-          dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_IP);
+        } else if (this.env.CHROMATIC_DNS_FAILOVER_SERVERS.length) {
+          this.log.warn('Fetch failed due to DNS lookup; switching to failover DNS servers');
+          dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_SERVERS);
         }
       }
     };
