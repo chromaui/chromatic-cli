@@ -14,7 +14,7 @@ export default (isGithubAction = false) =>
         With {bold actions/checkout@v2}, you can enable this by setting 'fetch-depth: 0'.
         ${info} Read more at ${link('https://www.chromatic.com/docs/github-actions')}
       - You've only made a single commit so far. 
-        Chromatic needs an additional commit to be able to detect what's changed. 
+        Please make at least one additional commit to be able to detect what's changed. 
     `)
     : dedent(chalk`
       ${error} {bold Found only one commit}
@@ -23,5 +23,5 @@ export default (isGithubAction = false) =>
         In order for Chromatic to correctly determine baseline commits, we need access to the full Git history graph.
         Refer to your CI provider's documentation for details.
       - You've only made a single commit so far.  
-        Chromatic needs an additional commit to be able to detect what's changed.
+        Please make at least one additional commit to be able to detect what's changed.
     `);
