@@ -68,7 +68,8 @@ export default class HTTPClient {
     const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
     const onRetry = (err, n) => {
       this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
-      if (err.message.includes('ENOTFOUND')) {
+      // node-fetch includes ENOTFOUND in the message, but undici (native fetch in ts-node) doesn't.
+      if (err.message.includes('ENOTFOUND') || [err.code, err.cause?.code].includes('ENOTFOUND')) {
         if (!agent) {
           this.log.warn('Fetch failed due to DNS lookup; switching to custom DNS resolver');
           agent = getDNSResolveAgent();
