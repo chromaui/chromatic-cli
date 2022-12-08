@@ -1,19 +1,12 @@
 import retry from 'async-retry';
 import dns from 'dns';
-import { Agent, AgentOptions } from 'https';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import fetch, { Response, RequestInit } from 'node-fetch';
 
 import { Context } from '../types';
 
+import getDNSResolveAgent from './getDNSResolveAgent';
 import getProxyAgent from './getProxyAgent';
-
-const getCustomDNSAgent = () =>
-  new Agent({
-    lookup: (hostname, _, callback) => {
-      dns.resolve(hostname, (err, addresses) => callback(err, addresses?.[0], 4));
-    },
-  } as AgentOptions);
 
 export class HTTPClientError extends Error {
   response: Response;
@@ -68,7 +61,7 @@ export default class HTTPClient {
     if (this.env.CHROMATIC_DNS_SERVERS.length) {
       this.log.debug(`Using custom DNS servers: ${this.env.CHROMATIC_DNS_SERVERS.join(', ')}`);
       dns.setServers(this.env.CHROMATIC_DNS_SERVERS);
-      agent = getCustomDNSAgent();
+      agent = getDNSResolveAgent();
     }
 
     // The user can override retries and set it to 0
@@ -78,7 +71,7 @@ export default class HTTPClient {
       if (err.message.includes('ENOTFOUND')) {
         if (!agent) {
           this.log.warn('Fetch failed due to DNS lookup; switching to custom DNS resolver');
-          agent = getCustomDNSAgent();
+          agent = getDNSResolveAgent();
         } else if (this.env.CHROMATIC_DNS_FAILOVER_SERVERS.length) {
           this.log.warn('Fetch failed due to DNS lookup; switching to failover DNS servers');
           dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_SERVERS);
