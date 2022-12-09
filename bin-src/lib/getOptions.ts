@@ -70,7 +70,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
-    storybookUrl: flags.storybookUrl,
 
     ownerName,
     branchName,
@@ -101,13 +100,12 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   const { storybookBuildDir } = options;
-  let { storybookUrl, scriptName, buildScriptName } = options;
+  let { scriptName, buildScriptName } = options;
 
   // We can only have one of these arguments
   const singularOpts = {
     buildScriptName: '--build-script-name',
     scriptName: '--script-name',
-    storybookUrl: '--storybook-url',
     storybookBuildDir: '--storybook-build-dir',
   };
   const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
@@ -161,7 +159,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   // Build Storybook instead of starting it
-  if (scriptName === undefined && !storybookUrl) {
+  if (scriptName === undefined) {
     if (storybookBuildDir) {
       return { ...options };
     }
@@ -186,23 +184,18 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   if (options.onlyChanged) throw new Error(invalidOnlyChanged());
 
   // Start Storybook on localhost and generate the URL to it
-  if (!storybookUrl) {
-    // If we need to start the command, let's look up the script for it
-    scriptName = scriptName || 'storybook';
-    const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
+  // If we need to start the command, let's look up the script for it
+  scriptName = scriptName || 'storybook';
+  const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
 
-    if (!storybookScript) {
-      throw new Error(missingScriptName(scriptName));
-    }
-
-    if (log) log.info('', inferredOptions({ scriptName }));
-
-    storybookUrl = `http://localhost`;
+  if (!storybookScript) {
+    throw new Error(missingScriptName(scriptName));
   }
+
+  if (log) log.info('', inferredOptions({ scriptName }));
 
   return {
     ...options,
-    url: storybookUrl,
     scriptName,
   };
 }

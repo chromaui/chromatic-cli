@@ -20,7 +20,6 @@ const getContext = (argv: string[]): Context => {
   const packageJson = {
     scripts: {
       storybook: 'start-storybook',
-      otherStorybook: 'start-storybook',
       notStorybook: 'lint',
       'build-storybook': 'build-storybook',
       otherBuildStorybook: 'build-storybook',
@@ -77,7 +76,6 @@ describe('getOptions', () => {
   it('picks up default start script', async () => {
     expect(getOptions(getContext(['-s']))).toMatchObject({
       scriptName: 'storybook',
-      url: 'http://localhost',
     });
   });
 
@@ -85,19 +83,6 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--build-script-name', 'otherBuildStorybook']))).toMatchObject({
       buildScriptName: 'otherBuildStorybook',
     });
-  });
-
-  it('allows you to specify alternate script, still picks up port', async () => {
-    expect(getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
-      scriptName: 'otherStorybook',
-      url: 'http://localhost',
-    });
-  });
-
-  it('throws if you try to pass a script name and a url', async () => {
-    await expect(() =>
-      getOptions(getContext(['--script-name', 'storybook', '--storybook-url', 'http://foo.bar']))
-    ).toThrow(/You can only use one of --script-name, --storybook-url/);
   });
 
   it('throws if you try to pass a script name and a build script', async () => {
@@ -116,26 +101,6 @@ describe('getOptions', () => {
     await expect(() =>
       getOptions(getContext(['-b', '/tmp/dir', '--storybook-build-dir', '/tmp/dir']))
     ).toThrow(/You can only use one of --build-script-name, --storybook-build-dir/);
-  });
-
-  it('allows you to set a URL without path', async () => {
-    expect(getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
-      url: 'https://google.com',
-    });
-  });
-
-  it('allows you to set a URL with a path', async () => {
-    expect(getOptions(getContext(['--storybook-url', 'https://google.com/foo']))).toMatchObject({
-      url: 'https://google.com/foo',
-    });
-  });
-
-  it('allows you to set a URL with iframe.html already set', async () => {
-    expect(
-      getOptions(getContext(['--storybook-url', 'https://google.com/iframe.html?param=foo']))
-    ).toMatchObject({
-      url: 'https://google.com/iframe.html?param=foo',
-    });
   });
 
   it('allows you to specify the branch name', async () => {

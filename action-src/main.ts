@@ -154,7 +154,6 @@ async function run() {
     const traceChanged = getInput('traceChanged');
     const diagnostics = getInput('diagnostics');
     const debug = getInput('debug');
-    const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
     const preserveMissing = getInput('preserveMissing');
     const autoAcceptChanges = getInput('autoAcceptChanges');
@@ -192,7 +191,6 @@ async function run() {
       storybookBaseDir: maybe(storybookBaseDir),
       storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
-      storybookUrl: maybe(storybookUrl),
       storybookBuildDir: maybe(storybookBuildDir),
       fromCI: true,
       interactive: false,

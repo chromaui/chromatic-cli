@@ -69,9 +69,6 @@ inputs:
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
     required: false
-  storybookUrl:
-    description: 'Storybook is already running at (external) url (implies -S)'
-    required: false
   preserveMissing:
     description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'
     required: false

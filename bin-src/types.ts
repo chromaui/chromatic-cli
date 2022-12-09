@@ -43,7 +43,6 @@ export interface Flags {
   allowConsoleErrors?: boolean;
   appCode?: string[];
   scriptName?: string;
-  storybookUrl?: string;
   only?: string;
   preserveMissing?: boolean;
 }
@@ -82,7 +81,6 @@ export interface Options {
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];
   storybookConfigDir: Flags['storybookConfigDir'];
-  storybookUrl: Flags['storybookUrl'];
 
   ownerName: string;
   branchName: string;
