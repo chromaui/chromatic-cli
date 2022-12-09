@@ -81,9 +81,6 @@ inputs:
   storybookKey:
     description: 'Use if Storybook is running on https (auto detected from -s, if set)'
     required: false
-  storybookPort:
-    description: 'What port is your Storybook running on (auto detected from -s, if set)'
-    required: false
   storybookUrl:
     description: 'Storybook is already running at (external) url (implies -S)'
     required: false

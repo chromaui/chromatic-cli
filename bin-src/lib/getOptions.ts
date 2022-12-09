@@ -13,8 +13,6 @@ import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import missingScriptName from '../ui/messages/errors/missingScriptName';
-import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
-import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
 import inferredOptions from '../ui/messages/info/inferredOptions';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import getStorybookConfiguration from './getStorybookConfiguration';
@@ -74,7 +72,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
       key: flags.storybookKey,
       ca: flags.storybookCa,
     },
-    port: flags.storybookPort,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
@@ -109,7 +106,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   const { storybookBuildDir } = options;
-  let { port, storybookUrl, scriptName, buildScriptName } = options;
+  let { storybookUrl, scriptName, buildScriptName } = options;
 
   // We can only have one of these arguments
   const singularOpts = {
@@ -169,7 +166,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   // Build Storybook instead of starting it
-  if (scriptName === undefined && !storybookUrl && !port) {
+  if (scriptName === undefined && !storybookUrl) {
     if (storybookBuildDir) {
       return { ...options };
     }
@@ -195,32 +192,25 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   // Start Storybook on localhost and generate the URL to it
   if (!storybookUrl) {
-    if (!port) {
-      // If you don't provide a port or we need to start the command, let's look up the script for it
-      scriptName = scriptName || 'storybook';
-      const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
+    // If we need to start the command, let's look up the script for it
+    scriptName = scriptName || 'storybook';
+    const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
 
-      if (!storybookScript) {
-        throw new Error(missingScriptName(scriptName));
-      }
-
-      options.https =
-        options.https ||
-        (getStorybookConfiguration(storybookScript, '--https') && {
-          cert: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-cert')),
-          key: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-key')),
-          ca: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-ca')),
-        });
-
-      port = port || getStorybookConfiguration(storybookScript, '-p', '--port');
-      if (!port) {
-        throw new Error(unknownStorybookPort(scriptName));
-      }
-
-      if (log) log.info('', inferredOptions({ scriptName, port }));
+    if (!storybookScript) {
+      throw new Error(missingScriptName(scriptName));
     }
 
-    storybookUrl = `${options.https ? 'https' : 'http'}://localhost:${port}`;
+    options.https =
+      options.https ||
+      (getStorybookConfiguration(storybookScript, '--https') && {
+        cert: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-cert')),
+        key: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-key')),
+        ca: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-ca')),
+      });
+
+    if (log) log.info('', inferredOptions({ scriptName }));
+
+    storybookUrl = `${options.https ? 'https' : 'http'}://localhost`;
   }
 
   return {

@@ -43,7 +43,6 @@ export interface Flags {
   allowConsoleErrors?: boolean;
   appCode?: string[];
   scriptName?: string;
-  storybookPort?: string;
   storybookUrl?: string;
   storybookHttps?: boolean;
   storybookCert?: string;
@@ -89,7 +88,6 @@ export interface Options {
     ca: Flags['storybookCa'];
   };
   url?: string;
-  port: Flags['storybookPort'];
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];
   storybookConfigDir: Flags['storybookConfigDir'];

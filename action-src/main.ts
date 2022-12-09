@@ -154,7 +154,6 @@ async function run() {
     const traceChanged = getInput('traceChanged');
     const diagnostics = getInput('diagnostics');
     const debug = getInput('debug');
-    const storybookPort = getInput('storybookPort');
     const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
     const storybookHttps = getInput('storybookHttps');
@@ -197,7 +196,6 @@ async function run() {
       storybookBaseDir: maybe(storybookBaseDir),
       storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
-      storybookPort: maybe(storybookPort),
       storybookUrl: maybe(storybookUrl),
       storybookBuildDir: maybe(storybookBuildDir),
       storybookHttps: maybe(storybookHttps),

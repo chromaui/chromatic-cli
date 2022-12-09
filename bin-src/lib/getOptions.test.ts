@@ -19,8 +19,8 @@ const getContext = (argv: string[]): Context => {
   const log = new TestLogger();
   const packageJson = {
     scripts: {
-      storybook: 'start-storybook -p 1337',
-      otherStorybook: 'start-storybook -p 7070',
+      storybook: 'start-storybook',
+      otherStorybook: 'start-storybook',
       notStorybook: 'lint',
       'build-storybook': 'build-storybook',
       otherBuildStorybook: 'build-storybook',
@@ -77,7 +77,7 @@ describe('getOptions', () => {
   it('picks up default start script', async () => {
     expect(getOptions(getContext(['-s']))).toMatchObject({
       scriptName: 'storybook',
-      url: 'http://localhost:1337',
+      url: 'http://localhost',
     });
   });
 
@@ -90,23 +90,8 @@ describe('getOptions', () => {
   it('allows you to specify alternate script, still picks up port', async () => {
     expect(getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
       scriptName: 'otherStorybook',
-      url: 'http://localhost:7070',
+      url: 'http://localhost',
     });
-  });
-
-  it('allows you to specify alternate script, that does not start Storybook, if you set port', async () => {
-    expect(
-      getOptions(getContext(['--script-name', 'notStorybook', '--storybook-port', '6060']))
-    ).toMatchObject({
-      scriptName: 'notStorybook',
-      url: 'http://localhost:6060',
-    });
-  });
-
-  it('throws if you try to specify a script name that is not a Storybook, if you do NOT set port', async () => {
-    expect(() => getOptions(getContext(['--script-name', 'notStorybook']))).toThrow(
-      /must pass a port/
-    );
   });
 
   it('throws if you try to pass a script name and a url', async () => {
