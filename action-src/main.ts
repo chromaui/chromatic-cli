@@ -139,7 +139,6 @@ async function run() {
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const buildScriptName = getInput('buildScriptName');
-    const scriptName = getInput('scriptName');
     const skip = getInput('skip');
     const dryRun = getInput('dryRun');
     const forceRebuild = getInput('forceRebuild');
@@ -176,7 +175,6 @@ async function run() {
       projectToken,
       workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
-      scriptName: maybe(scriptName),
       diagnostics: maybe(diagnostics),
       debug: maybe(debug),
       skip: maybe(skip),

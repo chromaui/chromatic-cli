@@ -21,9 +21,6 @@ inputs:
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
-  scriptName:
-    description: 'The npm script that starts your Storybook [storybook]'
-    required: false
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false

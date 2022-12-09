@@ -73,28 +73,10 @@ describe('getOptions', () => {
     });
   });
 
-  it('picks up default start script', async () => {
-    expect(getOptions(getContext(['-s']))).toMatchObject({
-      scriptName: 'storybook',
-    });
-  });
-
   it('allows you to specify alternate build script', async () => {
     expect(getOptions(getContext(['--build-script-name', 'otherBuildStorybook']))).toMatchObject({
       buildScriptName: 'otherBuildStorybook',
     });
-  });
-
-  it('throws if you try to pass a script name and a build script', async () => {
-    await expect(() =>
-      getOptions(getContext(['--script-name', 'storybook', '-b', 'build-command']))
-    ).toThrow(/You can only use one of --build-script-name, --script-name/);
-  });
-
-  it('throws if you try to pass a script name and a directory', async () => {
-    await expect(() =>
-      getOptions(getContext(['--script-name', 'storybook', '--storybook-build-dir', '/tmp/dir']))
-    ).toThrow(/You can only use one of --script-name, --storybook-build-dir/);
   });
 
   it('throws if you try to pass a build script and a directory', async () => {

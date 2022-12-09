@@ -8,7 +8,6 @@ import jsonfile from 'jsonfile';
 import * as git from './git/git';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
-import * as startStorybook from './lib/startStorybook';
 import TestLogger from './lib/testLogger';
 import uploadFiles from './lib/uploadFiles';
 import { runAll, runBuild } from './main';
@@ -228,13 +227,6 @@ jest.mock('./git/getParentCommits', () => ({
 }));
 
 const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
-
-jest.mock('./lib/startStorybook');
-
-const startApp = <jest.MockedFunction<typeof startStorybook.default>>startStorybook.default;
-const resolveIsolatorUrl = <jest.MockedFunction<typeof startStorybook.resolveIsolatorUrl>>(
-  startStorybook.resolveIsolatorUrl
-);
 
 jest.mock('./lib/getStorybookInfo', () => () => ({
   version: '5.1.0',

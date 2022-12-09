@@ -8,7 +8,6 @@ import prepareWorkspace from './prepareWorkspace';
 import report from './report';
 import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
-import start from './start';
 import storybookInfo from './storybookInfo';
 import upload from './upload';
 import verify from './verify';

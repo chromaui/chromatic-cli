@@ -12,8 +12,6 @@ import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
-import missingScriptName from '../ui/messages/errors/missingScriptName';
-import inferredOptions from '../ui/messages/info/inferredOptions';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
@@ -66,7 +64,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     buildScriptName: flags.buildScriptName,
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
-    scriptName: flags.scriptName,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
@@ -100,12 +97,11 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   const { storybookBuildDir } = options;
-  let { scriptName, buildScriptName } = options;
+  let { buildScriptName } = options;
 
   // We can only have one of these arguments
   const singularOpts = {
     buildScriptName: '--build-script-name',
-    scriptName: '--script-name',
     storybookBuildDir: '--storybook-build-dir',
   };
   const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
@@ -136,10 +132,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     throw new Error(dependentOption('--trace-changed', '--only-changed'));
   }
 
-  if (scriptName && options.exitOnceUploaded) {
-    throw new Error(invalidExitOnceUploaded());
-  }
-
   if (options.junitReport && options.exitOnceUploaded) {
     throw new Error(incompatibleOptions(['--junit-report', '--exit-once-uploaded']));
   }
@@ -158,44 +150,28 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     log.info(deprecatedOption({ flag: 'preserveMissing' }));
   }
 
-  // Build Storybook instead of starting it
-  if (scriptName === undefined) {
-    if (storybookBuildDir) {
-      return { ...options };
-    }
-    const { scripts } = packageJson;
-    if (typeof buildScriptName !== 'string') {
-      buildScriptName = 'build-storybook';
-      if (!scripts[buildScriptName]) {
-        const [key] =
-          Object.entries(scripts as Record<string, string>).find(([, script]) =>
-            script.startsWith('build-storybook')
-          ) || [];
-        if (key) buildScriptName = key;
-      }
-    }
-    if (scripts && buildScriptName && scripts[buildScriptName]) {
-      return { ...options, buildScriptName };
-    }
-    throw new Error(missingBuildScriptName(buildScriptName));
+  // Build Storybook
+  if (storybookBuildDir) {
+    return { ...options };
   }
+  const { scripts } = packageJson;
+  if (typeof buildScriptName !== 'string') {
+    buildScriptName = 'build-storybook';
+    if (!scripts[buildScriptName]) {
+      const [key] =
+        Object.entries(scripts as Record<string, string>).find(([, script]) =>
+          script.startsWith('build-storybook')
+        ) || [];
+      if (key) buildScriptName = key;
+    }
+  }
+  if (scripts && buildScriptName && scripts[buildScriptName]) {
+    return { ...options, buildScriptName };
+  }
+  throw new Error(missingBuildScriptName(buildScriptName));
 
   // TurboSnap requires a static build with a webpack stats file.
   if (options.onlyChanged) throw new Error(invalidOnlyChanged());
 
-  // Start Storybook on localhost and generate the URL to it
-  // If we need to start the command, let's look up the script for it
-  scriptName = scriptName || 'storybook';
-  const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
-
-  if (!storybookScript) {
-    throw new Error(missingScriptName(scriptName));
-  }
-
-  if (log) log.info('', inferredOptions({ scriptName }));
-
-  return {
-    ...options,
-    scriptName,
-  };
+  return options;
 }

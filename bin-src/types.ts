@@ -42,7 +42,6 @@ export interface Flags {
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
-  scriptName?: string;
   only?: string;
   preserveMissing?: boolean;
 }
@@ -76,7 +75,6 @@ export interface Options {
   buildScriptName: Flags['buildScriptName'];
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
-  scriptName: string;
   url?: string;
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];

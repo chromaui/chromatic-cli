@@ -50,7 +50,6 @@ export default function parseArgs(argv: string[]) {
     Deprecated options
       --app-code <token>            Renamed to --project-token.
       --allow-console-errors        Continue running Chromatic even if there are errors logged to console in your Storybook.
-      --script-name, -s [name]      The npm script that starts your Storybook. [storybook]
       --only                        Superceded by --only-story-names.
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
     `,
@@ -98,7 +97,6 @@ export default function parseArgs(argv: string[]) {
         // Deprecated options (for JSDOM and tunneled builds, among others)
         allowConsoleErrors: { type: 'boolean' },
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
-        scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
         only: { type: 'string' },
         preserveMissing: { type: 'boolean' },
       },
