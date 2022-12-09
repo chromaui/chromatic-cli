@@ -156,10 +156,6 @@ async function run() {
     const debug = getInput('debug');
     const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
-    const storybookHttps = getInput('storybookHttps');
-    const storybookCert = getInput('storybookCert');
-    const storybookKey = getInput('storybookKey');
-    const storybookCa = getInput('storybookCa');
     const preserveMissing = getInput('preserveMissing');
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const allowConsoleErrors = getInput('allowConsoleErrors');
@@ -198,10 +194,6 @@ async function run() {
       traceChanged: maybe(traceChanged),
       storybookUrl: maybe(storybookUrl),
       storybookBuildDir: maybe(storybookBuildDir),
-      storybookHttps: maybe(storybookHttps),
-      storybookCert: maybe(storybookCert),
-      storybookKey: maybe(storybookKey),
-      storybookCa: maybe(storybookCa),
       fromCI: true,
       interactive: false,
       preserveMissing: maybe(preserveMissing),

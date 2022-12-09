@@ -44,10 +44,6 @@ export interface Flags {
   appCode?: string[];
   scriptName?: string;
   storybookUrl?: string;
-  storybookHttps?: boolean;
-  storybookCert?: string;
-  storybookKey?: string;
-  storybookCa?: string;
   only?: string;
   preserveMissing?: boolean;
 }
@@ -82,11 +78,6 @@ export interface Options {
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
   scriptName: string;
-  https: {
-    cert: Flags['storybookCert'];
-    key: Flags['storybookKey'];
-    ca: Flags['storybookCa'];
-  };
   url?: string;
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];

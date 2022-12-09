@@ -69,18 +69,6 @@ inputs:
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
     required: false
-  storybookCa:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookCert:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookHttps:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookKey:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
   storybookUrl:
     description: 'Storybook is already running at (external) url (implies -S)'
     required: false

@@ -67,11 +67,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: flags.scriptName,
-    https: flags.storybookHttps && {
-      cert: flags.storybookCert,
-      key: flags.storybookKey,
-      ca: flags.storybookCa,
-    },
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
@@ -200,17 +195,9 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
       throw new Error(missingScriptName(scriptName));
     }
 
-    options.https =
-      options.https ||
-      (getStorybookConfiguration(storybookScript, '--https') && {
-        cert: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-cert')),
-        key: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-key')),
-        ca: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-ca')),
-      });
-
     if (log) log.info('', inferredOptions({ scriptName }));
 
-    storybookUrl = `${options.https ? 'https' : 'http'}://localhost`;
+    storybookUrl = `http://localhost`;
   }
 
   return {

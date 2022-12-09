@@ -51,10 +51,6 @@ export default function parseArgs(argv: string[]) {
       --app-code <token>            Renamed to --project-token.
       --allow-console-errors        Continue running Chromatic even if there are errors logged to console in your Storybook.
       --script-name, -s [name]      The npm script that starts your Storybook. [storybook]
-      --storybook-https             Enable if Storybook is running on HTTPS (locally). Auto detected from the npm script when using --script-name.
-      --storybook-cert <path>       Use with --storybook-https. Auto detected from the npm script when using --script-name.
-      --storybook-key <path>        Use with --storybook-https. Auto detected from the npm script when using --script-name.
-      --storybook-ca <ca>           Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-url, -u <url>     Run against an online Storybook at some URL.
       --only                        Superceded by --only-story-names.
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
@@ -105,10 +101,6 @@ export default function parseArgs(argv: string[]) {
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
         scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
         storybookUrl: { type: 'string', alias: 'u' },
-        storybookHttps: { type: 'boolean' },
-        storybookCert: { type: 'string' },
-        storybookKey: { type: 'string' },
-        storybookCa: { type: 'string' },
         only: { type: 'string' },
         preserveMissing: { type: 'boolean' },
       },
