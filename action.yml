@@ -24,9 +24,6 @@ inputs:
   scriptName:
     description: 'The npm script that starts your Storybook [storybook]'
     required: false
-  exec:
-    description: 'Alternatively, a full command to run to start your storybook'
-    required: false
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false

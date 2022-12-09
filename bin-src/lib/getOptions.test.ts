@@ -112,46 +112,19 @@ describe('getOptions', () => {
     );
   });
 
-  it('allows you to specify alternate command if you set port', async () => {
-    expect(
-      getOptions(getContext(['--exec', 'storybook-command', '--storybook-port', '6060']))
-    ).toMatchObject({
-      exec: 'storybook-command',
-      url: 'http://localhost:6060',
-    });
-  });
-
-  it('throws if you try to specify a command name, if you do NOT set port', async () => {
-    await expect(() => getOptions(getContext(['--exec', 'storybook-command']))).toThrow(
-      /must pass a port/
-    );
-  });
-
-  it('throws if you try to pass a script or command name and a url', async () => {
-    await expect(() =>
-      getOptions(getContext(['--exec', 'storybook-command', '--storybook-url', 'http://foo.bar']))
-    ).toThrow(/You can only use one of --exec, --storybook-url/);
-
+  it('throws if you try to pass a script name and a url', async () => {
     await expect(() =>
       getOptions(getContext(['--script-name', 'storybook', '--storybook-url', 'http://foo.bar']))
     ).toThrow(/You can only use one of --script-name, --storybook-url/);
   });
 
-  it('throws if you try to pass a script or command name and a build script', async () => {
-    await expect(() =>
-      getOptions(getContext(['--exec', 'storybook-command', '-b', 'build-command']))
-    ).toThrow(/You can only use one of --build-script-name, --exec/);
-
+  it('throws if you try to pass a script name and a build script', async () => {
     await expect(() =>
       getOptions(getContext(['--script-name', 'storybook', '-b', 'build-command']))
     ).toThrow(/You can only use one of --build-script-name, --script-name/);
   });
 
-  it('throws if you try to pass a script or command name and a directory', async () => {
-    await expect(() =>
-      getOptions(getContext(['--exec', 'storybook-command', '--storybook-build-dir', '/tmp/dir']))
-    ).toThrow(/You can only use one of --exec, --storybook-build-dir/);
-
+  it('throws if you try to pass a script name and a directory', async () => {
     await expect(() =>
       getOptions(getContext(['--script-name', 'storybook', '--storybook-build-dir', '/tmp/dir']))
     ).toThrow(/You can only use one of --script-name, --storybook-build-dir/);

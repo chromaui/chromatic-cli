@@ -43,7 +43,6 @@ export interface Flags {
   allowConsoleErrors?: boolean;
   appCode?: string[];
   doNotStart?: boolean;
-  exec?: string;
   scriptName?: string;
   storybookPort?: string;
   storybookUrl?: string;
@@ -85,7 +84,6 @@ export interface Options {
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
   scriptName: string;
-  exec: Flags['exec'];
   noStart: Flags['doNotStart'];
   https: {
     cert: Flags['storybookCert'];

@@ -51,7 +51,6 @@ export default function parseArgs(argv: string[]) {
       --app-code <token>            Renamed to --project-token.
       --allow-console-errors        Continue running Chromatic even if there are errors logged to console in your Storybook.
       --script-name, -s [name]      The npm script that starts your Storybook. [storybook]
-      --exec, -e <command>          Alternatively, a shell command that starts your Storybook.
       --do-not-start, -S            Don't attempt to start or build Storybook. Use this if your Storybook is already running, for example when part of a larger app.
       --storybook-port, -p <port>   What port is your Storybook running on. Auto detected from the npm script when using --script-name.
       --storybook-https             Enable if Storybook is running on HTTPS (locally). Auto detected from the npm script when using --script-name.
@@ -107,7 +106,6 @@ export default function parseArgs(argv: string[]) {
         allowConsoleErrors: { type: 'boolean' },
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
         doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
-        exec: { type: 'string', alias: 'e' }, // start via spawn
         scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
         storybookPort: { type: 'string', alias: 'p' },
         storybookUrl: { type: 'string', alias: 'u' },

@@ -140,7 +140,6 @@ async function run() {
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const buildScriptName = getInput('buildScriptName');
     const scriptName = getInput('scriptName');
-    const exec = getInput('exec');
     const skip = getInput('skip');
     const dryRun = getInput('dryRun');
     const forceRebuild = getInput('forceRebuild');
@@ -187,7 +186,6 @@ async function run() {
       scriptName: maybe(scriptName),
       diagnostics: maybe(diagnostics),
       debug: maybe(debug),
-      exec: maybe(exec),
       skip: maybe(skip),
       dryRun: maybe(dryRun),
       forceRebuild: maybe(forceRebuild),

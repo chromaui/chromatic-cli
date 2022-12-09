@@ -10,7 +10,7 @@ export const initial = {
 export const pending = (ctx: Context) => ({
   status: 'pending',
   title: 'Starting your Storybook',
-  output: `Running '${ctx.options.scriptName || ctx.options.exec}'`,
+  output: `Running '${ctx.options.scriptName}'`,
 });
 
 export const success = (ctx: Context) => ({

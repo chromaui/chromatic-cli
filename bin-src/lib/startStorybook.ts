@@ -81,10 +81,8 @@ export default async function startApp(
 
     spawnArgs.push('run', ctx.options.scriptName, ...args);
     child = spawn(execPath, spawnArgs, { cwd: process.cwd(), env: process.env, ...options });
-  } else if (ctx.options.exec) {
-    child = spawn(ctx.options.exec, { env: process.env, shell: true });
   } else {
-    throw new Error('You must pass --script-name or --exec');
+    throw new Error('You must pass --script-name');
   }
 
   if (ctx.options.url) {
