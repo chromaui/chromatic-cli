@@ -23,10 +23,16 @@ export const throttle = (fn: (...args: any[]) => void, wait: number) => {
 };
 
 export const repeat = (n: number, char: string) => [...new Array(Math.round(n))].map(() => char);
-export const progress = (percentage: number, size = 20) => {
+export const progressBar = (percentage: number, size = 20) => {
   const track = repeat(size, ' ');
   const completed = repeat((percentage / 100) * size || 0, '=');
-  return `${completed.join('')}${track.join('')}`.substr(0, 20);
+  return `[${`${completed.join('')}${track.join('')}`.slice(0, 20)}]`;
+};
+export const activityBar = (n = 0, size = 20) => {
+  const track = repeat(size, ' ');
+  const i = n % ((size - 1) * 2);
+  track[i >= size ? (size - 1) * 2 - i : i] = '*';
+  return `[${track.join('')}]`;
 };
 
 export const baseStorybookUrl = (url: string) => url.replace(/\/iframe\.html$/, '');

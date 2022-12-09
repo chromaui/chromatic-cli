@@ -7,6 +7,7 @@ import tmp from 'tmp-promise';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
+import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
@@ -69,7 +70,7 @@ export const setSpawnParams = async (ctx) => {
 const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
-export const buildStorybook = async (ctx) => {
+export const buildStorybook = async (ctx: Context) => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
   const logFile = fs.createWriteStream(ctx.buildLogFile);
   await new Promise((resolve, reject) => {
@@ -108,7 +109,9 @@ export default createTask({
     setSourceDir,
     setSpawnParams,
     transitionTo(pending),
+    startActivity,
     buildStorybook,
+    endActivity,
     transitionTo(success, true),
   ],
 });

@@ -28,7 +28,6 @@ import {
   success,
 } from '../ui/tasks/upload';
 import { Context, Task } from '../types';
-import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { readStatsFile } from './read-stats-file';
 
 const GetUploadUrlsMutation = `
