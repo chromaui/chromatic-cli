@@ -98,8 +98,6 @@ export interface Options {
   storybookBaseDir: Flags['storybookBaseDir'];
   storybookConfigDir: Flags['storybookConfigDir'];
   storybookUrl: Flags['storybookUrl'];
-  createTunnel: boolean;
-  useTunnel?: boolean;
 
   ownerName: string;
   branchName: string;
@@ -138,7 +136,6 @@ export interface Context {
   environment?: Record<string, string>;
   reportPath?: string;
   stopApp?: () => void;
-  closeTunnel?: () => void;
   isPublishOnly?: boolean;
   isOnboarding: boolean;
   turboSnapAvailability?: string;

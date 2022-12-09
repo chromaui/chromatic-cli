@@ -10,7 +10,6 @@ import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import * as startStorybook from './lib/startStorybook';
 import TestLogger from './lib/testLogger';
-import tunnel from './lib/tunnel';
 import uploadFiles from './lib/uploadFiles';
 import { runAll, runBuild } from './main';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
@@ -242,9 +241,6 @@ jest.mock('./lib/getStorybookInfo', () => () => ({
   viewLayer: 'viewLayer',
   addons: [],
 }));
-jest.mock('./lib/tunnel');
-
-const openTunnel = <jest.MockedFunction<typeof tunnel>>tunnel;
 
 jest.mock('./lib/uploadFiles');
 
@@ -425,156 +421,6 @@ it('uses custom DNS server if provided', async () => {
   expect(dns.setServers).toHaveBeenCalledWith(['1.2.3.4']);
   // The lookup isn't actually performed because fetch is mocked, so we just check the agent.
   expect((fetch as any).mock.calls[0][1].agent).toBeInstanceOf(DNSResolveAgent);
-});
-
-describe('tunneled build', () => {
-  beforeEach(() => {
-    resolveIsolatorUrl.mockReset().mockResolvedValue(false);
-    startApp.mockReset().mockImplementation((ctx) => {
-      ctx.isolatorUrl = ctx.options.url;
-      return {
-        on: jest.fn(),
-        stderr: { on: jest.fn(), resume: jest.fn() },
-        stdout: { on: jest.fn(), resume: jest.fn() },
-      } as any;
-    });
-    openTunnel.mockReset().mockResolvedValue({
-      url: 'http://tunnel.com/?clientId=foo',
-      cachedUrl: 'http://cached.tunnel.com?foo=bar#hash',
-      close: jest.fn,
-    } as any);
-    kill.mockReset().mockImplementation((pid, sig, cb) => cb());
-  });
-
-  it('properly deals with updating the isolatorUrl/cachedUrl in complex situations', async () => {
-    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
-    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
-    await runBuild(ctx);
-
-    expect(ctx.exitCode).toBe(1);
-    expect(ctx.closeTunnel).toBeDefined();
-    expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
-      cachedUrl: 'http://cached.tunnel.com/iframe.html?foo=bar',
-      isolatorUrl: `http://tunnel.com/?clientId=foo&path=${encodeURIComponent('/iframe.html')}`,
-    });
-  });
-
-  it('calls out to npm script passed', async () => {
-    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
-    await runBuild(ctx);
-    expect(startApp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        options: expect.objectContaining({
-          scriptName: 'storybook',
-          url: 'http://localhost:1337',
-        }),
-      }),
-      expect.objectContaining({
-        args: ['--', '--ci'],
-      })
-    );
-  });
-
-  it('calls out to the exec command passed', async () => {
-    const ctx = getContext([
-      '--project-token=asdf1234',
-      '--exec=./run.sh',
-      '--storybook-port=9001',
-    ]);
-    await runBuild(ctx);
-    expect(startApp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        options: expect.objectContaining({
-          exec: './run.sh',
-          url: 'http://localhost:9001',
-        }),
-      }),
-      expect.objectContaining({})
-    );
-    expect(openTunnel).toHaveBeenCalledWith(
-      expect.objectContaining(ctx),
-      expect.objectContaining({ port: '9001' })
-    );
-  });
-
-  it('skips start when already running', async () => {
-    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
-    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
-    await runBuild(ctx);
-    expect(startApp).not.toHaveBeenCalled();
-    expect(openTunnel).toHaveBeenCalledWith(
-      expect.objectContaining(ctx),
-      expect.objectContaining({ port: '1337' })
-    );
-  });
-
-  it('fails when trying to use --do-not-start while not running', async () => {
-    resolveIsolatorUrl.mockResolvedValueOnce(false);
-    const ctx = getContext([
-      '--project-token=asdf1234',
-      '--script-name=storybook',
-      '--do-not-start',
-    ]);
-    await runBuild(ctx);
-    expect(ctx.exitCode).toBe(255);
-    expect(startApp).not.toHaveBeenCalled();
-  });
-
-  it('skips tunnel when using --storybook-url', async () => {
-    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/iframe.html');
-    const ctx = getContext([
-      '--project-token=asdf1234',
-      '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
-    ]);
-    await runBuild(ctx);
-    expect(ctx.exitCode).toBe(1);
-    expect(ctx.closeTunnel).toBeUndefined();
-    expect(openTunnel).not.toHaveBeenCalled();
-    expect(publishedBuild).toMatchObject({
-      isolatorUrl: 'http://localhost:1337/iframe.html',
-    });
-  });
-
-  it('supports redirects in --storybook-url', async () => {
-    resolveIsolatorUrl.mockResolvedValue('http://localhost:1337/some/other/path/iframe.html');
-    const ctx = getContext([
-      '--project-token=asdf1234',
-      '--storybook-url=http://localhost:1337/iframe.html?foo=bar#hash',
-    ]);
-    await runBuild(ctx);
-    expect(publishedBuild).toMatchObject({
-      isolatorUrl: 'http://localhost:1337/some/other/path/iframe.html',
-    });
-  });
-
-  it('stops the running Storybook if something goes wrong', async () => {
-    openTunnel.mockImplementation(() => {
-      throw new Error('tunnel error');
-    });
-    startApp.mockReset().mockImplementation((ctx) => {
-      ctx.isolatorUrl = ctx.options.url;
-      return { pid: 12345 } as any;
-    });
-    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
-    await runBuild(ctx);
-    expect(ctx.exitCode).toBe(255);
-    expect(ctx.testLogger.errors[0]).toMatch('tunnel error');
-    expect(kill).toHaveBeenCalledWith(12345, 'SIGHUP', expect.any(Function));
-  });
-
-  it('stops the tunnel if something goes wrong', async () => {
-    const close = jest.fn();
-    openTunnel.mockResolvedValueOnce({
-      url: 'http://throw-an-error',
-      cachedUrl: 'http://tunnel.com/',
-      close,
-    } as any);
-    const ctx = getContext(['--project-token=asdf1234', '--script-name=storybook']);
-    await runBuild(ctx);
-    expect(ctx.exitCode).toBe(255);
-    expect(ctx.testLogger.errors[0]).toMatch('fetch error');
-    expect(close).toHaveBeenCalled();
-  });
 });
 
 describe('in CI', () => {

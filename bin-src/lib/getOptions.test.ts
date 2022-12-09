@@ -11,7 +11,6 @@ import TestLogger from './testLogger';
 chalk.level = 0;
 
 jest.mock('./getEnv', () => () => ({
-  CHROMATIC_CREATE_TUNNEL: true,
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
@@ -42,7 +41,6 @@ describe('getOptions', () => {
       exitOnceUploaded: undefined,
       interactive: false,
       verbose: false,
-      createTunnel: true,
       originalArgv: ['--project-token', 'cli-code'],
     });
   });
@@ -74,7 +72,6 @@ describe('getOptions', () => {
       exitOnceUploaded: true,
       verbose: true,
       interactive: false,
-      createTunnel: true,
     });
   });
 
@@ -170,7 +167,6 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
       noStart: true,
       url: 'https://google.com',
-      createTunnel: false,
     });
   });
 
@@ -178,7 +174,6 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--storybook-url', 'https://google.com/foo']))).toMatchObject({
       noStart: true,
       url: 'https://google.com/foo',
-      createTunnel: false,
     });
   });
 
@@ -188,7 +183,6 @@ describe('getOptions', () => {
     ).toMatchObject({
       noStart: true,
       url: 'https://google.com/iframe.html?param=foo',
-      createTunnel: false,
     });
   });
 

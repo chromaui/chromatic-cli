@@ -81,7 +81,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
     storybookUrl: flags.storybookUrl,
-    createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
     ownerName,
     branchName,
@@ -184,7 +183,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   // Build Storybook instead of starting it
   if (scriptName === undefined && !exec && !noStart && !storybookUrl && !port) {
     if (storybookBuildDir) {
-      return { ...options, noStart: true, useTunnel: false };
+      return { ...options, noStart: true };
     }
     const { scripts } = packageJson;
     if (typeof buildScriptName !== 'string') {
@@ -198,7 +197,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
       }
     }
     if (scripts && buildScriptName && scripts[buildScriptName]) {
-      return { ...options, noStart: true, useTunnel: false, buildScriptName };
+      return { ...options, noStart: true, buildScriptName };
     }
     throw new Error(missingBuildScriptName(buildScriptName));
   }
@@ -243,7 +242,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   return {
     ...options,
     noStart,
-    useTunnel: true,
     url: storybookUrl,
     scriptName,
   };
