@@ -1,3 +1,8 @@
+# 6.12.0 - 2022-12-09
+
+- [685](https://github.com/chromaui/chromatic-cli/pull/685) Support custom DNS IP and DNS failover IP using custom DNS resolver
+- [689](https://github.com/chromaui/chromatic-cli/pull/689) Improve the failure message when there's only one git commit
+
 # 6.11.3 - 2022-10-31
 
 - [670](https://github.com/chromaui/chromatic-cli/pull/670) Trace command errors for package manifest change
