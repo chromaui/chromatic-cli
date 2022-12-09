@@ -40,11 +40,15 @@ export default class GraphQLClient {
     return retry(
       async (bail) => {
         const { data, errors } = await this.client
-          .fetch(this.endpoint, {
-            body: JSON.stringify({ query, variables }),
-            headers: { ...this.headers, ...headers },
-            method: 'post',
-          })
+          .fetch(
+            this.endpoint,
+            {
+              body: JSON.stringify({ query, variables }),
+              headers: { ...this.headers, ...headers },
+              method: 'post',
+            },
+            { retries }
+          )
           .then((res) => res.json() as any)
           .catch(bail);
 
