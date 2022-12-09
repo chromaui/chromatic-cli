@@ -18,6 +18,4 @@ export const Started = () => success({ isolatorUrl, now: 0, startedAt: -21000 } 
 
 export const Skipped = () => skipped({ isolatorUrl, options: {} } as any);
 
-export const NoStart = () => skipped({ isolatorUrl, options: { noStart: true } } as any);
-
 export const SkipFailed = () => skipFailed({ options: { url: isolatorUrl } } as any);

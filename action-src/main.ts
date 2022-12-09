@@ -152,7 +152,6 @@ async function run() {
     const externals = getInput('externals');
     const untraced = getInput('untraced');
     const traceChanged = getInput('traceChanged');
-    const doNotStart = getInput('doNotStart');
     const diagnostics = getInput('diagnostics');
     const debug = getInput('debug');
     const storybookPort = getInput('storybookPort');
@@ -198,7 +197,6 @@ async function run() {
       storybookBaseDir: maybe(storybookBaseDir),
       storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
-      doNotStart: maybe(doNotStart),
       storybookPort: maybe(storybookPort),
       storybookUrl: maybe(storybookUrl),
       storybookBuildDir: maybe(storybookBuildDir),

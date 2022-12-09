@@ -42,7 +42,6 @@ export interface Flags {
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
-  doNotStart?: boolean;
   scriptName?: string;
   storybookPort?: string;
   storybookUrl?: string;
@@ -84,7 +83,6 @@ export interface Options {
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
   scriptName: string;
-  noStart: Flags['doNotStart'];
   https: {
     cert: Flags['storybookCert'];
     key: Flags['storybookKey'];

@@ -51,13 +51,12 @@ export default function parseArgs(argv: string[]) {
       --app-code <token>            Renamed to --project-token.
       --allow-console-errors        Continue running Chromatic even if there are errors logged to console in your Storybook.
       --script-name, -s [name]      The npm script that starts your Storybook. [storybook]
-      --do-not-start, -S            Don't attempt to start or build Storybook. Use this if your Storybook is already running, for example when part of a larger app.
       --storybook-port, -p <port>   What port is your Storybook running on. Auto detected from the npm script when using --script-name.
       --storybook-https             Enable if Storybook is running on HTTPS (locally). Auto detected from the npm script when using --script-name.
       --storybook-cert <path>       Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-key <path>        Use with --storybook-https. Auto detected from the npm script when using --script-name.
       --storybook-ca <ca>           Use with --storybook-https. Auto detected from the npm script when using --script-name.
-      --storybook-url, -u <url>     Run against an online Storybook at some URL. This implies --do-not-start.
+      --storybook-url, -u <url>     Run against an online Storybook at some URL.
       --only                        Superceded by --only-story-names.
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
     `,
@@ -105,7 +104,6 @@ export default function parseArgs(argv: string[]) {
         // Deprecated options (for JSDOM and tunneled builds, among others)
         allowConsoleErrors: { type: 'boolean' },
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
-        doNotStart: { type: 'boolean', alias: 'S' }, // assumes already started
         scriptName: { type: 'string', alias: 's' }, // start via npm/yarn run
         storybookPort: { type: 'string', alias: 'p' },
         storybookUrl: { type: 'string', alias: 'u' },

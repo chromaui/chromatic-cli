@@ -69,7 +69,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     scriptName: flags.scriptName,
-    noStart: !!flags.doNotStart,
     https: flags.storybookHttps && {
       cert: flags.storybookCert,
       key: flags.storybookKey,
@@ -110,7 +109,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   const { storybookBuildDir } = options;
-  let { port, storybookUrl, noStart, scriptName, buildScriptName } = options;
+  let { port, storybookUrl, scriptName, buildScriptName } = options;
 
   // We can only have one of these arguments
   const singularOpts = {
@@ -147,15 +146,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     throw new Error(dependentOption('--trace-changed', '--only-changed'));
   }
 
-  // No need to start or build Storybook if we're going to fetch from a URL
-  if (storybookUrl) {
-    noStart = true;
-  }
-
-  if (noStart && options.exitOnceUploaded) {
-    throw new Error(invalidExitOnceUploaded());
-  }
-
   if (scriptName && options.exitOnceUploaded) {
     throw new Error(invalidExitOnceUploaded());
   }
@@ -179,9 +169,9 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   }
 
   // Build Storybook instead of starting it
-  if (scriptName === undefined && !noStart && !storybookUrl && !port) {
+  if (scriptName === undefined && !storybookUrl && !port) {
     if (storybookBuildDir) {
-      return { ...options, noStart: true };
+      return { ...options };
     }
     const { scripts } = packageJson;
     if (typeof buildScriptName !== 'string') {
@@ -195,7 +185,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
       }
     }
     if (scripts && buildScriptName && scripts[buildScriptName]) {
-      return { ...options, noStart: true, buildScriptName };
+      return { ...options, buildScriptName };
     }
     throw new Error(missingBuildScriptName(buildScriptName));
   }
@@ -205,7 +195,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   // Start Storybook on localhost and generate the URL to it
   if (!storybookUrl) {
-    if (!port || !noStart) {
+    if (!port) {
       // If you don't provide a port or we need to start the command, let's look up the script for it
       scriptName = scriptName || 'storybook';
       const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
@@ -235,7 +225,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   return {
     ...options,
-    noStart,
     url: storybookUrl,
     scriptName,
   };

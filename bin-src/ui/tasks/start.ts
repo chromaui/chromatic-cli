@@ -22,11 +22,7 @@ export const success = (ctx: Context) => ({
 export const skipped = (ctx: Context) => ({
   status: 'skipped',
   title: 'Start Storybook [skipped]',
-  output: ctx.options.noStart
-    ? `Skipped due to ${
-        ctx.options.storybookUrl ? '--storybook-url' : '--do-not-start'
-      }; using ${baseStorybookUrl(ctx.isolatorUrl)}`
-    : `Storybook already running at ${baseStorybookUrl(ctx.isolatorUrl)}`,
+  output: `Storybook already running at ${baseStorybookUrl(ctx.isolatorUrl)}`,
 });
 
 export const skipFailed = (ctx: Context) => ({

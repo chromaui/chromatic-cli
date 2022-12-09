@@ -33,9 +33,6 @@ export default createTask({
       ctx.isolatorUrl = isolatorUrl;
       return skipped(ctx).output;
     }
-    if (ctx.options.noStart) {
-      throw new Error(skipFailed(ctx).output);
-    }
     return false;
   },
   steps: [transitionTo(pending), startStorybook, transitionTo(success, true)],

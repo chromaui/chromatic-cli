@@ -34,7 +34,6 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
-      noStart: true,
       fromCI: !!process.env.CI,
       autoAcceptChanges: undefined,
       exitZeroOnChanges: undefined,
@@ -79,7 +78,6 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['-s']))).toMatchObject({
       scriptName: 'storybook',
       url: 'http://localhost:1337',
-      noStart: false,
     });
   });
 
@@ -93,7 +91,6 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
       scriptName: 'otherStorybook',
       url: 'http://localhost:7070',
-      noStart: false,
     });
   });
 
@@ -138,14 +135,12 @@ describe('getOptions', () => {
 
   it('allows you to set a URL without path', async () => {
     expect(getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
-      noStart: true,
       url: 'https://google.com',
     });
   });
 
   it('allows you to set a URL with a path', async () => {
     expect(getOptions(getContext(['--storybook-url', 'https://google.com/foo']))).toMatchObject({
-      noStart: true,
       url: 'https://google.com/foo',
     });
   });
@@ -154,7 +149,6 @@ describe('getOptions', () => {
     expect(
       getOptions(getContext(['--storybook-url', 'https://google.com/iframe.html?param=foo']))
     ).toMatchObject({
-      noStart: true,
       url: 'https://google.com/iframe.html?param=foo',
     });
   });
