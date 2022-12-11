@@ -25,6 +25,7 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+import { endActivity } from './ui/components/activity';
 
 export async function main(argv: string[]) {
   const sessionId: string = uuid();
@@ -104,6 +105,7 @@ export async function runBuild(ctx: Context) {
       const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
+      endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);
         throw rewriteErrorMessage(err, fetchError(ctx, err));

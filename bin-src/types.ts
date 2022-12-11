@@ -129,6 +129,7 @@ export interface Context {
   skipSnapshots?: boolean;
   now?: number;
   startedAt?: number;
+  activity?: { end: () => void };
   exitCode: number;
   exitCodeKey: string;
   userError?: boolean;
