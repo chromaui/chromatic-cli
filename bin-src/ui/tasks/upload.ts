@@ -1,7 +1,7 @@
 import pluralize from 'pluralize';
 
 import { getDuration } from '../../lib/tasks';
-import { baseStorybookUrl, progress as progressBar, isPackageManifestFile } from '../../lib/utils';
+import { baseStorybookUrl, progressBar, isPackageManifestFile } from '../../lib/utils';
 import { Context } from '../../types';
 
 export const initial = {
@@ -95,7 +95,7 @@ export const starting = () => ({
 export const uploading = ({ percentage }: { percentage: number }) => ({
   status: 'pending',
   title: 'Publishing your built Storybook',
-  output: `[${progressBar(percentage)}] ${percentage}%`,
+  output: `${progressBar(percentage)} ${percentage}%`,
 });
 
 export const success = (ctx: Context) => ({

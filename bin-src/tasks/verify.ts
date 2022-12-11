@@ -18,6 +18,7 @@ import {
 import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { Context, Task } from '../types';
 import brokenStorybook from '../ui/messages/errors/brokenStorybook';
+import { endActivity, startActivity } from '../ui/components/activity';
 
 const PublishBuildMutation = `
   mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
@@ -244,5 +245,5 @@ export default createTask({
     if (ctx.options.dryRun) return dryRun().output;
     return false;
   },
-  steps: [transitionTo(pending), publishBuild, verifyBuild],
+  steps: [transitionTo(pending), startActivity, publishBuild, verifyBuild, endActivity],
 });
