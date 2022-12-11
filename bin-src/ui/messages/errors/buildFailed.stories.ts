@@ -58,7 +58,7 @@ export const BuildFailed = () =>
       options: { buildScriptName: 'build:storybook' },
       buildLogFile: '/path/to/project/build-storybook.log',
       spawnParams,
-    },
+    } as any,
     { message: 'Command failed with exit code 1' },
     buildLog
   );

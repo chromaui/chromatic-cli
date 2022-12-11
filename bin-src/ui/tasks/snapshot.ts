@@ -1,7 +1,7 @@
 import pluralize from 'pluralize';
 
 import { getDuration } from '../../lib/tasks';
-import { progress as progressBar } from '../../lib/utils';
+import { progressBar } from '../../lib/utils';
 import { Context } from '../../types';
 
 export const initial = {
@@ -54,7 +54,7 @@ export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
     status: 'pending',
     title: `Running ${tests}${matching}${affected}${skipping}`,
     output: cursor
-      ? `[${progressBar(percentage)}] ${counts} ${errs} ${label}`
+      ? `${progressBar(percentage)} ${counts} ${errs} ${label}`
       : 'This may take a few minutes',
   };
 };

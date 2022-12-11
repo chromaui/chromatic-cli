@@ -1,11 +1,12 @@
 import chalk from 'chalk';
 import { EOL } from 'os';
 import { dedent } from 'ts-dedent';
+import { Context } from '../../../types';
 
 import { info } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ options, buildLogFile, spawnParams }, { message }, buildLog) => {
+export default ({ options, buildLogFile, spawnParams }: Context, { message }, buildLog) => {
   const { buildScriptName } = options;
   const lines = buildLog.split(EOL).filter((line) => line && !line.startsWith('<s>'));
 
