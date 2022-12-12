@@ -152,7 +152,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   // Build Storybook
   if (storybookBuildDir) {
-    return { ...options };
+    return options;
   }
 
   const { scripts } = packageJson;
