@@ -55,20 +55,10 @@ const getBuildInfo = (event: typeof context) => {
       };
     }
     case 'workflow_dispatch': {
-      const { ref, sha } = event.payload.inputs || {};
-
-      if (!ref || !sha) {
-        setFailed(
-          `When triggering via workflow_dispatch, ref & sha are required inputs. See https://github.com/chromaui/action#triggering-from-workflow_dispatch`
-        );
-        return null;
-      }
-
       return {
+        sha: event.sha,
+        branch: event.ref.replace('refs/heads/', ''),
         slug: event.payload.repository.full_name,
-        branch: ref.replace('refs/heads/', ''),
-        ref,
-        sha,
       };
     }
     default: {
