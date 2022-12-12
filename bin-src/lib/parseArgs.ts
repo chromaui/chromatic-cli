@@ -1,9 +1,9 @@
 import meow from 'meow';
 
-import pkg from '../../package.json';
+import { Context } from '../types';
 
 export default function parseArgs(argv: string[]) {
-  const { input, flags, help } = meow(
+  const { input, flags, help, pkg } = meow(
     `
     Chromatic CLI
       https://www.chromatic.com/docs/cli
@@ -121,5 +121,5 @@ export default function parseArgs(argv: string[]) {
     }
   );
 
-  return { argv, input, flags, help, pkg };
+  return { argv, input, flags, help, pkg: pkg as Context['pkg'] };
 }
