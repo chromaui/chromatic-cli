@@ -229,3 +229,8 @@ export async function discardChanges() {
 export async function getRepositoryRoot() {
   return execGitCommand(`git rev-parse --show-toplevel`);
 }
+
+export async function findFiles(pattern: string) {
+  const files = await execGitCommand(`git ls-files -z '${pattern}'`);
+  return files.split('\0').filter(Boolean);
+}
