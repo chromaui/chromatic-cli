@@ -154,6 +154,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   if (storybookBuildDir) {
     return { ...options };
   }
+
   const { scripts } = packageJson;
   if (typeof buildScriptName !== 'string') {
     buildScriptName = 'build-storybook';
@@ -165,13 +166,10 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
       if (key) buildScriptName = key;
     }
   }
+
   if (scripts && buildScriptName && scripts[buildScriptName]) {
     return { ...options, buildScriptName };
   }
+
   throw new Error(missingBuildScriptName(buildScriptName));
-
-  // TurboSnap requires a static build with a webpack stats file.
-  if (options.onlyChanged) throw new Error(invalidOnlyChanged());
-
-  return options;
 }
