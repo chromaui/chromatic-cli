@@ -169,10 +169,14 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       // Track changed package manifest files along with the commit they were changed in.
-      ctx.git.packageManifestChanges = changedFilesWithInfo.flatMap(({ build, changedFiles }) => {
-        const manifestFiles = changedFiles.filter(isPackageManifestFile);
-        return manifestFiles.length ? [{ changedFiles: manifestFiles, commit: build.commit }] : [];
-      });
+      ctx.git.packageManifestChanges = changedFilesWithInfo.flatMap(
+        ({ build, changedFiles, replacementBuild }) => {
+          const manifestFiles = changedFiles.filter(isPackageManifestFile);
+          return manifestFiles.length
+            ? [{ changedFiles: manifestFiles, commit: replacementBuild?.commit ?? build.commit }]
+            : [];
+        }
+      );
 
       // Track replacement build info to pass along when we create the new build later on.
       ctx.git.replacementBuildIds = changedFilesWithInfo
