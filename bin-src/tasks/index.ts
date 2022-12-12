@@ -23,14 +23,10 @@ export const runUploadBuild = [
   snapshot,
 ];
 
-export const runPatchBuild = (runBuild: typeof runUploadBuild) => [
-  prepareWorkspace,
-  ...runBuild,
-  restoreWorkspace,
-];
+export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 
 export default (options: Context['options']): Listr.ListrTask<Context>[] => {
-  const tasks =
-    options.patchHeadRef && options.patchBaseRef ? runPatchBuild(runUploadBuild) : runUploadBuild;
+  const tasks = options.patchHeadRef && options.patchBaseRef ? runUploadBuild : runUploadBuild;
+
   return options.junitReport ? tasks.concat(report) : tasks;
 };
