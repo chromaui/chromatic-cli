@@ -142,6 +142,7 @@ export const validateFiles = async (ctx: Context) => {
 };
 
 export const traceChangedFiles = async (ctx: Context, task: Task) => {
+  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
     ctx.turboSnap.bailReason = { missingStatsFile: true };

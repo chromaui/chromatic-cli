@@ -103,6 +103,7 @@ describe('traceChangedFiles', () => {
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
     } as any;
     await traceChangedFiles(ctx, {} as any);
 

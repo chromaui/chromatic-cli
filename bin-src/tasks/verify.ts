@@ -18,6 +18,7 @@ import {
 import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { Context, Task } from '../types';
 import brokenStorybook from '../ui/messages/errors/brokenStorybook';
+import turboSnapUnavailable from '../ui/messages/warnings/turboSnapUnavailable';
 import { endActivity, startActivity } from '../ui/components/activity';
 
 const PublishBuildMutation = `
@@ -119,8 +120,11 @@ const VerifyBuildQuery = `
           uiReview
         }
         autoAcceptChanges
+        turboSnapEnabled
         wasLimited
         app {
+          manageUrl
+          setupUrl
           account {
             exceededThreshold
             paymentRequired
@@ -129,7 +133,6 @@ const VerifyBuildQuery = `
           repository {
             provider
           }
-          setupUrl
         }
         tests {
           spec {
@@ -210,8 +213,12 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     ctx.log.info(listingStories(ctx.build.tests));
   }
 
-  if (ctx.turboSnap && !ctx.turboSnap.bailReason) {
-    ctx.log.info(turboSnapEnabled(ctx));
+  if (ctx.turboSnap) {
+    if (ctx.turboSnap.unavailable) {
+      ctx.log.warn(turboSnapUnavailable(ctx));
+    } else if (ctx.build.turboSnapEnabled) {
+      ctx.log.info(turboSnapEnabled(ctx));
+    }
   }
 
   if (ctx.build.wasLimited) {
