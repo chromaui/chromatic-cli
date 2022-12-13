@@ -1,3 +1,9 @@
+# 6.13.0 - 2022-12-13
+
+- [676](https://github.com/chromaui/chromatic-cli/pull/676) Log message when TurboSnap is unavailable
+- [671](https://github.com/chromaui/chromatic-cli/pull/671) Don't bundle package.json but rely on meow's runtime value instead
+- [675](https://github.com/chromaui/chromatic-cli/pull/675) Output progress updates in non-interactive mode every 10 seconds
+
 # 6.12.0 - 2022-12-09
 
 - [685](https://github.com/chromaui/chromatic-cli/pull/685) Support custom DNS IP and DNS failover IP using custom DNS resolver
