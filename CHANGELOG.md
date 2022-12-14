@@ -1,3 +1,7 @@
+# 6.13.1 - 2022-12-14
+
+- [700](https://github.com/chromaui/chromatic-cli/pull/700) Revert "Don't bundle package.json but rely on meow's runtime value instead"
+
 # 6.13.0 - 2022-12-13
 
 - [676](https://github.com/chromaui/chromatic-cli/pull/676) Log message when TurboSnap is unavailable
