@@ -139,8 +139,6 @@ async function run() {
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const buildScriptName = getInput('buildScriptName');
-    const scriptName = getInput('scriptName');
-    const exec = getInput('exec');
     const skip = getInput('skip');
     const dryRun = getInput('dryRun');
     const forceRebuild = getInput('forceRebuild');
@@ -153,16 +151,9 @@ async function run() {
     const externals = getInput('externals');
     const untraced = getInput('untraced');
     const traceChanged = getInput('traceChanged');
-    const doNotStart = getInput('doNotStart');
     const diagnostics = getInput('diagnostics');
     const debug = getInput('debug');
-    const storybookPort = getInput('storybookPort');
-    const storybookUrl = getInput('storybookUrl');
     const storybookBuildDir = getInput('storybookBuildDir');
-    const storybookHttps = getInput('storybookHttps');
-    const storybookCert = getInput('storybookCert');
-    const storybookKey = getInput('storybookKey');
-    const storybookCa = getInput('storybookCa');
     const preserveMissing = getInput('preserveMissing');
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const allowConsoleErrors = getInput('allowConsoleErrors');
@@ -184,10 +175,8 @@ async function run() {
       projectToken,
       workingDir: maybe(workingDir),
       buildScriptName: maybe(buildScriptName),
-      scriptName: maybe(scriptName),
       diagnostics: maybe(diagnostics),
       debug: maybe(debug),
-      exec: maybe(exec),
       skip: maybe(skip),
       dryRun: maybe(dryRun),
       forceRebuild: maybe(forceRebuild),
@@ -200,14 +189,7 @@ async function run() {
       storybookBaseDir: maybe(storybookBaseDir),
       storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
-      doNotStart: maybe(doNotStart),
-      storybookPort: maybe(storybookPort),
-      storybookUrl: maybe(storybookUrl),
       storybookBuildDir: maybe(storybookBuildDir),
-      storybookHttps: maybe(storybookHttps),
-      storybookCert: maybe(storybookCert),
-      storybookKey: maybe(storybookKey),
-      storybookCa: maybe(storybookCa),
       fromCI: true,
       interactive: false,
       preserveMissing: maybe(preserveMissing),

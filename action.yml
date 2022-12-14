@@ -21,12 +21,6 @@ inputs:
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
-  scriptName:
-    description: 'The npm script that starts your Storybook [storybook]'
-    required: false
-  exec:
-    description: 'Alternatively, a full command to run to start your storybook'
-    required: false
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false
@@ -63,9 +57,6 @@ inputs:
   traceChanged:
     description: 'Print dependency trace for changed files to affected story files; set to "expanded" to list individual modules'
     required: false
-  doNotStart:
-    description: 'Do not attempt to start or build; use if your Storybook is already running'
-    required: false
   diagnostics:
     description: 'Write process context information to chromatic-diagnostics.json'
     required: false
@@ -74,24 +65,6 @@ inputs:
     required: false
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
-    required: false
-  storybookCa:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookCert:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookHttps:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookKey:
-    description: 'Use if Storybook is running on https (auto detected from -s, if set)'
-    required: false
-  storybookPort:
-    description: 'What port is your Storybook running on (auto detected from -s, if set)'
-    required: false
-  storybookUrl:
-    description: 'Storybook is already running at (external) url (implies -S)'
     required: false
   preserveMissing:
     description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'

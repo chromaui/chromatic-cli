@@ -14,7 +14,7 @@ export default {
 };
 
 const options = {
-  scriptName: 'build-storybook',
+  buildScriptName: 'build-storybook',
   patchBaseRef: 'main',
   patchHeadRef: 'feature',
 };

@@ -15,12 +15,6 @@ export const dryRun = () => ({
   output: 'Skipped due to --dry-run',
 });
 
-export const skipped = (ctx: Context) => ({
-  status: 'skipped',
-  title: 'Publish your built Storybook [skipped]',
-  output: `Using hosted Storybook at ${ctx.options.storybookUrl}`,
-});
-
 export const validating = () => ({
   status: 'pending',
   title: 'Publish your built Storybook',

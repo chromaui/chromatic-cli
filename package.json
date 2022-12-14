@@ -86,7 +86,6 @@
     "@babel/preset-env": "^7.15.0",
     "@babel/preset-typescript": "^7.15.0",
     "@babel/runtime": "^7.15.3",
-    "@chromaui/localtunnel": "^2.0.3",
     "@storybook/addon-essentials": "^6.5.6",
     "@storybook/builder-webpack5": "^6.5.6",
     "@storybook/eslint-config-storybook": "^3.1.2",

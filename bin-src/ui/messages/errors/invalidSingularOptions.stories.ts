@@ -5,4 +5,4 @@ export default {
 };
 
 export const InvalidSingularOptions = () =>
-  invalidSingularOptions(['--build-script-name', '--script-name']);
+  invalidSingularOptions(['--build-script-name', '--storybook-build-dir']);

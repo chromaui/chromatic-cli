@@ -11,7 +11,6 @@ import TestLogger from './testLogger';
 chalk.level = 0;
 
 jest.mock('./getEnv', () => () => ({
-  CHROMATIC_CREATE_TUNNEL: true,
   CHROMATIC_PROJECT_TOKEN: 'env-code',
 }));
 
@@ -20,8 +19,7 @@ const getContext = (argv: string[]): Context => {
   const log = new TestLogger();
   const packageJson = {
     scripts: {
-      storybook: 'start-storybook -p 1337',
-      otherStorybook: 'start-storybook -p 7070',
+      storybook: 'start-storybook',
       notStorybook: 'lint',
       'build-storybook': 'build-storybook',
       otherBuildStorybook: 'build-storybook',
@@ -35,14 +33,12 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
-      noStart: true,
       fromCI: !!process.env.CI,
       autoAcceptChanges: undefined,
       exitZeroOnChanges: undefined,
       exitOnceUploaded: undefined,
       interactive: false,
       verbose: false,
-      createTunnel: true,
       originalArgv: ['--project-token', 'cli-code'],
     });
   });
@@ -74,15 +70,6 @@ describe('getOptions', () => {
       exitOnceUploaded: true,
       verbose: true,
       interactive: false,
-      createTunnel: true,
-    });
-  });
-
-  it('picks up default start script', async () => {
-    expect(getOptions(getContext(['-s']))).toMatchObject({
-      scriptName: 'storybook',
-      url: 'http://localhost:1337',
-      noStart: false,
     });
   });
 
@@ -92,104 +79,10 @@ describe('getOptions', () => {
     });
   });
 
-  it('allows you to specify alternate script, still picks up port', async () => {
-    expect(getOptions(getContext(['--script-name', 'otherStorybook']))).toMatchObject({
-      scriptName: 'otherStorybook',
-      url: 'http://localhost:7070',
-      noStart: false,
-    });
-  });
-
-  it('allows you to specify alternate script, that does not start Storybook, if you set port', async () => {
-    expect(
-      getOptions(getContext(['--script-name', 'notStorybook', '--storybook-port', '6060']))
-    ).toMatchObject({
-      scriptName: 'notStorybook',
-      url: 'http://localhost:6060',
-    });
-  });
-
-  it('throws if you try to specify a script name that is not a Storybook, if you do NOT set port', async () => {
-    expect(() => getOptions(getContext(['--script-name', 'notStorybook']))).toThrow(
-      /must pass a port/
-    );
-  });
-
-  it('allows you to specify alternate command if you set port', async () => {
-    expect(
-      getOptions(getContext(['--exec', 'storybook-command', '--storybook-port', '6060']))
-    ).toMatchObject({
-      exec: 'storybook-command',
-      url: 'http://localhost:6060',
-    });
-  });
-
-  it('throws if you try to specify a command name, if you do NOT set port', async () => {
-    await expect(() => getOptions(getContext(['--exec', 'storybook-command']))).toThrow(
-      /must pass a port/
-    );
-  });
-
-  it('throws if you try to pass a script or command name and a url', async () => {
-    await expect(() =>
-      getOptions(getContext(['--exec', 'storybook-command', '--storybook-url', 'http://foo.bar']))
-    ).toThrow(/You can only use one of --exec, --storybook-url/);
-
-    await expect(() =>
-      getOptions(getContext(['--script-name', 'storybook', '--storybook-url', 'http://foo.bar']))
-    ).toThrow(/You can only use one of --script-name, --storybook-url/);
-  });
-
-  it('throws if you try to pass a script or command name and a build script', async () => {
-    await expect(() =>
-      getOptions(getContext(['--exec', 'storybook-command', '-b', 'build-command']))
-    ).toThrow(/You can only use one of --build-script-name, --exec/);
-
-    await expect(() =>
-      getOptions(getContext(['--script-name', 'storybook', '-b', 'build-command']))
-    ).toThrow(/You can only use one of --build-script-name, --script-name/);
-  });
-
-  it('throws if you try to pass a script or command name and a directory', async () => {
-    await expect(() =>
-      getOptions(getContext(['--exec', 'storybook-command', '--storybook-build-dir', '/tmp/dir']))
-    ).toThrow(/You can only use one of --exec, --storybook-build-dir/);
-
-    await expect(() =>
-      getOptions(getContext(['--script-name', 'storybook', '--storybook-build-dir', '/tmp/dir']))
-    ).toThrow(/You can only use one of --script-name, --storybook-build-dir/);
-  });
-
   it('throws if you try to pass a build script and a directory', async () => {
     await expect(() =>
       getOptions(getContext(['-b', '/tmp/dir', '--storybook-build-dir', '/tmp/dir']))
     ).toThrow(/You can only use one of --build-script-name, --storybook-build-dir/);
-  });
-
-  it('allows you to set a URL without path', async () => {
-    expect(getOptions(getContext(['--storybook-url', 'https://google.com']))).toMatchObject({
-      noStart: true,
-      url: 'https://google.com',
-      createTunnel: false,
-    });
-  });
-
-  it('allows you to set a URL with a path', async () => {
-    expect(getOptions(getContext(['--storybook-url', 'https://google.com/foo']))).toMatchObject({
-      noStart: true,
-      url: 'https://google.com/foo',
-      createTunnel: false,
-    });
-  });
-
-  it('allows you to set a URL with iframe.html already set', async () => {
-    expect(
-      getOptions(getContext(['--storybook-url', 'https://google.com/iframe.html?param=foo']))
-    ).toMatchObject({
-      noStart: true,
-      url: 'https://google.com/iframe.html?param=foo',
-      createTunnel: false,
-    });
   });
 
   it('allows you to specify the branch name', async () => {

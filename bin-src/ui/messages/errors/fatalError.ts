@@ -33,7 +33,6 @@ export default function fatalError(
     ...(options && options.buildScriptName
       ? { buildScript: scripts[options.buildScriptName] }
       : {}),
-    ...(options && options.scriptName ? { storybookScript: scripts[options.scriptName] } : {}),
     ...(spawnParams ? { spawnParams } : {}),
     exitCode,
     exitCodeKey,

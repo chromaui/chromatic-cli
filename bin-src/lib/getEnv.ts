@@ -1,7 +1,5 @@
 export interface Env {
   CHROMATIC_INDEX_URL: string;
-  CHROMATIC_TUNNEL_URL: string;
-  CHROMATIC_CREATE_TUNNEL: 'true' | 'false';
   CHROMATIC_PROJECT_TOKEN: string;
   CHROMATIC_RETRIES: number;
   CHROMATIC_POLL_INTERVAL: number;
@@ -21,8 +19,6 @@ export interface Env {
 
 const {
   CHROMATIC_INDEX_URL = 'https://index.chromatic.com',
-  CHROMATIC_TUNNEL_URL = 'https://tunnel.chromaticqa.com',
-  CHROMATIC_CREATE_TUNNEL = 'true',
   CHROMATIC_RETRIES = '5',
   CHROMATIC_POLL_INTERVAL = String(1000),
   CHROMATIC_OUTPUT_INTERVAL = String(10 * 1000),
@@ -52,8 +48,6 @@ const CHROMATIC_PROJECT_TOKEN =
 export default () =>
   ({
     CHROMATIC_INDEX_URL,
-    CHROMATIC_TUNNEL_URL,
-    CHROMATIC_CREATE_TUNNEL,
     CHROMATIC_PROJECT_TOKEN,
     CHROMATIC_RETRIES: parseInt(CHROMATIC_RETRIES, 10),
     CHROMATIC_POLL_INTERVAL: parseInt(CHROMATIC_POLL_INTERVAL, 10),
