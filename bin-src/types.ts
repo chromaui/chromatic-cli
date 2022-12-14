@@ -116,7 +116,6 @@ export interface Context {
   runtimeWarnings?: Error[];
   environment?: Record<string, string>;
   reportPath?: string;
-  stopApp?: () => void;
   isPublishOnly?: boolean;
   isOnboarding: boolean;
   turboSnapAvailability?: string;

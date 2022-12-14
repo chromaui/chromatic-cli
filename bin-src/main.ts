@@ -128,7 +128,6 @@ export async function runBuild(ctx: Context) {
       }
 
       ctx.log.flush();
-      if (ctx.stopApp) ctx.stopApp();
     }
   } catch (error) {
     const errors = [].concat(error); // GraphQLClient might throw an array of errors
