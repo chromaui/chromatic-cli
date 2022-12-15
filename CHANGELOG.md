@@ -1,3 +1,18 @@
+# 6.13.1 - 2022-12-14
+
+- [700](https://github.com/chromaui/chromatic-cli/pull/700) Revert "Don't bundle package.json but rely on meow's runtime value instead"
+
+# 6.13.0 - 2022-12-13
+
+- [676](https://github.com/chromaui/chromatic-cli/pull/676) Log message when TurboSnap is unavailable
+- [671](https://github.com/chromaui/chromatic-cli/pull/671) Don't bundle package.json but rely on meow's runtime value instead
+- [675](https://github.com/chromaui/chromatic-cli/pull/675) Output progress updates in non-interactive mode every 10 seconds
+
+# 6.12.0 - 2022-12-09
+
+- [685](https://github.com/chromaui/chromatic-cli/pull/685) Support custom DNS IP and DNS failover IP using custom DNS resolver
+- [689](https://github.com/chromaui/chromatic-cli/pull/689) Improve the failure message when there's only one git commit
+
 # 6.11.3 - 2022-10-31
 
 - [670](https://github.com/chromaui/chromatic-cli/pull/670) Trace command errors for package manifest change

@@ -8,7 +8,7 @@ import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import makeZipFile from '../lib/compress';
 import uploadFiles from '../lib/uploadFiles';
-import { rewriteErrorMessage } from '../lib/utils';
+import { rewriteErrorMessage, throttle } from '../lib/utils';
 import { uploadZip, waitForUnpack } from '../lib/uploadZip';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
@@ -145,6 +145,7 @@ export const validateFiles = async (ctx: Context) => {
 };
 
 export const traceChangedFiles = async (ctx: Context, task: Task) => {
+  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
     ctx.turboSnap.bailReason = { missingStatsFile: true };
@@ -207,7 +208,11 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   }
 };
 
-async function uploadAsIndividualFiles(ctx: Context, task: Task) {
+async function uploadAsIndividualFiles(
+  ctx: Context,
+  task: Task,
+  updateProgress: (progress: number, total: number) => void
+) {
   const { lengths, paths, total } = ctx.fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
     GetUploadUrlsMutation,
@@ -224,12 +229,7 @@ async function uploadAsIndividualFiles(ctx: Context, task: Task) {
   task.output = starting().output;
 
   try {
-    await uploadFiles(ctx, files, (progress: number) => {
-      if (ctx.options.interactive) {
-        const percentage = Math.round((progress / total) * 100);
-        task.output = uploading({ percentage }).output;
-      }
-    });
+    await uploadFiles(ctx, files, (progress) => updateProgress(progress, total));
   } catch (e) {
     if (files.find(({ path }) => path === e.message)) {
       throw new Error(failed({ path: e.message }).output);
@@ -241,7 +241,11 @@ async function uploadAsIndividualFiles(ctx: Context, task: Task) {
   ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
 }
 
-async function uploadAsZipFile(ctx: Context, task: Task) {
+async function uploadAsZipFile(
+  ctx: Context,
+  task: Task,
+  updateProgress: (progress: number, total: number) => void
+) {
   const zipped = await makeZipFile(ctx);
   const { path, size: total } = zipped;
   const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
@@ -252,12 +256,7 @@ async function uploadAsZipFile(ctx: Context, task: Task) {
   task.output = starting().output;
 
   try {
-    await uploadZip(ctx, path, url, total, (progress) => {
-      if (ctx.options.interactive) {
-        const percentage = Math.round((progress / total) * 100);
-        task.output = uploading({ percentage }).output;
-      }
-    });
+    await uploadZip(ctx, path, url, total, (progress) => updateProgress(progress, total));
   } catch (e) {
     if (path === e.message) {
       throw new Error(failed({ path }).output);
@@ -275,15 +274,24 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(preparing)(ctx, task);
 
+  const updateProgress = throttle(
+    (progress, total) => {
+      const percentage = Math.round((progress / total) * 100);
+      task.output = uploading({ percentage }).output;
+    },
+    // Avoid spamming the logs with progress updates in non-interactive mode
+    ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
+  );
+
   if (ctx.options.zip) {
     try {
-      await uploadAsZipFile(ctx, task);
+      await uploadAsZipFile(ctx, task, updateProgress);
     } catch (err) {
       ctx.log.debug({ err }, 'Error uploading zip file');
-      await uploadAsIndividualFiles(ctx, task);
+      await uploadAsIndividualFiles(ctx, task, updateProgress);
     }
   } else {
-    await uploadAsIndividualFiles(ctx, task);
+    await uploadAsIndividualFiles(ctx, task, updateProgress);
   }
 };
 

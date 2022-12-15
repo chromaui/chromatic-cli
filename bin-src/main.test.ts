@@ -2,7 +2,8 @@ import { Readable } from 'stream';
 import execaDefault from 'execa';
 import { confirm } from 'node-ask';
 import treeKill from 'tree-kill';
-import fetch from 'node-fetch';
+import fetchDefault from 'node-fetch';
+import dns from 'dns';
 
 import jsonfile from 'jsonfile';
 import * as git from './git/git';
@@ -15,6 +16,7 @@ import uploadFiles from './lib/uploadFiles';
 import { runAll, runBuild } from './main';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
+import { DNSResolveAgent } from './io/getDNSResolveAgent';
 
 let announcedBuild;
 let publishedBuild;
@@ -35,9 +37,11 @@ beforeEach(() => {
   };
 });
 
+jest.mock('dns');
 jest.mock('execa');
 
 const execa = <jest.MockedFunction<typeof execaDefault>>execaDefault;
+const fetch = <jest.MockedFunction<typeof fetchDefault>>fetchDefault;
 
 jest.mock('jsonfile', () => {
   const originalModule = jest.requireActual('jsonfile');
@@ -453,6 +457,15 @@ it('passes autoAcceptChanges to the index based on branch', async () => {
 
   await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
   expect(announcedBuild).toMatchObject({ autoAcceptChanges: false });
+});
+
+it('uses custom DNS server if provided', async () => {
+  const ctx = getContext(['--project-token=asdf1234']);
+  ctx.env.CHROMATIC_DNS_SERVERS = ['1.2.3.4'];
+  await runBuild(ctx);
+  expect(dns.setServers).toHaveBeenCalledWith(['1.2.3.4']);
+  // The lookup isn't actually performed because fetch is mocked, so we just check the agent.
+  expect((fetch as any).mock.calls[0][1].agent).toBeInstanceOf(DNSResolveAgent);
 });
 
 describe('with TurboSnap', () => {

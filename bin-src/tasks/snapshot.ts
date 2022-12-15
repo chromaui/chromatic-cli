@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay } from '../lib/utils';
+import { delay, throttle } from '../lib/utils';
 import { Context, Task } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
@@ -64,6 +64,14 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       return `${spec.component.displayName} › ${spec.name}${suffix}`;
     });
 
+  const updateProgress = throttle(
+    ({ cursor, label }) => {
+      task.output = pending(ctx, { cursor, label }).output;
+    },
+    // Avoid spamming the logs with progress updates in non-interactive mode
+    ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
+  );
+
   const waitForBuild = async (): Promise<Context['build']> => {
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
@@ -73,12 +81,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       return ctx.build;
     }
 
-    if (ctx.options.interactive) {
-      const { inProgressCount } = ctx.build;
-      const cursor = actualTestCount - inProgressCount + 1;
-      const label = (testLabels && testLabels[cursor - 1]) || '';
-      task.output = pending(ctx, { cursor, label }).output;
-    }
+    const { inProgressCount } = ctx.build;
+    const cursor = actualTestCount - inProgressCount + 1;
+    const label = (testLabels && testLabels[cursor - 1]) || '';
+    updateProgress({ cursor, label });
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
     return waitForBuild();

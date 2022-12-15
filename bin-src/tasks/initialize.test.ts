@@ -61,7 +61,7 @@ describe('announceBuild', () => {
   });
 
   it('requires baselines for TurboSnap-enabled builds', async () => {
-    const build = { number: 1, status: 'ANNOUNCED' };
+    const build = { number: 1, status: 'ANNOUNCED', app: {} };
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
 
@@ -76,7 +76,7 @@ describe('announceBuild', () => {
   });
 
   it('does not require baselines for TurboSnap bailed builds', async () => {
-    const build = { number: 1, status: 'ANNOUNCED' };
+    const build = { number: 1, status: 'ANNOUNCED', app: {} };
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
 
