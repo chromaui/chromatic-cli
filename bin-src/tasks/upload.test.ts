@@ -124,6 +124,27 @@ describe('traceChangedFiles', () => {
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
   });
 
+  it('ignores package.json changes if lockfile does not have changes', async () => {
+    const deps = { 123: ['./example.stories.js'] };
+    findChangedDependencies.mockResolvedValue([]);
+    findChangedPackageFiles.mockResolvedValue(['./package.json']);
+    getDependentStoryFiles.mockResolvedValue(deps);
+
+    const ctx = {
+      env,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx, {} as any);
+
+    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+  });
+
   it('bails on package.json changes if it fails to retrieve lockfile changes', async () => {
     findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
     findChangedPackageFiles.mockResolvedValue(['./package.json']);
