@@ -74,6 +74,9 @@ jest.mock('node-fetch', () =>
               id: 'build-id',
               number: 1,
               status: 'ANNOUNCED',
+              app: {
+                turboSnapAvailability: 'APPLIED',
+              },
             },
           },
         };
