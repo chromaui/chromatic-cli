@@ -16,7 +16,6 @@ import {
   failed,
   initial,
   dryRun,
-  skipped,
   validating,
   invalid,
   preparing,
@@ -300,7 +299,6 @@ export default createTask({
   skip: (ctx: Context) => {
     if (ctx.skip) return true;
     if (ctx.options.dryRun) return dryRun().output;
-    if (ctx.options.storybookUrl) return skipped(ctx).output;
     return false;
   },
   steps: [

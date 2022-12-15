@@ -2,7 +2,6 @@ import task from '../components/task';
 import {
   initial,
   dryRun,
-  skipped,
   validating,
   invalid,
   tracing,
@@ -26,8 +25,6 @@ const storybookUrl = 'https://self-hosted-storybook.netlify.app';
 export const Initial = () => initial;
 
 export const DryRun = () => dryRun();
-
-export const Skipped = () => skipped({ options: { storybookUrl } } as any);
 
 export const Validating = () => validating();
 

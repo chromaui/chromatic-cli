@@ -42,15 +42,6 @@ export interface Flags {
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
-  doNotStart?: boolean;
-  exec?: string;
-  scriptName?: string;
-  storybookPort?: string;
-  storybookUrl?: string;
-  storybookHttps?: boolean;
-  storybookCert?: string;
-  storybookKey?: string;
-  storybookCa?: string;
   only?: string;
   preserveMissing?: boolean;
 }
@@ -84,22 +75,10 @@ export interface Options {
   buildScriptName: Flags['buildScriptName'];
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
-  scriptName: string;
-  exec: Flags['exec'];
-  noStart: Flags['doNotStart'];
-  https: {
-    cert: Flags['storybookCert'];
-    key: Flags['storybookKey'];
-    ca: Flags['storybookCa'];
-  };
   url?: string;
-  port: Flags['storybookPort'];
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];
   storybookConfigDir: Flags['storybookConfigDir'];
-  storybookUrl: Flags['storybookUrl'];
-  createTunnel: boolean;
-  useTunnel?: boolean;
 
   ownerName: string;
   branchName: string;
@@ -137,8 +116,6 @@ export interface Context {
   runtimeWarnings?: Error[];
   environment?: Record<string, string>;
   reportPath?: string;
-  stopApp?: () => void;
-  closeTunnel?: () => void;
   isPublishOnly?: boolean;
   isOnboarding: boolean;
   turboSnapAvailability?: string;

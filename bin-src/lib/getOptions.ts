@@ -12,10 +12,6 @@ import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
-import missingScriptName from '../ui/messages/errors/missingScriptName';
-import missingStorybookPort from '../ui/messages/errors/missingStorybookPort';
-import unknownStorybookPort from '../ui/messages/errors/unknownStorybookPort';
-import inferredOptions from '../ui/messages/info/inferredOptions';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import getStorybookConfiguration from './getStorybookConfiguration';
 
@@ -68,20 +64,9 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     buildScriptName: flags.buildScriptName,
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
-    scriptName: flags.scriptName,
-    exec: flags.exec,
-    noStart: !!flags.doNotStart,
-    https: flags.storybookHttps && {
-      cert: flags.storybookCert,
-      key: flags.storybookKey,
-      ca: flags.storybookCa,
-    },
-    port: flags.storybookPort,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
-    storybookUrl: flags.storybookUrl,
-    createTunnel: !flags.storybookUrl && env.CHROMATIC_CREATE_TUNNEL !== 'false',
 
     ownerName,
     branchName,
@@ -111,15 +96,12 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     throw new Error(invalidOnlyStoryNames());
   }
 
-  const { storybookBuildDir, exec } = options;
-  let { port, storybookUrl, noStart, scriptName, buildScriptName } = options;
+  const { storybookBuildDir } = options;
+  let { buildScriptName } = options;
 
   // We can only have one of these arguments
   const singularOpts = {
     buildScriptName: '--build-script-name',
-    scriptName: '--script-name',
-    exec: '--exec',
-    storybookUrl: '--storybook-url',
     storybookBuildDir: '--storybook-build-dir',
   };
   const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
@@ -150,19 +132,6 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     throw new Error(dependentOption('--trace-changed', '--only-changed'));
   }
 
-  // No need to start or build Storybook if we're going to fetch from a URL
-  if (storybookUrl) {
-    noStart = true;
-  }
-
-  if (noStart && options.exitOnceUploaded) {
-    throw new Error(invalidExitOnceUploaded());
-  }
-
-  if (scriptName && options.exitOnceUploaded) {
-    throw new Error(invalidExitOnceUploaded());
-  }
-
   if (options.junitReport && options.exitOnceUploaded) {
     throw new Error(incompatibleOptions(['--junit-report', '--exit-once-uploaded']));
   }
@@ -181,70 +150,26 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     log.info(deprecatedOption({ flag: 'preserveMissing' }));
   }
 
-  // Build Storybook instead of starting it
-  if (scriptName === undefined && !exec && !noStart && !storybookUrl && !port) {
-    if (storybookBuildDir) {
-      return { ...options, noStart: true, useTunnel: false };
-    }
-    const { scripts } = packageJson;
-    if (typeof buildScriptName !== 'string') {
-      buildScriptName = 'build-storybook';
-      if (!scripts[buildScriptName]) {
-        const [key] =
-          Object.entries(scripts as Record<string, string>).find(([, script]) =>
-            script.startsWith('build-storybook')
-          ) || [];
-        if (key) buildScriptName = key;
-      }
-    }
-    if (scripts && buildScriptName && scripts[buildScriptName]) {
-      return { ...options, noStart: true, useTunnel: false, buildScriptName };
-    }
-    throw new Error(missingBuildScriptName(buildScriptName));
+  // Build Storybook
+  if (storybookBuildDir) {
+    return options;
   }
 
-  // TurboSnap requires a static build with a webpack stats file.
-  if (options.onlyChanged) throw new Error(invalidOnlyChanged());
-
-  // Start Storybook on localhost and generate the URL to it
-  if (!storybookUrl) {
-    if (exec && !port) {
-      throw new Error(missingStorybookPort());
+  const { scripts } = packageJson;
+  if (typeof buildScriptName !== 'string') {
+    buildScriptName = 'build-storybook';
+    if (!scripts[buildScriptName]) {
+      const [key] =
+        Object.entries(scripts as Record<string, string>).find(([, script]) =>
+          script.startsWith('build-storybook')
+        ) || [];
+      if (key) buildScriptName = key;
     }
-
-    if (!exec && (!port || !noStart)) {
-      // If you don't provide a port or we need to start the command, let's look up the script for it
-      scriptName = scriptName || 'storybook';
-      const storybookScript = packageJson.scripts && packageJson.scripts[scriptName];
-
-      if (!storybookScript) {
-        throw new Error(missingScriptName(scriptName));
-      }
-
-      options.https =
-        options.https ||
-        (getStorybookConfiguration(storybookScript, '--https') && {
-          cert: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-cert')),
-          key: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-key')),
-          ca: resolveHomeDir(getStorybookConfiguration(storybookScript, '--ssl-ca')),
-        });
-
-      port = port || getStorybookConfiguration(storybookScript, '-p', '--port');
-      if (!port) {
-        throw new Error(unknownStorybookPort(scriptName));
-      }
-
-      if (log) log.info('', inferredOptions({ scriptName, port }));
-    }
-
-    storybookUrl = `${options.https ? 'https' : 'http'}://localhost:${port}`;
   }
 
-  return {
-    ...options,
-    noStart,
-    useTunnel: true,
-    url: storybookUrl,
-    scriptName,
-  };
+  if (scripts && buildScriptName && scripts[buildScriptName]) {
+    return { ...options, buildScriptName };
+  }
+
+  throw new Error(missingBuildScriptName(buildScriptName));
 }
