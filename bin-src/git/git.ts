@@ -212,8 +212,9 @@ export async function checkout(ref: string) {
   return execGitCommand(`git checkout ${ref}`);
 }
 
-export async function checkoutFile(ref: string, fileName: string) {
+export async function checkoutFile({ log }: Pick<Context, 'log'>, ref: string, fileName: string) {
   const { path: targetFileName } = await tmpFile({ postfix: `-${fileName}` });
+  log.debug(`Checking out file ${ref}:${fileName} at ${targetFileName}`);
   await execGitCommand(`git show ${ref}:${fileName} > ${targetFileName}`);
   return targetFileName;
 }

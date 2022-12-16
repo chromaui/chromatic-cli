@@ -1,16 +1,8 @@
 import path from 'path';
-import { buildDepTreeFromFiles, PkgTree } from 'snyk-nodejs-lockfile-parser';
 import { hasYarn } from 'yarn-or-npm';
 import { checkoutFile, findFiles, getRepositoryRoot } from '../git/git';
-
-const flattenDependencyTree = (
-  tree: PkgTree['dependencies'],
-  results = new Set<string>()
-): Set<string> =>
-  Object.values(tree).reduce((acc, dep) => {
-    acc.add(`${dep.name}@@${dep.version}`);
-    return flattenDependencyTree(dep.dependencies || {}, acc);
-  }, results);
+import { Context } from '../types';
+import { getDependencies } from './getDependencies';
 
 // Retrieve a set of values which is in either set, but not both.
 const xor = <T>(left: Set<T>, right: Set<T>) =>
@@ -22,9 +14,20 @@ const xor = <T>(left: Set<T>, right: Set<T>) =>
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
-export const findChangedDependencies = async (baselineCommits: string[]) => {
+export const findChangedDependencies = async (ctx: Context) => {
+  const { baselineCommits } = ctx.git;
   const manifestName = 'package.json';
   const lockfileName = hasYarn() ? 'yarn.lock' : 'package-lock.json';
+
+  if (!baselineCommits.length) {
+    ctx.log.debug('No baseline commits found');
+    return [];
+  }
+
+  ctx.log.debug(
+    { baselineCommits },
+    `Finding changed dependencies for ${baselineCommits.length} baselines`
+  );
 
   const rootPath = await getRepositoryRoot();
   const [rootManifestPath] = await findFiles(manifestName);
@@ -32,6 +35,8 @@ export const findChangedDependencies = async (baselineCommits: string[]) => {
   if (!rootManifestPath || !rootLockfilePath) {
     throw new Error(`Could not find ${manifestName} or ${lockfileName} in the repository`);
   }
+
+  ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
   // Handle monorepos with multiple package.json files.
   const nestedManifestPaths = await findFiles(`**/${manifestName}`);
@@ -43,34 +48,42 @@ export const findChangedDependencies = async (baselineCommits: string[]) => {
       return [manifestPath, lockfilePath || rootLockfilePath];
     })
   );
+  pathPairs.unshift([rootManifestPath, rootLockfilePath]);
+
+  ctx.log.debug({ pathPairs }, `Found ${pathPairs.length} manifest/lockfile pairs to check`);
 
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
 
   await Promise.all(
-    [[rootManifestPath, rootLockfilePath], ...pathPairs].map(
-      async ([manifestPath, lockfilePath]) => {
-        const headTree = await buildDepTreeFromFiles(rootPath, manifestPath, lockfilePath, true);
-        const headDependencies = flattenDependencyTree(headTree.dependencies);
+    pathPairs.map(async ([manifestPath, lockfilePath]) => {
+      const headDependencies = await getDependencies({ rootPath, manifestPath, lockfilePath });
+      ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
 
-        // Retrieve the union of dependencies which changed compared to each baseline.
-        // A change means either the version number is different or the dependency was added/removed.
-        // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
-        await Promise.all(
-          baselineCommits.map(async (commit) => {
-            const manifest = await checkoutFile(commit, manifestPath);
-            const lockfile = await checkoutFile(commit, lockfilePath);
-            const baselineTree = await buildDepTreeFromFiles(rootPath, manifest, lockfile, true);
-            const baselineDependencies = flattenDependencyTree(baselineTree.dependencies);
-            // eslint-disable-next-line no-restricted-syntax
-            for (const dependency of xor(baselineDependencies, headDependencies)) {
-              // Strip the version number so we get a set of package names.
-              changedDependencyNames.add(dependency.split('@@')[0]);
-            }
-          })
-        );
-      }
-    )
+      // Retrieve the union of dependencies which changed compared to each baseline.
+      // A change means either the version number is different or the dependency was added/removed.
+      // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
+      await Promise.all(
+        baselineCommits.map(async (commit) => {
+          const manifest = await checkoutFile(ctx, commit, manifestPath);
+          const lockfile = await checkoutFile(ctx, commit, lockfilePath);
+          const baselineDependencies = await getDependencies({
+            rootPath,
+            manifestPath: manifest,
+            lockfilePath: lockfile,
+          });
+          ctx.log.debug(
+            { commit, manifest, lockfile, baselineDependencies },
+            `Found baseline dependencies`
+          );
+          // eslint-disable-next-line no-restricted-syntax
+          for (const dependency of xor(baselineDependencies, headDependencies)) {
+            // Strip the version number so we get a set of package names.
+            changedDependencyNames.add(dependency.split('@@')[0]);
+          }
+        })
+      );
+    })
   );
 
   return Array.from(changedDependencyNames);

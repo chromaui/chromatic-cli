@@ -1,6 +1,7 @@
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import { findChangedDependencies } from './findChangedDependencies';
 import * as git from '../git/git';
+import TestLogger from './testLogger';
 
 jest.mock('snyk-nodejs-lockfile-parser');
 jest.mock('yarn-or-npm');
@@ -22,11 +23,16 @@ afterEach(() => {
   buildDepTree.mockReset();
 });
 
+const getContext: any = (baselineCommits: string[]) => ({
+  log: new TestLogger(),
+  git: { baselineCommits },
+});
+
 describe('findChangedDependencies', () => {
   it('returns nothing given no baselines', async () => {
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
-    await expect(findChangedDependencies([])).resolves.toEqual([]);
+    await expect(findChangedDependencies(getContext([]))).resolves.toEqual([]);
   });
 
   it('returns nothing when dependency tree is empty', async () => {
@@ -34,7 +40,7 @@ describe('findChangedDependencies', () => {
     checkoutFile.mockResolvedValueOnce('A.package-lock.json');
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual([]);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual([]);
   });
 
   it('returns nothing when dependency tree is unchanged', async () => {
@@ -46,7 +52,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual([]);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual([]);
   });
 
   it('returns updated dependencies', async () => {
@@ -62,7 +68,7 @@ describe('findChangedDependencies', () => {
       dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
     });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual(['react']);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual(['react']);
   });
 
   it('returns added/removed dependencies', async () => {
@@ -78,7 +84,7 @@ describe('findChangedDependencies', () => {
       dependencies: { vue: { name: 'vue', version: '3.2.0', dependencies: {} } },
     });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual(['vue', 'react']);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual(['vue', 'react']);
   });
 
   it('finds updated transient dependencies', async () => {
@@ -110,7 +116,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual(['loose-envify']);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual(['loose-envify']);
   });
 
   it('combines and dedupes changes for multiple baselines', async () => {
@@ -142,7 +148,10 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(['A', 'B'])).resolves.toEqual(['react', 'lodash']);
+    await expect(findChangedDependencies(getContext(['A', 'B']))).resolves.toEqual([
+      'react',
+      'lodash',
+    ]);
   });
 
   it('looks for manifest and lock files in subpackages', async () => {
@@ -160,7 +169,7 @@ describe('findChangedDependencies', () => {
     });
 
     // Baseline A
-    checkoutFile.mockImplementation((commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValueOnce({
       dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
     });
@@ -168,7 +177,7 @@ describe('findChangedDependencies', () => {
       dependencies: { lodash: { name: 'lodash', version: '4.18.0', dependencies: {} } },
     });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual(['react', 'lodash']);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual(['react', 'lodash']);
 
     // Root manifest and lock files are checked
     expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'package-lock.json', true);
@@ -200,10 +209,10 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
-    await expect(findChangedDependencies(['A'])).resolves.toEqual([]);
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual([]);
 
     expect(buildDepTree).toHaveBeenCalledWith(
       '/root',
