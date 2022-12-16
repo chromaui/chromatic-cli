@@ -142,6 +142,7 @@ export interface Context {
     parentCommits?: string[];
     baselineCommits?: string[];
     changedFiles?: string[];
+    changedDependencyNames?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
     packageManifestChanges?: { changedFiles: string[]; commit: string }[];

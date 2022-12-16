@@ -157,10 +157,13 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
   const { baselineCommits, changedFiles, packageManifestChanges } = ctx.git;
   try {
-    const changedDependencyNames = await findChangedDependencies(baselineCommits).catch((e) => {
-      ctx.log.debug(e);
+    const changedDependencyNames = await findChangedDependencies(baselineCommits).catch((err) => {
+      const { name, message, stack, code } = err;
+      ctx.log.debug({ name, message, stack, code });
     });
-    if (!changedDependencyNames) {
+    if (changedDependencyNames) {
+      ctx.git.changedDependencyNames = changedDependencyNames;
+    } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
       const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
       if (changedPackageFiles.length > 0) {

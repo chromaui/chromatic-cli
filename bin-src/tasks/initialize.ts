@@ -44,6 +44,7 @@ export const announceBuild = async (ctx: Context) => {
     version,
     matchesBranch,
     changedFiles,
+    changedDependencyNames,
     replacementBuildIds,
     committedAt,
     baselineCommits,
