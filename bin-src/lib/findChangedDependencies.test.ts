@@ -24,9 +24,10 @@ afterEach(() => {
   buildDepTree.mockReset();
 });
 
-const getContext: any = (baselineCommits: string[]) => ({
+const getContext: any = (baselineCommits: string[], options = {}) => ({
   log: new TestLogger(),
   git: { baselineCommits },
+  options,
 });
 
 describe('findChangedDependencies', () => {
@@ -236,5 +237,39 @@ describe('findChangedDependencies', () => {
       'A.subdir/package-lock.json',
       true
     );
+  });
+
+  it('ignores manifest files matching --untraced', async () => {
+    // HEAD
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
+    });
+
+    // Baseline A
+    checkoutFile.mockResolvedValueOnce('A.package.json');
+    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
+    });
+
+    const ctx = getContext(['A'], { untraced: ['package.json'] });
+    await expect(findChangedDependencies(ctx)).resolves.toEqual([]);
+  });
+
+  it('ignores lockfiles matching --untraced', async () => {
+    // HEAD
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
+    });
+
+    // Baseline A
+    checkoutFile.mockResolvedValueOnce('A.package.json');
+    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
+    });
+
+    const ctx = getContext(['A'], { untraced: ['yarn.lock'] });
+    await expect(findChangedDependencies(ctx)).resolves.toEqual([]);
   });
 });

@@ -1,8 +1,10 @@
 import path from 'path';
+
 import { checkoutFile, findFiles, getRepositoryRoot } from '../git/git';
 import { Context } from '../types';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
+import { matchesFile } from './utils';
 
 const PACKAGE_JSON = 'package.json';
 const PACKAGE_LOCK = 'package-lock.json';
@@ -12,6 +14,7 @@ const YARN_LOCK = 'yarn.lock';
 // E.g. ['react', 'react-dom', '@storybook/react']
 export const findChangedDependencies = async (ctx: Context) => {
   const { baselineCommits } = ctx.git;
+  const { untraced = [] } = ctx.options;
 
   if (!baselineCommits.length) {
     ctx.log.debug('No baseline commits found');
@@ -52,14 +55,23 @@ export const findChangedDependencies = async (ctx: Context) => {
     })
   );
   pathPairs.unshift([rootManifestPath, rootLockfilePath]);
-
   ctx.log.debug({ pathPairs }, `Found ${pathPairs.length} manifest/lockfile pairs to check`);
+
+  const tracedPairs = pathPairs.filter(([manifestPath, lockfilePath]) => {
+    if (untraced.some((glob) => matchesFile(glob, manifestPath))) return false;
+    if (untraced.some((glob) => matchesFile(glob, lockfilePath))) return false;
+    return true;
+  });
+  const untracedCount = pathPairs.length - tracedPairs.length;
+  if (untracedCount) {
+    ctx.log.debug(`Skipping ${untracedCount} manifest/lockfile pairs due to --untraced`);
+  }
 
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
 
   await Promise.all(
-    pathPairs.map(async ([manifestPath, lockfilePath]) => {
+    tracedPairs.map(async ([manifestPath, lockfilePath]) => {
       const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
       ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
 
