@@ -13,11 +13,13 @@ export const getDependencies = async ({
   rootPath,
   manifestPath,
   lockfilePath,
+  includeDev = true,
 }: {
   rootPath: string;
   manifestPath: string;
   lockfilePath: string;
+  includeDev?: boolean;
 }) => {
-  const headTree = await buildDepTreeFromFiles(rootPath, manifestPath, lockfilePath, true);
+  const headTree = await buildDepTreeFromFiles(rootPath, manifestPath, lockfilePath, includeDev);
   return flattenDependencyTree(headTree.dependencies);
 };

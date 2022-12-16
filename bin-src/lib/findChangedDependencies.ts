@@ -2,15 +2,8 @@ import path from 'path';
 import { hasYarn } from 'yarn-or-npm';
 import { checkoutFile, findFiles, getRepositoryRoot } from '../git/git';
 import { Context } from '../types';
+import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
-
-// Retrieve a set of values which is in either set, but not both.
-const xor = <T>(left: Set<T>, right: Set<T>) =>
-  Array.from(right.values()).reduce((acc, value) => {
-    if (acc.has(value)) acc.delete(value);
-    else acc.add(value);
-    return acc;
-  }, new Set(left));
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
@@ -64,23 +57,14 @@ export const findChangedDependencies = async (ctx: Context) => {
       // A change means either the version number is different or the dependency was added/removed.
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
       await Promise.all(
-        baselineCommits.map(async (commit) => {
-          const manifest = await checkoutFile(ctx, commit, manifestPath);
-          const lockfile = await checkoutFile(ctx, commit, lockfilePath);
-          const baselineDependencies = await getDependencies({
+        baselineCommits.map(async (ref) => {
+          const baselineChanges = await compareBaseline(ctx, headDependencies, {
+            ref,
             rootPath,
-            manifestPath: manifest,
-            lockfilePath: lockfile,
+            manifestPath: await checkoutFile(ctx, ref, manifestPath),
+            lockfilePath: await checkoutFile(ctx, ref, lockfilePath),
           });
-          ctx.log.debug(
-            { commit, manifest, lockfile, baselineDependencies },
-            `Found baseline dependencies`
-          );
-          // eslint-disable-next-line no-restricted-syntax
-          for (const dependency of xor(baselineDependencies, headDependencies)) {
-            // Strip the version number so we get a set of package names.
-            changedDependencyNames.add(dependency.split('@@')[0]);
-          }
+          baselineChanges.forEach((change) => changedDependencyNames.add(change));
         })
       );
     })

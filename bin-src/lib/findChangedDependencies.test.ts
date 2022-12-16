@@ -1,6 +1,7 @@
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
-import { findChangedDependencies } from './findChangedDependencies';
+
 import * as git from '../git/git';
+import { findChangedDependencies } from './findChangedDependencies';
 import TestLogger from './testLogger';
 
 jest.mock('snyk-nodejs-lockfile-parser');
