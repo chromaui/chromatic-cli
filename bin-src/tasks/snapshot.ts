@@ -141,7 +141,7 @@ export default createTask({
     if (ctx.skip) return true;
     if (ctx.skipSnapshots) return skipped(ctx).output;
     if (ctx.options.dryRun) return dryRun().output;
-    return false;
+    return !ctx.build.actualTestCount;
   },
   steps: [transitionTo(pending), takeSnapshots],
 });
