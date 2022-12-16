@@ -213,7 +213,7 @@ export async function checkout(ref: string) {
 }
 
 export async function checkoutFile(ref: string, fileName: string) {
-  const { path: targetFileName } = await tmpFile();
+  const { path: targetFileName } = await tmpFile({ postfix: `-${fileName}` });
   await execGitCommand(`git show ${ref}:${fileName} > ${targetFileName}`);
   return targetFileName;
 }
