@@ -12,7 +12,7 @@ const getContext: any = (baselineCommits: string[]) => ({
 describe('compareBaseline', () => {
   it('finds changed dependency names', async () => {
     const ctx = getContext();
-    const headDependencies = await getDependencies({
+    const headDependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
       manifestPath: 'react-async-10-package.json',
       lockfilePath: 'react-async-10-yarn.lock',
@@ -29,7 +29,7 @@ describe('compareBaseline', () => {
 
   it('finds added dependency names', async () => {
     const ctx = getContext();
-    const headDependencies = await getDependencies({
+    const headDependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
       manifestPath: 'react-async-9-package.json',
       lockfilePath: 'react-async-9-yarn.lock',
@@ -46,7 +46,7 @@ describe('compareBaseline', () => {
 
   it('finds removed dependency names', async () => {
     const ctx = getContext();
-    const headDependencies = await getDependencies({
+    const headDependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
       manifestPath: 'plain-package.json',
       lockfilePath: 'plain-yarn.lock',
@@ -63,7 +63,7 @@ describe('compareBaseline', () => {
 
   it('finds nothing given identical files', async () => {
     const ctx = getContext();
-    const headDependencies = await getDependencies({
+    const headDependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
       manifestPath: 'plain-package.json',
       lockfilePath: 'plain-yarn.lock',

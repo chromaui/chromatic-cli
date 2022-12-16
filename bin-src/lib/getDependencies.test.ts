@@ -4,11 +4,11 @@ import packageJson from '../../package.json';
 import { checkoutFile } from '../git/git';
 import TestLogger from './testLogger';
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger() } as any;
 
 describe('getDependencies', () => {
   it('should return a set of dependencies', async () => {
-    const dependencies = await getDependencies({
+    const dependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../../'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -27,7 +27,7 @@ describe('getDependencies', () => {
   });
 
   it('should handle checked out manifest and lock files', async () => {
-    const dependencies = await getDependencies({
+    const dependencies = await getDependencies(ctx, {
       rootPath: '/',
       manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json'),
       lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock'),
@@ -46,7 +46,7 @@ describe('getDependencies', () => {
     // chromatic@6.12.0
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
 
-    const dependencies = await getDependencies({
+    const dependencies = await getDependencies(ctx, {
       rootPath: '/',
       manifestPath: await checkoutFile(ctx, commit, 'package.json'),
       lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock'),

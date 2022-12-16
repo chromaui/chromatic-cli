@@ -60,7 +60,7 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   await Promise.all(
     pathPairs.map(async ([manifestPath, lockfilePath]) => {
-      const headDependencies = await getDependencies({ rootPath, manifestPath, lockfilePath });
+      const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
       ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
 
       // Retrieve the union of dependencies which changed compared to each baseline.

@@ -22,7 +22,7 @@ export const compareBaseline = async (
   baselineConfig: BaselineConfig
 ) => {
   const changedDependencyNames = new Set<string>();
-  const baselineDependencies = await getDependencies(baselineConfig);
+  const baselineDependencies = await getDependencies(ctx, baselineConfig);
 
   ctx.log.debug({ ...baselineConfig, baselineDependencies }, `Found baseline dependencies`);
   // eslint-disable-next-line no-restricted-syntax
