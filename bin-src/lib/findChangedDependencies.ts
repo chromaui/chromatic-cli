@@ -1,16 +1,17 @@
 import path from 'path';
-import { hasYarn } from 'yarn-or-npm';
 import { checkoutFile, findFiles, getRepositoryRoot } from '../git/git';
 import { Context } from '../types';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 
+const PACKAGE_JSON = 'package.json';
+const PACKAGE_LOCK = 'package-lock.json';
+const YARN_LOCK = 'yarn.lock';
+
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
 export const findChangedDependencies = async (ctx: Context) => {
   const { baselineCommits } = ctx.git;
-  const manifestName = 'package.json';
-  const lockfileName = hasYarn() ? 'yarn.lock' : 'package-lock.json';
 
   if (!baselineCommits.length) {
     ctx.log.debug('No baseline commits found');
@@ -23,20 +24,29 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   const rootPath = await getRepositoryRoot();
-  const [rootManifestPath] = await findFiles(manifestName);
-  const [rootLockfilePath] = await findFiles(lockfileName);
+  const [rootManifestPath] = await findFiles(PACKAGE_JSON);
+  const [rootLockfilePath] = await findFiles(YARN_LOCK, PACKAGE_LOCK);
   if (!rootManifestPath || !rootLockfilePath) {
-    throw new Error(`Could not find ${manifestName} or ${lockfileName} in the repository`);
+    ctx.log.debug(
+      { rootPath, rootManifestPath, rootLockfilePath },
+      'No manifest or lockfile found at the root of the repository'
+    );
+    throw new Error(
+      `Could not find ${PACKAGE_JSON}, ${PACKAGE_LOCK} or ${YARN_LOCK} at the root of the repository`
+    );
   }
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
   // Handle monorepos with multiple package.json files.
-  const nestedManifestPaths = await findFiles(`**/${manifestName}`);
+  const nestedManifestPaths = await findFiles(`**/${PACKAGE_JSON}`);
   const pathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
-      const [lockfilePath] = await findFiles(`${dirname}/${lockfileName}`);
+      const [lockfilePath] = await findFiles(
+        `${dirname}/${YARN_LOCK}`,
+        `${dirname}/${PACKAGE_LOCK}`
+      );
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
     })

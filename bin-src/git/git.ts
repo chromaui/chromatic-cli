@@ -231,7 +231,7 @@ export async function getRepositoryRoot() {
   return execGitCommand(`git rev-parse --show-toplevel`);
 }
 
-export async function findFiles(pattern: string) {
-  const files = await execGitCommand(`git ls-files -z '${pattern}'`);
+export async function findFiles(...patterns: string[]) {
+  const files = await execGitCommand(`git ls-files -z ${patterns.map((p) => `'${p}'`).join(' ')}`);
   return files.split('\0').filter(Boolean);
 }
