@@ -41,6 +41,14 @@ export const stats = ({
 
 export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
   const { build, options, onlyStoryFiles } = ctx;
+  if (build.actualTestCount === 0) {
+    return {
+      status: 'pending',
+      title: 'Finalizing build',
+      output: onlyStoryFiles ? 'All tests skipped' : 'No tests run',
+    };
+  }
+
   const { errors, tests, skips } = stats(ctx);
   const matching = options.onlyStoryNames
     ? ` for stories matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
