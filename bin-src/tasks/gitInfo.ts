@@ -188,11 +188,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         });
 
       if (!interactive) {
-        ctx.log.info(
-          `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
-            .map((f) => `  ${f}`)
-            .join('\n')}`
-        );
+        const list = ctx.git.changedFiles.length
+          ? `:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`
+          : '';
+        ctx.log.info(`Found ${ctx.git.changedFiles.length} changed files${list}`);
       }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };

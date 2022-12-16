@@ -163,6 +163,12 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     });
     if (changedDependencyNames) {
       ctx.git.changedDependencyNames = changedDependencyNames;
+      if (!ctx.options.interactive) {
+        const list = changedDependencyNames.length
+          ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
+          : '';
+        ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
+      }
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
       const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
