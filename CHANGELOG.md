@@ -1,3 +1,8 @@
+# 6.14.0 - 2022-12-19
+
+- [683](https://github.com/chromaui/chromatic-cli/pull/683) Enhanced TurboSnap: Trace dependency changes instead of bailing out
+- [694](https://github.com/chromaui/chromatic-cli/pull/694) Remove tunnel flags
+
 # 6.13.1 - 2022-12-14
 
 - [700](https://github.com/chromaui/chromatic-cli/pull/700) Revert "Don't bundle package.json but rely on meow's runtime value instead"
