@@ -1,11 +1,14 @@
 import path from 'path';
 
-import { matchesFile } from './utils';
+import { isPackageManifestFile, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
 import bailFile from '../ui/messages/warnings/bailFile';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import { Context, Module, Reason, Stats } from '../types';
+
+type FilePath = string;
+type NormalizedName = string;
 
 // Bail whenever one of these was changed
 const LOCKFILES = [
@@ -15,22 +18,27 @@ const LOCKFILES = [
   /\/yarn\.lock$/,
 ];
 
-const GLOBALS = [/^package\.json$/, /\/package\.json$/];
-
 // Ignore these while tracing dependencies
-const EXTERNALS = [/^node_modules\//, /\/node_modules\//, /\/webpack\/runtime\//, /^\(webpack\)/];
+const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
 const isPackageLockFile = (name: string) => LOCKFILES.some((re) => re.test(name));
-const isPackageFile = (name: string) => GLOBALS.some((re) => re.test(name));
 const isUserModule = (mod: Module | Reason) =>
   (mod as Module).id !== undefined &&
   (mod as Module).id !== null &&
-  !EXTERNALS.some((re) => re.test((mod as Module).name || (mod as Reason).moduleName));
+  !INTERNALS.some((re) => re.test((mod as Module).name || (mod as Reason).moduleName));
 
 // Replaces Windows-style backslash path separators with POSIX-style forward slashes, because the
 // Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
 // already contains forward slashes, because that's what git yields even on Windows.
 const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
+
+// For any path in node_modules, return the package name, including scope prefix if any.
+const getPackageName = (modulePath: string) => {
+  const [, scopedName] = modulePath.match(/\/node_modules\/(@[\w-]+\/[\w-]+)\//) || [];
+  if (scopedName) return scopedName;
+  const [, unscopedName] = modulePath.match(/\/node_modules\/([\w-]+)\//) || [];
+  return unscopedName;
+};
 
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
@@ -55,7 +63,8 @@ export async function getDependentStoryFiles(
   ctx: Context,
   stats: Stats,
   statsPath: string,
-  changedFiles: string[]
+  changedFiles: string[],
+  changedDependencies: string[] = []
 ) {
   const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
   const {
@@ -70,19 +79,14 @@ export async function getDependentStoryFiles(
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
-  const normalize = (posixPath: string) => {
+  const normalize = (posixPath: FilePath): NormalizedName => {
     const CSF_REGEX = /\s+sync\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
-    let newPath = normalizePath(posixPath, rootPath, baseDir);
-    // This regex test is to ensure file names do not include url parameters
-    // or match the CSF glob we get back in the stats file. We added this because
-    // CSS/SCSS files were getting ?ngResource appended on the end of file names
-    // in the stats file.
-    if (URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)) {
-      newPath = newPath.replace(URL_PARAM_REGEX, '');
-    }
-
-    return newPath;
+    const newPath = normalizePath(posixPath, rootPath, baseDir);
+    // Trim query params such as `?ngResource` which are sometimes present
+    return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
+      ? newPath.replace(URL_PARAM_REGEX, '')
+      : newPath;
   };
 
   const storybookDir = normalize(posix(storybookConfigDir));
@@ -103,37 +107,43 @@ export async function getDependentStoryFiles(
     `/virtual:/@storybook/builder-vite/vite-app.js`,
   ].map(normalize);
 
-  const modulesByName: Record<string, Module> = {};
-  const namesById: Record<number, string> = {};
-  const reasonsById: Record<number, string[]> = {};
-  const csfGlobsByName: Record<string, true> = {};
+  const modulesByName = new Map<NormalizedName, Module>();
+  const nodeModules = new Map<string, NormalizedName[]>();
+  const namesById = new Map<Module['id'], NormalizedName>();
+  const reasonsById = new Map<Module['id'], NormalizedName[]>();
+  const csfGlobsByName = new Set<NormalizedName>();
 
   stats.modules
     .filter((mod) => isUserModule(mod))
     .forEach((mod) => {
       const normalizedName = normalize(mod.name);
-      modulesByName[normalizedName] = mod;
-      namesById[mod.id] = normalizedName;
+      modulesByName.set(normalizedName, mod);
+      namesById.set(mod.id, normalizedName);
 
-      if (mod.modules) {
-        mod.modules.forEach((m) => {
-          modulesByName[normalize(m.name)] = mod;
-        });
+      const packageName = getPackageName(mod.name);
+      if (packageName) {
+        // Track all modules from any node_modules directory by their package name, so we can mark
+        // all those files "changed" if a dependency (version) changes, while still being able to
+        // "untrace" certain files (or globs) in those packages.
+        if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
+        nodeModules.get(packageName).push(normalizedName);
       }
 
-      reasonsById[mod.id] = mod.reasons
+      if (mod.modules) {
+        mod.modules.forEach((m) => modulesByName.set(normalize(m.name), mod));
+      }
+
+      const normalizedReasons = mod.reasons
         .map((reason) => normalize(reason.moduleName))
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
+      reasonsById.set(mod.id, normalizedReasons);
 
-      if (reasonsById[mod.id].some((reason) => storiesEntryFiles.includes(reason))) {
-        csfGlobsByName[normalizedName] = true;
+      if (reasonsById.get(mod.id).some((reason) => storiesEntryFiles.includes(reason))) {
+        csfGlobsByName.add(normalizedName);
       }
     });
 
-  const globs = Object.keys(csfGlobsByName);
-  const modules = Object.keys(modulesByName);
-
-  if (globs.length === 0) {
+  if (csfGlobsByName.size === 0) {
     // Check for misconfigured Storybook configDir. Only applicable to v6 store because v7 store
     // does not use configDir in the entry file path so there's no fix to recommend there.
     const storiesEntryRegExp = /^(.+\/)?generated-stories-entry\.js$/;
@@ -145,7 +155,7 @@ export async function getDependentStoryFiles(
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 
-  const isCsfGlob = (name: string) => !!csfGlobsByName[name];
+  const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);
   const isStorybookFile = (name: string) =>
     name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
   const isStaticFile = (name: string) =>
@@ -161,13 +171,17 @@ export async function getDependentStoryFiles(
   }
 
   function files(moduleName: string) {
-    const mod = modulesByName[moduleName];
+    const mod = modulesByName.get(moduleName);
     if (!mod) return [moduleName];
     // Normalize module names, if there are any
     return mod.modules?.length ? mod.modules.map((m) => normalize(m.name)) : [normalize(mod.name)];
   }
 
-  const tracedFiles = changedFiles.filter(untrace);
+  const tracedFiles = [
+    // Convert dependency names into their corresponding files which occur in the stats file.
+    ...changedDependencies.flatMap((packageName) => nodeModules.get(packageName) || []),
+    ...changedFiles,
+  ].filter(untrace);
   const tracedPaths = new Set<string>();
   const affectedModuleIds = new Set<string | number>();
   const checkedIds = {};
@@ -178,22 +192,24 @@ export async function getDependentStoryFiles(
     baseDir,
     storybookDir,
     staticDirs,
-    globs,
-    modules,
+    globs: Array.from(csfGlobsByName),
+    modules: Array.from(modulesByName.keys()),
     tracedFiles,
     tracedPaths,
     affectedModuleIds,
     bailReason: undefined,
   };
 
-  const changedPackageFiles = tracedFiles.filter(isPackageLockFile);
-  if (changedPackageFiles.length) {
-    ctx.turboSnap.bailReason = { changedPackageFiles };
-    // If package.json dependencies changed, we still want to use the same TurboSnap bail reason
-    // for now.
-    // if package.jsons are untraced, don't bail, even when its dependency fields have changed
-  } else if (ctx.git?.changedPackageManifests?.length && tracedFiles.filter(isPackageFile).length) {
-    ctx.turboSnap.bailReason = { changedPackageFiles: ctx.git.changedPackageManifests };
+  const changedPackageLockFiles = tracedFiles.filter(isPackageLockFile);
+
+  if (nodeModules.size === 0 && changedDependencies.length > 0) {
+    // If we didn't find any node_modules in the stats file, it's probably incomplete and we can't
+    // trace changed dependencies, so we bail just in case.
+    ctx.turboSnap.bailReason = {
+      changedPackageFiles: ctx.git.changedFiles
+        .filter(isPackageManifestFile)
+        .concat(changedPackageLockFiles),
+    };
   }
 
   function shouldBail(moduleName: string) {
@@ -211,18 +227,17 @@ export async function getDependentStoryFiles(
   function traceName(name: string, tracePath: string[] = []) {
     if (ctx.turboSnap.bailReason || isCsfGlob(name)) return;
     if (shouldBail(name)) return;
-
-    const { id } = modulesByName[name] || {};
-    const normalizedName = namesById[id];
+    const { id } = modulesByName.get(name) || {};
+    const normalizedName = namesById.get(id);
     if (shouldBail(normalizedName)) return;
 
-    if (!id || !reasonsById[id] || checkedIds[id]) return;
+    if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
 
-    if (reasonsById[id].some(isCsfGlob)) {
+    if (reasonsById.get(id).some(isCsfGlob)) {
       affectedModuleIds.add(id);
-      tracedPaths.add([...tracePath, id].map((pid) => namesById[pid]).join('\n'));
+      tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
   }
 
@@ -232,16 +247,24 @@ export async function getDependentStoryFiles(
   while (toCheck.length > 0) {
     const [id, tracePath] = toCheck.pop();
     checkedIds[id] = true;
-    reasonsById[id].filter(untrace).forEach((reason) => traceName(reason, tracePath));
+    reasonsById
+      .get(id)
+      .filter(untrace)
+      .forEach((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
-    Array.from(affectedModuleIds).map((id) => [String(id), files(namesById[id])])
+    Array.from(affectedModuleIds).map((id) => [String(id), files(namesById.get(id))])
   );
 
   if (ctx.options.traceChanged) {
     ctx.log.info(
-      tracedAffectedFiles(ctx, { changedFiles, affectedModules, modulesByName, normalize })
+      tracedAffectedFiles(ctx, {
+        changedFiles: ctx.git.changedFiles,
+        affectedModules,
+        modulesByName: Object.fromEntries(modulesByName),
+        normalize,
+      })
     );
     ctx.log.info('');
   }

@@ -140,10 +140,12 @@ export interface Context {
     slug?: string;
     mergeCommit?: string;
     parentCommits?: string[];
+    baselineCommits?: string[];
     changedFiles?: string[];
+    changedDependencyNames?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: true | string) => boolean;
-    changedPackageManifests?: string[];
+    packageManifestChanges?: { changedFiles: string[]; commit: string }[];
   };
   storybook: {
     version: string;
@@ -254,6 +256,8 @@ export interface Context {
     modules: string[];
     tracedFiles: string[];
     tracedPaths: Set<string>;
+    changedDependencyNames: Set<string>;
+    changedManifestFiles: Set<string>;
     affectedModuleIds: Set<string | number>;
     bailReason: {
       changedPackageFiles?: string[];

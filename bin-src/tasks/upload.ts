@@ -28,6 +28,9 @@ import {
 } from '../ui/tasks/upload';
 import { Context, Task } from '../types';
 import { readStatsFile } from './read-stats-file';
+import bailFile from '../ui/messages/warnings/bailFile';
+import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
+import { findChangedDependencies } from '../lib/findChangedDependencies';
 
 const GetUploadUrlsMutation = `
   mutation GetUploadUrlsMutation($paths: [String!]!) {
@@ -152,10 +155,37 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   transitionTo(tracing)(ctx, task);
 
   const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
-  const { changedFiles } = ctx.git;
+  const { changedFiles, packageManifestChanges } = ctx.git;
   try {
+    const changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
+      const { name, message, stack, code } = err;
+      ctx.log.debug({ name, message, stack, code });
+    });
+    if (changedDependencyNames) {
+      ctx.git.changedDependencyNames = changedDependencyNames;
+      if (!ctx.options.interactive) {
+        const list = changedDependencyNames.length
+          ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
+          : '';
+        ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
+      }
+    } else {
+      ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
+      const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
+      if (changedPackageFiles.length > 0) {
+        ctx.turboSnap.bailReason = { changedPackageFiles };
+        ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
+        return;
+      }
+    }
     const stats = await readStatsFile(statsPath);
-    const onlyStoryFiles = await getDependentStoryFiles(ctx, stats, statsPath, changedFiles);
+    const onlyStoryFiles = await getDependentStoryFiles(
+      ctx,
+      stats,
+      statsPath,
+      changedFiles,
+      changedDependencyNames || []
+    );
     if (onlyStoryFiles) {
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
       if (!ctx.options.interactive) {

@@ -1,5 +1,7 @@
 import execa from 'execa';
 import { EOL } from 'os';
+import pLimit from 'p-limit';
+import { file as tmpFile } from 'tmp-promise';
 
 import { Context } from '../types';
 
@@ -211,6 +213,23 @@ export async function checkout(ref: string) {
   return execGitCommand(`git checkout ${ref}`);
 }
 
+const fileCache = {};
+const limitConcurrency = pLimit(10);
+export async function checkoutFile({ log }: Pick<Context, 'log'>, ref: string, fileName: string) {
+  const pathspec = `${ref}:${fileName}`;
+  if (!fileCache[pathspec]) {
+    fileCache[pathspec] = limitConcurrency(async () => {
+      const { path: targetFileName } = await tmpFile({
+        postfix: `-${fileName.replace(/\//g, '--')}`,
+      });
+      log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
+      await execGitCommand(`git show ${pathspec} > ${targetFileName}`);
+      return targetFileName;
+    });
+  }
+  return fileCache[pathspec];
+}
+
 export async function checkoutPrevious() {
   return execGitCommand(`git checkout -`);
 }
@@ -221,4 +240,9 @@ export async function discardChanges() {
 
 export async function getRepositoryRoot() {
   return execGitCommand(`git rev-parse --show-toplevel`);
+}
+
+export async function findFiles(...patterns: string[]) {
+  const files = await execGitCommand(`git ls-files -z ${patterns.map((p) => `'${p}'`).join(' ')}`);
+  return files.split('\0').filter(Boolean);
 }

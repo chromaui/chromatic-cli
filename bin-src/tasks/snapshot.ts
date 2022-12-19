@@ -81,10 +81,12 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       return ctx.build;
     }
 
-    const { inProgressCount } = ctx.build;
-    const cursor = actualTestCount - inProgressCount + 1;
-    const label = (testLabels && testLabels[cursor - 1]) || '';
-    updateProgress({ cursor, label });
+    if (actualTestCount > 0) {
+      const { inProgressCount } = ctx.build;
+      const cursor = actualTestCount - inProgressCount + 1;
+      const label = (testLabels && testLabels[cursor - 1]) || '';
+      updateProgress({ cursor, label });
+    }
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
     return waitForBuild();

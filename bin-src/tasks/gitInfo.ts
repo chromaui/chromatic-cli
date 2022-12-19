@@ -6,7 +6,7 @@ import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesFile } from '../lib/utils';
+import { isPackageManifestFile, matchesFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -23,10 +23,6 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
-import {
-  getDependencyChangedPackageManifests,
-  getChangedPackageManifests,
-} from '../lib/getDependencyChangedPackageManifests';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -150,44 +146,57 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     }
 
     const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
-    const baselineCommits = baselineBuilds.map((build) => build.commit);
-    ctx.log.debug(`Found baselineCommits: ${baselineCommits.join(', ')}`);
+    ctx.git.baselineCommits = baselineBuilds.map((build) => build.commit);
+    ctx.log.debug(`Found baselineCommits: ${ctx.git.baselineCommits.join(', ')}`);
 
     // Use the most recent baseline to determine final CLI output if we end up skipping the build.
     // Note this will get overwritten if we end up not skipping the build.
     ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0] as any;
 
     try {
-      const results = await Promise.all(
-        baselineBuilds.map(async (build) => ({
-          build,
-          ...(await getChangedFilesWithReplacement(ctx, build)),
-        }))
+      // Map the baseline builds to their changed files, falling back to an earlier "replacement"
+      // build if the baseline commit no longer exists (e.g. due to force-pushing).
+      const changedFilesWithInfo = await Promise.all(
+        baselineBuilds.map(async (build) => {
+          const changedFilesWithReplacement = await getChangedFilesWithReplacement(ctx, build);
+          return { build, ...changedFilesWithReplacement };
+        })
       );
-      ctx.git.changedFiles = Array.from(new Set(results.flatMap((r) => r.changedFiles)));
 
-      ctx.git.replacementBuildIds = results
+      // Take the distinct union of changed files across all baselines.
+      ctx.git.changedFiles = Array.from(
+        new Set(changedFilesWithInfo.flatMap(({ changedFiles }) => changedFiles))
+      );
+
+      // Track changed package manifest files along with the commit they were changed in.
+      ctx.git.packageManifestChanges = changedFilesWithInfo.flatMap(
+        ({ build, changedFiles, replacementBuild }) => {
+          const manifestFiles = changedFiles.filter(isPackageManifestFile);
+          return manifestFiles.length
+            ? [{ changedFiles: manifestFiles, commit: replacementBuild?.commit ?? build.commit }]
+            : [];
+        }
+      );
+
+      // Track replacement build info to pass along when we create the new build later on.
+      ctx.git.replacementBuildIds = changedFilesWithInfo
         .filter((r) => !!r.replacementBuild)
         .map(({ build, replacementBuild }) => {
           ctx.log.info('');
           ctx.log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
           return [build.id, replacementBuild.id];
         });
-      if (!interactive) {
-        ctx.log.info(
-          `Found ${ctx.git.changedFiles.length} changed files:\n${ctx.git.changedFiles
-            .map((f) => `  ${f}`)
-            .join('\n')}`
-        );
-      }
 
-      const packageManifestChanges = getChangedPackageManifests(results);
-      ctx.git.changedPackageManifests = await getDependencyChangedPackageManifests(
-        packageManifestChanges
-      );
+      if (!interactive) {
+        const list = ctx.git.changedFiles.length
+          ? `:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`
+          : '';
+        ctx.log.info(`Found ${ctx.git.changedFiles.length} changed files${list}`);
+      }
     } catch (e) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
+      ctx.git.replacementBuildIds = null;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(e);
     }
@@ -200,6 +209,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
           ctx.turboSnap.bailReason = { changedExternalFiles: matches };
           ctx.log.warn(externalsChanged(matches));
           ctx.git.changedFiles = null;
+          ctx.git.replacementBuildIds = null;
           break;
         }
       }

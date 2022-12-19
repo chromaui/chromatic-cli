@@ -1,8 +1,8 @@
 import {
   arePackageDependenciesEqual,
-  getDependencyChangedPackageManifests,
-  getChangedPackageManifests,
-} from './getDependencyChangedPackageManifests';
+  clearFileCache,
+  findChangedPackageFiles,
+} from './findChangedPackageFiles';
 import * as git from '../git/git';
 
 jest.mock('../git/git');
@@ -23,88 +23,35 @@ const mockFileContents = (packagesCommitsByFile) => {
 
 beforeEach(() => {
   execGitCommand.mockReset();
+  clearFileCache();
 });
 
-describe('getChangedPackageManifests', () => {
-  it('Returns empty array when there are no changed package files', () => {
-    expect(
-      getChangedPackageManifests([{ changedFiles: ['src/button.jsx'], build: { commit: 'A' } }])
-    ).toStrictEqual([]);
+describe('findChangedPackageFiles', () => {
+  it('returns empty array when there are no changed package files', async () => {
+    expect(await findChangedPackageFiles([])).toStrictEqual([]);
   });
 
-  it('Returns array with single item when there is one package file', () => {
-    expect(
-      getChangedPackageManifests([
-        { changedFiles: ['src/button.jsx', 'package.json'], build: { commit: 'A' } },
-      ])
-    ).toStrictEqual([{ commit: 'A', changedFiles: ['package.json'] }]);
-  });
-
-  it('Returns array with single item when package file is nested', () => {
-    expect(
-      getChangedPackageManifests([
-        { changedFiles: ['src/button.jsx', 'src/somedir/package.json'], build: { commit: 'A' } },
-      ])
-    ).toStrictEqual([{ commit: 'A', changedFiles: ['src/somedir/package.json'] }]);
-  });
-
-  it('Returns array with multiple items when there are multiple package files in single commit', () => {
-    expect(
-      getChangedPackageManifests([
-        {
-          changedFiles: ['src/button.jsx', 'package.json', 'src/package.json'],
-          build: { commit: 'A' },
-        },
-      ])
-    ).toStrictEqual([{ commit: 'A', changedFiles: ['package.json', 'src/package.json'] }]);
-  });
-
-  it('Returns array with multiple items when there are package files in multiple commits', () => {
-    expect(
-      getChangedPackageManifests([
-        {
-          changedFiles: ['src/button.jsx', 'package.json'],
-          build: { commit: 'A' },
-        },
-        {
-          changedFiles: ['package.json'],
-          build: { commit: 'B' },
-        },
-      ])
-    ).toStrictEqual([
-      // it's OK to have duplicate file names at this point
-      { commit: 'A', changedFiles: ['package.json'] },
-      { commit: 'B', changedFiles: ['package.json'] },
-    ]);
-  });
-});
-
-describe('getDependencyChangedPackageManifests', () => {
-  it('Returns empty array when there are no changed package files', async () => {
-    expect(await getDependencyChangedPackageManifests([])).toStrictEqual([]);
-  });
-
-  it('Returns empty array when there are package files with no changed dependencies', async () => {
+  it('returns empty array when there are package files with no changed dependencies', async () => {
     mockFileContents({
       'package.json': { A: { dependencies: { a: '1' } }, HEAD: { dependencies: { a: '1' } } },
     });
 
     expect(
-      await getDependencyChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
+      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual([]);
   });
 
-  it('Returns array with single item when there is one dependency-changed package file', async () => {
+  it('returns array with single item when there is one dependency-changed package file', async () => {
     mockFileContents({
       'package.json': { A: { dependencies: { a: '1' } }, HEAD: { dependencies: { a: '2' } } },
     });
 
     expect(
-      await getDependencyChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
+      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual(['package.json']);
   });
 
-  it('Returns array with multilple items when there are multiple dependency-changed package files', async () => {
+  it('returns array with multilple items when there are multiple dependency-changed package files', async () => {
     mockFileContents({
       'package.json': { A: { dependencies: { a: '1' } }, HEAD: { dependencies: { a: '2' } } },
       'src/another/package.json': {
@@ -114,13 +61,13 @@ describe('getDependencyChangedPackageManifests', () => {
     });
 
     expect(
-      await getDependencyChangedPackageManifests([
+      await findChangedPackageFiles([
         { commit: 'A', changedFiles: ['package.json', 'src/another/package.json'] },
       ])
     ).toStrictEqual(['package.json', 'src/another/package.json']);
   });
 
-  it('Returns array with single item when there are multiple package files but only one has dependency changes', async () => {
+  it('returns array with single item when there are multiple package files but only one has dependency changes', async () => {
     mockFileContents({
       // same deps
       'package.json': { A: { dependencies: { a: '1' } }, HEAD: { dependencies: { a: '1' } } },
@@ -132,13 +79,13 @@ describe('getDependencyChangedPackageManifests', () => {
     });
 
     expect(
-      await getDependencyChangedPackageManifests([
+      await findChangedPackageFiles([
         { commit: 'A', changedFiles: ['package.json', 'src/another/package.json'] },
       ])
     ).toStrictEqual(['src/another/package.json']);
   });
 
-  it('Returns item when last baseline commit has the package dependency change', async () => {
+  it('returns item when last baseline commit has the package dependency change', async () => {
     mockFileContents({
       'package.json': {
         A: { dependencies: { a: '2' } },
@@ -148,14 +95,14 @@ describe('getDependencyChangedPackageManifests', () => {
     });
 
     expect(
-      await getDependencyChangedPackageManifests([
+      await findChangedPackageFiles([
         { commit: 'A', changedFiles: [] },
         { commit: 'B', changedFiles: ['package.json'] },
       ])
     ).toStrictEqual(['package.json']);
   });
 
-  it('Returns item when first baseline commit has the package dependency change', async () => {
+  it('returns item when first baseline commit has the package dependency change', async () => {
     mockFileContents({
       'package.json': {
         A: { dependencies: { a: '1' } },
@@ -165,14 +112,14 @@ describe('getDependencyChangedPackageManifests', () => {
     });
 
     expect(
-      await getDependencyChangedPackageManifests([
+      await findChangedPackageFiles([
         { commit: 'A', changedFiles: ['package.json'] },
         { commit: 'B', changedFiles: [] },
       ])
     ).toStrictEqual(['package.json']);
   });
 
-  it('Dedupes when both commits have the same file as package dependency change', async () => {
+  it('dedupes when both commits have the same file as package dependency change', async () => {
     mockFileContents({
       'package.json': {
         A: { dependencies: { a: '1' } },
@@ -182,14 +129,14 @@ describe('getDependencyChangedPackageManifests', () => {
     });
 
     expect(
-      await getDependencyChangedPackageManifests([
+      await findChangedPackageFiles([
         { commit: 'A', changedFiles: ['package.json'] },
         { commit: 'B', changedFiles: ['package.json'] },
       ])
     ).toStrictEqual(['package.json']);
   });
 
-  it('Throws an error if one of the files is incomplete', async () => {
+  it('considers the file changed if it fails to parse', async () => {
     mockFileContents({
       'package.json': {
         A: null,
@@ -197,9 +144,9 @@ describe('getDependencyChangedPackageManifests', () => {
       },
     });
 
-    await expect(
-      getDependencyChangedPackageManifests([{ commit: 'A', changedFiles: ['package.json'] }])
-    ).rejects.toThrowError();
+    expect(
+      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
+    ).toStrictEqual(['package.json']);
   });
 });
 
@@ -207,18 +154,8 @@ describe('arePackageDependenciesEqual', () => {
   it('returns true if dependencies objects have same number of keys', () => {
     expect(
       arePackageDependenciesEqual(
-        {
-          dependencies: {
-            a: '1',
-            b: '2',
-          },
-        },
-        {
-          dependencies: {
-            a: '1',
-            b: '2',
-          },
-        }
+        { dependencies: { a: '1', b: '2' } },
+        { dependencies: { a: '1', b: '2' } }
       )
     ).toBe(true);
   });
@@ -226,17 +163,8 @@ describe('arePackageDependenciesEqual', () => {
   it("returns false if dependencies objects don't have same number of keys", () => {
     expect(
       arePackageDependenciesEqual(
-        {
-          dependencies: {
-            a: '1',
-            b: '2',
-          },
-        },
-        {
-          dependencies: {
-            a: '1',
-          },
-        }
+        { dependencies: { a: '1', b: '2' } },
+        { dependencies: { a: '1' } }
       )
     ).toBe(false);
   });
@@ -514,7 +442,7 @@ describe('arePackageDependenciesEqual', () => {
     expect(arePackageDependenciesEqual({ dependencies: { a: '1' } }, {})).toBe(false);
   });
 
-  it('Returns true if dependencies are null', () => {
+  it('returns true if dependencies are null', () => {
     expect(arePackageDependenciesEqual({ dependencies: null }, { dependencies: null })).toBe(true);
   });
 });

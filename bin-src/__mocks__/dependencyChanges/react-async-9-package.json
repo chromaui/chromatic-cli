@@ -1,0 +1,42 @@
+{
+  "name": "storybook-demo",
+  "test": "4",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Gert Hengeveld <info@ghengeveld.nl>",
+  "license": "MIT",
+  "dependencies": {
+    "@emotion/core": "10.0.22",
+    "@emotion/styled": "10.0.23",
+    "polished": "3.4.2",
+    "react": "16.12.0",
+    "react-async": "9.0.0",
+    "react-dom": "16.12.0",
+    "relative-deps": "1.0.7"
+  },
+  "devDependencies": {
+    "@babel/core": "7.7.5",
+    "@storybook/addon-actions": "^6.4.22",
+    "@storybook/addon-essentials": "^6.4.22",
+    "@storybook/addon-links": "^6.4.22",
+    "@storybook/react": "^6.4.22",
+    "@types/lodash": "^4.14.191",
+    "babel-loader": "8.0.6",
+    "chromatic": "5.6.1",
+    "react-docgen-typescript-loader": "3.6.0",
+    "react-is": "^17.0.2",
+    "ts-loader": "6.2.1",
+    "typescript": "3.7.3"
+  },
+  "relativeDependencies": {
+    "chromatic": "../chromatic-cli"
+  },
+  "scripts": {
+    "prepare": "relative-deps",
+    "chromatic": "CHROMATIC_INDEX_URL=https://index.chromatic.com chromatic --project-token 2gsw6ht6am",
+    "chromatic-dev": "CHROMATIC_INDEX_URL=https://index.dev-chromatic.com chromatic",
+    "chromatic-staging": "CHROMATIC_INDEX_URL=https://index.staging-chromatic.com chromatic --project-token wu94j15cmd7",
+    "storybook": "start-storybook -p 6006 --no-dll",
+    "build-storybook": "build-storybook --no-dll"
+  }
+}

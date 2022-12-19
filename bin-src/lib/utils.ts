@@ -56,5 +56,5 @@ export const matchesFile = (glob: string, filepath: string) => {
   return fileMatchers[glob](filepath.replace(/^\.\//, ''));
 };
 
-export const isPackageManifestFile = (filePath) =>
+export const isPackageManifestFile = (filePath: string) =>
   [/^package\.json$/, /\/package\.json$/].some((re) => re.test(filePath));

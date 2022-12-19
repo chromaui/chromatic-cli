@@ -44,9 +44,11 @@ export const announceBuild = async (ctx: Context) => {
     version,
     matchesBranch,
     changedFiles,
+    changedDependencyNames,
     replacementBuildIds,
     committedAt,
-    changedPackageManifests,
+    baselineCommits,
+    packageManifestChanges,
     ...commitInfo
   } = ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
