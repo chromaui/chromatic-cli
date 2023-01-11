@@ -161,6 +161,7 @@ async function run() {
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
     const zip = getInput('zip');
+    const junitReport = getInput('junitReport');
 
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branch;
@@ -199,6 +200,7 @@ async function run() {
       allowConsoleErrors: maybe(allowConsoleErrors, false),
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
       zip: maybe(zip, false),
+      junitReport: maybe(junitReport, false),
     });
 
     Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
