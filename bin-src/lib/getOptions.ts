@@ -45,7 +45,12 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     dryRun: !!flags.dryRun,
     forceRebuild: trueIfSet(flags.forceRebuild),
     verbose: !!flags.debug,
-    interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
+    interactive:
+      !fromCI &&
+      !flags.debug &&
+      !!flags.interactive &&
+      !!process.stdout.isTTY &&
+      process.env.NODE_ENV !== 'test',
     junitReport: trueIfSet(flags.junitReport),
     zip: flags.zip,
 
