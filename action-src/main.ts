@@ -136,30 +136,30 @@ async function run() {
 
   try {
     // Remember to keep this list in sync with ../action.yml
-    const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
-    const workingDir = getInput('workingDir') || getInput('workingDirectory');
+    const allowConsoleErrors = getInput('allowConsoleErrors');
+    const autoAcceptChanges = getInput('autoAcceptChanges');
     const buildScriptName = getInput('buildScriptName');
-    const skip = getInput('skip');
+    const debug = getInput('debug');
+    const diagnostics = getInput('diagnostics');
     const dryRun = getInput('dryRun');
+    const exitOnceUploaded = getInput('exitOnceUploaded');
+    const exitZeroOnChanges = getInput('exitZeroOnChanges');
+    const externals = getInput('externals');
     const forceRebuild = getInput('forceRebuild');
-    const storybookBaseDir = getInput('storybookBaseDir');
-    const storybookConfigDir = getInput('storybookConfigDir');
+    const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
-    const onlyStoryNames = getInput('onlyStoryNames');
     const onlyStoryFiles = getInput('onlyStoryFiles');
-    const externals = getInput('externals');
-    const untraced = getInput('untraced');
-    const traceChanged = getInput('traceChanged');
-    const diagnostics = getInput('diagnostics');
-    const debug = getInput('debug');
-    const storybookBuildDir = getInput('storybookBuildDir');
+    const onlyStoryNames = getInput('onlyStoryNames');
     const preserveMissing = getInput('preserveMissing');
-    const autoAcceptChanges = getInput('autoAcceptChanges');
-    const allowConsoleErrors = getInput('allowConsoleErrors');
-    const exitZeroOnChanges = getInput('exitZeroOnChanges');
-    const exitOnceUploaded = getInput('exitOnceUploaded');
-    const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
+    const skip = getInput('skip');
+    const storybookBaseDir = getInput('storybookBaseDir');
+    const storybookBuildDir = getInput('storybookBuildDir');
+    const storybookConfigDir = getInput('storybookConfigDir');
+    const traceChanged = getInput('traceChanged');
+    const untraced = getInput('untraced');
+    const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
 
     process.env.CHROMATIC_SHA = sha;
@@ -172,32 +172,32 @@ async function run() {
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
     const output = await runChromatic({
-      projectToken,
-      workingDir: maybe(workingDir),
+      allowConsoleErrors: maybe(allowConsoleErrors, false),
+      autoAcceptChanges: maybe(autoAcceptChanges),
       buildScriptName: maybe(buildScriptName),
-      diagnostics: maybe(diagnostics),
       debug: maybe(debug),
-      skip: maybe(skip),
+      diagnostics: maybe(diagnostics),
       dryRun: maybe(dryRun),
+      exitOnceUploaded: maybe(exitOnceUploaded, false),
+      exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+      externals: maybe(externals),
       forceRebuild: maybe(forceRebuild),
+      fromCI: true,
+      ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+      interactive: false,
       only: maybe(only),
       onlyChanged: maybe(onlyChanged),
-      onlyStoryNames: maybe(onlyStoryNames),
       onlyStoryFiles: maybe(onlyStoryFiles),
-      externals: maybe(externals),
-      untraced: maybe(untraced),
+      onlyStoryNames: maybe(onlyStoryNames),
+      preserveMissing: maybe(preserveMissing),
+      projectToken,
+      skip: maybe(skip),
       storybookBaseDir: maybe(storybookBaseDir),
+      storybookBuildDir: maybe(storybookBuildDir),
       storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
-      storybookBuildDir: maybe(storybookBuildDir),
-      fromCI: true,
-      interactive: false,
-      preserveMissing: maybe(preserveMissing),
-      autoAcceptChanges: maybe(autoAcceptChanges),
-      exitZeroOnChanges: maybe(exitZeroOnChanges, true),
-      exitOnceUploaded: maybe(exitOnceUploaded, false),
-      allowConsoleErrors: maybe(allowConsoleErrors, false),
-      ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+      untraced: maybe(untraced),
+      workingDir: maybe(workingDir),
       zip: maybe(zip, false),
     });
 

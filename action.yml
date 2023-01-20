@@ -6,35 +6,41 @@ branding:
   color: 'orange'
 
 inputs:
-  token:
-    description: 'Your github token'
-    required: false
-  projectToken:
-    description: 'Your chromatic project token'
-    required: true
-  workingDir:
-    description: 'Working directory for the package.json file'
+  allowConsoleErrors:
+    description: 'Do not exit when runtime errors occur in storybook'
     required: false
   appCode:
     description: 'Deprecated, please use projectToken instead'
     required: false
+  autoAcceptChanges:
+    description: 'Automatically accept all changes in chromatic: boolean or branchname'
+    required: false
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
-  skip:
-    description: 'Skip Chromatic tests, but mark the commit as passing'
+  debug:
+    description: 'Output verbose debugging information.'
+    required: false
+  diagnostics:
+    description: 'Write process context information to chromatic-diagnostics.json'
     required: false
   dryRun:
     description: 'Run without actually publishing to Chromatic'
     required: false
+  exitOnceUploaded:
+    description: 'Exit with 0 once the built version has been sent to chromatic: boolean or branchname'
+    required: false
+  exitZeroOnChanges:
+    description: 'Positive exit of action even when there are changes: boolean or branchname'
+    required: false
+  externals:
+    description: 'Disable TurboSnap when any of these files have changed since the baseline build'
+    required: false
   forceRebuild:
     description: 'Do not skip build when a rebuild is detected'
     required: false
-  storybookBaseDir:
-    description: 'Relative path from repository root to Storybook project root'
-    required: false
-  storybookConfigDir:
-    description: 'Relative path from where you run Chromatic to your Storybook config directory'
+  ignoreLastBuildOnBranch:
+    description: 'Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)'
     required: false
   only:
     description: 'Deprecated, replaced by onlyStoryNames'
@@ -48,41 +54,35 @@ inputs:
   onlyStoryFiles:
     description: 'Only run a single story or a subset of stories by their filename(s)'
     required: false
-  externals:
-    description: 'Disable TurboSnap when any of these files have changed since the baseline build'
+  preserveMissing:
+    description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'
     required: false
-  untraced:
-    description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
+  projectToken:
+    description: 'Your chromatic project token'
+    required: true
+  skip:
+    description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false
-  traceChanged:
-    description: 'Print dependency trace for changed files to affected story files; set to "expanded" to list individual modules'
-    required: false
-  diagnostics:
-    description: 'Write process context information to chromatic-diagnostics.json'
-    required: false
-  debug:
-    description: 'Output verbose debugging information.'
+  storybookBaseDir:
+    description: 'Relative path from repository root to Storybook project root'
     required: false
   storybookBuildDir:
     description: 'Provide a directory with your built storybook; use if you have already built your storybook'
     required: false
-  preserveMissing:
-    description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'
+  storybookConfigDir:
+    description: 'Relative path from where you run Chromatic to your Storybook config directory'
     required: false
-  autoAcceptChanges:
-    description: 'Automatically accept all changes in chromatic: boolean or branchname'
+  token:
+    description: 'Your github token'
     required: false
-  allowConsoleErrors:
-    description: 'Do not exit when runtime errors occur in storybook'
+  traceChanged:
+    description: 'Print dependency trace for changed files to affected story files; set to "expanded" to list individual modules'
     required: false
-  exitZeroOnChanges:
-    description: 'Positive exit of action even when there are changes: boolean or branchname'
+  untraced:
+    description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
     required: false
-  exitOnceUploaded:
-    description: 'Exit with 0 once the built version has been sent to chromatic: boolean or branchname'
-    required: false
-  ignoreLastBuildOnBranch:
-    description: 'Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)'
+  workingDir:
+    description: 'Working directory for the package.json file'
     required: false
   zip:
     description: 'Publish your Storybook to Chromatic as a single zip file instead of individual content files'
