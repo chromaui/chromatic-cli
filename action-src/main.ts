@@ -164,6 +164,7 @@ async function run() {
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
 
+    process.env.CHROMATIC_ACTION = 'true';
     process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branchName || branch;
     process.env.CHROMATIC_SLUG = repositorySlug || slug;

@@ -117,14 +117,8 @@ export default async function getCommitAndBranch(
     slug = GITHUB_REPOSITORY;
   }
 
-  const {
-    isCi,
-    service: ciService,
-    prBranch,
-    branch: ciBranch,
-    commit: ciCommit,
-    slug: ciSlug,
-  } = envCi();
+  const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
+  const ciService = process.env.CHROMATIC_ACTION ? 'chromaui/action' : service;
   slug = slug || ciSlug;
 
   // On certain CI systems, a branch is not checked out
