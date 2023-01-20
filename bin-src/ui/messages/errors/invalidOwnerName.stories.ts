@@ -4,4 +4,4 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-export const InvalidOwnerName = () => invalidOwnerName();
+export const InvalidOwnerName = () => invalidOwnerName('branchOwner', 'repoOwner');
