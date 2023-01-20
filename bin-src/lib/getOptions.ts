@@ -4,24 +4,18 @@ import { Context, Options } from '../types';
 import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
-import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
 import invalidOnlyStoryNames from '../ui/messages/errors/invalidOnlyStoryNames';
-import invalidOnlyChanged from '../ui/messages/errors/invalidOnlyChanged';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
-import getStorybookConfiguration from './getStorybookConfiguration';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
 
 const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input : [input]);
-
-const resolveHomeDir = (filepath: string) =>
-  filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 const trueIfSet = <T>(value: T) => ((value as unknown) === '' ? true : value);
 const undefinedIfEmpty = <T>(array: T[]) => {
