@@ -15,11 +15,14 @@ inputs:
   autoAcceptChanges:
     description: 'Automatically accept all changes in chromatic: boolean or branchname'
     required: false
+  branchName:
+    description: 'Override the branch name'
+    required: false
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
   debug:
-    description: 'Output verbose debugging information.'
+    description: 'Output verbose debugging information'
     required: false
   diagnostics:
     description: 'Write process context information to chromatic-diagnostics.json'
@@ -60,6 +63,9 @@ inputs:
   projectToken:
     description: 'Your chromatic project token'
     required: true
+  repositorySlug:
+    description: 'Override the repository slug (e.g. ownerName/repositoryName)'
+    required: false
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false

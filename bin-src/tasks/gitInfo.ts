@@ -52,7 +52,14 @@ interface LastBuildQueryResult {
 }
 
 export const setGitInfo = async (ctx: Context, task: Task) => {
-  const { branchName, patchBaseRef, fromCI: ci, interactive } = ctx.options;
+  const {
+    branchName,
+    ownerName,
+    repositorySlug,
+    patchBaseRef,
+    fromCI: ci,
+    interactive,
+  } = ctx.options;
 
   ctx.git = {
     version: await getVersion(),
@@ -68,8 +75,9 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     );
   }
 
-  if (ctx.git.slug && ctx.options.ownerName) {
-    ctx.git.slug = ctx.git.slug.replace(/[^/]+/, ctx.options.ownerName);
+  if (ownerName) {
+    ctx.git.branch = ctx.git.branch.replace(/[^:]+:/, '');
+    ctx.git.slug = repositorySlug || ctx.git.slug?.replace(/[^/]+/, ownerName);
   }
 
   const { branch, commit, slug } = ctx.git;

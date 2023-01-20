@@ -138,6 +138,7 @@ async function run() {
     // Remember to keep this list in sync with ../action.yml
     const allowConsoleErrors = getInput('allowConsoleErrors');
     const autoAcceptChanges = getInput('autoAcceptChanges');
+    const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
     const debug = getInput('debug');
     const diagnostics = getInput('diagnostics');
@@ -153,6 +154,7 @@ async function run() {
     const onlyStoryNames = getInput('onlyStoryNames');
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
+    const repositorySlug = getInput('repositorySlug');
     const skip = getInput('skip');
     const storybookBaseDir = getInput('storybookBaseDir');
     const storybookBuildDir = getInput('storybookBuildDir');
@@ -163,8 +165,8 @@ async function run() {
     const zip = getInput('zip');
 
     process.env.CHROMATIC_SHA = sha;
-    process.env.CHROMATIC_BRANCH = branch;
-    process.env.CHROMATIC_SLUG = slug;
+    process.env.CHROMATIC_BRANCH = branchName || branch;
+    process.env.CHROMATIC_SLUG = repositorySlug || slug;
     if (mergeCommit) {
       process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
     }
@@ -174,6 +176,7 @@ async function run() {
     const output = await runChromatic({
       allowConsoleErrors: maybe(allowConsoleErrors, false),
       autoAcceptChanges: maybe(autoAcceptChanges),
+      branchName: maybe(branchName),
       buildScriptName: maybe(buildScriptName),
       debug: maybe(debug),
       diagnostics: maybe(diagnostics),
@@ -191,6 +194,7 @@ async function run() {
       onlyStoryNames: maybe(onlyStoryNames),
       preserveMissing: maybe(preserveMissing),
       projectToken,
+      repositorySlug: maybe(repositorySlug),
       skip: maybe(skip),
       storybookBaseDir: maybe(storybookBaseDir),
       storybookBuildDir: maybe(storybookBuildDir),
