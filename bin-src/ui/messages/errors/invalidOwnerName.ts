@@ -6,5 +6,5 @@ import { error } from '../../components/icons';
 export default (branchOwner: string, repoOwner: string) =>
   dedent(chalk`
     ${error} Invalid value for {bold --branch-name and/or --repository-slug}
-    The owner name prefix '${branchOwner}' on the branch does not match the repository slug '${repoOwner}'.
+    The branch owner name prefix '${branchOwner}' does not match the repository owner '${repoOwner}'.
   `);
