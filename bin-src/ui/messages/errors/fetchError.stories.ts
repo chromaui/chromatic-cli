@@ -11,6 +11,8 @@ export const FetchError = () =>
     {
       error: {
         name: 'FetchError',
+        // @ts-expect-error This seems to sometimes be required, sometimes disallowed.
+        [Symbol.toStringTag]: 'FetchError',
         message:
           'request to https://index.chromatic.com/graphql failed, reason: connect ECONNREFUSED',
         type: 'system',
