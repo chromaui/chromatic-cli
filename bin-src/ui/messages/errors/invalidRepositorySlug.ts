@@ -6,6 +6,6 @@ import { error } from '../../components/icons';
 export default () =>
   dedent(chalk`
     ${error} Invalid value for {bold --repository-slug}
-    The value must be in the format {bold <ownerName>/<repositoryName>}
+    The value must be in the format {bold ownerName/repositoryName}
     You can typically find this in the URL of your repository.
   `);
