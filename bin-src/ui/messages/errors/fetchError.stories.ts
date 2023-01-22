@@ -11,7 +11,6 @@ export const FetchError = () =>
     {
       error: {
         name: 'FetchError',
-        [Symbol.toStringTag]: 'FetchError',
         message:
           'request to https://index.chromatic.com/graphql failed, reason: connect ECONNREFUSED',
         type: 'system',
