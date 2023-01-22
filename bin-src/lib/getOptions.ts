@@ -8,6 +8,7 @@ import invalidOnlyStoryNames from '../ui/messages/errors/invalidOnlyStoryNames';
 import invalidOwnerName from '../ui/messages/errors/invalidOwnerName';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
+import invalidRepositorySlug from '../ui/messages/errors/invalidRepositorySlug';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
@@ -28,7 +29,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
-  const [repositoryOwner] = flags.repositorySlug ? flags.repositorySlug.split('/') : [];
+  const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
   const options: Options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
@@ -83,6 +84,10 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   if (!options.projectToken) {
     throw new Error(missingProjectToken());
+  }
+
+  if (repositoryOwner && (!repositoryName || rest.length)) {
+    throw new Error(invalidRepositorySlug());
   }
 
   if (branchOwner && repositoryOwner && branchOwner !== repositoryOwner) {

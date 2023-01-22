@@ -31,6 +31,7 @@ export default function parseArgs(argv: string[]) {
       --only-story-files <filepath>             Only run a single story or a subset of stories by their filename(s). Specify the full path to the story file relative to the root of your Storybook project. Globs are supported via picomatch. This flag can be specified multiple times.
       --only-story-names <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This flag can be specified multiple times.
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.
+      --repository-slug <slug>                  Override the repository slug. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Format: <ownerName>/<repoName>.
       --skip [branch]                           Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
       --storybook-base-dir <dirname>            Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when running Chromatic from a different directory than your Storybook.
       --storybook-config-dir <dirname>          Relative path from where you run Chromatic to your Storybook config directory ('.storybook'). Use with --only-changed and --storybook-build-dir when using a custom --config-dir (-c) flag for Storybook. [.storybook]
@@ -78,6 +79,7 @@ export default function parseArgs(argv: string[]) {
         onlyStoryFiles: { type: 'string', isMultiple: true },
         onlyStoryNames: { type: 'string', isMultiple: true },
         patchBuild: { type: 'string' },
+        repositorySlug: { type: 'string' },
         skip: { type: 'string' },
         storybookBaseDir: { type: 'string' },
         storybookConfigDir: { type: 'string' },
