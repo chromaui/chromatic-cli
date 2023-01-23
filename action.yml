@@ -87,7 +87,7 @@ inputs:
   zip:
     description: 'Publish your Storybook to Chromatic as a single zip file instead of individual content files'
     required: false
-  junitReport
+  junitReport:
     description: 'Write build results to a JUnit XML file.'
     required: false
 
