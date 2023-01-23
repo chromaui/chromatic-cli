@@ -1,3 +1,7 @@
+# 6.15.0 - 2023-01-23
+
+- [710](https://github.com/chromaui/chromatic-cli/pull/710) Add `--repository-slug` flag to CLI, and `repositorySlug` + `branchName` options to GitHub Action
+
 # 6.14.0 - 2022-12-19
 
 - [683](https://github.com/chromaui/chromatic-cli/pull/683) Enhanced TurboSnap: Trace dependency changes instead of bailing out
