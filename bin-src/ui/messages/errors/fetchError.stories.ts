@@ -11,7 +11,8 @@ export const FetchError = () =>
     {
       error: {
         name: 'FetchError',
-        // @ts-expect-error This seems to sometimes be required, sometimes disallowed.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore This seems to sometimes be required, sometimes disallowed.
         [Symbol.toStringTag]: 'FetchError',
         message:
           'request to https://index.chromatic.com/graphql failed, reason: connect ECONNREFUSED',
