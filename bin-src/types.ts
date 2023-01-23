@@ -23,6 +23,7 @@ export interface Flags {
   onlyStoryFiles?: string[];
   onlyStoryNames?: string[];
   patchBuild?: string;
+  repositorySlug?: string;
   skip?: string;
   storybookBaseDir?: string;
   storybookConfigDir?: string;
@@ -81,6 +82,7 @@ export interface Options {
   storybookConfigDir: Flags['storybookConfigDir'];
 
   ownerName: string;
+  repositorySlug: Flags['repositorySlug'];
   branchName: string;
   patchHeadRef: string;
   patchBaseRef: string;

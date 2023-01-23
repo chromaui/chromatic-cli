@@ -3,13 +3,10 @@ import { Context } from '../types';
 import { builders } from './builders';
 import { supportedAddons } from './supportedAddons';
 import { viewLayers } from './viewLayers';
-import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
-import { resolvePackageJson } from './getStorybookMetadata';
-import { timeout } from './promises';
 
-/* 
+/*
   In Storybook 6.5+, when building a Storybook, a project.json file is generated,
-  containing metadata (sb builder, addons, viewLayer and viewLayer version) for the 
+  containing metadata (sb builder, addons, viewLayer and viewLayer version) for the
   particular setup.
 */
 

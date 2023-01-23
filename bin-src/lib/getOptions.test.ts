@@ -89,6 +89,34 @@ describe('getOptions', () => {
     expect(getOptions(getContext(['--branch-name', 'my/branch']))).toMatchObject({
       branchName: 'my/branch',
     });
+    expect(getOptions(getContext(['--branch-name', 'owner:my/branch']))).toMatchObject({
+      branchName: 'my/branch',
+      ownerName: 'owner',
+    });
+  });
+
+  it('allows you to specify the repository slug', async () => {
+    expect(getOptions(getContext(['--repository-slug', 'owner/repo']))).toMatchObject({
+      ownerName: 'owner',
+      repositorySlug: 'owner/repo',
+    });
+  });
+
+  it('checks whether branch name and repository slug contain a conflicting owner name', async () => {
+    expect(
+      getOptions(
+        getContext(['--branch-name', 'owner:my/branch', '--repository-slug', 'owner/repo'])
+      )
+    ).toMatchObject({
+      branchName: 'my/branch',
+      ownerName: 'owner',
+      repositorySlug: 'owner/repo',
+    });
+    expect(() =>
+      getOptions(
+        getContext(['--branch-name', 'owner:my/branch', '--repository-slug', 'another/repo'])
+      )
+    ).toThrow('Invalid value for --branch-name and/or --repository-slug');
   });
 
   it('supports arrays, removing empty values', async () => {

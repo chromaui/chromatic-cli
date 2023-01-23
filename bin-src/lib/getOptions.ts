@@ -4,24 +4,20 @@ import { Context, Options } from '../types';
 import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
-import invalidExitOnceUploaded from '../ui/messages/errors/invalidExitOnceUploaded';
 import invalidOnlyStoryNames from '../ui/messages/errors/invalidOnlyStoryNames';
-import invalidOnlyChanged from '../ui/messages/errors/invalidOnlyChanged';
+import invalidOwnerName from '../ui/messages/errors/invalidOwnerName';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
+import invalidRepositorySlug from '../ui/messages/errors/invalidRepositorySlug';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
-import getStorybookConfiguration from './getStorybookConfiguration';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
 
 const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input : [input]);
-
-const resolveHomeDir = (filepath: string) =>
-  filepath && filepath.startsWith('~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath;
 
 const trueIfSet = <T>(value: T) => ((value as unknown) === '' ? true : value);
 const undefinedIfEmpty = <T>(array: T[]) => {
@@ -32,7 +28,8 @@ const undefinedIfEmpty = <T>(array: T[]) => {
 export default function getOptions({ argv, env, flags, log, packageJson }: Context): Options {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
-  const [branchName, ownerName] = (flags.branchName || '').split(':').reverse();
+  const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
+  const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
   const options: Options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
@@ -49,7 +46,12 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     dryRun: !!flags.dryRun,
     forceRebuild: trueIfSet(flags.forceRebuild),
     verbose: !!flags.debug,
-    interactive: !flags.debug && !fromCI && !!flags.interactive && !!process.stdout.isTTY,
+    interactive:
+      !fromCI &&
+      !flags.debug &&
+      !!flags.interactive &&
+      !!process.stdout.isTTY &&
+      process.env.NODE_ENV !== 'test',
     junitReport: trueIfSet(flags.junitReport),
     zip: flags.zip,
 
@@ -68,7 +70,8 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
 
-    ownerName,
+    ownerName: branchOwner || repositoryOwner,
+    repositorySlug: flags.repositorySlug,
     branchName,
     patchHeadRef,
     patchBaseRef,
@@ -81,6 +84,14 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
 
   if (!options.projectToken) {
     throw new Error(missingProjectToken());
+  }
+
+  if (repositoryOwner && (!repositoryName || rest.length)) {
+    throw new Error(invalidRepositorySlug());
+  }
+
+  if (branchOwner && repositoryOwner && branchOwner !== repositoryOwner) {
+    throw new Error(invalidOwnerName(branchOwner, repositoryOwner));
   }
 
   if (flags.patchBuild) {
