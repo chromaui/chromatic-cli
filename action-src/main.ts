@@ -54,7 +54,8 @@ const getBuildInfo = (event: typeof context) => {
         slug: repository.full_name,
       };
     }
-    case 'workflow_dispatch': {
+    case 'workflow_dispatch':
+    case 'issue_comment': {
       return {
         sha: event.sha,
         branch: event.ref.replace('refs/heads/', ''),
