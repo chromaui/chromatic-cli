@@ -58,7 +58,7 @@ const getBuildInfo = (event: typeof context) => {
       return {
         slug: event.payload.repository.full_name,
         branch: event.ref.replace('refs/heads/', ''),
-        sha: event.payload.inputs.sha || event.sha,
+        sha: event.sha,
       };
     }
     default: {
