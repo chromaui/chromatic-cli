@@ -5,7 +5,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   mode: 'production',
-  target: 'node12',
+  target: 'node16',
   entry: './bin-src/register.js',
   externalsPresets: { node: true },
   // devtool: 'source-map',
