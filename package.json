@@ -50,7 +50,7 @@
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install && npm run build",
-    "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",
+    "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs --openssl-legacy-provider",
     "bundle:action": "webpack --config=webpack-action.config.js",
     "dev": "webpack --config=webpack-bin.config.js --watch --progress --mode=development",
     "lint-staged": "lint-staged"
