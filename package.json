@@ -75,7 +75,7 @@
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
     "@types/webpack-env": "^1.17.0",
-    "snyk-nodejs-lockfile-parser": "^1.43.1"
+    "snyk-nodejs-lockfile-parser": "^1.47.4"
   },
   "devDependencies": {
     "@actions/core": "^1.10.0",
