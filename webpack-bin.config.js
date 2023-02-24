@@ -13,6 +13,7 @@ module.exports = {
     path: path.resolve(__dirname, 'bin'),
     filename: 'main.cjs',
     clean: true,
+    hashFunction: 'xxhash64',
   },
   module: {
     rules: [
