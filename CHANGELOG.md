@@ -1,3 +1,12 @@
+# 6.17.1 - 2023-02-24
+
+- [718](https://github.com/chromaui/chromatic-cli/pull/718) Update `changedFiles` target to fix broken trace utility
+
+# 6.17.0 - 2023-02-07
+
+- [695](https://github.com/chromaui/chromatic-cli/pull/695) Omit `inputs` for `workflow_dispatch` event in GitHub Action
+- [713](https://github.com/chromaui/chromatic-cli/pull/713) Add support for `issue_comment` event in GitHub Action
+
 # 6.15.0 - 2023-01-23
 
 - [710](https://github.com/chromaui/chromatic-cli/pull/710) Add `--repository-slug` flag to CLI, and `repositorySlug` + `branchName` options to GitHub Action
