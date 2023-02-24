@@ -260,7 +260,7 @@ export async function getDependentStoryFiles(
   if (ctx.options.traceChanged) {
     ctx.log.info(
       tracedAffectedFiles(ctx, {
-        changedFiles: ctx.git.changedFiles,
+        changedFiles,
         affectedModules,
         modulesByName: Object.fromEntries(modulesByName),
         normalize,
