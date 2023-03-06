@@ -38,7 +38,10 @@ export default (
 
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
-  const summary = chalk`${info} Traced {bold ${changed}} to {bold ${affected}}`;
+  const directoryDebug = chalk`Root Directory: ${ctx.turboSnap.rootPath}\n\n Base Directory: ${ctx.turboSnap.baseDir}\n\n Storybook Directory: ${ctx.turboSnap.storybookDir}\n\n ${ctx.turboSnap.tracedPaths}\n\n`;
+  const summary = chalk`${
+    ctx.options.traceChanged === 'expanded' ? directoryDebug : ''
+  } ${info} Traced {bold ${changed}} to {bold ${affected}}`;
 
   if (ctx.options.traceChanged === 'compact') {
     let submodules = false;
@@ -74,7 +77,9 @@ export default (
           if (seen.has(part)) note = chalk` {yellow [duplicate]}`;
           else seen.add(part);
         }
-        return chalk`${acc}\n${indent}∟ ${printPath(part)}${note}${printModules(part, indent)}`;
+        return chalk`File Path: ${part}\n\nBase Directory: ${basedir}\n\n${acc}\n${indent}∟ ${printPath(
+          part
+        )}${note}${printModules(part, indent)}`;
       }, '')
       .concat(chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`);
   });
