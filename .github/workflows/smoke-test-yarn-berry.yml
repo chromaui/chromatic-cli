@@ -7,8 +7,10 @@ jobs:
     steps:
       - uses: actions/setup-node@v1
         with:
-          node-version: '14.x'
-      - uses: actions/checkout@v1
+          node-version: '16.x'
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - run: yarn install
       - run: yarn set version berry
       - name: run chromatic

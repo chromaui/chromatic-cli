@@ -5,7 +5,12 @@ jobs:
   self-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
       - run: yarn
       - run: yarn bundle:bin
       - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
