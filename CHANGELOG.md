@@ -1,3 +1,9 @@
+# 6.17.2 - 2023-03-17
+
+- [726](https://github.com/chromaui/chromatic-cli/pull/726) Increase timeout on Storybook Verification
+- [725](https://github.com/chromaui/chromatic-cli/pull/725) Bump webpack from 5.72.1 to 5.76.0 
+- [711](https://github.com/chromaui/chromatic-cli/pull/711) Bump http-cache-semantics from 4.1.0 to 4.1.1
+- 
 # 6.17.1 - 2023-02-24
 
 - [718](https://github.com/chromaui/chromatic-cli/pull/718) Update `changedFiles` target to fix broken trace utility
