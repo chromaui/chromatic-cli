@@ -78,7 +78,7 @@ export const findChangedDependencies = async (ctx: Context) => {
       // Retrieve the union of dependencies which changed compared to each baseline.
       // A change means either the version number is different or the dependency was added/removed.
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
-      await Promise.all(
+      await Promise.allSettled(
         baselineCommits.map(async (ref) => {
           const baselineChanges = await compareBaseline(ctx, headDependencies, {
             ref,

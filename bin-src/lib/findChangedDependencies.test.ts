@@ -272,4 +272,79 @@ describe('findChangedDependencies', () => {
     const ctx = getContext(['A'], { untraced: ['yarn.lock'] });
     await expect(findChangedDependencies(ctx)).resolves.toEqual([]);
   });
+
+  it('uses resolves with changed dependencies even if we fail to checkout a file', async () => {
+    findFiles.mockImplementation((file) =>
+      Promise.resolve(
+        file.startsWith('**')
+          ? [
+              file.replace('**', 'subdir'),
+              file.replace('**', 'A.subdir'),
+              file.replace('**', 'B.subdir'),
+            ]
+          : [file]
+      )
+    );
+
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
+    });
+
+    checkoutFile.mockImplementation((ctx, commit, file) =>
+      commit === 'A' ? Promise.reject() : Promise.resolve(`${commit}.${file}`)
+    );
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: {
+        react: { name: 'react', version: '18.3.0', dependencies: {} },
+        lodash: { name: 'lodash', version: '4.18.0', dependencies: {} },
+      },
+    });
+
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: {
+        react: { name: 'react', version: '18.3.0', dependencies: {} },
+        lodash: { name: 'lodash', version: '4.19.0', dependencies: {} },
+      },
+    });
+
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: {
+        react: { name: 'react', version: '18.3.0', dependencies: {} },
+        lodash: { name: 'lodash', version: '4.18.0', dependencies: {} },
+      },
+    });
+
+    buildDepTree.mockResolvedValueOnce({
+      dependencies: {
+        react: { name: 'react', version: '18.3.0', dependencies: {} },
+        lodash: { name: 'lodash', version: '4.19.0', dependencies: {} },
+      },
+    });
+
+    await expect(
+      findChangedDependencies(getContext(['A', 'B'], { untraced: ['package.json'] }))
+    ).resolves.toEqual(['react', 'lodash']);
+
+    expect(buildDepTree).toBeCalledTimes(6);
+    expect(buildDepTree).not.toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true);
+    // Subpackage manifest and lock files are checked
+    expect(buildDepTree).toHaveBeenCalledWith(
+      '/root',
+      'A.subdir/package.json',
+      'A.subdir/yarn.lock',
+      true
+    );
+    expect(buildDepTree).toHaveBeenCalledWith(
+      '/root',
+      'B.subdir/package.json',
+      'B.subdir/yarn.lock',
+      true
+    );
+    expect(buildDepTree).toHaveBeenCalledWith(
+      '/root',
+      'subdir/package.json',
+      'subdir/yarn.lock',
+      true
+    );
+  });
 });
