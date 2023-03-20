@@ -273,7 +273,7 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(ctx)).resolves.toEqual([]);
   });
 
-  it('uses resolves with changed dependencies even if we fail to checkout a file', async () => {
+  it('resolves with changed dependencies even if we fail to checkout a file', async () => {
     findFiles.mockImplementation((file) =>
       Promise.resolve(
         file.startsWith('**')
