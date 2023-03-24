@@ -4,6 +4,7 @@ import { checkoutFile, findFiles, getRepositoryRoot } from '../git/git';
 import { Context } from '../types';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
+import { posix } from './getDependentStoryFiles';
 import { matchesFile } from './utils';
 
 const PACKAGE_JSON = 'package.json';
@@ -26,9 +27,15 @@ export const findChangedDependencies = async (ctx: Context) => {
     `Finding changed dependencies for ${baselineCommits.length} baselines`
   );
 
-  const rootPath = await getRepositoryRoot();
-  const [rootManifestPath] = await findFiles(PACKAGE_JSON);
-  const [rootLockfilePath] = await findFiles(YARN_LOCK, PACKAGE_LOCK);
+  const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
+  const baseDir = ctx.options.storybookBaseDir
+    ? posix(ctx.options.storybookBaseDir)
+    : path.posix.relative(rootPath, '');
+  const [rootManifestPath] = await findFiles(`${baseDir}/${PACKAGE_JSON}`);
+  const [rootLockfilePath] = await findFiles(
+    `${baseDir}/${YARN_LOCK}`,
+    `${baseDir}/${PACKAGE_LOCK}`
+  );
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
