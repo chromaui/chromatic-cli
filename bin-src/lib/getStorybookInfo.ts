@@ -10,7 +10,6 @@ export default async function getStorybookInfo(
   ctx: Context
 ): Promise<Partial<Context['storybook']>> {
   try {
-    ctx.log.debug('packageJson', ctx.packageJson);
     if (ctx.options.storybookBuildDir) {
       const projectJsonPath = path.resolve(ctx.options.storybookBuildDir, 'project.json');
       // This test makes sure we fall through if the file does not exist.

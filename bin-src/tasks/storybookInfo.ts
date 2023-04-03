@@ -4,6 +4,8 @@ import { Context } from '../types';
 import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
 export const setStorybookInfo = async (ctx: Context) => {
+  ctx.log.debug('setting storybook info');
+  ctx.log.debug(ctx.packageJson);
   ctx.storybook = (await getStorybookInfo(ctx)) as Context['storybook'];
 };
 
