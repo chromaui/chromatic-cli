@@ -164,6 +164,7 @@ export interface Context {
       packageName?: string;
       packageVersion?: string;
     };
+    metadataSource?: string;
   };
   spawnParams: {
     client: 'yarn' | 'npm';

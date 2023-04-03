@@ -6,8 +6,17 @@ const capitalize = (string: string) =>
     .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
     .join(' ');
 
-const infoMessage = ({ addons, version, viewLayer, builder }: Context['storybook']) => {
-  const info = version && viewLayer ? `Storybook ${version} for ${capitalize(viewLayer)}` : '';
+const infoMessage = ({
+  addons,
+  version,
+  viewLayer,
+  builder,
+  metadataSource,
+}: Context['storybook']) => {
+  const info =
+    version && viewLayer
+      ? `${metadataSource} Storybook ${version} for ${capitalize(viewLayer)}`
+      : '';
   const builderInfo = builder
     ? `${info}; using the ${builder.name} builder (${builder.packageVersion})`
     : info;

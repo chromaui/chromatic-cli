@@ -175,6 +175,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findConfigFlags(ctx),
     findViewlayer(ctx),
     findBuilder(mainConfig),
+    { metadataSource: 'localDirectory' },
   ]);
   ctx.log.debug(info);
   return info.reduce((acc, obj) => Object.assign(acc, obj), {});

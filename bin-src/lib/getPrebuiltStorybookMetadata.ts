@@ -55,5 +55,6 @@ export const getStorybookMetadataFromProjectJson = async (
         packageName,
         packageVersion: addon.version,
       })),
+    metadataSource: 'buildDirectory',
   };
 };
