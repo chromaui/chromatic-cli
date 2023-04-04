@@ -166,6 +166,7 @@ export const findBuilder = async (mainConfig) => {
 };
 
 export const getStorybookMetadata = async (ctx: Context) => {
+  ctx.log.debug('getStorybookMetadata ', ctx.packageJson);
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
   const mainConfig = await r(path.resolve(configDir, 'main'));

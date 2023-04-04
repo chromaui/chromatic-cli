@@ -36,9 +36,13 @@ const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersio
 };
 
 export const getStorybookMetadataFromProjectJson = async (
-  projectJsonPath: string
+  projectJsonPath: string,
+  ctx: Context
 ): Promise<Partial<Context['storybook']>> => {
   const sbProjectJson = (await readFile(projectJsonPath)) as SBProjectJson;
+
+  ctx.log.debug('getStorybookMetadataFromProjectJson ', sbProjectJson);
+
   const viewLayerPackage = Object.keys(viewLayers).find(
     (viewLayer) => viewLayers[viewLayer] === sbProjectJson.framework.name
   );
