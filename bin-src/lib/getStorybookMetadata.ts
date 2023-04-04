@@ -30,6 +30,7 @@ const findDependency = (
 ];
 
 const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, string>) => {
+  log.debug('getDependencyInfo', packageJson);
   const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => dependencyMap[key]);
   const [pkg, version] = dep || devDep || peerDep || [];
   const dependency = viewLayers[pkg];
