@@ -184,12 +184,16 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const viewLayer = await findViewlayer(ctx);
   ctx.log.debug('viewLayer', viewLayer);
 
-  const builder = await findBuilder(mainConfig);
-  ctx.log.debug('builder', builder);
-
-  const info = [addons, configFlags, viewLayer, builder];
-
+  try {
+    const builder = await findBuilder(mainConfig);
+    ctx.log.debug('builder', builder);
+  } catch (e) {
+    ctx.log.debug('builder error', e);
+  }
   ctx.log.debug('awaited info promises');
+
+  const info = [addons, configFlags, viewLayer];
+
   const reducedInfo = info.reduce((acc, obj) => Object.assign(acc, obj), {});
   ctx.log.debug('reduced info', reducedInfo);
 
