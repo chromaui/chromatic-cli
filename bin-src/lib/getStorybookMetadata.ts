@@ -50,7 +50,6 @@ const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, s
 
 const findViewlayer = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
-
   log.debug('findViewLayer', packageJson);
   log.debug('env.CHROMATIC_STORYBOOK_VERSION', env.CHROMATIC_STORYBOOK_VERSION);
 
@@ -176,12 +175,18 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
   const mainConfig = await r(path.resolve(configDir, 'main'));
 
-  const info = await Promise.all([
-    findAddons(ctx, mainConfig),
-    findConfigFlags(ctx),
-    findViewlayer(ctx),
-    findBuilder(mainConfig),
-  ]);
-  ctx.log.debug(info);
+  const addons = await findAddons(ctx, mainConfig);
+
+  ctx.log.debug('addons', addons);
+  const configFlags = await findConfigFlags(ctx);
+  ctx.log.debug('config', configFlags);
+  const viewLayer = await findViewlayer(ctx);
+  ctx.log.debug('viewLayer', viewLayer);
+  const builder = await findBuilder(mainConfig);
+  ctx.log.debug('builder', builder);
+
+  const info = [addons, configFlags, viewLayer, builder];
+
+  ctx.log.debug('awaited info promises', info);
   return info.reduce((acc, obj) => Object.assign(acc, obj), {});
 };
