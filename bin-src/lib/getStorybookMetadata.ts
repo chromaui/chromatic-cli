@@ -174,28 +174,28 @@ export const getStorybookMetadata = async (ctx: Context) => {
   try {
     addons = await findAddons(ctx, mainConfig);
   } catch (e) {
-    ctx.log.info('Unable to determine addons used in this project');
+    ctx.log.info('Unable to determine addons used in this project', e);
   }
 
   let configFlags = {};
   try {
     configFlags = await findConfigFlags(ctx);
   } catch (e) {
-    ctx.log.info('Unable to determine config flags used in this project');
+    ctx.log.info('Unable to determine config flags used in this project', e);
   }
 
   let viewLayer = {};
   try {
     viewLayer = await findViewlayer(ctx);
   } catch (e) {
-    ctx.log.info('Unable to determine viewLayer used in this project');
+    ctx.log.info('Unable to determine viewLayer used in this project', e);
   }
 
   let builder = {};
   try {
     builder = await findBuilder(mainConfig);
   } catch (e) {
-    ctx.log.info('Unable to determine builder based in this project');
+    ctx.log.info('Unable to determine builder based in this project', e);
   }
   return [addons, configFlags, viewLayer, builder].reduce(
     (acc, obj) => Object.assign(acc, obj),
