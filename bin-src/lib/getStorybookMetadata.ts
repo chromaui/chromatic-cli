@@ -176,17 +176,22 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const mainConfig = await r(path.resolve(configDir, 'main'));
 
   const addons = await findAddons(ctx, mainConfig);
-
   ctx.log.debug('addons', addons);
+
   const configFlags = await findConfigFlags(ctx);
   ctx.log.debug('config', configFlags);
+
   const viewLayer = await findViewlayer(ctx);
   ctx.log.debug('viewLayer', viewLayer);
+
   const builder = await findBuilder(mainConfig);
   ctx.log.debug('builder', builder);
 
   const info = [addons, configFlags, viewLayer, builder];
 
-  ctx.log.debug('awaited info promises', info);
-  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  ctx.log.debug('awaited info promises');
+  const reducedInfo = info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  ctx.log.debug('reduced info', reducedInfo);
+
+  return reducedInfo;
 };
