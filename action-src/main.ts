@@ -62,6 +62,13 @@ const getBuildInfo = (event: typeof context) => {
         slug: event.payload.repository.full_name,
       };
     }
+    case 'release': {
+      return {
+        sha: event.sha,
+        branch: event.ref.replace('refs/tags/', ''),
+        slug: event.payload.repository.full_name,
+      };
+    }
     default: {
       setFailed(`${event.eventName} event is not supported in this action`);
       return null;
