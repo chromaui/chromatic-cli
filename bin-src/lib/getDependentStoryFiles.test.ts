@@ -706,7 +706,6 @@ describe('getDependentStoryFiles', () => {
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
-
   it('does not bail on untraced Storybook config files that change due to a module sibling', async () => {
     const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
     const modules = [
@@ -788,7 +787,7 @@ describe('getDependentStoryFiles', () => {
       },
       {
         id: './src/foo.js',
-        name: './src/foo.js',
+        name: './src/foo.js', // untraced
         reasons: [{ moduleName: './src/foo.stories.js' }],
       },
       {
@@ -804,7 +803,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({
       configDir: 'path/to/storybook-config',
-      untraced: ['**/decorator.jsx'],
+      untraced: ['**/docs-decorator.jsx', '**/path/to/storybook-config/preview.js'],
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
