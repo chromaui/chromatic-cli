@@ -151,7 +151,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export const findBuilder = async (mainConfig) => {
-  if (mainConfig?.framework) {
+  if (mainConfig?.framework?.name) {
     const sbV7BuilderName = mainConfig.framework.name;
 
     return Promise.race([
