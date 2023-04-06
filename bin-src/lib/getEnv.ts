@@ -27,7 +27,7 @@ const {
   CHROMATIC_DNS_SERVERS = '',
   CHROMATIC_DNS_FAILOVER_SERVERS = '1.1.1.1, 8.8.8.8', // Cloudflare, Google
   LOGGLY_CUSTOMER_TOKEN = 'b5e26204-cdc5-4c78-a9cc-c69eb7fabad3',
-  STORYBOOK_VERIFY_TIMEOUT = String(2 * 60 * 1000),
+  STORYBOOK_VERIFY_TIMEOUT = String(3 * 60 * 1000),
   STORYBOOK_BUILD_TIMEOUT = String(10 * 60 * 1000),
   HTTPS_PROXY = process.env.https_proxy,
   HTTP_PROXY = process.env.http_proxy,
