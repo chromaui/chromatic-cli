@@ -27,7 +27,8 @@ describe('getStorybookInfo', () => {
 
   it('returns viewLayer and version', async () => {
     const ctx = getContext({ packageJson: { dependencies: REACT } });
-    await expect(getStorybookInfo(ctx)).resolves.toEqual(
+    const sbInfo = await getStorybookInfo(ctx);
+    expect(sbInfo).toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
         viewLayer: 'react',
@@ -55,14 +56,19 @@ describe('getStorybookInfo', () => {
     );
   });
 
-  it('throws on missing package', async () => {
+  it('returns other metadate if missing view layer package', async () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
-    await expect(getStorybookInfo(ctx)).resolves.toEqual({
-      addons: [],
-      version: null,
-      viewLayer: null,
-      builder: null,
-    });
+    await expect(getStorybookInfo(ctx)).resolves.toEqual(
+      expect.objectContaining({
+        addons: [
+          {
+            name: 'viewport',
+            packageName: '@storybook/addon-viewport',
+          },
+        ],
+        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+      })
+    );
   });
 
   it('looks up package in node_modules on missing dependency', async () => {
@@ -84,7 +90,7 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({
         env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@3.2.1' },
       });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual(
+      expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
@@ -95,7 +101,7 @@ describe('getStorybookInfo', () => {
 
     it('supports unscoped package name', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: 'react@3.2.1' } });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual(
+      expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
@@ -104,24 +110,34 @@ describe('getStorybookInfo', () => {
       );
     });
 
-    it('throws on invalid value', async () => {
+    it('still returns addons and builder for invalid version value', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual({
-        addons: [],
-        version: null,
-        viewLayer: null,
-        builder: null,
-      });
+      expect(await getStorybookInfo(ctx)).toEqual(
+        expect.objectContaining({
+          addons: [
+            {
+              name: 'viewport',
+              packageName: '@storybook/addon-viewport',
+            },
+          ],
+          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        })
+      );
     });
 
-    it('throws on unsupported viewlayer', async () => {
+    it('does not include unsupported view layers', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual({
-        addons: [],
-        version: null,
-        viewLayer: null,
-        builder: null,
-      });
+      expect(await getStorybookInfo(ctx)).toEqual(
+        expect.objectContaining({
+          addons: [
+            {
+              name: 'viewport',
+              packageName: '@storybook/addon-viewport',
+            },
+          ],
+          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        })
+      );
     });
   });
 
@@ -131,7 +147,7 @@ describe('getStorybookInfo', () => {
         options: { storybookBuildDir: 'bin-src/__mocks__/normalProjectJson' },
         packageJson: { dependencies: REACT },
       });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+      expect(await getStorybookInfo(ctx)).toEqual({
         addons: [
           {
             name: 'viewport',
@@ -150,7 +166,7 @@ describe('getStorybookInfo', () => {
         options: { storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson' },
         packageJson: { dependencies: REACT },
       });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+      expect(await getStorybookInfo(ctx)).toEqual({
         addons: [],
         version: null,
         viewLayer: null,
@@ -163,7 +179,7 @@ describe('getStorybookInfo', () => {
         options: { storybookBuildDir: 'bin-src/__mocks__/unsupportedAddons' },
         packageJson: { dependencies: REACT },
       });
-      await expect(getStorybookInfo(ctx)).resolves.toEqual({
+      expect(await getStorybookInfo(ctx)).toEqual({
         addons: [
           {
             name: 'viewport',

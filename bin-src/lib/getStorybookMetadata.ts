@@ -188,5 +188,14 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findBuilder(mainConfig),
   ]);
   ctx.log.debug(info);
-  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  let metadata = {};
+  info.forEach((sbItem) => {
+    if (sbItem.status === 'fulfilled') {
+      metadata = {
+        ...metadata,
+        ...(sbItem?.value as any),
+      };
+    }
+  });
+  return metadata;
 };
