@@ -56,7 +56,7 @@ describe('getStorybookInfo', () => {
     );
   });
 
-  it('returns other metadate if missing view layer package', async () => {
+  it('returns other metadata if missing view layer package', async () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual(
       expect.objectContaining({
