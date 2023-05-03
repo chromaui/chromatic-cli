@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "6.17.4-next.0",
+  "version": "6.17.4-next.1",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -75,7 +75,7 @@
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
     "@types/webpack-env": "^1.17.0",
-    "snyk-nodejs-lockfile-parser": "^1.47.4"
+    "snyk-nodejs-lockfile-parser": "^1.49.0"
   },
   "devDependencies": {
     "@actions/core": "^1.10.0",
