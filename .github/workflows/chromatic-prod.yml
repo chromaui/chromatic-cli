@@ -20,7 +20,7 @@ jobs:
           traceChanged: true
           diagnostics: true
         env:
-          CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
       - uses: actions/upload-artifact@v2
         if: always()
         with:
