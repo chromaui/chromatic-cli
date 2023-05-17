@@ -74,6 +74,7 @@
   },
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
+    "@storybook/csf-tools": "^7.0.12",
     "@types/webpack-env": "^1.17.0",
     "snyk-nodejs-lockfile-parser": "^1.49.0"
   },
