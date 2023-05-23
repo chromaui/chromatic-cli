@@ -151,6 +151,17 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export const findBuilder = async (mainConfig) => {
+  if (mainConfig?.framework?.name) {
+    const sbV7BuilderName = mainConfig.framework.name;
+
+    return Promise.race([
+      resolvePackageJson(sbV7BuilderName)
+        .then((json) => ({ builder: { name: sbV7BuilderName, packageVersion: json.version } }))
+        .catch(() => Promise.reject(new Error(packageDoesNotExist(sbV7BuilderName)))),
+      timeout(10000),
+    ]);
+  }
+
   let name = 'webpack4'; // default builder in Storybook v6
   if (mainConfig?.core?.builder) {
     const { builder } = mainConfig.core;
@@ -170,12 +181,21 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
   const mainConfig = await r(path.resolve(configDir, 'main'));
 
-  const info = await Promise.all([
+  const info = await Promise.allSettled([
     findAddons(ctx, mainConfig),
     findConfigFlags(ctx),
     findViewlayer(ctx),
     findBuilder(mainConfig),
   ]);
   ctx.log.debug(info);
-  return info.reduce((acc, obj) => Object.assign(acc, obj), {});
+  let metadata = {};
+  info.forEach((sbItem) => {
+    if (sbItem.status === 'fulfilled') {
+      metadata = {
+        ...metadata,
+        ...(sbItem?.value as any),
+      };
+    }
+  });
+  return metadata;
 };
