@@ -706,6 +706,7 @@ describe('getDependentStoryFiles', () => {
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
+
   it('does not bail on untraced Storybook config files that change due to a module sibling', async () => {
     const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
     const modules = [
