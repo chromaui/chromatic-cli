@@ -787,7 +787,7 @@ describe('getDependentStoryFiles', () => {
       },
       {
         id: './src/foo.js',
-        name: './src/foo.js', // untraced
+        name: './src/foo.js',
         reasons: [{ moduleName: './src/foo.stories.js' }],
       },
       {
@@ -803,7 +803,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({
       configDir: 'path/to/storybook-config',
-      untraced: ['**/docs-decorator.jsx', '**/path/to/storybook-config/preview.js'],
+      untraced: ['**/decorator.jsx'],
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
