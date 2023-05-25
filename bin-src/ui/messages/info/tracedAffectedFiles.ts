@@ -38,7 +38,30 @@ export default (
 
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
-  const directoryDebug = chalk`Root Directory: ${ctx.turboSnap.rootPath}\n\n Base Directory: ${ctx.turboSnap.baseDir}\n\n Storybook Directory: ${ctx.turboSnap.storybookDir}\n\n ${ctx.turboSnap.tracedPaths}\n\n`;
+  const bailReason = ctx.turboSnap.bailReason
+    ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap.bailReason}\n\n`
+    : '';
+  const rootPath = `${chalk.magenta('The root directory of your project:')} ${
+    ctx.turboSnap.rootPath
+  }\n\n`;
+  const basePath = `${chalk.magenta(
+    'The base directory (The relative path from the root to the storybook config root):'
+  )} ${ctx.turboSnap.baseDir}\n\n`;
+  const storybookPath = `${chalk.magenta(
+    'The storybook directory (The directory can either be at the root or in a sub-directory):'
+  )} ${ctx.turboSnap.storybookDir}\n\n`;
+  const untracedNotice =
+    ctx.untracedFiles.length > 0
+      ? `${chalk.magenta(
+          `We detected some untraced files, this may affect your traced changes as 
+    the untraced flag instructs TurboSnap to not trace dependencies for the files:`
+        )} \n  ${ctx.untracedFiles.join(',')}\n\n\n`
+      : '';
+  const directoryDebug = `${rootPath}${basePath}${storybookPath}${bailReason}${untracedNotice}If you are having trouble with tracing, please check the following:\n
+  1. Make sure you have the correct root path, base path, and storybook path.\n
+  2. Make sure you have the correct storybook config file.\n
+  3. Make sure you have the correct storybook config file path.\nYou can either set the flags storybook-base-dir or storybook-config-dir to help TurboSnap find the correct storybook config file.\n
+  `;
   const summary = chalk`${
     ctx.options.traceChanged === 'expanded' ? directoryDebug : ''
   } ${info} Traced {bold ${changed}} to {bold ${affected}}`;
