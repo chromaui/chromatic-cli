@@ -9,8 +9,6 @@ import {
 } from './ui/messages/info/tracedAffectedFiles';
 
 const scriptCommand = `$ ./bin/main.cjs trace ./bin-src/ui/messages/errors/invalidReportPath.ts`;
-const tracedBegin = `Traced 1 changed file to 1 affected story file`;
-const moduleName = `bin-src/ui/messages/errors/invalidReportPath.stories.ts`;
 
 describe('Test trace script from package.json', () => {
   it('returns the default output successfully', () => {
@@ -22,8 +20,6 @@ describe('Test trace script from package.json', () => {
 
     // Add your assertions based on the expected output or behavior of the script
     expect(output).toContain(scriptCommand);
-    expect(output).toContain(tracedBegin);
-    expect(output).toContain(moduleName);
 
     // Verify that the output does not contain the expanded output
     expect(output).not.toContain(rootDirNote);

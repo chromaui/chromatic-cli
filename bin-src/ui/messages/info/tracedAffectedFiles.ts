@@ -48,12 +48,12 @@ export default (
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
 
-  const bailReason = ctx.turboSnap.bailReason
-    ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap.bailReason}\n\n`
+  const bailReason = ctx.turboSnap?.bailReason
+    ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap?.bailReason}\n\n`
     : '';
-  const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap.rootPath}\n\n`;
-  const basePath = `${chalk.magenta(baseDirNote)} ${ctx.turboSnap.baseDir}\n\n`;
-  const storybookPath = `${chalk.magenta(storybookDirNote)} ${ctx.turboSnap.storybookDir}\n\n`;
+  const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap?.rootPath}\n\n`;
+  const basePath = `${chalk.magenta(baseDirNote)} ${ctx.turboSnap?.baseDir}\n\n`;
+  const storybookPath = `${chalk.magenta(storybookDirNote)} ${ctx.turboSnap?.storybookDir}\n\n`;
   const untracedNotice =
     ctx.untracedFiles && ctx.untracedFiles.length > 0
       ? `${chalk.magenta(
