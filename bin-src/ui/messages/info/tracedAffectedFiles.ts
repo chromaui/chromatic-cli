@@ -40,8 +40,11 @@ export default (
     normalize: (name: string) => string;
   }
 ) => {
+  console.log('Hello');
+  console.log(ctx);
   const flag = ctx.log === (console as any) ? '--mode (-m)' : '--trace-changed';
   const basedir = ctx.options.storybookBaseDir || '.';
+  const storybookConfigDir = ctx.options.storybookConfigDir || '.storybook';
   const expanded = ctx.options.traceChanged === 'expanded';
   const printPath = (filepath: string) => printFilePath(filepath, basedir, expanded);
 
@@ -51,9 +54,9 @@ export default (
   const bailReason = ctx.turboSnap?.bailReason
     ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap?.bailReason}\n\n`
     : '';
-  const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap?.rootPath}\n\n`;
-  const basePath = `${chalk.magenta(baseDirNote)} ${ctx.turboSnap?.baseDir}\n\n`;
-  const storybookPath = `${chalk.magenta(storybookDirNote)} ${ctx.turboSnap?.storybookDir}\n\n`;
+  const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap.rootPath}\n\n`;
+  const basePath = `${chalk.magenta(baseDirNote)} ${basedir}\n\n`;
+  const storybookPath = `${chalk.magenta(storybookDirNote)} ${storybookConfigDir}\n\n`;
   const untracedNotice =
     ctx.untracedFiles && ctx.untracedFiles.length > 0
       ? `${chalk.magenta(
@@ -101,9 +104,9 @@ export default (
           if (seen.has(part)) note = chalk` {yellow [duplicate]}`;
           else seen.add(part);
         }
-        return chalk`File Path: ${part}\n\nBase Directory: ${basedir}\n\n${acc}\n${indent}∟ ${printPath(
-          part
-        )}${note}${printModules(part, indent)}`;
+        return chalk`${
+          expanded ? `File Path: ${part}\n\nBase Directory: ${basedir}\n\n` : ''
+        }${acc}\n${indent}∟ ${printPath(part)}${note}${printModules(part, indent)}`;
       }, '')
       .concat(chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`);
   });
