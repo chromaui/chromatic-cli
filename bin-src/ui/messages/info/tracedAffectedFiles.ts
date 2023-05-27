@@ -24,7 +24,7 @@ export const traceSuggestions = `If you are having trouble with tracing, please 
   1. Make sure you have the correct root path, base path, and storybook path.\n
   2. Make sure you have the correct storybook config file.\n
   3. Make sure you have the correct storybook config file path.\nYou can either set the flags storybook-base-dir or storybook-config-dir to help TurboSnap find the correct storybook config file.\n
-  `;
+`;
 
 export default (
   ctx: Context,
