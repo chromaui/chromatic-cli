@@ -4,6 +4,7 @@ export default {
   title: 'CLI/Messages/Info',
 };
 
+const rootPath = './chromatic-cli';
 const tracedPaths = [
   'src/app/dashboard/index.ts + 3 modules\nsrc/app/settings/Settings.stories.tsx + 2 modules',
   'src/app/dashboard/index.ts + 3 modules\nsrc/app/payment/Payment.stories.tsx',
@@ -74,7 +75,7 @@ export const TracedAffectedFilesExpanded = () =>
   tracedAffectedFiles(
     {
       options: { traceChanged: 'expanded' },
-      turboSnap: { tracedPaths: new Set(tracedPaths) },
+      turboSnap: { rootPath, tracedPaths: new Set(tracedPaths) },
     } as any,
     {
       changedFiles: ['src/app/dashboard/index.ts'],
