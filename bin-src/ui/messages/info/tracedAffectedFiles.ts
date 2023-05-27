@@ -40,8 +40,6 @@ export default (
     normalize: (name: string) => string;
   }
 ) => {
-  console.log('Hello');
-  console.log(ctx);
   const flag = ctx.log === (console as any) ? '--mode (-m)' : '--trace-changed';
   const basedir = ctx.options.storybookBaseDir || '.';
   const storybookConfigDir = ctx.options.storybookConfigDir || '.storybook';
@@ -51,20 +49,24 @@ export default (
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
 
-  const bailReason = ctx.turboSnap?.bailReason
-    ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap?.bailReason}\n\n`
-    : '';
-  const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap.rootPath}\n\n`;
-  const basePath = `${chalk.magenta(baseDirNote)} ${basedir}\n\n`;
-  const storybookPath = `${chalk.magenta(storybookDirNote)} ${storybookConfigDir}\n\n`;
-  const untracedNotice =
-    ctx.untracedFiles && ctx.untracedFiles.length > 0
-      ? `${chalk.magenta(
-          `We detected some untraced files, this may affect your traced changes as 
-    the untraced flag instructs TurboSnap to not trace dependencies for the files:`
-        )} \n  ${ctx.untracedFiles.join(',')}\n\n\n`
+  let directoryDebug = '';
+
+  if (expanded) {
+    const bailReason = ctx.turboSnap?.bailReason
+      ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap.bailReason}\n\n`
       : '';
-  const directoryDebug = `${rootPath}${basePath}${storybookPath}${bailReason}${untracedNotice}${traceSuggestions}`;
+    const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap.rootPath}\n\n`;
+    const basePath = `${chalk.magenta(baseDirNote)} ${basedir}\n\n`;
+    const storybookPath = `${chalk.magenta(storybookDirNote)} ${storybookConfigDir}\n\n`;
+    const untracedNotice =
+      ctx.untracedFiles && ctx.untracedFiles.length > 0
+        ? `${chalk.magenta(
+            `We detected some untraced files, this may affect your traced changes as 
+    the untraced flag instructs TurboSnap to not trace dependencies for the files:`
+          )} \n  ${ctx.untracedFiles.join(',')}\n\n\n`
+        : '';
+    directoryDebug = `${rootPath}${basePath}${storybookPath}${bailReason}${untracedNotice}${traceSuggestions}`;
+  }
 
   const summary = chalk`${
     ctx.options.traceChanged === 'expanded' ? directoryDebug : ''
