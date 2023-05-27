@@ -49,7 +49,7 @@ export default (
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
 
-  let directoryDebug = '';
+  let directoryDebug = null;
 
   if (expanded) {
     const bailReason = ctx.turboSnap?.bailReason
@@ -70,7 +70,7 @@ export default (
 
   const summary = chalk`${
     ctx.options.traceChanged === 'expanded' ? directoryDebug : ''
-  } ${info} Traced {bold ${changed}} to {bold ${affected}}`;
+  }${info} Traced {bold ${changed}} to {bold ${affected}}`;
 
   if (ctx.options.traceChanged === 'compact') {
     let submodules = false;
