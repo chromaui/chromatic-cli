@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "6.17.4",
+  "version": "6.17.5-canary.0",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -74,6 +74,7 @@
   },
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
+    "@storybook/csf-tools": "^7.0.12",
     "@types/webpack-env": "^1.17.0",
     "snyk-nodejs-lockfile-parser": "^1.49.0"
   },

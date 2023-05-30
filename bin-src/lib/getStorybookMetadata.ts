@@ -3,7 +3,9 @@ import meow from 'meow';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
 
-import path from 'path';
+import path, { join } from 'path';
+import { readConfig } from '@storybook/csf-tools';
+import { readdir } from 'fs/promises';
 import { Context } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
@@ -103,15 +105,21 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-const findAddons = async (ctx, mainConfig) => {
-  if (mainConfig?.addons) {
+const findAddons = async (ctx, mainConfig, v7) => {
+  const addons = v7
+    ? await Promise.all(
+        mainConfig.getSafeFieldValue(['addons']).map((addon) => resolvePackageJson(addon))
+      )
+    : mainConfig?.addons;
+
+  if (addons) {
     const allDependencies = {
       ...ctx.packageJson?.dependencies,
       ...ctx.packageJson?.devDependencies,
       ...ctx.packageJson?.peerDependencies,
     };
     return {
-      addons: mainConfig.addons.map((addon) => {
+      addons: addons.map((addon) => {
         let name: string;
         if (typeof addon === 'string') {
           name = addon.replace('/register', '');
@@ -150,9 +158,12 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
-export const findBuilder = async (mainConfig) => {
-  if (mainConfig?.framework?.name) {
-    const sbV7BuilderName = mainConfig.framework.name;
+export const findBuilder = async (mainConfig, v7) => {
+  const framework = v7 ? mainConfig.getSafeFieldValue(['framework']) : mainConfig?.framework;
+  const core = v7 ? mainConfig.getSafeFieldValue(['core']) : mainConfig?.core;
+
+  if (framework?.name) {
+    const sbV7BuilderName = framework.name;
 
     return Promise.race([
       resolvePackageJson(sbV7BuilderName)
@@ -163,8 +174,8 @@ export const findBuilder = async (mainConfig) => {
   }
 
   let name = 'webpack4'; // default builder in Storybook v6
-  if (mainConfig?.core?.builder) {
-    const { builder } = mainConfig.core;
+  if (core?.builder) {
+    const { builder } = core;
     name = typeof builder === 'string' ? builder : builder.name;
   }
 
@@ -179,14 +190,26 @@ export const findBuilder = async (mainConfig) => {
 export const getStorybookMetadata = async (ctx: Context) => {
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
-  const mainConfig = await r(path.resolve(configDir, 'main'));
+
+  let mainConfig;
+  let v7 = false;
+  try {
+    mainConfig = await r(path.resolve(configDir, 'main'));
+  } catch (e) {
+    const files = await readdir(configDir);
+    const mainConfigFileName = files.find((file) => file.startsWith('main')) || null;
+    const mainConfigFilePath = join(configDir, mainConfigFileName);
+    mainConfig = await readConfig(mainConfigFilePath);
+    v7 = true;
+  }
 
   const info = await Promise.allSettled([
-    findAddons(ctx, mainConfig),
+    findAddons(ctx, mainConfig, v7),
     findConfigFlags(ctx),
     findViewlayer(ctx),
-    findBuilder(mainConfig),
+    findBuilder(mainConfig, v7),
   ]);
+
   ctx.log.debug(info);
   let metadata = {};
   info.forEach((sbItem) => {
