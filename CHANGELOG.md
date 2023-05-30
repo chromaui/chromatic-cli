@@ -1,7 +1,21 @@
+# 6.17.5 - 2023-05-03
+
+- [747](https://github.com/chromaui/chromatic-cli/pull/747) Fix Storybook config detection by adding serverRequire to interpret files
+- [737](https://github.com/chromaui/chromatic-cli/pull/737) Better discovery for TurboSnap trace-changed and related directories
+
+# 6.17.4 - 2023-05-03
+
+- [738](https://github.com/chromaui/chromatic-cli/pull/738) Get the builder name and version via the mainConfig for SB v7+
+- [743](https://github.com/chromaui/chromatic-cli/pull/743) Bump Snyk lockfile parser dependency
+
+# 6.17.3 - 2023-04-05
+
+- [730](https://github.com/chromaui/chromatic-cli/pull/730) Disconnect preserveMissing from `--only-story-names` flag
+
 # 6.17.2 - 2023-03-17
 
 - [726](https://github.com/chromaui/chromatic-cli/pull/726) Increase timeout on Storybook Verification
-- [725](https://github.com/chromaui/chromatic-cli/pull/725) Bump webpack from 5.72.1 to 5.76.0 
+- [725](https://github.com/chromaui/chromatic-cli/pull/725) Bump webpack from 5.72.1 to 5.76.0
 - [711](https://github.com/chromaui/chromatic-cli/pull/711) Bump http-cache-semantics from 4.1.0 to 4.1.1
 
 # 6.17.1 - 2023-02-24
