@@ -1,7 +1,7 @@
-# 6.17.5 - 2023-05-03
+# 6.18.0 - 2023-05-03
 
-- [747](https://github.com/chromaui/chromatic-cli/pull/747) Fix Storybook config detection by adding serverRequire to interpret files
 - [737](https://github.com/chromaui/chromatic-cli/pull/737) Better discovery for TurboSnap trace-changed and related directories
+- [747](https://github.com/chromaui/chromatic-cli/pull/747) Fix Storybook config detection by adding serverRequire to interpret files
 
 # 6.17.4 - 2023-05-03
 
