@@ -33,7 +33,7 @@
     "isChromatic.d.ts"
   ],
   "scripts": {
-    "build": "npm-run-all --serial -l bundle:**",
+    "build": "npm-run-all --serial -l bundle:bin bundle:action",
     "build-storybook": "build-storybook -s static",
     "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
@@ -175,7 +175,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "docs": "https://www.chromatic.com/docs/cli",
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "yarn@3.5.1",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
     "displayName": "Chromatic"

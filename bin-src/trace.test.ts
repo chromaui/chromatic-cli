@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import { execSync } from 'child_process';
 
 import {
@@ -8,7 +7,7 @@ import {
   traceSuggestions,
 } from './ui/messages/info/tracedAffectedFiles';
 
-const scriptCommand = `$ ./bin/main.cjs trace ./bin-src/ui/messages/errors/invalidReportPath.ts`;
+const baseMessageModule = `bin-src/ui/messages/errors/`;
 
 describe('Test trace script from package.json', () => {
   it('returns the default output successfully', () => {
@@ -18,9 +17,7 @@ describe('Test trace script from package.json', () => {
     // Execute the script as a child process
     const output = execSync(`yarn ${scriptName}`).toString().trim();
 
-    // Add your assertions based on the expected output or behavior of the script
-    expect(output).toContain(scriptCommand);
-
+    expect(output).toContain(baseMessageModule);
     // Verify that the output does not contain the expanded output
     expect(output).not.toContain(rootDirNote);
   });
@@ -49,7 +46,7 @@ describe('Test trace script from package.json', () => {
     // Execute the script as a child process
     const output = execSync(`yarn ${scriptName}`).toString().trim();
 
-    const untracedFile = `./bin-src/ui/messages/errors/invalidReportPath.ts`;
+    const untracedFile = `bin-src/ui/messages/errors/invalidReportPath.ts`;
     const untracedFileNote = `We detected some untraced files`;
 
     expect(output).toContain(untracedFileNote);
