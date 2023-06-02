@@ -257,6 +257,8 @@ export async function getDependentStoryFiles(
     Array.from(affectedModuleIds).map((id) => [String(id), files(namesById.get(id))])
   );
 
+  ctx.log.debug(affectedModules);
+
   if (ctx.options.traceChanged) {
     ctx.log.info(
       tracedAffectedFiles(ctx, {
