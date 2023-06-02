@@ -231,11 +231,9 @@ export async function getDependentStoryFiles(
     const normalizedName = namesById.get(id);
     if (shouldBail(normalizedName)) return;
 
-    ctx.log.debug('Trace id...');
+    ctx.log.debug('Trace file...');
+    ctx.log.debug(name);
     ctx.log.debug(id);
-
-    ctx.log.debug('Reasons by Id...');
-    ctx.log.debug(reasonsById);
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
@@ -243,8 +241,6 @@ export async function getDependentStoryFiles(
 
     if (reasonsById.get(id).some(isCsfGlob)) {
       affectedModuleIds.add(id);
-      ctx.log.debug('Affected module ids...');
-      ctx.log.debug(affectedModuleIds);
       tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
   }
