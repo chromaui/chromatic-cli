@@ -11,9 +11,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Publish Chromatic
-        run: cd subdir && echo $PWD
-      - uses: chromaui/action@v1
+      - name: install
+        run: yarn install --frozen-lockfile
+      - uses: chromaui/action-next@v1
         with:
           exitOnceUploaded: true
           onlyChanged: true
