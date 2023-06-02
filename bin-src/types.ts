@@ -4,7 +4,7 @@ import { Logger } from './lib/log';
 
 export interface Flags {
   // Required options
-  projectToken?: string[];
+  projectToken?: string[] | string;
 
   // Storybook options
   buildScriptName?: string;

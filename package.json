@@ -19,6 +19,15 @@
     "url": "https://github.com/chromaui/chromatic-cli.git"
   },
   "license": "MIT",
+  "exports": {
+    ".": {
+      "require": "./isChromatic.js",
+      "import": "./isChromatic.mjs"
+    },
+    "./api": {
+      "import": "./node/main.cjs"
+    }
+  },
   "main": "isChromatic.js",
   "module": "isChromatic.mjs",
   "bin": {
@@ -41,7 +50,7 @@
     "chromatic-prebuilt": "./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./bin/main.cjs",
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./bin/main.cjs",
-    "lint": "yarn lint:js .storybook bin-src test-stories ./isChromatic.js ./isChromatic.mjs",
+    "lint": "yarn lint:js .storybook bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "node scripts/release.js",
@@ -52,6 +61,7 @@
     "prepare": "husky install && npm run build",
     "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",
     "bundle:action": "webpack --config=webpack-action.config.js",
+    "bundle:node": "webpack --config=webpack-node.config.js",
     "dev": "webpack --config=webpack-bin.config.js --watch --progress --mode=development",
     "lint-staged": "lint-staged"
   },

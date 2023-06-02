@@ -1,14 +1,8 @@
-import { error, getInput, setFailed, setOutput, info } from '@actions/core';
+import { error, getInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
-import { readFile } from 'jsonfile';
-import pkgUp from 'pkg-up';
-import { v4 as uuid } from 'uuid';
 import path from 'path';
 
-import getEnv from '../bin-src/lib/getEnv';
-import { createLogger } from '../bin-src/lib/log';
-import parseArgs from '../bin-src/lib/parseArgs';
-import { runAll } from '../bin-src/main';
+import { runChromatic } from '../node-src';
 
 const maybe = (a: string, b: any = undefined) => {
   if (!a) {
@@ -69,58 +63,6 @@ const getBuildInfo = (event: typeof context) => {
   }
 };
 
-interface Output {
-  code: number;
-  url: string;
-  buildUrl: string;
-  storybookUrl: string;
-  specCount: number;
-  componentCount: number;
-  testCount: number;
-  changeCount: number;
-  errorCount: number;
-  interactionTestFailuresCount: number;
-  actualTestCount: number;
-  actualCaptureCount: number;
-  inheritedCaptureCount: number;
-}
-
-async function runChromatic(options): Promise<Output> {
-  const sessionId = uuid();
-  const env = getEnv();
-  const log = createLogger(sessionId, env);
-  const packagePath = await pkgUp(); // the user's own package.json
-  const packageJson = await readFile(packagePath);
-
-  const ctx = {
-    ...parseArgs([]),
-    packagePath,
-    packageJson,
-    env,
-    log,
-    sessionId,
-    flags: options,
-  } as any;
-  await runAll(ctx);
-
-  return {
-    // Keep this in sync with the configured outputs in action.yml
-    code: ctx.exitCode,
-    url: ctx.build?.webUrl,
-    buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
-    specCount: ctx.build?.specCount,
-    componentCount: ctx.build?.componentCount,
-    testCount: ctx.build?.testCount,
-    changeCount: ctx.build?.changeCount,
-    errorCount: ctx.build?.errorCount,
-    interactionTestFailuresCount: ctx.build?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount,
-    inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
-  };
-}
-
 async function run() {
   const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
@@ -177,7 +119,6 @@ async function run() {
       exitZeroOnChanges: maybe(exitZeroOnChanges, true),
       externals: maybe(externals),
       forceRebuild: maybe(forceRebuild),
-      fromCI: true,
       ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
       interactive: false,
       only: maybe(only),
@@ -193,7 +134,6 @@ async function run() {
       storybookConfigDir: maybe(storybookConfigDir),
       traceChanged: maybe(traceChanged),
       untraced: maybe(untraced),
-      workingDir: maybe(workingDir),
       zip: maybe(zip, false),
     });
 

@@ -55,15 +55,17 @@ export async function findAncestorBuildWithCommit(
   let skip = 0;
   while (skip < limit) {
     // eslint-disable-next-line no-await-in-loop
-    const { app } = await client.runQuery(AncestorBuildsQuery, {
+    const { app } = (await client.runQuery(AncestorBuildsQuery, {
       buildNumber,
       skip,
       limit: Math.min(page, limit - skip),
-    });
+    })) as AncestorBuildsQueryResult;
 
     // eslint-disable-next-line no-await-in-loop
     const results = await Promise.all(
-      app.build.ancestorBuilds.map(async (build) => [build, await commitExists(build.commit)])
+      app.build.ancestorBuilds.map(
+        async (build) => [build, await commitExists(build.commit)] as const
+      )
     );
     const result = results.find(([build, exists]) => exists);
 
