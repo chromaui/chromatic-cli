@@ -55,7 +55,7 @@ export async function findAncestorBuildWithCommit(
   let skip = 0;
   while (skip < limit) {
     // eslint-disable-next-line no-await-in-loop
-    const { app } = await client.runQuery(AncestorBuildsQuery, {
+    const { app }: any = await client.runQuery(AncestorBuildsQuery, {
       buildNumber,
       skip,
       limit: Math.min(page, limit - skip),
