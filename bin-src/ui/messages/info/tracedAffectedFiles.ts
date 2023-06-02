@@ -17,6 +17,7 @@ const printFilePath = (filepath: string, basedir: string, expanded: boolean) => 
     .join('/');
 };
 
+// I don't know if this is really useful
 export const rootDirNote = `The root directory of your project:`;
 export const baseDirNote = `The base directory (The relative path from the root to the storybook config root):`;
 export const storybookDirNote = `The storybook directory (The directory can either be at the root or in a sub-directory):`;

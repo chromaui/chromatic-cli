@@ -231,12 +231,20 @@ export async function getDependentStoryFiles(
     const normalizedName = namesById.get(id);
     if (shouldBail(normalizedName)) return;
 
+    ctx.log.debug('Trace id...');
+    ctx.log.debug(id);
+
+    ctx.log.debug('Reasons by Id...');
+    ctx.log.debug(reasonsById);
+
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
 
     if (reasonsById.get(id).some(isCsfGlob)) {
       affectedModuleIds.add(id);
+      ctx.log.debug('Affected module ids...');
+      ctx.log.debug(affectedModuleIds);
       tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
   }
