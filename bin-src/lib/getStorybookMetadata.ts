@@ -195,12 +195,16 @@ export const getStorybookMetadata = async (ctx: Context) => {
   let v7 = false;
   try {
     mainConfig = await r(path.resolve(configDir, 'main'));
-  } catch (e) {
-    const files = await readdir(configDir);
-    const mainConfigFileName = files.find((file) => file.startsWith('main')) || null;
-    const mainConfigFilePath = join(configDir, mainConfigFileName);
-    mainConfig = await readConfig(mainConfigFilePath);
-    v7 = true;
+  } catch (storybookV6error) {
+    try {
+      const files = await readdir(configDir);
+      const mainConfigFileName = files.find((file) => file.startsWith('main')) || null;
+      const mainConfigFilePath = join(configDir, mainConfigFileName);
+      mainConfig = await readConfig(mainConfigFilePath);
+      v7 = true;
+    } catch (storybookV7error) {
+      mainConfig = {};
+    }
   }
 
   const info = await Promise.allSettled([
