@@ -1,4 +1,4 @@
-import { error, getInput, setFailed, setOutput, info } from '@actions/core';
+import { error, getInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
 import { readFile } from 'jsonfile';
 import pkgUp from 'pkg-up';
