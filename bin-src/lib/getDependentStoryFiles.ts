@@ -241,6 +241,9 @@ export async function getDependentStoryFiles(
     }
   }
 
+  ctx.log.debug('Traced files...');
+  ctx.log.debug(tracedFiles);
+
   // First, check the files that have changed according to git
   tracedFiles.forEach((posixPath) => traceName(posixPath));
   // If more were found during that process, check them too.
@@ -257,6 +260,7 @@ export async function getDependentStoryFiles(
     Array.from(affectedModuleIds).map((id) => [String(id), files(namesById.get(id))])
   );
 
+  ctx.log.debug('Affected modules...');
   ctx.log.debug(affectedModules);
 
   if (ctx.options.traceChanged) {
