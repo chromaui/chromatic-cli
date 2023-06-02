@@ -106,6 +106,10 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
 };
 
 const findAddons = async (ctx, mainConfig, v7) => {
+  if (!mainConfig) {
+    return { addons: [{ name: 'unknown', packageName: 'unknown', packageVersion: '0' }] };
+  }
+
   const addons = v7
     ? await Promise.all(
         mainConfig.getSafeFieldValue(['addons']).map((addon) => resolvePackageJson(addon))
@@ -159,6 +163,10 @@ const findConfigFlags = async ({ options, packageJson }) => {
 };
 
 export const findBuilder = async (mainConfig, v7) => {
+  if (!mainConfig) {
+    return { builder: [{ name: 'unknown', packageVersion: '0' }] };
+  }
+
   const framework = v7 ? mainConfig.getSafeFieldValue(['framework']) : mainConfig?.framework;
   const core = v7 ? mainConfig.getSafeFieldValue(['core']) : mainConfig?.core;
 
@@ -203,7 +211,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
       mainConfig = await readConfig(mainConfigFilePath);
       v7 = true;
     } catch (storybookV7error) {
-      mainConfig = {};
+      mainConfig = null;
     }
   }
 
