@@ -7,7 +7,7 @@ import getEnv from '../bin-src/lib/getEnv';
 import { createLogger } from '../bin-src/lib/log';
 import parseArgs from '../bin-src/lib/parseArgs';
 import { runAll } from '../bin-src/main';
-import { Context, Flags } from '../bin-src/types';
+import { Context, Flags, Options } from '../bin-src/types';
 
 interface Output {
   code: number;
@@ -25,7 +25,13 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export async function run(flags: Flags): Promise<Output> {
+export async function runChromaticFull({
+  flags = {},
+  options = {},
+}: {
+  flags?: Flags;
+  options?: Partial<Options>;
+}): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
   const log = createLogger(sessionId, env);
@@ -41,7 +47,7 @@ export async function run(flags: Flags): Promise<Output> {
     sessionId,
     flags,
   };
-  await runAll(ctx);
+  await runAll(ctx, options);
 
   return {
     // Keep this in sync with the configured outputs in action.yml
@@ -59,4 +65,8 @@ export async function run(flags: Flags): Promise<Output> {
     actualCaptureCount: ctx.build?.actualCaptureCount,
     inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
   };
+}
+
+export async function run(options: Partial<Options>): Promise<Output> {
+  return runChromaticFull({ options });
 }

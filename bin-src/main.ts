@@ -15,7 +15,7 @@ import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
-import { Context } from './types';
+import { Context, Options } from './types';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
@@ -60,13 +60,13 @@ export async function main(argv: string[]) {
   process.exit(ctx.exitCode);
 }
 
-export async function runAll(ctx) {
+export async function runAll(ctx, extraOptions?: Partial<Options>) {
   setExitCode(ctx, exitCodes.OK);
 
   ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
 
   // Run these in parallel; neither should ever reject
-  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
+  await Promise.all([runBuild(ctx, extraOptions), checkForUpdates(ctx)]);
 
   if (ctx.exitCode === 0 || ctx.exitCode === 1) {
     await checkPackageJson(ctx);
@@ -77,12 +77,12 @@ export async function runAll(ctx) {
   }
 }
 
-export async function runBuild(ctx: Context) {
+export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 
   try {
-    ctx.options = await getOptions(ctx);
+    ctx.options = await getOptions(ctx, extraOptions);
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));

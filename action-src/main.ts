@@ -2,7 +2,7 @@ import { error, getInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
 import path from 'path';
 
-import { run as runNode } from '../node-src';
+import { runChromaticFull } from '../node-src';
 
 const maybe = (a: string, b: any = undefined) => {
   if (!a) {
@@ -108,35 +108,36 @@ async function run() {
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
-    const output = await runNode({
-      allowConsoleErrors: maybe(allowConsoleErrors, false),
-      autoAcceptChanges: maybe(autoAcceptChanges),
-      branchName: maybe(branchName),
-      buildScriptName: maybe(buildScriptName),
-      debug: maybe(debug),
-      diagnostics: maybe(diagnostics),
-      dryRun: maybe(dryRun),
-      exitOnceUploaded: maybe(exitOnceUploaded, false),
-      exitZeroOnChanges: maybe(exitZeroOnChanges, true),
-      externals: maybe(externals),
-      forceRebuild: maybe(forceRebuild),
-      ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
-      interactive: false,
-      only: maybe(only),
-      onlyChanged: maybe(onlyChanged),
-      onlyStoryFiles: maybe(onlyStoryFiles),
-      onlyStoryNames: maybe(onlyStoryNames),
-      preserveMissing: maybe(preserveMissing),
-      projectToken,
-      repositorySlug: maybe(repositorySlug),
-      skip: maybe(skip),
-      storybookBaseDir: maybe(storybookBaseDir),
-      storybookBuildDir: maybe(storybookBuildDir),
-      storybookConfigDir: maybe(storybookConfigDir),
-      traceChanged: maybe(traceChanged),
-      untraced: maybe(untraced),
-      zip: maybe(zip, false),
-      junitReport: maybe(junitReport, false),
+    const output = await runChromaticFull({
+      flags: {
+        allowConsoleErrors: maybe(allowConsoleErrors, false),
+        autoAcceptChanges: maybe(autoAcceptChanges),
+        branchName: maybe(branchName),
+        buildScriptName: maybe(buildScriptName),
+        debug: maybe(debug),
+        diagnostics: maybe(diagnostics),
+        dryRun: maybe(dryRun),
+        exitOnceUploaded: maybe(exitOnceUploaded, false),
+        exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+        externals: maybe(externals),
+        forceRebuild: maybe(forceRebuild),
+        ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+        interactive: false,
+        only: maybe(only),
+        onlyChanged: maybe(onlyChanged),
+        onlyStoryFiles: maybe(onlyStoryFiles),
+        onlyStoryNames: maybe(onlyStoryNames),
+        preserveMissing: maybe(preserveMissing),
+        projectToken,
+        repositorySlug: maybe(repositorySlug),
+        skip: maybe(skip),
+        storybookBaseDir: maybe(storybookBaseDir),
+        storybookBuildDir: maybe(storybookBuildDir),
+        storybookConfigDir: maybe(storybookConfigDir),
+        traceChanged: maybe(traceChanged),
+        untraced: maybe(untraced),
+        zip: maybe(zip, false),
+      },
     });
 
     Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
