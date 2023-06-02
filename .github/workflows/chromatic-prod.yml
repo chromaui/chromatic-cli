@@ -11,24 +11,20 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: install
-        run: yarn install --frozen-lockfile
       - name: Publish Chromatic
-        run: cd subdir && echo $PWD
-      - name: Test PWD  
-        run: echo $PWD
-      # - uses: chromaui/action-next@v1
-      #   with:
-      #     exitOnceUploaded: true
-      #     onlyChanged: true
-      #     traceChanged: true
-      #     diagnostics: true
-      #   env:
-      #     CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
-      # - uses: actions/upload-artifact@v2
-      #   if: always()
-      #   with:
-      #     name: chromatic-build-artifacts-${{ github.run_id }}
-      #     path: |
-      #       chromatic-diagnostics.json
-      #       **/build-storybook.log
+        run: cd web-client && echo $PWD
+      - uses: chromaui/action@v1
+        with:
+          exitOnceUploaded: true
+          onlyChanged: true
+          traceChanged: true
+          diagnostics: true
+        env:
+          CHROMATIC_PROJECT_TOKEN: gcaw1ai2dgo
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: chromatic-build-artifacts-${{ github.run_id }}
+          path: |
+            chromatic-diagnostics.json
+            **/build-storybook.log
