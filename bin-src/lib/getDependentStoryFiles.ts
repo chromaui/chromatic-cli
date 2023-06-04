@@ -231,6 +231,10 @@ export async function getDependentStoryFiles(
     const normalizedName = namesById.get(id);
     if (shouldBail(normalizedName)) return;
 
+    ctx.log.debug('Trace file...');
+    ctx.log.debug(name);
+    ctx.log.debug(id);
+
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
@@ -240,6 +244,9 @@ export async function getDependentStoryFiles(
       tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
   }
+
+  ctx.log.debug('Traced files...');
+  ctx.log.debug(tracedFiles);
 
   // First, check the files that have changed according to git
   tracedFiles.forEach((posixPath) => traceName(posixPath));
@@ -256,6 +263,9 @@ export async function getDependentStoryFiles(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
     Array.from(affectedModuleIds).map((id) => [String(id), files(namesById.get(id))])
   );
+
+  ctx.log.debug('Affected modules...');
+  ctx.log.debug(affectedModules);
 
   if (ctx.options.traceChanged) {
     ctx.log.info(
