@@ -47,6 +47,7 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
     // eslint-disable-next-line no-console
     console.log(`Wrote ${targetFile}`);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error(err);
   }
 }
