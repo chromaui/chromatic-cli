@@ -14,3 +14,4 @@ chromatic-diagnostics.json
 # the dist folder IS included so we can test every version in the CI without publishing
 bin
 action
+node

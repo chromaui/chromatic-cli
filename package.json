@@ -25,7 +25,7 @@
       "import": "./isChromatic.mjs"
     },
     "./node": {
-      "require": "./node/main.cjs"
+      "require": "./node/index.js"
     }
   },
   "main": "isChromatic.js",
@@ -61,7 +61,7 @@
     "prepare": "husky install && npm run build",
     "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",
     "bundle:action": "webpack --config=webpack-action.config.js",
-    "bundle:node": "webpack --config=webpack-node.config.js",
+    "bundle:node": "tsup",
     "dev": "webpack --config=webpack-bin.config.js --watch --progress --mode=development",
     "lint-staged": "lint-staged"
   },
@@ -170,6 +170,7 @@
     "tree-kill": "^1.2.2",
     "ts-dedent": "^1.0.0",
     "ts-loader": "^9.2.5",
+    "tsup": "^6.7.0",
     "typescript": "^4.3.5",
     "util-deprecate": "^1.0.2",
     "uuid": "^8.3.2",
