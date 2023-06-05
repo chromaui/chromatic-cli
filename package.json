@@ -24,8 +24,8 @@
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
     },
-    "./api": {
-      "import": "./node/main.cjs"
+    "./node": {
+      "require": "./node/main.cjs"
     }
   },
   "main": "isChromatic.js",
