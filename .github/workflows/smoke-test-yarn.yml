@@ -12,7 +12,7 @@ jobs:
         with:
           node-version: 16
       - run: yarn
-      - run: yarn bundle:bin
+      - run: yarn build
       - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
           LOG_LEVEL: debug

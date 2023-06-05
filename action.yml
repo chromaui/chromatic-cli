@@ -124,5 +124,5 @@ outputs:
     description: 'The number of inherited (not captured) snapshots (e.g. due to TurboSnap)'
 
 runs:
-  main: action/main.js
+  main: dist/action.js
   using: node16
