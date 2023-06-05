@@ -2,7 +2,7 @@ import { error, getInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
 import path from 'path';
 
-import { runChromatic } from '../node-src';
+import { run as runNode } from '../node-src';
 
 const maybe = (a: string, b: any = undefined) => {
   if (!a) {
@@ -107,7 +107,7 @@ async function run() {
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
-    const output = await runChromatic({
+    const output = await runNode({
       allowConsoleErrors: maybe(allowConsoleErrors, false),
       autoAcceptChanges: maybe(autoAcceptChanges),
       branchName: maybe(branchName),

@@ -24,7 +24,7 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export async function runChromatic(flags: Flags): Promise<Output> {
+export async function run(flags: Flags): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
   const log = createLogger(sessionId, env);
