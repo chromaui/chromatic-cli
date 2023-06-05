@@ -52,9 +52,7 @@ export default (
   let directoryDebug = null;
 
   if (expanded) {
-    const bailReason = ctx.turboSnap?.bailReason
-      ? `${chalk.magenta('Bail Reason:')} ${ctx.turboSnap.bailReason}\n\n`
-      : '';
+    const bailReason = ctx.turboSnap?.bailReason ? `${ctx.turboSnap.bailReason}\n\n` : '';
     const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap.rootPath}\n\n`;
     const basePath = `${chalk.magenta(baseDirNote)} ${basedir}\n\n`;
     const storybookPath = `${chalk.magenta(storybookDirNote)} ${storybookConfigDir}\n\n`;
