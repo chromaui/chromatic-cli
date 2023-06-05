@@ -5,7 +5,6 @@ node_modules
 *.tgz
 .editorconfig
 
-action/main.js
 storybook-static
 subdir-static
 test-storybook
