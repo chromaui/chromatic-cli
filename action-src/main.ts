@@ -155,6 +155,7 @@ async function run() {
     const untraced = getInput('untraced');
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
+    const junitReport = getInput('junitReport');
 
     process.env.CHROMATIC_ACTION = 'true';
     process.env.CHROMATIC_SHA = sha;
@@ -196,6 +197,7 @@ async function run() {
       untraced: maybe(untraced),
       workingDir: maybe(workingDir),
       zip: maybe(zip, false),
+      junitReport: maybe(junitReport, false),
     });
 
     Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));

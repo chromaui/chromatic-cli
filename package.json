@@ -176,7 +176,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "docs": "https://www.chromatic.com/docs/cli",
-  "packageManager": "yarn@1.22.19",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
     "displayName": "Chromatic"
