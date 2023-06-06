@@ -1,15 +1,13 @@
 import { readFile } from 'jsonfile';
 import pkgUp from 'pkg-up';
 import { v4 as uuid } from 'uuid';
-import registerObservable from 'any-observable/register';
+import 'any-observable/register/zen';
 
 import getEnv from '../bin-src/lib/getEnv';
 import { createLogger } from '../bin-src/lib/log';
 import parseArgs from '../bin-src/lib/parseArgs';
 import { runAll } from '../bin-src/main';
 import { Context, Flags } from '../bin-src/types';
-
-registerObservable('zen');
 
 interface Output {
   code: number;
