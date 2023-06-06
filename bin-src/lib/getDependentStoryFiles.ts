@@ -92,6 +92,9 @@ export async function getDependentStoryFiles(
   const storybookDir = normalize(posix(storybookConfigDir));
   const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
 
+  ctx.log.debug('BASE Directory:', baseDir);
+  ctx.log.debug('Storybook CONFIG Directory:', storybookDir);
+
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
   const storiesEntryFiles = [
