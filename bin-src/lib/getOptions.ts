@@ -25,10 +25,7 @@ const undefinedIfEmpty = <T>(array: T[]) => {
   return filtered.length ? filtered : undefined;
 };
 
-export default function getOptions(
-  { argv, env, flags, log, packageJson }: Context,
-  extraOptions: Partial<Options> = {}
-): Options {
+export default function getOptions({ argv, env, flags, log, packageJson }: Context): Options {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
@@ -78,7 +75,6 @@ export default function getOptions(
     branchName,
     patchHeadRef,
     patchBaseRef,
-    ...extraOptions,
   };
 
   if (flags.debug) {

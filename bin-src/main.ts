@@ -82,7 +82,8 @@ export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
   ctx.log.info(intro(ctx));
 
   try {
-    ctx.options = await getOptions(ctx, extraOptions);
+    ctx.options = await getOptions(ctx);
+    if (extraOptions) ctx.options = { ...ctx.options, ...extraOptions };
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));

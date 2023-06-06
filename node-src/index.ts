@@ -25,7 +25,7 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export async function runChromaticFull({
+export async function run({
   flags = {},
   options = {},
 }: {
@@ -65,8 +65,4 @@ export async function runChromaticFull({
     actualCaptureCount: ctx.build?.actualCaptureCount,
     inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
   };
-}
-
-export async function run(options: Partial<Options>): Promise<Output> {
-  return runChromaticFull({ options });
 }
