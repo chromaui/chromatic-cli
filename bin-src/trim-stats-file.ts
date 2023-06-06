@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { outputFile } from 'fs-extra';
 import { readStatsFile } from './tasks/read-stats-file';
 
@@ -44,7 +45,6 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
         .replace(/\n {8}}/g, ' }')
     );
 
-    // eslint-disable-next-line no-console
     console.log(`Wrote ${targetFile}`);
   } catch (err) {
     // eslint-disable-next-line no-console
