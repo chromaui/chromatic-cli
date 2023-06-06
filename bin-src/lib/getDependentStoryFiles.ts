@@ -83,6 +83,13 @@ export async function getDependentStoryFiles(
     const CSF_REGEX = /\s+sync\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
     const newPath = normalizePath(posixPath, rootPath, baseDir);
+    if (
+      (posixPath?.includes('generated-stories-entry') || posixPath?.includes('preview')) &&
+      !posixPath?.includes('node_modules') &&
+      !posixPath?.includes('webpack')
+    ) {
+      ctx.log.debug('Normalizing path:', posixPath, '=>', newPath);
+    }
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
       ? newPath.replace(URL_PARAM_REGEX, '')
@@ -236,7 +243,7 @@ export async function getDependentStoryFiles(
 
     ctx.log.debug('Trace file...');
     ctx.log.debug(name);
-    ctx.log.debug(id);
+    ctx.log.debug(id || 'no moduleId found for this file');
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
