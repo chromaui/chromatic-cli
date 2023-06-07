@@ -10,7 +10,7 @@ export default defineConfig((options) => [
     minify: !options.watch,
     format: ['cjs'],
     dts: {
-      entry: ['node-src/index.ts'],
+      entry: { node: 'node-src/index.ts' },
       resolve: true,
     },
     treeshake: true,
