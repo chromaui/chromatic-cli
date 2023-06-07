@@ -38,7 +38,7 @@ export const exitCodes = {
   INVALID_OPTIONS: 254,
 };
 
-export const setExitCode = (ctx: Context, exitCode: number, userError = false) => {
+export const setExitCode = (ctx: Partial<Context>, exitCode: number, userError = false) => {
   const [exitCodeKey] = Object.entries(exitCodes).find(([_, code]) => code === exitCode) || [];
   if (!exitCodeKey) throw new Error(`Invalid exitCode: ${exitCode}`);
   ctx.exitCode = exitCode;

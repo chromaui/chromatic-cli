@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import { execSync } from 'child_process';
 
 import {
@@ -6,7 +5,7 @@ import {
   baseDirNote,
   storybookDirNote,
   traceSuggestions,
-} from './ui/messages/info/tracedAffectedFiles';
+} from '../node-src/ui/messages/info/tracedAffectedFiles';
 
 const scriptCommand = `$ ./dist/bin.js trace ./bin-src/ui/messages/errors/invalidReportPath.ts`;
 
