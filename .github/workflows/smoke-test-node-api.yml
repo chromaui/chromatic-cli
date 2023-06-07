@@ -1,4 +1,4 @@
-name: Smoke test via action
+name: Smoke test via node api
 on: push
 
 jobs:
