@@ -35,7 +35,7 @@ interface Output {
 
 export async function run({
   argv = [],
-  flags,
+  flags = {},
 }: {
   argv?: string[];
   flags?: Flags;

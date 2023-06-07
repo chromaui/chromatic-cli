@@ -2,7 +2,7 @@ import mockfs from 'mock-fs';
 
 import { readStatsFile } from '../node-src/tasks/read-stats-file';
 // eslint-disable-next-line jest/no-mocks-import
-import * as trimmedFile from '../node-src/__mocks__/previewStatsJson/preview-stats.trimmed.json';
+import * as trimmedFile from './__mocks__/previewStatsJson/preview-stats.trimmed.json';
 
 mockfs({
   './storybook-static/preview-stats.json': JSON.stringify(trimmedFile),
