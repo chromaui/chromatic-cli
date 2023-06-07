@@ -164,7 +164,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
 
 export const findBuilder = async (mainConfig, v7) => {
   if (!mainConfig) {
-    return { builder: [{ name: 'unknown', packageVersion: '0' }] };
+    return { builder: { name: 'unknown', packageVersion: '0' } };
   }
 
   const framework = v7 ? mainConfig.getSafeFieldValue(['framework']) : mainConfig?.framework;
