@@ -1,5 +1,7 @@
 module.exports = {
-  stories: process.env.SMOKE_TEST ? ['../test-stories/*.stories.*'] : ['../bin-src/**/*.stories.*'],
+  stories: process.env.SMOKE_TEST
+    ? ['../test-stories/*.stories.*']
+    : ['../node-src/**/*.stories.*'],
   addons: ['@storybook/addon-viewport'],
   features: {
     postcss: false,
