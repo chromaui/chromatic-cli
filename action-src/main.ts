@@ -63,6 +63,22 @@ const getBuildInfo = (event: typeof context) => {
   }
 };
 
+interface Output {
+  code: number;
+  url: string;
+  buildUrl: string;
+  storybookUrl: string;
+  specCount: number;
+  componentCount: number;
+  testCount: number;
+  changeCount: number;
+  errorCount: number;
+  interactionTestFailuresCount: number;
+  actualTestCount: number;
+  actualCaptureCount: number;
+  inheritedCaptureCount: number;
+}
+
 async function run() {
   const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
@@ -109,34 +125,36 @@ async function run() {
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
     const output = await runNode({
-      allowConsoleErrors: maybe(allowConsoleErrors, false),
-      autoAcceptChanges: maybe(autoAcceptChanges),
-      branchName: maybe(branchName),
-      buildScriptName: maybe(buildScriptName),
-      debug: maybe(debug),
-      diagnostics: maybe(diagnostics),
-      dryRun: maybe(dryRun),
-      exitOnceUploaded: maybe(exitOnceUploaded, false),
-      exitZeroOnChanges: maybe(exitZeroOnChanges, true),
-      externals: maybe(externals),
-      forceRebuild: maybe(forceRebuild),
-      ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
-      interactive: false,
-      only: maybe(only),
-      onlyChanged: maybe(onlyChanged),
-      onlyStoryFiles: maybe(onlyStoryFiles),
-      onlyStoryNames: maybe(onlyStoryNames),
-      preserveMissing: maybe(preserveMissing),
-      projectToken,
-      repositorySlug: maybe(repositorySlug),
-      skip: maybe(skip),
-      storybookBaseDir: maybe(storybookBaseDir),
-      storybookBuildDir: maybe(storybookBuildDir),
-      storybookConfigDir: maybe(storybookConfigDir),
-      traceChanged: maybe(traceChanged),
-      untraced: maybe(untraced),
-      zip: maybe(zip, false),
-      junitReport: maybe(junitReport, false),
+      flags: {
+        allowConsoleErrors: maybe(allowConsoleErrors, false),
+        autoAcceptChanges: maybe(autoAcceptChanges),
+        branchName: maybe(branchName),
+        buildScriptName: maybe(buildScriptName),
+        debug: maybe(debug),
+        diagnostics: maybe(diagnostics),
+        dryRun: maybe(dryRun),
+        exitOnceUploaded: maybe(exitOnceUploaded, false),
+        exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+        externals: maybe(externals),
+        forceRebuild: maybe(forceRebuild),
+        ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+        interactive: false,
+        only: maybe(only),
+        onlyChanged: maybe(onlyChanged),
+        onlyStoryFiles: maybe(onlyStoryFiles),
+        onlyStoryNames: maybe(onlyStoryNames),
+        preserveMissing: maybe(preserveMissing),
+        projectToken,
+        repositorySlug: maybe(repositorySlug),
+        skip: maybe(skip),
+        storybookBaseDir: maybe(storybookBaseDir),
+        storybookBuildDir: maybe(storybookBuildDir),
+        storybookConfigDir: maybe(storybookConfigDir),
+        traceChanged: maybe(traceChanged),
+        untraced: maybe(untraced),
+        zip: maybe(zip, false),
+        junitReport: maybe(junitReport, false),
+      },
     });
 
     Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));

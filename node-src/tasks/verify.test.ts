@@ -70,25 +70,25 @@ describe('verifyBuild', () => {
     const ctx = { client, ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
 
-    expect(client.runQuery).nthCalledWith(
+    expect(client.runQuery).toHaveBeenNthCalledWith(
       1,
       expect.stringMatching(/StartedBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
-    expect(client.runQuery).nthCalledWith(
+    expect(client.runQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringMatching(/StartedBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
-    expect(client.runQuery).nthCalledWith(
+    expect(client.runQuery).toHaveBeenNthCalledWith(
       3,
       expect.stringMatching(/StartedBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
-    expect(client.runQuery).nthCalledWith(
+    expect(client.runQuery).toHaveBeenNthCalledWith(
       4,
       expect.stringMatching(/VerifyBuildQuery/),
       { number: 1 },
