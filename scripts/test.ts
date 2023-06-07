@@ -3,7 +3,9 @@ import { run } from '../dist/node';
 
 async function go() {
   await run({
-    projectToken: process.env.CHROMATIC_PROJECT_TOKEN,
+    flags: {
+      projectToken: process.env.CHROMATIC_PROJECT_TOKEN,
+    },
   });
 }
 
