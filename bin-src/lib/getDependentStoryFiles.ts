@@ -83,7 +83,6 @@ export async function getDependentStoryFiles(
     const CSF_REGEX = /\s+sync\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
     const newPath = normalizePath(posixPath, rootPath, baseDir);
-
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
       ? newPath.replace(URL_PARAM_REGEX, '')
