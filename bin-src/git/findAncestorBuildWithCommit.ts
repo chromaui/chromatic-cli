@@ -54,7 +54,6 @@ export async function findAncestorBuildWithCommit(
 ): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | null> {
   let skip = 0;
   while (skip < limit) {
-    // @ts-expect-error runQuery is not typed
     // eslint-disable-next-line no-await-in-loop
     const { app } = await client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
       buildNumber,
