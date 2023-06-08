@@ -1,3 +1,10 @@
+# 6.18.2 - 2023-06-07
+
+- [758](https://github.com/chromaui/chromatic-cli/pull/758) Add additional logging for turbosnap
+- [753](https://github.com/chromaui/chromatic-cli/pull/753) Update getStorybookMetadata to safely record version even if fails to parse mainConfig
+
+
+
 # 6.18.0 - 2023-05-03
 
 - [737](https://github.com/chromaui/chromatic-cli/pull/737) Better discovery for TurboSnap trace-changed and related directories
