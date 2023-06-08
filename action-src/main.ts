@@ -1,4 +1,4 @@
-import { error, getInput, setFailed, setOutput, info } from '@actions/core';
+import { error, getInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
 import { readFile } from 'jsonfile';
 import pkgUp from 'pkg-up';
@@ -9,6 +9,7 @@ import getEnv from '../bin-src/lib/getEnv';
 import { createLogger } from '../bin-src/lib/log';
 import parseArgs from '../bin-src/lib/parseArgs';
 import { runAll } from '../bin-src/main';
+import { Context } from '../bin-src/types';
 
 const maybe = (a: string, b: any = undefined) => {
   if (!a) {
@@ -92,7 +93,7 @@ async function runChromatic(options): Promise<Output> {
   const packagePath = await pkgUp(); // the user's own package.json
   const packageJson = await readFile(packagePath);
 
-  const ctx = {
+  const ctx: Partial<Context> = {
     ...parseArgs([]),
     packagePath,
     packageJson,
@@ -100,7 +101,7 @@ async function runChromatic(options): Promise<Output> {
     log,
     sessionId,
     flags: options,
-  } as any;
+  };
   await runAll(ctx);
 
   return {
@@ -154,6 +155,7 @@ async function run() {
     const untraced = getInput('untraced');
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
+    const junitReport = getInput('junitReport');
 
     process.env.CHROMATIC_ACTION = 'true';
     process.env.CHROMATIC_SHA = sha;
@@ -195,6 +197,7 @@ async function run() {
       untraced: maybe(untraced),
       workingDir: maybe(workingDir),
       zip: maybe(zip, false),
+      junitReport: maybe(junitReport, false),
     });
 
     Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
