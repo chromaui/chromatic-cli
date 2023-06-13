@@ -25,13 +25,20 @@
       "import": "./isChromatic.mjs"
     },
     "./node": {
+      "types": "./dist/node.d.ts",
       "require": "./dist/node.js",
-      "node": "./dist/node.js",
-      "types": "./dist/node.d.ts"
+      "node": "./dist/node.js"
     }
   },
   "main": "isChromatic.js",
   "module": "isChromatic.mjs",
+  "typesVersions": {
+    "*": {
+      "node": [
+        "dist/node.d.ts"
+      ]
+    }
+  },
   "bin": {
     "chroma": "dist/bin.js",
     "chromatic": "dist/bin.js",
