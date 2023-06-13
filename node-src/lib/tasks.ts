@@ -15,6 +15,8 @@ export const createTask = ({ title, steps, ...config }): Listr.ListrTask<Context
       // eslint-disable-next-line no-await-in-loop
       await step(ctx, task);
     }
+
+    ctx.options.onTaskComplete?.({ ...ctx });
   },
   ...config,
 });

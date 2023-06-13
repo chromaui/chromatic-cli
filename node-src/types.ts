@@ -86,6 +86,9 @@ export interface Options {
   branchName: string;
   patchHeadRef: string;
   patchBaseRef: string;
+
+  /** A callback that is called at the completion of each task */
+  onTaskComplete?: (ctx: Context) => void;
 }
 
 export interface Context {
