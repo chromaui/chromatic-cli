@@ -1,4 +1,4 @@
-# 6.19.3 - 2023-06-12
+# 6.19.4 - 2023-06-12
 
 - [764](https://github.com/chromaui/chromatic-cli/pull/764) Move all depenendencies to dev deps
 
