@@ -1,3 +1,9 @@
+# 6.19.0 - 2023-06-12
+
+- [756](https://github.com/chromaui/chromatic-cli/pull/756) Added onTaskComplete callback option
+- [755](https://github.com/chromaui/chromatic-cli/pull/755) Add a node entry point
+
+
 # 6.18.2 - 2023-06-07
 
 - [758](https://github.com/chromaui/chromatic-cli/pull/758) Add additional logging for turbosnap
