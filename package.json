@@ -37,8 +37,7 @@
     "chromatic-cli": "dist/bin.js"
   },
   "files": [
-    "dist/bin.js",
-    "dist/node.js",
+    "dist/*.js",
     "dist/node.d.ts",
     "isChromatic.js",
     "isChromatic.mjs",
