@@ -6,7 +6,7 @@ import HTTPClient from './io/HTTPClient';
 import getEnv from './lib/getEnv';
 import { createLogger } from './lib/log';
 import parseArgs from './lib/parseArgs';
-import { Context, Flags } from './types';
+import { Context, Flags, Options } from './types';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { runBuild } from './runBuild';
 import checkForUpdates from './lib/checkForUpdates';
@@ -39,9 +39,11 @@ interface Output {
 export async function run({
   argv = [],
   flags,
+  options,
 }: {
   argv?: string[];
   flags?: Flags;
+  options?: Options;
 }): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
@@ -76,7 +78,7 @@ export async function run({
 
   ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
 
-  await runAll(ctx);
+  await runAll(ctx, options);
 
   return {
     // Keep this in sync with the configured outputs in action.yml
@@ -96,9 +98,9 @@ export async function run({
   };
 }
 
-export async function runAll(ctx) {
+export async function runAll(ctx, options?: Options) {
   // Run these in parallel; neither should ever reject
-  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
+  await Promise.all([runBuild(ctx, options), checkForUpdates(ctx)]);
 
   if (ctx.exitCode === 0 || ctx.exitCode === 1) {
     await checkPackageJson(ctx);

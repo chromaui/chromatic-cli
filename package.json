@@ -26,6 +26,7 @@
     },
     "./node": {
       "require": "./dist/node.js",
+      "node": "./dist/node.js",
       "types": "./dist/node.d.ts"
     }
   },

@@ -6,7 +6,7 @@ import NonTTYRenderer from './lib/NonTTYRenderer';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
-import { Context } from './types';
+import { Context, Options } from './types';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
@@ -16,12 +16,13 @@ import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
 import { endActivity } from './ui/components/activity';
 
-export async function runBuild(ctx: Context) {
+export async function runBuild(ctx: Context, extraOptions?: Options) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 
   try {
     ctx.options = await getOptions(ctx);
+    if (extraOptions) ctx.options = { ...ctx.options, ...extraOptions };
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));
