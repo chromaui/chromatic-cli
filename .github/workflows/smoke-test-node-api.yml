@@ -1,4 +1,4 @@
-name: Smoke test via yarn
+name: Smoke test via node api
 on: push
 
 jobs:
@@ -12,8 +12,8 @@ jobs:
         with:
           node-version: 16
       - run: yarn
-      - run: yarn build
-      - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+      - name: run chromatic via node
+        run: yarn ts-node ./scripts/run-via-node.ts
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

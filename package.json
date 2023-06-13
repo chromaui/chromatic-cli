@@ -19,29 +19,41 @@
     "url": "https://github.com/chromaui/chromatic-cli.git"
   },
   "license": "MIT",
+  "exports": {
+    ".": {
+      "require": "./isChromatic.js",
+      "import": "./isChromatic.mjs"
+    },
+    "./node": {
+      "require": "./dist/node.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "main": "isChromatic.js",
   "module": "isChromatic.mjs",
   "bin": {
-    "chroma": "bin/main.cjs",
-    "chromatic": "bin/main.cjs",
-    "chromatic-cli": "bin/main.cjs"
+    "chroma": "dist/bin.js",
+    "chromatic": "dist/bin.js",
+    "chromatic-cli": "dist/bin.js"
   },
   "files": [
-    "bin",
+    "dist/bin.js",
+    "dist/node.js",
+    "dist/node.d.ts",
     "isChromatic.js",
     "isChromatic.mjs",
     "isChromatic.d.ts"
   ],
   "scripts": {
-    "build": "npm-run-all --serial -l bundle:**",
+    "build": "tsup",
     "build-storybook": "build-storybook -s static",
     "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
-    "chromatic": "./bin/main.cjs",
-    "chromatic-prebuilt": "./bin/main.cjs --storybook-build-dir=\"storybook-static\"",
-    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./bin/main.cjs",
-    "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./bin/main.cjs",
-    "lint": "yarn lint:js .storybook bin-src test-stories ./isChromatic.js ./isChromatic.mjs",
+    "chromatic": "./dist/bin.js",
+    "chromatic-prebuilt": "./dist/bin.js --storybook-build-dir=\"storybook-static\"",
+    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.js",
+    "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.js",
+    "lint": "yarn lint:js .storybook bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "node scripts/release.js",
@@ -50,9 +62,7 @@
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install && npm run build",
-    "bundle:bin": "webpack --config=webpack-bin.config.js && chmod +x ./bin/main.cjs",
-    "bundle:action": "webpack --config=webpack-action.config.js",
-    "dev": "webpack --config=webpack-bin.config.js --watch --progress --mode=development",
+    "dev": "tsup --watch",
     "lint-staged": "lint-staged"
   },
   "lint-staged": {
@@ -75,7 +85,6 @@
   "dependencies": {
     "@discoveryjs/json-ext": "^0.5.7",
     "@storybook/csf-tools": "^7.0.12",
-    "@types/webpack-env": "^1.17.0",
     "snyk-nodejs-lockfile-parser": "^1.49.0"
   },
   "devDependencies": {
@@ -156,17 +165,15 @@
     "sort-package-json": "1.50.0",
     "string-argv": "^0.3.1",
     "strip-ansi": "6.0.0",
-    "terser-webpack-plugin": "^5.3.6",
     "tmp-promise": "3.0.2",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^1.0.0",
     "ts-loader": "^9.2.5",
+    "ts-node": "^10.9.1",
+    "tsup": "^6.7.0",
     "typescript": "^4.3.5",
     "util-deprecate": "^1.0.2",
     "uuid": "^8.3.2",
-    "webpack": "^5.72.1",
-    "webpack-cli": "^4.8.0",
-    "webpack-license-plugin": "^4.2.2",
     "why-is-node-running": "^2.1.2",
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15"

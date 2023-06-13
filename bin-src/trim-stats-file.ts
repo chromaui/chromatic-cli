@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { outputFile } from 'fs-extra';
-import { readStatsFile } from './tasks/read-stats-file';
+import { readStatsFile } from '../node-src/tasks/read-stats-file';
 
 const dedupe = <T>(arr: T[]) => Array.from(new Set(arr));
 const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: string }) =>

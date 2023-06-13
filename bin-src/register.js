@@ -1,9 +1,5 @@
 #!/usr/bin/env node
 /* eslint-disable global-require */
-const Observable = require('zen-observable');
-
-global.Observable = Observable;
-require('any-observable/register')('global.Observable');
 
 require('dotenv').config();
 

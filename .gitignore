@@ -5,12 +5,12 @@ node_modules
 *.tgz
 .editorconfig
 
-action/main.js
 storybook-static
 subdir-static
 test-storybook
 chromatic-build-*.xml
 chromatic-diagnostics.json
-# the dist folder IS included so we can test every version in the CI without publishing
+dist
 bin
 action
+node

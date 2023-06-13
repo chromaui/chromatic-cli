@@ -1,15 +1,8 @@
 import { error, getInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
-import { readFile } from 'jsonfile';
-import pkgUp from 'pkg-up';
-import { v4 as uuid } from 'uuid';
 import path from 'path';
 
-import getEnv from '../bin-src/lib/getEnv';
-import { createLogger } from '../bin-src/lib/log';
-import parseArgs from '../bin-src/lib/parseArgs';
-import { runAll } from '../bin-src/main';
-import { Context } from '../bin-src/types';
+import { run as runNode } from '../node-src';
 
 const maybe = (a: string, b: any = undefined) => {
   if (!a) {
@@ -86,42 +79,6 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-async function runChromatic(options): Promise<Output> {
-  const sessionId = uuid();
-  const env = getEnv();
-  const log = createLogger(sessionId, env);
-  const packagePath = await pkgUp(); // the user's own package.json
-  const packageJson = await readFile(packagePath);
-
-  const ctx: Partial<Context> = {
-    ...parseArgs([]),
-    packagePath,
-    packageJson,
-    env,
-    log,
-    sessionId,
-    flags: options,
-  };
-  await runAll(ctx);
-
-  return {
-    // Keep this in sync with the configured outputs in action.yml
-    code: ctx.exitCode,
-    url: ctx.build?.webUrl,
-    buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
-    specCount: ctx.build?.specCount,
-    componentCount: ctx.build?.componentCount,
-    testCount: ctx.build?.testCount,
-    changeCount: ctx.build?.changeCount,
-    errorCount: ctx.build?.errorCount,
-    interactionTestFailuresCount: ctx.build?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount,
-    inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
-  };
-}
-
 async function run() {
   const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
@@ -167,37 +124,37 @@ async function run() {
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
-    const output = await runChromatic({
-      allowConsoleErrors: maybe(allowConsoleErrors, false),
-      autoAcceptChanges: maybe(autoAcceptChanges),
-      branchName: maybe(branchName),
-      buildScriptName: maybe(buildScriptName),
-      debug: maybe(debug),
-      diagnostics: maybe(diagnostics),
-      dryRun: maybe(dryRun),
-      exitOnceUploaded: maybe(exitOnceUploaded, false),
-      exitZeroOnChanges: maybe(exitZeroOnChanges, true),
-      externals: maybe(externals),
-      forceRebuild: maybe(forceRebuild),
-      fromCI: true,
-      ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
-      interactive: false,
-      only: maybe(only),
-      onlyChanged: maybe(onlyChanged),
-      onlyStoryFiles: maybe(onlyStoryFiles),
-      onlyStoryNames: maybe(onlyStoryNames),
-      preserveMissing: maybe(preserveMissing),
-      projectToken,
-      repositorySlug: maybe(repositorySlug),
-      skip: maybe(skip),
-      storybookBaseDir: maybe(storybookBaseDir),
-      storybookBuildDir: maybe(storybookBuildDir),
-      storybookConfigDir: maybe(storybookConfigDir),
-      traceChanged: maybe(traceChanged),
-      untraced: maybe(untraced),
-      workingDir: maybe(workingDir),
-      zip: maybe(zip, false),
-      junitReport: maybe(junitReport, false),
+    const output = await runNode({
+      flags: {
+        allowConsoleErrors: maybe(allowConsoleErrors, false),
+        autoAcceptChanges: maybe(autoAcceptChanges),
+        branchName: maybe(branchName),
+        buildScriptName: maybe(buildScriptName),
+        debug: maybe(debug),
+        diagnostics: maybe(diagnostics),
+        dryRun: maybe(dryRun),
+        exitOnceUploaded: maybe(exitOnceUploaded, false),
+        exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+        externals: maybe(externals),
+        forceRebuild: maybe(forceRebuild),
+        ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+        interactive: false,
+        only: maybe(only),
+        onlyChanged: maybe(onlyChanged),
+        onlyStoryFiles: maybe(onlyStoryFiles),
+        onlyStoryNames: maybe(onlyStoryNames),
+        preserveMissing: maybe(preserveMissing),
+        projectToken,
+        repositorySlug: maybe(repositorySlug),
+        skip: maybe(skip),
+        storybookBaseDir: maybe(storybookBaseDir),
+        storybookBuildDir: maybe(storybookBuildDir),
+        storybookConfigDir: maybe(storybookConfigDir),
+        traceChanged: maybe(traceChanged),
+        untraced: maybe(untraced),
+        zip: maybe(zip, false),
+        junitReport: maybe(junitReport, false),
+      },
     });
 
     Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
