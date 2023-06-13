@@ -38,7 +38,7 @@ interface Output {
 
 export async function run({
   argv = [],
-  flags = {},
+  flags,
 }: {
   argv?: string[];
   flags?: Flags;
@@ -69,7 +69,7 @@ export async function run({
     env,
     log,
     sessionId,
-    flags,
+    ...(flags && { flags }),
   };
 
   setExitCode(ctx, exitCodes.OK);
