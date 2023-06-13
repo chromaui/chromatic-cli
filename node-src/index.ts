@@ -15,6 +15,9 @@ import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 
+/**
+ Make keys of `T` outside of `R` optional.
+*/
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
 
 interface Output {
