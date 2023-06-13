@@ -1,4 +1,4 @@
-# 6.19.0 - 2023-06-12
+# 6.19.1 - 2023-06-12
 
 - [756](https://github.com/chromaui/chromatic-cli/pull/756) Added onTaskComplete callback option
 - [755](https://github.com/chromaui/chromatic-cli/pull/755) Add a node entry point
