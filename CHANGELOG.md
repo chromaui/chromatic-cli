@@ -1,3 +1,7 @@
+# 6.19.5 - 2023-06-12
+
+- [763](https://github.com/chromaui/chromatic-cli/pull/763) Fix issue with `onTaskComplete` callback
+
 # 6.19.4 - 2023-06-12
 
 - [764](https://github.com/chromaui/chromatic-cli/pull/764) Move all depenendencies to dev deps
@@ -7,13 +11,10 @@
 - [756](https://github.com/chromaui/chromatic-cli/pull/756) Added onTaskComplete callback option
 - [755](https://github.com/chromaui/chromatic-cli/pull/755) Add a node entry point
 
-
 # 6.18.2 - 2023-06-07
 
 - [758](https://github.com/chromaui/chromatic-cli/pull/758) Add additional logging for turbosnap
 - [753](https://github.com/chromaui/chromatic-cli/pull/753) Update getStorybookMetadata to safely record version even if fails to parse mainConfig
-
-
 
 # 6.18.0 - 2023-05-03
 
