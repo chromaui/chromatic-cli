@@ -28,6 +28,10 @@
       "require": "./dist/node.js",
       "node": "./dist/node.js",
       "types": "./dist/node.d.ts"
+    },
+    "./isChromatic": {
+      "require": "./isChromatic.js",
+      "import": "./isChromatic.mjs"
     }
   },
   "main": "isChromatic.js",
