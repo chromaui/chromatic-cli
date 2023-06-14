@@ -1,6 +1,14 @@
-# 6.19.5 - 2023-06-14
+# 6.19.7 - 2023-06-14
+
+- [770](https://github.com/chromaui/chromatic-cli/pull/770) Ensure we exit with a code at the end
+
+# 6.19.6 - 2023-06-14
 
 - [768](https://github.com/chromaui/chromatic-cli/pull/768) Add `isChromatic` exports
+
+# 6.19.5 - 2023-06-14
+
+- [763](https://github.com/chromaui/chromatic-cli/pull/763) Fix issue with onTaskComplete callback
 
 # 6.19.5 - 2023-06-12
 
