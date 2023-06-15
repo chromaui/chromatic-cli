@@ -39,6 +39,12 @@
   "module": "isChromatic.mjs",
   "typesVersions": {
     "*": {
+      "*": [
+        "./isChromatic.d.ts"
+      ],
+      "isChromatic": [
+        "./isChromatic.d.ts"
+      ],
       "node": [
         "dist/node.d.ts"
       ]
