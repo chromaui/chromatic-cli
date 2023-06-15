@@ -494,6 +494,17 @@ describe('in CI', () => {
     expect(ctx.options.interactive).toBe(false);
   });
 
+  it('detects Netlify CI', async () => {
+    process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
+    const ctx = getContext(['--project-token=asdf1234']);
+    await runBuild(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(announcedBuild).toMatchObject({
+      fromCI: true,
+    });
+    expect(ctx.options.interactive).toBe(false);
+  });
+
   it('detects Travis PR build, external', async () => {
     process.env = {
       CI: 'true',
