@@ -21,21 +21,36 @@
   "license": "MIT",
   "exports": {
     ".": {
+      "types": "./dist/node.d.ts",
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
     },
     "./node": {
+      "types": "./dist/node.d.ts",
       "require": "./dist/node.js",
-      "node": "./dist/node.js",
-      "types": "./dist/node.d.ts"
+      "node": "./dist/node.js"
     },
     "./isChromatic": {
+      "types": "./isChromatic.d.ts",
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
     }
   },
   "main": "isChromatic.js",
   "module": "isChromatic.mjs",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./isChromatic.d.ts"
+      ],
+      "isChromatic": [
+        "./isChromatic.d.ts"
+      ],
+      "node": [
+        "dist/node.d.ts"
+      ]
+    }
+  },
   "bin": {
     "chroma": "dist/bin.js",
     "chromatic": "dist/bin.js",
