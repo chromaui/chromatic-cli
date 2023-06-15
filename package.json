@@ -30,12 +30,26 @@
       "types": "./dist/node.d.ts"
     },
     "./isChromatic": {
+      "types": "./isChromatic.d.ts",
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
     }
   },
   "main": "isChromatic.js",
   "module": "isChromatic.mjs",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./isChromatic.d.ts"
+      ],
+      "isChromatic": [
+        "./isChromatic.d.ts"
+      ],
+      "node": [
+        "dist/node.d.ts"
+      ]
+    }
+  },
   "bin": {
     "chroma": "dist/bin.js",
     "chromatic": "dist/bin.js",
