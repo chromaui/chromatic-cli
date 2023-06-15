@@ -21,6 +21,7 @@
   "license": "MIT",
   "exports": {
     ".": {
+      "types": "./dist/node.d.ts",
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
     },
