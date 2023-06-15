@@ -24,7 +24,7 @@ jobs:
       - run: yarn lint
 
       # unit test
-      - run: yarn test --runInBand
+      - run: yarn test --runInBand --detectOpenHandles --forceExit
 
       # test if dist is correctly generated from src
       - run: yarn build && git status --porcelain
