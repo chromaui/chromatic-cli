@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "6.19.6-canary.0",
+  "version": "6.19.7",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -28,6 +28,11 @@
       "types": "./dist/node.d.ts",
       "require": "./dist/node.js",
       "node": "./dist/node.js"
+    },
+    "./isChromatic": {
+      "types": "./isChromatic.d.ts",
+      "require": "./isChromatic.js",
+      "import": "./isChromatic.mjs"
     }
   },
   "main": "isChromatic.js",
