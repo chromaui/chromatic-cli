@@ -148,7 +148,7 @@
     "no-proxy": "^1.0.3",
     "node-ask": "^1.0.1",
     "node-fetch": "3.2.10",
-    "node-loggly-bulk": "^2.2.4",
+    "node-loggly-bulk": "^4.0.1",
     "npm-run-all": "^4.0.2",
     "observable": "^2.1.4",
     "os-browserify": "^0.3.0",
