@@ -130,6 +130,7 @@
     "debug": "^4.3.2",
     "dotenv": "^8.2.0",
     "env-ci": "^5.0.2",
+    "esbuild-jest": "^0.5.0",
     "eslint": "^7.32.0",
     "eslint-plugin-jest": "^27.2.1",
     "esm": "^3.2.25",
