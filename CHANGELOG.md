@@ -1,3 +1,7 @@
+# 6.19.8 - 2023-06-16
+- [765](https://github.com/chromaui/chromatic-cli/pull/765) Add some fields to package.json to help resolve types in entrypoints
+- [773](https://github.com/chromaui/chromatic-cli/pull/773) Bump the Loggly Dependency
+
 # 6.19.7 - 2023-06-14
 
 - [770](https://github.com/chromaui/chromatic-cli/pull/770) Ensure we exit with a code at the end
