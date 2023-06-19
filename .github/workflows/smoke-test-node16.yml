@@ -22,4 +22,4 @@ jobs:
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
-          CHROMATIC_PROJECT_TOKEN: 47c20821d2c2
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
