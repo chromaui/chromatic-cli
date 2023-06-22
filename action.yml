@@ -6,6 +6,7 @@ branding:
   color: 'orange'
 
 
+  
 inputs:
   allowConsoleErrors:
     description: 'Do not exit when runtime errors occur in storybook'
