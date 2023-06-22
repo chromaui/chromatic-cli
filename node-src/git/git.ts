@@ -15,7 +15,7 @@ export async function execGitCommand(command: string) {
   try {
     const { all } = await execa.command(command, {
       env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-      timeout: 10000, // 10 seconds
+      timeout: 20000, // 20 seconds
       all: true, // interleave stdout and stderr
       shell: true, // we'll deal with escaping ourselves (for now)
     });
