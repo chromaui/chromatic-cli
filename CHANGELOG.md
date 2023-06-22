@@ -1,3 +1,8 @@
+# 6.19.9 - 2023-06-22
+- [734](https://github.com/chromaui/chromatic-cli/pull/734) Add support for `release` event to Github action.
+- [750](https://github.com/chromaui/chromatic-cli/pull/750) Update CI to store tokens in environment variables
+- [775](https://github.com/chromaui/chromatic-cli/pull/775) Increase timeout for Git command(s) execution
+
 # 6.19.8 - 2023-06-16
 - [765](https://github.com/chromaui/chromatic-cli/pull/765) Add some fields to package.json to help resolve types in entrypoints
 - [773](https://github.com/chromaui/chromatic-cli/pull/773) Bump the Loggly Dependency
