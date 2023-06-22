@@ -65,7 +65,7 @@ const getBuildInfo = (event: typeof context) => {
     case 'release': {
       return {
         sha: event.sha,
-        branch: event.ref.replace('refs/tags/', ''),
+        branch: event.payload.release.target_commitish,
         slug: event.payload.repository.full_name,
       };
     }
