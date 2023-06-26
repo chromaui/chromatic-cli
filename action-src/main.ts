@@ -56,6 +56,12 @@ const getBuildInfo = (event: typeof context) => {
         slug: event.payload.repository.full_name,
       };
     }
+    case 'schedule':
+      return {
+        sha: event.sha,
+        branch: event.ref.replace('refs/heads/', ''),
+        slug: event.payload.repository.full_name,
+      };
     case 'release': {
       return {
         sha: event.sha,
