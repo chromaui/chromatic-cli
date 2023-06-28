@@ -1,4 +1,4 @@
-name: Smoke test via Node 12
+name: Smoke test via Node 18
 on: push
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '18'
       - run: yarn
       - run: yarn build
       - uses: ./
@@ -18,7 +18,8 @@ jobs:
           buildScriptName: build-test-storybook
           exitZeroOnChanges: true
           forceRebuild: true
+          onlyChanged: true
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
-          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+          CHROMATIC_PROJECT_TOKEN: "chpt_7c6a9803710c709"
