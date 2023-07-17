@@ -33,8 +33,8 @@ import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 
 const GetUploadUrlsMutation = `
-  mutation GetUploadUrlsMutation($paths: [String!]!) {
-    getUploadUrls(paths: $paths) {
+  mutation GetUploadUrlsMutation($id: ObjID, $paths: [String!]!) {
+    getUploadUrls(id: $id, paths: $paths) {
       domain
       urls {
         path
@@ -56,8 +56,8 @@ interface GetUploadUrlsMutationResult {
 }
 
 const GetZipUploadUrlMutation = `
-  mutation GetZipUploadUrlMutation {
-    getZipUploadUrl {
+  mutation GetZipUploadUrlMutation($id: ObjID) {
+    getZipUploadUrl(id: $id) {
       domain
       url
       sentinelUrl
@@ -224,7 +224,7 @@ async function uploadAsIndividualFiles(
   const { lengths, paths, total } = ctx.fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
     GetUploadUrlsMutation,
-    { paths }
+    { id: ctx.announcedBuild.id, paths }
   );
   const { domain, urls } = getUploadUrls;
   const files = urls.map(({ path, url, contentType }) => ({
@@ -257,7 +257,8 @@ async function uploadAsZipFile(
   const zipped = await makeZipFile(ctx);
   const { path, size: total } = zipped;
   const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
-    GetZipUploadUrlMutation
+    GetZipUploadUrlMutation,
+    { id: ctx.announcedBuild.id }
   );
   const { domain, url, sentinelUrl } = getZipUploadUrl;
 
