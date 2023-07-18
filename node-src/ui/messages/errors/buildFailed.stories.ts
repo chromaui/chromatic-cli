@@ -8,14 +8,8 @@ const spawnParams = {
   client: 'npm',
   clientVersion: '7.11.2',
   platform: 'darwin',
-  command: '/path/to/node',
-  clientArgs: ['/path/to/npm-cli.js', 'run'],
-  scriptArgs: [
-    'build-storybook',
-    '--',
-    '--output-dir',
-    '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp',
-  ].filter(Boolean),
+  command:
+    'npm run build-storybook -- --output-dir /var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp',
 };
 
 const buildLog = `

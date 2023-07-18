@@ -1,9 +1,6 @@
 import { getDuration } from '../../lib/tasks';
 import { Context } from '../../types';
 
-const fullCommand = ({ command, clientArgs, scriptArgs }: Context['spawnParams']) =>
-  [command, ...clientArgs, ...scriptArgs].join(' ');
-
 export const initial = {
   status: 'initial',
   title: 'Build Storybook',
@@ -12,7 +9,7 @@ export const initial = {
 export const pending = (ctx: Context) => ({
   status: 'pending',
   title: `Building your Storybook`,
-  output: `Running command: ${fullCommand(ctx.spawnParams)}`,
+  output: `Running command: ${ctx.spawnParams.command}`,
 });
 
 export const success = (ctx: Context) => ({
@@ -30,5 +27,5 @@ export const skipped = (ctx: Context) => ({
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: `Building your Storybook`,
-  output: `Command failed: ${fullCommand(ctx.spawnParams)}`,
+  output: `Command failed: ${ctx.spawnParams.command}`,
 });
