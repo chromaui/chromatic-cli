@@ -32,43 +32,28 @@ import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 
-const GetUploadUrlsMutation = `
-  mutation GetUploadUrlsMutation($buildId: ObjID, $paths: [String!]!) {
-    getUploadUrls(buildId: $buildId, paths: $paths) {
+const UploadBuildMutation = `
+  mutation UploadBuildMutation($id: ObjID!, $paths: [String!]) {
+    uploadBuild(id: $id, paths: $paths) {
       domain
       urls {
         path
         url
         contentType
       }
+      sentinelUrl
     }
   }
 `;
-interface GetUploadUrlsMutationResult {
-  getUploadUrls: {
+interface UploadBuildMutationResult {
+  uploadBuild: {
     domain: string;
     urls: {
       path: string;
       url: string;
       contentType: string;
     }[];
-  };
-}
-
-const GetZipUploadUrlMutation = `
-  mutation GetZipUploadUrlMutation($buildId: ObjID) {
-    getZipUploadUrl(buildId: $buildId) {
-      domain
-      url
-      sentinelUrl
-    }
-  }
-`;
-interface GetZipUploadUrlMutationResult {
-  getZipUploadUrl: {
-    domain: string;
-    url: string;
-    sentinelUrl: string;
+    sentinelUrl?: string;
   };
 }
 
@@ -222,11 +207,11 @@ async function uploadAsIndividualFiles(
   updateProgress: (progress: number, total: number) => void
 ) {
   const { lengths, paths, total } = ctx.fileInfo;
-  const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
-    GetUploadUrlsMutation,
-    { buildId: ctx.announcedBuild.id, paths }
+  const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
+    UploadBuildMutation,
+    { id: ctx.announcedBuild.id, paths }
   );
-  const { domain, urls } = getUploadUrls;
+  const { domain, urls } = uploadBuild;
   const files = urls.map(({ path, url, contentType }) => ({
     path: join(ctx.sourceDir, path),
     url,
@@ -256,11 +241,15 @@ async function uploadAsZipFile(
 ) {
   const zipped = await makeZipFile(ctx);
   const { path, size: total } = zipped;
-  const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
-    GetZipUploadUrlMutation,
-    { buildId: ctx.announcedBuild.id }
+  const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
+    UploadBuildMutation,
+    { id: ctx.announcedBuild.id }
   );
-  const { domain, url, sentinelUrl } = getZipUploadUrl;
+  const {
+    domain,
+    urls: [{ url }],
+    sentinelUrl,
+  } = uploadBuild;
 
   task.output = starting().output;
 
