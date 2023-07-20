@@ -1,4 +1,3 @@
-import { parseNr, getCliCommand, parseNa } from '@antfu/ni';
 import execa from 'execa';
 import fs from 'fs-extra';
 import path from 'path';
@@ -11,6 +10,7 @@ import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
+import { getPackageManagerName, getPackageManagerRunCommand } from '../lib/getPackageManager';
 
 const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
 
@@ -35,20 +35,18 @@ export const setSpawnParams = async (ctx) => {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
-  const client = await getCliCommand(parseNa, [], { programmatic: true });
+  const client = await getPackageManagerName();
   const clientVersion = await execa(client, ['--version']).then(trimOutput);
   const nodeVersion = await execa('node', ['--version']).then(trimOutput);
 
-  const command = await getCliCommand(
-    parseNr,
+  const command = await getPackageManagerRunCommand(
     [
       ctx.options.buildScriptName,
       '--output-dir',
       ctx.sourceDir,
       ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
       ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
-    ].filter(Boolean),
-    { programmatic: true }
+    ].filter(Boolean)
   );
 
   ctx.spawnParams = {
