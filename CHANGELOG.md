@@ -1,3 +1,5 @@
+# 6.20.0 - 2023-07-21
+- [788](https://github.com/chromaui/chromatic-cli/pull/788) Track Build ID for Storybook Uploads
 # 6.19.9 - 2023-06-22
 - [734](https://github.com/chromaui/chromatic-cli/pull/734) Add support for `release` event to Github action.
 - [750](https://github.com/chromaui/chromatic-cli/pull/750) Update CI to store tokens in environment variables
