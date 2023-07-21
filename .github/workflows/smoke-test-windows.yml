@@ -12,7 +12,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: install
-        run: yarn
+        run: yarn install --frozen-lockfile
       - name: prep package
         run: node ./scripts/rename.js storybook-chromatic
       - run: yarn build

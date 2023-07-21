@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: yarn install
+      - run: yarn install --frozen-lockfile
       - run: yarn set version berry
       - run: yarn set version canary
       - name: run chromatic

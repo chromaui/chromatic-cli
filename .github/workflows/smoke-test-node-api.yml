@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - run: yarn
+      - run: yarn install --frozen-lockfile
       - name: run chromatic via node
         run: yarn ts-node ./scripts/run-via-node.ts
         env:

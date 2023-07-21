@@ -12,7 +12,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: install
-        run: yarn && git status --porcelain
+        run: yarn install --frozen-lockfile && git status --porcelain
       - name: prep package
         run: ./scripts/rename.js storybook-chromatic
       - run: yarn build
