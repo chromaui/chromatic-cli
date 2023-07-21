@@ -1,0 +1,25 @@
+name: Smoke test via Node 20
+on: push
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+      - run: yarn
+      - run: yarn build
+      - uses: ./
+        with:
+          buildScriptName: build-test-storybook
+          exitZeroOnChanges: true
+          forceRebuild: true
+          onlyChanged: true
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
