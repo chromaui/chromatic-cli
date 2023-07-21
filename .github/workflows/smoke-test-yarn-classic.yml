@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - run: rm -r subdir # remove conflicting subproject
+      - run: rm -rf subdir # remove conflicting subproject
       - run: yarn install
       - run: yarn set version 1.x.x
       - name: run chromatic
