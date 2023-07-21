@@ -199,10 +199,20 @@ describe('uploadStorybook', () => {
       paths: ['iframe.html', 'index.html'],
       total: 84,
     };
-    const ctx = { client, env, log, http, sourceDir: '/static/', options: {}, fileInfo } as any;
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
     await uploadStorybook(ctx, {} as any);
 
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/GetUploadUrlsMutation/), {
+      buildId: '1',
       paths: ['iframe.html', 'index.html'],
     });
     expect(http.fetch).toHaveBeenCalledWith(
