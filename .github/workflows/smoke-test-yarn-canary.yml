@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v1
         with:
-          node-version: '16.x'
+          node-version: '18.x'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
