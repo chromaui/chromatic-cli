@@ -77,4 +77,38 @@ describe('compareBaseline', () => {
 
     expect(baselineChanges).toEqual(new Set());
   });
+
+  it('runs the manifest check on yarn berry lock files successfully', async () => {
+    const ctx = getContext();
+    const headDependencies = await getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'berry-package.json',
+      lockfilePath: 'berry-yarn.lock',
+    });
+    const baselineChanges = await compareBaseline(ctx, headDependencies, {
+      ref: 'A',
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'berry-package.json',
+      lockfilePath: 'berry-yarn.lock',
+    });
+
+    expect(baselineChanges).toEqual(new Set());
+  });
+
+  it('finds yarn berry changed dependency names', async () => {
+    const ctx = getContext();
+    const headDependencies = await getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'berry-package.json',
+      lockfilePath: 'berry-yarn.lock',
+    });
+    const baselineChanges = await compareBaseline(ctx, headDependencies, {
+      ref: 'A',
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'berry-chalk-package.json',
+      lockfilePath: 'berry-chalk-yarn.lock',
+    });
+
+    expect(baselineChanges).toEqual(new Set(['chalk']));
+  });
 });
