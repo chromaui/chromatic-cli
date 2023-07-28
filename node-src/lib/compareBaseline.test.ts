@@ -95,7 +95,7 @@ describe('compareBaseline', () => {
     expect(baselineChanges).toEqual(new Set());
   });
 
-  it('finds yarn berry changed dependency names', async () => {
+  it('does not find yarn berry changed dependency name for set resolution', async () => {
     const ctx = getContext();
     const headDependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
@@ -109,6 +109,23 @@ describe('compareBaseline', () => {
       lockfilePath: 'berry-chalk-yarn.lock',
     });
 
-    expect(baselineChanges).toEqual(new Set(['chalk']));
+    expect(baselineChanges).toEqual(new Set(['husky']));
+  });
+
+  it('finds yarn berry dependency change name', async () => {
+    const ctx = getContext();
+    const headDependencies = await getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'berry-package.json',
+      lockfilePath: 'berry-yarn.lock',
+    });
+    const baselineChanges = await compareBaseline(ctx, headDependencies, {
+      ref: 'A',
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'berry-chalk-package.json',
+      lockfilePath: 'berry-chalk-yarn.lock',
+    });
+
+    expect(baselineChanges).toEqual(new Set(['husky']));
   });
 });

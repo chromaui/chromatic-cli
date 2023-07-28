@@ -73,7 +73,8 @@
     "package.json": ["yarn lint:package"]
   },
   "resolutions": {
-    "any-observable": "^0.5.1"
+    "any-observable": "^0.5.1",
+    "chalk": "^4.1.2"
   },
   "devDependencies": {
     "@actions/core": "^1.10.0",
