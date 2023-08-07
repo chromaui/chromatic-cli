@@ -1,11 +1,21 @@
+# 6.21.0 - 2023-08-07
+
+- [794](https://github.com/chromaui/chromatic-cli/pull/794) Add `getGitInfo` function exported by the Node API
+- [780](https://github.com/chromaui/chromatic-cli/pull/780) Add support for `schedule` GitHub Action workflow trigger
+- [793](https://github.com/chromaui/chromatic-cli/pull/793) Update snyk parser and added tests for yarn berry
+
 # 6.20.0 - 2023-07-21
+
 - [788](https://github.com/chromaui/chromatic-cli/pull/788) Track Build ID for Storybook Uploads
+
 # 6.19.9 - 2023-06-22
+
 - [734](https://github.com/chromaui/chromatic-cli/pull/734) Add support for `release` event to Github action.
 - [750](https://github.com/chromaui/chromatic-cli/pull/750) Update CI to store tokens in environment variables
 - [775](https://github.com/chromaui/chromatic-cli/pull/775) Increase timeout for Git command(s) execution
 
 # 6.19.8 - 2023-06-16
+
 - [765](https://github.com/chromaui/chromatic-cli/pull/765) Add some fields to package.json to help resolve types in entrypoints
 - [773](https://github.com/chromaui/chromatic-cli/pull/773) Bump the Loggly Dependency
 
