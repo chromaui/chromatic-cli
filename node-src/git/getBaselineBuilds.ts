@@ -3,9 +3,9 @@ import gql from 'fake-tag';
 import { Context } from '../types';
 
 const BaselineCommitsQuery = gql`
-  query BaselineCommitsQuery($branch: String!, $parentCommits: [String!]!) {
+  query BaselineCommitsQuery($branch: String!, $parentCommits: [String!]!, $creatorEmail: String!) {
     app {
-      baselineBuilds(branch: $branch, parentCommits: $parentCommits) {
+      baselineBuilds(branch: $branch, parentCommits: $parentCommits, creatorEmail: $creatorEmail) {
         id
         number
         status(legacy: false)
@@ -30,12 +30,13 @@ interface BaselineCommitsQueryResult {
 }
 
 export async function getBaselineBuilds(
-  { client }: Pick<Context, 'client'>,
+  { client, git: { creatorEmail } }: Pick<Context, 'client' | 'git'>,
   { branch, parentCommits }: { branch: string; parentCommits: string[] }
 ) {
   const { app } = await client.runQuery<BaselineCommitsQueryResult>(BaselineCommitsQuery, {
     branch,
     parentCommits,
+    creatorEmail,
   });
   return app.baselineBuilds;
 }
