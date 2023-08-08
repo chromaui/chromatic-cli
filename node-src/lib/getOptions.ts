@@ -58,6 +58,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
+    isLocalBuild: !!flags.local,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     // deprecated
     preserveMissingSpecs: flags.preserveMissing || !!flags.only,
