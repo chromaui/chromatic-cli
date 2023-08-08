@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getSlug, getVersion } from '../git/git';
+import { getSlug, getUserEmail, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -59,11 +59,19 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     patchBaseRef,
     fromCI: ci,
     interactive,
+    isLocalBuild,
   } = ctx.options;
+
+  const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
+
+  const creatorEmail = isLocalBuild
+    ? await getUserEmail()
+    : commitAndBranchInfo.committerEmail || 'unknown';
 
   ctx.git = {
     version: await getVersion(),
-    ...(await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci })),
+    creatorEmail,
+    ...commitAndBranchInfo,
   };
 
   if (!ctx.git.slug) {
