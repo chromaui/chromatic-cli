@@ -19,7 +19,6 @@ export interface Flags {
   exitZeroOnChanges?: string;
   externals?: string[];
   ignoreLastBuildOnBranch?: string;
-  local?: string;
   onlyChanged?: string;
   onlyStoryFiles?: string[];
   onlyStoryNames?: string[];
