@@ -15,6 +15,7 @@ import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import { getBranch, getCommit, getSlug, getUserEmail } from './git/git';
+import { emailHash } from './lib/emailHash';
 
 /**
  Make keys of `T` outside of `R` optional.
@@ -114,6 +115,7 @@ export async function runAll(ctx, options?: Options) {
 
 export type GitInfo = {
   userEmail: string;
+  userEmailHash: string;
   branch: string;
   commit: string;
   slug: string;
@@ -121,6 +123,7 @@ export type GitInfo = {
 
 export async function getGitInfo(): Promise<GitInfo> {
   const userEmail = await getUserEmail();
+  const userEmailHash = emailHash(userEmail);
   const branch = await getBranch();
   const { commit } = await getCommit();
   const slug = await getSlug();
@@ -128,5 +131,5 @@ export async function getGitInfo(): Promise<GitInfo> {
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
 
-  return { userEmail, branch, commit, slug: isValidSlug ? slug : '' };
+  return { userEmail, userEmailHash, branch, commit, slug: isValidSlug ? slug : '' };
 }
