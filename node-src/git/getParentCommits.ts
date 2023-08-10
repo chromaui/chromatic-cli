@@ -3,16 +3,17 @@ import gql from 'fake-tag';
 import { Context } from '../types';
 
 import { execGitCommand, commitExists } from './git';
+import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
 const FirstCommittedAtQuery = gql`
-  query FirstCommittedAtQuery($commit: String!, $branch: String!, $creatorEmail: String!) {
+  query FirstCommittedAtQuery($commit: String!, $branch: String!, $localBuilds: LocalBuildsSpecifierInput!!) {
     app {
-      firstBuild(sortByCommittedAt: true, creatorEmail: $creatorEmail) {
+      firstBuild(sortByCommittedAt: true, localBuilds: $localBuilds) {
         committedAt
       }
-      lastBuild(branch: $branch, sortByCommittedAt: true, creatorEmail: $creatorEmail) {
+      lastBuild(branch: $branch, sortByCommittedAt: true, localBuilds: $localBuilds) {
         commit
         committedAt
       }
@@ -42,9 +43,9 @@ interface FirstCommittedAtQueryResult {
 }
 
 const HasBuildsWithCommitsQuery = gql`
-  query HasBuildsWithCommitsQuery($commits: [String!]!, $creatorEmail: String!) {
+  query HasBuildsWithCommitsQuery($commits: [String!]!, $localBuilds: LocalBuildsSpecifierInput!!) {
     app {
-      hasBuildsWithCommits(commits: $commits, creatorEmail: $creatorEmail)
+      hasBuildsWithCommits(commits: $commits, localBuilds: $localBuilds)
     }
   }
 `;
@@ -127,7 +128,7 @@ async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits
 
 // Exponentially iterate `limit` up to infinity to find a "covering" set of commits with builds
 async function step(
-  { client, log, git }: Pick<Context, 'client' | 'log' | 'git'>,
+  { options, client, log, git }: Pick<Context, 'options' | 'client' | 'log' | 'git'>,
   limit: number,
   {
     firstCommittedAtSeconds,
@@ -161,7 +162,7 @@ async function step(
     app: { hasBuildsWithCommits: newCommitsWithBuilds },
   } = await client.runQuery<HasBuildsWithCommitsQueryResult>(HasBuildsWithCommitsQuery, {
     commits: candidateCommits,
-    creatorEmail: git.creatorEmail,
+    localBuilds: localBuildsSpecifier({ options, git }),
   });
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
@@ -169,7 +170,7 @@ async function step(
     (commit) => !newCommitsWithBuilds.includes(commit)
   );
 
-  return step({ client, log, git }, limit * 2, {
+  return step({ options, client, log, git }, limit * 2, {
     firstCommittedAtSeconds,
     commitsWithBuilds: [...commitsWithBuilds, ...newCommitsWithBuilds],
     commitsWithoutBuilds: [...commitsWithoutBuilds, ...newCommitsWithoutBuilds],
@@ -177,15 +178,15 @@ async function step(
 }
 
 export async function getParentCommits(
-  { client, git, log }: Context,
+  { options, client, git, log }: Context,
   { ignoreLastBuildOnBranch = false } = {}
 ) {
-  const { branch, commit, committedAt, creatorEmail } = git;
+  const { branch, commit, committedAt } = git;
 
   // Include the latest build from this branch as an ancestor of the current build
   const { app } = await client.runQuery<FirstCommittedAtQueryResult>(
     FirstCommittedAtQuery,
-    { branch, commit, creatorEmail },
+    { branch, commit, localBuilds: localBuildsSpecifier({ options, git }) },
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
   const { firstBuild, lastBuild, pullRequest } = app;
@@ -250,11 +251,15 @@ export async function getParentCommits(
   //   - in commitsWithBuilds
   //   - an ancestor of a commit in commitsWithBuilds
   //   - has no build
-  const commitsWithBuilds = await step({ client, log, git }, FETCH_N_INITIAL_BUILD_COMMITS, {
-    firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
-    commitsWithBuilds: initialCommitsWithBuilds,
-    commitsWithoutBuilds: [],
-  });
+  const commitsWithBuilds = await step(
+    { options, client, log, git },
+    FETCH_N_INITIAL_BUILD_COMMITS,
+    {
+      firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
+      commitsWithBuilds: initialCommitsWithBuilds,
+      commitsWithoutBuilds: [],
+    }
+  );
 
   log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
 
