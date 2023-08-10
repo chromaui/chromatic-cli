@@ -28,19 +28,16 @@ const getParentCommits = <jest.MockedFunction<typeof getParentCommitsUnmocked>>(
 
 const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 
-const minimalCommitInfo = {
+const commitInfo = {
   commit: '123asdf',
   committedAt: 1640131292,
+  committerName: 'Gert Hengeveld',
+  committerEmail: 'gert@chromatic.com',
   branch: 'something',
   slug: undefined,
   isTravisPrBuild: false,
   fromCI: false,
   ciService: undefined,
-};
-const commitInfo = {
-  ...minimalCommitInfo,
-  committerName: 'Gert Hengeveld',
-  committerEmail: 'gert@chromatic.com',
 };
 
 const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
@@ -65,31 +62,15 @@ describe('setGitInfo', () => {
       branch: 'something',
       parentCommits: ['asd2344'],
       version: 'Git v1.0.0',
-      creatorEmail: 'gert@chromatic.com',
       slug: 'user/repo',
     });
   });
 
-  it('falls back to unknown when git info cannot be parsed', async () => {
-    getCommitAndBranch.mockResolvedValue(minimalCommitInfo);
-
-    const ctx = { log, options: {}, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git).toMatchObject({
-      commit: '123asdf',
-      branch: 'something',
-      parentCommits: ['asd2344'],
-      version: 'Git v1.0.0',
-      creatorEmail: 'unknown',
-      slug: 'user/repo',
-    });
-  });
-
-  it('sets creatorEmail to current user for local builds', async () => {
+  it('sets gitUserEmail to current user for local builds', async () => {
     const ctx = { log, options: { isLocalBuild: true }, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({
-      creatorEmail: 'user@email.com',
+      gitUserEmail: 'user@email.com',
     });
   });
 

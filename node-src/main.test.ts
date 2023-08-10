@@ -354,7 +354,7 @@ it('runs in simple situations', async () => {
     packageVersion: expect.any(String),
     storybookVersion: '5.1.0',
     storybookViewLayer: 'viewLayer',
-    creatorEmail: 'test@test.com',
+    gitUserEmail: 'test@test.com',
     committerEmail: 'test@test.com',
     committerName: 'tester',
     isolatorUrl: `https://chromatic.com/iframe.html`,

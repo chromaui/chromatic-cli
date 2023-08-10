@@ -141,13 +141,8 @@ export interface Context {
 
   git: {
     version: string;
-    /**
-     * The creator of the build is:
-     *   - the current user in local builds
-     *   - the creator of the commit in CI builds
-     *   - 'unknown' in CI situations where we cannot read the current commit info.
-     */
-    creatorEmail: string;
+    /** The current user's email as pre git config */
+    gitUserEmail: string;
     branch: string;
     commit: string;
     committerEmail?: string;
