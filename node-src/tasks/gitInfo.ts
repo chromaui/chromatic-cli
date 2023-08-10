@@ -23,6 +23,7 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
+import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -64,15 +65,15 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
 
-  const creatorEmail = isLocalBuild
-    ? await getUserEmail()
-    : commitAndBranchInfo.committerEmail || 'unknown';
-
   ctx.git = {
     version: await getVersion(),
-    creatorEmail,
+    gitUserEmail: await getUserEmail(),
     ...commitAndBranchInfo,
   };
+
+  if (isLocalBuild && !ctx.git.gitUserEmail) {
+    throw new Error(gitUserEmailNotFound());
+  }
 
   if (!ctx.git.slug) {
     await getSlug().then(
