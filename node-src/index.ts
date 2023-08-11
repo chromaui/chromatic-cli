@@ -128,3 +128,5 @@ export async function getGitInfo(): Promise<GitInfo> {
 
   return { branch, commit, slug: isValidSlug ? slug : '' };
 }
+
+export { getUncommittedHash } from './git/git';
