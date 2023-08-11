@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getSlug, getVersion } from '../git/git';
+import { getSlug, getUncommittedHash, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -62,8 +62,12 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   } = ctx.options;
 
   ctx.git = {
-    version: await getVersion(),
     ...(await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci })),
+    uncommittedHash: await getUncommittedHash().catch((e) => {
+      ctx.log.warn('Failed to retrieve uncommitted files hash', e);
+      return null;
+    }),
+    version: await getVersion(),
   };
 
   if (!ctx.git.slug) {
