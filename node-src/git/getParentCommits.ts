@@ -8,7 +8,11 @@ import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
 const FirstCommittedAtQuery = gql`
-  query FirstCommittedAtQuery($commit: String!, $branch: String!, $localBuilds: LocalBuildsSpecifierInput!!) {
+  query FirstCommittedAtQuery(
+    $commit: String!
+    $branch: String!
+    $localBuilds: LocalBuildsSpecifierInput!
+  ) {
     app {
       firstBuild(sortByCommittedAt: true, localBuilds: $localBuilds) {
         committedAt
