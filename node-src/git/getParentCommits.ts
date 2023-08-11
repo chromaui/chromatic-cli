@@ -47,7 +47,7 @@ interface FirstCommittedAtQueryResult {
 }
 
 const HasBuildsWithCommitsQuery = gql`
-  query HasBuildsWithCommitsQuery($commits: [String!]!, $localBuilds: LocalBuildsSpecifierInput!!) {
+  query HasBuildsWithCommitsQuery($commits: [String!]!, $localBuilds: LocalBuildsSpecifierInput!) {
     app {
       hasBuildsWithCommits(commits: $commits, localBuilds: $localBuilds)
     }
