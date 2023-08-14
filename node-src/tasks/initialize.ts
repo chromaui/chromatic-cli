@@ -64,7 +64,7 @@ export const announceBuild = async (ctx: Context) => {
         patchBaseRef,
         patchHeadRef,
         preserveMissingSpecs,
-        gitUserEmailHash: emailHash(gitUserEmail),
+        ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
         ...commitInfo,
         committedAt: new Date(committedAt),
         ciVariables: ctx.environment,
