@@ -67,7 +67,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   ctx.git = {
     version: await getVersion(),
-    gitUserEmail: await getUserEmail(),
+    gitUserEmail: await getUserEmail().catch((e) => {
+      ctx.log.debug('Failed to retrieve Git user email', e);
+      return null;
+    }),
     ...commitAndBranchInfo,
   };
 
