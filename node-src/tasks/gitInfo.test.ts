@@ -18,6 +18,9 @@ const getChangedFilesWithReplacement = <
 const getSlug = <jest.MockedFunction<typeof git.getSlug>>git.getSlug;
 const getVersion = <jest.MockedFunction<typeof git.getVersion>>git.getVersion;
 const getUserEmail = <jest.MockedFunction<typeof git.getUserEmail>>git.getUserEmail;
+const getUncommittedHash = <jest.MockedFunction<typeof git.getUncommittedHash>>(
+  git.getUncommittedHash
+);
 
 const getBaselineBuilds = <jest.MockedFunction<typeof getBaselineBuildsUnmocked>>(
   getBaselineBuildsUnmocked
@@ -44,6 +47,7 @@ const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
 
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
+  getUncommittedHash.mockResolvedValue('abc123');
   getParentCommits.mockResolvedValue(['asd2344']);
   getBaselineBuilds.mockResolvedValue([]);
   getChangedFilesWithReplacement.mockResolvedValue({ changedFiles: [] });

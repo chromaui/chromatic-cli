@@ -264,6 +264,7 @@ jest.mock('./git/git', () => ({
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
+  getUncommittedHash: () => Promise.resolve('abc123'),
 }));
 
 jest.mock('./git/getParentCommits', () => ({

@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getSlug, getUserEmail, getVersion } from '../git/git';
+import { getSlug, getUserEmail, getUncommittedHash, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -69,6 +69,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     version: await getVersion(),
     gitUserEmail: await getUserEmail().catch((e) => {
       ctx.log.debug('Failed to retrieve Git user email', e);
+      return null;
+    }),
+    uncommittedHash: await getUncommittedHash().catch((e) => {
+      ctx.log.warn('Failed to retrieve uncommitted files hash', e);
       return null;
     }),
     ...commitAndBranchInfo,

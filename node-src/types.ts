@@ -149,6 +149,7 @@ export interface Context {
     committedAt: number;
     slug?: string;
     mergeCommit?: string;
+    uncommittedHash?: string;
     parentCommits?: string[];
     baselineCommits?: string[];
     changedFiles?: string[];

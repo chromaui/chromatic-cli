@@ -14,7 +14,7 @@ import checkPackageJson from './lib/checkPackageJson';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
-import { getBranch, getCommit, getSlug, getUserEmail } from './git/git';
+import { getBranch, getCommit, getSlug, getUserEmail, getUncommittedHash } from './git/git';
 import { emailHash } from './lib/emailHash';
 
 /**
@@ -119,6 +119,7 @@ export type GitInfo = {
   branch: string;
   commit: string;
   slug: string;
+  uncommittedHash: string;
 };
 
 export async function getGitInfo(): Promise<GitInfo> {
@@ -131,5 +132,13 @@ export async function getGitInfo(): Promise<GitInfo> {
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
 
-  return { userEmail, userEmailHash, branch, commit, slug: isValidSlug ? slug : '' };
+  const uncommittedHash = await getUncommittedHash();
+  return {
+    userEmail,
+    userEmailHash,
+    branch,
+    commit,
+    slug: isValidSlug ? slug : '',
+    uncommittedHash,
+  };
 }
