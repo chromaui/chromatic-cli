@@ -69,6 +69,7 @@ export interface Options {
   autoAcceptChanges: true | string;
   exitZeroOnChanges: true | string;
   exitOnceUploaded: true | string;
+  isLocalBuild: boolean;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
   preserveMissingSpecs: boolean;
   originalArgv: string[];

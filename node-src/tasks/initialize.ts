@@ -39,7 +39,7 @@ export const setEnvironment = async (ctx: Context) => {
 };
 
 export const announceBuild = async (ctx: Context) => {
-  const { patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
+  const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
   const {
     version,
     matchesBranch,
@@ -65,6 +65,7 @@ export const announceBuild = async (ctx: Context) => {
         ...commitInfo,
         committedAt: new Date(committedAt),
         ciVariables: ctx.environment,
+        isLocalBuild,
         needsBaselines: !!turboSnap && !turboSnap.bailReason,
         packageVersion: ctx.pkg.version,
         rebuildForBuildId,
