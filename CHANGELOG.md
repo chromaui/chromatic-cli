@@ -1,3 +1,7 @@
+# 6.22.0 - 2023-08-15
+
+- [798](https://github.com/chromaui/chromatic-cli/pull/798) Calculate and record `uncommittedHash` when creating a build
+
 # 6.21.0 - 2023-08-07
 
 - [794](https://github.com/chromaui/chromatic-cli/pull/794) Add `getGitInfo` function exported by the Node API

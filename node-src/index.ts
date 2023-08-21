@@ -14,7 +14,7 @@ import checkPackageJson from './lib/checkPackageJson';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
-import { getBranch, getCommit, getSlug } from './git/git';
+import { getBranch, getCommit, getSlug, getUncommittedHash } from './git/git';
 
 /**
  Make keys of `T` outside of `R` optional.
@@ -112,11 +112,12 @@ export async function runAll(ctx, options?: Options) {
   }
 }
 
-export type GitInfo = {
+export interface GitInfo {
   branch: string;
   commit: string;
   slug: string;
-};
+  uncommittedHash: string;
+}
 
 export async function getGitInfo(): Promise<GitInfo> {
   const branch = await getBranch();
@@ -126,5 +127,6 @@ export async function getGitInfo(): Promise<GitInfo> {
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
 
-  return { branch, commit, slug: isValidSlug ? slug : '' };
+  const uncommittedHash = await getUncommittedHash();
+  return { branch, commit, slug: isValidSlug ? slug : '', uncommittedHash };
 }
