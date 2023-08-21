@@ -265,6 +265,7 @@ jest.mock('./git/git', () => ({
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
   getUncommittedHash: () => Promise.resolve('abc123'),
+  getUserEmail: () => Promise.resolve('test@test.com'),
 }));
 
 jest.mock('./git/getParentCommits', () => ({
@@ -355,7 +356,6 @@ it('runs in simple situations', async () => {
     packageVersion: expect.any(String),
     storybookVersion: '5.1.0',
     storybookViewLayer: 'viewLayer',
-    gitUserEmail: 'test@test.com',
     committerEmail: 'test@test.com',
     committerName: 'tester',
     isolatorUrl: `https://chromatic.com/iframe.html`,
