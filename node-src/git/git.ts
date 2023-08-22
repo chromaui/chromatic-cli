@@ -44,6 +44,10 @@ export async function getVersion() {
   return result.replace('git version ', '');
 }
 
+export async function getUserEmail() {
+  return execGitCommand(`git config user.email`);
+}
+
 // The slug consists of the last two parts of the URL, at least for GitHub, GitLab and Bitbucket,
 // and is typically followed by `.git`. The regex matches the last two parts between slashes, and
 // ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.

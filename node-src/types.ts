@@ -140,8 +140,11 @@ export interface Context {
 
   git: {
     version: string;
+    /** The current user's email as pre git config */
+    gitUserEmail: string;
     branch: string;
     commit: string;
+    committerEmail?: string;
     committedAt: number;
     slug?: string;
     mergeCommit?: string;

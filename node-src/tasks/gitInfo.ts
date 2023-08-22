@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 
 import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getSlug, getUncommittedHash, getVersion } from '../git/git';
+import { getSlug, getUserEmail, getUncommittedHash, getVersion } from '../git/git';
 import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -23,6 +23,7 @@ import { Context, Task } from '../types';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import replacedBuild from '../ui/messages/info/replacedBuild';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
+import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -59,16 +60,27 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     patchBaseRef,
     fromCI: ci,
     interactive,
+    isLocalBuild,
   } = ctx.options;
 
+  const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
+
   ctx.git = {
-    ...(await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci })),
+    version: await getVersion(),
+    gitUserEmail: await getUserEmail().catch((e) => {
+      ctx.log.debug('Failed to retrieve Git user email', e);
+      return null;
+    }),
     uncommittedHash: await getUncommittedHash().catch((e) => {
       ctx.log.warn('Failed to retrieve uncommitted files hash', e);
       return null;
     }),
-    version: await getVersion(),
+    ...commitAndBranchInfo,
   };
+
+  if (isLocalBuild && !ctx.git.gitUserEmail) {
+    throw new Error(gitUserEmailNotFound());
+  }
 
   if (!ctx.git.slug) {
     await getSlug().then(

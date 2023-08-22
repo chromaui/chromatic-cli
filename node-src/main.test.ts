@@ -265,6 +265,7 @@ jest.mock('./git/git', () => ({
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
   getUncommittedHash: () => Promise.resolve('abc123'),
+  getUserEmail: () => Promise.resolve('test@test.com'),
 }));
 
 jest.mock('./git/getParentCommits', () => ({

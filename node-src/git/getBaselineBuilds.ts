@@ -1,11 +1,16 @@
 import gql from 'fake-tag';
 
 import { Context } from '../types';
+import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 
 const BaselineCommitsQuery = gql`
-  query BaselineCommitsQuery($branch: String!, $parentCommits: [String!]!) {
+  query BaselineCommitsQuery(
+    $branch: String!
+    $parentCommits: [String!]!
+    $localBuilds: LocalBuildsSpecifierInput!
+  ) {
     app {
-      baselineBuilds(branch: $branch, parentCommits: $parentCommits) {
+      baselineBuilds(branch: $branch, parentCommits: $parentCommits, localBuilds: $localBuilds) {
         id
         number
         status(legacy: false)
@@ -30,12 +35,13 @@ interface BaselineCommitsQueryResult {
 }
 
 export async function getBaselineBuilds(
-  { client }: Pick<Context, 'client'>,
+  ctx: Pick<Context, 'options' | 'client' | 'git'>,
   { branch, parentCommits }: { branch: string; parentCommits: string[] }
 ) {
-  const { app } = await client.runQuery<BaselineCommitsQueryResult>(BaselineCommitsQuery, {
+  const { app } = await ctx.client.runQuery<BaselineCommitsQueryResult>(BaselineCommitsQuery, {
     branch,
     parentCommits,
+    localBuilds: localBuildsSpecifier(ctx),
   });
   return app.baselineBuilds;
 }
