@@ -4,7 +4,8 @@ import { dedent } from 'ts-dedent';
 import { error } from '../../components/icons';
 import link from '../../components/link';
 
-const localBuildsDocsLink = 'https://www.chromatic.com/docs/addon-visual-tests#local-builds';
+const localBuildsDocsLink =
+  'https://www.chromatic.com/docs/branching-and-baselines#what-are-local-builds';
 
 export default () =>
   `${dedent(chalk`
