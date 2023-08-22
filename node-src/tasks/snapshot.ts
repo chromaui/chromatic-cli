@@ -30,6 +30,7 @@ const SnapshotBuildQuery = `
         testCount
         changeCount
         errorCount: testCount(statuses: [BROKEN])
+        completedAt
       }
     }
   }
@@ -44,6 +45,7 @@ interface BuildQueryResult {
       testCount: number;
       changeCount: number;
       errorCount: number;
+      completedAt?: number;
     };
   };
 }
@@ -72,12 +74,12 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
   );
 
-  const waitForBuild = async (): Promise<Context['build']> => {
+  const waitForBuildToComplete = async (): Promise<Context['build']> => {
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
     ctx.build = { ...ctx.build, ...data.app.build };
 
-    if (ctx.build.status !== 'IN_PROGRESS') {
+    if (ctx.build.completedAt) {
       return ctx.build;
     }
 
@@ -89,10 +91,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     }
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
-    return waitForBuild();
+    return waitForBuildToComplete();
   };
 
-  const build = await waitForBuild();
+  const build = await waitForBuildToComplete();
 
   switch (build.status) {
     case 'PASSED':
