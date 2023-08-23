@@ -114,31 +114,34 @@ export async function runAll(ctx, options?: Options) {
 }
 
 export type GitInfo = {
-  userEmail: string;
-  userEmailHash: string;
+  slug: string;
   branch: string;
   commit: string;
-  slug: string;
+  committedAt: number;
+  committerEmail: string;
+  committerName: string;
   uncommittedHash: string;
+  userEmail: string;
+  userEmailHash: string;
 };
 
 export async function getGitInfo(): Promise<GitInfo> {
+  const slug = await getSlug();
+  const branch = await getBranch();
+  const commitInfo = await getCommit();
   const userEmail = await getUserEmail();
   const userEmailHash = emailHash(userEmail);
-  const branch = await getBranch();
-  const { commit } = await getCommit();
-  const slug = await getSlug();
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
 
   const uncommittedHash = await getUncommittedHash();
   return {
+    slug: isValidSlug ? slug : '',
+    branch,
+    ...commitInfo,
+    uncommittedHash,
     userEmail,
     userEmailHash,
-    branch,
-    commit,
-    slug: isValidSlug ? slug : '',
-    uncommittedHash,
   };
 }
