@@ -45,7 +45,7 @@ export async function run({
 }: {
   argv?: string[];
   flags?: Flags;
-  options?: Options;
+  options?: Partial<Options>;
 }): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
@@ -100,7 +100,7 @@ export async function run({
   };
 }
 
-export async function runAll(ctx, options?: Options) {
+export async function runAll(ctx, options?: Partial<Options>) {
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx, options), checkForUpdates(ctx)]);
 
