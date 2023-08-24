@@ -1,3 +1,8 @@
+# 6.24.0 - 2023-08-24
+
+- [801](https://github.com/chromaui/chromatic-cli/pull/801) Fix `Unexpected build status: PREPARED` error
+- [802](https://github.com/chromaui/chromatic-cli/pull/802) Include all commit info in `GitInfo`
+
 # 6.23.1 - 2023-08-24
 
 - [800](https://github.com/chromaui/chromatic-cli/pull/800) Fix type signature for `runAll` and `runBuild`
