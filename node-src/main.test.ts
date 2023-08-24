@@ -145,7 +145,7 @@ jest.mock('node-fetch', () =>
       if (query.match('SnapshotBuildQuery')) {
         return {
           data: {
-            app: { build: { status: 'PENDING', changeCount: 1 } },
+            app: { build: { status: 'PENDING', changeCount: 1, completedAt: 1 } },
           },
         };
       }

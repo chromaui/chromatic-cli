@@ -216,6 +216,7 @@ export interface Context {
     turboSnapEnabled?: boolean;
     wasLimited?: boolean;
     startedAt?: number;
+    completedAt?: number;
     app: {
       manageUrl: string;
       setupUrl: string;

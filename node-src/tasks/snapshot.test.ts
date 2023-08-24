@@ -24,7 +24,7 @@ describe('takeSnapshots', () => {
 
     client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 0, status: 'PASSED' } },
+      app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
@@ -34,7 +34,7 @@ describe('takeSnapshots', () => {
       { headers: { Authorization: `Bearer report-token` } }
     );
     expect(client.runQuery).toHaveBeenCalledTimes(2);
-    expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);
   });
 
@@ -53,11 +53,11 @@ describe('takeSnapshots', () => {
 
     client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 2, status: 'PENDING' } },
+      app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
-    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING', completedAt: 1 });
     expect(ctx.exitCode).toBe(1);
   });
 
@@ -76,11 +76,11 @@ describe('takeSnapshots', () => {
 
     client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 2, status: 'BROKEN' } },
+      app: { build: { changeCount: 2, status: 'BROKEN', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
-    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BROKEN' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BROKEN', completedAt: 1 });
     expect(ctx.exitCode).toBe(2);
   });
 
@@ -99,11 +99,11 @@ describe('takeSnapshots', () => {
 
     client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 2, status: 'FAILED' } },
+      app: { build: { changeCount: 2, status: 'FAILED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
-    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'FAILED' });
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'FAILED', completedAt: 1 });
     expect(ctx.exitCode).toBe(3);
   });
 });
