@@ -16,7 +16,7 @@ import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
 import { endActivity } from './ui/components/activity';
 
-export async function runBuild(ctx: Context, extraOptions?: Options) {
+export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 

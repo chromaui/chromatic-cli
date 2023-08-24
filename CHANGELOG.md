@@ -1,3 +1,12 @@
+# 6.23.1 - 2023-08-24
+
+- [800](https://github.com/chromaui/chromatic-cli/pull/800) Fix type signature for `runAll` and `runBuild`
+
+# 6.23.0 - 2023-08-22
+
+- [795](https://github.com/chromaui/chromatic-cli/pull/795) Add `--local` flag and pass to builds as `isLocalBuild`
+- [796](https://github.com/chromaui/chromatic-cli/pull/796) Pass `gitUserEmailHash` up with new builds and use `localBuilds` filter in baseline calculations
+
 # 6.22.0 - 2023-08-15
 
 - [798](https://github.com/chromaui/chromatic-cli/pull/798) Calculate and record `uncommittedHash` when creating a build
