@@ -1,3 +1,7 @@
+# 6.23.1 - 2023-08-24
+
+- [800](https://github.com/chromaui/chromatic-cli/pull/800) Fix type signature for `runAll` and `runBuild`
+
 # 6.23.0 - 2023-08-22
 
 - [795](https://github.com/chromaui/chromatic-cli/pull/795) Add `--local` flag and pass to builds as `isLocalBuild`
