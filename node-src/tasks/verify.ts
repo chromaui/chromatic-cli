@@ -146,6 +146,9 @@ const VerifyBuildQuery = `
             viewport
             viewportIsDefault
           }
+          mode {
+            name
+          }
         }
       }
     }
