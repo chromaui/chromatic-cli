@@ -242,6 +242,10 @@ export interface Context {
         viewport: number;
         viewportIsDefault: boolean;
       };
+      mode: {
+        id: string;
+        name: string;
+      };
     }[];
   };
   sourceDir: string;

@@ -31,6 +31,9 @@ const ReportQuery = `
             viewport
             viewportIsDefault
           }
+          mode {
+            name
+          }
         }
       }
     }
@@ -58,6 +61,9 @@ interface ReportQueryResult {
         parameters: {
           viewport: number;
           viewportIsDefault: boolean;
+        };
+        mode: {
+          name: string;
         };
       }[];
     };
@@ -91,12 +97,13 @@ export const generateReport = async (ctx: Context) => {
     .property('buildUrl', build.webUrl)
     .property('storybookUrl', baseStorybookUrl(build.cachedUrl));
 
-  build.tests.forEach(({ status, result, spec, parameters }) => {
-    const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
+  build.tests.forEach(({ status, result, spec, parameters, mode }) => {
+    const testSuffixName = mode.name || `[${parameters.viewport}px]`;
+    const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
     const testCase = suite
       .testCase()
       .className(spec.component.name.replace(/[|/]/g, '.')) // transform story path to class path
-      .name(`${spec.name}${suffix}`);
+      .name(`${spec.name} ${suffix}`);
 
     switch (status) {
       case 'FAILED':

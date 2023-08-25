@@ -133,6 +133,7 @@ jest.mock('node-fetch', () =>
                   {
                     spec: { name: 'name', component: { displayName: 'component' } },
                     parameters: { viewport: 320, viewportIsDefault: false },
+                    mode: { name: '320px' },
                   },
                 ],
                 startedAt: Date.now(),

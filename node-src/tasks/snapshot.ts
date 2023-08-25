@@ -61,9 +61,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   const testLabels =
     ctx.options.interactive &&
     testCount === actualTestCount &&
-    tests.map(({ spec, parameters }) => {
-      const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
-      return `${spec.component.displayName} › ${spec.name}${suffix}`;
+    tests.map(({ spec, parameters, mode }) => {
+      const testSuffixName = mode.name || `[${parameters.viewport}px]`;
+      const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
+      return `${spec.component.displayName} › ${spec.name} ${suffix}`;
     });
 
   const updateProgress = throttle(
