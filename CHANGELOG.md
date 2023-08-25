@@ -1,3 +1,7 @@
+# 6.24.1 - 2023-08-25
+
+- [803](https://github.com/chromaui/chromatic-cli/pull/803) Support Mode Name as Suffix for Build Progress Indicator
+
 # 6.24.0 - 2023-08-24
 
 - [801](https://github.com/chromaui/chromatic-cli/pull/801) Fix `Unexpected build status: PREPARED` error
