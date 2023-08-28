@@ -1,6 +1,6 @@
 import { takeSnapshots } from './snapshot';
 
-const env = { CHROMATIC_POLL_INTERVAL: 0 };
+const env = { CHROMATIC_POLL_INTERVAL: 0, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { error: jest.fn(), info: jest.fn() };
 const matchesBranch = () => false;
 
@@ -105,5 +105,49 @@ describe('takeSnapshots', () => {
     await takeSnapshots(ctx, {} as any);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'FAILED', completedAt: 1 });
     expect(ctx.exitCode).toBe(3);
+  });
+
+  it('calls onTaskProgress with progress', async () => {
+    const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+    const build = {
+      app: { repository: { provider: 'github' } },
+      number: 1,
+      features: {},
+      reportToken: 'report-token',
+      actualTestCount: 5,
+      inProgressCount: 5,
+    };
+    const ctx = {
+      client,
+      env,
+      git: { matchesBranch },
+      log,
+      options: { onTaskProgress: jest.fn() },
+      build,
+    } as any;
+
+    client.runQuery.mockReturnValueOnce({
+      app: { build: { status: 'IN_PROGRESS', inProgressCount: 5 } },
+    });
+    client.runQuery.mockReturnValueOnce({
+      app: { build: { status: 'IN_PROGRESS', inProgressCount: 3 } },
+    });
+    client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1, inProgressCount: 0 } },
+    });
+
+    await takeSnapshots(ctx, {} as any);
+
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledTimes(2);
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+      progress: 1,
+      total: 5,
+      unit: 'snapshots',
+    });
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+      progress: 3,
+      total: 5,
+      unit: 'snapshots',
+    });
   });
 });

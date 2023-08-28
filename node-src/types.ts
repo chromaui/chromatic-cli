@@ -90,6 +90,12 @@ export interface Options {
 
   /** A callback that is called at the completion of each task */
   onTaskComplete?: (ctx: Context) => void;
+
+  /** A callback that is called during tasks that have incremental progress */
+  onTaskProgress?: (
+    ctx: Context,
+    status: { progress: number; total: number; unit: string }
+  ) => void;
 }
 
 export interface Context {
