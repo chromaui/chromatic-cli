@@ -287,6 +287,8 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     (progress, total) => {
       const percentage = Math.round((progress / total) * 100);
       task.output = uploading({ percentage }).output;
+
+      ctx.options.onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
     },
     // Avoid spamming the logs with progress updates in non-interactive mode
     ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL

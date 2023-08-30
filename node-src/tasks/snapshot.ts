@@ -70,6 +70,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   const updateProgress = throttle(
     ({ cursor, label }) => {
       task.output = pending(ctx, { cursor, label }).output;
+      ctx.options.onTaskProgress?.(
+        { ...ctx },
+        { progress: cursor, total: actualTestCount, unit: 'snapshots' }
+      );
     },
     // Avoid spamming the logs with progress updates in non-interactive mode
     ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
