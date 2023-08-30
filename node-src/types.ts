@@ -90,6 +90,9 @@ export interface Options {
 
   /** A callback that is called at the completion of each task */
   onTaskComplete?: (ctx: Context) => void;
+
+  /** A callback that is called if a task fails */
+  onTaskError?: (ctx: Context, error: Error | Error[] | string) => void;
 }
 
 export interface Context {

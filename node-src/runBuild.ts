@@ -75,6 +75,7 @@ export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
     if (errors.length && !ctx.userError) {
       ctx.log.info('');
       ctx.log.error(fatalError(ctx, errors));
+      ctx.options.onTaskError?.(ctx, fatalError(ctx, errors));
     }
 
     if (!ctx.exitCode) {
