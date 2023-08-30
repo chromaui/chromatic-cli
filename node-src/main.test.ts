@@ -343,6 +343,23 @@ it('fails on missing project token', async () => {
   expect(ctx.testLogger.errors[0]).toMatch(/Missing project token/);
 });
 
+// Note this tests options errors, but not fatal task or runtime errors.
+it('passes options error to onTaskError', async () => {
+  const ctx = getContext([]);
+  ctx.options = {
+    onTaskError: jest.fn(),
+  } as any;
+
+  ctx.options.onTaskError = jest.fn();
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runBuild(ctx);
+
+  await expect(ctx.options.onTaskError).toHaveBeenCalledWith(
+    expect.anything(), // Context
+    expect.stringContaining('Missing project token') // Long formatted error fatalError https://github.com/chromaui/chromatic-cli/blob/217e77671179748eb4ddb8becde78444db93d067/node-src/ui/messages/errors/fatalError.ts#L11
+  );
+});
+
 it('runs in simple situations', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   await runBuild(ctx);
