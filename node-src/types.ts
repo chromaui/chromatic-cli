@@ -92,8 +92,11 @@ export interface Options {
   onTaskComplete?: (ctx: Context) => void;
 
   /** A callback that is called if a task fails */
-  onTaskError?: (ctx: Context, error: Error | Error[] | string) => void;
-  
+  onTaskError?: (
+    ctx: Context,
+    { formattedError, originalError }: { formattedError: string; originalError: Error | Error[] }
+  ) => void;
+
   /** A callback that is called during tasks that have incremental progress */
   onTaskProgress?: (
     ctx: Context,
