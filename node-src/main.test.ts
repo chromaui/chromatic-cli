@@ -146,7 +146,7 @@ jest.mock('node-fetch', () =>
       if (query.match('SnapshotBuildQuery')) {
         return {
           data: {
-            app: { build: { status: 'PENDING', changeCount: 1, completedAt: 1 } },
+            app: { build: { status: 'PENDING', changeCount: 1, completedAt: 12345 } },
           },
         };
       }
@@ -170,6 +170,7 @@ jest.mock('node-fetch', () =>
                   status: 'PASSED',
                   commit: 'baseline',
                   committedAt: 1234,
+                  completedAt: 12345,
                   changeCount: 1,
                 },
               ],
@@ -274,6 +275,13 @@ jest.mock('./git/getParentCommits', () => ({
 }));
 
 const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
+
+jest.mock('./lib/emailHash');
+
+jest.mock('./lib/getPackageManager', () => ({
+  getPackageManagerName: () => Promise.resolve('pnpm'),
+  getPackageManagerRunCommand: (args) => Promise.resolve(`pnpm run ${args.join(' ')}`),
+}));
 
 jest.mock('./lib/getStorybookInfo', () => () => ({
   version: '5.1.0',

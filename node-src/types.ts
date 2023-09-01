@@ -185,8 +185,6 @@ export interface Context {
     nodeVersion: string;
     platform: string;
     command: string;
-    clientArgs: string[];
-    scriptArgs: string[];
   };
   isolatorUrl: string;
   cachedUrl: string;

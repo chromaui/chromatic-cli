@@ -10,6 +10,7 @@ import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
+import { getPackageManagerName, getPackageManagerRunCommand } from '../lib/getPackageManager';
 
 const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
 
@@ -34,36 +35,26 @@ export const setSpawnParams = async (ctx) => {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
-  // Run either:
-  //   node path/to/npm-cli.js run build-storybook
-  //   node path/to/yarn.js run build-storybook
-  //   npm run build-storybook
-  // Based on https://github.com/mysticatea/npm-run-all/blob/52eaf86242ba408dedd015f53ca7ca368f25a026/lib/run-task.js#L156-L174
-  const npmExecPath = process.env.npm_execpath;
-  const npmExecFile = npmExecPath && path.basename(npmExecPath);
-  const isJsPath = npmExecFile && /\.m?js$/.test(npmExecFile);
-  const isYarn = npmExecFile && npmExecFile.includes('yarn');
-  const isNpx = npmExecFile && npmExecFile.includes('npx');
-
-  const client = isYarn ? 'yarn' : 'npm';
+  const client = await getPackageManagerName();
   const clientVersion = await execa(client, ['--version']).then(trimOutput);
   const nodeVersion = await execa('node', ['--version']).then(trimOutput);
+
+  const command = await getPackageManagerRunCommand(
+    [
+      ctx.options.buildScriptName,
+      '--output-dir',
+      ctx.sourceDir,
+      ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
+      ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
+    ].filter(Boolean)
+  );
 
   ctx.spawnParams = {
     client,
     clientVersion,
     nodeVersion,
     platform: process.platform,
-    command: (!isNpx && (isJsPath ? process.execPath : npmExecPath)) || 'npm',
-    clientArgs: !isNpx && isJsPath ? [npmExecPath, 'run'] : ['run', '--silent'],
-    scriptArgs: [
-      ctx.options.buildScriptName,
-      isYarn ? '' : '--',
-      '--output-dir',
-      ctx.sourceDir,
-      ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
-      ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
-    ].filter(Boolean),
+    command,
   };
 };
 
@@ -79,10 +70,10 @@ export const buildStorybook = async (ctx: Context) => {
   });
 
   try {
-    const { command, clientArgs, scriptArgs } = ctx.spawnParams;
+    const { command } = ctx.spawnParams;
     ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
     await Promise.race([
-      execa(command, [...clientArgs, ...scriptArgs], { stdio: [null, logFile, logFile] }),
+      execa.command(command, { stdio: [null, logFile, logFile] }),
       timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
     ]);
   } catch (e) {

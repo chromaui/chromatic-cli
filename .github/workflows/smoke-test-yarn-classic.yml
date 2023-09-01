@@ -5,14 +5,15 @@ jobs:
   chromatic:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v1
-        with:
-          node-version: '16.x'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - run: yarn install
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: rm -rf subdir # remove conflicting subproject
       - run: yarn set version 1.x.x
+      - run: yarn install
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
