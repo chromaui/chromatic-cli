@@ -331,6 +331,7 @@ const getContext = (
     },
     packagePath: '',
     statsPath: 'preview-stats.json',
+    options: {},
     ...parseArgs(argv),
   } as any;
 };
@@ -358,7 +359,7 @@ it('passes options error to onTaskError', async () => {
     expect.anything(), // Context
     expect.objectContaining({
       formattedError: expect.stringContaining('Missing project token'), // Long formatted error fatalError https://github.com/chromaui/chromatic-cli/blob/217e77671179748eb4ddb8becde78444db93d067/node-src/ui/messages/errors/fatalError.ts#L11
-      originalError: expect.anything(), // No jest matcher for an error.
+      originalError: expect.any(Error),
     })
   );
 });
