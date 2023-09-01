@@ -1,4 +1,4 @@
-name: Smoke test via Node 16
+name: Smoke test via Node 20
 on: push
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 20
       - run: yarn
       - run: yarn build
       - uses: ./

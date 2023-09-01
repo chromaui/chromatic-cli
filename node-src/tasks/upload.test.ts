@@ -22,7 +22,7 @@ const readFileSync = <jest.MockedFunction<typeof fs.readFileSync>>fs.readFileSyn
 const statSync = <jest.MockedFunction<typeof fs.statSync>>fs.statSync;
 const progress = <jest.MockedFunction<typeof progressStream>>progressStream;
 
-const env = { CHROMATIC_RETRIES: 2 };
+const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 const http = { fetch: jest.fn() };
 
@@ -199,10 +199,20 @@ describe('uploadStorybook', () => {
       paths: ['iframe.html', 'index.html'],
       total: 84,
     };
-    const ctx = { client, env, log, http, sourceDir: '/static/', options: {}, fileInfo } as any;
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
     await uploadStorybook(ctx, {} as any);
 
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/GetUploadUrlsMutation/), {
+      buildId: '1',
       paths: ['iframe.html', 'index.html'],
     });
     expect(http.fetch).toHaveBeenCalledWith(
@@ -231,5 +241,85 @@ describe('uploadStorybook', () => {
     );
     expect(ctx.uploadedBytes).toBe(84);
     expect(ctx.isolatorUrl).toBe('https://asdqwe.chromatic.com/iframe.html');
+  });
+
+  it('calls onTaskProgress with progress', async () => {
+    const client = { runQuery: jest.fn() };
+    client.runQuery.mockReturnValue({
+      getUploadUrls: {
+        domain: 'https://asdqwe.chromatic.com',
+        urls: [
+          {
+            path: 'iframe.html',
+            url: 'https://asdqwe.chromatic.com/iframe.html',
+            contentType: 'text/html',
+          },
+          {
+            path: 'index.html',
+            url: 'https://asdqwe.chromatic.com/index.html',
+            contentType: 'text/html',
+          },
+        ],
+      },
+    });
+
+    createReadStream.mockReturnValue({ pipe: jest.fn((x) => x) } as any);
+    progress.mockImplementation((() => {
+      let progressCb;
+      return {
+        on: jest.fn((name, cb) => {
+          progressCb = cb;
+        }),
+        sendProgress: (delta: number) => progressCb({ delta }),
+      };
+    }) as any);
+    http.fetch.mockReset().mockImplementation(async (url, { body }) => {
+      // body is just the mocked progress stream, as pipe returns it
+      body.sendProgress(21);
+      body.sendProgress(21);
+      return { ok: true };
+    });
+
+    const fileInfo = {
+      lengths: [
+        { knownAs: 'iframe.html', contentLength: 42 },
+        { knownAs: 'index.html', contentLength: 42 },
+      ],
+      paths: ['iframe.html', 'index.html'],
+      total: 84,
+    };
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: { onTaskProgress: jest.fn() },
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledTimes(4);
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+      progress: 21,
+      total: 84,
+      unit: 'bytes',
+    });
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+      progress: 42,
+      total: 84,
+      unit: 'bytes',
+    });
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+      progress: 63,
+      total: 84,
+      unit: 'bytes',
+    });
+    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+      progress: 84,
+      total: 84,
+      unit: 'bytes',
+    });
   });
 });

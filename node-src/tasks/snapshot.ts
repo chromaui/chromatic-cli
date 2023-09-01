@@ -30,6 +30,7 @@ const SnapshotBuildQuery = `
         testCount
         changeCount
         errorCount: testCount(statuses: [BROKEN])
+        completedAt
       }
     }
   }
@@ -44,6 +45,7 @@ interface BuildQueryResult {
       testCount: number;
       changeCount: number;
       errorCount: number;
+      completedAt?: number;
     };
   };
 }
@@ -59,25 +61,30 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   const testLabels =
     ctx.options.interactive &&
     testCount === actualTestCount &&
-    tests.map(({ spec, parameters }) => {
-      const suffix = parameters.viewportIsDefault ? '' : ` [${parameters.viewport}px]`;
-      return `${spec.component.displayName} › ${spec.name}${suffix}`;
+    tests.map(({ spec, parameters, mode }) => {
+      const testSuffixName = mode.name || `[${parameters.viewport}px]`;
+      const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
+      return `${spec.component.displayName} › ${spec.name} ${suffix}`;
     });
 
   const updateProgress = throttle(
     ({ cursor, label }) => {
       task.output = pending(ctx, { cursor, label }).output;
+      ctx.options.onTaskProgress?.(
+        { ...ctx },
+        { progress: cursor, total: actualTestCount, unit: 'snapshots' }
+      );
     },
     // Avoid spamming the logs with progress updates in non-interactive mode
     ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
   );
 
-  const waitForBuild = async (): Promise<Context['build']> => {
+  const waitForBuildToComplete = async (): Promise<Context['build']> => {
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
     ctx.build = { ...ctx.build, ...data.app.build };
 
-    if (ctx.build.status !== 'IN_PROGRESS') {
+    if (ctx.build.completedAt) {
       return ctx.build;
     }
 
@@ -89,10 +96,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     }
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
-    return waitForBuild();
+    return waitForBuildToComplete();
   };
 
-  const build = await waitForBuild();
+  const build = await waitForBuildToComplete();
 
   switch (build.status) {
     case 'PASSED':

@@ -1,3 +1,4 @@
+import { emailHash } from '../lib/emailHash';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
@@ -39,7 +40,7 @@ export const setEnvironment = async (ctx: Context) => {
 };
 
 export const announceBuild = async (ctx: Context) => {
-  const { patchBaseRef, patchHeadRef, preserveMissingSpecs } = ctx.options;
+  const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
   const {
     version,
     matchesBranch,
@@ -49,6 +50,7 @@ export const announceBuild = async (ctx: Context) => {
     committedAt,
     baselineCommits,
     packageManifestChanges,
+    gitUserEmail,
     ...commitInfo
   } = ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
@@ -62,9 +64,11 @@ export const announceBuild = async (ctx: Context) => {
         patchBaseRef,
         patchHeadRef,
         preserveMissingSpecs,
+        ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
         ...commitInfo,
         committedAt: new Date(committedAt),
         ciVariables: ctx.environment,
+        isLocalBuild,
         needsBaselines: !!turboSnap && !turboSnap.bailReason,
         packageVersion: ctx.pkg.version,
         rebuildForBuildId,

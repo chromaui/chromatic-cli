@@ -14,6 +14,8 @@ import checkPackageJson from './lib/checkPackageJson';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
+import { getBranch, getCommit, getSlug, getUserEmail, getUncommittedHash } from './git/git';
+import { emailHash } from './lib/emailHash';
 
 /**
  Make keys of `T` outside of `R` optional.
@@ -43,7 +45,7 @@ export async function run({
 }: {
   argv?: string[];
   flags?: Flags;
-  options?: Options;
+  options?: Partial<Options>;
 }): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
@@ -98,7 +100,7 @@ export async function run({
   };
 }
 
-export async function runAll(ctx, options?: Options) {
+export async function runAll(ctx, options?: Partial<Options>) {
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx, options), checkForUpdates(ctx)]);
 
@@ -109,4 +111,37 @@ export async function runAll(ctx, options?: Options) {
   if (ctx.flags.diagnostics) {
     await writeChromaticDiagnostics(ctx);
   }
+}
+
+export type GitInfo = {
+  slug: string;
+  branch: string;
+  commit: string;
+  committedAt: number;
+  committerEmail: string;
+  committerName: string;
+  uncommittedHash: string;
+  userEmail: string;
+  userEmailHash: string;
+};
+
+export async function getGitInfo(): Promise<GitInfo> {
+  const slug = await getSlug();
+  const branch = await getBranch();
+  const commitInfo = await getCommit();
+  const userEmail = await getUserEmail();
+  const userEmailHash = emailHash(userEmail);
+
+  const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
+  const isValidSlug = !!ownerName && !!repoName && !rest.length;
+
+  const uncommittedHash = await getUncommittedHash();
+  return {
+    slug: isValidSlug ? slug : '',
+    branch,
+    ...commitInfo,
+    uncommittedHash,
+    userEmail,
+    userEmailHash,
+  };
 }

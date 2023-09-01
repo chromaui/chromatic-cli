@@ -33,8 +33,8 @@ import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 
 const GetUploadUrlsMutation = `
-  mutation GetUploadUrlsMutation($paths: [String!]!) {
-    getUploadUrls(paths: $paths) {
+  mutation GetUploadUrlsMutation($buildId: ObjID, $paths: [String!]!) {
+    getUploadUrls(buildId: $buildId, paths: $paths) {
       domain
       urls {
         path
@@ -56,8 +56,8 @@ interface GetUploadUrlsMutationResult {
 }
 
 const GetZipUploadUrlMutation = `
-  mutation GetZipUploadUrlMutation {
-    getZipUploadUrl {
+  mutation GetZipUploadUrlMutation($buildId: ObjID) {
+    getZipUploadUrl(buildId: $buildId) {
       domain
       url
       sentinelUrl
@@ -224,7 +224,7 @@ async function uploadAsIndividualFiles(
   const { lengths, paths, total } = ctx.fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
     GetUploadUrlsMutation,
-    { paths }
+    { buildId: ctx.announcedBuild.id, paths }
   );
   const { domain, urls } = getUploadUrls;
   const files = urls.map(({ path, url, contentType }) => ({
@@ -257,7 +257,8 @@ async function uploadAsZipFile(
   const zipped = await makeZipFile(ctx);
   const { path, size: total } = zipped;
   const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
-    GetZipUploadUrlMutation
+    GetZipUploadUrlMutation,
+    { buildId: ctx.announcedBuild.id }
   );
   const { domain, url, sentinelUrl } = getZipUploadUrl;
 
@@ -286,6 +287,8 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     (progress, total) => {
       const percentage = Math.round((progress / total) * 100);
       task.output = uploading({ percentage }).output;
+
+      ctx.options.onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
     },
     // Avoid spamming the logs with progress updates in non-interactive mode
     ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL

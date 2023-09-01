@@ -17,6 +17,10 @@ const getChangedFilesWithReplacement = <
 >getChangedFilesWithReplacementUnmocked;
 const getSlug = <jest.MockedFunction<typeof git.getSlug>>git.getSlug;
 const getVersion = <jest.MockedFunction<typeof git.getVersion>>git.getVersion;
+const getUserEmail = <jest.MockedFunction<typeof git.getUserEmail>>git.getUserEmail;
+const getUncommittedHash = <jest.MockedFunction<typeof git.getUncommittedHash>>(
+  git.getUncommittedHash
+);
 
 const getBaselineBuilds = <jest.MockedFunction<typeof getBaselineBuildsUnmocked>>(
   getBaselineBuildsUnmocked
@@ -38,14 +42,17 @@ const commitInfo = {
   fromCI: false,
   ciService: undefined,
 };
+
 const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
 
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
+  getUncommittedHash.mockResolvedValue('abc123');
   getParentCommits.mockResolvedValue(['asd2344']);
   getBaselineBuilds.mockResolvedValue([]);
   getChangedFilesWithReplacement.mockResolvedValue({ changedFiles: [] });
   getVersion.mockResolvedValue('Git v1.0.0');
+  getUserEmail.mockResolvedValue('user@email.com');
   getSlug.mockResolvedValue('user/repo');
   client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
@@ -60,6 +67,14 @@ describe('setGitInfo', () => {
       parentCommits: ['asd2344'],
       version: 'Git v1.0.0',
       slug: 'user/repo',
+    });
+  });
+
+  it('sets gitUserEmail to current user for local builds', async () => {
+    const ctx = { log, options: { isLocalBuild: true }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.git).toMatchObject({
+      gitUserEmail: 'user@email.com',
     });
   });
 

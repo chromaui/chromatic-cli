@@ -69,6 +69,7 @@ export interface Options {
   autoAcceptChanges: true | string;
   exitZeroOnChanges: true | string;
   exitOnceUploaded: true | string;
+  isLocalBuild: boolean;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
   preserveMissingSpecs: boolean;
   originalArgv: string[];
@@ -89,6 +90,12 @@ export interface Options {
 
   /** A callback that is called at the completion of each task */
   onTaskComplete?: (ctx: Context) => void;
+
+  /** A callback that is called during tasks that have incremental progress */
+  onTaskProgress?: (
+    ctx: Context,
+    status: { progress: number; total: number; unit: string }
+  ) => void;
 }
 
 export interface Context {
@@ -139,11 +146,15 @@ export interface Context {
 
   git: {
     version: string;
+    /** The current user's email as pre git config */
+    gitUserEmail: string;
     branch: string;
     commit: string;
+    committerEmail?: string;
     committedAt: number;
     slug?: string;
     mergeCommit?: string;
+    uncommittedHash?: string;
     parentCommits?: string[];
     baselineCommits?: string[];
     changedFiles?: string[];
@@ -209,6 +220,7 @@ export interface Context {
     turboSnapEnabled?: boolean;
     wasLimited?: boolean;
     startedAt?: number;
+    completedAt?: number;
     app: {
       manageUrl: string;
       setupUrl: string;
@@ -233,6 +245,10 @@ export interface Context {
       parameters: {
         viewport: number;
         viewportIsDefault: boolean;
+      };
+      mode: {
+        id: string;
+        name: string;
       };
     }[];
   };
