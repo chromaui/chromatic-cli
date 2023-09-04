@@ -21,6 +21,9 @@ export const createTask = ({
     ctx.task = name;
     ctx.title = title;
     ctx.startedAt = Number.isInteger(ctx.now) ? ctx.now : new Date().getTime();
+
+    ctx.options.onTaskStart?.({ ...ctx });
+
     // eslint-disable-next-line no-restricted-syntax
     for (const step of steps) {
       // eslint-disable-next-line no-await-in-loop

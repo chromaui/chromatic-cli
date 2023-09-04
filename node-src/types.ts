@@ -88,14 +88,17 @@ export interface Options {
   patchHeadRef: string;
   patchBaseRef: string;
 
-  /** A callback that is called at the completion of each task */
-  onTaskComplete?: (ctx: Context) => void;
+  /** A callback that is called at the start of each task */
+  onTaskStart?: (ctx: Context) => void;
 
   /** A callback that is called during tasks that have incremental progress */
   onTaskProgress?: (
     ctx: Context,
     status: { progress: number; total: number; unit: string }
   ) => void;
+
+  /** A callback that is called at the completion of each task */
+  onTaskComplete?: (ctx: Context) => void;
 }
 
 export interface Context {
