@@ -5,9 +5,20 @@ import { Context, Task } from '../types';
 
 type ValueFn = string | ((ctx: Context, task: Task) => string);
 
-export const createTask = ({ title, steps, ...config }): Listr.ListrTask<Context> => ({
+type TaskInput = Omit<Listr.ListrTask<Context>, 'task'> & {
+  name: string;
+  steps: ((ctx: Context, task: Listr.ListrTaskWrapper<Context> | Task) => void | Promise<void>)[];
+};
+
+export const createTask = ({
+  name,
+  title,
+  steps,
+  ...config
+}: TaskInput): Listr.ListrTask<Context> => ({
   title,
   task: async (ctx: Context, task: Listr.ListrTaskWrapper<Context>) => {
+    ctx.task = name;
     ctx.title = title;
     ctx.startedAt = Number.isInteger(ctx.now) ? ctx.now : new Date().getTime();
     // eslint-disable-next-line no-restricted-syntax

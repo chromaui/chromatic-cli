@@ -59,6 +59,7 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
 };
 
 export default createTask({
+  name: 'prepareWorkspace',
   title: initial.title,
   steps: [transitionTo(pending), runPrepareWorkspace, transitionTo(success, true)],
 });

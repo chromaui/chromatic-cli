@@ -145,6 +145,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
 };
 
 export default createTask({
+  name: 'snapshot',
   title: initial.title,
   skip: (ctx: Context) => {
     if (ctx.skip) return true;

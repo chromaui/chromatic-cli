@@ -11,6 +11,7 @@ export const runRestoreWorkspace = async () => {
 };
 
 export default createTask({
+  name: 'restoreWorkspace',
   title: initial.title,
   steps: [transitionTo(pending), runRestoreWorkspace, transitionTo(success, true)],
 });

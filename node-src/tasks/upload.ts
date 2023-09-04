@@ -307,6 +307,7 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
 };
 
 export default createTask({
+  name: 'upload',
   title: initial.title,
   skip: (ctx: Context) => {
     if (ctx.skip) return true;

@@ -249,6 +249,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 };
 
 export default createTask({
+  name: 'verify',
   title: initial.title,
   skip: (ctx: Context) => {
     if (ctx.skip) return true;

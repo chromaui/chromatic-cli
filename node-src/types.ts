@@ -115,6 +115,7 @@ export interface Context {
   argv: string[];
   flags: Flags;
   options: Options;
+  task: string;
   title: string;
   skip?: boolean;
   skipSnapshots?: boolean;
