@@ -1,3 +1,10 @@
+# 7.0.0 - 2023-09-04
+
+- [789](https://github.com/chromaui/chromatic-cli/pull/789) Use `@antfu/ni` to support `pnpm` for Storybook build
+- [805](https://github.com/chromaui/chromatic-cli/pull/805) Add a `onTaskProgress` option and report progress on it
+
+This is a potentially breaking change due to the introduction of [@antfu/ni](https://github.com/antfu/ni) to handle running the `storybook build` command in the **Build Storybook** step.
+
 # 6.24.1 - 2023-08-25
 
 - [803](https://github.com/chromaui/chromatic-cli/pull/803) Support Mode Name as Suffix for Build Progress Indicator
