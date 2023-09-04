@@ -101,6 +101,19 @@ export interface Options {
   onTaskComplete?: (ctx: Context) => void;
 }
 
+export type TaskName =
+  | 'auth'
+  | 'gitInfo'
+  | 'storybookInfo'
+  | 'initialize'
+  | 'build'
+  | 'upload'
+  | 'verify'
+  | 'snapshot'
+  | 'report'
+  | 'prepareWorkspace'
+  | 'restoreWorkspace';
+
 export interface Context {
   env: Env;
   log: Logger;
@@ -118,7 +131,7 @@ export interface Context {
   argv: string[];
   flags: Flags;
   options: Options;
-  task: string;
+  task: TaskName;
   title: string;
   skip?: boolean;
   skipSnapshots?: boolean;

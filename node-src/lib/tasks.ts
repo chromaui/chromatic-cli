@@ -1,12 +1,12 @@
 import chalk from 'chalk';
 import Listr from 'listr';
 import pluralize from 'pluralize';
-import { Context, Task } from '../types';
+import { Context, Task, TaskName } from '../types';
 
 type ValueFn = string | ((ctx: Context, task: Task) => string);
 
 type TaskInput = Omit<Listr.ListrTask<Context>, 'task'> & {
-  name: string;
+  name: TaskName;
   steps: ((ctx: Context, task: Listr.ListrTaskWrapper<Context> | Task) => void | Promise<void>)[];
 };
 
