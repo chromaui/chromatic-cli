@@ -107,7 +107,7 @@ describe('takeSnapshots', () => {
     expect(ctx.exitCode).toBe(3);
   });
 
-  it('calls onTaskProgress with progress', async () => {
+  it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
@@ -122,7 +122,7 @@ describe('takeSnapshots', () => {
       env,
       git: { matchesBranch },
       log,
-      options: { onTaskProgress: jest.fn() },
+      options: { experimental_onTaskProgress: jest.fn() },
       build,
     } as any;
 
@@ -138,13 +138,13 @@ describe('takeSnapshots', () => {
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledTimes(2);
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledTimes(2);
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
       progress: 1,
       total: 5,
       unit: 'snapshots',
     });
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
       progress: 3,
       total: 5,
       unit: 'snapshots',

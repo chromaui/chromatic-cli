@@ -243,7 +243,7 @@ describe('uploadStorybook', () => {
     expect(ctx.isolatorUrl).toBe('https://asdqwe.chromatic.com/iframe.html');
   });
 
-  it('calls onTaskProgress with progress', async () => {
+  it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: jest.fn() };
     client.runQuery.mockReturnValue({
       getUploadUrls: {
@@ -294,29 +294,29 @@ describe('uploadStorybook', () => {
       log,
       http,
       sourceDir: '/static/',
-      options: { onTaskProgress: jest.fn() },
+      options: { experimental_onTaskProgress: jest.fn() },
       fileInfo,
       announcedBuild: { id: '1' },
     } as any;
     await uploadStorybook(ctx, {} as any);
 
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledTimes(4);
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledTimes(4);
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
       progress: 21,
       total: 84,
       unit: 'bytes',
     });
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
       progress: 42,
       total: 84,
       unit: 'bytes',
     });
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
       progress: 63,
       total: 84,
       unit: 'bytes',
     });
-    expect(ctx.options.onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
+    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
       progress: 84,
       total: 84,
       unit: 'bytes',

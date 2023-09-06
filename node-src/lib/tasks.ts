@@ -22,7 +22,7 @@ export const createTask = ({
     ctx.title = title;
     ctx.startedAt = Number.isInteger(ctx.now) ? ctx.now : new Date().getTime();
 
-    ctx.options.onTaskStart?.({ ...ctx });
+    ctx.options.experimental_onTaskStart?.({ ...ctx });
 
     // eslint-disable-next-line no-restricted-syntax
     for (const step of steps) {
@@ -30,7 +30,7 @@ export const createTask = ({
       await step(ctx, task);
     }
 
-    ctx.options.onTaskComplete?.({ ...ctx });
+    ctx.options.experimental_onTaskComplete?.({ ...ctx });
   },
   ...config,
 });
