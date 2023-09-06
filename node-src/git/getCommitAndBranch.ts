@@ -21,7 +21,7 @@ interface CommitInfo {
 }
 
 export default async function getCommitAndBranch(
-  { log },
+  { log, options },
   {
     branchName,
     patchBaseRef,
@@ -50,6 +50,7 @@ export default async function getCommitAndBranch(
     CHROMATIC_PULL_REQUEST_SHA,
     CHROMATIC_SLUG,
   } = process.env;
+  const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
 
   const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
@@ -57,7 +58,12 @@ export default async function getCommitAndBranch(
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
 
   if (!(await hasPreviousCommit())) {
-    throw new Error(gitOneCommit(isGitHubAction));
+    const message = gitOneCommit(isGitHubAction);
+    if (isCi) {
+      throw new Error(message);
+    } else {
+      log.warn(message);
+    }
   }
 
   if (isFromEnvVariable) {
@@ -117,7 +123,6 @@ export default async function getCommitAndBranch(
     slug = GITHUB_REPOSITORY;
   }
 
-  const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
   const ciService = process.env.CHROMATIC_ACTION ? 'chromaui/action' : service;
   slug = slug || ciSlug;
 
