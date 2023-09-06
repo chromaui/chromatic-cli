@@ -94,6 +94,7 @@ export const announceBuild = async (ctx: Context) => {
 };
 
 export default createTask({
+  name: 'initialize',
   title: initial.title,
   skip: (ctx: Context) => ctx.skip,
   steps: [transitionTo(pending), setEnvironment, announceBuild, transitionTo(success, true)],
