@@ -26,7 +26,10 @@ export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));
-    ctx.options.onTaskError?.(ctx, { formattedError: fatalError(ctx, [e]), originalError: e });
+    ctx.options.experimental_onTaskError?.(ctx, {
+      formattedError: fatalError(ctx, [e]),
+      originalError: e,
+    });
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     return;
   }
@@ -72,7 +75,7 @@ export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
     }
   } catch (error) {
     const errors = [].concat(error); // GraphQLClient might throw an array of errors
-    ctx.options.onTaskError?.(ctx, {
+    ctx.options.experimental_onTaskError?.(ctx, {
       formattedError: fatalError(ctx, errors),
       originalError: error,
     });

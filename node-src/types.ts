@@ -92,7 +92,7 @@ export interface Options {
   experimental_onTaskStart?: (ctx: Context) => void;
 
   /** A callback that is called if a task fails */
-  onTaskError?: (
+  experimental_onTaskError?: (
     ctx: Context,
     { formattedError, originalError }: { formattedError: string; originalError: Error | Error[] }
   ) => void;
