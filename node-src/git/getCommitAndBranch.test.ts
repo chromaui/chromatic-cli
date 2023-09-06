@@ -87,9 +87,17 @@ describe('getCommitAndBranch', () => {
     expect(info).toMatchObject({ branch: 'master' });
   });
 
-  it('throws when there is only one commit', async () => {
+  it('throws when there is only one commit, CI', async () => {
+    envCi.mockReturnValue({ isCi: true });
     hasPreviousCommit.mockResolvedValue(false);
     await expect(getCommitAndBranch({ log })).rejects.toThrow('Found only one commit');
+  });
+
+  it('does NOT throw when there is only one commit, non-CI', async () => {
+    envCi.mockReturnValue({ isCi: false });
+    hasPreviousCommit.mockResolvedValue(false);
+    const info = await getCommitAndBranch({ log });
+    expect(info).toMatchObject({});
   });
 
   describe('with branchName', () => {

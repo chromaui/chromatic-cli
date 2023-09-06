@@ -21,7 +21,7 @@ interface CommitInfo {
 }
 
 export default async function getCommitAndBranch(
-  { log, options },
+  { log },
   {
     branchName,
     patchBaseRef,
