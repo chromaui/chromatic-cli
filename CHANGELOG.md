@@ -1,3 +1,10 @@
+# 7.1.0 - 2023-09-07
+
+- [812](https://github.com/chromaui/chromatic-cli/pull/812) Allow running a build from a repo with only one commit when not in CI
+- [810](https://github.com/chromaui/chromatic-cli/pull/810) Add `onTaskStart`, and a new typed field `ctx.task`
+- [808](https://github.com/chromaui/chromatic-cli/pull/808) Add `onTaskError` option to report errors to node consumers
+- [813](https://github.com/chromaui/chromatic-cli/pull/813) Rename `onTaskError` to `experimental_onTaskError`
+
 # 7.0.0 - 2023-09-04
 
 - [789](https://github.com/chromaui/chromatic-cli/pull/789) Use `@antfu/ni` to support `pnpm` for Storybook build
