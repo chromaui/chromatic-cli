@@ -88,15 +88,37 @@ export interface Options {
   patchHeadRef: string;
   patchBaseRef: string;
 
-  /** A callback that is called at the completion of each task */
-  onTaskComplete?: (ctx: Context) => void;
+  /** A callback that is called at the start of each task */
+  experimental_onTaskStart?: (ctx: Context) => void;
+
+  /** A callback that is called if a task fails */
+  experimental_onTaskError?: (
+    ctx: Context,
+    { formattedError, originalError }: { formattedError: string; originalError: Error | Error[] }
+  ) => void;
 
   /** A callback that is called during tasks that have incremental progress */
-  onTaskProgress?: (
+  experimental_onTaskProgress?: (
     ctx: Context,
     status: { progress: number; total: number; unit: string }
   ) => void;
+
+  /** A callback that is called at the completion of each task */
+  experimental_onTaskComplete?: (ctx: Context) => void;
 }
+
+export type TaskName =
+  | 'auth'
+  | 'gitInfo'
+  | 'storybookInfo'
+  | 'initialize'
+  | 'build'
+  | 'upload'
+  | 'verify'
+  | 'snapshot'
+  | 'report'
+  | 'prepareWorkspace'
+  | 'restoreWorkspace';
 
 export interface Context {
   env: Env;
@@ -115,6 +137,7 @@ export interface Context {
   argv: string[];
   flags: Flags;
   options: Options;
+  task: TaskName;
   title: string;
   skip?: boolean;
   skipSnapshots?: boolean;

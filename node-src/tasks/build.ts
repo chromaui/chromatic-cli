@@ -87,6 +87,7 @@ export const buildStorybook = async (ctx: Context) => {
 };
 
 export default createTask({
+  name: 'build',
   title: initial.title,
   skip: async (ctx) => {
     if (ctx.skip) return true;

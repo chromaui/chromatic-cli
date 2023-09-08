@@ -38,6 +38,8 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
+export type { Flags, Options, TaskName, Context } from './types';
+
 export async function run({
   argv = [],
   flags,

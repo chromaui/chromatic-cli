@@ -131,6 +131,7 @@ export const generateReport = async (ctx: Context) => {
 };
 
 export default createTask({
+  name: 'report',
   title: initial.title,
   skip: (ctx: Context) => ctx.skip,
   steps: [transitionTo(pending), generateReport, transitionTo(success, true)],

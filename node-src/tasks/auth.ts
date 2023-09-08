@@ -32,6 +32,7 @@ export const setAuthorizationToken = async (ctx: Context) => {
 };
 
 export default createTask({
+  name: 'auth',
   title: initial.title,
   steps: [transitionTo(authenticating), setAuthorizationToken, transitionTo(authenticated, true)],
 });
