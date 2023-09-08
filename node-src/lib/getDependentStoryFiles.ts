@@ -234,10 +234,6 @@ export async function getDependentStoryFiles(
     const normalizedName = namesById.get(id);
     if (shouldBail(normalizedName)) return;
 
-    ctx.log.debug('Trace file...');
-    ctx.log.debug(name);
-    ctx.log.debug(id || 'no moduleId found for this file');
-
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
