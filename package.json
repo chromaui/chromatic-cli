@@ -101,7 +101,9 @@
   "resolutions": {
     "any-observable": "^0.5.1"
   },
-  "dependencies": {},
+  "dependencies": {
+    "zod": "^3.22.2"
+  },
   "devDependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.0.0",

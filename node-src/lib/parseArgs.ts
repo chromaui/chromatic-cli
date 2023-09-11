@@ -23,6 +23,7 @@ export default function parseArgs(argv: string[]) {
       --auto-accept-changes [branch]            If there are any changes to the build, automatically accept them. Only for [branch], if specified. Globs are supported via picomatch.
       --branch-name <branch>                    Override the branch name. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Also accepts <owner>:<branch> format.
       --ci                                      Mark this build as a CI build. Alternatively, set the 'CI' environment variable (present in most CI systems). This option implies --no-interactive.
+      --config-file, -c <path>                  Path to a configuration file containing the options listed in JSON format. Uses ".chromatic.config.json" by default.
       --exit-once-uploaded [branch]             Exit with 0 once the built version has been published to Chromatic. Only for [branch], if specified. Globs are supported via picomatch.
       --exit-zero-on-changes [branch]           If all snapshots render but there are visual changes, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --externals <filepath>                    Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
@@ -71,6 +72,7 @@ export default function parseArgs(argv: string[]) {
         autoAcceptChanges: { type: 'string' },
         branchName: { type: 'string' },
         ci: { type: 'boolean' },
+        configFile: { type: 'string', alias: 'c' },
         exitOnceUploaded: { type: 'string' },
         exitZeroOnChanges: { type: 'string' },
         externals: { type: 'string', isMultiple: true },

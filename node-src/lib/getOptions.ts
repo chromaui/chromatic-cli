@@ -25,13 +25,21 @@ const undefinedIfEmpty = <T>(array: T[]) => {
   return filtered.length ? filtered : undefined;
 };
 
-export default function getOptions({ argv, env, flags, log, packageJson }: Context): Options {
+export default function getOptions({
+  argv,
+  env,
+  flags,
+  extraOptions,
+  configuration,
+  log,
+  packageJson,
+}: Context): Options {
   const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
-  const options: Options = {
+  const optionsFromFlags: Options = {
     projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
 
     onlyChanged: trueIfSet(flags.onlyChanged),
@@ -77,6 +85,7 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     patchHeadRef,
     patchBaseRef,
   };
+  const options = { ...optionsFromFlags, ...configuration, ...extraOptions };
 
   if (flags.debug) {
     log.setLevel('debug');

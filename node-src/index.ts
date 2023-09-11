@@ -16,7 +16,6 @@ import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import { getBranch, getCommit, getSlug, getUserEmail, getUncommittedHash } from './git/git';
 import { emailHash } from './lib/emailHash';
-
 /**
  Make keys of `T` outside of `R` optional.
 */
@@ -38,7 +37,7 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export type { Flags, Options, TaskName, Context } from './types';
+export type { Flags, Options, TaskName, Context, Configuration } from './types';
 
 export async function run({
   argv = [],
@@ -81,8 +80,9 @@ export async function run({
   setExitCode(ctx, exitCodes.OK);
 
   ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
+  ctx.extraOptions = options;
 
-  await runAll(ctx, options);
+  await runAll(ctx);
 
   return {
     // Keep this in sync with the configured outputs in action.yml
@@ -102,9 +102,9 @@ export async function run({
   };
 }
 
-export async function runAll(ctx, options?: Partial<Options>) {
+export async function runAll(ctx) {
   // Run these in parallel; neither should ever reject
-  await Promise.all([runBuild(ctx, options), checkForUpdates(ctx)]);
+  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 
   if (ctx.exitCode === 0 || ctx.exitCode === 1) {
     await checkPackageJson(ctx);

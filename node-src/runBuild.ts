@@ -15,18 +15,21 @@ import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
 import { endActivity } from './ui/components/activity';
+import { getConfiguration } from './lib/getConfiguration';
 
-export async function runBuild(ctx: Context, extraOptions?: Partial<Options>) {
+export async function runBuild(ctx: Context) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 
   try {
+    ctx.configuration = await getConfiguration(
+      ctx.extraOptions?.configFile || ctx.flags.configFile
+    );
     ctx.options = await getOptions(ctx);
-    if (extraOptions) ctx.options = { ...ctx.options, ...extraOptions };
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));
-    ctx.options.experimental_onTaskError?.(ctx, {
+    (ctx.options || ctx.extraOptions)?.experimental_onTaskError?.(ctx, {
       formattedError: fatalError(ctx, [e]),
       originalError: e,
     });
