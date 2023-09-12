@@ -101,9 +101,7 @@
   "resolutions": {
     "any-observable": "^0.5.1"
   },
-  "dependencies": {
-    "zod": "^3.22.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.0.0",
@@ -198,7 +196,8 @@
     "uuid": "^8.3.2",
     "why-is-node-running": "^2.1.2",
     "yarn-or-npm": "^3.0.1",
-    "zen-observable": "^0.8.15"
+    "zen-observable": "^0.8.15",
+    "zod": "^3.22.2"
   },
   "publishConfig": {
     "access": "public",
