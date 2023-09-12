@@ -8,16 +8,14 @@ export const invalidConfigurationFile = (configFile: string, err: ZodError) => {
   const { formErrors, fieldErrors } = err.flatten();
 
   return dedent(chalk`
-    ${error} Configuration file ${chalk.bold(
-    configFile
-  )} was invalid, please check the allowed keys.
+    ${error} Configuration file {bold configFile} was invalid, please check the allowed keys.
     ${
       formErrors.length
-        ? `\n${formErrors.map((msg) => `- ${chalk.bold(msg)}`).join('\n    ')}\n\n`
+        ? `\n${formErrors.map((msg) => chalk`- {bold ${msg}}`).join('\n    ')}\n\n`
         : ''
     }
     ${Object.entries(fieldErrors)
-      .map(([field, msg]) => `- ${chalk.bold(field)}: ${msg}`)
+      .map(([field, msg]) => chalk`- {bold ${field}}: ${msg}`)
       .join('\n    ')}
   `);
 };
