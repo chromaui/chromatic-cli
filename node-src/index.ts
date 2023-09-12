@@ -147,3 +147,5 @@ export async function getGitInfo(): Promise<GitInfo> {
     userEmailHash,
   };
 }
+
+export { getConfiguration } from './lib/getConfiguration';
