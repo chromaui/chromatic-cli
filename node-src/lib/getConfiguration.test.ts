@@ -14,11 +14,11 @@ it('reads configuration successfully', async () => {
   expect(await getConfiguration()).toEqual({ projectToken: 'json-file-token' });
 });
 
-it('reads from .chromatic.config.json by default', async () => {
+it('reads from chromatic.config.json by default', async () => {
   mockedReadFile.mockResolvedValue({ projectToken: 'json-file-token' }).mockClear();
   await getConfiguration();
 
-  expect(mockedReadFile).toHaveBeenCalledWith('.chromatic.config.json');
+  expect(mockedReadFile).toHaveBeenCalledWith('chromatic.config.json');
 });
 
 it('can read from a different location', async () => {

@@ -37,7 +37,7 @@ const configurationSchema = z
 export type Configuration = z.infer<typeof configurationSchema>;
 
 export async function getConfiguration(configFile?: string) {
-  const usedConfigFile = configFile || '.chromatic.config.json';
+  const usedConfigFile = configFile || 'chromatic.config.json';
   try {
     const rawJson = await readFile(usedConfigFile);
 
