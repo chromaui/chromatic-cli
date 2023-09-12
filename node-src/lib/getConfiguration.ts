@@ -18,9 +18,9 @@ const configurationSchema = z
     debug: z.boolean(),
     junitReport: z.union([z.string(), z.boolean()]),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),
-    exitZeroOnChanged: z.union([z.string(), z.boolean()]),
+    exitZeroOnChanges: z.union([z.string(), z.boolean()]),
     exitOnceUploaded: z.union([z.string(), z.boolean()]),
-    ignoreLastBuildOneBranch: z.string(),
+    ignoreLastBuildOnBranch: z.string(),
 
     buildScriptName: z.string(),
     outputDir: z.string(),
