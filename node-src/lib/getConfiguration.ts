@@ -14,7 +14,6 @@ const configurationSchema = z
     onlyStoryNames: z.array(z.string()),
     untraced: z.array(z.string()),
     externals: z.array(z.string()),
-    ci: z.boolean(),
     debug: z.boolean(),
     junitReport: z.union([z.string(), z.boolean()]),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),
