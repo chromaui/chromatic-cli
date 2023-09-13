@@ -34,11 +34,11 @@ describe('getOptions', () => {
       projectToken: 'cli-code',
       buildScriptName: 'build-storybook',
       fromCI: !!process.env.CI,
-      autoAcceptChanges: undefined,
-      exitZeroOnChanges: undefined,
-      exitOnceUploaded: undefined,
+      autoAcceptChanges: false,
+      exitZeroOnChanges: false,
+      exitOnceUploaded: false,
       interactive: false,
-      verbose: false,
+      debug: false,
       originalArgv: ['--project-token', 'cli-code'],
     });
   });
@@ -68,7 +68,7 @@ describe('getOptions', () => {
       autoAcceptChanges: true,
       exitZeroOnChanges: true,
       exitOnceUploaded: true,
-      verbose: true,
+      debug: true,
       interactive: false,
     });
   });
@@ -124,7 +124,26 @@ describe('getOptions', () => {
     expect(getOptions(getContext(flags))).toMatchObject({ externals: ['foo', 'bar'] });
   });
 
-  it('allows you to override options with extraOptions', async () => {
+  it('allows you to set options with configuration', async () => {
+    expect(
+      getOptions({ ...getContext([]), configuration: { projectToken: 'config-token' } })
+    ).toMatchObject({
+      projectToken: 'config-token',
+    });
+  });
+
+  it('allows you to override configuration with flags', async () => {
+    expect(
+      getOptions({
+        ...getContext(['--project-token', 'cli-token']),
+        configuration: { projectToken: 'config-token' },
+      })
+    ).toMatchObject({
+      projectToken: 'cli-token',
+    });
+  });
+
+  it('allows you to set options with extraOptions', async () => {
     expect(
       getOptions({ ...getContext([]), extraOptions: { projectToken: 'extra-token' } })
     ).toMatchObject({
@@ -132,11 +151,14 @@ describe('getOptions', () => {
     });
   });
 
-  it('allows you to override options with configuration', async () => {
+  it('allows you to override flags with extraOptions', async () => {
     expect(
-      getOptions({ ...getContext([]), configuration: { projectToken: 'config-token' } })
+      getOptions({
+        ...getContext(['--project-token', 'cli-token']),
+        extraOptions: { projectToken: 'extra-token' },
+      })
     ).toMatchObject({
-      projectToken: 'config-token',
+      projectToken: 'extra-token',
     });
   });
 });

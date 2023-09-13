@@ -64,7 +64,7 @@ export interface Options {
   skip: boolean | string;
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;
-  verbose: boolean;
+  debug: boolean;
   interactive: boolean;
   junitReport: boolean | string;
   zip: Flags['zip'];

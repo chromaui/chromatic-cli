@@ -110,7 +110,7 @@ export async function runAll(ctx) {
     await checkPackageJson(ctx);
   }
 
-  if (ctx.flags.diagnostics) {
+  if (ctx.options.diagnostics) {
     await writeChromaticDiagnostics(ctx);
   }
 }

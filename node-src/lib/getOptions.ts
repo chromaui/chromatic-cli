@@ -25,6 +25,9 @@ const undefinedIfEmpty = <T>(array: T[]) => {
   return filtered.length ? filtered : undefined;
 };
 
+const stripUndefined = <T extends Record<string, unknown | undefined>>(object: T) =>
+  Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
+
 export default function getOptions({
   argv,
   env,
@@ -34,13 +37,25 @@ export default function getOptions({
   log,
   packageJson,
 }: Context): Options {
-  const fromCI = !!flags.ci || !!process.env.CI;
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
-  const optionsFromFlags: Options = {
-    projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
+  const defaultOptions = {
+    projectToken: env.CHROMATIC_PROJECT_TOKEN,
+    fromCI: !!process.env.CI,
+    dryRun: false,
+    debug: false,
+    autoAcceptChanges: false,
+    exitZeroOnChanges: false,
+    exitOnceUploaded: false,
+    diagnostics: false,
+    isLocalBuild: false,
+    originalArgv: argv,
+  };
+
+  const optionsFromFlags = stripUndefined({
+    projectToken: takeLast(flags.projectToken || flags.appCode),
 
     onlyChanged: trueIfSet(flags.onlyChanged),
     onlyStoryFiles: undefinedIfEmpty(ensureArray(flags.onlyStoryFiles)),
@@ -49,28 +64,22 @@ export default function getOptions({
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
     traceChanged: trueIfSet(flags.traceChanged),
     list: flags.list,
-    fromCI,
+    fromCI: flags.ci,
     skip: trueIfSet(flags.skip),
-    dryRun: !!flags.dryRun,
+    dryRun: flags.dryRun,
     forceRebuild: trueIfSet(flags.forceRebuild),
-    verbose: !!flags.debug,
-    interactive:
-      !fromCI &&
-      !flags.debug &&
-      !!flags.interactive &&
-      !!process.stdout.isTTY &&
-      process.env.NODE_ENV !== 'test',
+    debug: flags.debug,
+    diagnostics: flags.diagnostics,
     junitReport: trueIfSet(flags.junitReport),
     zip: flags.zip,
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
-    isLocalBuild: false,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     // deprecated
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
-    originalArgv: argv,
+    preserveMissingSpecs:
+      flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
 
     buildScriptName: flags.buildScriptName,
     outputDir: takeLast(flags.outputDir),
@@ -84,10 +93,25 @@ export default function getOptions({
     branchName,
     patchHeadRef,
     patchBaseRef,
-  };
-  const options = { ...optionsFromFlags, ...configuration, ...extraOptions };
+  });
 
-  if (flags.debug) {
+  const options: Options = {
+    ...defaultOptions,
+    ...configuration,
+    ...optionsFromFlags,
+    ...extraOptions,
+
+    // This option is sort of weird
+    interactive:
+      !process.env.CI &&
+      !flags.ci &&
+      !flags.debug &&
+      !!flags.interactive &&
+      !!process.stdout.isTTY &&
+      process.env.NODE_ENV !== 'test',
+  };
+
+  if (options.debug) {
     log.setLevel('debug');
     log.setInteractive(false);
   }

@@ -7,7 +7,7 @@ import { invalidConfigurationFile } from '../ui/messages/errors/invalidConfigura
 const configurationSchema = z
   .object({
     projectId: z.string(),
-    projectToken: z.string(),
+    projectToken: z.string(), // deprecated
 
     onlyChanged: z.union([z.string(), z.boolean()]),
     onlyStoryFiles: z.array(z.string()),
@@ -15,6 +15,7 @@ const configurationSchema = z
     untraced: z.array(z.string()),
     externals: z.array(z.string()),
     debug: z.boolean(),
+    diagnostics: z.union([z.string(), z.boolean()]),
     junitReport: z.union([z.string(), z.boolean()]),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),
     exitZeroOnChanges: z.union([z.string(), z.boolean()]),
@@ -27,9 +28,6 @@ const configurationSchema = z
     storybookBuildDir: z.string(),
     storybookBaseDir: z.string(),
     storybookConfigDir: z.string(),
-
-    ownerName: z.string(),
-    repositorySlug: z.string(),
   })
   .partial();
 
