@@ -37,10 +37,6 @@ export default function getOptions({
   log,
   packageJson,
 }: Context): Options {
-  const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
-  const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
-  const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
-
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
     fromCI: !!process.env.CI,
@@ -52,8 +48,42 @@ export default function getOptions({
     diagnostics: false,
     isLocalBuild: false,
     originalArgv: argv,
+
+    // We set these to undefined just so TS doesn't complain
+    onlyChanged: undefined,
+    onlyStoryFiles: undefined,
+    onlyStoryNames: undefined,
+    untraced: undefined,
+    externals: undefined,
+    traceChanged: undefined,
+    list: undefined,
+    skip: undefined,
+    forceRebuild: undefined,
+    junitReport: undefined,
+    zip: undefined,
+
+    ignoreLastBuildOnBranch: undefined,
+    preserveMissingSpecs: undefined,
+
+    buildScriptName: undefined,
+    outputDir: undefined,
+    allowConsoleErrors: undefined,
+    storybookBuildDir: undefined,
+    storybookBaseDir: undefined,
+    storybookConfigDir: undefined,
+
+    ownerName: undefined,
+    repositorySlug: undefined,
+    branchName: undefined,
+    patchHeadRef: undefined,
+    patchBaseRef: undefined,
   };
 
+  const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
+  const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
+  const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
+
+  // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
     projectToken: takeLast(flags.projectToken || flags.appCode),
 
