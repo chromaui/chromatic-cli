@@ -30,7 +30,8 @@ const configurationSchema = z
     storybookBaseDir: z.string(),
     storybookConfigDir: z.string(),
   })
-  .partial();
+  .partial()
+  .strict();
 
 export type Configuration = z.infer<typeof configurationSchema>;
 

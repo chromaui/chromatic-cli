@@ -45,3 +45,9 @@ it('errors if config file contains invalid data', async () => {
 
   await expect(getConfiguration('test.file')).rejects.toThrow(/projectToken/);
 });
+
+it('errors if config file contains unknown keys', async () => {
+  mockedReadFile.mockResolvedValue({ random: 1 });
+
+  await expect(getConfiguration('test.file')).rejects.toThrow(/random/);
+});
