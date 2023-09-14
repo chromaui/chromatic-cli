@@ -40,7 +40,7 @@ it('returns nothing if there is no config file and it was specified', async () =
   await expect(getConfiguration('test.file')).rejects.toThrow(/could not be found/);
 });
 
-it('errors if config file contains invalid date', async () => {
+it('errors if config file contains invalid data', async () => {
   mockedReadFile.mockResolvedValue({ projectToken: 1 });
 
   await expect(getConfiguration('test.file')).rejects.toThrow(/projectToken/);

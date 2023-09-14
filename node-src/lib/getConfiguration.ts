@@ -17,6 +17,7 @@ const configurationSchema = z
     debug: z.boolean(),
     diagnostics: z.union([z.string(), z.boolean()]),
     junitReport: z.union([z.string(), z.boolean()]),
+    zip: z.boolean(),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),
     exitZeroOnChanges: z.union([z.string(), z.boolean()]),
     exitOnceUploaded: z.union([z.string(), z.boolean()]),
