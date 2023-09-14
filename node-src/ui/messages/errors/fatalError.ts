@@ -13,7 +13,7 @@ export default function fatalError(
   error: Error | Error[],
   timestamp = new Date().toISOString()
 ) {
-  const { flags, options, sessionId, pkg, packageJson } = ctx;
+  const { flags, extraOptions, configuration, options, sessionId, pkg, packageJson } = ctx;
   const { scripts = {} } = packageJson;
   const email = link(pkg.bugs.email);
   const website = link(pkg.docs);
@@ -30,6 +30,8 @@ export default function fatalError(
     packageVersion: pkg.version,
     ...(storybook ? { storybook } : {}),
     flags,
+    ...(extraOptions && { extraOptions }),
+    ...(configuration && { configuration }),
     ...(options && options.buildScriptName
       ? { buildScript: scripts[options.buildScriptName] }
       : {}),

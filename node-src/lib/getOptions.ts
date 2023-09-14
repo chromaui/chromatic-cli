@@ -25,14 +25,67 @@ const undefinedIfEmpty = <T>(array: T[]) => {
   return filtered.length ? filtered : undefined;
 };
 
-export default function getOptions({ argv, env, flags, log, packageJson }: Context): Options {
-  const fromCI = !!flags.ci || !!process.env.CI;
+const stripUndefined = <T extends Record<string, unknown | undefined>>(object: T) =>
+  Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
+
+export default function getOptions({
+  argv,
+  env,
+  flags,
+  extraOptions,
+  configuration,
+  log,
+  packageJson,
+}: Context): Options {
+  const defaultOptions = {
+    projectToken: env.CHROMATIC_PROJECT_TOKEN,
+    fromCI: !!process.env.CI,
+    dryRun: false,
+    debug: false,
+    autoAcceptChanges: false,
+    exitZeroOnChanges: false,
+    exitOnceUploaded: false,
+    diagnostics: false,
+    isLocalBuild: false,
+    originalArgv: argv,
+
+    // We set these to undefined just so TS doesn't complain
+    onlyChanged: undefined,
+    onlyStoryFiles: undefined,
+    onlyStoryNames: undefined,
+    untraced: undefined,
+    externals: undefined,
+    traceChanged: undefined,
+    list: undefined,
+    skip: undefined,
+    forceRebuild: undefined,
+    junitReport: undefined,
+    zip: undefined,
+
+    ignoreLastBuildOnBranch: undefined,
+    preserveMissingSpecs: undefined,
+
+    buildScriptName: undefined,
+    outputDir: undefined,
+    allowConsoleErrors: undefined,
+    storybookBuildDir: undefined,
+    storybookBaseDir: undefined,
+    storybookConfigDir: undefined,
+
+    ownerName: undefined,
+    repositorySlug: undefined,
+    branchName: undefined,
+    patchHeadRef: undefined,
+    patchBaseRef: undefined,
+  };
+
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
-  const options: Options = {
-    projectToken: takeLast(flags.projectToken || flags.appCode) || env.CHROMATIC_PROJECT_TOKEN, // backwards compatibility
+  // We need to strip out undefined because they otherwise they override anyway
+  const optionsFromFlags = stripUndefined({
+    projectToken: takeLast(flags.projectToken || flags.appCode),
 
     onlyChanged: trueIfSet(flags.onlyChanged),
     onlyStoryFiles: undefinedIfEmpty(ensureArray(flags.onlyStoryFiles)),
@@ -41,28 +94,22 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
     traceChanged: trueIfSet(flags.traceChanged),
     list: flags.list,
-    fromCI,
+    fromCI: flags.ci,
     skip: trueIfSet(flags.skip),
-    dryRun: !!flags.dryRun,
+    dryRun: flags.dryRun,
     forceRebuild: trueIfSet(flags.forceRebuild),
-    verbose: !!flags.debug,
-    interactive:
-      !fromCI &&
-      !flags.debug &&
-      !!flags.interactive &&
-      !!process.stdout.isTTY &&
-      process.env.NODE_ENV !== 'test',
+    debug: flags.debug,
+    diagnostics: flags.diagnostics,
     junitReport: trueIfSet(flags.junitReport),
     zip: flags.zip,
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
-    isLocalBuild: false,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     // deprecated
-    preserveMissingSpecs: flags.preserveMissing || !!flags.only,
-    originalArgv: argv,
+    preserveMissingSpecs:
+      flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
 
     buildScriptName: flags.buildScriptName,
     outputDir: takeLast(flags.outputDir),
@@ -76,9 +123,25 @@ export default function getOptions({ argv, env, flags, log, packageJson }: Conte
     branchName,
     patchHeadRef,
     patchBaseRef,
+  });
+
+  const options: Options = {
+    ...defaultOptions,
+    ...configuration,
+    ...optionsFromFlags,
+    ...extraOptions,
+
+    // This option is sort of weird
+    interactive:
+      !process.env.CI &&
+      !flags.ci &&
+      !flags.debug &&
+      !!flags.interactive &&
+      !!process.stdout.isTTY &&
+      process.env.NODE_ENV !== 'test',
   };
 
-  if (flags.debug) {
+  if (options.debug) {
     log.setLevel('debug');
     log.setInteractive(false);
   }

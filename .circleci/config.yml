@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: cimg/node:16.18.0
+    resource_class: xlarge
 
     working_directory: ~/repo
 

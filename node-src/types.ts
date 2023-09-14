@@ -1,6 +1,7 @@
 import { Response, RequestInit } from 'node-fetch';
 import { Env } from './lib/getEnv';
 import { Logger } from './lib/log';
+import type { Configuration } from './lib/getConfiguration';
 
 export interface Flags {
   // Required options
@@ -15,6 +16,7 @@ export interface Flags {
   autoAcceptChanges?: string;
   branchName?: string;
   ci?: boolean;
+  configFile?: string;
   exitOnceUploaded?: string;
   exitZeroOnChanges?: string;
   externals?: string[];
@@ -50,25 +52,26 @@ export interface Flags {
 export interface Options {
   projectToken: string;
 
-  onlyChanged: true | string;
+  configFile?: Flags['configFile'];
+  onlyChanged: boolean | string;
   onlyStoryFiles: Flags['onlyStoryFiles'];
   onlyStoryNames: Flags['onlyStoryNames'];
   untraced: Flags['untraced'];
   externals: Flags['externals'];
-  traceChanged: true | string;
+  traceChanged: boolean | string;
   list: Flags['list'];
   fromCI: boolean;
-  skip: true | string;
+  skip: boolean | string;
   dryRun: Flags['dryRun'];
-  forceRebuild: true | string;
-  verbose: boolean;
+  forceRebuild: boolean | string;
+  debug: boolean;
   interactive: boolean;
-  junitReport: true | string;
+  junitReport: boolean | string;
   zip: Flags['zip'];
 
-  autoAcceptChanges: true | string;
-  exitZeroOnChanges: true | string;
-  exitOnceUploaded: true | string;
+  autoAcceptChanges: boolean | string;
+  exitZeroOnChanges: boolean | string;
+  exitOnceUploaded: boolean | string;
   isLocalBuild: boolean;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
   preserveMissingSpecs: boolean;
@@ -107,6 +110,8 @@ export interface Options {
   experimental_onTaskComplete?: (ctx: Context) => void;
 }
 
+export { Configuration };
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -136,6 +141,8 @@ export interface Context {
   help: any;
   argv: string[];
   flags: Flags;
+  extraOptions: Partial<Options>;
+  configuration: Configuration;
   options: Options;
   task: TaskName;
   title: string;
@@ -183,7 +190,7 @@ export interface Context {
     changedFiles?: string[];
     changedDependencyNames?: string[];
     replacementBuildIds?: [string, string][];
-    matchesBranch?: (glob: true | string) => boolean;
+    matchesBranch?: (glob: boolean | string) => boolean;
     packageManifestChanges?: { changedFiles: string[]; commit: string }[];
   };
   storybook: {

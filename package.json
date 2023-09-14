@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "7.1.0",
+  "version": "7.2.0-canary.1",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -196,7 +196,8 @@
     "uuid": "^8.3.2",
     "why-is-node-running": "^2.1.2",
     "yarn-or-npm": "^3.0.1",
-    "zen-observable": "^0.8.15"
+    "zen-observable": "^0.8.15",
+    "zod": "^3.22.2"
   },
   "publishConfig": {
     "access": "public",
