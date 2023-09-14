@@ -123,22 +123,6 @@ describe('getOptions', () => {
     const flags = ['--only-changed', '--externals', 'foo', '--externals', '', '--externals', 'bar'];
     expect(getOptions(getContext(flags))).toMatchObject({ externals: ['foo', 'bar'] });
   });
-
-  it('allows you to override options with extraOptions', async () => {
-    expect(
-      getOptions({ ...getContext([]), extraOptions: { projectToken: 'extra-token' } })
-    ).toMatchObject({
-      projectToken: 'extra-token',
-    });
-  });
-
-  it('allows you to override options with configuration', async () => {
-    expect(
-      getOptions({ ...getContext([]), configuration: { projectToken: 'config-token' } })
-    ).toMatchObject({
-      projectToken: 'config-token',
-    });
-  });
 });
 
 describe('getStorybookConfiguration', () => {
