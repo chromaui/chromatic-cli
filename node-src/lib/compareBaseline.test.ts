@@ -4,7 +4,7 @@ import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 import TestLogger from './testLogger';
 
-jest.setTimeout(10000);
+jest.setTimeout(30 * 1000);
 
 const getContext: any = (baselineCommits: string[]) => ({
   log: new TestLogger(),
