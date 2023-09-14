@@ -4,6 +4,8 @@ import packageJson from '../../package.json';
 import { checkoutFile } from '../git/git';
 import TestLogger from './testLogger';
 
+jest.setTimeout(10000);
+
 const ctx = { log: new TestLogger() } as any;
 
 describe('getDependencies', () => {

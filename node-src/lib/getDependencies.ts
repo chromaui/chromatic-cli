@@ -1,8 +1,6 @@
 import { buildDepTreeFromFiles, PkgTree } from 'snyk-nodejs-lockfile-parser';
 import { Context } from '../types';
 
-jest.setTimeout(10000);
-
 const flattenDependencyTree = (
   tree: PkgTree['dependencies'],
   results = new Set<string>()
