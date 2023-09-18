@@ -1,6 +1,5 @@
 /* eslint-disable no-console */
 import debug from 'debug';
-import nlb from 'node-loggly-bulk/lib/loggly/client';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
@@ -39,20 +38,13 @@ export interface Logger {
   setInteractive: (value: boolean) => void;
 }
 
-export const createLogger = (sessionId, env) => {
+export const createLogger = (env) => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
 
   let interactive = !process.argv.slice(2).includes('--no-interactive');
   let enqueue = false;
   const queue = [];
-
-  const logglyClient = nlb.createClient({
-    token: env.LOGGLY_CUSTOMER_TOKEN,
-    subdomain: 'hichroma',
-    tags: ['chromatic-cli'],
-    json: true,
-  });
 
   const log =
     (type: LogType) =>
@@ -66,9 +58,6 @@ export const createLogger = (sessionId, env) => {
       // Queue up the logs or print them right away
       if (enqueue) queue.push({ type, messages });
       else console[type](...messages);
-
-      // Also send logs to Loggly
-      logglyClient.log(messages.map((msg) => ({ sessionId, msg })));
     };
 
   const logger: Logger = {
