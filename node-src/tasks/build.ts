@@ -84,7 +84,6 @@ export const buildStorybook = async (ctx: Context) => {
     subprocess = execa.command(command, { stdio: [null, logFile, logFile] });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
-    endActivity(ctx);
     abortSignal?.throwIfAborted();
 
     const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');

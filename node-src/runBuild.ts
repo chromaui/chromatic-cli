@@ -83,17 +83,16 @@ export async function runBuild(ctx: Context) {
     }
   } catch (error) {
     const errors = [].concat(error); // GraphQLClient might throw an array of errors
+    const formattedError = fatalError(ctx, errors);
 
-    if (errors.length) {
-      const formattedError = fatalError(ctx, errors);
-      ctx.options.experimental_onTaskError?.(ctx, {
-        formattedError,
-        originalError: errors[0],
-      });
-      if (!ctx.userError) {
-        ctx.log.info('');
-        ctx.log.error(formattedError);
-      }
+    ctx.options.experimental_onTaskError?.(ctx, {
+      formattedError,
+      originalError: errors[0],
+    });
+
+    if (!ctx.userError) {
+      ctx.log.info('');
+      ctx.log.error(formattedError);
     }
 
     if (!ctx.exitCode) {
