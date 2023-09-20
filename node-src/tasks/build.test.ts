@@ -129,6 +129,7 @@ describe('buildStorybook', () => {
       spawnParams: { command: 'npm run build:storybook --script-args' },
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: { debug: jest.fn() },
+      options: {},
     } as any;
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);

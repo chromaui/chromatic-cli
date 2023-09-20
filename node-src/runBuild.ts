@@ -66,7 +66,7 @@ export async function runBuild(ctx: Context) {
         setExitCode(ctx, exitCodes.BUILD_NO_STORIES);
         throw rewriteErrorMessage(err, missingStories(ctx));
       }
-      if (ctx.extraOptions.experimental_abortSignal?.aborted) {
+      if (ctx.options.experimental_abortSignal?.aborted) {
         setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED, true);
         throw rewriteErrorMessage(err, buildCanceled());
       }

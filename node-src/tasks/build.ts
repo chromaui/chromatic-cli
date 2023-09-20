@@ -69,7 +69,7 @@ export const buildStorybook = async (ctx: Context) => {
     logFile.on('error', reject);
   });
 
-  const { experimental_abortSignal: abortSignal } = ctx.extraOptions;
+  const { experimental_abortSignal: abortSignal } = ctx.options;
 
   try {
     const { command } = ctx.spawnParams;
