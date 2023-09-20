@@ -185,7 +185,6 @@
     "string-argv": "^0.3.1",
     "strip-ansi": "6.0.0",
     "tmp-promise": "3.0.2",
-    "tree-kill": "^1.2.2",
     "ts-dedent": "^1.0.0",
     "ts-loader": "^9.2.5",
     "ts-node": "^10.9.1",

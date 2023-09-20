@@ -1,7 +1,6 @@
 import { Readable } from 'stream';
 import execaDefault from 'execa';
 import { confirm } from 'node-ask';
-import treeKill from 'tree-kill';
 import fetchDefault from 'node-fetch';
 import dns from 'dns';
 
@@ -223,10 +222,6 @@ jest.mock('node-fetch', () =>
     },
   }))
 );
-
-jest.mock('tree-kill');
-
-const kill = <jest.MockedFunction<typeof treeKill>>treeKill;
 
 const mockStatsFile = Readable.from([
   JSON.stringify({
