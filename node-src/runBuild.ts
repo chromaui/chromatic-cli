@@ -67,8 +67,7 @@ export async function runBuild(ctx: Context) {
         throw rewriteErrorMessage(err, missingStories(ctx));
       }
       if (ctx.extraOptions.experimental_abortSignal?.aborted) {
-        ctx.userError = true;
-        setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED);
+        setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED, true);
         throw rewriteErrorMessage(err, buildCanceled());
       }
       throw rewriteErrorMessage(err, taskError(ctx, err));
@@ -84,14 +83,17 @@ export async function runBuild(ctx: Context) {
     }
   } catch (error) {
     const errors = [].concat(error); // GraphQLClient might throw an array of errors
-    ctx.options.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, errors),
-      originalError: error,
-    });
 
-    if (errors.length && !ctx.userError) {
-      ctx.log.info('');
-      ctx.log.error(fatalError(ctx, errors));
+    if (errors.length) {
+      const formattedError = fatalError(ctx, errors);
+      ctx.options.experimental_onTaskError?.(ctx, {
+        formattedError,
+        originalError: errors[0],
+      });
+      if (!ctx.userError) {
+        ctx.log.info('');
+        ctx.log.error(formattedError);
+      }
     }
 
     if (!ctx.exitCode) {
