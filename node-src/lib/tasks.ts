@@ -26,6 +26,7 @@ export const createTask = ({
 
     // eslint-disable-next-line no-restricted-syntax
     for (const step of steps) {
+      ctx.options.experimental_abortSignal?.throwIfAborted();
       // eslint-disable-next-line no-await-in-loop
       await step(ctx, task);
     }
