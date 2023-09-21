@@ -79,7 +79,7 @@
     "trace": "node -r esm bin-src/trace.js",
     "trim-stats": "node -r esm bin-src/trim-stats-file.js",
     "storybook": "start-storybook -p 9009 -s static",
-    "test": "vitest",
+    "test": "vitest run && vitest run -c vitest.no-threads.config.ts",
     "prepare": "husky install && npm run build",
     "dev": "tsup --watch",
     "lint-staged": "lint-staged"

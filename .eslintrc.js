@@ -31,6 +31,11 @@ module.exports = {
       },
     ],
   },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
   overrides: [
     {
       files: ['*.json', 'isChromatic.mjs', 'isChromatic.js', 'isChromatic.cjs', '.eslintrc.cjs'],
