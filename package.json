@@ -150,7 +150,7 @@
     "eslint-plugin-json": "^3.1.0",
     "eslint-plugin-react": "^7.33.2",
     "esm": "^3.2.25",
-    "execa": "^6.0.0",
+    "execa": "^7.2.0",
     "fake-tag": "^2.0.0",
     "fs-extra": "^10.0.0",
     "https-proxy-agent": "^5.0.0",
