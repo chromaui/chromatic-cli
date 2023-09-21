@@ -1,5 +1,5 @@
 import retry from 'async-retry';
-import fs from 'fs-extra';
+import { createReadStream } from 'fs';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
 import { Context } from '../types';
@@ -40,7 +40,7 @@ export default async function uploadFiles(
               url,
               {
                 method: 'PUT',
-                body: fs.createReadStream(path).pipe(progressStream),
+                body: createReadStream(path).pipe(progressStream),
                 headers: {
                   'content-type': contentType,
                   'content-length': contentLength.toString(),

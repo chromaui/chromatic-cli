@@ -1,5 +1,5 @@
-import execa from 'execa';
-import fs from 'fs-extra';
+import { execa, execaCommand } from 'execa';
+import { createWriteStream, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -63,7 +63,7 @@ const timeoutAfter = (ms) =>
 
 export const buildStorybook = async (ctx: Context) => {
   ctx.buildLogFile = path.resolve('./build-storybook.log');
-  const logFile = fs.createWriteStream(ctx.buildLogFile);
+  const logFile = createWriteStream(ctx.buildLogFile);
   await new Promise((resolve, reject) => {
     logFile.on('open', resolve);
     logFile.on('error', reject);
@@ -75,18 +75,18 @@ export const buildStorybook = async (ctx: Context) => {
     const { command } = ctx.spawnParams;
     ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
 
-    let subprocess;
+    let subprocess = null;
     if (abortSignal) {
       abortSignal.onabort = () => {
         subprocess?.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
       };
     }
-    subprocess = execa.command(command, { stdio: [null, logFile, logFile] });
+    subprocess = execaCommand(command, { stdio: [null, logFile, logFile] });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
     abortSignal?.throwIfAborted();
 
-    const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
+    const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(failed(ctx).output);

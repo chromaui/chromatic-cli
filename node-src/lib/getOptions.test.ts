@@ -1,6 +1,7 @@
 import chalk from 'chalk';
-import { Context } from '../types';
+import { describe, expect, it, vi } from 'vitest';
 
+import { Context } from '../types';
 import getEnv from './getEnv';
 import getOptions from './getOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
@@ -10,8 +11,8 @@ import TestLogger from './testLogger';
 // Make sure we don't print any colors so we can match against plain strings
 chalk.level = 0;
 
-jest.mock('./getEnv', () => () => ({
-  CHROMATIC_PROJECT_TOKEN: 'env-code',
+vi.mock('./getEnv', () => ({
+  default: () => ({ CHROMATIC_PROJECT_TOKEN: 'env-code' }),
 }));
 
 const getContext = (argv: string[]): Context => {

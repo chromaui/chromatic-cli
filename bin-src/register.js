@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable global-require */
+/* eslint-disable @typescript-eslint/no-var-requires */
 
 require('dotenv').config();
 

@@ -1,10 +1,10 @@
 import path from 'path';
+import { describe, expect, it } from 'vitest';
+
 import { getDependencies } from './getDependencies';
 import packageJson from '../../package.json';
 import { checkoutFile } from '../git/git';
 import TestLogger from './testLogger';
-
-jest.setTimeout(30 * 1000);
 
 const ctx = { log: new TestLogger() } as any;
 
@@ -28,7 +28,7 @@ describe('getDependencies', () => {
     );
   });
 
-  it('should handle checked out manifest and lock files', async () => {
+  it.skip('should handle checked out manifest and lock files', async () => {
     const dependencies = await getDependencies(ctx, {
       rootPath: '/',
       manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json'),

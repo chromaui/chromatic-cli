@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign */
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { delay, throttle } from '../lib/utils';

@@ -17,7 +17,6 @@ const isEqual = (left: unknown = {}, right: unknown = {}) => {
   }
 
   // depends on always having consistent ordering of keys
-  // eslint-disable-next-line no-plusplus
   for (let i = 0; i < entriesA.length; i++) {
     const [keyA, valueA] = entriesA[i];
     const [keyB, valueB] = entriesB[i];

@@ -1,12 +1,14 @@
+import { describe, expect, it, vi } from 'vitest';
+
 import { takeSnapshots } from './snapshot';
 
 const env = { CHROMATIC_POLL_INTERVAL: 0, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { error: jest.fn(), info: jest.fn() };
+const log = { error: vi.fn(), info: vi.fn() };
 const matchesBranch = () => false;
 
 describe('takeSnapshots', () => {
   it('waits for the build to complete and sets it on context', async () => {
-    const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -39,7 +41,7 @@ describe('takeSnapshots', () => {
   });
 
   it('sets exitCode to 1 when build has changes', async () => {
-    const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       client,
@@ -62,7 +64,7 @@ describe('takeSnapshots', () => {
   });
 
   it('sets exitCode to 2 when build is broken (capture error)', async () => {
-    const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       client,
@@ -85,7 +87,7 @@ describe('takeSnapshots', () => {
   });
 
   it('sets exitCode to 3 when build fails (system error)', async () => {
-    const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       client,
@@ -108,7 +110,7 @@ describe('takeSnapshots', () => {
   });
 
   it('calls experimental_onTaskProgress with progress', async () => {
-    const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -122,7 +124,7 @@ describe('takeSnapshots', () => {
       env,
       git: { matchesBranch },
       log,
-      options: { experimental_onTaskProgress: jest.fn() },
+      options: { experimental_onTaskProgress: vi.fn() },
       build,
     } as any;
 

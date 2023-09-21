@@ -1,16 +1,18 @@
 import envCi from 'env-ci';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import * as git from './git';
 
 import getCommitAndBranch from './getCommitAndBranch';
 
-jest.mock('env-ci');
-jest.mock('./git');
+vi.mock('env-ci');
+vi.mock('./git');
 
-const getBranch = <jest.MockedFunction<typeof git.getBranch>>git.getBranch;
-const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
-const hasPreviousCommit = <jest.MockedFunction<typeof git.hasPreviousCommit>>git.hasPreviousCommit;
+const getBranch = vi.mocked(git.getBranch);
+const getCommit = vi.mocked(git.getCommit);
+const hasPreviousCommit = vi.mocked(git.hasPreviousCommit);
 
-const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
 const processEnv = process.env;
 beforeEach(() => {

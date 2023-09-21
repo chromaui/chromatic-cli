@@ -1,5 +1,4 @@
-/* eslint-disable no-param-reassign */
-import fs from 'fs-extra';
+import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import slash from 'slash';
 import { URL } from 'url';
@@ -82,9 +81,9 @@ interface PathSpec {
 // paths will be like iframe.html rather than storybook-static/iframe.html
 function getPathsInDir(ctx: Context, rootDir: string, dirname = '.'): PathSpec[] {
   try {
-    return fs.readdirSync(join(rootDir, dirname)).flatMap((p: string) => {
+    return readdirSync(join(rootDir, dirname)).flatMap((p: string) => {
       const pathname = join(dirname, p);
-      const stats = fs.statSync(join(rootDir, pathname));
+      const stats = statSync(join(rootDir, pathname));
       return stats.isDirectory()
         ? getPathsInDir(ctx, rootDir, pathname)
         : [{ pathname, contentLength: stats.size }];
@@ -110,7 +109,6 @@ function getFileInfo(ctx: Context, sourceDir: string) {
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   const paths: string[] = [];
   let statsPath: string;
-  // eslint-disable-next-line no-restricted-syntax
   for (const { knownAs } of lengths) {
     if (knownAs.endsWith('preview-stats.json')) statsPath = knownAs;
     else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
@@ -126,7 +124,7 @@ export const validateFiles = async (ctx: Context) => {
 
   if (!isValidStorybook(ctx.fileInfo) && ctx.buildLogFile) {
     try {
-      const buildLog = fs.readFileSync(ctx.buildLogFile, 'utf8');
+      const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
       const outputDir = getOutputDir(buildLog);
       if (outputDir && outputDir !== ctx.sourceDir) {
         ctx.log.warn(deviatingOutputDir(ctx, outputDir));

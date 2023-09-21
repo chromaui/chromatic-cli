@@ -21,7 +21,6 @@ const WaitFor = ({ seconds }) => {
     <div>
       {Array.from(new Array(seconds - count)).map((x, index) => (
         <img
-          // eslint-disable-next-line react/no-array-index-key
           key={index}
           src={`http://deelay.me/1000/http://fpoimg.com/100x100?text=${index}`}
           alt=""

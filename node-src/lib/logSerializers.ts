@@ -15,7 +15,6 @@ function responseSerializer({ status, statusText, headers, url, _raw }: Response
 // Note it is added to both err.envPairs *and* err.options.envPairs :facepalm:
 function stripEnvPairs(err: any) {
   // @ts-expect-error Ignore the _ property
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const { envPairs, options: { envPairs: _, ...options } = {}, ...sanitizedErr } = err;
   return { sanitizedErr, ...(err.options && { options }) };
 }

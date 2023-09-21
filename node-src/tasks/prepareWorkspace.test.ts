@@ -1,18 +1,20 @@
+import { describe, expect, it, vi } from 'vitest';
+
 import * as git from '../git/git';
 import installDeps from '../lib/installDependencies';
 import { runPrepareWorkspace } from './prepareWorkspace';
 
-jest.mock('../git/git');
-jest.mock('../lib/installDependencies');
-jest.mock('./restoreWorkspace');
+vi.mock('../git/git');
+vi.mock('../lib/installDependencies');
+vi.mock('./restoreWorkspace');
 
-const checkout = <jest.MockedFunction<typeof git.checkout>>git.checkout;
-const isClean = <jest.MockedFunction<typeof git.isClean>>git.isClean;
-const isUpToDate = <jest.MockedFunction<typeof git.isUpToDate>>git.isUpToDate;
-const findMergeBase = <jest.MockedFunction<typeof git.findMergeBase>>git.findMergeBase;
-const installDependencies = <jest.MockedFunction<typeof installDeps>>installDeps;
+const checkout = vi.mocked(git.checkout);
+const isClean = vi.mocked(git.isClean);
+const isUpToDate = vi.mocked(git.isUpToDate);
+const findMergeBase = vi.mocked(git.findMergeBase);
+const installDependencies = vi.mocked(installDeps);
 
-const log = { error: jest.fn() };
+const log = { error: vi.fn() };
 
 describe('runPrepareWorkspace', () => {
   it('retrieves the merge base, does a git checkout and installs dependencies', async () => {

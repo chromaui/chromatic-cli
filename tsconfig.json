@@ -7,6 +7,6 @@
     "noImplicitAny": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": ["jest", "webpack-env"]
+    "types": ["webpack-env"]
   }
 }

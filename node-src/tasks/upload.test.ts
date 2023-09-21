@@ -1,35 +1,36 @@
-import * as fs from 'fs-extra';
+import { createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import progressStream from 'progress-stream';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
 import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
-jest.mock('fs-extra');
-jest.mock('progress-stream');
-jest.mock('../lib/getDependentStoryFiles');
-jest.mock('../lib/findChangedDependencies');
-jest.mock('../lib/findChangedPackageFiles');
-jest.mock('./read-stats-file');
+vi.mock('fs');
+vi.mock('progress-stream');
+vi.mock('../lib/getDependentStoryFiles');
+vi.mock('../lib/findChangedDependencies');
+vi.mock('../lib/findChangedPackageFiles');
+vi.mock('./read-stats-file');
 
-const findChangedDependencies = <jest.MockedFunction<typeof findChangedDep>>findChangedDep;
-const findChangedPackageFiles = <jest.MockedFunction<typeof findChangedPkg>>findChangedPkg;
-const getDependentStoryFiles = <jest.MockedFunction<typeof getDepStoryFiles>>getDepStoryFiles;
-const createReadStream = <jest.MockedFunction<typeof fs.createReadStream>>fs.createReadStream;
-const readdirSync = <jest.MockedFunction<typeof fs.readdirSync>>fs.readdirSync;
-const readFileSync = <jest.MockedFunction<typeof fs.readFileSync>>fs.readFileSync;
-const statSync = <jest.MockedFunction<typeof fs.statSync>>fs.statSync;
-const progress = <jest.MockedFunction<typeof progressStream>>progressStream;
+const findChangedDependencies = vi.mocked(findChangedDep);
+const findChangedPackageFiles = vi.mocked(findChangedPkg);
+const getDependentStoryFiles = vi.mocked(getDepStoryFiles);
+const createReadStreamMock = vi.mocked(createReadStream);
+const readdirSyncMock = vi.mocked(readdirSync);
+const readFileSyncMock = vi.mocked(readFileSync);
+const statSyncMock = vi.mocked(statSync);
+const progress = vi.mocked(progressStream);
 
 const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
-const http = { fetch: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const http = { fetch: vi.fn() };
 
 describe('validateFiles', () => {
   it('sets fileInfo on context', async () => {
-    readdirSync.mockReturnValue(['iframe.html', 'index.html'] as any);
-    statSync.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+    readdirSyncMock.mockReturnValue(['iframe.html', 'index.html'] as any);
+    statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
     const ctx = { env, log, http, sourceDir: '/static/' } as any;
     await validateFiles(ctx);
@@ -47,16 +48,16 @@ describe('validateFiles', () => {
   });
 
   it("throws when index.html doesn't exist", async () => {
-    readdirSync.mockReturnValue(['iframe.html'] as any);
-    statSync.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+    readdirSyncMock.mockReturnValue(['iframe.html'] as any);
+    statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
     const ctx = { env, log, http, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
   it("throws when iframe.html doesn't exist", async () => {
-    readdirSync.mockReturnValue(['index.html'] as any);
-    statSync.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+    readdirSyncMock.mockReturnValue(['index.html'] as any);
+    statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
     const ctx = { env, log, http, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
@@ -64,10 +65,10 @@ describe('validateFiles', () => {
 
   describe('with buildLogFile', () => {
     it('retries using outputDir from build-storybook.log', async () => {
-      readdirSync.mockReturnValueOnce([]);
-      readdirSync.mockReturnValueOnce(['iframe.html', 'index.html'] as any);
-      statSync.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-      readFileSync.mockReturnValue('info => Output directory: /var/storybook-static');
+      readdirSyncMock.mockReturnValueOnce([]);
+      readdirSyncMock.mockReturnValueOnce(['iframe.html', 'index.html'] as any);
+      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+      readFileSyncMock.mockReturnValue('info => Output directory: /var/storybook-static');
 
       const ctx = {
         env,
@@ -168,7 +169,7 @@ describe('traceChangedFiles', () => {
 
 describe('uploadStorybook', () => {
   it('retrieves the upload locations, puts the files there and sets the isolatorUrl on context', async () => {
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       getUploadUrls: {
         domain: 'https://asdqwe.chromatic.com',
@@ -187,9 +188,9 @@ describe('uploadStorybook', () => {
       },
     });
 
-    createReadStream.mockReturnValue({ pipe: jest.fn() } as any);
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
     http.fetch.mockReturnValue({ ok: true });
-    progress.mockReturnValue({ on: jest.fn() } as any);
+    progress.mockReturnValue({ on: vi.fn() } as any);
 
     const fileInfo = {
       lengths: [
@@ -244,7 +245,7 @@ describe('uploadStorybook', () => {
   });
 
   it('calls experimental_onTaskProgress with progress', async () => {
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       getUploadUrls: {
         domain: 'https://asdqwe.chromatic.com',
@@ -263,11 +264,11 @@ describe('uploadStorybook', () => {
       },
     });
 
-    createReadStream.mockReturnValue({ pipe: jest.fn((x) => x) } as any);
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn((x) => x) } as any);
     progress.mockImplementation((() => {
       let progressCb;
       return {
-        on: jest.fn((name, cb) => {
+        on: vi.fn((name, cb) => {
           progressCb = cb;
         }),
         sendProgress: (delta: number) => progressCb({ delta }),
@@ -294,7 +295,7 @@ describe('uploadStorybook', () => {
       log,
       http,
       sourceDir: '/static/',
-      options: { experimental_onTaskProgress: jest.fn() },
+      options: { experimental_onTaskProgress: vi.fn() },
       fileInfo,
       announcedBuild: { id: '1' },
     } as any;

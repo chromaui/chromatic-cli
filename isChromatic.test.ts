@@ -1,6 +1,7 @@
 /* eslint-env browser */
+import { describe, expect, it } from 'vitest';
 
-const isChromatic = require('./isChromatic');
+import isChromatic from './isChromatic';
 
 describe('with window arg', () => {
   it('returns false', () => {
@@ -10,7 +11,7 @@ describe('with window arg', () => {
           userAgent: 'Chrome',
         },
         location: new URL('https://example.com'),
-      })
+      } as any as Window)
     ).toBe(false);
   });
 
@@ -21,7 +22,7 @@ describe('with window arg', () => {
           userAgent: 'Chrome',
         },
         location: new URL('https://example.com?chromatic=true'),
-      })
+      } as any as Window)
     ).toBe(true);
   });
 
@@ -32,7 +33,7 @@ describe('with window arg', () => {
           userAgent: 'Chromium(Chromatic)',
         },
         location: new URL('https://example.com'),
-      })
+      } as any as Window)
     ).toBe(true);
   });
 });

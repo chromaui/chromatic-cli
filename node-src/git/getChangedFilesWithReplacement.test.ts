@@ -1,7 +1,9 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import TestLogger from '../lib/testLogger';
 
-jest.mock('./git', () => ({
+vi.mock('./git', () => ({
   getChangedFiles: (hash) => {
     if (hash.match(/exists/)) return ['changed', 'files'];
     throw new Error(`fatal: bad object ${hash}`);
@@ -10,7 +12,7 @@ jest.mock('./git', () => ({
 }));
 
 describe('getChangedFilesWithReplacements', () => {
-  const client = { runQuery: jest.fn() } as any;
+  const client = { runQuery: vi.fn() } as any;
   beforeEach(() => {
     client.runQuery.mockReset();
   });

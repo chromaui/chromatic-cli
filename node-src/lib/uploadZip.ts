@@ -1,5 +1,5 @@
 import retry from 'async-retry';
-import fs from 'fs-extra';
+import { createReadStream } from 'fs';
 import { Response } from 'node-fetch';
 import progress from 'progress-stream';
 import { Context } from '../types';
@@ -33,7 +33,7 @@ export async function uploadZip(
         url,
         {
           method: 'PUT',
-          body: fs.createReadStream(path).pipe(progressStream),
+          body: createReadStream(path).pipe(progressStream),
           headers: {
             'content-type': 'application/zip',
             'content-length': contentLength.toString(),

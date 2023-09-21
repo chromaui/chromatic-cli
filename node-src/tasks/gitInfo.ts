@@ -226,7 +226,6 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     }
 
     if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
-      // eslint-disable-next-line no-restricted-syntax
       for (const glob of ctx.options.externals) {
         const matches = ctx.git.changedFiles.filter((filepath) => matchesFile(glob, filepath));
         if (matches.length) {

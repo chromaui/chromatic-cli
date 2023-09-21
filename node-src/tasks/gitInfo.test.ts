@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import * as getCommitInfo from '../git/getCommitAndBranch';
 import * as git from '../git/git';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
@@ -5,31 +7,22 @@ import { getBaselineBuilds as getBaselineBuildsUnmocked } from '../git/getBaseli
 import { getChangedFilesWithReplacement as getChangedFilesWithReplacementUnmocked } from '../git/getChangedFilesWithReplacement';
 import { setGitInfo } from './gitInfo';
 
-jest.mock('../git/getCommitAndBranch');
-jest.mock('../git/git');
-jest.mock('../git/getParentCommits');
-jest.mock('../git/getBaselineBuilds');
-jest.mock('../git/getChangedFilesWithReplacement');
+vi.mock('../git/getCommitAndBranch');
+vi.mock('../git/git');
+vi.mock('../git/getParentCommits');
+vi.mock('../git/getBaselineBuilds');
+vi.mock('../git/getChangedFilesWithReplacement');
 
-const getCommitAndBranch = <jest.MockedFunction<typeof getCommitInfo.default>>getCommitInfo.default;
-const getChangedFilesWithReplacement = <
-  jest.MockedFunction<typeof getChangedFilesWithReplacementUnmocked>
->getChangedFilesWithReplacementUnmocked;
-const getSlug = <jest.MockedFunction<typeof git.getSlug>>git.getSlug;
-const getVersion = <jest.MockedFunction<typeof git.getVersion>>git.getVersion;
-const getUserEmail = <jest.MockedFunction<typeof git.getUserEmail>>git.getUserEmail;
-const getUncommittedHash = <jest.MockedFunction<typeof git.getUncommittedHash>>(
-  git.getUncommittedHash
-);
+const getCommitAndBranch = vi.mocked(getCommitInfo.default);
+const getChangedFilesWithReplacement = vi.mocked(getChangedFilesWithReplacementUnmocked);
+const getSlug = vi.mocked(git.getSlug);
+const getVersion = vi.mocked(git.getVersion);
+const getUserEmail = vi.mocked(git.getUserEmail);
+const getUncommittedHash = vi.mocked(git.getUncommittedHash);
+const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
+const getParentCommits = vi.mocked(getParentCommitsUnmocked);
 
-const getBaselineBuilds = <jest.MockedFunction<typeof getBaselineBuildsUnmocked>>(
-  getBaselineBuildsUnmocked
-);
-const getParentCommits = <jest.MockedFunction<typeof getParentCommitsUnmocked>>(
-  getParentCommitsUnmocked
-);
-
-const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
 const commitInfo = {
   commit: '123asdf',
@@ -43,7 +36,7 @@ const commitInfo = {
   ciService: undefined,
 };
 
-const client = { runQuery: jest.fn(), setAuthorization: jest.fn() };
+const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
 
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);

@@ -1,4 +1,4 @@
-import execa from 'execa';
+import { execaCommand } from 'execa';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import { file as tmpFile } from 'tmp-promise';
@@ -13,7 +13,7 @@ const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't 
 
 export async function execGitCommand(command: string) {
   try {
-    const { all } = await execa.command(command, {
+    const { all } = await execaCommand(command, {
       env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
       timeout: 20000, // 20 seconds
       all: true, // interleave stdout and stderr

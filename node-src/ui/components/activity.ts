@@ -22,7 +22,6 @@ const renderLoop = (ctx: Context, render: (frame: number) => void) => {
 export const startActivity = async (ctx: Context, task: Task) => {
   if (ctx.options.interactive) return;
   ctx.activity = renderLoop(ctx, (n) => {
-    // eslint-disable-next-line no-param-reassign
     task.output = activityBar(n);
   });
 };

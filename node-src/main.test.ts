@@ -1,10 +1,11 @@
 import { Readable } from 'stream';
-import execaDefault from 'execa';
+import { execa as execaDefault } from 'execa';
+import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
 import dns from 'dns';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import jsonfile from 'jsonfile';
 import * as git from './git/git';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
@@ -20,12 +21,12 @@ let announcedBuild;
 let publishedBuild;
 let mockBuildFeatures;
 
-jest.useFakeTimers();
+vi.useFakeTimers();
 
 afterEach(() => {
   // This would clear all existing timer functions
-  jest.clearAllTimers();
-  jest.clearAllMocks();
+  vi.clearAllTimers();
+  vi.clearAllMocks();
 });
 
 beforeEach(() => {
@@ -35,28 +36,28 @@ beforeEach(() => {
   };
 });
 
-jest.mock('dns');
-jest.mock('execa');
+vi.mock('dns');
+vi.mock('execa');
 
-const execa = <jest.MockedFunction<typeof execaDefault>>execaDefault;
-const fetch = <jest.MockedFunction<typeof fetchDefault>>fetchDefault;
+const execa = vi.mocked(execaDefault);
+const fetch = vi.mocked(fetchDefault);
 
-jest.mock('jsonfile', () => {
-  const originalModule = jest.requireActual('jsonfile');
+vi.mock('jsonfile', async (importOriginal) => {
+  const originalModule = (await importOriginal()) as any;
   return {
     __esModule: true,
     ...originalModule,
     default: {
       ...originalModule.default,
-      writeFile: jest.fn(() => Promise.resolve()),
+      writeFile: vi.fn(() => Promise.resolve()),
     },
   };
 });
 
-jest.mock('node-ask');
+vi.mock('node-ask');
 
-jest.mock('node-fetch', () =>
-  jest.fn(async (url, { body } = {}) => ({
+vi.mock('node-fetch', () => ({
+  default: vi.fn(async (url, { body } = {}) => ({
     ok: true,
     json: async () => {
       const { query, variables } = JSON.parse(body);
@@ -220,8 +221,8 @@ jest.mock('node-fetch', () =>
 
       throw new Error(`Unknown Query: ${query}`);
     },
-  }))
-);
+  })),
+}));
 
 const mockStatsFile = Readable.from([
   JSON.stringify({
@@ -240,22 +241,25 @@ const mockStatsFile = Readable.from([
   }),
 ]);
 
-jest.mock('fs-extra', () => ({
-  pathExists: async () => true,
-  readFileSync: jest.requireActual('fs-extra').readFileSync,
-  createReadStream: jest.fn(() => mockStatsFile),
-  createWriteStream: jest.requireActual('fs-extra').createWriteStream,
-  readdirSync: jest.fn(() => ['iframe.html', 'index.html', 'preview-stats.json']),
-  statSync: jest.fn((path) => {
-    const fsStatSync = jest.requireActual('fs-extra').createWriteStream;
-    if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
-    return { isDirectory: () => false, size: 42 };
-  }),
-}));
+vi.mock('fs', async (importOriginal) => {
+  const originalModule = (await importOriginal()) as any;
+  return {
+    pathExists: async () => true,
+    readFileSync: originalModule.readFileSync,
+    createReadStream: vi.fn(() => mockStatsFile),
+    createWriteStream: originalModule.createWriteStream,
+    readdirSync: vi.fn(() => ['iframe.html', 'index.html', 'preview-stats.json']),
+    statSync: vi.fn((path) => {
+      const fsStatSync = originalModule.createWriteStream;
+      if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
+      return { isDirectory: () => false, size: 42 };
+    }),
+  };
+});
 
-jest.mock('./git/git', () => ({
+vi.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
-  getCommit: jest.fn(),
+  getCommit: vi.fn(),
   getBranch: () => Promise.resolve('branch'),
   getSlug: () => Promise.resolve('user/repo'),
   getVersion: () => Promise.resolve('2.24.1'),
@@ -265,28 +269,30 @@ jest.mock('./git/git', () => ({
   getUserEmail: () => Promise.resolve('test@test.com'),
 }));
 
-jest.mock('./git/getParentCommits', () => ({
+vi.mock('./git/getParentCommits', () => ({
   getParentCommits: () => Promise.resolve(['baseline']),
 }));
 
-const getCommit = <jest.MockedFunction<typeof git.getCommit>>git.getCommit;
+const getCommit = vi.mocked(git.getCommit);
 
-jest.mock('./lib/emailHash');
+vi.mock('./lib/emailHash');
 
-jest.mock('./lib/getPackageManager', () => ({
+vi.mock('./lib/getPackageManager', () => ({
   getPackageManagerName: () => Promise.resolve('pnpm'),
   getPackageManagerRunCommand: (args) => Promise.resolve(`pnpm run ${args.join(' ')}`),
 }));
 
-jest.mock('./lib/getStorybookInfo', () => () => ({
-  version: '5.1.0',
-  viewLayer: 'viewLayer',
-  addons: [],
+vi.mock('./lib/getStorybookInfo', () => ({
+  default: () => ({
+    version: '5.1.0',
+    viewLayer: 'viewLayer',
+    addons: [],
+  }),
 }));
 
-jest.mock('./lib/uploadFiles');
+vi.mock('./lib/uploadFiles');
 
-jest.mock('./lib/spawn', () => () => Promise.resolve('https://npm.example.com'));
+vi.mock('./lib/spawn', () => ({ default: () => Promise.resolve('https://npm.example.com') }));
 
 let processEnv;
 beforeEach(() => {
@@ -313,7 +319,7 @@ const getContext = (
   argv: string[]
 ): Context & {
   testLogger: TestLogger;
-  http: { fetch: jest.MockedFunction<typeof fetch> };
+  http: { fetch: typeof fetch };
 } => {
   const testLogger = new TestLogger();
   return {
@@ -321,7 +327,7 @@ const getContext = (
     env: getEnv(),
     log: testLogger,
     testLogger,
-    http: { fetch: jest.fn() },
+    http: { fetch: vi.fn() },
     sessionId: ':sessionId',
     packageJson: {
       scripts: {
@@ -351,10 +357,10 @@ it('fails on missing project token', async () => {
 it('passes options error to experimental_onTaskError', async () => {
   const ctx = getContext([]);
   ctx.options = {
-    experimental_onTaskError: jest.fn(),
+    experimental_onTaskError: vi.fn(),
   } as any;
 
-  ctx.options.experimental_onTaskError = jest.fn();
+  ctx.options.experimental_onTaskError = vi.fn();
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runBuild(ctx);
 

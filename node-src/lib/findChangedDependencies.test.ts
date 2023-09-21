@@ -1,17 +1,18 @@
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
 import { findChangedDependencies } from './findChangedDependencies';
 import TestLogger from './testLogger';
 
-jest.mock('snyk-nodejs-lockfile-parser');
-jest.mock('yarn-or-npm');
-jest.mock('../git/git');
+vi.mock('snyk-nodejs-lockfile-parser');
+vi.mock('yarn-or-npm');
+vi.mock('../git/git');
 
-const getRepositoryRoot = <jest.MockedFunction<typeof git.getRepositoryRoot>>git.getRepositoryRoot;
-const checkoutFile = <jest.MockedFunction<typeof git.checkoutFile>>git.checkoutFile;
-const findFiles = <jest.MockedFunction<typeof git.findFiles>>git.findFiles;
-const buildDepTree = <jest.MockedFunction<typeof buildDepTreeFromFiles>>buildDepTreeFromFiles;
+const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
+const checkoutFile = vi.mocked(git.checkoutFile);
+const findFiles = vi.mocked(git.findFiles);
+const buildDepTree = vi.mocked(buildDepTreeFromFiles);
 
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
