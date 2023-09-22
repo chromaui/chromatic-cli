@@ -25,6 +25,7 @@ export const createTask = ({
     ctx.options.experimental_onTaskStart?.({ ...ctx });
 
     for (const step of steps) {
+      ctx.options.experimental_abortSignal?.throwIfAborted();
       await step(ctx, task);
     }
 
