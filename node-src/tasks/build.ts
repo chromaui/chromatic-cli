@@ -69,14 +69,23 @@ export const buildStorybook = async (ctx: Context) => {
     logFile.on('error', reject);
   });
 
+  const { experimental_abortSignal: abortSignal } = ctx.options;
+
   try {
     const { command } = ctx.spawnParams;
     ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
-    await Promise.race([
-      execaCommand(command, { stdio: [null, logFile, logFile] }),
-      timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT),
-    ]);
+
+    let subprocess = null;
+    if (abortSignal) {
+      abortSignal.onabort = () => {
+        subprocess?.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
+      };
+    }
+    subprocess = execaCommand(command, { stdio: [null, logFile, logFile] });
+    await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
+    abortSignal?.throwIfAborted();
+
     const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
