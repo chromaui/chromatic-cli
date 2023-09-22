@@ -421,15 +421,6 @@ it('should exit with code 0 when the current branch is skipped', async () => {
   expect(ctx.exitCode).toBe(0);
 });
 
-it('should exit with code 6 and stop the build when abortSignal is aborted', async () => {
-  const abortSignal = AbortSignal.abort(new Error('Build canceled'));
-  const ctx = getContext(['--project-token=asdf1234']);
-  ctx.extraOptions = { experimental_abortSignal: abortSignal };
-  await runBuild(ctx);
-  expect(ctx.exitCode).toBe(6);
-  expect(uploadFiles).not.toHaveBeenCalled();
-});
-
 it('calls out to npm build script passed and uploads files', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
   await runBuild(ctx);

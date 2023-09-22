@@ -1,14 +1,12 @@
 import Listr from 'listr';
 
 import GraphQLClient from './io/GraphQLClient';
-import { getConfiguration } from './lib/getConfiguration';
 import getOptions from './lib/getOptions';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
 import { Context } from './types';
-import buildCanceled from './ui/messages/errors/buildCanceled';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
@@ -17,6 +15,7 @@ import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
 import { endActivity } from './ui/components/activity';
+import { getConfiguration } from './lib/getConfiguration';
 
 export async function runBuild(ctx: Context) {
   ctx.log.info('');
@@ -65,10 +64,6 @@ export async function runBuild(ctx: Context) {
       if (err.message.startsWith('Cannot run a build with no stories')) {
         setExitCode(ctx, exitCodes.BUILD_NO_STORIES);
         throw rewriteErrorMessage(err, missingStories(ctx));
-      }
-      if (ctx.options.experimental_abortSignal?.aborted) {
-        setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED, true);
-        throw rewriteErrorMessage(err, buildCanceled());
       }
       throw rewriteErrorMessage(err, taskError(ctx, err));
     } finally {

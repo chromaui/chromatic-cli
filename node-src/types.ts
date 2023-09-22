@@ -108,9 +108,6 @@ export interface Options {
 
   /** A callback that is called at the completion of each task */
   experimental_onTaskComplete?: (ctx: Context) => void;
-
-  /** An AbortSignal that terminates the build if aborted */
-  experimental_abortSignal?: AbortSignal;
 }
 
 export { Configuration };
