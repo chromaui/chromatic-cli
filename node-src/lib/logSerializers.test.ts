@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { expect, it } from 'vitest';
 
 import { errorSerializer } from './logSerializers';
 

@@ -20,7 +20,7 @@ export default {
 };
 
 const isolatorUrl = 'https://5eb48280e78a12aeeaea33cf-kdypokzbrs.chromatic.com/iframe.html';
-const storybookUrl = 'https://self-hosted-storybook.netlify.app';
+// const storybookUrl = 'https://self-hosted-storybook.netlify.app';
 
 export const Initial = () => initial;
 

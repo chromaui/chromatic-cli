@@ -1,14 +1,16 @@
+import { describe, expect, it, vi } from 'vitest';
+
 import { publishBuild, verifyBuild } from './verify';
 
 const env = { STORYBOOK_VERIFY_TIMEOUT: 1000 };
-const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
-const http = { fetch: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const http = { fetch: vi.fn() };
 
 describe('publishBuild', () => {
   it('updates the build on the index and updates context', async () => {
     const announcedBuild = { number: 1, status: 'ANNOUNCED', reportToken: 'report-token' };
     const publishedBuild = { status: 'PUBLISHED' };
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ publishBuild: publishedBuild });
 
     const ctx = {
@@ -61,7 +63,7 @@ describe('verifyBuild', () => {
       startedAt: Date.now(),
     };
     const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: null };
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery
       .mockReturnValueOnce({ app: { build: publishedBuild } })
       .mockReturnValueOnce({ app: { build: publishedBuild } })
@@ -101,7 +103,7 @@ describe('verifyBuild', () => {
   });
 
   it('sets exitCode to 5 if build was limited', async () => {
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
         build: {
@@ -122,7 +124,7 @@ describe('verifyBuild', () => {
   });
 
   it('sets exitCode to 11 if snapshot quota was reached', async () => {
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
         build: {
@@ -143,7 +145,7 @@ describe('verifyBuild', () => {
   });
 
   it('sets exitCode to 12 if payment is required', async () => {
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
         build: {
@@ -164,7 +166,7 @@ describe('verifyBuild', () => {
   });
 
   it('sets exitCode to 0 and skips snapshotting for publish-only builds', async () => {
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
         build: {

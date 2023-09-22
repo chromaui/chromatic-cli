@@ -10,8 +10,7 @@ module.exports = {
   core: {
     builder: 'webpack5',
   },
-  webpackFinal: async (config, { configType }) => {
-    // eslint-disable-next-line no-param-reassign
+  webpackFinal: async (config) => {
     config.resolve = {
       ...config.resolve,
       fallback: {

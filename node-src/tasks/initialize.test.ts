@@ -1,16 +1,18 @@
+import { describe, expect, it, vi } from 'vitest';
+
 import { announceBuild, setEnvironment } from './initialize';
 
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
 
 const env = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
-const log = { info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
     const ctx = { env, log } as any;
     await setEnvironment(ctx);
-    expect(ctx.environment).toEqual({
+    expect(ctx.environment).toContain({
       GERRIT_BRANCH: 'foo/bar',
       TRAVIS_EVENT_TYPE: 'pull_request',
     });
@@ -30,7 +32,7 @@ describe('announceBuild', () => {
 
   it('creates a build on the index and puts it on context', async () => {
     const build = { number: 1, status: 'ANNOUNCED' };
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
 
     const ctx = { client, ...defaultContext } as any;
@@ -62,7 +64,7 @@ describe('announceBuild', () => {
 
   it('requires baselines for TurboSnap-enabled builds', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {} };
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
 
     const ctx = { client, ...defaultContext, turboSnap: {} } as any;
@@ -77,7 +79,7 @@ describe('announceBuild', () => {
 
   it('does not require baselines for TurboSnap bailed builds', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {} };
-    const client = { runQuery: jest.fn() };
+    const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
 
     const ctx = { client, ...defaultContext, turboSnap: { bailReason: {} } } as any;

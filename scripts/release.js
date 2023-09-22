@@ -1,11 +1,10 @@
-/* eslint-disable no-console */
-const cpy = require('cpy');
-const execa = require('execa');
-const { readJSON } = require('fs-extra');
-const { join } = require('path');
-const tmp = require('tmp-promise');
+import cpy from 'cpy';
+import { execaCommand } from 'execa';
+import { readJson } from 'fs-extra';
+import { join } from 'path';
+import tmp from 'tmp-promise';
 
-const command = (cmd, opts) => execa.command(cmd, { stdio: 'inherit', ...opts });
+const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 
 const bumpVersion = async ({ bump, tag, currentTag, dryRun }) => {
   if (dryRun) {
@@ -28,7 +27,7 @@ const bumpVersion = async ({ bump, tag, currentTag, dryRun }) => {
 };
 
 const publishPackage = async ({ tag, dryRun }) => {
-  const { version } = await readJSON(join(__dirname, '../package.json'));
+  const { version } = await readJson(join(__dirname, '../package.json'));
   const dry = dryRun ? '--dry-run' : '';
   console.log(`✅ Publishing ${tag} version ${version} ${dry && `(${dry})`}`);
   await command(`npm publish --tag ${tag} ${dry}`);
@@ -79,7 +78,7 @@ const publishAction = async ({ repo, tag, version }) => {
     // We need to build the action manually if we're not publishing to npm
     await command('npm run bundle:action');
   } else {
-    const { version: currentVersion } = await readJSON(join(__dirname, '../package.json'));
+    const { version: currentVersion } = await readJson(join(__dirname, '../package.json'));
     const [, , , currentTag] = currentVersion.match(/^([0-9]+\.[0-9]+\.[0-9]+)(-(\w+)\.\d+)?$/);
 
     await bumpVersion({ bump, tag, currentTag, dryRun });
@@ -87,7 +86,7 @@ const publishAction = async ({ repo, tag, version }) => {
   }
 
   // Get the version we bumped to (or whichever is current, if we're only publishing the action)
-  const { version } = await readJSON(join(__dirname, '../package.json'));
+  const { version } = await readJson(join(__dirname, '../package.json'));
 
   if (dryRun) {
     console.log(`✅ Not publishing action due to --dry-run`);

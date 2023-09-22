@@ -13,7 +13,6 @@ export default class NonTTYRenderer {
   }
 
   render() {
-    // eslint-disable-next-line no-restricted-syntax
     for (const task of this.tasks) {
       let lastData;
       task.subscribe((event) => {

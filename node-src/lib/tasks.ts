@@ -24,9 +24,7 @@ export const createTask = ({
 
     ctx.options.experimental_onTaskStart?.({ ...ctx });
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const step of steps) {
-      // eslint-disable-next-line no-await-in-loop
       await step(ctx, task);
     }
 
@@ -38,12 +36,10 @@ export const createTask = ({
 export const setTitle = (title: ValueFn, subtitle: ValueFn) => (ctx: Context, task: Task) => {
   const ttl = typeof title === 'function' ? title(ctx, task) : title;
   const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
-  // eslint-disable-next-line no-param-reassign
   task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
 };
 
 export const setOutput = (output: ValueFn) => (ctx: Context, task: Task) => {
-  // eslint-disable-next-line no-param-reassign
   task.output = typeof output === 'function' ? output(ctx, task) : output;
 };
 

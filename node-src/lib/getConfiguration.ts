@@ -1,4 +1,4 @@
-import { readFile } from 'jsonfile';
+import { readFileSync } from 'fs';
 import { ZodError, z } from 'zod';
 import { missingConfigurationFile } from '../ui/messages/errors/missingConfigurationFile';
 import { unparseableConfigurationFile } from '../ui/messages/errors/unparseableConfigurationFile';
@@ -38,9 +38,9 @@ export type Configuration = z.infer<typeof configurationSchema>;
 export async function getConfiguration(configFile?: string) {
   const usedConfigFile = configFile || 'chromatic.config.json';
   try {
-    const rawJson = await readFile(usedConfigFile);
+    const rawJson = readFileSync(usedConfigFile, 'utf8');
 
-    return configurationSchema.parse(rawJson);
+    return configurationSchema.parse(JSON.parse(rawJson));
   } catch (err) {
     // Config file does not exist
     if (err.message.match(/ENOENT/)) {

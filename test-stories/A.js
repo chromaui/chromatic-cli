@@ -11,7 +11,7 @@ const style = {
   backgroundColor: 'darkkhaki',
 };
 
-export default function A({ thing, backgroundColor, ...props }) {
+export default function A({ backgroundColor, ...props }) {
   let computedStyle = style;
   if (backgroundColor) {
     computedStyle = { ...style, backgroundColor };

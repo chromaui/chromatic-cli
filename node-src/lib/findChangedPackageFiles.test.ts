@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   arePackageDependenciesEqual,
   clearFileCache,
@@ -5,9 +7,9 @@ import {
 } from './findChangedPackageFiles';
 import * as git from '../git/git';
 
-jest.mock('../git/git');
+vi.mock('../git/git');
 
-const execGitCommand = <jest.MockedFunction<typeof git.execGitCommand>>git.execGitCommand;
+const execGitCommand = vi.mocked(git.execGitCommand);
 
 const mockFileContents = (packagesCommitsByFile) => {
   execGitCommand.mockImplementation(async (input) => {

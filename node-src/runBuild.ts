@@ -6,7 +6,7 @@ import NonTTYRenderer from './lib/NonTTYRenderer';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
-import { Context, Options } from './types';
+import { Context } from './types';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
@@ -78,14 +78,16 @@ export async function runBuild(ctx: Context) {
     }
   } catch (error) {
     const errors = [].concat(error); // GraphQLClient might throw an array of errors
+    const formattedError = fatalError(ctx, errors);
+
     ctx.options.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, errors),
-      originalError: error,
+      formattedError,
+      originalError: errors[0],
     });
 
-    if (errors.length && !ctx.userError) {
+    if (!ctx.userError) {
       ctx.log.info('');
-      ctx.log.error(fatalError(ctx, errors));
+      ctx.log.error(formattedError);
     }
 
     if (!ctx.exitCode) {

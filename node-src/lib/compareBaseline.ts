@@ -25,7 +25,6 @@ export const compareBaseline = async (
   const baselineDependencies = await getDependencies(ctx, baselineConfig);
 
   ctx.log.debug({ ...baselineConfig, baselineDependencies }, `Found baseline dependencies`);
-  // eslint-disable-next-line no-restricted-syntax
   for (const dependency of xor(baselineDependencies, headDependencies)) {
     // Strip the version number so we get a set of package names.
     changedDependencyNames.add(dependency.split('@@')[0]);

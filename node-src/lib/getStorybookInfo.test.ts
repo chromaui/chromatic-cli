@@ -1,10 +1,11 @@
-import mock from 'mock-fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
 
-jest.useFakeTimers();
+vi.useFakeTimers();
 
-const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
 const getContext = (ctx: any): Context => ({ ...context, ...ctx });
 
@@ -18,11 +19,10 @@ afterEach(() => {
   log.debug.mockReset();
 });
 
-jest.setTimeout(10000);
 describe('getStorybookInfo', () => {
   afterEach(() => {
     // This would clear all existing timer functions
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   it('returns viewLayer and version', async () => {

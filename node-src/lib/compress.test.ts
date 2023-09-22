@@ -1,10 +1,12 @@
+import { existsSync } from 'fs';
 import mockFs from 'mock-fs';
-import fs from 'fs-extra';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import makeZipFile from './compress';
 import TestLogger from './testLogger';
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -27,7 +29,7 @@ describe('makeZipFile', () => {
 
     const result = await makeZipFile(testContext);
 
-    expect(fs.existsSync(result.path)).toBeTruthy();
+    expect(existsSync(result.path)).toBeTruthy();
     expect(result.size).toBeGreaterThan(0);
   });
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import debug from 'debug';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
@@ -38,7 +37,7 @@ export interface Logger {
   setInteractive: (value: boolean) => void;
 }
 
-export const createLogger = (env) => {
+export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
 

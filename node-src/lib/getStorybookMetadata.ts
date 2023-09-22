@@ -1,11 +1,11 @@
-import fs from 'fs-extra';
+import { readConfig } from '@storybook/csf-tools';
+import { readJson } from 'fs-extra';
+import { readdir } from 'fs/promises';
 import meow from 'meow';
+import path, { join } from 'path';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
 
-import path, { join } from 'path';
-import { readConfig } from '@storybook/csf-tools';
-import { readdir } from 'fs/promises';
 import { Context } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { viewLayers } from './viewLayers';
@@ -16,7 +16,7 @@ import { builders } from './builders';
 export const resolvePackageJson = (pkg: string) => {
   try {
     const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
-    return fs.readJson(packagePath);
+    return readJson(packagePath);
   } catch (error) {
     return Promise.reject(error);
   }

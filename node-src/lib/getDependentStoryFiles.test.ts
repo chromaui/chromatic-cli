@@ -1,15 +1,16 @@
 import chalk from 'chalk';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 import * as git from '../git/git';
 
-jest.mock('../git/git');
+vi.mock('../git/git');
 
 const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
 const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
-const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 const getContext: any = ({
   configDir,
   staticDir,
@@ -29,7 +30,7 @@ afterEach(() => {
   log.debug.mockReset();
 });
 
-const getRepositoryRoot = <jest.MockedFunction<typeof git.getRepositoryRoot>>git.getRepositoryRoot;
+const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 
 getRepositoryRoot.mockResolvedValue('/path/to/project');
 

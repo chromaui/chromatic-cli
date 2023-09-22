@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { outputFile } from 'fs-extra';
 import { readStatsFile } from '../node-src/tasks/read-stats-file';
 

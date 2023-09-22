@@ -1,16 +1,40 @@
+/* eslint-env node */
 module.exports = {
   root: true,
-  extends: ['@storybook/eslint-config-storybook'],
-  rules: {
-    'no-use-before-define': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    'eslint-comments/disable-enable-pair': 'off',
-    'import/no-extraneous-dependencies': 'off',
+  env: {
+    browser: true,
+    node: true,
   },
+  extends: [
+    'eslint:recommended',
+    'prettier',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:import/recommended',
+    'plugin:import/typescript',
+    'plugin:json/recommended',
+    'plugin:react/recommended',
+  ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: ['./tsconfig.eslint.json'],
     extraFileExtensions: ['.cjs'],
+  },
+  rules: {
+    '@typescript-eslint/no-empty-function': ['error', { allow: ['arrowFunctions'] }],
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      },
+    ],
+  },
+  settings: {
+    react: {
+      version: 'detect',
+    },
   },
   overrides: [
     {

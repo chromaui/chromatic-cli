@@ -1,9 +1,11 @@
+import { describe, expect, it, vi } from 'vitest';
+
 import storybookInfo from '../lib/getStorybookInfo';
 import { setStorybookInfo } from './storybookInfo';
 
-jest.mock('../lib/getStorybookInfo');
+vi.mock('../lib/getStorybookInfo');
 
-const getStorybookInfo = <jest.MockedFunction<typeof storybookInfo>>storybookInfo;
+const getStorybookInfo = vi.mocked(storybookInfo);
 
 describe('startStorybook', () => {
   it('starts the app and sets the isolatorUrl on context', async () => {

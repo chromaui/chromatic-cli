@@ -36,7 +36,6 @@ export const decorators = [
   (storyFn, { kind }) => {
     if (kind.startsWith('CLI/')) {
       document.body.style.backgroundColor = '#16242c';
-      // eslint-disable-next-line react/no-danger
       return <code style={style} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
     }
     document.body.style.backgroundColor = 'paleturquoise';

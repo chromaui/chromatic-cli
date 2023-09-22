@@ -1,9 +1,11 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   AncestorBuildsQueryResult,
   findAncestorBuildWithCommit,
 } from './findAncestorBuildWithCommit';
 
-jest.mock('./git', () => ({
+vi.mock('./git', () => ({
   commitExists: (hash) => hash.match(/exists/),
 }));
 
@@ -19,7 +21,7 @@ const makeResult = (ancestorBuilds: Build[]): AncestorBuildsQueryResult => ({
 });
 
 describe('findAncestorBuildWithCommit', () => {
-  const client = { runQuery: jest.fn() } as any;
+  const client = { runQuery: vi.fn() } as any;
   beforeEach(() => {
     client.runQuery.mockReset();
   });

@@ -1,12 +1,13 @@
-import execaDefault from 'execa';
+import { execa as execaDefault, execaCommand } from 'execa';
 import mockfs from 'mock-fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildStorybook, setSourceDir, setSpawnParams } from './build';
 
-jest.mock('execa');
+vi.mock('execa');
 
-const execa = <jest.MockedFunction<typeof execaDefault>>execaDefault;
-const execaCommand = <jest.MockedFunction<typeof execaDefault.command>>execaDefault.command;
+const execa = vi.mocked(execaDefault);
+const command = vi.mocked(execaCommand);
 
 afterEach(() => {
   mockfs.restore();
@@ -44,7 +45,7 @@ describe('setSpawnParams', () => {
   beforeEach(() => {
     process.env.npm_execpath = npmExecPath;
     execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
-    execaCommand.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
+    command.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
   });
 
   it('sets the spawn params on the context', async () => {
@@ -114,7 +115,7 @@ describe('setSpawnParams', () => {
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.1.0' },
       git: { changedFiles: ['./index.js'] },
-      log: { warn: jest.fn() },
+      log: { warn: vi.fn() },
     } as any;
     await setSpawnParams(ctx);
     expect(ctx.log.warn).toHaveBeenCalledWith(
@@ -128,11 +129,12 @@ describe('buildStorybook', () => {
     const ctx = {
       spawnParams: { command: 'npm run build:storybook --script-args' },
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: { debug: jest.fn() },
+      log: { debug: vi.fn() },
+      options: {},
     } as any;
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
-    expect(execaCommand).toHaveBeenCalledWith(
+    expect(command).toHaveBeenCalledWith(
       'npm run build:storybook --script-args',
       expect.objectContaining({ stdio: expect.any(Array) })
     );
@@ -147,9 +149,9 @@ describe('buildStorybook', () => {
       spawnParams: { command: 'npm run build:storybook --script-args' },
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: { debug: jest.fn(), error: jest.fn() },
+      log: { debug: vi.fn(), error: vi.fn() },
     } as any;
-    execaCommand.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
+    command.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
   });

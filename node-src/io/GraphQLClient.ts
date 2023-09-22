@@ -61,9 +61,7 @@ export default class GraphQLClient {
           // Throw an error to retry the query if it's safe to do so, otherwise bail
           if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
 
-          // eslint-disable-next-line no-param-reassign
           err.name = err.name || 'GraphQLError';
-          // eslint-disable-next-line no-param-reassign
           err.at = `${err.path.join('.')} ${err.locations
             .map((l) => `${l.line}:${l.column}`)
             .join(', ')}`;

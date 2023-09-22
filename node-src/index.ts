@@ -50,7 +50,7 @@ export async function run({
 }): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
-  const log = createLogger(env);
+  const log = createLogger();
 
   const pkgInfo = await readPkgUp({ cwd: process.cwd() });
   if (!pkgInfo) {

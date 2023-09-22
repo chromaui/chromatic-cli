@@ -5,7 +5,6 @@ export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.sli
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 export const tick = async (times: number, interval: number, fn: (i: number) => any) => {
   for (let i = 0; i < times; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
     await delay(interval);
     fn(i);
   }
@@ -40,7 +39,6 @@ export const baseStorybookUrl = (url: string) => url.replace(/\/iframe\.html$/, 
 export const rewriteErrorMessage = (err: Error, message: string) => {
   try {
     // DOMException doesn't allow setting the message, so this might fail
-    // eslint-disable-next-line no-param-reassign
     err.message = message;
     return err;
   } catch (ex) {

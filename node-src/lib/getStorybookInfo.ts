@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import { pathExistsSync } from 'fs-extra';
 import path from 'path';
 
 import { Context } from '../types';
@@ -13,9 +13,9 @@ export default async function getStorybookInfo(
     if (ctx.options.storybookBuildDir) {
       const projectJsonPath = path.resolve(ctx.options.storybookBuildDir, 'project.json');
       // This test makes sure we fall through if the file does not exist.
-      if (fs.pathExistsSync(projectJsonPath)) {
-        /* 
-          This await is needed in order to for the catch block 
+      if (pathExistsSync(projectJsonPath)) {
+        /*
+          This await is needed in order to for the catch block
           to get the result in the case that this function fails.
         */
         return await getStorybookMetadataFromProjectJson(projectJsonPath);

@@ -1,8 +1,8 @@
-/* eslint-disable jest/expect-expect */
 import { exec } from 'child_process';
 import process from 'process';
-import { promisify } from 'util';
 import tmp from 'tmp-promise';
+import { promisify } from 'util';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { getCommit } from './git';
 import { getParentCommits } from './getParentCommits';
@@ -14,10 +14,6 @@ import createMockIndex from './mocks/mock-index';
 import simpleLoopDescription from './mocks/simple-loop';
 import threeParentsDescription from './mocks/three-parents';
 import twoRootsDescription from './mocks/two-roots';
-
-// Bumping up the Jest timeout for this file because it is timing out sometimes
-// I think this just a bit of a slow file due to git stuff, takes ~2-3s on my computer.
-jest.setTimeout(30 * 1000);
 
 const descriptions = {
   simpleLoop: simpleLoopDescription,
@@ -63,7 +59,7 @@ async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
   return commitMap[name].hash;
 }
 
-const log = { debug: jest.fn() };
+const log = { debug: vi.fn() };
 const options = {};
 
 // This is built in from TypeScript 4.5
@@ -76,16 +72,16 @@ interface Repository {
 }
 
 const repositories: Record<string, Repository> = {};
-beforeAll(async () =>
-  Promise.all(
+beforeAll(async () => {
+  await Promise.all(
     Object.keys(descriptions).map(async (key) => {
       const dirname = (await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` })).path;
       const runGit = makeRunGit(dirname);
       const commitMap = await generateGitRepository(runGit, descriptions[key]);
       repositories[key] = { dirname, runGit, commitMap };
     })
-  )
-);
+  );
+});
 
 describe('getParentCommits', () => {
   it('returns no baseline when there are no builds for the app', async () => {
