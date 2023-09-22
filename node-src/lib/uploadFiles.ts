@@ -16,6 +16,7 @@ export default async function uploadFiles(
   files: File[],
   onProgress: (progress: number) => void
 ) {
+  const { experimental_abortSignal: signal } = ctx.options;
   const limitConcurrency = pLimit(10);
   let totalProgress = 0;
 
@@ -27,7 +28,11 @@ export default async function uploadFiles(
 
       return limitConcurrency(() =>
         retry(
-          async () => {
+          async (bail) => {
+            if (signal?.aborted) {
+              return bail(signal.reason || new Error('Aborted'));
+            }
+
             const progressStream = progress();
 
             progressStream.on('progress', ({ delta }) => {
@@ -46,6 +51,7 @@ export default async function uploadFiles(
                   'content-length': contentLength.toString(),
                   'cache-control': 'max-age=31536000',
                 },
+                signal,
               },
               { retries: 0 } // already retrying the whole operation
             );
