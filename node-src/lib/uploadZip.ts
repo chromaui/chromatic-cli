@@ -16,12 +16,17 @@ export async function uploadZip(
   contentLength: number,
   onProgress: (progress: number) => void
 ) {
+  const { experimental_abortSignal: signal } = ctx.options;
   let totalProgress = 0;
 
   ctx.log.debug(`Uploading ${contentLength} bytes for '${path}' to '${url}'`);
 
   return retry(
-    async () => {
+    async (bail) => {
+      if (signal?.aborted) {
+        return bail(signal.reason || new Error('Aborted'));
+      }
+
       const progressStream = progress();
 
       progressStream.on('progress', ({ delta }) => {
@@ -38,6 +43,7 @@ export async function uploadZip(
             'content-type': 'application/zip',
             'content-length': contentLength.toString(),
           },
+          signal,
         },
         { retries: 0 } // already retrying the whole operation
       );
@@ -60,24 +66,30 @@ export async function uploadZip(
 }
 
 export async function waitForUnpack(ctx: Context, url: string) {
+  const { experimental_abortSignal: signal } = ctx.options;
+
   ctx.log.debug(`Waiting for zip unpack sentinel file to appear at '${url}'`);
 
   return retry(
-    async (bail: (reason: Error) => void) => {
+    async (bail) => {
+      if (signal?.aborted) {
+        return bail(signal.reason || new Error('Aborted'));
+      }
+
       let res: Response;
       try {
-        res = await ctx.http.fetch(url, {}, { retries: 0, noLogErrorBody: true });
+        res = await ctx.http.fetch(url, { signal }, { retries: 0, noLogErrorBody: true });
       } catch (e) {
         const { response = {} } = e;
         if (response.status === 403) {
-          bail(new Error('Provided signature expired.'));
+          return bail(new Error('Provided signature expired.'));
         }
         throw new Error('Sentinel file not present.');
       }
 
       const result = await res.text();
       if (result !== SENTINEL_SUCCESS_VALUE) {
-        bail(new Error('Zip file failed to unpack remotely.'));
+        return bail(new Error('Zip file failed to unpack remotely.'));
       } else {
         ctx.log.debug(`Sentinel file present, continuing.`);
       }
