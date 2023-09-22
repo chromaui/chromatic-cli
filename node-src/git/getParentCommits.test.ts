@@ -83,7 +83,6 @@ beforeAll(async () => {
   );
 });
 
-// Skipped because vitest doesn't allo `chdir` in workers
 describe('getParentCommits', () => {
   it('returns no baseline when there are no builds for the app', async () => {
     //  A - B - C - D - (F)  [main]
