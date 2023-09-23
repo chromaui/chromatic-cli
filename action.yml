@@ -21,6 +21,9 @@ inputs:
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
+  commitSha:
+    description: 'Override the commit SHA'
+    required: false
   debug:
     description: 'Output verbose debugging information'
     required: false
