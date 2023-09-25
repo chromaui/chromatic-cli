@@ -20,7 +20,8 @@ const getBuildInfo = (event: typeof context) => {
   switch (event.eventName) {
     case 'pull_request':
     case 'pull_request_review':
-    case 'pull_request_target': {
+    case 'pull_request_target':
+    case 'merge_group': {
       const { head } = event.payload.pull_request;
       return {
         sha: head.sha,
