@@ -20,8 +20,7 @@ const getBuildInfo = (event: typeof context) => {
   switch (event.eventName) {
     case 'pull_request':
     case 'pull_request_review':
-    case 'pull_request_target':
-    case 'merge_group': {
+    case 'pull_request_target': {
       const { head } = event.payload.pull_request;
       return {
         sha: head.sha,
@@ -67,6 +66,14 @@ const getBuildInfo = (event: typeof context) => {
       return {
         sha: event.sha,
         branch: event.payload.release.target_commitish,
+        slug: event.payload.repository.full_name,
+      };
+    }
+    case 'merge_group': {
+      const { head_sha, head_ref } = event.payload.merge_group;
+      return {
+        sha: head_sha,
+        branch: head_ref,
         slug: event.payload.repository.full_name,
       };
     }
