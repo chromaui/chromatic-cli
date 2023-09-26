@@ -1,8 +1,13 @@
 import cpy from 'cpy';
 import { execaCommand } from 'execa';
-import { readJson } from 'fs-extra';
+import fsExtra from 'fs-extra';
 import { join } from 'path';
 import tmp from 'tmp-promise';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const { readJson } = fsExtra;
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 
@@ -25,7 +30,6 @@ const bumpVersion = async ({ bump, tag, currentTag, dryRun }) => {
     await command(`npm version pre${bump} --preid=${tag}`);
   }
 };
-
 const publishPackage = async ({ tag, dryRun }) => {
   const { version } = await readJson(join(__dirname, '../package.json'));
   const dry = dryRun ? '--dry-run' : '';
