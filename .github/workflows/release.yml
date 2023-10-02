@@ -12,8 +12,13 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Prepare repository
-        # Fetch full git history and tags
         run: git fetch --unshallow --tags
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: yarn-deps-${{ hashFiles('yarn.lock') }}
 
       - name: Install dependencies
         run: yarn install --ignore-scripts
