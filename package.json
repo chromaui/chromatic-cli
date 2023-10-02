@@ -213,7 +213,7 @@
       [
         "exec",
         {
-          "afterShipIt": "yarn docs && push-dir --dir=docs --branch=gh-pages"
+          "afterShipIt": "yarn publish-action"
         }
       ]
     ],
