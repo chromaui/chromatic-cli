@@ -6,8 +6,8 @@ import tmp from 'tmp-promise';
 
 const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 
-const publishAction = async ({ repo, tag, version }) => {
-  console.info(`✅ Publishing '${tag}' action to https://github.com/${repo}`);
+const publishAction = async ({ context, newVersion, repo }) => {
+  console.info(`✅ Publishing '${context}' action to https://github.com/${repo}`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd) => command(cmd, { cwd: path });
@@ -18,36 +18,33 @@ const publishAction = async ({ repo, tag, version }) => {
   await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
 
   await run('git init -b main');
-  await run(`git remote add origin git@github.com:${repo}.git`);
+  await run('git config --global user.name "Chromatic"');
+  await run('git config --global user.email "support@chromatic.com"');
+  await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
   await run('git add .');
-  await run(`git commit -m ${version}`);
+  await run(`git commit -m "${newVersion}"`);
   await run('git tag v1');
-  await run('git push origin head --force');
+  await run('git push origin HEAD:main --force');
   await run('git push --tags --force');
 
   return cleanup();
 };
 
-/**
- * Usage:
- *  release <major | minor | patch> <canary | next | latest> [--dry-run]
- *  release action <canary | next | latest> [--dry-run]
- */
 (async () => {
-  console.log(JSON.parse(process.env.ARG_0));
-  return;
+  const { context, newVersion } = JSON.parse(process.env.ARG_0);
 
-  // if (tag === 'canary') {
-  //   await publishAction({ repo: 'chromaui/action-canary', tag, version });
-  // } else if (tag === 'next') {
-  //   await publishAction({ repo: 'chromaui/action-next', tag, version });
-  // } else {
-  //   await publishAction({ repo: 'chromaui/action-next', tag, version });
-  //   await publishAction({ repo: 'chromaui/action', tag, version });
-  // }
-
-  // if (tag === 'latest' && bump !== 'action') {
-  //   const tagCommand = `npm dist-tag add chromatic@${version} next`;
-  //   console.log(`⚠️ Don't forget to update the 'next' tag by running:\n  ${tagCommand}`);
-  // }
+  switch (context) {
+    case 'canary':
+      await publishAction({ context, newVersion, repo: 'chromaui/action-canary' });
+      break;
+    case 'next':
+      await publishAction({ context, newVersion, repo: 'chromaui/action-next' });
+      break;
+    case 'latest':
+      await publishAction({ context, newVersion, repo: 'chromaui/action-next' });
+      await publishAction({ context, newVersion, repo: 'chromaui/action' });
+      break;
+    default:
+      console.warn(`Unknown context: ${context}`);
+  }
 })();
