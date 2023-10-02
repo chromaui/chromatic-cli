@@ -208,8 +208,7 @@
     "plugins": [
       "npm",
       "released"
-    ],
-    "onlyPublishWithReleaseLabel": true
+    ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
   "storybook": {
