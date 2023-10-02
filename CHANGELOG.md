@@ -1,3 +1,13 @@
+# 7.3.0 - 2023-10-02
+
+- [822](https://github.com/chromaui/chromatic-cli/pull/822) Add `experimental_abortSignal` to Node API to allow canceling builds
+- [819](https://github.com/chromaui/chromatic-cli/pull/819) Migrate from Jest to Vitest, update ESLint config and upgrade Execa
+
+# 7.2.0 - 2023-09-19
+
+- [814](https://github.com/chromaui/chromatic-cli/pull/814) Add support for a JSON configuration file
+- [819](https://github.com/chromaui/chromatic-cli/pull/819) No longer log to loggly
+
 # 7.1.0 - 2023-09-07
 
 - [812](https://github.com/chromaui/chromatic-cli/pull/812) Allow running a build from a repo with only one commit when not in CI
