@@ -1,12 +1,11 @@
-import { execa as execaDefault, execaCommand } from 'execa';
+import { execaCommand } from 'execa';
 import mockfs from 'mock-fs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { buildStorybook, setSourceDir, setSpawnParams } from './build';
+import { buildStorybook, setSourceDir, setBuildCommand } from './build';
 
 vi.mock('execa');
 
-const execa = vi.mocked(execaDefault);
 const command = vi.mocked(execaCommand);
 
 afterEach(() => {
@@ -39,16 +38,8 @@ describe('setSourceDir', () => {
   });
 });
 
-describe('setSpawnParams', () => {
-  const npmExecPath = process.env.npm_execpath;
-
-  beforeEach(() => {
-    process.env.npm_execpath = npmExecPath;
-    execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
-    command.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
-  });
-
-  it('sets the spawn params on the context', async () => {
+describe('setBuildCommand', () => {
+  it('sets the build command on the context', async () => {
     mockfs({ './package.json': JSON.stringify({ packageManager: 'npm' }) });
 
     const ctx = {
@@ -57,16 +48,11 @@ describe('setSpawnParams', () => {
       storybook: { version: '6.2.0' },
       git: { changedFiles: ['./index.js'] },
     } as any;
-    await setSpawnParams(ctx);
+    await setBuildCommand(ctx);
 
-    expect(ctx.spawnParams).toEqual({
-      client: 'npm',
-      clientVersion: '1.2.3',
-      nodeVersion: '1.2.3',
-      platform: expect.stringMatching(/darwin|linux|win32/),
-      command:
-        'npm run build:storybook -- --output-dir ./source-dir/ --webpack-stats-json ./source-dir/',
-    });
+    expect(ctx.buildCommand).toEqual(
+      'npm run build:storybook -- --output-dir ./source-dir/ --webpack-stats-json ./source-dir/'
+    );
   });
 
   it('supports yarn', async () => {
@@ -78,15 +64,9 @@ describe('setSpawnParams', () => {
       storybook: { version: '6.1.0' },
       git: {},
     } as any;
-    await setSpawnParams(ctx);
+    await setBuildCommand(ctx);
 
-    expect(ctx.spawnParams).toEqual({
-      client: 'yarn',
-      clientVersion: '1.2.3',
-      nodeVersion: '1.2.3',
-      platform: expect.stringMatching(/darwin|linux|win32/),
-      command: 'yarn run build:storybook --output-dir ./source-dir/',
-    });
+    expect(ctx.buildCommand).toEqual('yarn run build:storybook --output-dir ./source-dir/');
   });
 
   it('supports pnpm', async () => {
@@ -98,15 +78,9 @@ describe('setSpawnParams', () => {
       storybook: { version: '6.1.0' },
       git: {},
     } as any;
-    await setSpawnParams(ctx);
+    await setBuildCommand(ctx);
 
-    expect(ctx.spawnParams).toEqual({
-      client: 'pnpm',
-      clientVersion: '1.2.3',
-      nodeVersion: '1.2.3',
-      platform: expect.stringMatching(/darwin|linux|win32/),
-      command: 'pnpm run build:storybook --output-dir ./source-dir/',
-    });
+    expect(ctx.buildCommand).toEqual('pnpm run build:storybook --output-dir ./source-dir/');
   });
 
   it('warns if --only-changes is not supported', async () => {
@@ -117,7 +91,7 @@ describe('setSpawnParams', () => {
       git: { changedFiles: ['./index.js'] },
       log: { warn: vi.fn() },
     } as any;
-    await setSpawnParams(ctx);
+    await setBuildCommand(ctx);
     expect(ctx.log.warn).toHaveBeenCalledWith(
       'Storybook version 6.2.0 or later is required to use the --only-changed flag'
     );
@@ -127,7 +101,7 @@ describe('setSpawnParams', () => {
 describe('buildStorybook', () => {
   it('runs the build command', async () => {
     const ctx = {
-      spawnParams: { command: 'npm run build:storybook --script-args' },
+      buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: { debug: vi.fn() },
       options: {},
@@ -138,15 +112,12 @@ describe('buildStorybook', () => {
       'npm run build:storybook --script-args',
       expect.objectContaining({ stdio: expect.any(Array) })
     );
-    expect(ctx.log.debug).toHaveBeenCalledWith(
-      'Using spawnParams:',
-      JSON.stringify(ctx.spawnParams, null, 2)
-    );
+    expect(ctx.log.debug).toHaveBeenCalledWith('Running build command:', ctx.buildCommand);
   });
 
   it('fails when build times out', async () => {
     const ctx = {
-      spawnParams: { command: 'npm run build:storybook --script-args' },
+      buildCommand: 'npm run build:storybook --script-args',
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
       log: { debug: vi.fn(), error: vi.fn() },

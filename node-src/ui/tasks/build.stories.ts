@@ -6,13 +6,11 @@ export default {
   decorators: [(storyFn) => task(storyFn())],
 };
 
-const spawnParams = {
-  command: 'yarn run build-storybook -o storybook-static',
-};
+const buildCommand = 'yarn run build-storybook -o storybook-static';
 
 export const Initial = () => initial;
 
-export const Building = () => pending({ spawnParams } as any);
+export const Building = () => pending({ buildCommand } as any);
 
 export const Built = () =>
   success({
@@ -26,4 +24,4 @@ export const Skipped = () =>
     options: { storybookBuildDir: '/users/me/project/storybook-static' },
   } as any);
 
-export const Failed = () => failed({ spawnParams } as any);
+export const Failed = () => failed({ buildCommand } as any);

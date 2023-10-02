@@ -9,7 +9,7 @@ export const initial = {
 export const pending = (ctx: Context) => ({
   status: 'pending',
   title: `Building your Storybook`,
-  output: `Running command: ${ctx.spawnParams.command}`,
+  output: `Running command: ${ctx.buildCommand}`,
 });
 
 export const success = (ctx: Context) => ({
@@ -27,5 +27,5 @@ export const skipped = (ctx: Context) => ({
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: `Building your Storybook`,
-  output: `Command failed: ${ctx.spawnParams.command}`,
+  output: `Command failed: ${ctx.buildCommand}`,
 });
