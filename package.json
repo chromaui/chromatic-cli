@@ -77,7 +77,7 @@
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "yarn run build && auto shipit",
-    "publish-action": "./scripts/publish-action.mjs $ARG_0 $ARG_1 $ARG_2 $ARG_3",
+    "publish-action": "./scripts/publish-action.mjs",
     "trace": "./dist/bin.js trace",
     "trim-stats": "./dist/bin.js trim-stats-file",
     "storybook": "start-storybook -p 9009 -s static",

@@ -34,9 +34,7 @@ const publishAction = async ({ repo, tag, version }) => {
  *  release action <canary | next | latest> [--dry-run]
  */
 (async () => {
-  const [data] = process.argv.slice(2);
-
-  console.log(JSON.parse(data));
+  console.log(JSON.parse(process.env.ARG_0));
   return;
 
   // if (tag === 'canary') {
