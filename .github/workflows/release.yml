@@ -14,12 +14,6 @@ jobs:
       - name: Prepare repository
         run: git fetch --unshallow --tags
 
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: yarn-deps-${{ hashFiles('yarn.lock') }}
-
       - name: Install dependencies
         run: yarn install --ignore-scripts
 
