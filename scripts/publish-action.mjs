@@ -34,9 +34,9 @@ const publishAction = async ({ repo, tag, version }) => {
  *  release action <canary | next | latest> [--dry-run]
  */
 (async () => {
-  // const [bump, tag, ...rest] = process.argv.slice(2);
+  const [data] = process.argv.slice(2);
 
-  console.log(JSON.stringify(process.argv.slice(1)));
+  console.log(JSON.parse(data));
   return;
 
   // if (tag === 'canary') {
