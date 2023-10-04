@@ -1,3 +1,15 @@
+# v7.2.2 (Wed Oct 04 2023)
+
+#### ⚠️ Pushed to `main`
+
+- Clean up auto-generated changelog ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.2.1 (Wed Oct 04 2023)
 
 #### 🐛 Bug Fix
