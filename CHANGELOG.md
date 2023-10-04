@@ -1,3 +1,34 @@
+# v7.2.2 (Wed Oct 04 2023)
+
+#### ⚠️ Pushed to `main`
+
+- Clean up auto-generated changelog ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v7.2.1 (Wed Oct 04 2023)
+
+#### 🐛 Bug Fix
+
+- Add `experimental_abortSignal` to Node API to allow canceling builds [#822](https://github.com/chromaui/chromatic-cli/pull/822) ([@ghengeveld](https://github.com/ghengeveld))
+- Migrate from Jest to Vitest, update ESLint config and upgrade Execa [#821](https://github.com/chromaui/chromatic-cli/pull/821) ([@ghengeveld](https://github.com/ghengeveld))
+- Replace release script with auto shipit [#828](https://github.com/chromaui/chromatic-cli/pull/828) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# 7.2.0 - 2023-09-19
+
+- [814](https://github.com/chromaui/chromatic-cli/pull/814) Add support for a JSON configuration file
+- [819](https://github.com/chromaui/chromatic-cli/pull/819) No longer log to loggly
+
 # 7.1.0 - 2023-09-07
 
 - [812](https://github.com/chromaui/chromatic-cli/pull/812) Allow running a build from a repo with only one commit when not in CI
