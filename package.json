@@ -206,21 +206,6 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "auto": {
-    "plugins": [
-      "npm",
-      "released",
-      [
-        "exec",
-        {
-          "afterShipIt": "yarn publish-action"
-        }
-      ]
-    ],
-    "shipit": {
-      "onlyGraduateWithReleaseLabel": true
-    }
-  },
   "docs": "https://www.chromatic.com/docs/cli",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
