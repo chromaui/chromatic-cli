@@ -10,6 +10,7 @@ const publishAction = async ({ context, newVersion, repo }) => {
   console.info(`✅ Publishing '${context}' action to https://github.com/${repo}`);
 
   const [major, minor, patch] = newVersion.replace(/^(\d+\.\d+\.\d+).*/, '$1').split('.');
+  if (!major || !minor || !patch) throw new Error(`Invalid version: ${newVersion}`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd) => command(cmd, { cwd: path });
@@ -25,10 +26,7 @@ const publishAction = async ({ context, newVersion, repo }) => {
   await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
   await run('git add .');
   await run(`git commit -m "${newVersion}"`);
-  await run('git tag v1');
-  await run(`git tag v${major}.x.x`);
-  await run(`git tag v${major}.${minor}.x`);
-  await run(`git tag v${major}.${minor}.${patch}`);
+  await run('git tag -f v1');
   await run('git push origin HEAD:main --force');
   await run('git push --tags --force');
 
