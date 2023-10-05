@@ -8,6 +8,9 @@ on:
       - node-src/**
       - isChromatic.*
       - package.json
+  pull_request:
+    branches:
+      - main
 
 jobs:
   release:
