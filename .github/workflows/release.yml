@@ -1,6 +1,13 @@
 name: Release
 
-on: [push]
+on:
+  push:
+    paths:
+      - action-src/**
+      - bin-src/**
+      - node-src/**
+      - isChromatic.*
+      - package.json
 
 jobs:
   release:
