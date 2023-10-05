@@ -25,7 +25,7 @@ const publishAction = async ({ context, newVersion, repo }) => {
   await run('git config --global user.email "support@chromatic.com"');
   await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
   await run('git add .');
-  await run(`git commit -m "${newVersion}"`);
+  await run(`git commit -m ${newVersion}`);
   await run('git tag -f v1');
   await run('git push origin HEAD:main --force');
   await run('git push --tags --force');
