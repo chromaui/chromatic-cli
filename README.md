@@ -17,38 +17,6 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md#readme)
 
-## Using a `next` version
-
-From time to time we pre-publish a `next` version of the package to test new features. To use the
-next branch you can either:
-
-### Using `npx`
-
-Change your script to use the `next` dist-tag:
-
-```bash
-npx chromatic@next --project-token ...
-```
-
-### Using a dependency in `package.json`
-
-Update to the latest `next` version with:
-
-```bash
-yarn add --dev chromatic@next
-
-# or
-npm i --save-dev chromatic@next
-```
-
-### Using the github action
-
-Use our `chromatic-next` action:
-
-```yaml
-- uses: chromaui/action-next@v1
-```
-
 ## Contributing
 
 Contributions of any kind are welcome! We're available to chat via the Intercom widget on the documentation site.
@@ -58,7 +26,7 @@ Contributions of any kind are welcome! We're available to chat via the Intercom 
 Compatibility is guaranteed between this package and Chromatic like so:
 
 - Production Chromatic ensures it’s compatible with what’s on npm
-- What's on the main branch is equal to what's published on npm
+- What's on the Git tag is equal to what's published on npm for that version
 - This package ensures it’s compatible with production Chromatic
 
 To facilitate upgrading in the future, removing and adding features, this is the process:
@@ -76,7 +44,7 @@ To facilitate upgrading in the future, removing and adding features, this is the
 #### Running against staging
 
 ```bash
-CHROMATIC_INDEX_URL=https://index.staging-chromatic.com yarn chromatic -t 253df72b53d2
+CHROMATIC_INDEX_URL=https://index.staging-chromatic.com yarn chromatic -t <token>
 ```
 
 #### Running against development
@@ -93,41 +61,29 @@ To only test a small number of test stories as a smoke test, use:
 SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
 ```
 
-### Publishing a new version to npm
+### Publishing a new version
 
-Before publishing, make sure you've done the following:
+We use `auto` to automate the release process. Versions are bumped, tags are created and the changelog is updated automatically. A new release goes out whenever a PR is merged to `main`. A PR **must** have **exactly one** of the following labels before merging:
 
-- Updated CHANGELOG.md
-- Committed and pushed everything (clean working directory)
-- Decide on the proper semver bump (major/minor/patch)
-- Decide on the proper tag (canary/next/latest)
+- `major` triggers a major version bump
+- `minor` triggers a minor version bump
+- `patch` triggers a patch version bump
+
+Additionally, a PR **may** have exactly one of these labels:
+
+- `release` creates a `latest` rather than a `next` release (see below)
+- `skip-release` does not create a release at all
 
 We have three types of releases:
 
-- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment.
-- `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request.
-- `latest` releases are the general audience production releases, used by most people.
+- `latest` releases are the general audience production releases, used by most people. Automatically created when merging a PR with the `release` label.
+- `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request. Automatically created when merging a PR without the `release` and `skip-release` labels.
+- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR, but does not auto-publush the GitHub Action.
 
-> For GitHub Actions, we publish `chromaui/action-canary` and `chromaui/action-next`, which contain the latest `canary` or `next` release, respectively. A `latest` release will also automatically update `chromaui/action-next` (besides `chromaui/action`), in order to keep users who happen to depend on `chromaui/action-next` up to date with the `latest` release.
+> For GitHub Actions, we publish `chromaui/action-next` and `chromaui/action-canary`. The latter is only published manually, rather than for every PR.
 
-A script is provided to create new releases:
-
-```sh
-yarn release <major|minor|patch> <canary|next|latest> [--dry-run]
-```
-
-This script ensures the version is bumped properly, the tag is set correctly and the corresponding GitHub Action is updated.
-
-#### Examples:
+A script is provided to manually publish the GitHub Action, though it's typically only necessary for `action-canary` releases:
 
 ```sh
-yarn release patch canary
+yarn publish-action <canary|next|latest>
 ```
-
-Releases e.g. `6.6.1-canary.0`.
-
-```sh
-yarn release major latest
-```
-
-Releases e.g. `7.0.0`.
