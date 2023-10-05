@@ -39,6 +39,8 @@ const publishAction = async ({ context, newVersion, repo }) => {
  * For manual (local) use:
  *   yarn publish-action <context>
  *   e.g. yarn publish-action canary
+ *
+ * Make sure to build the action before publishing manually.
  */
 (async () => {
   const { default: pkg } = await import('../package.json', { assert: { type: 'json' } });
@@ -49,7 +51,12 @@ const publishAction = async ({ context, newVersion, repo }) => {
 
   switch (context) {
     case 'canary':
-      await publishAction({ context, newVersion, repo: 'chromaui/action-canary' });
+      if (process.env.ARG_0) {
+        console.info('Skipping automatic publish of action-canary.');
+        console.info('Run `yarn publish-action canary` to publish a canary action.');
+      } else {
+        await publishAction({ context, newVersion, repo: 'chromaui/action-canary' });
+      }
       break;
     case 'next':
       await publishAction({ context, newVersion, repo: 'chromaui/action-next' });
