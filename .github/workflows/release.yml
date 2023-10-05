@@ -1,16 +1,25 @@
 name: Release
 
 on:
+  # PRs have their own canary releases which always run but don't publish the GitHub Action.
+  # To allow debugging the release process, this does not have a paths filter.
+  pull_request:
+    branches:
+      - main
+
+  # Pushes to main trigger a release and publish the GitHub Action. To allow the occasional update
+  # to markdown and config files, only changes to actual source code trigger a release.
   push:
+    branches:
+      - main
     paths:
       - action-src/**
       - bin-src/**
       - node-src/**
+      - action.yml
       - isChromatic.*
       - package.json
-  pull_request:
-    branches:
-      - main
+      - storybook-addon.*
 
 jobs:
   release:
