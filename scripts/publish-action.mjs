@@ -6,11 +6,10 @@ import tmp from 'tmp-promise';
 
 const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 
-const publishAction = async ({ context, newVersion, repo }) => {
-  console.info(`✅ Publishing ${newVersion} as ${context} action to https://github.com/${repo}`);
+const publishAction = async ({ version, repo }) => {
+  const dryRun = process.argv.includes('--dry-run');
 
-  const [major, minor, patch] = newVersion.replace(/^(\d+\.\d+\.\d+).*/, '$1').split('.');
-  if (!major || !minor || !patch) throw new Error(`Invalid version: ${newVersion}`);
+  console.info(`\n✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}\n`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd) => command(cmd, { cwd: path });
@@ -23,11 +22,16 @@ const publishAction = async ({ context, newVersion, repo }) => {
   await run('git init -b main');
   await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
   await run('git add .');
-  await run(`git commit -m ${newVersion}`);
+  await run(`git commit -m ${version}`);
   await run('git tag -f v1'); // For backwards compatibility
   await run('git tag -f latest');
-  await run('git push origin HEAD:main --force');
-  await run('git push --tags --force');
+
+  if (dryRun) {
+    console.info('\n✅ Skipping git push due to --dry-run\n');
+  } else {
+    await run('git push origin HEAD:main --force');
+    await run('git push --tags --force');
+  }
 
   return cleanup();
 };
@@ -36,35 +40,37 @@ const publishAction = async ({ context, newVersion, repo }) => {
  * Generally, this script is invoked by auto's `afterShipIt` hook.
  *
  * For manual (local) use:
- *   yarn publish-action <context>
+ *   yarn publish-action [context] [--dry-run]
  *   e.g. yarn publish-action canary
+ *   or   yarn publish-action --dry-run
  *
  * Make sure to build the action before publishing manually.
  */
 (async () => {
   const { default: pkg } = await import('../package.json', { assert: { type: 'json' } });
 
-  const { context, newVersion } = process.env.ARG_0
-    ? JSON.parse(process.env.ARG_0)
-    : { newVersion: pkg.version, context: process.argv[2] };
+  const [, major, minor, patch, tag = 'latest'] =
+    pkg.version.match(/(\d+)\.(\d+)\.(\d+)-?(\w+)?/) || [];
+  if (!major || !minor || !patch) throw new Error(`Invalid version: ${pkg.version}`);
+
+  const context = ['canary', 'next', 'latest'].includes(process.argv[2]) ? process.argv[2] : tag;
 
   switch (context) {
     case 'canary':
-      if (process.env.ARG_0) {
+      if (process.argv[2] !== 'canary') {
         console.info('Skipping automatic publish of action-canary.');
         console.info('Run `yarn publish-action canary` to publish a canary action.');
-      } else {
-        await publishAction({ context, newVersion, repo: 'chromaui/action-canary' });
+        return;
       }
+      await publishAction({ version: pkg.version, repo: 'chromaui/action-canary' });
       break;
     case 'next':
-      await publishAction({ context, newVersion, repo: 'chromaui/action-next' });
+      await publishAction({ version: pkg.version, repo: 'chromaui/action-next' });
       break;
     case 'latest':
-      await publishAction({ context, newVersion, repo: 'chromaui/action-next' });
-      await publishAction({ context, newVersion, repo: 'chromaui/action' });
+      await publishAction({ version: pkg.version, repo: 'chromaui/action' });
       break;
     default:
-      console.warn(`Unknown context: ${context}`);
+      throw new Error(`Unknown tag: ${tag}`);
   }
 })();

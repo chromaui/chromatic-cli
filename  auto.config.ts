@@ -7,7 +7,7 @@ import type { AutoRc } from 'auto';
 export default function rc(): AutoRc {
   return {
     baseBranch: 'main',
-    plugins: ['npm', 'released', ['exec', { afterShipIt: 'yarn publish-action' }]],
+    plugins: ['npm', 'released'],
     shipit: {
       onlyGraduateWithReleaseLabel: true,
       prerelease: true,
