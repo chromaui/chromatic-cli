@@ -1,3 +1,15 @@
+# v7.2.3 (Fri Oct 06 2023)
+
+#### 🐛 Bug Fix
+
+- Fix dependency tracing for monorepos with no `package.json` at the repository root [#827](https://github.com/chromaui/chromatic-cli/pull/827) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.2.2 (Wed Oct 04 2023)
 
 #### ⚠️ Pushed to `main`
