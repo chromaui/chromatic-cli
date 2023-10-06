@@ -17,7 +17,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: ['./tsconfig.eslint.json'],
-    extraFileExtensions: ['.cjs'],
+    extraFileExtensions: ['.cjs', '.mjs'],
   },
   rules: {
     '@typescript-eslint/no-empty-function': ['error', { allow: ['arrowFunctions'] }],
