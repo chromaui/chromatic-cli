@@ -9,7 +9,7 @@ const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 const publishAction = async ({ version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
-  console.info(`\n✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}\n`);
+  console.info(`✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
   const run = (cmd) => command(cmd, { cwd: path });
@@ -27,7 +27,7 @@ const publishAction = async ({ version, repo }) => {
   await run('git tag -f latest');
 
   if (dryRun) {
-    console.info('\n✅ Skipping git push due to --dry-run\n');
+    console.info('✅ Skipping git push due to --dry-run');
   } else {
     await run('git push origin HEAD:main --force');
     await run('git push --tags --force');
@@ -47,13 +47,23 @@ const publishAction = async ({ version, repo }) => {
  * Make sure to build the action before publishing manually.
  */
 (async () => {
+  const { stdout: status } = await execaCommand('git status --porcelain');
+  if (status) {
+    console.error(`❗️ Working directory is not clean:\n${status}`);
+    return;
+  }
+
   const { default: pkg } = await import('../package.json', { assert: { type: 'json' } });
 
-  const [, major, minor, patch, tag = 'latest'] =
-    pkg.version.match(/(\d+)\.(\d+)\.(\d+)-?(\w+)?/) || [];
-  if (!major || !minor || !patch) throw new Error(`Invalid version: ${pkg.version}`);
+  const [, major, minor, patch, tag] = pkg.version.match(/(\d+)\.(\d+)\.(\d+)-?(\w+)?/) || [];
+  if (!major || !minor || !patch) {
+    console.error(`❗️ Invalid version: ${pkg.version}`);
+    return;
+  }
 
-  const context = ['canary', 'next', 'latest'].includes(process.argv[2]) ? process.argv[2] : tag;
+  const context = ['canary', 'next', 'latest'].includes(process.argv[2])
+    ? process.argv[2]
+    : tag || 'latest';
 
   switch (context) {
     case 'canary':
@@ -71,6 +81,6 @@ const publishAction = async ({ version, repo }) => {
       await publishAction({ version: pkg.version, repo: 'chromaui/action' });
       break;
     default:
-      throw new Error(`Unknown tag: ${tag}`);
+      console.error(`❗️ Unknown tag: ${tag}`);
   }
 })();
