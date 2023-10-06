@@ -34,14 +34,11 @@ export const findChangedDependencies = async (ctx: Context) => {
       { rootPath, rootManifestPath, rootLockfilePath },
       'No manifest or lockfile found at the root of the repository'
     );
-    throw new Error(
-      `Could not find ${PACKAGE_JSON}, ${PACKAGE_LOCK} or ${YARN_LOCK} at the root of the repository`
-    );
   }
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
-  // Handle monorepos with multiple package.json files.
+  // Handle monorepos with (multiple) nested package.json files.
   const nestedManifestPaths = await findFiles(`**/${PACKAGE_JSON}`);
   const pathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
@@ -54,7 +51,13 @@ export const findChangedDependencies = async (ctx: Context) => {
       return [manifestPath, lockfilePath || rootLockfilePath];
     })
   );
-  pathPairs.unshift([rootManifestPath, rootLockfilePath]);
+
+  if (rootManifestPath && rootLockfilePath) {
+    pathPairs.unshift([rootManifestPath, rootLockfilePath]);
+  } else if (!pathPairs.length) {
+    throw new Error(`Could not find any pairs of ${PACKAGE_JSON} + ${PACKAGE_LOCK} / ${YARN_LOCK}`);
+  }
+
   ctx.log.debug({ pathPairs }, `Found ${pathPairs.length} manifest/lockfile pairs to check`);
 
   const tracedPairs = pathPairs.filter(([manifestPath, lockfilePath]) => {
