@@ -4,11 +4,11 @@ import { join } from 'path';
 import { file as tempFile } from 'tmp-promise';
 import { Context } from '../types';
 
-export default async function makeZipFile(ctx: Context) {
+export default async function makeZipFile(ctx: Context, fileInfo: { paths: string[] }) {
   const archive = archiver('zip', { zlib: { level: 9 } });
   const tmp = await tempFile({ postfix: '.zip' });
   const sink = createWriteStream(null, { fd: tmp.fd });
-  const { paths } = ctx.fileInfo;
+  const { paths } = fileInfo;
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
     sink.on('close', () => {

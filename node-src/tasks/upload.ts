@@ -5,10 +5,7 @@ import { URL } from 'url';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
-import makeZipFile from '../lib/compress';
-import uploadFiles from '../lib/uploadFiles';
 import { rewriteErrorMessage, throttle } from '../lib/utils';
-import { uploadZip, waitForUnpack } from '../lib/uploadZip';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
 import {
@@ -30,46 +27,7 @@ import { readStatsFile } from './read-stats-file';
 import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
-
-const GetUploadUrlsMutation = `
-  mutation GetUploadUrlsMutation($buildId: ObjID, $paths: [String!]!) {
-    getUploadUrls(buildId: $buildId, paths: $paths) {
-      domain
-      urls {
-        path
-        url
-        contentType
-      }
-    }
-  }
-`;
-interface GetUploadUrlsMutationResult {
-  getUploadUrls: {
-    domain: string;
-    urls: {
-      path: string;
-      url: string;
-      contentType: string;
-    }[];
-  };
-}
-
-const GetZipUploadUrlMutation = `
-  mutation GetZipUploadUrlMutation($buildId: ObjID) {
-    getZipUploadUrl(buildId: $buildId) {
-      domain
-      url
-      sentinelUrl
-    }
-  }
-`;
-interface GetZipUploadUrlMutationResult {
-  getZipUploadUrl: {
-    domain: string;
-    url: string;
-    sentinelUrl: string;
-  };
-}
+import { uploadAsIndividualFiles, uploadAsZipFile } from '../lib/upload';
 
 interface PathSpec {
   pathname: string;
@@ -214,93 +172,40 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   }
 };
 
-async function uploadAsIndividualFiles(
-  ctx: Context,
-  task: Task,
-  updateProgress: (progress: number, total: number) => void
-) {
-  const { lengths, paths, total } = ctx.fileInfo;
-  const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
-    GetUploadUrlsMutation,
-    { buildId: ctx.announcedBuild.id, paths }
-  );
-  const { domain, urls } = getUploadUrls;
-  const files = urls.map(({ path, url, contentType }) => ({
-    path: join(ctx.sourceDir, path),
-    url,
-    contentType,
-    contentLength: lengths.find(({ knownAs }) => knownAs === path).contentLength,
-  }));
-
-  task.output = starting().output;
-
-  try {
-    await uploadFiles(ctx, files, (progress) => updateProgress(progress, total));
-  } catch (e) {
-    if (files.find(({ path }) => path === e.message)) {
-      throw new Error(failed({ path: e.message }).output);
-    }
-    throw e;
-  }
-
-  ctx.uploadedBytes = total;
-  ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
-}
-
-async function uploadAsZipFile(
-  ctx: Context,
-  task: Task,
-  updateProgress: (progress: number, total: number) => void
-) {
-  const zipped = await makeZipFile(ctx);
-  const { path, size: total } = zipped;
-  const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
-    GetZipUploadUrlMutation,
-    { buildId: ctx.announcedBuild.id }
-  );
-  const { domain, url, sentinelUrl } = getZipUploadUrl;
-
-  task.output = starting().output;
-
-  try {
-    await uploadZip(ctx, path, url, total, (progress) => updateProgress(progress, total));
-  } catch (e) {
-    if (path === e.message) {
-      throw new Error(failed({ path }).output);
-    }
-    throw e;
-  }
-
-  ctx.uploadedBytes = total;
-  ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
-
-  return waitForUnpack(ctx, sentinelUrl);
-}
-
 export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(preparing)(ctx, task);
 
-  const updateProgress = throttle(
-    (progress, total) => {
-      const percentage = Math.round((progress / total) * 100);
-      task.output = uploading({ percentage }).output;
+  const options = {
+    onStart: () => (task.output = starting().output),
+    onProgress: throttle(
+      (progress, total) => {
+        const percentage = Math.round((progress / total) * 100);
+        task.output = uploading({ percentage }).output;
 
-      ctx.options.experimental_onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
+        ctx.options.experimental_onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
+      },
+      // Avoid spamming the logs with progress updates in non-interactive mode
+      ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
+    ),
+    onComplete: (uploadedBytes: number, domain: string) => {
+      ctx.uploadedBytes = uploadedBytes;
+      ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
     },
-    // Avoid spamming the logs with progress updates in non-interactive mode
-    ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
-  );
+    onError: (error: Error, path?: string) => {
+      throw path === error.message ? new Error(failed({ path }).output) : error;
+    },
+  };
 
   if (ctx.options.zip) {
     try {
-      await uploadAsZipFile(ctx, task, updateProgress);
+      await uploadAsZipFile(ctx, ctx.fileInfo, options);
     } catch (err) {
       ctx.log.debug({ err }, 'Error uploading zip file');
-      await uploadAsIndividualFiles(ctx, task, updateProgress);
+      await uploadAsIndividualFiles(ctx, ctx.fileInfo, options);
     }
   } else {
-    await uploadAsIndividualFiles(ctx, task, updateProgress);
+    await uploadAsIndividualFiles(ctx, ctx.fileInfo, options);
   }
 };
 

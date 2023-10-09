@@ -10,7 +10,7 @@ import * as git from './git/git';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
-import uploadFiles from './lib/uploadFiles';
+import { uploadFiles } from './lib/uploadFiles';
 import { runAll } from '.';
 import { runBuild } from './runBuild';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';

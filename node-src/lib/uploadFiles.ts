@@ -11,7 +11,7 @@ interface File {
   contentLength: number;
 }
 
-export default async function uploadFiles(
+export async function uploadFiles(
   ctx: Context,
   files: File[],
   onProgress: (progress: number) => void
