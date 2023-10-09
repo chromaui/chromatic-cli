@@ -40,17 +40,20 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   // Handle monorepos with (multiple) nested package.json files.
   const nestedManifestPaths = await findFiles(`**/${PACKAGE_JSON}`);
-  const pathPairs = await Promise.all(
-    nestedManifestPaths.map(async (manifestPath) => {
+  let pathPairs = await Promise.all(
+    nestedManifestPaths.map(async (manifestPath: string) => {
       const dirname = path.dirname(manifestPath);
-      const [lockfilePath] = await findFiles(
+      // Fall back to the root lockfile if we can't find one in the same directory.
+      const [lockfilePath = rootLockfilePath] = await findFiles(
         `${dirname}/${YARN_LOCK}`,
         `${dirname}/${PACKAGE_LOCK}`
       );
-      // Fall back to the root lockfile if we can't find one in the same directory.
-      return [manifestPath, lockfilePath || rootLockfilePath];
+      return lockfilePath && [manifestPath, lockfilePath];
     })
   );
+
+  // Deal with missing rootLockfilePath which may have been used as fallback.
+  pathPairs = pathPairs.filter(Boolean);
 
   if (rootManifestPath && rootLockfilePath) {
     pathPairs.unshift([rootManifestPath, rootLockfilePath]);
