@@ -1,4 +1,5 @@
 import { emailHash } from '../lib/emailHash';
+import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
@@ -39,6 +40,22 @@ export const setEnvironment = async (ctx: Context) => {
   ctx.log.debug(`Got environment:\n${JSON.stringify(ctx.environment, null, 2)}`);
 };
 
+export const setRuntimeMetadata = async (ctx: Context) => {
+  ctx.runtimeMetadata = {
+    nodePlatform: process.platform,
+    nodeVersion: process.versions.node,
+  };
+
+  try {
+    const packageManager = await getPackageManagerName();
+    ctx.runtimeMetadata.packageManager = packageManager as any;
+    const packageManagerVersion = await getPackageManagerVersion(packageManager);
+    ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
+  } catch (e) {
+    ctx.log.debug(`Failed to set runtime metadata: ${e.message}`);
+  }
+};
+
 export const announceBuild = async (ctx: Context) => {
   const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
   const {
@@ -71,6 +88,7 @@ export const announceBuild = async (ctx: Context) => {
         isLocalBuild,
         needsBaselines: !!turboSnap && !turboSnap.bailReason,
         packageVersion: ctx.pkg.version,
+        ...ctx.runtimeMetadata,
         rebuildForBuildId,
         storybookAddons: ctx.storybook.addons,
         storybookVersion: ctx.storybook.version,
@@ -97,5 +115,11 @@ export default createTask({
   name: 'initialize',
   title: initial.title,
   skip: (ctx: Context) => ctx.skip,
-  steps: [transitionTo(pending), setEnvironment, announceBuild, transitionTo(success, true)],
+  steps: [
+    transitionTo(pending),
+    setEnvironment,
+    setRuntimeMetadata,
+    announceBuild,
+    transitionTo(success, true),
+  ],
 });

@@ -68,7 +68,12 @@ export async function getCommit(revision = '') {
     // Technically this yields the author info, not committer info
     `git --no-pager log -n 1 --format="%H ## %ct ## %ae ## %an" ${revision}`
   );
-  const [commit, committedAtSeconds, committerEmail, committerName] = result.split(' ## ');
+
+  // Ignore lines that don't match the expected format (e.g. gpg signature info)
+  const format = new RegExp('^[a-f0-9]+ ## ');
+  const data = result.split('\n').find((line: string) => format.test(line));
+
+  const [commit, committedAtSeconds, committerEmail, committerName] = data.split(' ## ');
   const committedAt = Number(committedAtSeconds) * 1000;
   return { commit, committedAt, committerEmail, committerName };
 }
@@ -119,7 +124,10 @@ export async function getUncommittedHash() {
 
 export async function hasPreviousCommit() {
   const result = await execGitCommand(`git --no-pager log -n 1 --skip=1 --format="%H"`);
-  return !!result.trim();
+
+  // Ignore lines that don't match the expected format (e.g. gpg signature info)
+  const allhex = new RegExp('^[a-f0-9]+$');
+  return result.split('\n').some((line: string) => allhex.test(line));
 }
 
 // Check if a commit exists in the repository

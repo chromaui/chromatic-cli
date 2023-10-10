@@ -19,13 +19,24 @@ export default function fatalError(
   const website = link(pkg.docs);
   const errors = [].concat(error);
 
-  const { git, storybook, spawnParams, exitCode, exitCodeKey, isolatorUrl, cachedUrl, build } = ctx;
+  const {
+    git,
+    storybook,
+    runtimeMetadata,
+    exitCode,
+    exitCodeKey,
+    isolatorUrl,
+    cachedUrl,
+    build,
+    buildCommand,
+  } = ctx;
   const debugInfo = {
     timestamp,
     sessionId,
     gitVersion: git && git.version,
     nodePlatform: process.platform,
     nodeVersion: process.versions.node,
+    ...runtimeMetadata,
     packageName: pkg.name,
     packageVersion: pkg.version,
     ...(storybook ? { storybook } : {}),
@@ -35,7 +46,7 @@ export default function fatalError(
     ...(options && options.buildScriptName
       ? { buildScript: scripts[options.buildScriptName] }
       : {}),
-    ...(spawnParams ? { spawnParams } : {}),
+    ...(buildCommand && { buildCommand }),
     exitCode,
     exitCodeKey,
     errorType: errors.map((err) => err.name).join('\n'),

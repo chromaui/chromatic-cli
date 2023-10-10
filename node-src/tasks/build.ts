@@ -1,4 +1,4 @@
-import { execa, execaCommand } from 'execa';
+import { execaCommand } from 'execa';
 import { createWriteStream, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
@@ -10,9 +10,7 @@ import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
-import { getPackageManagerName, getPackageManagerRunCommand } from '../lib/getPackageManager';
-
-const trimOutput = ({ stdout }) => stdout && stdout.toString().trim();
+import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -26,20 +24,17 @@ export const setSourceDir = async (ctx: Context) => {
   }
 };
 
-export const setSpawnParams = async (ctx) => {
+export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
       ? semver.gte(semver.coerce(ctx.storybook.version), '6.2.0')
       : true;
+
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
-  const client = await getPackageManagerName();
-  const clientVersion = await execa(client, ['--version']).then(trimOutput);
-  const nodeVersion = await execa('node', ['--version']).then(trimOutput);
-
-  const command = await getPackageManagerRunCommand(
+  ctx.buildCommand = await getPackageManagerRunCommand(
     [
       ctx.options.buildScriptName,
       '--output-dir',
@@ -48,14 +43,6 @@ export const setSpawnParams = async (ctx) => {
       ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
     ].filter(Boolean)
   );
-
-  ctx.spawnParams = {
-    client,
-    clientVersion,
-    nodeVersion,
-    platform: process.platform,
-    command,
-  };
 };
 
 const timeoutAfter = (ms) =>
@@ -71,10 +58,10 @@ export const buildStorybook = async (ctx: Context) => {
 
   const { experimental_abortSignal: signal } = ctx.options;
   try {
-    const { command } = ctx.spawnParams;
-    ctx.log.debug('Using spawnParams:', JSON.stringify(ctx.spawnParams, null, 2));
+    ctx.log.debug('Running build command:', ctx.buildCommand);
+    ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
 
-    const subprocess = execaCommand(command, { stdio: [null, logFile, logFile], signal });
+    const subprocess = execaCommand(ctx.buildCommand, { stdio: [null, logFile, logFile], signal });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
     signal?.throwIfAborted();
@@ -101,7 +88,7 @@ export default createTask({
   },
   steps: [
     setSourceDir,
-    setSpawnParams,
+    setBuildCommand,
     transitionTo(pending),
     startActivity,
     buildStorybook,
