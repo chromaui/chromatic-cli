@@ -170,7 +170,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
       const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
-      if (changedPackageFiles.length > 0) {
+      if (changedPackageFiles.length > 0 && !ctx.untracedFiles) {
         ctx.turboSnap.bailReason = { changedPackageFiles };
         ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
         return;
