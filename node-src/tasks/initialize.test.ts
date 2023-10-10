@@ -1,6 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { execa as execaDefault, execaCommand } from 'execa';
+import mockfs from 'mock-fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { announceBuild, setEnvironment } from './initialize';
+import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
+
+vi.mock('execa');
+
+const execa = vi.mocked(execaDefault);
+const command = vi.mocked(execaCommand);
+
+afterEach(() => {
+  mockfs.restore();
+});
 
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
@@ -19,6 +30,70 @@ describe('setEnvironment', () => {
   });
 });
 
+describe('setRuntimeMetadata', () => {
+  beforeEach(() => {
+    execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
+    command.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
+  });
+
+  it('sets the build command on the context', async () => {
+    mockfs({ './package.json': JSON.stringify({ packageManager: 'npm' }) });
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setRuntimeMetadata(ctx);
+
+    expect(ctx.runtimeMetadata).toEqual({
+      nodePlatform: expect.stringMatching(/darwin|linux|win32/),
+      nodeVersion: process.versions.node,
+      packageManager: 'npm',
+      packageManagerVersion: '1.2.3',
+    });
+  });
+
+  it('supports yarn', async () => {
+    mockfs({ './package.json': JSON.stringify({ packageManager: 'yarn' }) });
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: {},
+    } as any;
+    await setRuntimeMetadata(ctx);
+
+    expect(ctx.runtimeMetadata).toEqual({
+      nodePlatform: expect.stringMatching(/darwin|linux|win32/),
+      nodeVersion: process.versions.node,
+      packageManager: 'yarn',
+      packageManagerVersion: '1.2.3',
+    });
+  });
+
+  it('supports pnpm', async () => {
+    mockfs({ './package.json': JSON.stringify({ packageManager: 'pnpm' }) });
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: {},
+    } as any;
+    await setRuntimeMetadata(ctx);
+
+    expect(ctx.runtimeMetadata).toEqual({
+      nodePlatform: expect.stringMatching(/darwin|linux|win32/),
+      nodeVersion: process.versions.node,
+      packageManager: 'pnpm',
+      packageManagerVersion: '1.2.3',
+    });
+  });
+});
+
 describe('announceBuild', () => {
   const defaultContext = {
     env,
@@ -28,6 +103,12 @@ describe('announceBuild', () => {
     git: { version: 'whatever', matchesBranch: () => false, committedAt: 0 },
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
+    runtimeMetadata: {
+      nodePlatform: 'darwin',
+      nodeVersion: '18.12.1',
+      packageManager: 'npm',
+      pacakgeManagerVersion: '8.19.2',
+    },
   };
 
   it('creates a build on the index and puts it on context', async () => {
@@ -54,6 +135,7 @@ describe('announceBuild', () => {
           storybookAddons: ctx.storybook.addons,
           storybookVersion: ctx.storybook.version,
           storybookViewLayer: ctx.storybook.viewLayer,
+          ...defaultContext.runtimeMetadata,
         },
       },
       { retries: 3 }

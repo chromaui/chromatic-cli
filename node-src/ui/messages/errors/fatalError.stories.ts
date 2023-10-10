@@ -30,16 +30,13 @@ const context = {
   options: {
     buildScriptName: 'build:storybook',
   },
-  spawnParams: {
-    client: 'npm',
-    clientVersion: '7.11.2',
-    platform: 'darwin',
-    command: 'npm run build:storybook -- --output-dir /tmp/path/to/output',
-    spawnOptions: {
-      preferLocal: true,
-      localDir: '/path/to/node_modules/.bin',
-    },
+  runtimeMetadata: {
+    nodePlatform: 'darwin',
+    nodeVersion: 'v18.12.1',
+    packageManager: 'npm',
+    packageManagerVersion: '8.19.2',
   },
+  buildCommand: 'npm run build:storybook -- --output-dir /tmp/path/to/output',
   exitCode: 255,
   exitCodeKey: 'UNKNOWN_ERROR',
   build: {
