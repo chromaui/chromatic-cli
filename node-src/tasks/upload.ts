@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import slash from 'slash';
-import { URL } from 'url';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -197,15 +196,21 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     },
   };
 
+  const files = ctx.fileInfo.paths.map((path) => ({
+    localPath: join(ctx.sourceDir, path),
+    targetPath: path,
+    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
+  }));
+
   if (ctx.options.zip) {
     try {
-      await uploadAsZipFile(ctx, ctx.fileInfo, options);
+      await uploadAsZipFile(ctx, files, options);
     } catch (err) {
       ctx.log.debug({ err }, 'Error uploading zip file');
-      await uploadAsIndividualFiles(ctx, ctx.fileInfo, options);
+      await uploadAsIndividualFiles(ctx, files, options);
     }
   } else {
-    await uploadAsIndividualFiles(ctx, ctx.fileInfo, options);
+    await uploadAsIndividualFiles(ctx, files, options);
   }
 };
 

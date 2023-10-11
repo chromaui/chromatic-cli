@@ -440,14 +440,14 @@ it('calls out to npm build script passed and uploads files', async () => {
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/iframe\.html$/),
-        url: 'https://cdn.example.com/iframe.html',
+        localPath: expect.stringMatching(/\/iframe\.html$/),
+        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/index\.html$/),
-        url: 'https://cdn.example.com/index.html',
+        localPath: expect.stringMatching(/\/index\.html$/),
+        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -465,14 +465,14 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/iframe\.html$/),
-        url: 'https://cdn.example.com/iframe.html',
+        localPath: expect.stringMatching(/\/iframe\.html$/),
+        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/index\.html$/),
-        url: 'https://cdn.example.com/index.html',
+        localPath: expect.stringMatching(/\/index\.html$/),
+        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)

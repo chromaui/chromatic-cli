@@ -5,8 +5,8 @@ import progress from 'progress-stream';
 import { Context } from '../types';
 
 interface File {
-  path: string;
-  url: string;
+  localPath: string;
+  targetUrl: string;
   contentType: string;
   contentLength: number;
 }
@@ -21,10 +21,12 @@ export async function uploadFiles(
   let totalProgress = 0;
 
   await Promise.all(
-    files.map(({ path, url, contentType, contentLength }) => {
+    files.map(({ localPath, targetUrl, contentType, contentLength }) => {
       let fileProgress = 0; // The bytes uploaded for this this particular file
 
-      ctx.log.debug(`Uploading ${contentLength} bytes of ${contentType} for '${path}' to '${url}'`);
+      ctx.log.debug(
+        `Uploading ${contentLength} bytes of ${contentType} for '${localPath}' to '${targetUrl}'`
+      );
 
       return limitConcurrency(() =>
         retry(
@@ -42,10 +44,10 @@ export async function uploadFiles(
             });
 
             const res = await ctx.http.fetch(
-              url,
+              targetUrl,
               {
                 method: 'PUT',
-                body: createReadStream(path).pipe(progressStream),
+                body: createReadStream(localPath).pipe(progressStream),
                 headers: {
                   'content-type': contentType,
                   'content-length': contentLength.toString(),
@@ -57,17 +59,17 @@ export async function uploadFiles(
             );
 
             if (!res.ok) {
-              ctx.log.debug(`Uploading '${path}' failed: %O`, res);
-              throw new Error(path);
+              ctx.log.debug(`Uploading '${localPath}' failed: %O`, res);
+              throw new Error(localPath);
             }
-            ctx.log.debug(`Uploaded '${path}'.`);
+            ctx.log.debug(`Uploaded '${localPath}'.`);
           },
           {
             retries: ctx.env.CHROMATIC_RETRIES,
             onRetry: (err: Error) => {
               totalProgress -= fileProgress;
               fileProgress = 0;
-              ctx.log.debug('Retrying upload %s, %O', url, err);
+              ctx.log.debug('Retrying upload %s, %O', targetUrl, err);
               onProgress(totalProgress);
             },
           }

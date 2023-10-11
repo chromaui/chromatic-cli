@@ -1,5 +1,3 @@
-import { join } from 'path';
-
 import makeZipFile from './compress';
 import { Context } from '../types';
 import { uploadZip, waitForUnpack } from './uploadZip';
@@ -47,15 +45,11 @@ interface GetZipUploadUrlMutationResult {
 
 export async function uploadAsIndividualFiles(
   ctx: Context,
-  fileInfo: {
-    paths: string[];
-    lengths: {
-      knownAs: string;
-      pathname: string;
-      contentLength: number;
-    }[];
-    total: number;
-  },
+  files: {
+    localPath: string;
+    targetPath: string;
+    contentLength?: number;
+  }[],
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
@@ -63,25 +57,23 @@ export async function uploadAsIndividualFiles(
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
-  const { lengths, paths, total } = fileInfo;
   const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
     GetUploadUrlsMutation,
-    { buildId: ctx.announcedBuild.id, paths }
+    { buildId: ctx.announcedBuild.id, paths: files.map(({ targetPath }) => targetPath) }
   );
   const { domain, urls } = getUploadUrls;
-  const files = urls.map(({ path, url, contentType }) => ({
-    path: join(ctx.sourceDir, path),
-    url,
-    contentType,
-    contentLength: lengths.find(({ knownAs }) => knownAs === path).contentLength,
-  }));
+  const targets = urls.map(({ path, url, contentType }) => {
+    const { localPath, contentLength } = files.find((f) => f.targetPath === path);
+    return { contentLength, contentType, localPath, targetUrl: url };
+  });
+  const total = targets.reduce((acc, { contentLength }) => acc + contentLength, 0);
 
   options.onStart?.();
 
   try {
-    await uploadFiles(ctx, files, (progress) => options.onProgress?.(progress, total));
+    await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, total));
   } catch (e) {
-    return options.onError?.(e, files.some(({ path }) => path === e.message) && e.message);
+    return options.onError?.(e, files.some((f) => f.localPath === e.message) && e.message);
   }
 
   options.onComplete?.(total, domain);
@@ -89,7 +81,7 @@ export async function uploadAsIndividualFiles(
 
 export async function uploadAsZipFile(
   ctx: Context,
-  fileInfo: { paths: string[] },
+  files: { localPath: string }[],
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
@@ -97,7 +89,7 @@ export async function uploadAsZipFile(
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
-  const zipped = await makeZipFile(ctx, fileInfo);
+  const zipped = await makeZipFile(ctx, { paths: files.map((f) => f.localPath) });
   const { path, size: total } = zipped;
   const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
     GetZipUploadUrlMutation,
