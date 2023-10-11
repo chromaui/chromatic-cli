@@ -11,11 +11,6 @@ const DEFAULT_LEVEL = 'info';
 
 export const CHROMATIC_LOG_FILE = 'chromatic.log';
 
-unlink(CHROMATIC_LOG_FILE, () => {});
-
-const stream = createWriteStream(CHROMATIC_LOG_FILE, { flags: 'a' });
-const appendToLogFile = (message: string) => stream.write(message + '\n');
-
 // Top-level promise rejection handler to deal with initialization errors
 const handleRejection = (reason: string) => console.error('Unhandled promise rejection:', reason);
 process.on('unhandledRejection', handleRejection);
@@ -49,10 +44,14 @@ export interface Logger {
 export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
+  if (level !== 'silent') unlink(CHROMATIC_LOG_FILE, () => {});
 
   let interactive = !process.argv.slice(2).includes('--no-interactive');
   let enqueue = false;
   const queue = [];
+
+  const stream = level !== 'silent' ? createWriteStream(CHROMATIC_LOG_FILE, { flags: 'a' }) : null;
+  const appendToLogFile = (message: string) => stream?.write(message + '\n');
 
   const log =
     (type: LogType, logFileOnly?: boolean) =>
