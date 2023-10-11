@@ -6,7 +6,11 @@ import { Context } from '../../../types';
 import { info } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ options, buildLogFile, spawnParams }: Context, { message }, buildLog) => {
+export default (
+  { options, buildCommand, buildLogFile, runtimeMetadata }: Context,
+  { message },
+  buildLog
+) => {
   const { buildScriptName } = options;
   const lines = buildLog.split(EOL).filter((line) => line && !line.startsWith('<s>'));
 
@@ -21,7 +25,8 @@ export default ({ options, buildLogFile, spawnParams }: Context, { message }, bu
       )}
     `),
     message,
-    chalk`${info} Spawn settings:\n{dim ${JSON.stringify(spawnParams, null, 2)}}`,
+    chalk`${info} Build command:\n{dim ${buildCommand}}`,
+    chalk`${info} Runtime metadata:\n{dim ${JSON.stringify(runtimeMetadata, null, 2)}}`,
     chalk`${info} Storybook build output:\n{dim ${buildLogFile}}`,
     lines.join(`\n`),
   ].join('\n\n');

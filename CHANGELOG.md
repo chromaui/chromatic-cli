@@ -1,3 +1,19 @@
+# v7.3.0 (Tue Oct 10 2023)
+
+#### 🚀 Enhancement
+
+- Pass runtime metadata in `announceBuild` [#826](https://github.com/chromaui/chromatic-cli/pull/826) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Gracefully handle gpg signature info in `git log` output [#833](https://github.com/chromaui/chromatic-cli/pull/833) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.2.3 (Fri Oct 06 2023)
 
 #### 🐛 Bug Fix

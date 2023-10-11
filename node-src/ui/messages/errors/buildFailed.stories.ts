@@ -4,12 +4,14 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-const spawnParams = {
-  client: 'npm',
-  clientVersion: '7.11.2',
-  platform: 'darwin',
-  command:
-    'npm run build-storybook -- --output-dir /var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp',
+const buildCommand =
+  'npm run build-storybook -- --output-dir /var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp';
+
+const runtimeMetadata = {
+  nodePlatform: 'darwin',
+  nodeVersion: '18.12.1',
+  packageManager: 'npm',
+  packageManagerVersion: '8.19.2',
 };
 
 const buildLog = `
@@ -50,8 +52,9 @@ export const BuildFailed = () =>
   buildFailed(
     {
       options: { buildScriptName: 'build:storybook' },
+      buildCommand,
       buildLogFile: '/path/to/project/build-storybook.log',
-      spawnParams,
+      runtimeMetadata,
     } as any,
     { message: 'Command failed with exit code 1' },
     buildLog
