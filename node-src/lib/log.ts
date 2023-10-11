@@ -1,4 +1,5 @@
 import debug from 'debug';
+import { createWriteStream, unlink } from 'fs';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
@@ -8,8 +9,15 @@ const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
 
+export const CHROMATIC_LOG_FILE = 'chromatic.log';
+
+unlink(CHROMATIC_LOG_FILE, () => {});
+
+const stream = createWriteStream(CHROMATIC_LOG_FILE, { flags: 'a' });
+const appendToLogFile = (message: string) => stream.write(message + '\n');
+
 // Top-level promise rejection handler to deal with initialization errors
-const handleRejection = (reason) => console.error('Unhandled promise rejection:', reason);
+const handleRejection = (reason: string) => console.error('Unhandled promise rejection:', reason);
 process.on('unhandledRejection', handleRejection);
 
 // Omits any JSON metadata, returning only the message string
@@ -30,6 +38,7 @@ export interface Logger {
   warn: LogFn;
   info: LogFn;
   log: LogFn;
+  file: LogFn;
   debug: LogFn;
   queue: () => void;
   flush: () => void;
@@ -46,12 +55,15 @@ export const createLogger = () => {
   const queue = [];
 
   const log =
-    (type: LogType) =>
-    (...args) => {
+    (type: LogType, logFileOnly?: boolean) =>
+    (...args: any[]) => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
-      // Convert the messages to an appropriate format
-      const messages = interactive ? logInteractive(args) : logVerbose(type, args);
+      const logs = logVerbose(type, args);
+      logs.forEach(appendToLogFile);
+      if (logFileOnly) return;
+
+      const messages = interactive ? logInteractive(args) : logs;
       if (!messages.length) return;
 
       // Queue up the logs or print them right away
@@ -71,6 +83,7 @@ export const createLogger = () => {
     warn: log('warn'),
     info: log('info'),
     log: log('info'),
+    file: log('info', true),
     debug: log('debug'),
     queue: () => {
       enqueue = true;
@@ -85,7 +98,7 @@ export const createLogger = () => {
     },
   };
 
-  debug.log = (...args) => logger.debug(format(...args));
+  debug.log = (...args: any[]) => logger.debug(format(...args));
 
   // Redirect unhandled promise rejections
   process.off('unhandledRejection', handleRejection);

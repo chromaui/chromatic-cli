@@ -1,30 +1,35 @@
-export default class NonTTYRenderer {
+import UpdateRenderer from 'listr-update-renderer';
+
+export default class LoggingRenderer {
   tasks;
   options;
+  updateRenderer;
 
   constructor(tasks: any, options: any) {
     this.tasks = tasks;
     this.options = options;
+    this.updateRenderer = new UpdateRenderer(tasks, options);
   }
 
   static get nonTTY() {
-    return true;
+    return false;
   }
 
   render() {
+    this.updateRenderer.render();
     for (const task of this.tasks) {
       let lastData;
       task.subscribe((event) => {
-        if (event.type === 'TITLE') this.options.log.info(`${task.title}`);
+        if (event.type === 'TITLE') this.options.log.file(`${task.title}`);
         if (event.type === 'DATA' && lastData !== event.data) {
           lastData = event.data;
-          this.options.log.info(`    → ${event.data}`);
+          this.options.log.file(`    → ${event.data}`);
         }
       });
     }
   }
 
   end() {
-    // do nothing
+    this.updateRenderer.end();
   }
 }

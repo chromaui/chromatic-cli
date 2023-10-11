@@ -3,6 +3,7 @@ import Listr from 'listr';
 import GraphQLClient from './io/GraphQLClient';
 import { getConfiguration } from './lib/getConfiguration';
 import getOptions from './lib/getOptions';
+import LoggingRenderer from './lib/LoggingRenderer';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
@@ -49,8 +50,16 @@ export async function runBuild(ctx: Context) {
 
     try {
       ctx.log.info('');
-      if (ctx.options.interactive) ctx.log.queue(); // queue up any log messages while Listr is running
-      const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
+      const options = {
+        log: ctx.log,
+        renderer: NonTTYRenderer,
+      };
+      if (ctx.options.interactive) {
+        // Use an enhanced version of Listr's default renderer, which also logs to a file
+        options.renderer = LoggingRenderer;
+        // Queue up any non-Listr log messages while Listr is running
+        ctx.log.queue();
+      }
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
       endActivity(ctx);
