@@ -48,7 +48,7 @@ export async function uploadAsIndividualFiles(
   files: {
     localPath: string;
     targetPath: string;
-    contentLength?: number;
+    contentLength: number;
   }[],
   options: {
     onStart?: () => void;

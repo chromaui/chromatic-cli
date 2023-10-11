@@ -77,6 +77,7 @@ export default function getOptions({
     branchName: undefined,
     patchHeadRef: undefined,
     patchBaseRef: undefined,
+    uploadMetadata: undefined,
   };
 
   const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
@@ -123,6 +124,7 @@ export default function getOptions({
     branchName,
     patchHeadRef,
     patchBaseRef,
+    uploadMetadata: flags.uploadMetadata,
   });
 
   const options: Options = {

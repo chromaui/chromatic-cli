@@ -16,6 +16,7 @@ import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import { getBranch, getCommit, getSlug, getUserEmail, getUncommittedHash } from './git/git';
 import { emailHash } from './lib/emailHash';
+import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 /**
  Make keys of `T` outside of `R` optional.
 */
@@ -82,7 +83,7 @@ export async function run({
   ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
   ctx.extraOptions = options;
 
-  await runAll(ctx);
+  await runAll(ctx as Context);
 
   return {
     // Keep this in sync with the configured outputs in action.yml
@@ -102,7 +103,7 @@ export async function run({
   };
 }
 
-export async function runAll(ctx) {
+export async function runAll(ctx: Context) {
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 
@@ -112,6 +113,10 @@ export async function runAll(ctx) {
 
   if (ctx.options.diagnostics) {
     await writeChromaticDiagnostics(ctx);
+  }
+
+  if (ctx.options.uploadMetadata) {
+    await uploadMetadataFiles(ctx);
   }
 }
 

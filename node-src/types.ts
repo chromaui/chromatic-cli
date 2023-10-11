@@ -41,6 +41,7 @@ export interface Flags {
   list?: boolean;
   interactive?: boolean;
   traceChanged?: string;
+  uploadMetadata?: boolean;
 
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
@@ -65,8 +66,10 @@ export interface Options {
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;
   debug: boolean;
+  diagnostics?: boolean;
   interactive: boolean;
   junitReport: boolean | string;
+  uploadMetadata?: Flags['uploadMetadata'];
   zip: Flags['zip'];
 
   autoAcceptChanges: boolean | string;
@@ -211,6 +214,7 @@ export interface Context {
       packageName?: string;
       packageVersion?: string;
     };
+    mainConfigFilePath?: string;
   };
   spawnParams: {
     client: 'yarn' | 'npm';
