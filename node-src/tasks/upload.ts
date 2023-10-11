@@ -7,7 +7,7 @@ import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import makeZipFile from '../lib/compress';
 import uploadFiles from '../lib/uploadFiles';
-import { rewriteErrorMessage, throttle } from '../lib/utils';
+import { matchesFile, rewriteErrorMessage, throttle } from '../lib/utils';
 import { uploadZip, waitForUnpack } from '../lib/uploadZip';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
@@ -169,7 +169,16 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       }
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
-      const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
+
+      const { untraced = [] } = ctx.options;
+      const tracedPackageManifestChanges = packageManifestChanges
+        ?.map(({ changedFiles, commit }) => ({
+          changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
+          commit,
+        }))
+        .filter(({ changedFiles }) => changedFiles.length > 0);
+
+      const changedPackageFiles = await findChangedPackageFiles(tracedPackageManifestChanges);
       if (changedPackageFiles.length > 0) {
         ctx.turboSnap.bailReason = { changedPackageFiles };
         ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
