@@ -110,6 +110,8 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   transitionTo(tracing)(ctx, task);
 
   const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
+  ctx.fileInfo.statsPath = statsPath;
+
   const { changedFiles, packageManifestChanges } = ctx.git;
   try {
     const changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {

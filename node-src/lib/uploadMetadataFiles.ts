@@ -18,7 +18,7 @@ export async function uploadMetadataFiles(ctx: Context) {
     CHROMATIC_LOG_FILE,
     STORYBOOK_BUILD_LOG_FILE,
     await findStorybookMainConfig(ctx).catch(() => null),
-    ctx.fileInfo.statsPath,
+    ctx.fileInfo?.statsPath,
   ].filter(Boolean);
 
   const files = await Promise.all(
