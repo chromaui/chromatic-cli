@@ -45,6 +45,8 @@ const build: any = {
   build: { webUrl: 'https://www.chromatic.com/build?appId=5d67dc0374b2e300209c41e7&number=7805' },
 };
 
-export const Default = () => metadataHtml(announced, files);
+const date = new Date('2023-10-12T12:05:23.706Z');
 
-export const WithBuildLink = () => metadataHtml(build, files);
+export const Default = () => metadataHtml(announced, files, date);
+
+export const WithBuildLink = () => metadataHtml(build, files, date);

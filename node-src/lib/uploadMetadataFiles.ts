@@ -4,7 +4,7 @@ import { withFile } from 'tmp-promise';
 
 import { STORYBOOK_BUILD_LOG_FILE } from '../tasks/build';
 import { Context, FileDesc } from '../types';
-import getMetadataHtml from '../ui/html/metadata.html';
+import metadataHtml from '../ui/html/metadata.html';
 import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
 import { findStorybookConfigFile } from './getStorybookMetadata';
 import { CHROMATIC_LOG_FILE } from './log';
@@ -48,7 +48,7 @@ export async function uploadMetadataFiles(ctx: Context) {
   }
 
   await withFile(async ({ path }) => {
-    const html = getMetadataHtml(ctx, files);
+    const html = metadataHtml(ctx, files);
     writeFileSync(path, html);
     files.push({
       localPath: path,
