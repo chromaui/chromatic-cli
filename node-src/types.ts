@@ -162,6 +162,12 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
+  runtimeMetadata?: {
+    nodePlatform: NodeJS.Platform;
+    nodeVersion: string;
+    packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
+    packageManagerVersion?: string;
+  };
   environment?: Record<string, string>;
   reportPath?: string;
   isPublishOnly?: boolean;
@@ -215,13 +221,6 @@ export interface Context {
       packageVersion?: string;
     };
     mainConfigFilePath?: string;
-  };
-  spawnParams: {
-    client: 'yarn' | 'npm';
-    clientVersion: string;
-    nodeVersion: string;
-    platform: string;
-    command: string;
   };
   isolatorUrl: string;
   cachedUrl: string;
@@ -290,6 +289,7 @@ export interface Context {
     }[];
   };
   sourceDir: string;
+  buildCommand?: string;
   buildLogFile?: string;
   fileInfo?: {
     paths: string[];
