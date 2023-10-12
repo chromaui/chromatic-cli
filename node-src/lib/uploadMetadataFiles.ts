@@ -2,6 +2,7 @@ import { stat, writeFileSync } from 'fs';
 import { basename } from 'path';
 import { withFile } from 'tmp-promise';
 
+import { main as trimStatsFile } from '../../bin-src/trim-stats-file';
 import { STORYBOOK_BUILD_LOG_FILE } from '../tasks/build';
 import { Context, FileDesc } from '../types';
 import metadataHtml from '../ui/html/metadata.html';
@@ -27,7 +28,7 @@ export async function uploadMetadataFiles(ctx: Context) {
     STORYBOOK_BUILD_LOG_FILE,
     await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/).catch(() => null),
     await findStorybookConfigFile(ctx, /^preview\.[jt]sx?$/).catch(() => null),
-    ctx.fileInfo?.statsPath,
+    ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
   ].filter(Boolean);
 
   const files = await Promise.all<FileDesc>(
