@@ -9,6 +9,7 @@ import { findStorybookConfigFile } from './getStorybookMetadata';
 import { CHROMATIC_LOG_FILE } from './log';
 import { uploadAsIndividualFiles } from './upload';
 import { CHROMATIC_DIAGNOSTICS_FILE } from './writeChromaticDiagnostics';
+import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
 
 const fileSize = (path: string): Promise<number> =>
   new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
@@ -36,6 +37,11 @@ export async function uploadMetadataFiles(ctx: Context) {
     })
   ).then((files) => files.filter(Boolean));
 
+  if (!files.length) {
+    ctx.log.warn('No metadata files found, skipping metadata upload.');
+    return;
+  }
+
   await withFile(async ({ path }) => {
     const html = getMetadataHtml(ctx, files);
     writeFileSync(path, html);
@@ -45,7 +51,7 @@ export async function uploadMetadataFiles(ctx: Context) {
       contentLength: html.length,
     });
 
-    ctx.log.info('Uploading metadata files: \n- ' + files.map((f) => f.targetPath).join('\n- '));
+    ctx.log.info(uploadingMetadata(files));
 
     await uploadAsIndividualFiles(ctx, files);
   });
