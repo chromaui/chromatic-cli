@@ -5,12 +5,12 @@ import { withFile } from 'tmp-promise';
 import { STORYBOOK_BUILD_LOG_FILE } from '../tasks/build';
 import { Context, FileDesc } from '../types';
 import getMetadataHtml from '../ui/html/metadata.html';
+import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
 import { findStorybookConfigFile } from './getStorybookMetadata';
 import { CHROMATIC_LOG_FILE } from './log';
 import { uploadAsIndividualFiles } from './upload';
-import { CHROMATIC_DIAGNOSTICS_FILE } from './writeChromaticDiagnostics';
-import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
 import { baseStorybookUrl } from './utils';
+import { CHROMATIC_DIAGNOSTICS_FILE } from './writeChromaticDiagnostics';
 
 const fileSize = (path: string): Promise<number> =>
   new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
