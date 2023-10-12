@@ -38,6 +38,10 @@ export const decorators = [
       document.body.style.backgroundColor = '#16242c';
       return <code style={style} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
     }
+    if (kind.startsWith('HTML/')) {
+      document.body.style.backgroundColor = '#ffffff';
+      return <div style={{ padding: '1em' }} dangerouslySetInnerHTML={{ __html: storyFn() }} />;
+    }
     document.body.style.backgroundColor = 'paleturquoise';
     return storyFn();
   },

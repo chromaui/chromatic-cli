@@ -1,5 +1,5 @@
 import makeZipFile from './compress';
-import { Context } from '../types';
+import { Context, FileDesc, TargetedFile } from '../types';
 import { uploadZip, waitForUnpack } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
 
@@ -45,11 +45,7 @@ interface GetZipUploadUrlMutationResult {
 
 export async function uploadAsIndividualFiles(
   ctx: Context,
-  files: {
-    localPath: string;
-    targetPath: string;
-    contentLength: number;
-  }[],
+  files: FileDesc[],
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
@@ -62,9 +58,9 @@ export async function uploadAsIndividualFiles(
     { buildId: ctx.announcedBuild.id, paths: files.map(({ targetPath }) => targetPath) }
   );
   const { domain, urls } = getUploadUrls;
-  const targets = urls.map(({ path, url, contentType }) => {
-    const { localPath, contentLength } = files.find((f) => f.targetPath === path);
-    return { contentLength, contentType, localPath, targetUrl: url };
+  const targets = urls.map<TargetedFile>(({ path, url, contentType }) => {
+    const file = files.find((f) => f.targetPath === path);
+    return { ...file, contentType, targetUrl: url };
   });
   const total = targets.reduce((acc, { contentLength }) => acc + contentLength, 0);
 
@@ -81,7 +77,7 @@ export async function uploadAsIndividualFiles(
 
 export async function uploadAsZipFile(
   ctx: Context,
-  files: { localPath: string }[],
+  files: FileDesc[],
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;

@@ -350,3 +350,14 @@ export interface Module {
 export interface Stats {
   modules: Module[];
 }
+
+export interface FileDesc {
+  contentLength: number;
+  localPath: string;
+  targetPath: string;
+}
+
+export interface TargetedFile extends FileDesc {
+  contentType: string;
+  targetUrl: string;
+}

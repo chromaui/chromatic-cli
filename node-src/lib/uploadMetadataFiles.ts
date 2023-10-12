@@ -3,7 +3,8 @@ import { basename } from 'path';
 import { withFile } from 'tmp-promise';
 
 import { STORYBOOK_BUILD_LOG_FILE } from '../tasks/build';
-import { Context } from '../types';
+import { Context, FileDesc } from '../types';
+import getMetadataHtml from '../ui/content/metadata.html';
 import { findStorybookMainConfig } from './getStorybookMetadata';
 import { CHROMATIC_LOG_FILE } from './log';
 import { uploadAsIndividualFiles } from './upload';
@@ -13,6 +14,11 @@ const fileSize = (path: string): Promise<number> =>
   new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
 
 export async function uploadMetadataFiles(ctx: Context) {
+  if (!ctx.announcedBuild) {
+    ctx.log.warn('No build announced, skipping metadata upload.');
+    return;
+  }
+
   const metadataFiles = [
     CHROMATIC_DIAGNOSTICS_FILE,
     CHROMATIC_LOG_FILE,
@@ -21,7 +27,7 @@ export async function uploadMetadataFiles(ctx: Context) {
     ctx.fileInfo?.statsPath,
   ].filter(Boolean);
 
-  const files = await Promise.all(
+  const files = await Promise.all<FileDesc>(
     metadataFiles.map(async (localPath) => {
       const targetPath = `.chromatic/${basename(localPath)}`;
       const contentLength = await fileSize(localPath);
@@ -30,16 +36,7 @@ export async function uploadMetadataFiles(ctx: Context) {
   ).then((files) => files.filter(Boolean));
 
   await withFile(async ({ path }) => {
-    const html = `
-      <!DOCTYPE html>
-      <ul>
-      ${files
-        .map(({ targetPath }) => targetPath.replace(/^\.chromatic\//, ''))
-        .sort()
-        .map((path) => `<li><a href="${path}">${path}</a></li>`)
-        .join('')}
-      </ul>
-    `;
+    const html = getMetadataHtml(ctx, files);
     writeFileSync(path, html);
     files.push({
       localPath: path,

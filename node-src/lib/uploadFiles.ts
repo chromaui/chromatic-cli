@@ -2,18 +2,11 @@ import retry from 'async-retry';
 import { createReadStream } from 'fs';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
-import { Context } from '../types';
-
-interface File {
-  localPath: string;
-  targetUrl: string;
-  contentType: string;
-  contentLength: number;
-}
+import { Context, TargetedFile } from '../types';
 
 export async function uploadFiles(
   ctx: Context,
-  files: File[],
+  files: TargetedFile[],
   onProgress: (progress: number) => void
 ) {
   const { experimental_abortSignal: signal } = ctx.options;
