@@ -4,7 +4,7 @@ import { withFile } from 'tmp-promise';
 
 import { STORYBOOK_BUILD_LOG_FILE } from '../tasks/build';
 import { Context, FileDesc } from '../types';
-import getMetadataHtml from '../ui/content/metadata.html';
+import getMetadataHtml from '../ui/html/metadata.html';
 import { findStorybookConfigFile } from './getStorybookMetadata';
 import { CHROMATIC_LOG_FILE } from './log';
 import { uploadAsIndividualFiles } from './upload';

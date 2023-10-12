@@ -1,4 +1,4 @@
-import { files } from '../../content/metadata.html.stories';
+import { files } from '../../html/metadata.html.stories';
 import uploadingMetadata from './uploadingMetadata';
 
 export default {
