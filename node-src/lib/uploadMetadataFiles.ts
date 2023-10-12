@@ -10,6 +10,7 @@ import { CHROMATIC_LOG_FILE } from './log';
 import { uploadAsIndividualFiles } from './upload';
 import { CHROMATIC_DIAGNOSTICS_FILE } from './writeChromaticDiagnostics';
 import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
+import { baseStorybookUrl } from './utils';
 
 const fileSize = (path: string): Promise<number> =>
   new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
@@ -35,7 +36,11 @@ export async function uploadMetadataFiles(ctx: Context) {
       const contentLength = await fileSize(localPath);
       return contentLength && { localPath, targetPath, contentLength };
     })
-  ).then((files) => files.filter(Boolean));
+  ).then((files) =>
+    files
+      .filter(Boolean)
+      .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }))
+  );
 
   if (!files.length) {
     ctx.log.warn('No metadata files found, skipping metadata upload.');
@@ -51,7 +56,8 @@ export async function uploadMetadataFiles(ctx: Context) {
       contentLength: html.length,
     });
 
-    ctx.log.info(uploadingMetadata(files));
+    const directoryUrl = `${baseStorybookUrl(ctx.isolatorUrl)}/.chromatic/`;
+    ctx.log.info(uploadingMetadata(directoryUrl, files));
 
     await uploadAsIndividualFiles(ctx, files);
   });

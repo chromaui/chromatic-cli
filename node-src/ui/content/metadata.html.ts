@@ -56,7 +56,6 @@ export default ({ announcedBuild, build }: Context, files: FileDesc[]) => `<!DOC
     <span>Metadata files</span>
     <ul>
     ${files
-      .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }))
       .map(({ targetPath, contentLength }) => {
         const path = targetPath.replace(/^\.chromatic\//, '');
         const size = filesize(contentLength);
