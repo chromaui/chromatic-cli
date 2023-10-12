@@ -47,4 +47,4 @@ const build: any = {
 
 export const Default = () => metadataHtml(announced, files);
 
-export const BuildUrl = () => metadataHtml(build, files);
+export const WithBuildLink = () => metadataHtml(build, files);

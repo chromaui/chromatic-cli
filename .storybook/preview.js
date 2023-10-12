@@ -33,7 +33,7 @@ const htmlStyle = {
   fontSize: 14,
   lineHeight: '1',
   color: '#5C6870',
-  margin: 20,
+  padding: 20,
 };
 
 export const parameters = {
