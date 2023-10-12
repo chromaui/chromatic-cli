@@ -15,6 +15,7 @@ export default (
     <title>Build ${announcedBuild.number} metadata files</title>
     <style>
       body {
+        -webkit-font-smoothing: antialiased;
         font-family: 'Nunito Sans', sans-serif;
         font-size: 14px;
         line-height: 1;
