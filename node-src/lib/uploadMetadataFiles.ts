@@ -5,7 +5,7 @@ import { withFile } from 'tmp-promise';
 import { STORYBOOK_BUILD_LOG_FILE } from '../tasks/build';
 import { Context, FileDesc } from '../types';
 import getMetadataHtml from '../ui/content/metadata.html';
-import { findStorybookMainConfig } from './getStorybookMetadata';
+import { findStorybookConfigFile } from './getStorybookMetadata';
 import { CHROMATIC_LOG_FILE } from './log';
 import { uploadAsIndividualFiles } from './upload';
 import { CHROMATIC_DIAGNOSTICS_FILE } from './writeChromaticDiagnostics';
@@ -23,7 +23,8 @@ export async function uploadMetadataFiles(ctx: Context) {
     CHROMATIC_DIAGNOSTICS_FILE,
     CHROMATIC_LOG_FILE,
     STORYBOOK_BUILD_LOG_FILE,
-    await findStorybookMainConfig(ctx).catch(() => null),
+    await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/).catch(() => null),
+    await findStorybookConfigFile(ctx, /^preview\.[jt]sx?$/).catch(() => null),
     ctx.fileInfo?.statsPath,
   ].filter(Boolean);
 
