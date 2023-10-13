@@ -1,3 +1,20 @@
+# v7.4.0 (Fri Oct 13 2023)
+
+#### 🚀 Enhancement
+
+- Support untraced flag in dependency tracing fallback scenario (for pnpm) [#835](https://github.com/chromaui/chromatic-cli/pull/835) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Improvements to auto release workflow [#832](https://github.com/chromaui/chromatic-cli/pull/832) ([@chromatic-support](https://github.com/chromatic-support) [@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- [@chromatic-support](https://github.com/chromatic-support)
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.3.0 (Tue Oct 10 2023)
 
 #### 🚀 Enhancement
