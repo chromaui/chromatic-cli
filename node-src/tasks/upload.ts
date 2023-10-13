@@ -4,7 +4,7 @@ import slash from 'slash';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
-import { rewriteErrorMessage, throttle } from '../lib/utils';
+import { matchesFile, rewriteErrorMessage, throttle } from '../lib/utils';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
 import {
@@ -128,7 +128,16 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       }
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
-      const changedPackageFiles = await findChangedPackageFiles(packageManifestChanges);
+
+      const { untraced = [] } = ctx.options;
+      const tracedPackageManifestChanges = packageManifestChanges
+        ?.map(({ changedFiles, commit }) => ({
+          changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
+          commit,
+        }))
+        .filter(({ changedFiles }) => changedFiles.length > 0);
+
+      const changedPackageFiles = await findChangedPackageFiles(tracedPackageManifestChanges);
       if (changedPackageFiles.length > 0) {
         ctx.turboSnap.bailReason = { changedPackageFiles };
         ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));

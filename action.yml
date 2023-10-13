@@ -61,8 +61,8 @@ inputs:
     description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'
     required: false
   projectToken:
-    description: 'Your chromatic project token'
-    required: true
+    description: 'Your chromatic project token (best provided via env.CHROMATIC_PROJECT_TOKEN)'
+    required: false
   repositorySlug:
     description: 'Override the repository slug (e.g. ownerName/repositoryName)'
     required: false
