@@ -651,7 +651,7 @@ describe('runAll', () => {
           diagnostics: true,
         }),
         options: expect.objectContaining({
-          projectToken: 'asdf1234',
+          projectToken: undefined, // redacted
         }),
       }),
       { spaces: 2 }
