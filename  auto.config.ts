@@ -6,9 +6,11 @@ import type { AutoRc } from 'auto';
  */
 export default function rc(): AutoRc {
   return {
-    plugins: ['npm', 'released'],
+    baseBranch: 'main',
+    plugins: ['npm', 'released', ['exec', { afterShipIt: 'yarn publish-action' }]],
     shipit: {
       onlyGraduateWithReleaseLabel: true,
+      prerelease: true,
     },
   };
 }

@@ -7,7 +7,7 @@ import tmp from 'tmp-promise';
 const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 
 const publishAction = async ({ context, newVersion, repo }) => {
-  console.info(`✅ Publishing '${context}' action to https://github.com/${repo}`);
+  console.info(`✅ Publishing ${newVersion} as ${context} action to https://github.com/${repo}`);
 
   const [major, minor, patch] = newVersion.replace(/^(\d+\.\d+\.\d+).*/, '$1').split('.');
   if (!major || !minor || !patch) throw new Error(`Invalid version: ${newVersion}`);
@@ -33,8 +33,19 @@ const publishAction = async ({ context, newVersion, repo }) => {
   return cleanup();
 };
 
+/**
+ * Generally, this script is invoked by auto's `afterShipIt` hook.
+ *
+ * For manual (local) use:
+ *   yarn publish-action <context>
+ *   e.g. yarn publish-action canary
+ */
 (async () => {
-  const { context, newVersion } = JSON.parse(process.env.ARG_0);
+  const { default: pkg } = await import('../package.json', { assert: { type: 'json' } });
+
+  const { context, newVersion } = process.env.ARG_0
+    ? JSON.parse(process.env.ARG_0)
+    : { newVersion: pkg.version, context: process.argv[2] };
 
   switch (context) {
     case 'canary':
