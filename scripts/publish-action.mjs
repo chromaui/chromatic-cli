@@ -20,6 +20,8 @@ const publishAction = async ({ version, repo }) => {
   await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
 
   await run('git init -b main');
+  await run('git config user.name "Chromatic"');
+  await run('git config user.email "support@chromatic.com"');
   await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
   await run('git add .');
   await run(`git commit -m ${version}`);
