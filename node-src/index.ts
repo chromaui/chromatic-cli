@@ -40,10 +40,11 @@ interface Output {
 
 export type { Flags, Options, TaskName, Context, Configuration } from './types';
 
+// Main entry point for CLI, GitHub Action and Node API
 export async function run({
   argv = [],
   flags,
-  options,
+  options: extraOptions,
 }: {
   argv?: string[];
   flags?: Flags;
@@ -67,21 +68,26 @@ export async function run({
 
   const ctx: AtLeast<
     Context,
-    'argv' | 'flags' | 'help' | 'pkg' | 'packagePath' | 'packageJson' | 'env' | 'log' | 'sessionId'
+    | 'argv'
+    | 'flags'
+    | 'extraOptions'
+    | 'help'
+    | 'pkg'
+    | 'packagePath'
+    | 'packageJson'
+    | 'env'
+    | 'log'
+    | 'sessionId'
   > = {
     ...parseArgs(argv),
+    ...(flags && { flags }),
+    ...(extraOptions && { extraOptions }),
     packagePath,
     packageJson,
     env,
     log,
     sessionId,
-    ...(flags && { flags }),
   };
-
-  setExitCode(ctx, exitCodes.OK);
-
-  ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
-  ctx.extraOptions = options;
 
   await runAll(ctx as Context);
 
@@ -103,7 +109,12 @@ export async function run({
   };
 }
 
+// Entry point for testing
 export async function runAll(ctx: Context) {
+  setExitCode(ctx, exitCodes.OK);
+
+  ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
+
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 
@@ -111,11 +122,11 @@ export async function runAll(ctx: Context) {
     await checkPackageJson(ctx);
   }
 
-  if (ctx.options.diagnostics) {
+  if (ctx.flags?.diagnostics || ctx.extraOptions?.diagnostics) {
     await writeChromaticDiagnostics(ctx);
   }
 
-  if (ctx.options.uploadMetadata) {
+  if (ctx.flags?.uploadMetadata || ctx.extraOptions?.uploadMetadata) {
     await uploadMetadataFiles(ctx);
   }
 }
