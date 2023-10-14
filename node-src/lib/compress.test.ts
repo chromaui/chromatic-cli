@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 const testContext = { sourceDir: '/chromatic-tmp', log: new TestLogger() } as any;
-const fileInfo = { paths: ['file1'] };
+const fileInfo = { paths: ['/chromatic-tmp/file1'] };
 
 describe('makeZipFile', () => {
   it('adds files to an archive', async () => {

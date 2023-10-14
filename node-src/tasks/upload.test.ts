@@ -2,6 +2,7 @@ import { createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import progressStream from 'progress-stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { default as compress } from '../lib/compress';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
@@ -9,11 +10,13 @@ import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
 vi.mock('fs');
 vi.mock('progress-stream');
+vi.mock('../lib/compress');
 vi.mock('../lib/getDependentStoryFiles');
 vi.mock('../lib/findChangedDependencies');
 vi.mock('../lib/findChangedPackageFiles');
 vi.mock('./read-stats-file');
 
+const makeZipFile = vi.mocked(compress);
 const findChangedDependencies = vi.mocked(findChangedDep);
 const findChangedPackageFiles = vi.mocked(findChangedPkg);
 const getDependentStoryFiles = vi.mocked(getDepStoryFiles);
@@ -370,6 +373,61 @@ describe('uploadStorybook', () => {
       progress: 84,
       total: 84,
       unit: 'bytes',
+    });
+  });
+
+  describe('with zip', () => {
+    it.only('retrieves the upload location, adds the files to an archive and uploads it', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        getZipUploadUrl: {
+          domain: 'https://asdqwe.chromatic.com',
+          url: 'https://asdqwe.chromatic.com/storybook.zip',
+          sentinelUrl: 'https://asdqwe.chromatic.com/upload.txt',
+        },
+      });
+
+      makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
+      progress.mockReturnValue({ on: vi.fn() } as any);
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        paths: ['iframe.html', 'index.html'],
+        total: 84,
+      };
+      const ctx = {
+        client,
+        env,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: { zip: true },
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/GetZipUploadUrlMutation/),
+        { buildId: '1' }
+      );
+      expect(http.fetch).toHaveBeenCalledWith(
+        'https://asdqwe.chromatic.com/storybook.zip',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/zip',
+            'content-length': '80',
+          },
+        }),
+        expect.objectContaining({ retries: 0 })
+      );
+      expect(ctx.uploadedBytes).toBe(80);
     });
   });
 });

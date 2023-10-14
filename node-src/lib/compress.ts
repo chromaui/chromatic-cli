@@ -1,6 +1,5 @@
 import archiver from 'archiver';
 import { createReadStream, createWriteStream } from 'fs';
-import { join } from 'path';
 import { file as tempFile } from 'tmp-promise';
 import { Context } from '../types';
 
@@ -25,9 +24,8 @@ export default async function makeZipFile(ctx: Context, fileInfo: { paths: strin
     archive.pipe(sink);
 
     paths.forEach((path) => {
-      const fullPath = join(ctx.sourceDir, path);
-      ctx.log.debug({ fullPath }, 'Adding file to zip archive');
-      archive.append(createReadStream(fullPath), { name: path });
+      ctx.log.debug({ path }, 'Adding file to zip archive');
+      archive.append(createReadStream(path), { name: path });
     });
 
     ctx.log.debug('Finalizing zip archive');
