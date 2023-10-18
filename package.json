@@ -156,7 +156,7 @@
     "execa": "^7.2.0",
     "fake-tag": "^2.0.0",
     "fs-extra": "^10.0.0",
-    "https-proxy-agent": "^5.0.0",
+    "https-proxy-agent": "^7.0.2",
     "husky": "^7.0.0",
     "jsonfile": "^6.0.1",
     "junit-report-builder": "2.1.0",
