@@ -1,8 +1,9 @@
-import { RequestInit, Response } from 'node-fetch';
 import { InitialContext } from '.';
 import type { Configuration } from './lib/getConfiguration';
 import { Env } from './lib/getEnv';
 import { Logger } from './lib/log';
+import HTTPClient from './io/HTTPClient';
+import GraphQLClient from './io/GraphQLClient';
 
 export interface Flags {
   // Required options
@@ -173,17 +174,8 @@ export interface Context {
   isOnboarding: boolean;
   turboSnapAvailability?: string;
 
-  http: {
-    fetch: (url: string, options?: RequestInit, opts?: any) => Promise<Response>;
-  };
-  client: {
-    runQuery: <T>(
-      query: string,
-      variables?: any,
-      options?: { retries?: number; headers?: Record<string, string> }
-    ) => Promise<T>;
-    setAuthorization: (token: string) => void;
-  };
+  http: HTTPClient;
+  client: GraphQLClient;
 
   git: {
     version: string;

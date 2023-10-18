@@ -1,11 +1,11 @@
 import jsonfile from 'jsonfile';
 
-import { Context, InitialContext } from '..';
+import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
 
 const { writeFile } = jsonfile;
 
-export function getDiagnostics(ctx: Context | InitialContext) {
+export function getDiagnostics(ctx: Context) {
   const { argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
   return Object.keys(rest)
     .sort((a, b) => a.localeCompare(b))
@@ -13,7 +13,7 @@ export function getDiagnostics(ctx: Context | InitialContext) {
 }
 
 // Extract important information from ctx, sort it and output into a json file
-export async function writeChromaticDiagnostics(ctx: Context | InitialContext) {
+export async function writeChromaticDiagnostics(ctx: Context) {
   try {
     const chromaticDiagnosticsPath = 'chromatic-diagnostics.json';
     await writeFile(chromaticDiagnosticsPath, getDiagnostics(ctx), { spaces: 2 });

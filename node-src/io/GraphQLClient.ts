@@ -16,15 +16,13 @@ export interface GraphQLError {
 
 export default class GraphQLClient {
   endpoint: string;
-
+  headers: HTTPClientOptions['headers'];
   client: HTTPClient;
 
-  headers: HTTPClientOptions['headers'];
-
-  constructor(context: InitialContext, endpoint: string, httpClientOptions: HTTPClientOptions) {
+  constructor(ctx: InitialContext, endpoint: string, httpClientOptions: HTTPClientOptions) {
     if (!endpoint) throw new Error('Option `endpoint` required.');
     this.endpoint = endpoint;
-    this.client = new HTTPClient(context, httpClientOptions);
+    this.client = new HTTPClient(ctx, httpClientOptions);
     this.headers = { 'Content-Type': 'application/json' };
   }
 
@@ -32,11 +30,11 @@ export default class GraphQLClient {
     this.headers.Authorization = `Bearer ${token}`;
   }
 
-  async runQuery(
+  async runQuery<T>(
     query: string,
     variables: Record<string, any>,
     { headers = {}, retries = 2 } = {}
-  ) {
+  ): Promise<T> {
     return retry(
       async (bail) => {
         const { data, errors } = await this.client
