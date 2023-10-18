@@ -13,7 +13,7 @@ jobs:
           node-version: latest
       - run: yarn
       - name: run chromatic via node
-        run: yarn ts-node ./scripts/run-via-node.ts
+        run: ./scripts/run-via-node.mjs
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
