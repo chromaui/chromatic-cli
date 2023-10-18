@@ -17,7 +17,7 @@ export default defineConfig((options) => [
     sourcemap: false,
     clean: true,
     platform: 'node',
-    target: 'node16',
+    target: 'node18', // Minimum supported (LTS) version
   },
   {
     entry: ['action-src/register.js'],
@@ -29,6 +29,6 @@ export default defineConfig((options) => [
     sourcemap: false,
     clean: true,
     platform: 'node',
-    target: 'node16',
+    target: 'node18', // Sync with `runs.using` in action.yml
   },
 ]);

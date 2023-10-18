@@ -125,4 +125,4 @@ outputs:
 
 runs:
   main: action/register.js
-  using: node16
+  using: node18 # Sync with `target` in tsup.config.ts
