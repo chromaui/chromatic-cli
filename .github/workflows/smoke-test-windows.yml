@@ -12,9 +12,9 @@ jobs:
         with:
           node-version: lts/*
       - name: install
-        run: yarn
+        run: yarn && git status --porcelain
       - name: prep package
-        run: node ./scripts/rename.js storybook-chromatic
+        run: ./scripts/rename.js storybook-chromatic
       - run: yarn build
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
