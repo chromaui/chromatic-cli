@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: latest
       - run: yarn
       - name: run chromatic via node
         run: yarn ts-node ./scripts/run-via-node.ts
