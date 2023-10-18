@@ -15,7 +15,17 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 👉 Read the [Chromatic CLI docs](https://www.chromatic.com/docs/cli)
 
-📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md#readme)
+📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md)
+
+## System requirements
+
+The Chromatic CLI (and GitHub Action) is built to run in a variety of environments. We provide support for the following platforms:
+
+- Latest (LTS) versions of Ubuntu, Windows (Server), macOS
+- Node.js Current, Active or Maintenance (LTS) versions, according to their [release schedule](https://github.com/nodejs/release#release-schedule)
+- Storybook 6.5+
+
+Other platforms/versions may work, but are not officially supported. Certain features may not be available on certain platforms/versions, even if otherwise supported.
 
 ## Contributing
 
