@@ -1,11 +1,12 @@
 {
   "exclude": ["node_modules"],
+  "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
-    "target": "ES6",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    // Override module/moduleResolution since we're using tsup/esbuild
+    "module": "es2022",
+    "moduleResolution": "Bundler",
+    "strict": false,
     "noImplicitAny": false,
-    "esModuleInterop": true,
     "resolveJsonModule": true,
     "types": ["webpack-env"]
   }
