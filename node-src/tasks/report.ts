@@ -75,7 +75,7 @@ export const generateReport = async (ctx: Context) => {
   const { junitReport } = ctx.options;
   const { number: buildNumber, reportToken } = ctx.build;
 
-  const file = junitReport === true ? 'chromatic-build-{buildNumber}.xml' : junitReport;
+  const file = junitReport === true ? 'chromatic-build-{buildNumber}.xml' : (junitReport as string);
   ctx.reportPath = path.resolve(file.replace(/{buildNumber}/g, String(buildNumber)));
 
   const {

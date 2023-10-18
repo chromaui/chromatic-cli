@@ -1,13 +1,14 @@
 import Listr from 'listr';
 
+import { Context, InitialContext } from '.';
 import GraphQLClient from './io/GraphQLClient';
+import NonTTYRenderer from './lib/NonTTYRenderer';
 import { getConfiguration } from './lib/getConfiguration';
 import getOptions from './lib/getOptions';
-import NonTTYRenderer from './lib/NonTTYRenderer';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { rewriteErrorMessage } from './lib/utils';
 import getTasks from './tasks';
-import { Context } from './types';
+import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
@@ -16,9 +17,8 @@ import missingStories from './ui/messages/errors/missingStories';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
-import { endActivity } from './ui/components/activity';
 
-export async function runBuild(ctx: Context) {
+const initialize = async (ctx: InitialContext): Promise<Context | null> => {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 
@@ -26,17 +26,22 @@ export async function runBuild(ctx: Context) {
     ctx.configuration = await getConfiguration(
       ctx.extraOptions?.configFile || ctx.flags.configFile
     );
-    ctx.options = await getOptions(ctx);
+    return { ...ctx, options: getOptions(ctx) } as Context;
   } catch (e) {
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [e]));
-    (ctx.options || ctx.extraOptions)?.experimental_onTaskError?.(ctx, {
+    ctx.extraOptions?.experimental_onTaskError?.(ctx, {
       formattedError: fatalError(ctx, [e]),
       originalError: e,
     });
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-    return;
+    return null;
   }
+};
+
+export async function runBuild(initialContext: InitialContext) {
+  const ctx = await initialize(initialContext);
+  if (!ctx) return;
 
   try {
     ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {

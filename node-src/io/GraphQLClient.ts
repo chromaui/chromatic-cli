@@ -1,7 +1,7 @@
 import retry from 'async-retry';
 
+import { InitialContext } from '..';
 import HTTPClient, { HTTPClientOptions } from './HTTPClient';
-import { Context } from '../types';
 
 const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 
@@ -21,14 +21,14 @@ export default class GraphQLClient {
 
   headers: HTTPClientOptions['headers'];
 
-  constructor(context: Context, endpoint: string, httpClientOptions: HTTPClientOptions) {
+  constructor(context: InitialContext, endpoint: string, httpClientOptions: HTTPClientOptions) {
     if (!endpoint) throw new Error('Option `endpoint` required.');
     this.endpoint = endpoint;
     this.client = new HTTPClient(context, httpClientOptions);
     this.headers = { 'Content-Type': 'application/json' };
   }
 
-  setAuthorization(token) {
+  setAuthorization(token: string) {
     this.headers.Authorization = `Bearer ${token}`;
   }
 

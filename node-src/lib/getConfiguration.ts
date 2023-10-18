@@ -15,7 +15,7 @@ const configurationSchema = z
     untraced: z.array(z.string()),
     externals: z.array(z.string()),
     debug: z.boolean(),
-    diagnostics: z.union([z.string(), z.boolean()]),
+    diagnostics: z.boolean(),
     junitReport: z.union([z.string(), z.boolean()]),
     zip: z.boolean(),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),

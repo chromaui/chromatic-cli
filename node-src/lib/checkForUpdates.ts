@@ -1,16 +1,15 @@
 import semver from 'semver';
 import { hasYarn } from 'yarn-or-npm';
 
-import spawn from './spawn';
-import { Context } from '../types';
-
+import { InitialContext } from '..';
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
+import spawn from './spawn';
 
 const rejectIn = (ms: number) => new Promise<any>((_, reject) => setTimeout(reject, ms));
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   Promise.race([promise, rejectIn(ms)]);
 
-export default async function checkForUpdates(ctx: Context) {
+export default async function checkForUpdates(ctx: InitialContext) {
   if (!semver.valid(ctx.pkg.version)) {
     ctx.log.warn(`Invalid semver version in package.json: ${ctx.pkg.version}`);
     return;

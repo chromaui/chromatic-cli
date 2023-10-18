@@ -1,21 +1,21 @@
+import 'any-observable/register/zen';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
-import 'any-observable/register/zen';
 
+import { getBranch, getCommit, getSlug, getUncommittedHash, getUserEmail } from './git/git';
 import HTTPClient from './io/HTTPClient';
+import checkForUpdates from './lib/checkForUpdates';
+import checkPackageJson from './lib/checkPackageJson';
+import { emailHash } from './lib/emailHash';
 import getEnv from './lib/getEnv';
 import { createLogger } from './lib/log';
 import parseArgs from './lib/parseArgs';
-import { Context, Flags, Options } from './types';
 import { exitCodes, setExitCode } from './lib/setExitCode';
-import { runBuild } from './runBuild';
-import checkForUpdates from './lib/checkForUpdates';
-import checkPackageJson from './lib/checkPackageJson';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import { runBuild } from './runBuild';
+import { Context, Flags, Options } from './types';
 import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import noPackageJson from './ui/messages/errors/noPackageJson';
-import { getBranch, getCommit, getSlug, getUserEmail, getUncommittedHash } from './git/git';
-import { emailHash } from './lib/emailHash';
 /**
  Make keys of `T` outside of `R` optional.
 */
@@ -37,12 +37,29 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export type { Flags, Options, TaskName, Context, Configuration } from './types';
+export type { Configuration, Context, Flags, Options, TaskName } from './types';
+
+export type InitialContext = Omit<
+  AtLeast<
+    Context,
+    | 'argv'
+    | 'flags'
+    | 'help'
+    | 'pkg'
+    | 'extraOptions'
+    | 'packagePath'
+    | 'packageJson'
+    | 'env'
+    | 'log'
+    | 'sessionId'
+  >,
+  'options'
+>;
 
 export async function run({
   argv = [],
   flags,
-  options,
+  options: extraOptions,
 }: {
   argv?: string[];
   flags?: Flags;
@@ -64,23 +81,16 @@ export async function run({
     process.exit(252);
   }
 
-  const ctx: AtLeast<
-    Context,
-    'argv' | 'flags' | 'help' | 'pkg' | 'packagePath' | 'packageJson' | 'env' | 'log' | 'sessionId'
-  > = {
+  const ctx: InitialContext = {
     ...parseArgs(argv),
+    ...(flags && { flags }),
+    ...(extraOptions && { extraOptions }),
     packagePath,
     packageJson,
     env,
     log,
     sessionId,
-    ...(flags && { flags }),
   };
-
-  setExitCode(ctx, exitCodes.OK);
-
-  ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
-  ctx.extraOptions = options;
 
   await runAll(ctx);
 
@@ -102,16 +112,20 @@ export async function run({
   };
 }
 
-export async function runAll(ctx) {
+export async function runAll(ctx: InitialContext) {
+  setExitCode(ctx, exitCodes.OK);
+
+  ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
+
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
 
-  if (ctx.exitCode === 0 || ctx.exitCode === 1) {
-    await checkPackageJson(ctx);
+  // At this point we may or may not have options on context
+  if ([0, 1].includes(ctx.exitCode) && 'options' in ctx) {
+    await checkPackageJson(ctx as Context);
   }
-
-  if (ctx.options.diagnostics) {
-    await writeChromaticDiagnostics(ctx);
+  if (ctx.flags?.diagnostics || ctx.extraOptions?.diagnostics) {
+    await writeChromaticDiagnostics(ctx as Context | InitialContext);
   }
 }
 

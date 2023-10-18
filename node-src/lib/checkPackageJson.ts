@@ -1,7 +1,7 @@
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
-import { Context } from '../types';
 
+import { Context } from '..';
 import addedScript from '../ui/messages/info/addedScript';
 import notAddedScript from '../ui/messages/info/notAddedScript';
 import scriptNotFound from '../ui/messages/warnings/scriptNotFound';
