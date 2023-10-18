@@ -29,6 +29,6 @@ export default defineConfig((options) => [
     sourcemap: false,
     clean: true,
     platform: 'node',
-    target: 'node18', // Sync with `runs.using` in action.yml
+    target: 'node20', // Sync with `runs.using` in action.yml
   },
 ]);
