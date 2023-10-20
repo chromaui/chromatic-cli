@@ -51,7 +51,7 @@ export const createLogger = () => {
   const queue = [];
 
   const stream = level !== 'silent' ? createWriteStream(CHROMATIC_LOG_FILE, { flags: 'a' }) : null;
-  const appendToLogFile = (message: string) => stream?.write(message + '\n');
+  const appendToLogFile = (...messages: string[]) => stream?.write(messages.join(' ') + '\n');
 
   const log =
     (type: LogType, logFileOnly?: boolean) =>
@@ -59,7 +59,7 @@ export const createLogger = () => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
       const logs = logVerbose(type, args);
-      logs.forEach(appendToLogFile);
+      appendToLogFile(...logs);
       if (logFileOnly) return;
 
       const messages = interactive ? logInteractive(args) : logs;

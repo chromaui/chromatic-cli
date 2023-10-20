@@ -85,7 +85,7 @@ export async function uploadAsZipFile(
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
-  const zipped = await makeZipFile(ctx, { paths: files.map((f) => f.localPath) });
+  const zipped = await makeZipFile(ctx, files);
   const { path, size: total } = zipped;
   const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
     GetZipUploadUrlMutation,

@@ -1,13 +1,13 @@
 import archiver from 'archiver';
 import { createReadStream, createWriteStream } from 'fs';
 import { file as tempFile } from 'tmp-promise';
-import { Context } from '../types';
 
-export default async function makeZipFile(ctx: Context, fileInfo: { paths: string[] }) {
+import { Context, FileDesc } from '../types';
+
+export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
   const archive = archiver('zip', { zlib: { level: 9 } });
   const tmp = await tempFile({ postfix: '.zip' });
   const sink = createWriteStream(null, { fd: tmp.fd });
-  const { paths } = fileInfo;
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
     sink.on('close', () => {
@@ -23,9 +23,9 @@ export default async function makeZipFile(ctx: Context, fileInfo: { paths: strin
     });
     archive.pipe(sink);
 
-    paths.forEach((path) => {
-      ctx.log.debug({ path }, 'Adding file to zip archive');
-      archive.append(createReadStream(path), { name: path });
+    files.forEach(({ localPath, targetPath: name }) => {
+      ctx.log.debug({ name }, 'Adding file to zip archive');
+      archive.append(createReadStream(localPath), { name });
     });
 
     ctx.log.debug('Finalizing zip archive');
