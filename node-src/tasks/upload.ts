@@ -217,7 +217,10 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     try {
       await uploadAsZipFile(ctx, files, options);
     } catch (err) {
-      ctx.log.debug({ err }, 'Error uploading zip file');
+      ctx.log.debug(
+        { err },
+        'Error uploading zip file, falling back to uploading individual files'
+      );
       await uploadAsIndividualFiles(ctx, files, options);
     }
   } else {

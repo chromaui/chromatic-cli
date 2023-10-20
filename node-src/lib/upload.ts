@@ -85,8 +85,13 @@ export async function uploadAsZipFile(
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
+  const originalSize = files.reduce((acc, { contentLength }) => acc + contentLength, 0);
   const zipped = await makeZipFile(ctx, files);
-  const { path, size: total } = zipped;
+  const { path, size } = zipped;
+
+  if (size > originalSize) throw new Error('Zip file is larger than individual files');
+  ctx.log.debug(`Compression reduced upload size by ${originalSize - size} bytes`);
+
   const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
     GetZipUploadUrlMutation,
     { buildId: ctx.announcedBuild.id }
@@ -96,12 +101,12 @@ export async function uploadAsZipFile(
   options.onStart?.();
 
   try {
-    await uploadZip(ctx, path, url, total, (progress) => options.onProgress?.(progress, total));
+    await uploadZip(ctx, path, url, size, (progress) => options.onProgress?.(progress, size));
   } catch (e) {
     return options.onError?.(e, path);
   }
 
   await waitForUnpack(ctx, sentinelUrl);
 
-  options.onComplete?.(total, domain);
+  options.onComplete?.(size, domain);
 }
