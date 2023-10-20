@@ -17,7 +17,7 @@ export default defineConfig((options) => [
     sourcemap: false,
     clean: true,
     platform: 'node',
-    target: 'node18', // Minimum supported (LTS) version
+    target: 'node16', // Storybook still supports Node 16
   },
   {
     entry: ['action-src/register.js'],
