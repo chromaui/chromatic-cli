@@ -57,15 +57,17 @@ const publishAction = async ({ version, repo }) => {
 
   const { default: pkg } = await import('../package.json', { assert: { type: 'json' } });
 
-  const [, major, minor, patch, tag] = pkg.version.match(/(\d+)\.(\d+)\.(\d+)-?(\w+)?/) || [];
+  const [, major, minor, patch, tag] = pkg.version.match(/(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
   if (!major || !minor || !patch) {
     console.error(`❗️ Invalid version: ${pkg.version}`);
     return;
   }
 
+  const { stdout: branch } = await execaCommand('git rev-parse --abbrev-ref HEAD');
+  const defaultTag = branch === 'main' ? 'latest' : 'canary';
   const context = ['canary', 'next', 'latest'].includes(process.argv[2])
     ? process.argv[2]
-    : tag || 'latest';
+    : tag || defaultTag;
 
   switch (context) {
     case 'canary':
