@@ -1,0 +1,18 @@
+name: Check PR Labels
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+jobs:
+  check-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - uses: chromaui/pr-label-checker-action@main
+        with:
+          one-of: |
+            major, minor, patch
+            release, skip-release
+          none-of: DO NOT MERGE
