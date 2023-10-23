@@ -136,6 +136,16 @@ export async function runAll(ctx: InitialContext) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
 
+  const onError = (e: Error | Error[]) => {
+    ctx.log.info('');
+    ctx.log.error(fatalError(ctx, [].concat(e)));
+    ctx.extraOptions?.experimental_onTaskError?.(ctx, {
+      formattedError: fatalError(ctx, [].concat(e)),
+      originalError: e,
+    });
+    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+  };
+
   try {
     ctx.http = new HTTPClient(ctx);
     ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
@@ -151,22 +161,17 @@ export async function runAll(ctx: InitialContext) {
     (ctx as Context).options = getOptions(ctx);
     setExitCode(ctx, exitCodes.OK);
   } catch (e) {
-    ctx.log.info('');
-    ctx.log.error(fatalError(ctx, [e]));
-    ctx.extraOptions?.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, [e]),
-      originalError: e,
-    });
-    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-    return;
+    return onError(e);
   }
 
-  if (!isContext(ctx)) return;
+  if (!isContext(ctx)) {
+    return onError(new Error('Invalid context'));
+  }
 
   // Run these in parallel; neither should ever reject
-  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
+  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch(onError);
 
-  if ([0, 1].includes(ctx.exitCode) && 'options' in ctx) {
+  if ([0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
   }
 
