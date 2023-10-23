@@ -1,21 +1,20 @@
-import { Readable } from 'stream';
+import dns from 'dns';
 import { execa as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
-import dns from 'dns';
+import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { runAll } from '.';
 import * as git from './git/git';
+import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
 import uploadFiles from './lib/uploadFiles';
-import { runAll } from '.';
-// import { runAll } from './runAll';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
-import { DNSResolveAgent } from './io/getDNSResolveAgent';
 
 let announcedBuild;
 let publishedBuild;
