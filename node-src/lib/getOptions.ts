@@ -1,6 +1,6 @@
 import path from 'path';
-import { Context, Options } from '../types';
 
+import { InitialContext, Options } from '..';
 import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
@@ -36,7 +36,7 @@ export default function getOptions({
   configuration,
   log,
   packageJson,
-}: Context): Options {
+}: InitialContext): Options {
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
     fromCI: !!process.env.CI,

@@ -33,7 +33,7 @@ export interface HTTPClientOptions {
 
 export interface HTTPClientFetchOptions {
   noLogErrorBody?: boolean;
-  proxy?: HttpsProxyAgentOptions;
+  proxy?: HttpsProxyAgentOptions<any>;
   retries?: number;
 }
 

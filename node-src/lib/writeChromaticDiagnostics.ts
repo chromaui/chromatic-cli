@@ -1,5 +1,6 @@
 import jsonfile from 'jsonfile';
-import { Context } from '../types';
+
+import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
 
 const { writeFile } = jsonfile;
