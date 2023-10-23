@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
 
+import { InitialContext } from '../../..';
 import { warning } from '../../components/icons';
 
-export default (ctx: Context, latestVersion: string, hasYarn = false) => {
+export default (ctx: InitialContext, latestVersion: string, hasYarn = false) => {
   const installScript = hasYarn
     ? `yarn upgrade chromatic --latest`
     : `npm install chromatic@latest --save-dev`;

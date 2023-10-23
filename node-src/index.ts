@@ -1,22 +1,38 @@
+import 'any-observable/register/zen';
+import Listr from 'listr';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
-import 'any-observable/register/zen';
 
+import { getBranch, getCommit, getSlug, getUncommittedHash, getUserEmail } from './git/git';
+import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
-import getEnv from './lib/getEnv';
-import { createLogger } from './lib/log';
-import parseArgs from './lib/parseArgs';
-import { Context, Flags, Options } from './types';
-import { exitCodes, setExitCode } from './lib/setExitCode';
-import { runBuild } from './runBuild';
+import NonTTYRenderer from './lib/NonTTYRenderer';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
-import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
-import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
-import noPackageJson from './ui/messages/errors/noPackageJson';
-import { getBranch, getCommit, getSlug, getUserEmail, getUncommittedHash } from './git/git';
 import { emailHash } from './lib/emailHash';
+import { getConfiguration } from './lib/getConfiguration';
+import getEnv from './lib/getEnv';
+import getOptions from './lib/getOptions';
+import { createLogger } from './lib/log';
+import parseArgs from './lib/parseArgs';
+import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
+import { rewriteErrorMessage } from './lib/utils';
+import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import getTasks from './tasks';
+import { Context, Flags, Options } from './types';
+import { endActivity } from './ui/components/activity';
+import buildCanceled from './ui/messages/errors/buildCanceled';
+import { default as fatalError } from './ui/messages/errors/fatalError';
+import fetchError from './ui/messages/errors/fetchError';
+import graphqlError from './ui/messages/errors/graphqlError';
+import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
+import missingStories from './ui/messages/errors/missingStories';
+import noPackageJson from './ui/messages/errors/noPackageJson';
+import runtimeError from './ui/messages/errors/runtimeError';
+import taskError from './ui/messages/errors/taskError';
+import intro from './ui/messages/info/intro';
+
 /**
  Make keys of `T` outside of `R` optional.
 */
@@ -38,9 +54,28 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export type { Flags, Options, TaskName, Context, Configuration } from './types';
+export type { Configuration, Context, Flags, Options, TaskName } from './types';
 
-// Main entry point for CLI, GitHub Action and Node API
+export type InitialContext = Omit<
+  AtLeast<
+    Context,
+    | 'argv'
+    | 'flags'
+    | 'help'
+    | 'pkg'
+    | 'extraOptions'
+    | 'packagePath'
+    | 'packageJson'
+    | 'env'
+    | 'log'
+    | 'sessionId'
+  >,
+  'options'
+>;
+
+const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
+
+// Entry point for the CLI, GitHub Action, and Node API
 export async function run({
   argv = [],
   flags,
@@ -66,19 +101,7 @@ export async function run({
     process.exit(252);
   }
 
-  const ctx: AtLeast<
-    Context,
-    | 'argv'
-    | 'flags'
-    | 'extraOptions'
-    | 'help'
-    | 'pkg'
-    | 'packagePath'
-    | 'packageJson'
-    | 'env'
-    | 'log'
-    | 'sessionId'
-  > = {
+  const ctx: InitialContext = {
     ...parseArgs(argv),
     ...(flags && { flags }),
     ...(extraOptions && { extraOptions }),
@@ -89,7 +112,7 @@ export async function run({
     sessionId,
   };
 
-  await runAll(ctx as Context);
+  await runAll(ctx);
 
   return {
     // Keep this in sync with the configured outputs in action.yml
@@ -109,16 +132,47 @@ export async function run({
   };
 }
 
-// Entry point for testing
-export async function runAll(ctx: Context) {
-  setExitCode(ctx, exitCodes.OK);
+// Entry point for testing only (typically invoked via `run` above)
+export async function runAll(ctx: InitialContext) {
+  ctx.log.info('');
+  ctx.log.info(intro(ctx));
 
-  ctx.http = (ctx.http as HTTPClient) || new HTTPClient(ctx);
+  const onError = (e: Error | Error[]) => {
+    ctx.log.info('');
+    ctx.log.error(fatalError(ctx, [].concat(e)));
+    ctx.extraOptions?.experimental_onTaskError?.(ctx, {
+      formattedError: fatalError(ctx, [].concat(e)),
+      originalError: e,
+    });
+    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+  };
+
+  try {
+    ctx.http = new HTTPClient(ctx);
+    ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
+      headers: {
+        'x-chromatic-session-id': ctx.sessionId,
+        'x-chromatic-cli-version': ctx.pkg.version,
+      },
+      retries: 3,
+    });
+    ctx.configuration = await getConfiguration(
+      ctx.extraOptions?.configFile || ctx.flags.configFile
+    );
+    (ctx as Context).options = getOptions(ctx);
+    setExitCode(ctx, exitCodes.OK);
+  } catch (e) {
+    return onError(e);
+  }
+
+  if (!isContext(ctx)) {
+    return onError(new Error('Invalid context'));
+  }
 
   // Run these in parallel; neither should ever reject
-  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]);
+  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch(onError);
 
-  if (ctx.exitCode === 0 || ctx.exitCode === 1) {
+  if ([0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
   }
 
@@ -128,6 +182,62 @@ export async function runAll(ctx: Context) {
 
   if (ctx.flags?.uploadMetadata || ctx.extraOptions?.uploadMetadata) {
     await uploadMetadataFiles(ctx);
+  }
+}
+
+async function runBuild(ctx: Context) {
+  try {
+    try {
+      ctx.log.info('');
+      if (ctx.options.interactive) ctx.log.queue(); // queue up any log messages while Listr is running
+      const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
+      await new Listr(getTasks(ctx.options), options).run(ctx);
+    } catch (err) {
+      endActivity(ctx);
+      if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
+        setExitCode(ctx, exitCodes.FETCH_ERROR);
+        throw rewriteErrorMessage(err, fetchError(ctx, err));
+      }
+      if (err.name === 'GraphQLError') {
+        setExitCode(ctx, exitCodes.GRAPHQL_ERROR);
+        throw rewriteErrorMessage(err, graphqlError(ctx, err));
+      }
+      if (err.message.startsWith('Cannot run a build with no stories')) {
+        setExitCode(ctx, exitCodes.BUILD_NO_STORIES);
+        throw rewriteErrorMessage(err, missingStories(ctx));
+      }
+      if (ctx.options.experimental_abortSignal?.aborted) {
+        setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED, true);
+        throw rewriteErrorMessage(err, buildCanceled());
+      }
+      throw rewriteErrorMessage(err, taskError(ctx, err));
+    } finally {
+      // Handle potential runtime errors from JSDOM
+      const { runtimeErrors, runtimeWarnings } = ctx;
+      if ((runtimeErrors && runtimeErrors.length) || (runtimeWarnings && runtimeWarnings.length)) {
+        ctx.log.info('');
+        ctx.log.error(runtimeError(ctx));
+      }
+
+      ctx.log.flush();
+    }
+  } catch (error) {
+    const errors = [].concat(error); // GraphQLClient might throw an array of errors
+    const formattedError = fatalError(ctx, errors);
+
+    ctx.options.experimental_onTaskError?.(ctx, {
+      formattedError,
+      originalError: errors[0],
+    });
+
+    if (!ctx.userError) {
+      ctx.log.info('');
+      ctx.log.error(formattedError);
+    }
+
+    if (!ctx.exitCode) {
+      setExitCode(ctx, exitCodes.UNKNOWN_ERROR);
+    }
   }
 }
 

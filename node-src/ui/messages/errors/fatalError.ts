@@ -2,18 +2,18 @@ import chalk from 'chalk';
 import pluralize from 'pluralize';
 import stripAnsi from 'strip-ansi';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
 
+import { Context, InitialContext } from '../../..';
 import link from '../../components/link';
 
 const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
 
 export default function fatalError(
-  ctx: Context,
+  ctx: Context | InitialContext,
   error: Error | Error[],
   timestamp = new Date().toISOString()
 ) {
-  const { flags, extraOptions, configuration, options, sessionId, pkg, packageJson } = ctx;
+  const { flags, extraOptions, configuration, sessionId, pkg, packageJson } = ctx;
   const { scripts = {} } = packageJson;
   const email = link(pkg.bugs.email);
   const website = link(pkg.docs);
@@ -43,8 +43,8 @@ export default function fatalError(
     flags,
     ...(extraOptions && { extraOptions }),
     ...(configuration && { configuration }),
-    ...(options && options.buildScriptName
-      ? { buildScript: scripts[options.buildScriptName] }
+    ...('options' in ctx && ctx.options?.buildScriptName
+      ? { buildScript: scripts[ctx.options.buildScriptName] }
       : {}),
     ...(buildCommand && { buildCommand }),
     exitCode,
