@@ -67,7 +67,7 @@ function getFileInfo(ctx: Context, sourceDir: string) {
   const paths: string[] = [];
   let statsPath: string;
   for (const { knownAs } of lengths) {
-    if (knownAs.endsWith('preview-stats.json')) statsPath = knownAs;
+    if (knownAs.endsWith('preview-stats.json')) statsPath = join(sourceDir, knownAs);
     else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
   }
   return { lengths, paths, statsPath, total };
@@ -109,9 +109,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
   transitionTo(tracing)(ctx, task);
 
-  const statsPath = join(ctx.sourceDir, ctx.fileInfo.statsPath);
-  ctx.fileInfo.statsPath = statsPath;
-
+  const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageManifestChanges } = ctx.git;
   try {
     const changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {

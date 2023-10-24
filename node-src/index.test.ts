@@ -40,6 +40,7 @@ vi.mock('execa');
 
 const execa = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
+const upload = vi.mocked(uploadFiles);
 
 vi.mock('jsonfile', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
@@ -190,22 +191,21 @@ vi.mock('node-fetch', () => ({
       }
 
       if (query?.match('GetUploadUrlsMutation')) {
+        const contentTypes = {
+          html: 'text/html',
+          js: 'text/javascript',
+          json: 'application/json',
+          log: 'text/plain',
+        };
         return {
           data: {
             getUploadUrls: {
               domain: 'https://chromatic.com',
-              urls: [
-                {
-                  path: 'iframe.html',
-                  url: 'https://cdn.example.com/iframe.html',
-                  contentType: 'text/html',
-                },
-                {
-                  path: 'index.html',
-                  url: 'https://cdn.example.com/index.html',
-                  contentType: 'text/html',
-                },
-              ],
+              urls: variables.paths.map((path: string) => ({
+                path,
+                url: `https://cdn.example.com/${path}`,
+                contentType: contentTypes[path.split('.').at(-1)],
+              })),
             },
           },
         };
@@ -234,31 +234,36 @@ vi.mock('node-fetch', () => ({
   })),
 }));
 
-const mockStatsFile = Readable.from([
-  JSON.stringify({
-    modules: [
-      {
-        id: './src/foo.stories.js',
-        name: './src/foo.stories.js',
-        reasons: [{ moduleName: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$' }],
-      },
-      {
-        id: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
-        name: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
-        reasons: [{ moduleName: './storybook-stories.js' }],
-      },
-    ],
-  }),
-]);
+const mockStats = {
+  modules: [
+    {
+      id: './src/foo.stories.js',
+      name: './src/foo.stories.js',
+      reasons: [{ moduleName: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$' }],
+    },
+    {
+      id: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+      name: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+      reasons: [{ moduleName: './storybook-stories.js' }],
+    },
+  ],
+};
+const mockStatsFile = Readable.from([JSON.stringify(mockStats)]);
+
+vi.mock('./tasks/read-stats-file', () => ({
+  readStatsFile: () => Promise.resolve(mockStats),
+}));
 
 vi.mock('fs', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
   return {
     pathExists: async () => true,
     readFileSync: originalModule.readFileSync,
+    writeFileSync: vi.fn(),
     createReadStream: vi.fn(() => mockStatsFile),
     createWriteStream: originalModule.createWriteStream,
     readdirSync: vi.fn(() => ['iframe.html', 'index.html', 'preview-stats.json']),
+    stat: originalModule.stat,
     statSync: vi.fn((path) => {
       const fsStatSync = originalModule.createWriteStream;
       if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
@@ -661,4 +666,58 @@ it('should not write context to chromatic-diagnostics.json if --diagnostics is n
   const ctx = getContext(['--project-token=asdf1234']);
   await runAll(ctx);
   expect(jsonfile.writeFile).not.toHaveBeenCalled();
+});
+
+it('should upload metadata files if --upload-metadata is passed', async () => {
+  const ctx = getContext([
+    '--project-token=asdf1234',
+    '--output-dir=storybook-out',
+    '--upload-metadata',
+    '--only-changed',
+  ]);
+  await runAll(ctx);
+  expect(upload.mock.calls.at(-1)[1]).toEqual([
+    {
+      localPath: 'chromatic-diagnostics.json',
+      targetPath: '.chromatic/chromatic-diagnostics.json',
+      contentLength: 90651,
+      contentType: 'application/json',
+      targetUrl: 'https://cdn.example.com/.chromatic/chromatic-diagnostics.json',
+    },
+    {
+      localPath: 'chromatic.log',
+      targetPath: '.chromatic/chromatic.log',
+      contentLength: 6841,
+      contentType: 'text/plain',
+      targetUrl: 'https://cdn.example.com/.chromatic/chromatic.log',
+    },
+    {
+      localPath: '.storybook/main.js',
+      targetPath: '.chromatic/main.js',
+      contentLength: 518,
+      contentType: 'text/javascript',
+      targetUrl: 'https://cdn.example.com/.chromatic/main.js',
+    },
+    {
+      localPath: 'storybook-out/preview-stats.trimmed.json',
+      targetPath: '.chromatic/preview-stats.trimmed.json',
+      contentLength: 457,
+      contentType: 'application/json',
+      targetUrl: 'https://cdn.example.com/.chromatic/preview-stats.trimmed.json',
+    },
+    {
+      localPath: '.storybook/preview.js',
+      targetPath: '.chromatic/preview.js',
+      contentLength: 1338,
+      contentType: 'text/javascript',
+      targetUrl: 'https://cdn.example.com/.chromatic/preview.js',
+    },
+    {
+      localPath: expect.any(String),
+      targetPath: '.chromatic/index.html',
+      contentLength: 4339,
+      contentType: 'text/html',
+      targetUrl: 'https://cdn.example.com/.chromatic/index.html',
+    },
+  ]);
 });
