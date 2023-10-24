@@ -195,6 +195,13 @@ export const findBuilder = async (mainConfig, v7) => {
   ]);
 };
 
+export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => {
+  const configDir = ctx.options.storybookConfigDir ?? '.storybook';
+  const files = await readdir(configDir);
+  const configFile = files.find((file) => pattern.test(file));
+  return configFile && join(configDir, configFile);
+};
+
 export const getStorybookMetadata = async (ctx: Context) => {
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
@@ -205,10 +212,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
     mainConfig = await r(path.resolve(configDir, 'main'));
   } catch (storybookV6error) {
     try {
-      const files = await readdir(configDir);
-      const mainConfigFileName = files.find((file) => file.startsWith('main')) || null;
-      const mainConfigFilePath = join(configDir, mainConfigFileName);
-      mainConfig = await readConfig(mainConfigFilePath);
+      mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
       v7 = true;
     } catch (storybookV7error) {
       mainConfig = null;

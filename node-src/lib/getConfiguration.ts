@@ -29,6 +29,7 @@ const configurationSchema = z
     storybookBuildDir: z.string(),
     storybookBaseDir: z.string(),
     storybookConfigDir: z.string(),
+    uploadMetadata: z.boolean(),
   })
   .partial()
   .strict();

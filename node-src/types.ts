@@ -43,6 +43,7 @@ export interface Flags {
   list?: boolean;
   interactive?: boolean;
   traceChanged?: string;
+  uploadMetadata?: boolean;
 
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
@@ -70,6 +71,7 @@ export interface Options {
   diagnostics: boolean;
   interactive: boolean;
   junitReport: boolean | string;
+  uploadMetadata?: Flags['uploadMetadata'];
   zip: Flags['zip'];
 
   autoAcceptChanges: boolean | string;
@@ -211,6 +213,7 @@ export interface Context {
       packageName?: string;
       packageVersion?: string;
     };
+    mainConfigFilePath?: string;
   };
   isolatorUrl: string;
   cachedUrl: string;
@@ -339,4 +342,15 @@ export interface Module {
 }
 export interface Stats {
   modules: Module[];
+}
+
+export interface FileDesc {
+  contentLength: number;
+  localPath: string;
+  targetPath: string;
+}
+
+export interface TargetedFile extends FileDesc {
+  contentType: string;
+  targetUrl: string;
 }

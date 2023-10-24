@@ -16,6 +16,7 @@ import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
 import parseArgs from './lib/parseArgs';
 import { exitCodes, setExitCode } from './lib/setExitCode';
+import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utils';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
@@ -175,8 +176,12 @@ export async function runAll(ctx: InitialContext) {
     await checkPackageJson(ctx);
   }
 
-  if (ctx.options.diagnostics) {
+  if (ctx.flags?.diagnostics || ctx.extraOptions?.diagnostics) {
     await writeChromaticDiagnostics(ctx);
+  }
+
+  if (ctx.flags?.uploadMetadata || ctx.extraOptions?.uploadMetadata) {
+    await uploadMetadataFiles(ctx);
   }
 }
 

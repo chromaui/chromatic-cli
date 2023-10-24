@@ -45,6 +45,7 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
     );
 
     console.log(`Wrote ${targetFile}`);
+    return targetFile;
   } catch (err) {
     console.error(err);
   }

@@ -12,6 +12,8 @@ import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 
+export const STORYBOOK_BUILD_LOG_FILE = 'build-storybook.log';
+
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
@@ -49,7 +51,7 @@ const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 export const buildStorybook = async (ctx: Context) => {
-  ctx.buildLogFile = path.resolve('./build-storybook.log');
+  ctx.buildLogFile = path.resolve(STORYBOOK_BUILD_LOG_FILE);
   const logFile = createWriteStream(ctx.buildLogFile);
   await new Promise((resolve, reject) => {
     logFile.on('open', resolve);

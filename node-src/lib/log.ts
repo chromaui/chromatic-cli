@@ -1,4 +1,5 @@
 import debug from 'debug';
+import { createWriteStream, unlink } from 'fs';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
@@ -8,8 +9,10 @@ const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
 
+export const CHROMATIC_LOG_FILE = 'chromatic.log';
+
 // Top-level promise rejection handler to deal with initialization errors
-const handleRejection = (reason) => console.error('Unhandled promise rejection:', reason);
+const handleRejection = (reason: string) => console.error('Unhandled promise rejection:', reason);
 process.on('unhandledRejection', handleRejection);
 
 // Omits any JSON metadata, returning only the message string
@@ -30,6 +33,7 @@ export interface Logger {
   warn: LogFn;
   info: LogFn;
   log: LogFn;
+  file: LogFn;
   debug: LogFn;
   queue: () => void;
   flush: () => void;
@@ -40,18 +44,25 @@ export interface Logger {
 export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
+  if (level !== 'silent') unlink(CHROMATIC_LOG_FILE, () => {});
 
   let interactive = !process.argv.slice(2).includes('--no-interactive');
   let enqueue = false;
   const queue = [];
 
+  const stream = level !== 'silent' ? createWriteStream(CHROMATIC_LOG_FILE, { flags: 'a' }) : null;
+  const appendToLogFile = (...messages: string[]) => stream?.write(messages.join(' ') + '\n');
+
   const log =
-    (type: LogType) =>
-    (...args) => {
+    (type: LogType, logFileOnly?: boolean) =>
+    (...args: any[]) => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
-      // Convert the messages to an appropriate format
-      const messages = interactive ? logInteractive(args) : logVerbose(type, args);
+      const logs = logVerbose(type, args);
+      appendToLogFile(...logs);
+      if (logFileOnly) return;
+
+      const messages = interactive ? logInteractive(args) : logs;
       if (!messages.length) return;
 
       // Queue up the logs or print them right away
@@ -71,6 +82,7 @@ export const createLogger = () => {
     warn: log('warn'),
     info: log('info'),
     log: log('info'),
+    file: log('info', true),
     debug: log('debug'),
     queue: () => {
       enqueue = true;
@@ -85,7 +97,7 @@ export const createLogger = () => {
     },
   };
 
-  debug.log = (...args) => logger.debug(format(...args));
+  debug.log = (...args: any[]) => logger.debug(format(...args));
 
   // Redirect unhandled promise rejections
   process.off('unhandledRejection', handleRejection);

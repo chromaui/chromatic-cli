@@ -39,7 +39,6 @@ const getBuildInfo = (event: typeof context) => {
     }
     case 'workflow_run': {
       const { repository } = event.payload;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       const { head_sha, head_branch } = event.payload.workflow_run;
 
       return {
@@ -76,22 +75,6 @@ const getBuildInfo = (event: typeof context) => {
   }
 };
 
-interface Output {
-  code: number;
-  url: string;
-  buildUrl: string;
-  storybookUrl: string;
-  specCount: number;
-  componentCount: number;
-  testCount: number;
-  changeCount: number;
-  errorCount: number;
-  interactionTestFailuresCount: number;
-  actualTestCount: number;
-  actualCaptureCount: number;
-  inheritedCaptureCount: number;
-}
-
 async function run() {
   const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
@@ -123,6 +106,7 @@ async function run() {
     const storybookConfigDir = getInput('storybookConfigDir');
     const traceChanged = getInput('traceChanged');
     const untraced = getInput('untraced');
+    const uploadMetadata = getInput('uploadMetadata');
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
     const junitReport = getInput('junitReport');
@@ -165,6 +149,7 @@ async function run() {
         storybookConfigDir: maybe(storybookConfigDir),
         traceChanged: maybe(traceChanged),
         untraced: maybe(untraced),
+        uploadMetadata: maybe(uploadMetadata, false),
         zip: maybe(zip, false),
         junitReport: maybe(junitReport, false),
       },

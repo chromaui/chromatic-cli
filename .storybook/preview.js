@@ -17,7 +17,7 @@ ansiHTML.setColors({
 chalk.enabled = true;
 chalk.level = 3;
 
-const style = {
+const codeStyle = {
   display: 'inline-block',
   margin: 0,
   padding: '1rem',
@@ -28,6 +28,14 @@ const style = {
   color: '#c0c4cd',
 };
 
+const htmlStyle = {
+  fontFamily: "'Nunito Sans', sans-serif",
+  fontSize: 14,
+  lineHeight: '1',
+  color: '#5C6870',
+  padding: 20,
+};
+
 export const parameters = {
   layout: 'fullscreen',
 };
@@ -36,7 +44,11 @@ export const decorators = [
   (storyFn, { kind }) => {
     if (kind.startsWith('CLI/')) {
       document.body.style.backgroundColor = '#16242c';
-      return <code style={style} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
+      return <code style={codeStyle} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
+    }
+    if (kind.startsWith('HTML/')) {
+      document.body.style.backgroundColor = '#F6F9FC';
+      return <div style={htmlStyle} dangerouslySetInnerHTML={{ __html: storyFn() }} />;
     }
     document.body.style.backgroundColor = 'paleturquoise';
     return storyFn();

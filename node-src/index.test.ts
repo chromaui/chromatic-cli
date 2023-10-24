@@ -12,7 +12,7 @@ import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
-import uploadFiles from './lib/uploadFiles';
+import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
 
@@ -443,14 +443,16 @@ it('calls out to npm build script passed and uploads files', async () => {
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/iframe\.html$/),
-        url: 'https://cdn.example.com/iframe.html',
+        localPath: expect.stringMatching(/\/iframe\.html$/),
+        targetPath: 'iframe.html',
+        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/index\.html$/),
-        url: 'https://cdn.example.com/index.html',
+        localPath: expect.stringMatching(/\/index\.html$/),
+        targetPath: 'index.html',
+        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -468,14 +470,16 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/iframe\.html$/),
-        url: 'https://cdn.example.com/iframe.html',
+        localPath: expect.stringMatching(/\/iframe\.html$/),
+        targetPath: 'iframe.html',
+        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/index\.html$/),
-        url: 'https://cdn.example.com/index.html',
+        localPath: expect.stringMatching(/\/index\.html$/),
+        targetPath: 'index.html',
+        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -646,7 +650,7 @@ it('should write context to chromatic-diagnostics.json if --diagnostics is passe
         diagnostics: true,
       }),
       options: expect.objectContaining({
-        projectToken: 'asdf1234',
+        projectToken: undefined, // redacted
       }),
     }),
     { spaces: 2 }

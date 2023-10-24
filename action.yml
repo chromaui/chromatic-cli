@@ -87,6 +87,9 @@ inputs:
   untraced:
     description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
     required: false
+  uploadMetadata:
+    description: 'Upload Chromatic metadata files as part of the published Storybook'
+    required: false
   workingDir:
     description: 'Working directory for the package.json file'
     required: false
