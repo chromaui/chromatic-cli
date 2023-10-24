@@ -1,3 +1,21 @@
+# v7.5.0 (Tue Oct 24 2023)
+
+#### 🚀 Enhancement
+
+- Write to log file and add `--upload-metadata` to publish metadata files [#836](https://github.com/chromaui/chromatic-cli/pull/836) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Add workflow to require certain PR labels before merging [#841](https://github.com/chromaui/chromatic-cli/pull/841) ([@ghengeveld](https://github.com/ghengeveld))
+- Fix reading `diagnostics` from undefined [#840](https://github.com/chromaui/chromatic-cli/pull/840) ([@ghengeveld](https://github.com/ghengeveld))
+- Only release 'latest' GitHub Action from `main` branch [#837](https://github.com/chromaui/chromatic-cli/pull/837) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.4.0 (Fri Oct 13 2023)
 
 #### 🚀 Enhancement
