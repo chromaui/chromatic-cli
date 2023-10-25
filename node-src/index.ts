@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { getBranch, getCommit, getSlug, getUncommittedHash, getUserEmail } from './git/git';
 import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
+import LoggingRenderer from './lib/LoggingRenderer';
 import NonTTYRenderer from './lib/NonTTYRenderer';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
@@ -136,6 +137,7 @@ export async function run({
 export async function runAll(ctx: InitialContext) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
+  ctx.log.info('');
 
   const onError = (e: Error | Error[]) => {
     ctx.log.info('');
@@ -188,9 +190,16 @@ export async function runAll(ctx: InitialContext) {
 async function runBuild(ctx: Context) {
   try {
     try {
-      ctx.log.info('');
-      if (ctx.options.interactive) ctx.log.queue(); // queue up any log messages while Listr is running
-      const options = ctx.options.interactive ? {} : { renderer: NonTTYRenderer, log: ctx.log };
+      const options = {
+        log: ctx.log,
+        renderer: NonTTYRenderer,
+      };
+      if (ctx.options.interactive) {
+        // Use an enhanced version of Listr's default renderer, which also logs to a file
+        options.renderer = LoggingRenderer;
+        // Queue up any non-Listr log messages while Listr is running
+        ctx.log.queue();
+      }
       await new Listr(getTasks(ctx.options), options).run(ctx);
     } catch (err) {
       endActivity(ctx);
