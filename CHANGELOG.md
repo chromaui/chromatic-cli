@@ -1,3 +1,15 @@
+# v7.5.2 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Fix `ENOENT` when uploading stats file with `--upload-metadata` [#843](https://github.com/chromaui/chromatic-cli/pull/843) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.5.1 (Thu Oct 26 2023)
 
 #### 🐛 Bug Fix
