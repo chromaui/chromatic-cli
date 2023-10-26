@@ -1,3 +1,15 @@
+# v7.5.3 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Fix config for Auto and add `next-release` tag to trigger a `next` release [#846](https://github.com/chromaui/chromatic-cli/pull/846) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.5.2 (Thu Oct 26 2023)
 
 #### 🐛 Bug Fix
