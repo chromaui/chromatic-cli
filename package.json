@@ -213,7 +213,8 @@
       "released"
     ],
     "shipit": {
-      "onlyGraduateWithReleaseLabel": true
+      "onlyGraduateWithReleaseLabel": true,
+      "prerelease": true
     }
   },
   "docs": "https://www.chromatic.com/docs/cli",
