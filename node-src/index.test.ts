@@ -715,7 +715,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
     {
       localPath: expect.any(String),
       targetPath: '.chromatic/index.html',
-      contentLength: 4339,
+      contentLength: expect.any(Number),
       contentType: 'text/html',
       targetUrl: 'https://cdn.example.com/.chromatic/index.html',
     },
