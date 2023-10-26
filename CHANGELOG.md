@@ -1,3 +1,15 @@
+# v7.5.1 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Fix use of `LoggingRenderer` after bad merge [#845](https://github.com/chromaui/chromatic-cli/pull/845) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.5.0 (Tue Oct 24 2023)
 
 #### 🚀 Enhancement
