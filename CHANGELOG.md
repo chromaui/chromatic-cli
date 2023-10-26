@@ -1,3 +1,15 @@
+# v7.5.4 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Configure auto with `prerelease` setting and update readme [#847](https://github.com/chromaui/chromatic-cli/pull/847) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.5.3 (Thu Oct 26 2023)
 
 #### 🐛 Bug Fix
