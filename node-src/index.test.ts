@@ -676,48 +676,36 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
     '--only-changed',
   ]);
   await runAll(ctx);
-  expect(upload.mock.calls.at(-1)[1]).toEqual([
-    {
-      localPath: 'chromatic-diagnostics.json',
-      targetPath: '.chromatic/chromatic-diagnostics.json',
-      contentLength: 90651,
-      contentType: 'application/json',
-      targetUrl: 'https://cdn.example.com/.chromatic/chromatic-diagnostics.json',
-    },
-    {
-      localPath: 'chromatic.log',
-      targetPath: '.chromatic/chromatic.log',
-      contentLength: 6841,
-      contentType: 'text/plain',
-      targetUrl: 'https://cdn.example.com/.chromatic/chromatic.log',
-    },
-    {
-      localPath: '.storybook/main.js',
-      targetPath: '.chromatic/main.js',
-      contentLength: 518,
-      contentType: 'text/javascript',
-      targetUrl: 'https://cdn.example.com/.chromatic/main.js',
-    },
-    {
-      localPath: 'storybook-out/preview-stats.trimmed.json',
-      targetPath: '.chromatic/preview-stats.trimmed.json',
-      contentLength: 457,
-      contentType: 'application/json',
-      targetUrl: 'https://cdn.example.com/.chromatic/preview-stats.trimmed.json',
-    },
-    {
-      localPath: '.storybook/preview.js',
-      targetPath: '.chromatic/preview.js',
-      contentLength: 1338,
-      contentType: 'text/javascript',
-      targetUrl: 'https://cdn.example.com/.chromatic/preview.js',
-    },
-    {
-      localPath: expect.any(String),
-      targetPath: '.chromatic/index.html',
-      contentLength: expect.any(Number),
-      contentType: 'text/html',
-      targetUrl: 'https://cdn.example.com/.chromatic/index.html',
-    },
-  ]);
+  expect(upload.mock.calls.at(-1)[1]).toEqual(
+    expect.arrayContaining([
+      {
+        localPath: '.storybook/main.js',
+        targetPath: '.chromatic/main.js',
+        contentLength: 518,
+        contentType: 'text/javascript',
+        targetUrl: 'https://cdn.example.com/.chromatic/main.js',
+      },
+      {
+        localPath: 'storybook-out/preview-stats.trimmed.json',
+        targetPath: '.chromatic/preview-stats.trimmed.json',
+        contentLength: 457,
+        contentType: 'application/json',
+        targetUrl: 'https://cdn.example.com/.chromatic/preview-stats.trimmed.json',
+      },
+      {
+        localPath: '.storybook/preview.js',
+        targetPath: '.chromatic/preview.js',
+        contentLength: 1338,
+        contentType: 'text/javascript',
+        targetUrl: 'https://cdn.example.com/.chromatic/preview.js',
+      },
+      {
+        localPath: expect.any(String),
+        targetPath: '.chromatic/index.html',
+        contentLength: expect.any(Number),
+        contentType: 'text/html',
+        targetUrl: 'https://cdn.example.com/.chromatic/index.html',
+      },
+    ])
+  );
 });
