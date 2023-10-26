@@ -14,5 +14,5 @@ jobs:
         with:
           one-of: |
             major, minor, patch
-            release, skip-release
+            release, next-release, skip-release
           none-of: DO NOT MERGE

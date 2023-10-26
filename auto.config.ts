@@ -10,7 +10,6 @@ export default function rc(): AutoRc {
     plugins: ['npm', 'released'],
     shipit: {
       onlyGraduateWithReleaseLabel: true,
-      prerelease: true,
     },
   };
 }
