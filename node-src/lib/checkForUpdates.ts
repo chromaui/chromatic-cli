@@ -25,7 +25,7 @@ export default async function checkForUpdates(ctx: InitialContext) {
     }
 
     const pkgUrl = new URL(ctx.pkg.name, registryUrl).href;
-    const res = await withTimeout(ctx.http.fetch(pkgUrl), 5000); // If not fetched within 5 seconds, nevermind.
+    const res = await withTimeout(ctx.http.fetch(pkgUrl), 30000); // If not fetched within 30 seconds, nevermind.
     const { 'dist-tags': distTags = {} } = (await res.json()) as any;
     if (!semver.valid(distTags.latest)) {
       ctx.log.warn(`Invalid dist-tag 'latest' returned from registry; skipping update check`);
