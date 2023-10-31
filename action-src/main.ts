@@ -68,6 +68,14 @@ const getBuildInfo = (event: typeof context) => {
         slug: event.payload.repository.full_name,
       };
     }
+    case 'merge_group': {
+      const { head_sha, head_ref } = event.payload.merge_group;
+      return {
+        sha: head_sha,
+        branch: head_ref,
+        slug: event.payload.repository.full_name,
+      };
+    }
     default: {
       setFailed(`${event.eventName} event is not supported in this action`);
       return null;
