@@ -14,14 +14,14 @@ import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnv from './lib/getEnv';
 import getOptions from './lib/getOptions';
-import { createLogger, Logger } from './lib/log';
+import { createLogger } from './lib/log';
 import parseArgs from './lib/parseArgs';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utils';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
-import { Context, Flags, Options } from './types';
+import { Context, Flags, Logger, Options } from './types';
 import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
 import { default as fatalError } from './ui/messages/errors/fatalError';
@@ -55,7 +55,7 @@ interface Output {
   inheritedCaptureCount: number;
 }
 
-export type { Configuration, Context, Flags, Options, TaskName } from './types';
+export type { Configuration, Context, Flags, Options, TaskName, Logger } from './types';
 
 export type InitialContext = Omit<
   AtLeast<
@@ -81,15 +81,16 @@ export async function run({
   argv = [],
   flags,
   options: extraOptions,
+  logger
 }: {
   argv?: string[];
   flags?: Flags;
   options?: Partial<Options>;
-  log?: Logger;
+  logger?: Logger;
 }): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
-  const log = this.log ?? createLogger();
+  const log = logger ?? createLogger();
 
   const pkgInfo = await readPkgUp({ cwd: process.cwd() });
   if (!pkgInfo) {

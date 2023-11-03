@@ -4,9 +4,10 @@ import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
 import { errorSerializer } from './logSerializers';
+import { Logger } from '../types';
 
 const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
-const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
+export const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
 
 export const CHROMATIC_LOG_FILE = 'chromatic.log';
@@ -27,19 +28,6 @@ const logVerbose = (type: string, args: any[]) => {
 };
 
 type LogType = 'error' | 'warn' | 'info' | 'debug';
-type LogFn = (...args: any[]) => void;
-export interface Logger {
-  error: LogFn;
-  warn: LogFn;
-  info: LogFn;
-  log: LogFn;
-  file: LogFn;
-  debug: LogFn;
-  queue: () => void;
-  flush: () => void;
-  setLevel: (value: keyof typeof LOG_LEVELS) => void;
-  setInteractive: (value: boolean) => void;
-}
 
 export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;

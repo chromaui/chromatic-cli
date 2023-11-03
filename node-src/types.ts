@@ -1,7 +1,7 @@
 import { InitialContext } from '.';
 import type { Configuration } from './lib/getConfiguration';
 import { Env } from './lib/getEnv';
-import { Logger } from './lib/log';
+import { LOG_LEVELS } from './lib/log';
 import HTTPClient from './io/HTTPClient';
 import GraphQLClient from './io/GraphQLClient';
 
@@ -116,6 +116,21 @@ export interface Options {
 
   /** An AbortSignal that terminates the build if aborted */
   experimental_abortSignal?: AbortSignal;
+}
+
+type LogFn = (...args: any[]) => void;
+
+export interface Logger {
+  error: LogFn;
+  warn: LogFn;
+  info: LogFn;
+  log: LogFn;
+  file: LogFn;
+  debug: LogFn;
+  queue: () => void;
+  flush: () => void;
+  setLevel: (value: keyof typeof LOG_LEVELS) => void;
+  setInteractive: (value: boolean) => void;
 }
 
 export { Configuration };
