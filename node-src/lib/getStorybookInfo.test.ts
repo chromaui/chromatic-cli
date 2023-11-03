@@ -33,7 +33,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: 'webpack5', packageVersion: '6.5.16' },
       })
     );
   });
@@ -66,7 +66,7 @@ describe('getStorybookInfo', () => {
             packageName: '@storybook/addon-viewport',
           },
         ],
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: 'webpack5', packageVersion: '6.5.16' },
       })
     );
   });
@@ -77,7 +77,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: 'webpack5', packageVersion: '6.5.16' },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -94,7 +94,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: 'webpack5', packageVersion: '6.5.16' },
         })
       );
     });
@@ -105,7 +105,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: 'webpack5', packageVersion: '6.5.16' },
         })
       );
     });
@@ -120,7 +120,7 @@ describe('getStorybookInfo', () => {
               packageName: '@storybook/addon-viewport',
             },
           ],
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: 'webpack5', packageVersion: '6.5.16' },
         })
       );
     });
@@ -135,7 +135,7 @@ describe('getStorybookInfo', () => {
               packageName: '@storybook/addon-viewport',
             },
           ],
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: 'webpack5', packageVersion: '6.5.16' },
         })
       );
     });
