@@ -85,10 +85,11 @@ export async function run({
   argv?: string[];
   flags?: Flags;
   options?: Partial<Options>;
+  log?: Logger;
 }): Promise<Output> {
   const sessionId = uuid();
   const env = getEnv();
-  const log = createLogger();
+  const log = this.log ?? createLogger();
 
   const pkgInfo = await readPkgUp({ cwd: process.cwd() });
   if (!pkgInfo) {
