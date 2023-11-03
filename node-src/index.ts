@@ -14,7 +14,7 @@ import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnv from './lib/getEnv';
 import getOptions from './lib/getOptions';
-import { createLogger } from './lib/log';
+import { createLogger, Logger } from './lib/log';
 import parseArgs from './lib/parseArgs';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
