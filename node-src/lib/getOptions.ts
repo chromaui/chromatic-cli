@@ -148,7 +148,7 @@ export default function getOptions({
     log.setInteractive(false);
   }
 
-  if (!options.projectToken) {
+  if (!options.projectToken && !(options.projectId && options.userToken)) {
     throw new Error(missingProjectToken());
   }
 
