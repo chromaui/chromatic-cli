@@ -1,3 +1,21 @@
+# v7.6.0 (Tue Oct 31 2023)
+
+#### 🚀 Enhancement
+
+- Merge Group (Queues) GitHub Action Event Support [#825](https://github.com/chromaui/chromatic-cli/pull/825) ([@mhemmings](https://github.com/mhemmings) [@thafryer](https://github.com/thafryer))
+
+#### 🐛 Bug Fix
+
+- Configure auto with `prerelease` setting and update readme [#847](https://github.com/chromaui/chromatic-cli/pull/847) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 3
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+- Mark Hemmings ([@mhemmings](https://github.com/mhemmings))
+
+---
+
 # v7.5.4 (Thu Oct 26 2023)
 
 #### 🐛 Bug Fix
