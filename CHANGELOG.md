@@ -1,3 +1,87 @@
+# v7.6.0 (Tue Oct 31 2023)
+
+#### 🚀 Enhancement
+
+- Merge Group (Queues) GitHub Action Event Support [#825](https://github.com/chromaui/chromatic-cli/pull/825) ([@mhemmings](https://github.com/mhemmings) [@thafryer](https://github.com/thafryer))
+
+#### 🐛 Bug Fix
+
+- Configure auto with `prerelease` setting and update readme [#847](https://github.com/chromaui/chromatic-cli/pull/847) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 3
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+- Mark Hemmings ([@mhemmings](https://github.com/mhemmings))
+
+---
+
+# v7.5.4 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Configure auto with `prerelease` setting and update readme [#847](https://github.com/chromaui/chromatic-cli/pull/847) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v7.5.3 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Fix config for Auto and add `next-release` tag to trigger a `next` release [#846](https://github.com/chromaui/chromatic-cli/pull/846) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v7.5.2 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Fix `ENOENT` when uploading stats file with `--upload-metadata` [#843](https://github.com/chromaui/chromatic-cli/pull/843) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v7.5.1 (Thu Oct 26 2023)
+
+#### 🐛 Bug Fix
+
+- Fix use of `LoggingRenderer` after bad merge [#845](https://github.com/chromaui/chromatic-cli/pull/845) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v7.5.0 (Tue Oct 24 2023)
+
+#### 🚀 Enhancement
+
+- Write to log file and add `--upload-metadata` to publish metadata files [#836](https://github.com/chromaui/chromatic-cli/pull/836) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Add workflow to require certain PR labels before merging [#841](https://github.com/chromaui/chromatic-cli/pull/841) ([@ghengeveld](https://github.com/ghengeveld))
+- Fix reading `diagnostics` from undefined [#840](https://github.com/chromaui/chromatic-cli/pull/840) ([@ghengeveld](https://github.com/ghengeveld))
+- Only release 'latest' GitHub Action from `main` branch [#837](https://github.com/chromaui/chromatic-cli/pull/837) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v7.4.0 (Fri Oct 13 2023)
 
 #### 🚀 Enhancement

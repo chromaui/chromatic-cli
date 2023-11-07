@@ -1,6 +1,7 @@
 import meow from 'meow';
 
 import pkg from '../../package.json';
+import { Flags } from '../types';
 
 export default function parseArgs(argv: string[]) {
   const { input, flags, help } = meow(
@@ -48,6 +49,7 @@ export default function parseArgs(argv: string[]) {
       --list                        List available stories. This requires running a full build.
       --no-interactive              Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
       --trace-changed [mode]        Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
+      --upload-metadata             Upload Chromatic metadata files as part of the published Storybook. Includes chromatic-diagnostics.json, chromatic.log, and storybook-build.log, among others.
 
     Deprecated options
       --app-code <token>            Renamed to --project-token.
@@ -97,6 +99,7 @@ export default function parseArgs(argv: string[]) {
         list: { type: 'boolean' },
         interactive: { type: 'boolean', default: true },
         traceChanged: { type: 'string' },
+        uploadMetadata: { type: 'boolean' },
 
         // Deprecated options (for JSDOM and tunneled builds, among others)
         allowConsoleErrors: { type: 'boolean' },
@@ -107,5 +110,5 @@ export default function parseArgs(argv: string[]) {
     }
   );
 
-  return { argv, input, flags, help, pkg };
+  return { argv, input, flags: flags as Flags, help, pkg };
 }

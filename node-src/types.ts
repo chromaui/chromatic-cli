@@ -1,7 +1,9 @@
-import { Response, RequestInit } from 'node-fetch';
+import { InitialContext } from '.';
+import type { Configuration } from './lib/getConfiguration';
 import { Env } from './lib/getEnv';
 import { Logger } from './lib/log';
-import type { Configuration } from './lib/getConfiguration';
+import HTTPClient from './io/HTTPClient';
+import GraphQLClient from './io/GraphQLClient';
 
 export interface Flags {
   // Required options
@@ -41,6 +43,7 @@ export interface Flags {
   list?: boolean;
   interactive?: boolean;
   traceChanged?: string;
+  uploadMetadata?: boolean;
 
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
@@ -65,8 +68,10 @@ export interface Options {
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;
   debug: boolean;
+  diagnostics: boolean;
   interactive: boolean;
   junitReport: boolean | string;
+  uploadMetadata?: Flags['uploadMetadata'];
   zip: Flags['zip'];
 
   autoAcceptChanges: boolean | string;
@@ -96,7 +101,7 @@ export interface Options {
 
   /** A callback that is called if a task fails */
   experimental_onTaskError?: (
-    ctx: Context,
+    ctx: InitialContext,
     { formattedError, originalError }: { formattedError: string; originalError: Error | Error[] }
   ) => void;
 
@@ -144,7 +149,7 @@ export interface Context {
   help: any;
   argv: string[];
   flags: Flags;
-  extraOptions: Partial<Options>;
+  extraOptions?: Partial<Options>;
   configuration: Configuration;
   options: Options;
   task: TaskName;
@@ -171,17 +176,8 @@ export interface Context {
   isOnboarding: boolean;
   turboSnapAvailability?: string;
 
-  http: {
-    fetch: (url: string, options?: RequestInit, opts?: any) => Promise<Response>;
-  };
-  client: {
-    runQuery: <T>(
-      query: string,
-      variables?: any,
-      options?: { retries?: number; headers?: Record<string, string> }
-    ) => Promise<T>;
-    setAuthorization: (token: string) => void;
-  };
+  http: HTTPClient;
+  client: GraphQLClient;
 
   git: {
     version: string;
@@ -217,6 +213,7 @@ export interface Context {
       packageName?: string;
       packageVersion?: string;
     };
+    mainConfigFilePath?: string;
   };
   isolatorUrl: string;
   cachedUrl: string;
@@ -345,4 +342,15 @@ export interface Module {
 }
 export interface Stats {
   modules: Module[];
+}
+
+export interface FileDesc {
+  contentLength: number;
+  localPath: string;
+  targetPath: string;
+}
+
+export interface TargetedFile extends FileDesc {
+  contentType: string;
+  targetUrl: string;
 }

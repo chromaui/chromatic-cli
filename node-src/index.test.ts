@@ -1,21 +1,20 @@
-import { Readable } from 'stream';
+import dns from 'dns';
 import { execa as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
-import dns from 'dns';
+import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { runAll } from '.';
 import * as git from './git/git';
+import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
-import uploadFiles from './lib/uploadFiles';
-import { runAll } from '.';
-import { runBuild } from './runBuild';
+import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
-import { DNSResolveAgent } from './io/getDNSResolveAgent';
 
 let announcedBuild;
 let publishedBuild;
@@ -41,6 +40,7 @@ vi.mock('execa');
 
 const execa = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
+const upload = vi.mocked(uploadFiles);
 
 vi.mock('jsonfile', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
@@ -60,14 +60,25 @@ vi.mock('node-fetch', () => ({
   default: vi.fn(async (url, { body } = {}) => ({
     ok: true,
     json: async () => {
-      const { query, variables } = JSON.parse(body);
+      let query: string, variables: { [key: string]: any };
+      try {
+        const data = JSON.parse(body);
+        query = data.query;
+        variables = data.variables;
+      } catch (e) {
+        // Do nothing
+      }
+
+      if (url.match('npm.example.com')) {
+        return { 'dist-tags': { latest: '5.0.0' } };
+      }
 
       // Authenticate
-      if (query.match('CreateAppTokenMutation')) {
+      if (query?.match('CreateAppTokenMutation')) {
         return { data: { createAppToken: 'token' } };
       }
 
-      if (query.match('AnnounceBuildMutation')) {
+      if (query?.match('AnnounceBuildMutation')) {
         announcedBuild = variables.input;
         return {
           data: {
@@ -83,7 +94,7 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('PublishBuildMutation')) {
+      if (query?.match('PublishBuildMutation')) {
         if (variables.input.isolatorUrl.startsWith('http://throw-an-error')) {
           throw new Error('fetch error');
         }
@@ -97,7 +108,7 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('StartedBuildQuery')) {
+      if (query?.match('StartedBuildQuery')) {
         return {
           data: {
             app: {
@@ -109,7 +120,7 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('VerifyBuildQuery')) {
+      if (query?.match('VerifyBuildQuery')) {
         return {
           data: {
             app: {
@@ -143,7 +154,7 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('SnapshotBuildQuery')) {
+      if (query?.match('SnapshotBuildQuery')) {
         return {
           data: {
             app: { build: { status: 'PENDING', changeCount: 1, completedAt: 12345 } },
@@ -151,15 +162,15 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('FirstCommittedAtQuery')) {
+      if (query?.match('FirstCommittedAtQuery')) {
         return { data: { app: { firstBuild: { committedAt: null } } } };
       }
 
-      if (query.match('HasBuildsWithCommitsQuery')) {
+      if (query?.match('HasBuildsWithCommitsQuery')) {
         return { data: { app: { hasBuildsWithCommits: [] } } };
       }
 
-      if (query.match('BaselineCommitsQuery')) {
+      if (query?.match('BaselineCommitsQuery')) {
         return {
           data: {
             app: {
@@ -179,29 +190,28 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('GetUploadUrlsMutation')) {
+      if (query?.match('GetUploadUrlsMutation')) {
+        const contentTypes = {
+          html: 'text/html',
+          js: 'text/javascript',
+          json: 'application/json',
+          log: 'text/plain',
+        };
         return {
           data: {
             getUploadUrls: {
               domain: 'https://chromatic.com',
-              urls: [
-                {
-                  path: 'iframe.html',
-                  url: 'https://cdn.example.com/iframe.html',
-                  contentType: 'text/html',
-                },
-                {
-                  path: 'index.html',
-                  url: 'https://cdn.example.com/index.html',
-                  contentType: 'text/html',
-                },
-              ],
+              urls: variables.paths.map((path: string) => ({
+                path,
+                url: `https://cdn.example.com/${path}`,
+                contentType: contentTypes[path.split('.').at(-1)],
+              })),
             },
           },
         };
       }
 
-      if (query.match('SkipBuildMutation')) {
+      if (query?.match('SkipBuildMutation')) {
         return {
           data: {
             skipBuild: true,
@@ -209,7 +219,7 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query.match('LastBuildQuery')) {
+      if (query?.match('LastBuildQuery')) {
         return {
           data: {
             app: {
@@ -219,36 +229,41 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      throw new Error(`Unknown Query: ${query}`);
+      throw new Error(query ? `Unknown Query: ${query}` : `Unmocked request to ${url}`);
     },
   })),
 }));
 
-const mockStatsFile = Readable.from([
-  JSON.stringify({
-    modules: [
-      {
-        id: './src/foo.stories.js',
-        name: './src/foo.stories.js',
-        reasons: [{ moduleName: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$' }],
-      },
-      {
-        id: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
-        name: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
-        reasons: [{ moduleName: './storybook-stories.js' }],
-      },
-    ],
-  }),
-]);
+const mockStats = {
+  modules: [
+    {
+      id: './src/foo.stories.js',
+      name: './src/foo.stories.js',
+      reasons: [{ moduleName: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$' }],
+    },
+    {
+      id: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+      name: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+      reasons: [{ moduleName: './storybook-stories.js' }],
+    },
+  ],
+};
+const mockStatsFile = Readable.from([JSON.stringify(mockStats)]);
+
+vi.mock('./tasks/read-stats-file', () => ({
+  readStatsFile: () => Promise.resolve(mockStats),
+}));
 
 vi.mock('fs', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
   return {
     pathExists: async () => true,
     readFileSync: originalModule.readFileSync,
+    writeFileSync: vi.fn(),
     createReadStream: vi.fn(() => mockStatsFile),
     createWriteStream: originalModule.createWriteStream,
     readdirSync: vi.fn(() => ['iframe.html', 'index.html', 'preview-stats.json']),
+    stat: originalModule.stat,
     statSync: vi.fn((path) => {
       const fsStatSync = originalModule.createWriteStream;
       if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
@@ -315,19 +330,13 @@ afterEach(() => {
   process.env = processEnv;
 });
 
-const getContext = (
-  argv: string[]
-): Context & {
-  testLogger: TestLogger;
-  http: { fetch: typeof fetch };
-} => {
+const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
   const testLogger = new TestLogger();
   return {
     title: '',
     env: getEnv(),
     log: testLogger,
     testLogger,
-    http: { fetch: vi.fn() },
     sessionId: ':sessionId',
     packageJson: {
       scripts: {
@@ -348,7 +357,7 @@ const getContext = (
 it('fails on missing project token', async () => {
   const ctx = getContext([]);
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(254);
   expect(ctx.testLogger.errors[0]).toMatch(/Missing project token/);
 });
@@ -356,15 +365,14 @@ it('fails on missing project token', async () => {
 // Note this tests options errors, but not fatal task or runtime errors.
 it('passes options error to experimental_onTaskError', async () => {
   const ctx = getContext([]);
-  ctx.options = {
+  ctx.extraOptions = {
     experimental_onTaskError: vi.fn(),
   } as any;
 
-  ctx.options.experimental_onTaskError = vi.fn();
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
-  await runBuild(ctx);
+  await runAll(ctx);
 
-  await expect(ctx.options.experimental_onTaskError).toHaveBeenCalledWith(
+  expect(ctx.extraOptions.experimental_onTaskError).toHaveBeenCalledWith(
     expect.anything(), // Context
     expect.objectContaining({
       formattedError: expect.stringContaining('Missing project token'), // Long formatted error fatalError https://github.com/chromaui/chromatic-cli/blob/217e77671179748eb4ddb8becde78444db93d067/node-src/ui/messages/errors/fatalError.ts#L11
@@ -375,7 +383,7 @@ it('passes options error to experimental_onTaskError', async () => {
 
 it('runs in simple situations', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
-  await runBuild(ctx);
+  await runAll(ctx);
 
   expect(ctx.exitCode).toBe(1);
   expect({ ...announcedBuild, ...publishedBuild }).toMatchObject({
@@ -395,13 +403,13 @@ it('runs in simple situations', async () => {
 
 it('returns 0 with exit-zero-on-changes', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--exit-zero-on-changes']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(0);
 });
 
 it('returns 0 with exit-once-uploaded', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--exit-once-uploaded']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(0);
 });
 
@@ -411,13 +419,13 @@ it('returns 0 when the build is publish only', async () => {
     wasLimited: false,
   };
   const ctx = getContext(['--project-token=asdf1234']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(0);
 });
 
 it('should exit with code 0 when the current branch is skipped', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--skip=branch']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(0);
 });
 
@@ -425,14 +433,14 @@ it('should exit with code 6 and stop the build when abortSignal is aborted', asy
   const abortSignal = AbortSignal.abort(new Error('Build canceled'));
   const ctx = getContext(['--project-token=asdf1234']);
   ctx.extraOptions = { experimental_abortSignal: abortSignal };
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(6);
   expect(uploadFiles).not.toHaveBeenCalled();
 });
 
 it('calls out to npm build script passed and uploads files', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
@@ -440,14 +448,16 @@ it('calls out to npm build script passed and uploads files', async () => {
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/iframe\.html$/),
-        url: 'https://cdn.example.com/iframe.html',
+        localPath: expect.stringMatching(/\/iframe\.html$/),
+        targetPath: 'iframe.html',
+        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/index\.html$/),
-        url: 'https://cdn.example.com/index.html',
+        localPath: expect.stringMatching(/\/index\.html$/),
+        targetPath: 'index.html',
+        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -456,7 +466,7 @@ it('calls out to npm build script passed and uploads files', async () => {
 
 it('skips building and uploads directly with storybook-build-dir', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--storybook-build-dir=dirname']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
   expect(execa).not.toHaveBeenCalled();
   expect(uploadFiles).toHaveBeenCalledWith(
@@ -465,14 +475,16 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/iframe\.html$/),
-        url: 'https://cdn.example.com/iframe.html',
+        localPath: expect.stringMatching(/\/iframe\.html$/),
+        targetPath: 'iframe.html',
+        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
         contentLength: 42,
         contentType: 'text/html',
-        path: expect.stringMatching(/\/index\.html$/),
-        url: 'https://cdn.example.com/index.html',
+        localPath: expect.stringMatching(/\/index\.html$/),
+        targetPath: 'index.html',
+        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -481,22 +493,22 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
 
 it('passes autoAcceptChanges to the index', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--auto-accept-changes']);
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(announcedBuild).toMatchObject({ autoAcceptChanges: true });
 });
 
 it('passes autoAcceptChanges to the index based on branch', async () => {
-  await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=branch']));
+  await runAll(getContext(['--project-token=asdf1234', '--auto-accept-changes=branch']));
   expect(announcedBuild).toMatchObject({ autoAcceptChanges: true });
 
-  await runBuild(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
+  await runAll(getContext(['--project-token=asdf1234', '--auto-accept-changes=wrong-branch']));
   expect(announcedBuild).toMatchObject({ autoAcceptChanges: false });
 });
 
 it('uses custom DNS server if provided', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   ctx.env.CHROMATIC_DNS_SERVERS = ['1.2.3.4'];
-  await runBuild(ctx);
+  await runAll(ctx);
   expect(dns.setServers).toHaveBeenCalledWith(['1.2.3.4']);
   // The lookup isn't actually performed because fetch is mocked, so we just check the agent.
   expect((fetch as any).mock.calls[0][1].agent).toBeInstanceOf(DNSResolveAgent);
@@ -505,7 +517,7 @@ it('uses custom DNS server if provided', async () => {
 describe('with TurboSnap', () => {
   it('provides onlyStoryFiles to build', async () => {
     const ctx = getContext(['--project-token=asdf1234', '--only-changed']);
-    await runBuild(ctx);
+    await runAll(ctx);
 
     expect(ctx.exitCode).toBe(1);
     expect(ctx.onlyStoryFiles).toEqual(['./src/foo.stories.js']);
@@ -517,7 +529,7 @@ describe('in CI', () => {
   it('detects standard CI environments', async () => {
     process.env = { CI: 'true', DISABLE_LOGGING: 'true' };
     const ctx = getContext(['--project-token=asdf1234']);
-    await runBuild(ctx);
+    await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       fromCI: true,
@@ -528,7 +540,7 @@ describe('in CI', () => {
   it('detects CI passed as option', async () => {
     process.env = { DISABLE_LOGGING: 'true' };
     const ctx = getContext(['--project-token=asdf1234', '--ci']);
-    await runBuild(ctx);
+    await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       fromCI: true,
@@ -539,7 +551,7 @@ describe('in CI', () => {
   it('detects Netlify CI', async () => {
     process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
     const ctx = getContext(['--project-token=asdf1234']);
-    await runBuild(ctx);
+    await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       fromCI: true,
@@ -566,7 +578,7 @@ describe('in CI', () => {
       })
     );
     const ctx = getContext(['--project-token=asdf1234']);
-    await runBuild(ctx);
+    await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       commit: 'travis-commit',
@@ -596,7 +608,7 @@ describe('in CI', () => {
       })
     );
     const ctx = getContext(['--project-token=asdf1234']);
-    await runBuild(ctx);
+    await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
     expect(announcedBuild).toMatchObject({
       commit: 'travis-commit',
@@ -611,52 +623,89 @@ describe('in CI', () => {
   });
 });
 
-describe('runAll', () => {
-  it('checks for updates', async () => {
-    const ctx = getContext(['--project-token=asdf1234']);
-    ctx.pkg.version = '4.3.2';
-    ctx.http.fetch.mockReturnValueOnce({
-      json: () => Promise.resolve({ 'dist-tags': { latest: '5.0.0' } }),
-    } as any);
-    await runAll(ctx);
-    expect(ctx.exitCode).toBe(1);
-    expect(ctx.http.fetch).toHaveBeenCalledWith('https://npm.example.com/chromatic');
-    expect(ctx.testLogger.warnings[0]).toMatch('Using outdated package');
-  });
+it('checks for updates', async () => {
+  const ctx = getContext(['--project-token=asdf1234']);
+  ctx.pkg.version = '4.3.2';
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(1);
+  expect(ctx.testLogger.warnings[0]).toMatch('Using outdated package');
+  expect(fetch).toHaveBeenCalledWith('https://npm.example.com/chromatic', expect.anything());
+});
 
-  it('prompts you to add a script to your package.json', async () => {
-    process.stdout.isTTY = true; // enable interactive mode
-    const ctx = getContext(['--project-token=asdf1234']);
-    await runAll(ctx);
-    expect(ctx.exitCode).toBe(1);
-    expect(confirm).toHaveBeenCalled();
-  });
+it('prompts you to add a script to your package.json', async () => {
+  process.stdout.isTTY = true; // enable interactive mode
+  const ctx = getContext(['--project-token=asdf1234']);
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(1);
+  expect(confirm).toHaveBeenCalled();
+});
 
-  it('ctx should be JSON serializable', async () => {
-    const ctx = getContext(['--project-token=asdf1234']);
-    expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
-  });
+it('ctx should be JSON serializable', async () => {
+  const ctx = getContext(['--project-token=asdf1234']);
+  expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
+});
 
-  it('should write context to chromatic-diagnostics.json if --diagnostics is passed', async () => {
-    const ctx = getContext(['--project-token=asdf1234', '--diagnostics']);
-    await runAll(ctx);
-    expect(jsonfile.writeFile).toHaveBeenCalledWith(
-      'chromatic-diagnostics.json',
-      expect.objectContaining({
-        flags: expect.objectContaining({
-          diagnostics: true,
-        }),
-        options: expect.objectContaining({
-          projectToken: 'asdf1234',
-        }),
+it('should write context to chromatic-diagnostics.json if --diagnostics is passed', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--diagnostics']);
+  await runAll(ctx);
+  expect(jsonfile.writeFile).toHaveBeenCalledWith(
+    'chromatic-diagnostics.json',
+    expect.objectContaining({
+      flags: expect.objectContaining({
+        diagnostics: true,
       }),
-      { spaces: 2 }
-    );
-  });
+      options: expect.objectContaining({
+        projectToken: undefined, // redacted
+      }),
+    }),
+    { spaces: 2 }
+  );
+});
 
-  it('should not write context to chromatic-diagnostics.json if --diagnostics is not passed', async () => {
-    const ctx = getContext(['--project-token=asdf1234']);
-    await runAll(ctx);
-    expect(jsonfile.writeFile).not.toHaveBeenCalled();
-  });
+it('should not write context to chromatic-diagnostics.json if --diagnostics is not passed', async () => {
+  const ctx = getContext(['--project-token=asdf1234']);
+  await runAll(ctx);
+  expect(jsonfile.writeFile).not.toHaveBeenCalled();
+});
+
+it('should upload metadata files if --upload-metadata is passed', async () => {
+  const ctx = getContext([
+    '--project-token=asdf1234',
+    '--output-dir=storybook-out',
+    '--upload-metadata',
+    '--only-changed',
+  ]);
+  await runAll(ctx);
+  expect(upload.mock.calls.at(-1)[1]).toEqual(
+    expect.arrayContaining([
+      {
+        localPath: '.storybook/main.js',
+        targetPath: '.chromatic/main.js',
+        contentLength: 518,
+        contentType: 'text/javascript',
+        targetUrl: 'https://cdn.example.com/.chromatic/main.js',
+      },
+      {
+        localPath: 'storybook-out/preview-stats.trimmed.json',
+        targetPath: '.chromatic/preview-stats.trimmed.json',
+        contentLength: 457,
+        contentType: 'application/json',
+        targetUrl: 'https://cdn.example.com/.chromatic/preview-stats.trimmed.json',
+      },
+      {
+        localPath: '.storybook/preview.js',
+        targetPath: '.chromatic/preview.js',
+        contentLength: 1338,
+        contentType: 'text/javascript',
+        targetUrl: 'https://cdn.example.com/.chromatic/preview.js',
+      },
+      {
+        localPath: expect.any(String),
+        targetPath: '.chromatic/index.html',
+        contentLength: expect.any(Number),
+        contentType: 'text/html',
+        targetUrl: 'https://cdn.example.com/.chromatic/index.html',
+      },
+    ])
+  );
 });
