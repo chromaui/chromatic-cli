@@ -203,11 +203,7 @@
     "plugins": [
       "npm",
       "released"
-    ],
-    "shipit": {
-      "onlyGraduateWithReleaseLabel": true,
-      "prerelease": true
-    }
+    ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
   "storybook": {
