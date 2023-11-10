@@ -41,15 +41,17 @@ export default function parseArgs(argv: string[]) {
       --zip                                     Publish your Storybook to Chromatic as a single zip file instead of individual content files.
 
     Debug options
-      --debug                       Output verbose debugging information. This option implies --no-interactive.
-      --diagnostics                 Write process context information to chromatic-diagnostics.json.
-      --dry-run                     Run without actually publishing to Chromatic.
-      --force-rebuild [branch]      Do not skip build when a rebuild is detected. Only for [branch], if specified. Globs are supported via picomatch.
-      --junit-report [filepath]     Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
-      --list                        List available stories. This requires running a full build.
-      --no-interactive              Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
-      --trace-changed [mode]        Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
-      --upload-metadata             Upload Chromatic metadata files as part of the published Storybook. Includes chromatic-diagnostics.json, chromatic.log, and storybook-build.log, among others.
+      --debug                          Output verbose debugging information. This option implies --no-interactive.
+      --diagnostics-file [filepath]    Write process context information to a JSON file. [chromatic-diagnostics.json]
+      --dry-run                        Run without actually publishing to Chromatic.
+      --force-rebuild [branch]         Do not skip build when a rebuild is detected. Only for [branch], if specified. Globs are supported via picomatch.
+      --junit-report [filepath]        Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
+      --list                           List available stories. This requires running a full build.
+      --log-file [filepath]            Write log output to a file. [chromatic.log]
+      --no-interactive                 Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
+      --storybook-log-file [filepath]  Write Storybook build output to a file. [storybook-build.log]
+      --trace-changed [mode]           Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
+      --upload-metadata                Upload Chromatic metadata files as part of the published Storybook. Includes diagnostics and log files, among others. This option enables --diagnostics-file, --log-file and --storybook-log-file, unless explicitly disabled via the 'no-' prefix.
 
     Deprecated options
       --app-code <token>            Renamed to --project-token.
@@ -92,18 +94,21 @@ export default function parseArgs(argv: string[]) {
 
         // Debug options
         debug: { type: 'boolean' },
-        diagnostics: { type: 'boolean' },
+        diagnosticsFile: { type: 'string' },
         dryRun: { type: 'boolean' },
         forceRebuild: { type: 'string' },
         junitReport: { type: 'string' },
         list: { type: 'boolean' },
+        logFile: { type: 'string' },
         interactive: { type: 'boolean', default: true },
+        storybookLogFile: { type: 'string' },
         traceChanged: { type: 'string' },
         uploadMetadata: { type: 'boolean' },
 
         // Deprecated options (for JSDOM and tunneled builds, among others)
         allowConsoleErrors: { type: 'boolean' },
         appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
+        diagnostics: { type: 'boolean' },
         only: { type: 'string' },
         preserveMissing: { type: 'boolean' },
       },

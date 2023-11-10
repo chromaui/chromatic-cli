@@ -161,7 +161,9 @@ export async function runAll(ctx: InitialContext) {
     ctx.configuration = await getConfiguration(
       ctx.extraOptions?.configFile || ctx.flags.configFile
     );
-    (ctx as Context).options = getOptions(ctx);
+    const options = getOptions(ctx);
+    (ctx as Context).options = options;
+    ctx.log.setLogFile(options.logFile);
     setExitCode(ctx, exitCodes.OK);
   } catch (e) {
     return onError(e);

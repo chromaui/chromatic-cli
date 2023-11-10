@@ -5,8 +5,6 @@ import wroteReport from '../ui/messages/info/wroteReport';
 
 const { writeFile } = jsonfile;
 
-export const CHROMATIC_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
-
 const redact = <T>(value: T, ...fields: string[]): T => {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
@@ -29,8 +27,8 @@ export function getDiagnostics(ctx: Context) {
 // Extract important information from ctx, sort it and output into a json file
 export async function writeChromaticDiagnostics(ctx: Context) {
   try {
-    await writeFile(CHROMATIC_DIAGNOSTICS_FILE, getDiagnostics(ctx), { spaces: 2 });
-    ctx.log.info(wroteReport(CHROMATIC_DIAGNOSTICS_FILE, 'Chromatic diagnostics'));
+    await writeFile(ctx.options.diagnosticsFile, getDiagnostics(ctx), { spaces: 2 });
+    ctx.log.info(wroteReport(ctx.options.diagnosticsFile, 'Chromatic diagnostics'));
   } catch (error) {
     ctx.log.error(error);
   }
