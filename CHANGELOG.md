@@ -1,3 +1,29 @@
+# v8.0.0 (Thu Nov 09 2023)
+
+#### 💥 Breaking Change
+
+- Drop official support for Node 14/16 [#839](https://github.com/chromaui/chromatic-cli/pull/839) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🚀 Enhancement
+
+- Merge Group (Queues) GitHub Action Event Support [#825](https://github.com/chromaui/chromatic-cli/pull/825) ([@mhemmings](https://github.com/mhemmings) [@thafryer](https://github.com/thafryer))
+
+#### 🐛 Bug Fix
+
+- Bump browserify-sign from 4.2.1 to 4.2.2 [#848](https://github.com/chromaui/chromatic-cli/pull/848) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump semver from 7.3.5 to 7.5.2 [#778](https://github.com/chromaui/chromatic-cli/pull/778) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump browserify-sign from 4.2.1 to 4.2.2 in /subdir [#849](https://github.com/chromaui/chromatic-cli/pull/849) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Configure auto with `prerelease` setting and update readme [#847](https://github.com/chromaui/chromatic-cli/pull/847) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 4
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+- Mark Hemmings ([@mhemmings](https://github.com/mhemmings))
+
+---
+
 # v7.6.0 (Tue Oct 31 2023)
 
 #### 🚀 Enhancement
