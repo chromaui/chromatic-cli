@@ -56,7 +56,10 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports yarn', async () => {
-    mockfs({ './package.json': JSON.stringify({ packageManager: 'yarn' }) });
+    mockfs({
+      './package.json': JSON.stringify({ packageManager: 'yarn' }),
+      './yarn.lock': '',
+    });
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -75,7 +78,10 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports pnpm', async () => {
-    mockfs({ './package.json': JSON.stringify({ packageManager: 'pnpm' }) });
+    mockfs({
+      './package.json': JSON.stringify({ packageManager: 'pnpm' }),
+      './pnpm-lock.yaml': '',
+    });
 
     const ctx = {
       sourceDir: './source-dir/',
