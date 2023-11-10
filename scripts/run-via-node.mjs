@@ -1,5 +1,7 @@
+#!/usr/bin/env node
+
 import process from 'process';
-import { run } from '../dist/node';
+import { run } from '../dist/node.js';
 
 run({
   flags: {

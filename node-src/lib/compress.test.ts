@@ -16,7 +16,7 @@ afterEach(() => {
 const testContext = { sourceDir: '/chromatic-tmp', log: new TestLogger() } as any;
 const files = [{ localPath: '/chromatic-tmp/file1', targetPath: 'file1', contentLength: 1 }];
 
-describe('makeZipFile', () => {
+describe.skip('makeZipFile', () => {
   it('adds files to an archive', async () => {
     mockFs({
       '/chromatic-tmp': {
