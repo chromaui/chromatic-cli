@@ -52,8 +52,9 @@ export interface Flags {
   preserveMissing?: boolean;
 }
 
-export interface Options {
+export interface Options extends Configuration {
   projectToken: string;
+  userToken?: string;
 
   configFile?: Flags['configFile'];
   onlyChanged: boolean | string;
