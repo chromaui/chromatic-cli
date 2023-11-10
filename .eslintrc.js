@@ -11,7 +11,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
-    'plugin:json/recommended',
+    'plugin:json/recommended-with-comments',
     'plugin:react/recommended',
   ],
   parser: '@typescript-eslint/parser',

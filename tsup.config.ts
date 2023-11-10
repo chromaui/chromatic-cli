@@ -17,7 +17,7 @@ export default defineConfig((options) => [
     sourcemap: false,
     clean: true,
     platform: 'node',
-    target: 'node16',
+    target: 'node16', // Storybook still supports Node 16
   },
   {
     entry: ['action-src/register.js'],
@@ -29,6 +29,6 @@ export default defineConfig((options) => [
     sourcemap: false,
     clean: true,
     platform: 'node',
-    target: 'node16',
+    target: 'node20', // Sync with `runs.using` in action.yml
   },
 ]);
