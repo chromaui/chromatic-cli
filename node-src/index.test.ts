@@ -75,7 +75,10 @@ vi.mock('node-fetch', () => ({
 
       // Authenticate
       if (query?.match('CreateAppTokenMutation')) {
-        return { data: { createAppToken: 'token' } };
+        return { data: { appToken: 'token' } };
+      }
+      if (query?.match('CreateCLITokenMutation')) {
+        return { data: { cliToken: 'token' } };
       }
 
       if (query?.match('AnnounceBuildMutation')) {
@@ -399,6 +402,14 @@ it('runs in simple situations', async () => {
     committerName: 'tester',
     isolatorUrl: `https://chromatic.com/iframe.html`,
   });
+});
+
+it('supports projectId + userToken', async () => {
+  const ctx = getContext([]);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  ctx.extraOptions = { projectId: 'project-id', userToken: 'user-token' };
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(1);
 });
 
 it('returns 0 with exit-zero-on-changes', async () => {
