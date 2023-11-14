@@ -167,7 +167,7 @@ export default function getOptions({
     options.storybookLogFile = options.storybookLogFile ?? DEFAULT_STORYBOOK_LOG_FILE;
   }
 
-  if (!options.projectToken) {
+  if (!options.projectToken && !(options.projectId && options.userToken)) {
     throw new Error(missingProjectToken());
   }
 

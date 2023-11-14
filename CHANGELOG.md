@@ -1,3 +1,15 @@
+# v9.0.0 (Fri Nov 10 2023)
+
+#### 🚀 Enhancement
+
+- Support `projectId` + `userToken` as alternative to `projectToken` for auth [#852](https://github.com/chromaui/chromatic-cli/pull/852) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v8.0.0 (Thu Nov 09 2023)
 
 #### 💥 Breaking Change
