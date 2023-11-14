@@ -9,10 +9,10 @@ import link from '../../components/link';
 export default (
   { options, buildCommand, buildLogFile, runtimeMetadata }: Context,
   { message },
-  buildLog
+  buildLog?: string
 ) => {
   const { buildScriptName } = options;
-  const lines = buildLog.split(EOL).filter((line) => line && !line.startsWith('<s>'));
+  const lines = buildLog?.split(EOL).filter((line) => line && !line.startsWith('<s>')) || [];
 
   return [
     dedent(chalk`

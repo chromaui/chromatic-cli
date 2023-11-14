@@ -48,4 +48,8 @@ export default class TestLogger {
   setInteractive() {
     // do nothing
   }
+
+  setLogFile() {
+    // do nothing
+  }
 }

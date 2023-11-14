@@ -21,6 +21,8 @@ const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input 
 
 const trueIfSet = <T>(value: T) => ((value as unknown) === '' ? true : value);
 const defaultIfSet = <T>(value: T, fallback: T) => ((value as unknown) === '' ? fallback : value);
+const defaultUnlessSet = <T>(value: T, fallback: T) =>
+  ['', true, undefined].includes(value as any) ? fallback : value;
 const undefinedIfEmpty = <T>(array: T[]) => {
   const filtered = array.filter(Boolean);
   return filtered.length ? filtered : undefined;
@@ -46,11 +48,11 @@ export default function getOptions({
     autoAcceptChanges: false,
     exitZeroOnChanges: false,
     exitOnceUploaded: false,
-    diagnostics: false,
+    diagnosticsFile: undefined,
+    interactive: false,
     isLocalBuild: false,
     originalArgv: argv,
 
-    // We set these to undefined just so TS doesn't complain
     onlyChanged: undefined,
     onlyStoryFiles: undefined,
     onlyStoryNames: undefined,
@@ -129,7 +131,7 @@ export default function getOptions({
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
-    storybookLogFile: defaultIfSet(flags.storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
+    storybookLogFile: defaultUnlessSet(flags.storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
 
     ownerName: branchOwner || repositoryOwner,
     repositorySlug: flags.repositorySlug,
@@ -160,11 +162,10 @@ export default function getOptions({
     log.setInteractive(false);
   }
 
-  if (options.uploadMetadata) {
+  if (options.debug || options.uploadMetadata) {
     // Implicitly enable these options unless they're already enabled or explicitly disabled
     options.logFile = options.logFile ?? DEFAULT_LOG_FILE;
     options.diagnosticsFile = options.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
-    options.storybookLogFile = options.storybookLogFile ?? DEFAULT_STORYBOOK_LOG_FILE;
   }
 
   if (!options.projectToken && !(options.projectId && options.userToken)) {

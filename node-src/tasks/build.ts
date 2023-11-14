@@ -49,12 +49,15 @@ const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 export const buildStorybook = async (ctx: Context) => {
-  ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
-  const logFile = createWriteStream(ctx.buildLogFile);
-  await new Promise((resolve, reject) => {
-    logFile.on('open', resolve);
-    logFile.on('error', reject);
-  });
+  let logFile = null;
+  if (ctx.options.storybookLogFile) {
+    ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
+    logFile = createWriteStream(ctx.buildLogFile);
+    await new Promise((resolve, reject) => {
+      logFile.on('open', resolve);
+      logFile.on('error', reject);
+    });
+  }
 
   const { experimental_abortSignal: signal } = ctx.options;
   try {
@@ -66,12 +69,12 @@ export const buildStorybook = async (ctx: Context) => {
   } catch (e) {
     signal?.throwIfAborted();
 
-    const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
+    const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(failed(ctx).output);
   } finally {
-    logFile.end();
+    logFile?.end();
   }
 };
 
