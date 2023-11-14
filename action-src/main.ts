@@ -94,13 +94,14 @@ async function run() {
     const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
     const debug = getInput('debug');
-    const diagnostics = getInput('diagnostics');
+    const diagnosticsFile = getInput('diagnosticsFile') || getInput('diagnostics');
     const dryRun = getInput('dryRun');
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const externals = getInput('externals');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const logFile = getInput('logFile');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getInput('onlyStoryFiles');
@@ -112,6 +113,7 @@ async function run() {
     const storybookBaseDir = getInput('storybookBaseDir');
     const storybookBuildDir = getInput('storybookBuildDir');
     const storybookConfigDir = getInput('storybookConfigDir');
+    const storybookLogFile = getInput('storybookLogFile');
     const traceChanged = getInput('traceChanged');
     const untraced = getInput('untraced');
     const uploadMetadata = getInput('uploadMetadata');
@@ -136,7 +138,7 @@ async function run() {
         branchName: maybe(branchName),
         buildScriptName: maybe(buildScriptName),
         debug: maybe(debug),
-        diagnostics: maybe(diagnostics),
+        diagnosticsFile: maybe(diagnosticsFile),
         dryRun: maybe(dryRun),
         exitOnceUploaded: maybe(exitOnceUploaded, false),
         exitZeroOnChanges: maybe(exitZeroOnChanges, true),
@@ -144,6 +146,7 @@ async function run() {
         forceRebuild: maybe(forceRebuild),
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
         interactive: false,
+        logFile: maybe(logFile),
         only: maybe(only),
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),
@@ -155,11 +158,12 @@ async function run() {
         storybookBaseDir: maybe(storybookBaseDir),
         storybookBuildDir: maybe(storybookBuildDir),
         storybookConfigDir: maybe(storybookConfigDir),
+        storybookLogFile: maybe(storybookLogFile),
         traceChanged: maybe(traceChanged),
         untraced: maybe(untraced),
         uploadMetadata: maybe(uploadMetadata, false),
         zip: maybe(zip, false),
-        junitReport: maybe(junitReport, false),
+        junitReport: maybe(junitReport),
       },
     });
 
