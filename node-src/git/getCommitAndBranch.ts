@@ -52,6 +52,10 @@ export default async function getCommitAndBranch(
   } = process.env;
   const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
 
+  log.debug('PR Branch: ', prBranch);
+  log.debug('CI Branch: ', ciBranch);
+  log.debug('GITHUB_HEAD_REF: ', GITHUB_HEAD_REF);
+
   const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
   const isGitHubAction = GITHUB_ACTIONS === 'true';
