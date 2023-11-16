@@ -19,6 +19,7 @@ jobs:
           onlyChanged: true
           traceChanged: true
           diagnostics: true
+          debug: true
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.STAGING_CHROMATIC_PROJECT_TOKEN }}
           CHROMATIC_INDEX_URL: https://index.staging-chromatic.com
