@@ -1,3 +1,30 @@
+# v9.1.0 (Fri Nov 17 2023)
+
+#### 🚀 Enhancement
+
+- Don't write `chromatic.log` by default, allow configuring log files [#855](https://github.com/chromaui/chromatic-cli/pull/855) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Redact `userToken` in diagnostics and fatal error output [#859](https://github.com/chromaui/chromatic-cli/pull/859) ([@ghengeveld](https://github.com/ghengeveld))
+- Bump zod from 3.22.2 to 3.22.3 [#830](https://github.com/chromaui/chromatic-cli/pull/830) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Bump word-wrap from 1.2.3 to 1.2.5 [#804](https://github.com/chromaui/chromatic-cli/pull/804) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Bump get-func-name from 2.0.0 to 2.0.2 [#824](https://github.com/chromaui/chromatic-cli/pull/824) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Bump @babel/traverse from 7.16.3 to 7.23.2 in /subdir [#838](https://github.com/chromaui/chromatic-cli/pull/838) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Fix changelog for 9.0.0 and update auto config to prevent issue in the future [#854](https://github.com/chromaui/chromatic-cli/pull/854) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### ⚠️ Pushed to `main`
+
+- Drop next-release label ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 3
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v9.0.0 (Fri Nov 10 2023)
 
 #### 🚀 Enhancement
