@@ -2,21 +2,14 @@ import jsonfile from 'jsonfile';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
+import { redact } from './utils';
 
 const { writeFile } = jsonfile;
-
-const redact = <T>(value: T, ...fields: string[]): T => {
-  if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
-  const obj = { ...value };
-  for (const key in obj) obj[key] = fields.includes(key) ? undefined : redact(obj[key], ...fields);
-  return obj;
-};
 
 export function getDiagnostics(ctx: Context) {
   // Drop some fields that are not useful to have and redact sensitive fields
   const { argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
-  const data = redact(rest, 'projectToken', 'reportToken');
+  const data = redact(rest, 'projectToken', 'reportToken', 'userToken');
 
   // Sort top-level fields alphabetically
   return Object.keys(data)
