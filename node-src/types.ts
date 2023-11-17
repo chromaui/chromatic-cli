@@ -36,18 +36,21 @@ export interface Flags {
 
   // Debug options
   debug?: boolean;
-  diagnostics?: boolean;
+  diagnosticsFile?: string;
   dryRun?: boolean;
   forceRebuild?: string;
+  interactive?: boolean;
   junitReport?: string;
   list?: boolean;
-  interactive?: boolean;
+  logFile?: string;
+  storybookLogFile?: string;
   traceChanged?: string;
   uploadMetadata?: boolean;
 
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
+  diagnostics?: boolean;
   only?: string;
   preserveMissing?: boolean;
 }
@@ -57,6 +60,7 @@ export interface Options extends Configuration {
   userToken?: string;
 
   configFile?: Flags['configFile'];
+  logFile?: Flags['logFile'];
   onlyChanged: boolean | string;
   onlyStoryFiles: Flags['onlyStoryFiles'];
   onlyStoryNames: Flags['onlyStoryNames'];
@@ -69,9 +73,9 @@ export interface Options extends Configuration {
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;
   debug: boolean;
-  diagnostics: boolean;
+  diagnosticsFile?: Flags['diagnosticsFile'];
   interactive: boolean;
-  junitReport: boolean | string;
+  junitReport?: Flags['junitReport'];
   uploadMetadata?: Flags['uploadMetadata'];
   zip: Flags['zip'];
 
@@ -90,6 +94,7 @@ export interface Options extends Configuration {
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];
   storybookConfigDir: Flags['storybookConfigDir'];
+  storybookLogFile: Flags['storybookLogFile'];
 
   ownerName: string;
   repositorySlug: Flags['repositorySlug'];

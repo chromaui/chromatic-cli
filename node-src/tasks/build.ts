@@ -12,8 +12,6 @@ import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 
-export const STORYBOOK_BUILD_LOG_FILE = 'build-storybook.log';
-
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
@@ -51,12 +49,15 @@ const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 export const buildStorybook = async (ctx: Context) => {
-  ctx.buildLogFile = path.resolve(STORYBOOK_BUILD_LOG_FILE);
-  const logFile = createWriteStream(ctx.buildLogFile);
-  await new Promise((resolve, reject) => {
-    logFile.on('open', resolve);
-    logFile.on('error', reject);
-  });
+  let logFile = null;
+  if (ctx.options.storybookLogFile) {
+    ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
+    logFile = createWriteStream(ctx.buildLogFile);
+    await new Promise((resolve, reject) => {
+      logFile.on('open', resolve);
+      logFile.on('error', reject);
+    });
+  }
 
   const { experimental_abortSignal: signal } = ctx.options;
   try {
@@ -68,12 +69,12 @@ export const buildStorybook = async (ctx: Context) => {
   } catch (e) {
     signal?.throwIfAborted();
 
-    const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
+    const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
     ctx.log.error(buildFailed(ctx, e, buildLog));
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(failed(ctx).output);
   } finally {
-    logFile.end();
+    logFile?.end();
   }
 };
 

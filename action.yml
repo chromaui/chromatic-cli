@@ -25,7 +25,10 @@ inputs:
     description: 'Output verbose debugging information'
     required: false
   diagnostics:
-    description: 'Write process context information to chromatic-diagnostics.json'
+    description: 'Deprecated, use diagnosticsFile instead'
+    required: false
+  diagnosticsFile:
+    description: 'Write process context information to a JSON file'
     required: false
   dryRun:
     description: 'Run without actually publishing to Chromatic'
@@ -44,6 +47,9 @@ inputs:
     required: false
   ignoreLastBuildOnBranch:
     description: 'Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)'
+    required: false
+  logFile:
+    description: 'Write CLI logs to a file'
     required: false
   only:
     description: 'Deprecated, replaced by onlyStoryNames'
@@ -78,6 +84,9 @@ inputs:
   storybookConfigDir:
     description: 'Relative path from where you run Chromatic to your Storybook config directory'
     required: false
+  storybookLogFile:
+    description: 'Write Storybook build logs to a file'
+    required: false
   token:
     description: 'Your github token'
     required: false
@@ -97,7 +106,7 @@ inputs:
     description: 'Publish your Storybook to Chromatic as a single zip file instead of individual content files'
     required: false
   junitReport:
-    description: 'Write build results to a JUnit XML file.'
+    description: 'Write build results to a JUnit XML file'
     required: false
 
 outputs:

@@ -110,7 +110,7 @@ describe('buildStorybook', () => {
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: { debug: vi.fn() },
-      options: {},
+      options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
