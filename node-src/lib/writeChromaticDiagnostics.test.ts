@@ -16,10 +16,12 @@ describe('getDiagnostics', () => {
     const ctx = {
       build: { number: 1, reportToken: 'foo' },
       flags: { projectToken: 'bar' },
+      extraOptions: { userToken: 'baz' },
     };
     expect(getDiagnostics(ctx as any)).toEqual({
       build: { number: 1, reportToken: undefined },
       flags: { projectToken: undefined },
+      extraOptions: { userToken: undefined },
     });
   });
 });
