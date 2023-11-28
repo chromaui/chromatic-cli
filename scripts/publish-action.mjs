@@ -1,43 +1,46 @@
 #!/usr/bin/env node
 
 import cpy from 'cpy';
-import { execa } from 'execa';
+import { $ } from 'execa';
 import tmp from 'tmp-promise';
-
-const git = (args, opts) => execa('git', args, { stdio: 'inherit', ...opts });
 
 const publishAction = async ({ major, version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
-  console.info(`✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
+  console.info(`🚀 Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
-  const run = (...args) => {
-    if (dryRun) console.log(`👉 git ${args.join(' ')}`);
-    return git(args, { stdio: 'inherit', cwd: path });
+
+  const copy = (globs, opts) => {
+    console.info(`📦 Copying:\n   - ${globs.join('\n   - ')}`);
+    return cpy(globs, path, opts);
   };
 
-  await cpy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
-    parents: true,
-  });
-  await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
+  await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], { parents: true });
+  await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md']);
 
-  await run('init', '-b', 'main');
-  await run('config', 'user.name', 'Chromatic');
-  await run('config', 'user.email', 'support@chromatic.com');
-  await run('remote', 'add', 'origin', `https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
-  await run('add', '.');
-  await run('commit', '-m', `v${version}`);
-  await run('tag', '-a', `v${version}`, '-m', `v${version} without automatic upgrades (pinned)`);
-  await run('tag', '-a', `v${major}`, '-m', `v${version} with automatic upgrades to v${major}.x.x`);
-  await run('tag', '-a', 'v1', '-m', `Deprecated, use 'latest' tag instead`);
-  await run('tag', '-a', 'latest', '-m', `v${version} with automatic upgrades to all versions`);
+  const $$ = (strings, ...args) => {
+    console.info(strings.reduce((acc, s, i) => `${acc}${s}${args[i] || ''}`, '🏃 '));
+    return $({ cwd: path })(strings, ...args);
+  };
+
+  await $$`git init -b main`;
+  await $$`git config user.name Chromatic`;
+  await $$`git config user.email support@chromatic.com`;
+  await $$`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`;
+  await $$`git add .`;
+  await $$`git commit -m v${version}`;
+  await $$`git tag -a v${version} -m ${`v${version} without automatic upgrades (pinned)`}`;
+  await $$`git tag -a v${major} -m ${`v${version} with automatic upgrades to v${major}.x.x`}`;
+  await $$`git tag -a v1 -m ${`Deprecated, use 'latest' tag instead`}`;
+  await $$`git tag -a latest -m ${`v${version} with automatic upgrades to all versions`}`;
 
   if (dryRun) {
     console.info('✅ Skipping git push due to --dry-run');
   } else {
-    await run('push', 'origin', 'HEAD:main', '--force');
-    await run('push', '--tags', '--force');
+    await $$`git push origin HEAD:main --force`;
+    await $$`git push --tags --force`;
+    console.info('✅ Done');
   }
 
   return cleanup();
@@ -54,7 +57,7 @@ const publishAction = async ({ major, version, repo }) => {
  * Make sure to build the action before publishing manually.
  */
 (async () => {
-  const { stdout: status } = await git(['status', '--porcelain']);
+  const { stdout: status } = await $`git status --porcelain`;
   if (status) {
     console.error(`❗️ Working directory is not clean:\n${status}`);
     return;
@@ -68,7 +71,7 @@ const publishAction = async ({ major, version, repo }) => {
     return;
   }
 
-  const { stdout: branch } = await git(['rev-parse', '--abbrev-ref', 'HEAD']);
+  const { stdout: branch } = await $`git rev-parse --abbrev-ref HEAD`;
   const defaultTag = branch === 'main' ? 'latest' : 'canary';
   const context = ['canary', 'next', 'latest'].includes(process.argv[2])
     ? process.argv[2]
