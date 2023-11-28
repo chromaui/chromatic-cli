@@ -12,7 +12,10 @@ const publishAction = async ({ major, version, repo }) => {
   console.info(`✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
-  const run = (cmd) => command(cmd, { cwd: path });
+  const run = (cmd) => {
+    if (dryRun) console.log(`👉 ${cmd}`);
+    return command(cmd, { cwd: path });
+  };
 
   await cpy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
     parents: true,
