@@ -18,7 +18,7 @@ jobs:
           node-version: lts/*
       - name: install
         run: yarn install --frozen-lockfile
-      - uses: chromaui/action@v1
+      - uses: chromaui/action@latest
         with:
           # 👇 Chromatic projectToken, refer to the manage page to obtain it.
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

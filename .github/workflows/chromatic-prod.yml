@@ -13,7 +13,7 @@ jobs:
           node-version: lts/*
       - name: install
         run: yarn install --frozen-lockfile
-      - uses: chromaui/action-next@v1
+      - uses: chromaui/action@latest
         with:
           exitOnceUploaded: true
           onlyChanged: true
