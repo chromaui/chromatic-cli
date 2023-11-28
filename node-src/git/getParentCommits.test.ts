@@ -687,10 +687,22 @@ describe('getParentCommits', () => {
 
     // it(`deals with situations where squashed branches have no builds`)
 
+    //       [X]
+    //     /    \
+    //    P - Q - R
+    //  /
+    //[A] - B - C - M
+
     // it(`deals with situations where squashed branches no longer exist in the repo but have a build`)
 
     // it(`deals with situations where squashed branches no longer exist in the repo and have no build`)
 
     // it(`deals with situations where squashed branches themselves have squash merge commits`)
+
+    // P -[Q]
+    //  \
+    //   X - [Y] -<Z>   (squash merge of Q)
+    //    \
+    //      A -    -   <M> (squash merge of Z)
   });
 });

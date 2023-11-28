@@ -154,7 +154,7 @@ async function step(
   // No more commits uncovered commitsWithBuilds!
   if (candidateCommits.length === 0) {
     log.debug('step: no candidateCommits; we are done');
-    return { commitsWithBuilds, commitsWithoutBuilds, visitedCommitsWithoutBuilds };
+    return { commitsWithBuilds, visitedCommitsWithoutBuilds };
   }
 
   const {
@@ -199,7 +199,7 @@ export async function getParentCommits(
   { options, client, git, log }: Context,
   { ignoreLastBuildOnBranch = false } = {}
 ) {
-  const { branch, commit, committedAt } = git;
+  const { branch, committedAt } = git;
 
   // Include the latest build from this branch as an ancestor of the current build
   const { app } = await client.runQuery<FirstCommittedAtQueryResult>(
@@ -247,7 +247,7 @@ export async function getParentCommits(
   //   - in commitsWithBuilds
   //   - an ancestor of a commit in commitsWithBuilds
   //   - has no build
-  const { commitsWithBuilds } = await step(
+  const { commitsWithBuilds, visitedCommitsWithoutBuilds } = await step(
     { options, client, log, git },
     FETCH_N_INITIAL_BUILD_COMMITS,
     {
@@ -257,69 +257,37 @@ export async function getParentCommits(
     }
   );
 
-  // Check if the current commit is a merge commit
-  const {
-    app: { pullRequest },
-  } = await client.runQuery<IsMergeCommitQueryResult>(
-    IsMergeCommitQuery,
-    { commit, branch },
-    { retries: 5 } // This query requires a request to an upstream provider which may fail
+  // TODO: what if visitedCommitsWithoutBuilds is really long?
+
+  await Promise.all(
+    visitedCommitsWithoutBuilds.map(async (commit) => {
+      // Check if the visited commit is a merge commit
+      const {
+        app: { pullRequest },
+      } = await client.runQuery<IsMergeCommitQueryResult>(
+        IsMergeCommitQuery,
+        { commit, branch },
+        { retries: 5 } // This query requires a request to an upstream provider which may fail
+      );
+
+      // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
+      // during our ancestor selection that was the merge commit for that PR.
+      // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
+      if (pullRequest && pullRequest.lastHeadBuild) {
+        if (await commitExists(pullRequest.lastHeadBuild.commit)) {
+          log.debug(
+            `Adding merged PR build commit ${pullRequest.lastHeadBuild.commit} to commits with builds`
+          );
+          commitsWithBuilds.push(pullRequest.lastHeadBuild.commit);
+        } else {
+          log.debug(
+            `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to parents`
+          );
+          extraParentCommits.push(pullRequest.lastHeadBuild.commit);
+        }
+      }
+    })
   );
-
-  // Add the most recent build on a (merged) branch as a parent if we think this was the commit that
-  // merged the pull request.
-  // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
-  // let shouldRecurse = false;
-  if (pullRequest && pullRequest.lastHeadBuild) {
-    if (await commitExists(pullRequest.lastHeadBuild.commit)) {
-      log.debug(
-        `Adding merged PR build commit ${pullRequest.lastHeadBuild.commit} to commits with builds`
-      );
-      commitsWithBuilds.push(pullRequest.lastHeadBuild.commit);
-      // shouldRecurse = true;
-    } else {
-      log.debug(
-        `Merged PR build commit ${pullRequest.lastHeadBuild.commit} not in index, blindly appending to parents`
-      );
-      extraParentCommits.push(pullRequest.lastHeadBuild.commit);
-    }
-  }
-
-  // let finalCommitsWithBuilds = commitsWithBuilds;
-  // if (shouldRecurse) {
-  //   const { commitsWithBuilds: secondCommitsWithBuilds, visitedCommitsWithoutBuilds } = await step(
-  //     { options, client, log, git },
-  //     FETCH_N_INITIAL_BUILD_COMMITS,
-  //     {
-  //       firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
-  //       commitsWithBuilds: commitsWithBuilds,
-  //       commitsWithoutBuilds,
-  //     }
-  //   );
-  //   finalCommitsWithBuilds = secondCommitsWithBuilds;
-  // }
-
-  // 1. Add new App.pullRequests(mergeInfo) resolver
-  // const extraPrs = runQuery(`app {
-  //       pullRequests(mergeInfo: $mergeInfos) {
-  //         lastHeadBuild {
-  //           commit
-  //         }
-  //       }
-  //     }`, { mergeInfos: mergeInfoFromTraversedCommits(traversedCommits) });
-  //
-
-  //   let shouldRecurse = false;
-  //   extraPrs.forEach(pr => {
-  //     if (await commitExists(pullRequest.lastCommit)) {
-  //       commitsWithBuilds.push(pullRequest.lastCommit);
-  //       shouldRecurse = true;
-  //     } else {
-  //       extraParentCommits.push(pullRequest.lastHeadBuild.commit);
-  //     }
-  //   });
-  //
-  // if (shouldRecurse) goto 258
 
   log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
 
