@@ -6,7 +6,7 @@ import tmp from 'tmp-promise';
 
 const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
 
-const publishAction = async ({ version, repo }) => {
+const publishAction = async ({ major, version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
   console.info(`✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
@@ -25,8 +25,10 @@ const publishAction = async ({ version, repo }) => {
   await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
   await run('git add .');
   await run(`git commit -m ${version}`);
-  await run('git tag -f v1'); // For backwards compatibility
-  await run('git tag -f latest');
+  await run(`git tag -f v${version}`); // for pinning to patch version
+  await run(`git tag -f v${major}`); // for pinning to major version
+  await run('git tag -f v1'); // for backwards compatibility, similar to 'latest'
+  await run('git tag -f latest'); // for using the latest version (whichever major)
 
   if (dryRun) {
     console.info('✅ Skipping git push due to --dry-run');
@@ -76,13 +78,13 @@ const publishAction = async ({ version, repo }) => {
         console.info('Run `yarn publish-action canary` to publish a canary action.');
         return;
       }
-      await publishAction({ version: pkg.version, repo: 'chromaui/action-canary' });
+      await publishAction({ major, version: pkg.version, repo: 'chromaui/action-canary' });
       break;
     case 'next':
-      await publishAction({ version: pkg.version, repo: 'chromaui/action-next' });
+      await publishAction({ major, version: pkg.version, repo: 'chromaui/action-next' });
       break;
     case 'latest':
-      await publishAction({ version: pkg.version, repo: 'chromaui/action' });
+      await publishAction({ major, version: pkg.version, repo: 'chromaui/action' });
       break;
     default:
       console.error(`❗️ Unknown tag: ${tag}`);
