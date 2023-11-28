@@ -12,18 +12,19 @@
 
 // create a mock set of responses to the queries we run as part of our git algorithm
 
-const mocks = {
-  FirstCommittedAtQuery: (builds, prs, { branch, commit }) => {
-    function lastBuildOnBranch(findingBranch) {
-      return builds
-        .slice()
-        .reverse()
-        .find((b) => b.branch === findingBranch);
-    }
+type Build = { branch: string; commit: string; committedAt: number };
+type PR = { mergeCommitHash: string; headBranch: string };
 
-    const lastBuild = lastBuildOnBranch(branch);
-    const pr = prs.find((p) => p.mergeCommitHash === commit);
-    const prLastBuild = pr && lastBuildOnBranch(pr.headBranch);
+function lastBuildOnBranch(builds: Build[], findingBranch: string) {
+  return builds
+    .slice()
+    .reverse()
+    .find((b) => b.branch === findingBranch);
+}
+
+const mocks = {
+  FirstCommittedAtQuery: (builds: Build[], prs: PR[], { branch }: { branch: string }) => {
+    const lastBuild = lastBuildOnBranch(builds, branch);
     return {
       app: {
         firstBuild: builds[0] && {
@@ -33,6 +34,20 @@ const mocks = {
           commit: lastBuild.commit,
           committedAt: lastBuild.committedAt,
         },
+      },
+    };
+  },
+  HasBuildsWithCommitsQuery: (builds: Build[], prs: PR[], { commits }: { commits: string[] }) => ({
+    app: {
+      hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
+    },
+  }),
+  IsMergeCommitQuery: (builds: Build[], prs: PR[], { commit }: { commit: string }) => {
+    const pr = prs.find((p) => p.mergeCommitHash === commit);
+    const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
+
+    return {
+      app: {
         pullRequest: prLastBuild && {
           lastHeadBuild: {
             commit: prLastBuild.commit,
@@ -41,11 +56,6 @@ const mocks = {
       },
     };
   },
-  HasBuildsWithCommitsQuery: (builds, _prs, { commits }) => ({
-    app: {
-      hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
-    },
-  }),
 };
 
 export default function createMockIndex({ commitMap }, buildDescriptions, prDescriptions = []) {
