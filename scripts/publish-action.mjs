@@ -4,6 +4,11 @@ import cpy from 'cpy';
 import { $ } from 'execa';
 import tmp from 'tmp-promise';
 
+const copy = (globs, ...args) => {
+  console.info(`📦 Copying:\n   - ${globs.join('\n   - ')}`);
+  return cpy(globs, ...args);
+};
+
 const publishAction = async ({ major, version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
@@ -11,13 +16,10 @@ const publishAction = async ({ major, version, repo }) => {
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
 
-  const copy = (globs, opts) => {
-    console.info(`📦 Copying:\n   - ${globs.join('\n   - ')}`);
-    return cpy(globs, path, opts);
-  };
-
-  await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], { parents: true });
-  await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md']);
+  await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
+    parents: true, // keep directory structure (i.e. action dir)
+  });
+  await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
 
   const $$ = (strings, ...args) => {
     console.info(strings.reduce((acc, s, i) => `${acc}${s}${args[i] || ''}`, '🏃 '));
