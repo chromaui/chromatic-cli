@@ -14,6 +14,7 @@
 
 type Build = { branch: string; commit: string; committedAt: number };
 type PR = { mergeCommitHash: string; headBranch: string };
+type MergeInfo = { commit: string; branch: string; }
 
 function lastBuildOnBranch(builds: Build[], findingBranch: string) {
   return builds
@@ -42,18 +43,22 @@ const mocks = {
       hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
     },
   }),
-  IsMergeCommitQuery: (builds: Build[], prs: PR[], { commit }: { commit: string }) => {
-    const pr = prs.find((p) => p.mergeCommitHash === commit);
-    const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
+  MergeCommitsQuery: (builds: Build[], prs: PR[], { mergeInfos }: { mergeInfos: MergeInfo[] }) => {
+    const mergedPrs = [];
+    for (const mergeInfo of mergeInfos) {
+      const pr = prs.find((p) => p.mergeCommitHash === mergeInfo.commit);
+      const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
+      mergedPrs.push({
+        lastHeadBuild: prLastBuild && {
+          commit: prLastBuild.commit,
+        }
+      });
+    }
 
     return {
       app: {
-        pullRequest: prLastBuild && {
-          lastHeadBuild: {
-            commit: prLastBuild.commit,
-          },
-        },
-      },
+        mergedPullRequests: mergedPrs
+      }
     };
   },
 };
