@@ -64,7 +64,11 @@ export const buildStorybook = async (ctx: Context) => {
     ctx.log.debug('Running build command:', ctx.buildCommand);
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
 
-    const subprocess = execaCommand(ctx.buildCommand, { stdio: [null, logFile, logFile], signal });
+    const subprocess = execaCommand(ctx.buildCommand, {
+      stdio: [null, logFile, logFile],
+      signal,
+      env: { NODE_ENV: 'production' },
+    });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
     signal?.throwIfAborted();
