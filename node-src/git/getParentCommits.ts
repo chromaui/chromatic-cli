@@ -46,9 +46,9 @@ interface HasBuildsWithCommitsQueryResult {
 }
 
 const MergeCommitsQuery = gql`
-  query MergeCommitsQuery($mergeInfos: [MergedInfoInput]!) {
+  query MergeCommitsQuery($mergeInfoList: [MergedInfoInput]!) {
     app {
-      mergedPullRequests(mergeInfos: $mergeInfos) {
+      mergedPullRequests(mergeInfoList: $mergeInfoList) {
         lastHeadBuild {
           commit
         }
@@ -257,12 +257,12 @@ export async function getParentCommits(
     }
   );
 
-  const mergeInfos = visitedCommitsWithoutBuilds.map((commit) => {
+  const mergeInfoList = visitedCommitsWithoutBuilds.map((commit) => {
     return { commit, baseRefName: branch };
   });
   const { app: { mergedPullRequests } } = await client.runQuery<MergeCommitsQueryResult>(
     MergeCommitsQuery,
-    { mergeInfos },
+    { mergeInfoList },
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
 

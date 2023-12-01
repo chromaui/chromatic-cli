@@ -43,9 +43,9 @@ const mocks = {
       hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
     },
   }),
-  MergeCommitsQuery: (builds: Build[], prs: PR[], { mergeInfos }: { mergeInfos: MergeInfo[] }) => {
+  MergeCommitsQuery: (builds: Build[], prs: PR[], { mergeInfoList }: { mergeInfoList: MergeInfo[] }) => {
     const mergedPrs = [];
-    for (const mergeInfo of mergeInfos) {
+    for (const mergeInfo of mergeInfoList) {
       const pr = prs.find((p) => p.mergeCommitHash === mergeInfo.commit);
       const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
       mergedPrs.push({
