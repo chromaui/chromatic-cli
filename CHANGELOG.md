@@ -1,3 +1,20 @@
+# v10.0.0 (Fri Dec 01 2023)
+
+#### 💥 Breaking Change
+
+- Force `NODE_ENV=production` for Storybook builds through the CLI [#865](https://github.com/chromaui/chromatic-cli/pull/865) ([@tmeasday](https://github.com/tmeasday))
+
+#### 🐛 Bug Fix
+
+- Support pinning GitHub Action to major or patch version [#863](https://github.com/chromaui/chromatic-cli/pull/863) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v9.1.0 (Fri Nov 17 2023)
 
 #### 🚀 Enhancement
