@@ -262,7 +262,7 @@ export async function getParentCommits(
   });
   const { app: { mergedPullRequests } } = await client.runQuery<MergeCommitsQueryResult>(
     MergeCommitsQuery,
-    { mergeInfoList },
+    { mergeInfoList: mergeInfoList.slice(0, 100) }, // Limit amount sent in API call
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
 
