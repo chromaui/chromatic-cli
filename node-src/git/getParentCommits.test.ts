@@ -10,6 +10,7 @@ import generateGitRepository from './generateGitRepository';
 
 import longLineDescription from './mocks/long-line';
 import longLoopDescription from './mocks/long-loop';
+import doubleLoopDescription from './mocks/double-loop';
 import createMockIndex from './mocks/mock-index';
 import simpleLoopDescription from './mocks/simple-loop';
 import threeParentsDescription from './mocks/three-parents';
@@ -19,6 +20,7 @@ const descriptions = {
   simpleLoop: simpleLoopDescription,
   longLine: longLineDescription,
   longLoop: longLoopDescription,
+  doubleLoop: doubleLoopDescription,
   threeParents: threeParentsDescription,
   twoRoots: twoRootsDescription,
 };
@@ -615,7 +617,7 @@ describe('getParentCommits', () => {
     it(`also includes PR head commits that were squashed to this commit`, async () => {
       //
       //
-      //             [D] [branch, squash merged into E]
+      //             [D]   [branch, squash merged into E]
       //            /   \
       //  A - B -[C]      F
       //            \   /
@@ -641,9 +643,9 @@ describe('getParentCommits', () => {
     it(`also finds squash merge commits that were on previous commits without builds`, async () => {
       // []: has build, <>: is squash merge, (): current commit
       //
-      //     B -[D]     [branch]
+      //     B -[D]      [branch]
       //    /
-      //  A - [C]-<E>-(G) [main]
+      //  A -[C]-<E>-(G) [main]
       const repository = repositories.longLoop;
       await checkoutCommit('G', 'main', repository);
       const client = createClient({
@@ -664,7 +666,7 @@ describe('getParentCommits', () => {
     it(`deals with situations where the last build on the squashed branch isn't the last commit`, async () => {
       // []: has build, <>: is squash merge, (): current commit
       //
-      //     [B] - D      [branch]
+      //     [B]- D      [branch]
       //    /
       //  A -[C]-<E>-(G) [main]
       const repository = repositories.longLoop;
@@ -681,28 +683,79 @@ describe('getParentCommits', () => {
       const git = { branch: 'main', ...(await getCommit()) };
 
       const parentCommits = await getParentCommits({ client, log, git, options } as any);
-      // This doesn't include 'C' as D "covers" it.
       expectCommitsToEqualNames(parentCommits, ['C', 'B'], repository);
     });
 
-    // it(`deals with situations where squashed branches have no builds`)
+    it(`deals with situations where squashed branches have no builds`, async () => {
+      // []: has build, <>: is squash merge, (): current commit
+      //
+      //     B - D       [branch]
+      //    /
+      //  A -[C]-<E>-(G) [main]
+      const repository = repositories.longLoop;
+      await checkoutCommit('G', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['C', 'main'],
+        ],
+        // Talking to GH (etc) tells us that commit E is the merge commit for "branch"
+        prs: [['E', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit()) };
 
-    //       [X]
-    //     /    \
-    //    P - Q - R
-    //  /
-    //[A] - B - C - M
+      const parentCommits = await getParentCommits({ client, log, git, options } as any);
+      expectCommitsToEqualNames(parentCommits, ['C'], repository);
+    });
 
-    // it(`deals with situations where squashed branches no longer exist in the repo but have a build`)
+    it(`deals with situations where squashed branches no longer exist in the repo but have a build`, async () => {
+      // []: has build, <>: is squash merge, (): current commit
+      //
+      //  [B] [no longer in repo]
+      //
+      //  [A]- C -<(D)> [main]
+      const repository = repositories.twoRoots;
+      await checkoutCommit('D', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['A', 'main'],
+          ['B', 'xxx'],
+        ],
+        // Talking to GH (etc) tells us that commit D is the merge commit for "branch" (which no longer exists)
+        prs: [['D', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit()) };
 
-    // it(`deals with situations where squashed branches no longer exist in the repo and have no build`)
+      const parentCommits = await getParentCommits({ client, log, git, options } as any);
+      // This is A and not B because we do not know anything about the deleted branch and its commits
+      expectCommitsToEqualNames(parentCommits, ['A'], repository);
+    });
 
-    // it(`deals with situations where squashed branches themselves have squash merge commits`)
+    it(`deals with situations where squashed branches themselves have squash merge commits`, async () => {
+      // []: has build, <>: is squash merge, (): current commit
+      //
+      //       [F]        [branch2]
+      //      /
+      //    [C]-<E>       [branch]
+      //   /
+      //  A -[B]-<D>- G  [main]
+      const repository = repositories.doubleLoop;
+      await checkoutCommit('G', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['B', 'main'],
+          ['C', 'branch'],
+          ['F', 'branch2'],
+        ],
+        // Talking to GH (etc) tells us that commit G is the merge commit for "branch"
+        prs: [['D', 'branch'], ['E', 'branch2']],
+      });
+      const git = { branch: 'main', ...(await getCommit()) };
 
-    // P -[Q]
-    //  \
-    //   X - [Y] -<Z>   (squash merge of Q)
-    //    \
-    //      A -    -   <M> (squash merge of Z)
+      const parentCommits = await getParentCommits({ client, log, git, options } as any);
+      expectCommitsToEqualNames(parentCommits, ['C', 'B'], repository);
+    });
   });
 });
