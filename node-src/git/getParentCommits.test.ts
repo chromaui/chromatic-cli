@@ -732,7 +732,7 @@ describe('getParentCommits', () => {
       expectCommitsToEqualNames(parentCommits, ['A'], repository);
     });
 
-    it(`deals with situations where squashed branches themselves have squash merge commits`, async () => {
+    it(`does not find parents for commits on a squashed branch that are themselves squash merge commits`, async () => {
       // []: has build, <>: is squash merge, (): current commit
       //
       //       [F]        [branch2]
