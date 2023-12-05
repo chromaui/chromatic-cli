@@ -65,8 +65,16 @@ const mocks = {
 
 export default function createMockIndex({ commitMap }, buildDescriptions, prDescriptions = []) {
   const builds = buildDescriptions.map(([name, branch], index) => {
-    const { hash, committedAt: committedAtSeconds } = commitMap[name];
-    const committedAt = parseInt(committedAtSeconds, 10) * 1000;
+    let hash, committedAt;
+    if (commitMap[name]) {
+      const commitInfo = commitMap[name];
+      hash = commitInfo.hash;
+      committedAt = parseInt(commitInfo.committedAt, 10) * 1000;
+    } else {
+      // Allow for test cases with a commit that is no longer in the history
+      hash = name;
+      committedAt = Date.now();
+    }
 
     const number = index + 1;
     return {

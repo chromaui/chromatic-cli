@@ -51,7 +51,7 @@ function createClient({
 }
 
 function expectCommitsToEqualNames(hashes, names, { commitMap }) {
-  return expect(hashes).toEqual(names.map((n) => commitMap[n].hash));
+  return expect(hashes).toEqual(names.map((name) => commitMap[name]?.hash || name));
 }
 
 async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
