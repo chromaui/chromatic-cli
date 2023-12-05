@@ -752,7 +752,6 @@ describe('getParentCommits', () => {
       const git = { branch: 'main', ...(await getCommit()) };
 
       const parentCommits = await getParentCommits({ client, log, git, options } as any);
-      // This is A and not B because we do not know anything about the deleted branch and its commits
       expectCommitsToEqualNames(parentCommits, ['MISSING', 'A'], repository);
     });
 
