@@ -135,7 +135,7 @@ describe('getParentCommits', () => {
       repository,
       builds: [
         ['D', 'main'],
-        ['E', 'main'],
+        ['E', 'branch'],
       ],
     });
     const git = { branch: 'main', ...(await getCommit()) };
@@ -735,7 +735,7 @@ describe('getParentCommits', () => {
     it(`deals with situations where squashed branches no longer exist in the repo but have a build`, async () => {
       // []: has build, <>: is squash merge, (): current commit
       //
-      //  [B] [no longer in repo]
+      //  [MISSING] [no longer in repo]
       //
       //  [A]- C -<(D)> [main]
       const repository = repositories.twoRoots;
@@ -744,7 +744,7 @@ describe('getParentCommits', () => {
         repository,
         builds: [
           ['A', 'main'],
-          ['B', 'xxx'],
+          ['MISSING', 'branch'],
         ],
         // Talking to GH (etc) tells us that commit D is the merge commit for "branch" (which no longer exists)
         prs: [['D', 'branch']],
@@ -753,9 +753,12 @@ describe('getParentCommits', () => {
 
       const parentCommits = await getParentCommits({ client, log, git, options } as any);
       // This is A and not B because we do not know anything about the deleted branch and its commits
-      expectCommitsToEqualNames(parentCommits, ['A'], repository);
+      expectCommitsToEqualNames(parentCommits, ['MISSING', 'A'], repository);
     });
 
+    // We could support this situation via recursing and doing a second (etc) check for squash merge commits,
+    // but that would make things a lot more complex and this situation seems quite unlikely and is easily avoided
+    // by ensuring you run a build for E.
     it(`does not find parents for commits on a squashed branch that are themselves squash merge commits`, async () => {
       // []: has build, <>: is squash merge, (): current commit
       //
@@ -780,6 +783,28 @@ describe('getParentCommits', () => {
 
       const parentCommits = await getParentCommits({ client, log, git, options } as any);
       expectCommitsToEqualNames(parentCommits, ['C', 'B'], repository);
+    });
+
+    it(`does not affect finding a merge commit's parents (in correct order) when they already have a build`, async () => {
+      // []: has build, <>: is squash merge, (): current commit
+      //  A - B - C -[D]-(F)  [main]
+      //            \   /
+      //             [E]      [branch]
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('F', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['D', 'main'],
+          ['E', 'branch'],
+        ],
+        // Talking to GH (etc) tells us that commit F is the merge commit for "branch"
+        prs: [['F', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit()) };
+  
+      const parentCommits = await getParentCommits({ client, log, git, options } as any);
+      expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
     });
   });
 });
