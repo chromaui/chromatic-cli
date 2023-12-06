@@ -38,6 +38,7 @@ export interface Flags {
   debug?: boolean;
   diagnosticsFile?: string;
   dryRun?: boolean;
+  fileHashing?: boolean;
   forceRebuild?: string;
   interactive?: boolean;
   junitReport?: string;
@@ -74,6 +75,7 @@ export interface Options extends Configuration {
   forceRebuild: boolean | string;
   debug: boolean;
   diagnosticsFile?: Flags['diagnosticsFile'];
+  fileHashing: Flags['fileHashing'];
   interactive: boolean;
   junitReport?: Flags['junitReport'];
   uploadMetadata?: Flags['uploadMetadata'];
@@ -292,6 +294,7 @@ export interface Context {
   buildLogFile?: string;
   fileInfo?: {
     paths: string[];
+    hashes: Record<Context['fileInfo']['paths'][number], string>;
     statsPath: string;
     lengths: {
       knownAs: string;
@@ -351,6 +354,7 @@ export interface Stats {
 }
 
 export interface FileDesc {
+  contentHash?: string;
   contentLength: number;
   localPath: string;
   targetPath: string;

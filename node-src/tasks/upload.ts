@@ -20,6 +20,7 @@ import {
   starting,
   uploading,
   success,
+  hashing,
 } from '../ui/tasks/upload';
 import { Context, Task } from '../types';
 import { readStatsFile } from './read-stats-file';
@@ -27,6 +28,7 @@ import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { uploadAsIndividualFiles, uploadAsZipFile } from '../lib/upload';
+import { getFileHashes } from '../lib/getFileHashes';
 
 interface PathSpec {
   pathname: string;
@@ -180,6 +182,12 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   }
 };
 
+export const calculateFileHashes = async (ctx: Context, task: Task) => {
+  if (ctx.skip || !ctx.options.fileHashing) return;
+  transitionTo(hashing)(ctx, task);
+  ctx.fileInfo.hashes = await getFileHashes(ctx.fileInfo.paths, ctx.sourceDir);
+};
+
 export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(preparing)(ctx, task);
@@ -209,6 +217,7 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     localPath: join(ctx.sourceDir, path),
     targetPath: path,
     contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
+    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[path] }),
   }));
 
   if (ctx.options.zip) {
@@ -238,6 +247,7 @@ export default createTask({
     transitionTo(validating),
     validateFiles,
     traceChangedFiles,
+    calculateFileHashes,
     uploadStorybook,
     transitionTo(success, true),
   ],

@@ -74,6 +74,12 @@ export const traced = (ctx: Context) => {
   };
 };
 
+export const hashing = () => ({
+  status: 'pending',
+  title: 'Publishing your built Storybook',
+  output: `Calculating file hashes`,
+});
+
 export const preparing = () => ({
   status: 'pending',
   title: 'Publishing your built Storybook',

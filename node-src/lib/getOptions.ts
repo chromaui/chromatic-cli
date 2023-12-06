@@ -49,6 +49,7 @@ export default function getOptions({
     exitZeroOnChanges: false,
     exitOnceUploaded: false,
     diagnosticsFile: undefined,
+    fileHashing: true,
     interactive: false,
     isLocalBuild: false,
     originalArgv: argv,
@@ -109,6 +110,7 @@ export default function getOptions({
     fromCI: flags.ci,
     skip: trueIfSet(flags.skip),
     dryRun: flags.dryRun,
+    fileHashing: flags.fileHashing,
     forceRebuild: trueIfSet(flags.forceRebuild),
     debug: flags.debug,
     diagnosticsFile:
