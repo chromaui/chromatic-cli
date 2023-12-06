@@ -53,8 +53,9 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
   });
 };
 
-export const getFileHashes = async (files: string[], dir = process.cwd()) => {
-  const limit = pLimit(48);
+export const getFileHashes = async (files: string[], dir: string, concurrency: number) => {
+  // Limit the number of concurrent file reads and hashing operations.
+  const limit = pLimit(concurrency);
   const xxhash = await xxHashWasm();
 
   // Pre-allocate a 64K buffer for each file, matching WASM memory page size.

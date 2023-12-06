@@ -188,7 +188,11 @@ export const calculateFileHashes = async (ctx: Context, task: Task) => {
 
   try {
     const start = Date.now();
-    ctx.fileInfo.hashes = await getFileHashes(ctx.fileInfo.paths, ctx.sourceDir);
+    ctx.fileInfo.hashes = await getFileHashes(
+      ctx.fileInfo.paths,
+      ctx.sourceDir,
+      ctx.env.CHROMATIC_HASH_CONCURRENCY
+    );
     ctx.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
   } catch (err) {
     ctx.log.warn('Failed to calculate file hashes');
