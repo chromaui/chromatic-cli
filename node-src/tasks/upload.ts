@@ -185,9 +185,15 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 export const calculateFileHashes = async (ctx: Context, task: Task) => {
   if (ctx.skip || !ctx.options.fileHashing) return;
   transitionTo(hashing)(ctx, task);
-  const start = Date.now();
-  ctx.fileInfo.hashes = await getFileHashes(ctx.fileInfo.paths, ctx.sourceDir);
-  ctx.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
+
+  try {
+    const start = Date.now();
+    ctx.fileInfo.hashes = await getFileHashes(ctx.fileInfo.paths, ctx.sourceDir);
+    ctx.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
+  } catch (err) {
+    ctx.log.warn('Failed to calculate file hashes');
+    ctx.log.debug(err);
+  }
 };
 
 export const uploadStorybook = async (ctx: Context, task: Task) => {

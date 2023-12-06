@@ -55,14 +55,14 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
 
 export const getFileHashes = async (files: string[], dir = process.cwd()) => {
   const limit = pLimit(48);
+  const xxhash = await xxHashWasm();
 
   // Pre-allocate a 64K buffer for each file, matching WASM memory page size.
   const buffers = files.map((file) => [Buffer.allocUnsafe(64 * 1024), file] as const);
 
-  const api = await xxHashWasm();
   const hashes = await Promise.all(
     buffers.map(([buffer, file]) =>
-      limit(async () => [file, await hashFile(buffer, join(dir, file), api)] as const)
+      limit(async () => [file, await hashFile(buffer, join(dir, file), xxhash)] as const)
     )
   );
 
