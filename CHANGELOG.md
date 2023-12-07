@@ -1,3 +1,16 @@
+# v10.1.0 (Thu Dec 07 2023)
+
+#### 🚀 Enhancement
+
+- Increase number of commits checked for squash merge [#866](https://github.com/chromaui/chromatic-cli/pull/866) ([@tmeasday](https://github.com/tmeasday) [@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 2
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v10.0.0 (Fri Dec 01 2023)
 
 #### 💥 Breaking Change
