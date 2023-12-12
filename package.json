@@ -111,7 +111,6 @@
     "@discoveryjs/json-ext": "^0.5.7",
     "@storybook/addon-essentials": "^6.5.6",
     "@storybook/builder-webpack5": "^6.5.6",
-    "@storybook/csf-tools": "^7.0.12",
     "@storybook/linter-config": "^3.1.2",
     "@storybook/manager-webpack5": "^6.5.6",
     "@storybook/react": "^6.5.6",
@@ -193,6 +192,9 @@
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15",
     "zod": "^3.22.2"
+  },
+  "peerDependencies": {
+    "@storybook/csf-tools": "^7.0.12"
   },
   "publishConfig": {
     "access": "public",
