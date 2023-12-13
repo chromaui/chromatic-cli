@@ -2,6 +2,8 @@ import makeZipFile from './compress';
 import { Context, FileDesc, TargetInfo } from '../types';
 import { uploadZip, waitForUnpack } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
+import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
+import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 
 const UploadBuildMutation = `
   mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
@@ -24,6 +26,7 @@ const UploadBuildMutation = `
         }
       }
       userErrors {
+        __typename
         ... on UserError {
           message
         }
@@ -46,13 +49,24 @@ interface UploadBuildMutationResult {
       targets: TargetInfo[];
       zipTarget?: TargetInfo & { sentinelUrl: string };
     };
-    userErrors: {
-      message: string;
-      maxFileCount?: number;
-      maxFileSize?: number;
-      fileCount?: number;
-      filePaths?: string[];
-    }[];
+    userErrors: (
+      | {
+          __typename: 'UserError';
+          message: string;
+        }
+      | {
+          __typename: 'MaxFileCountExceededError';
+          message: string;
+          maxFileCount: number;
+          fileCount: number;
+        }
+      | {
+          __typename: 'MaxFileSizeExceededError';
+          message: string;
+          maxFileSize: number;
+          filePaths: string[];
+        }
+    )[];
   };
 }
 
@@ -79,8 +93,16 @@ export async function uploadBuild(
   );
 
   if (uploadBuild.userErrors.length) {
-    uploadBuild.userErrors.forEach((e) => ctx.log.error(e.message));
-    return options.onError?.(new Error('Upload does not meet requirements'));
+    uploadBuild.userErrors.forEach((e) => {
+      if (e.__typename === 'MaxFileCountExceededError') {
+        ctx.log.error(maxFileCountExceeded(e));
+      } else if (e.__typename === 'MaxFileSizeExceededError') {
+        ctx.log.error(maxFileSizeExceeded(e));
+      } else {
+        ctx.log.error(e.message);
+      }
+    });
+    return options.onError?.(new Error('Upload rejected due to user error'));
   }
 
   const targets = uploadBuild.info.targets.map((target) => {
