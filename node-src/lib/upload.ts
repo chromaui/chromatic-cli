@@ -84,7 +84,8 @@ export async function uploadBuild(
     UploadBuildMutation,
     {
       buildId: ctx.announcedBuild.id,
-      files: files.map(({ contentLength, targetPath }) => ({
+      files: files.map(({ contentHash, contentLength, targetPath }) => ({
+        contentHash,
         contentLength,
         filePath: targetPath,
       })),
@@ -178,7 +179,8 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
     UploadMetadataMutation,
     {
       buildId: ctx.announcedBuild.id,
-      files: files.map(({ contentLength, targetPath }) => ({
+      files: files.map(({ contentHash, contentLength, targetPath }) => ({
+        contentHash,
         contentLength,
         filePath: targetPath,
       })),

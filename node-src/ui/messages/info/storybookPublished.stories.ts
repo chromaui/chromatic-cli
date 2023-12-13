@@ -19,6 +19,7 @@ export const StorybookPrepared = () =>
       errorCount: undefined,
       componentCount: 5,
       specCount: 8,
+      storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
     },
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   } as any);

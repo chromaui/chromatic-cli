@@ -354,6 +354,7 @@ export interface Stats {
 }
 
 export interface FileDesc {
+  contentHash?: string;
   contentLength: number;
   localPath: string;
   targetPath: string;

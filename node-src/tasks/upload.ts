@@ -22,7 +22,7 @@ import {
   success,
   hashing,
 } from '../ui/tasks/upload';
-import { Context, Task } from '../types';
+import { Context, FileDesc, Task } from '../types';
 import { readStatsFile } from './read-stats-file';
 import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
@@ -205,7 +205,8 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   transitionTo(preparing)(ctx, task);
 
   const files = ctx.fileInfo.paths
-    .map((path) => ({
+    .map<FileDesc>((path) => ({
+      ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[path] }),
       contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
       localPath: join(ctx.sourceDir, path),
       targetPath: path,

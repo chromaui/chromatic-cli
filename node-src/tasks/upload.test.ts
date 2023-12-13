@@ -306,8 +306,8 @@ describe('uploadStorybook', () => {
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
       files: [
-        { contentLength: 42, filePath: 'iframe.html' },
-        { contentLength: 42, filePath: 'index.html' },
+        { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
+        { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
       ],
     });
     expect(http.fetch).toHaveBeenCalledWith(
@@ -468,8 +468,8 @@ describe('uploadStorybook', () => {
       expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
         buildId: '1',
         files: [
-          { contentLength: 42, filePath: 'iframe.html' },
-          { contentLength: 42, filePath: 'index.html' },
+          { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
+          { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
         ],
         zip: true,
       });
