@@ -6,6 +6,7 @@ import xxHashWasm, { XXHash, XXHashAPI } from 'xxhash-wasm';
 const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<string> => {
   const BUFFER_SIZE = buffer.length;
 
+  // This uses callback-style fs functions because it runs faster than with their promise-based counterparts.
   return new Promise((resolve, reject) => {
     const done = (fd: number, getResult: () => bigint) => {
       let result: bigint = undefined;
