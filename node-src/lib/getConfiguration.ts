@@ -16,6 +16,7 @@ const configurationSchema = z
     externals: z.array(z.string()),
     debug: z.boolean(),
     diagnosticFile: z.union([z.string(), z.boolean()]),
+    fileHashing: z.boolean().default(true),
     junitReport: z.union([z.string(), z.boolean()]),
     zip: z.boolean(),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),

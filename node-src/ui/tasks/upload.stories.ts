@@ -1,17 +1,18 @@
 import task from '../components/task';
 import {
-  initial,
-  dryRun,
-  validating,
-  invalid,
-  tracing,
   bailed,
-  traced,
+  dryRun,
+  failed,
+  hashing,
+  initial,
+  invalid,
   preparing,
   starting,
-  uploading,
   success,
-  failed,
+  traced,
+  tracing,
+  uploading,
+  validating,
 } from './upload';
 
 export default {
@@ -50,6 +51,8 @@ export const BailedSiblings = () =>
   } as any);
 
 export const Traced = () => traced({ onlyStoryFiles: Array.from({ length: 5 }) } as any);
+
+export const Hashing = () => hashing();
 
 export const Preparing = () => preparing();
 

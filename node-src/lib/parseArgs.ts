@@ -48,6 +48,7 @@ export default function parseArgs(argv: string[]) {
       --junit-report [filepath]        Write build results to a JUnit XML file. {buildNumber} will be replaced with the actual build number. [chromatic-build-{buildNumber}.xml]
       --list                           List available stories. This requires running a full build.
       --log-file [filepath]            Write log output to a file. Disable via --no-log-file. [chromatic.log]
+      --no-file-hashing                Disable file hashing. This will cause all files to be uploaded on every build.
       --no-interactive                 Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
       --storybook-log-file [filepath]  Write Storybook build output to a file. Disable via --no-storybook-log-file. [storybook-build.log]
       --trace-changed [mode]           Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
@@ -97,11 +98,12 @@ export default function parseArgs(argv: string[]) {
         debug: { type: 'boolean' },
         diagnosticsFile: { type: 'string' },
         dryRun: { type: 'boolean' },
+        fileHashing: { type: 'boolean', default: true },
         forceRebuild: { type: 'string' },
+        interactive: { type: 'boolean', default: true },
         junitReport: { type: 'string' },
         list: { type: 'boolean' },
         logFile: { type: 'string' },
-        interactive: { type: 'boolean', default: true },
         storybookLogFile: { type: 'string' },
         traceChanged: { type: 'string' },
         uploadMetadata: { type: 'boolean' },

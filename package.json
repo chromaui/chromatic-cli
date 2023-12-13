@@ -190,6 +190,7 @@
     "vite": "^4.4.9",
     "vitest": "^0.34.4",
     "why-is-node-running": "^2.1.2",
+    "xxhash-wasm": "^1.0.2",
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15",
     "zod": "^3.22.2"
