@@ -1,4 +1,3 @@
-import { readConfig } from '@storybook/csf-tools';
 import { readJson } from 'fs-extra';
 import { readdir } from 'fs/promises';
 import meow from 'meow';
@@ -212,6 +211,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
     mainConfig = await r(path.resolve(configDir, 'main'));
   } catch (storybookV6error) {
     try {
+      const { readConfig } = await import('@storybook/csf-tools');
       mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
       v7 = true;
     } catch (storybookV7error) {
