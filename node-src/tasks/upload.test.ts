@@ -7,6 +7,7 @@ import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentS
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
 import { calculateFileHashes, validateFiles, traceChangedFiles, uploadStorybook } from './upload';
+import { FormData } from 'node-fetch';
 
 vi.mock('fs');
 vi.mock('progress-stream');
@@ -254,23 +255,27 @@ describe('calculateFileHashes', () => {
 });
 
 describe('uploadStorybook', () => {
-  it('retrieves the upload locations, puts the files there and sets the isolatorUrl on context', async () => {
+  it('retrieves the upload locations and uploads the files', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
-      getUploadUrls: {
-        domain: 'https://asdqwe.chromatic.com',
-        urls: [
-          {
-            path: 'iframe.html',
-            url: 'https://asdqwe.chromatic.com/iframe.html',
-            contentType: 'text/html',
-          },
-          {
-            path: 'index.html',
-            url: 'https://asdqwe.chromatic.com/index.html',
-            contentType: 'text/html',
-          },
-        ],
+      uploadBuild: {
+        info: {
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'iframe.html',
+              formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+              formFields: {},
+            },
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
       },
     });
 
@@ -298,55 +303,48 @@ describe('uploadStorybook', () => {
     } as any;
     await uploadStorybook(ctx, {} as any);
 
-    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/GetUploadUrlsMutation/), {
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
-      paths: ['iframe.html', 'index.html'],
+      files: [
+        { contentLength: 42, filePath: 'iframe.html' },
+        { contentLength: 42, filePath: 'index.html' },
+      ],
     });
     expect(http.fetch).toHaveBeenCalledWith(
-      'https://asdqwe.chromatic.com/iframe.html',
-      expect.objectContaining({
-        method: 'PUT',
-        headers: {
-          'content-type': 'text/html',
-          'content-length': '42',
-          'cache-control': 'max-age=31536000',
-        },
-      }),
+      'https://s3.amazonaws.com/presigned?iframe.html',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
       expect.objectContaining({ retries: 0 })
     );
     expect(http.fetch).toHaveBeenCalledWith(
-      'https://asdqwe.chromatic.com/index.html',
-      expect.objectContaining({
-        method: 'PUT',
-        headers: {
-          'content-type': 'text/html',
-          'content-length': '42',
-          'cache-control': 'max-age=31536000',
-        },
-      }),
+      'https://s3.amazonaws.com/presigned?index.html',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
       expect.objectContaining({ retries: 0 })
     );
     expect(ctx.uploadedBytes).toBe(84);
-    expect(ctx.isolatorUrl).toBe('https://asdqwe.chromatic.com/iframe.html');
+    expect(ctx.uploadedFiles).toBe(2);
   });
 
   it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
-      getUploadUrls: {
-        domain: 'https://asdqwe.chromatic.com',
-        urls: [
-          {
-            path: 'iframe.html',
-            url: 'https://asdqwe.chromatic.com/iframe.html',
-            contentType: 'text/html',
-          },
-          {
-            path: 'index.html',
-            url: 'https://asdqwe.chromatic.com/index.html',
-            contentType: 'text/html',
-          },
-        ],
+      uploadBuild: {
+        info: {
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'iframe.html',
+              formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+              formFields: {},
+            },
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
       },
     });
 
@@ -411,13 +409,34 @@ describe('uploadStorybook', () => {
   });
 
   describe('with zip', () => {
-    it('retrieves the upload location, adds the files to an archive and uploads it', async () => {
+    it.only('retrieves the upload location, adds the files to an archive and uploads it', async () => {
       const client = { runQuery: vi.fn() };
       client.runQuery.mockReturnValue({
-        getZipUploadUrl: {
-          domain: 'https://asdqwe.chromatic.com',
-          url: 'https://asdqwe.chromatic.com/storybook.zip',
-          sentinelUrl: 'https://asdqwe.chromatic.com/upload.txt',
+        uploadBuild: {
+          info: {
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'iframe.html',
+                formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+                formFields: {},
+              },
+              {
+                contentType: 'text/html',
+                filePath: 'index.html',
+                formAction: 'https://s3.amazonaws.com/presigned?index.html',
+                formFields: {},
+              },
+            ],
+            zipTarget: {
+              contentType: 'application/zip',
+              filePath: 'storybook.zip',
+              formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
+              formFields: {},
+              sentinelUrl: 'https://asdqwe.chromatic.com/sentinel.txt',
+            },
+          },
+          userErrors: [],
         },
       });
 
@@ -446,22 +465,31 @@ describe('uploadStorybook', () => {
       } as any;
       await uploadStorybook(ctx, {} as any);
 
-      expect(client.runQuery).toHaveBeenCalledWith(
-        expect.stringMatching(/GetZipUploadUrlMutation/),
-        { buildId: '1' }
-      );
+      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+        buildId: '1',
+        files: [
+          { contentLength: 42, filePath: 'iframe.html' },
+          { contentLength: 42, filePath: 'index.html' },
+        ],
+        zip: true,
+      });
       expect(http.fetch).toHaveBeenCalledWith(
-        'https://asdqwe.chromatic.com/storybook.zip',
-        expect.objectContaining({
-          method: 'PUT',
-          headers: {
-            'content-type': 'application/zip',
-            'content-length': '80',
-          },
-        }),
+        'https://s3.amazonaws.com/presigned?storybook.zip',
+        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
         expect.objectContaining({ retries: 0 })
       );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?iframe.html',
+        expect.anything(),
+        expect.anything()
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?iframe.html',
+        expect.anything(),
+        expect.anything()
+      );
       expect(ctx.uploadedBytes).toBe(80);
+      expect(ctx.uploadedFiles).toBe(2);
     });
   });
 });

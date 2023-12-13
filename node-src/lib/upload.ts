@@ -1,112 +1,177 @@
 import makeZipFile from './compress';
-import { Context, FileDesc, TargetedFile } from '../types';
+import { Context, FileDesc, TargetInfo } from '../types';
 import { uploadZip, waitForUnpack } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
 
-const GetUploadUrlsMutation = `
-  mutation GetUploadUrlsMutation($buildId: ObjID, $paths: [String!]!) {
-    getUploadUrls(buildId: $buildId, paths: $paths) {
-      domain
-      urls {
-        path
-        url
-        contentType
+const UploadBuildMutation = `
+  mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
+    uploadBuild(buildId: $buildId, files: $files, zip: $zip) {
+      info {
+        targets {
+          contentType
+          fileKey
+          filePath
+          formAction
+          formFields
+        }
+        zipTarget {
+          contentType
+          fileKey
+          filePath
+          formAction
+          formFields
+          sentinelUrl
+        }
+      }
+      userErrors {
+        ... on UserError {
+          message
+        }
+        ... on MaxFileCountExceededError {
+          maxFileCount
+          fileCount
+        }
+        ... on MaxFileSizeExceededError {
+          maxFileSize
+          filePaths
+        }
       }
     }
   }
 `;
-interface GetUploadUrlsMutationResult {
-  getUploadUrls: {
-    domain: string;
-    urls: {
-      path: string;
-      url: string;
-      contentType: string;
+
+interface UploadBuildMutationResult {
+  uploadBuild: {
+    info?: {
+      targets: TargetInfo[];
+      zipTarget?: TargetInfo & { sentinelUrl: string };
+    };
+    userErrors: {
+      message: string;
+      maxFileCount?: number;
+      maxFileSize?: number;
+      fileCount?: number;
+      filePaths?: string[];
     }[];
   };
 }
 
-const GetZipUploadUrlMutation = `
-  mutation GetZipUploadUrlMutation($buildId: ObjID) {
-    getZipUploadUrl(buildId: $buildId) {
-      domain
-      url
-      sentinelUrl
-    }
-  }
-`;
-interface GetZipUploadUrlMutationResult {
-  getZipUploadUrl: {
-    domain: string;
-    url: string;
-    sentinelUrl: string;
-  };
-}
-
-export async function uploadAsIndividualFiles(
+export async function uploadBuild(
   ctx: Context,
   files: FileDesc[],
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
-    onComplete?: (uploadedBytes: number, domain?: string) => void;
+    onComplete?: (uploadedBytes: number, uploadedFiles: number) => void;
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
-  const { getUploadUrls } = await ctx.client.runQuery<GetUploadUrlsMutationResult>(
-    GetUploadUrlsMutation,
-    { buildId: ctx.announcedBuild.id, paths: files.map(({ targetPath }) => targetPath) }
+  const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
+    UploadBuildMutation,
+    {
+      buildId: ctx.announcedBuild.id,
+      files: files.map(({ contentLength, targetPath }) => ({
+        contentLength,
+        filePath: targetPath,
+      })),
+      zip: ctx.options.zip,
+    }
   );
-  const { domain, urls } = getUploadUrls;
-  const targets = urls.map<TargetedFile>(({ path, url, contentType }) => {
-    const file = files.find((f) => f.targetPath === path);
-    return { ...file, contentType, targetUrl: url };
+
+  if (uploadBuild.userErrors.length) {
+    uploadBuild.userErrors.forEach((e) => ctx.log.error(e.message));
+    return options.onError?.(new Error('Upload does not meet requirements'));
+  }
+
+  const targets = uploadBuild.info.targets.map((target) => {
+    const file = files.find((f) => f.targetPath === target.filePath);
+    return { ...file, ...target };
   });
-  const total = targets.reduce((acc, { contentLength }) => acc + contentLength, 0);
+
+  if (!targets.length) {
+    ctx.log.debug('No new files to upload, continuing');
+    return options.onComplete?.(0, 0);
+  }
 
   options.onStart?.();
+
+  const total = targets.reduce((acc, { contentLength }) => acc + contentLength, 0);
+  if (uploadBuild.info.zipTarget) {
+    try {
+      const { path, size } = await makeZipFile(ctx, targets);
+      const compressionRate = (total - size) / total;
+      ctx.log.debug(`Compression reduced upload size by ${Math.round(compressionRate * 100)}%`);
+
+      const target = { ...uploadBuild.info.zipTarget, contentLength: size, localPath: path };
+      await uploadZip(ctx, target, (progress) => options.onProgress?.(progress, size));
+      await waitForUnpack(ctx, target.sentinelUrl);
+      return options.onComplete?.(size, targets.length);
+    } catch (err) {
+      ctx.log.debug({ err }, 'Error uploading zip, falling back to uploading individual files');
+    }
+  }
 
   try {
     await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, total));
+    return options.onComplete?.(total, targets.length);
   } catch (e) {
     return options.onError?.(e, files.some((f) => f.localPath === e.message) && e.message);
   }
-
-  options.onComplete?.(total, domain);
 }
 
-export async function uploadAsZipFile(
-  ctx: Context,
-  files: FileDesc[],
-  options: {
-    onStart?: () => void;
-    onProgress?: (progress: number, total: number) => void;
-    onComplete?: (uploadedBytes: number, domain?: string) => void;
-    onError?: (error: Error, path?: string) => void;
-  } = {}
-) {
-  const originalSize = files.reduce((acc, { contentLength }) => acc + contentLength, 0);
-  const zipped = await makeZipFile(ctx, files);
-  const { path, size } = zipped;
+const UploadMetadataMutation = `
+  mutation UploadMetadataMutation($buildId: ObjID!, $files: [FileUploadInput!]!) {
+    uploadMetadata(buildId: $buildId, files: $files) {
+      info {
+        targets {
+          contentType
+          fileKey
+          filePath
+          formAction
+          formFields
+        }
+      }
+      userErrors {
+        ... on UserError {
+          message
+        }
+      }
+    }
+  }
+`;
 
-  if (size > originalSize) throw new Error('Zip file is larger than individual files');
-  ctx.log.debug(`Compression reduced upload size by ${originalSize - size} bytes`);
+interface UploadMetadataMutationResult {
+  uploadMetadata: {
+    info?: {
+      targets: TargetInfo[];
+    };
+    userErrors: {
+      message: string;
+    }[];
+  };
+}
 
-  const { getZipUploadUrl } = await ctx.client.runQuery<GetZipUploadUrlMutationResult>(
-    GetZipUploadUrlMutation,
-    { buildId: ctx.announcedBuild.id }
+export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
+  const { uploadMetadata } = await ctx.client.runQuery<UploadMetadataMutationResult>(
+    UploadMetadataMutation,
+    {
+      buildId: ctx.announcedBuild.id,
+      files: files.map(({ contentLength, targetPath }) => ({
+        contentLength,
+        filePath: targetPath,
+      })),
+    }
   );
-  const { domain, url, sentinelUrl } = getZipUploadUrl;
 
-  options.onStart?.();
-
-  try {
-    await uploadZip(ctx, path, url, size, (progress) => options.onProgress?.(progress, size));
-  } catch (e) {
-    return options.onError?.(e, path);
+  if (uploadMetadata.info) {
+    const targets = uploadMetadata.info.targets.map((target) => {
+      const file = files.find((f) => f.targetPath === target.filePath);
+      return { ...file, ...target };
+    });
+    await uploadFiles(ctx, targets);
   }
 
-  await waitForUnpack(ctx, sentinelUrl);
-
-  options.onComplete?.(size, domain);
+  if (uploadMetadata.userErrors.length) {
+    uploadMetadata.userErrors.forEach((e) => ctx.log.warn(e.message));
+  }
 }

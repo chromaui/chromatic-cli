@@ -2,24 +2,24 @@ import retry from 'async-retry';
 import { createReadStream } from 'fs';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
-import { Context, TargetedFile } from '../types';
+import { Context, FileDesc, TargetInfo } from '../types';
+import { FormData } from 'node-fetch';
+import { filesize } from 'filesize';
 
 export async function uploadFiles(
   ctx: Context,
-  files: TargetedFile[],
-  onProgress: (progress: number) => void
+  targets: (FileDesc & TargetInfo)[],
+  onProgress?: (progress: number) => void
 ) {
   const { experimental_abortSignal: signal } = ctx.options;
   const limitConcurrency = pLimit(10);
   let totalProgress = 0;
 
   await Promise.all(
-    files.map(({ localPath, targetUrl, contentType, contentLength }) => {
+    targets.map(({ contentLength, filePath, formAction, formFields, localPath }) => {
       let fileProgress = 0; // The bytes uploaded for this this particular file
 
-      ctx.log.debug(
-        `Uploading ${contentLength} bytes of ${contentType} for '${localPath}' to '${targetUrl}'`
-      );
+      ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)})`);
 
       return limitConcurrency(() =>
         retry(
@@ -33,37 +33,32 @@ export async function uploadFiles(
             progressStream.on('progress', ({ delta }) => {
               fileProgress += delta; // We upload multiple files so we only care about the delta
               totalProgress += delta;
-              onProgress(totalProgress);
+              onProgress?.(totalProgress);
             });
 
+            const formData = new FormData();
+            Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
+            formData.append('file', createReadStream(localPath).pipe(progressStream)); // must be the last one
+
             const res = await ctx.http.fetch(
-              targetUrl,
-              {
-                method: 'PUT',
-                body: createReadStream(localPath).pipe(progressStream),
-                headers: {
-                  'content-type': contentType,
-                  'content-length': contentLength.toString(),
-                  'cache-control': 'max-age=31536000',
-                },
-                signal,
-              },
+              formAction,
+              { body: formData, method: 'POST', signal },
               { retries: 0 } // already retrying the whole operation
             );
 
             if (!res.ok) {
-              ctx.log.debug(`Uploading '${localPath}' failed: %O`, res);
+              ctx.log.debug(`Uploading ${localPath} failed: %O`, res);
               throw new Error(localPath);
             }
-            ctx.log.debug(`Uploaded '${localPath}'.`);
+            ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
           },
           {
             retries: ctx.env.CHROMATIC_RETRIES,
             onRetry: (err: Error) => {
               totalProgress -= fileProgress;
               fileProgress = 0;
-              ctx.log.debug('Retrying upload %s, %O', targetUrl, err);
-              onProgress(totalProgress);
+              ctx.log.debug('Retrying upload for %s, %O', localPath, err);
+              onProgress?.(totalProgress);
             },
           }
         )

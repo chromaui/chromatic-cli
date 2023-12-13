@@ -49,8 +49,7 @@ const context = {
     number: 42,
     webUrl: 'https://www.chromatic.com/build?appId=5d67dc0374b2e300209c41e7&number=1400',
   },
-  isolatorUrl: 'https://pfkaemtlit.tunnel.chromaticqa.com/iframe.html',
-  cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
+  storybookUrl: 'https://pfkaemtlit.tunnel.chromaticqa.com/',
 };
 
 const stack = `Error: Oh no!
