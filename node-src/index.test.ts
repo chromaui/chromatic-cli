@@ -295,6 +295,11 @@ const getCommit = vi.mocked(git.getCommit);
 
 vi.mock('./lib/emailHash');
 
+vi.mock('./lib/getFileHashes', () => ({
+  getFileHashes: (files: string[]) =>
+    Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
+}));
+
 vi.mock('./lib/getPackageManager', () => ({
   getPackageManagerName: () => Promise.resolve('pnpm'),
   getPackageManagerRunCommand: (args) => Promise.resolve(`pnpm run ${args.join(' ')}`),
@@ -457,6 +462,7 @@ it('calls out to npm build script passed and uploads files', async () => {
     expect.any(Object),
     [
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         localPath: expect.stringMatching(/\/iframe\.html$/),
@@ -464,6 +470,7 @@ it('calls out to npm build script passed and uploads files', async () => {
         targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         localPath: expect.stringMatching(/\/index\.html$/),
@@ -484,6 +491,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
     expect.any(Object),
     [
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         localPath: expect.stringMatching(/\/iframe\.html$/),
@@ -491,6 +499,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
         targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         localPath: expect.stringMatching(/\/index\.html$/),

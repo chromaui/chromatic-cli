@@ -6,7 +6,7 @@ import { default as compress } from '../lib/compress';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
-import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
+import { calculateFileHashes, validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
 vi.mock('fs');
 vi.mock('progress-stream');
@@ -15,6 +15,11 @@ vi.mock('../lib/getDependentStoryFiles');
 vi.mock('../lib/findChangedDependencies');
 vi.mock('../lib/findChangedPackageFiles');
 vi.mock('./read-stats-file');
+
+vi.mock('../lib/getFileHashes', () => ({
+  getFileHashes: (files: string[]) =>
+    Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
+}));
 
 const makeZipFile = vi.mocked(compress);
 const findChangedDependencies = vi.mocked(findChangedDep);
@@ -216,6 +221,35 @@ describe('traceChangedFiles', () => {
 
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
     expect(findChangedPackageFiles).toHaveBeenCalledWith([]);
+  });
+});
+
+describe('calculateFileHashes', () => {
+  it('sets hashes on context.fileInfo', async () => {
+    const fileInfo = {
+      lengths: [
+        { knownAs: 'iframe.html', contentLength: 42 },
+        { knownAs: 'index.html', contentLength: 42 },
+      ],
+      paths: ['iframe.html', 'index.html'],
+      total: 84,
+    };
+    const ctx = {
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: { fileHashing: true },
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+
+    await calculateFileHashes(ctx, {} as any);
+
+    expect(ctx.fileInfo.hashes).toMatchObject({
+      'iframe.html': 'hash',
+      'index.html': 'hash',
+    });
   });
 });
 
