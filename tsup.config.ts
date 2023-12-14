@@ -6,7 +6,7 @@ export default defineConfig((options) => [
       bin: 'bin-src/register.js',
       node: 'node-src/index.ts',
     },
-    splitting: false,
+    splitting: true,
     minify: !options.watch,
     format: ['cjs'],
     dts: {
