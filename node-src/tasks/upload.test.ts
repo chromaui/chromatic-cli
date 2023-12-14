@@ -409,7 +409,7 @@ describe('uploadStorybook', () => {
   });
 
   describe('with zip', () => {
-    it.only('retrieves the upload location, adds the files to an archive and uploads it', async () => {
+    it('retrieves the upload location, adds the files to an archive and uploads it', async () => {
       const client = { runQuery: vi.fn() };
       client.runQuery.mockReturnValue({
         uploadBuild: {
