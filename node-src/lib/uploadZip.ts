@@ -1,8 +1,10 @@
 import retry from 'async-retry';
+import { filesize } from 'filesize';
+import FormData from 'form-data';
 import { createReadStream } from 'fs';
 import { Response } from 'node-fetch';
 import progress from 'progress-stream';
-import { Context } from '../types';
+import { Context, TargetInfo } from '../types';
 
 // A sentinel file is created by a zip-unpack lambda within the Chromatic infrastructure once the
 // uploaded zip is fully extracted. The contents of this file will consist of 'OK' if the process
@@ -11,15 +13,14 @@ const SENTINEL_SUCCESS_VALUE = 'OK';
 
 export async function uploadZip(
   ctx: Context,
-  path: string,
-  url: string,
-  contentLength: number,
+  target: TargetInfo & { contentLength: number; localPath: string; sentinelUrl: string },
   onProgress: (progress: number) => void
 ) {
   const { experimental_abortSignal: signal } = ctx.options;
+  const { contentLength, filePath, formAction, formFields, localPath } = target;
   let totalProgress = 0;
 
-  ctx.log.debug(`Uploading ${contentLength} bytes for '${path}' to '${url}'`);
+  ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)})`);
 
   return retry(
     async (bail) => {
@@ -34,31 +35,29 @@ export async function uploadZip(
         onProgress(totalProgress);
       });
 
+      const formData = new FormData();
+      Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
+      formData.append('file', createReadStream(localPath).pipe(progressStream), {
+        knownLength: contentLength,
+      });
+
       const res = await ctx.http.fetch(
-        url,
-        {
-          method: 'PUT',
-          body: createReadStream(path).pipe(progressStream),
-          headers: {
-            'content-type': 'application/zip',
-            'content-length': contentLength.toString(),
-          },
-          signal,
-        },
+        formAction,
+        { body: formData, method: 'POST', signal },
         { retries: 0 } // already retrying the whole operation
       );
 
       if (!res.ok) {
-        ctx.log.debug(`Uploading '${path}' failed: %O`, res);
-        throw new Error(path);
+        ctx.log.debug(`Uploading ${localPath} failed: %O`, res);
+        throw new Error(localPath);
       }
-      ctx.log.debug(`Uploaded '${path}'.`);
+      ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
     },
     {
       retries: ctx.env.CHROMATIC_RETRIES,
       onRetry: (err: Error) => {
         totalProgress = 0;
-        ctx.log.debug('Retrying upload %s, %O', url, err);
+        ctx.log.debug('Retrying upload for %s, %O', localPath, err);
         onProgress(totalProgress);
       },
     }

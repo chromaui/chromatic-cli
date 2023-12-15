@@ -149,6 +149,7 @@
     "execa": "^7.2.0",
     "fake-tag": "^2.0.0",
     "filesize": "^10.1.0",
+    "form-data": "^4.0.0",
     "fs-extra": "^10.0.0",
     "https-proxy-agent": "^7.0.2",
     "husky": "^7.0.0",
@@ -201,6 +202,9 @@
   },
   "auto": {
     "baseBranch": "main",
+    "canary": {
+      "force": true
+    },
     "plugins": [
       "npm",
       "released"
