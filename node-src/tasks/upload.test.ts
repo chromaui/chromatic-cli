@@ -412,6 +412,72 @@ describe('uploadStorybook', () => {
     });
   });
 
+  describe('with file hashes', () => {
+    it('retrieves file upload locations and uploads only returned targets', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'index.html',
+                formAction: 'https://s3.amazonaws.com/presigned?index.html',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+      progress.mockReturnValue({ on: vi.fn() } as any);
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        hashes: { 'iframe.html': 'iframe', 'index.html': 'index' },
+        paths: ['iframe.html', 'index.html'],
+        total: 84,
+      };
+      const ctx = {
+        client,
+        env,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+        buildId: '1',
+        files: [
+          { contentHash: 'iframe', contentLength: 42, filePath: 'iframe.html' },
+          { contentHash: 'index', contentLength: 42, filePath: 'index.html' },
+        ],
+      });
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?iframe.html',
+        expect.anything(),
+        expect.anything()
+      );
+      expect(http.fetch).toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?index.html',
+        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+        expect.objectContaining({ retries: 0 })
+      );
+      expect(ctx.uploadedBytes).toBe(42);
+      expect(ctx.uploadedFiles).toBe(1);
+    });
+  });
+
   describe('with zip', () => {
     it('retrieves the upload location, adds the files to an archive and uploads it', async () => {
       const client = { runQuery: vi.fn() };
