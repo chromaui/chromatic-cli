@@ -1,9 +1,10 @@
 import retry from 'async-retry';
+import { filesize } from 'filesize';
+import FormData from 'form-data';
 import { createReadStream } from 'fs';
-import { FormData, Response } from 'node-fetch';
+import { Response } from 'node-fetch';
 import progress from 'progress-stream';
 import { Context, TargetInfo } from '../types';
-import { filesize } from 'filesize';
 
 // A sentinel file is created by a zip-unpack lambda within the Chromatic infrastructure once the
 // uploaded zip is fully extracted. The contents of this file will consist of 'OK' if the process
@@ -36,7 +37,9 @@ export async function uploadZip(
 
       const formData = new FormData();
       Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
-      formData.append('file', createReadStream(localPath).pipe(progressStream)); // must be the last one
+      formData.append('file', createReadStream(localPath).pipe(progressStream), {
+        knownLength: contentLength,
+      });
 
       const res = await ctx.http.fetch(
         formAction,

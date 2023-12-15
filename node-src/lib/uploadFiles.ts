@@ -1,10 +1,10 @@
 import retry from 'async-retry';
+import { filesize } from 'filesize';
+import FormData from 'form-data';
 import { createReadStream } from 'fs';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
 import { Context, FileDesc, TargetInfo } from '../types';
-import { FormData } from 'node-fetch';
-import { filesize } from 'filesize';
 
 export async function uploadFiles(
   ctx: Context,
@@ -38,7 +38,9 @@ export async function uploadFiles(
 
             const formData = new FormData();
             Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
-            formData.append('file', createReadStream(localPath).pipe(progressStream)); // must be the last one
+            formData.append('file', createReadStream(localPath).pipe(progressStream), {
+              knownLength: contentLength,
+            });
 
             const res = await ctx.http.fetch(
               formAction,
