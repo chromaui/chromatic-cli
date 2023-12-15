@@ -202,6 +202,9 @@
   },
   "auto": {
     "baseBranch": "main",
+    "canary": {
+      "force": true
+    },
     "plugins": [
       "npm",
       "released"
