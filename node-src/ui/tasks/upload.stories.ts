@@ -75,6 +75,11 @@ export const SuccessSkippedFiles = () =>
     fileInfo: { paths: { length: 100 } },
   } as any);
 
-export const SuccessNoFiles = () => success({} as any);
+export const SuccessNoFiles = () =>
+  success({
+    uploadedBytes: 0,
+    uploadedFiles: 0,
+    fileInfo: { paths: { length: 100 } },
+  } as any);
 
 export const Failed = () => failed({ path: 'main.9e3e453142da82719bf4.bundle.js' });
