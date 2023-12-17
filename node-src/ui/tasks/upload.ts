@@ -102,10 +102,15 @@ export const uploading = ({ percentage }: { percentage: number }) => ({
 export const success = (ctx: Context) => {
   const files = pluralize('file', ctx.uploadedFiles, true);
   const bytes = filesize(ctx.uploadedBytes || 0);
+  const skipped =
+    ctx.fileInfo.paths.length > ctx.uploadedFiles
+      ? `, skipped ${pluralize('file', ctx.fileInfo.paths.length - ctx.uploadedFiles, true)}`
+      : '';
+
   return {
     status: 'success',
     title: ctx.uploadedBytes ? `Publish complete in ${getDuration(ctx)}` : `Publish complete`,
-    output: ctx.uploadedBytes ? `Uploaded ${files} (${bytes})` : 'No new files to upload',
+    output: ctx.uploadedBytes ? `Uploaded ${files} (${bytes})${skipped}` : 'No new files to upload',
   };
 };
 

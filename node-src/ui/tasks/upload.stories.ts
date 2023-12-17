@@ -63,6 +63,16 @@ export const Success = () =>
     startedAt: -54321,
     uploadedBytes: 1234567,
     uploadedFiles: 42,
+    fileInfo: { paths: { length: 42 } },
+  } as any);
+
+export const SuccessSkippedFiles = () =>
+  success({
+    now: 0,
+    startedAt: -54321,
+    uploadedBytes: 1234567,
+    uploadedFiles: 42,
+    fileInfo: { paths: { length: 100 } },
   } as any);
 
 export const SuccessNoFiles = () => success({} as any);
