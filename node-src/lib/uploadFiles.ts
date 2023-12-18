@@ -1,10 +1,9 @@
 import retry from 'async-retry';
 import { filesize } from 'filesize';
-import FormData from 'form-data';
-import { createReadStream } from 'fs';
+import { FormData } from 'formdata-node';
 import pLimit from 'p-limit';
-import progress from 'progress-stream';
 import { Context, FileDesc, TargetInfo } from '../types';
+import { FileReaderBlob } from './FileReaderBlob';
 
 export async function uploadFiles(
   ctx: Context,
@@ -28,19 +27,15 @@ export async function uploadFiles(
               return bail(signal.reason || new Error('Aborted'));
             }
 
-            const progressStream = progress();
-
-            progressStream.on('progress', ({ delta }) => {
-              fileProgress += delta; // We upload multiple files so we only care about the delta
+            const blob = new FileReaderBlob(localPath, contentLength, (delta) => {
+              fileProgress += delta;
               totalProgress += delta;
               onProgress?.(totalProgress);
             });
 
             const formData = new FormData();
             Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
-            formData.append('file', createReadStream(localPath).pipe(progressStream), {
-              knownLength: contentLength,
-            });
+            formData.append('file', blob);
 
             const res = await ctx.http.fetch(
               formAction,

@@ -1,6 +1,5 @@
-import FormData from 'form-data';
+import { FormData } from 'formdata-node';
 import { createReadStream, readdirSync, readFileSync, statSync } from 'fs';
-import progressStream from 'progress-stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
@@ -11,12 +10,20 @@ import { calculateFileHashes, validateFiles, traceChangedFiles, uploadStorybook 
 
 vi.mock('form-data');
 vi.mock('fs');
-vi.mock('progress-stream');
 vi.mock('../lib/compress');
 vi.mock('../lib/getDependentStoryFiles');
 vi.mock('../lib/findChangedDependencies');
 vi.mock('../lib/findChangedPackageFiles');
 vi.mock('./read-stats-file');
+
+vi.mock('../lib/FileReaderBlob', () => ({
+  FileReaderBlob: class {
+    constructor(path: string, length: number, onProgress: (delta: number) => void) {
+      onProgress(length / 2);
+      onProgress(length / 2);
+    }
+  },
+}));
 
 vi.mock('../lib/getFileHashes', () => ({
   getFileHashes: (files: string[]) =>
@@ -31,7 +38,6 @@ const createReadStreamMock = vi.mocked(createReadStream);
 const readdirSyncMock = vi.mocked(readdirSync);
 const readFileSyncMock = vi.mocked(readFileSync);
 const statSyncMock = vi.mocked(statSync);
-const progress = vi.mocked(progressStream);
 
 const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
@@ -286,7 +292,6 @@ describe('uploadStorybook', () => {
 
     createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
     http.fetch.mockReturnValue({ ok: true });
-    progress.mockReturnValue({ on: vi.fn() } as any);
 
     const fileInfo = {
       lengths: [
@@ -318,18 +323,18 @@ describe('uploadStorybook', () => {
     expect(http.fetch).toHaveBeenCalledWith(
       'https://s3.amazonaws.com/presigned?iframe.html',
       expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
-      expect.objectContaining({ retries: 0 })
+      { retries: 0 }
     );
     expect(http.fetch).toHaveBeenCalledWith(
       'https://s3.amazonaws.com/presigned?index.html',
       expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
-      expect.objectContaining({ retries: 0 })
+      { retries: 0 }
     );
     expect(ctx.uploadedBytes).toBe(84);
     expect(ctx.uploadedFiles).toBe(2);
   });
 
-  it.skip('calls experimental_onTaskProgress with progress', async () => {
+  it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       uploadBuild: {
@@ -354,20 +359,7 @@ describe('uploadStorybook', () => {
     });
 
     createReadStreamMock.mockReturnValue({ pipe: vi.fn((x) => x) } as any);
-    progress.mockImplementation((() => {
-      let progressCb;
-      return {
-        on: vi.fn((name, cb) => {
-          progressCb = cb;
-        }),
-        sendProgress: (delta: number) => progressCb({ delta }),
-      };
-    }) as any);
-    http.fetch.mockReset().mockImplementation(async (url, { body }) => {
-      // How to update progress?
-      console.log(body);
-      return { ok: true };
-    });
+    http.fetch.mockReturnValue({ ok: true });
 
     const fileInfo = {
       lengths: [
@@ -433,7 +425,6 @@ describe('uploadStorybook', () => {
 
       createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
       http.fetch.mockReturnValue({ ok: true });
-      progress.mockReturnValue({ on: vi.fn() } as any);
 
       const fileInfo = {
         lengths: [
@@ -471,7 +462,7 @@ describe('uploadStorybook', () => {
       expect(http.fetch).toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?index.html',
         expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
-        expect.objectContaining({ retries: 0 })
+        { retries: 0 }
       );
       expect(ctx.uploadedBytes).toBe(42);
       expect(ctx.uploadedFiles).toBe(1);
@@ -513,7 +504,6 @@ describe('uploadStorybook', () => {
       makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
       createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
       http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
-      progress.mockReturnValue({ on: vi.fn() } as any);
 
       const fileInfo = {
         lengths: [
@@ -546,7 +536,7 @@ describe('uploadStorybook', () => {
       expect(http.fetch).toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?storybook.zip',
         expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
-        expect.objectContaining({ retries: 0 })
+        { retries: 0 }
       );
       expect(http.fetch).not.toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?iframe.html',
