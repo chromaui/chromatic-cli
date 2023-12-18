@@ -97,6 +97,18 @@
     typescript-memoize "^1.0.0-alpha.3"
     url-join "^4.0.0"
 
+"@auto-it/exec@^11.0.4":
+  version "11.0.4"
+  resolved "https://registry.yarnpkg.com/@auto-it/exec/-/exec-11.0.4.tgz#97efbc9fbc14f2b777ef874c029a40fda8be7a3e"
+  integrity sha512-n/kB8k/dwci9UeTsLCs8mig8ZQuS2dMHcHlsKXBeM18EmcbGHxDxyaPeMHJsnSlfKNmGtCXhHBHBhGVP18Ia+w==
+  dependencies:
+    "@auto-it/core" "11.0.4"
+    endent "^2.1.0"
+    fp-ts "^2.5.3"
+    fromentries "^1.2.0"
+    io-ts "^2.1.2"
+    tslib "2.1.0"
+
 "@auto-it/npm@11.0.4":
   version "11.0.4"
   resolved "https://registry.yarnpkg.com/@auto-it/npm/-/npm-11.0.4.tgz#67b6bf78fb6d3f814365796f15541b014db73fcb"
