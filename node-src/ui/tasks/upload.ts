@@ -99,6 +99,12 @@ export const uploading = ({ percentage }: { percentage: number }) => ({
   output: `${progressBar(percentage)} ${percentage}%`,
 });
 
+export const finalizing = () => ({
+  status: 'pending',
+  title: 'Publishing your built Storybook',
+  output: `Finalizing upload`,
+});
+
 export const success = (ctx: Context) => {
   const files = pluralize('file', ctx.uploadedFiles, true);
   const bytes = filesize(ctx.uploadedBytes || 0);

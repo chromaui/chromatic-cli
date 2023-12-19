@@ -1,7 +1,7 @@
 import makeZipFile from './compress';
-import { Context, FileDesc, TargetInfo } from '../types';
-import { uploadZip, waitForUnpack } from './uploadZip';
+import { uploadZip } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
+import { Context, FileDesc, TargetInfo } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 
@@ -9,6 +9,7 @@ const UploadBuildMutation = `
   mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
     uploadBuild(buildId: $buildId, files: $files, zip: $zip) {
       info {
+        sentinelUrls
         targets {
           contentType
           fileKey
@@ -22,7 +23,6 @@ const UploadBuildMutation = `
           filePath
           formAction
           formFields
-          sentinelUrl
         }
       }
       userErrors {
@@ -46,8 +46,9 @@ const UploadBuildMutation = `
 interface UploadBuildMutationResult {
   uploadBuild: {
     info?: {
+      sentinelUrls: string[];
       targets: TargetInfo[];
-      zipTarget?: TargetInfo & { sentinelUrl: string };
+      zipTarget?: TargetInfo;
     };
     userErrors: (
       | {
@@ -76,7 +77,7 @@ export async function uploadBuild(
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
-    onComplete?: (uploadedBytes: number, uploadedFiles: number) => void;
+    onComplete?: (uploadedBytes: number, uploadedFiles: number, sentinelUrls: string[]) => void;
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
@@ -106,6 +107,8 @@ export async function uploadBuild(
     return options.onError?.(new Error('Upload rejected due to user error'));
   }
 
+  const { sentinelUrls } = uploadBuild.info;
+
   const targets = uploadBuild.info.targets.map((target) => {
     const file = files.find((f) => f.targetPath === target.filePath);
     return { ...file, ...target };
@@ -113,7 +116,7 @@ export async function uploadBuild(
 
   if (!targets.length) {
     ctx.log.debug('No new files to upload, continuing');
-    return options.onComplete?.(0, 0);
+    return options.onComplete?.(0, 0, sentinelUrls);
   }
 
   options.onStart?.();
@@ -127,8 +130,7 @@ export async function uploadBuild(
 
       const target = { ...uploadBuild.info.zipTarget, contentLength: size, localPath: path };
       await uploadZip(ctx, target, (progress) => options.onProgress?.(progress, size));
-      await waitForUnpack(ctx, target.sentinelUrl);
-      return options.onComplete?.(size, targets.length);
+      return options.onComplete?.(size, targets.length, sentinelUrls);
     } catch (err) {
       ctx.log.debug({ err }, 'Error uploading zip, falling back to uploading individual files');
     }
@@ -136,7 +138,7 @@ export async function uploadBuild(
 
   try {
     await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, total));
-    return options.onComplete?.(total, targets.length);
+    return options.onComplete?.(total, targets.length, sentinelUrls);
   } catch (e) {
     return options.onError?.(e, files.some((f) => f.localPath === e.message) && e.message);
   }

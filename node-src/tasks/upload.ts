@@ -21,6 +21,7 @@ import {
   uploading,
   success,
   hashing,
+  finalizing,
 } from '../ui/tasks/upload';
 import { Context, FileDesc, Task } from '../types';
 import { readStatsFile } from './read-stats-file';
@@ -29,6 +30,7 @@ import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { uploadBuild } from '../lib/upload';
 import { getFileHashes } from '../lib/getFileHashes';
+import { waitForSentinel } from '../lib/waitForSentinel';
 
 interface PathSpec {
   pathname: string;
@@ -225,7 +227,8 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
       // Avoid spamming the logs with progress updates in non-interactive mode
       ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
     ),
-    onComplete: (uploadedBytes: number, uploadedFiles: number) => {
+    onComplete: (uploadedBytes: number, uploadedFiles: number, sentinelUrls: string[]) => {
+      ctx.sentinelUrls = sentinelUrls;
       ctx.uploadedBytes = uploadedBytes;
       ctx.uploadedFiles = uploadedFiles;
     },
@@ -233,6 +236,13 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
       throw path === error.message ? new Error(failed({ path }).output) : error;
     },
   });
+};
+
+export const waitForSentinels = async (ctx: Context, task: Task) => {
+  if (ctx.skip || !ctx.sentinelUrls?.length) return;
+  transitionTo(finalizing)(ctx, task);
+
+  await Promise.all(ctx.sentinelUrls.map((url) => waitForSentinel(ctx, url)));
 };
 
 export default createTask({
@@ -249,6 +259,7 @@ export default createTask({
     traceChangedFiles,
     calculateFileHashes,
     uploadStorybook,
+    waitForSentinels,
     transitionTo(success, true),
   ],
 });

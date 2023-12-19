@@ -302,6 +302,7 @@ export interface Context {
     }[];
     total: number;
   };
+  sentinelUrls?: string[];
   uploadedBytes?: number;
   uploadedFiles?: number;
   turboSnap?: Partial<{
