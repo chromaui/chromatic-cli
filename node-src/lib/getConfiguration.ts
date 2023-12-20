@@ -23,6 +23,7 @@ const configurationSchema = z
     exitZeroOnChanges: z.union([z.string(), z.boolean()]),
     exitOnceUploaded: z.union([z.string(), z.boolean()]),
     ignoreLastBuildOnBranch: z.string(),
+    skip: z.union([z.string(), z.boolean()]),
 
     buildScriptName: z.string(),
     outputDir: z.string(),
