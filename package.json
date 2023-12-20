@@ -87,8 +87,7 @@
     "test": "vitest run && vitest run -c vitest.no-threads.config.ts",
     "prepare": "husky install && npm run build",
     "dev": "tsup --watch",
-    "lint-staged": "lint-staged",
-    "chromaticTest": "npx chromatic"
+    "lint-staged": "lint-staged"
   },
   "lint-staged": {
     "*.ts": [

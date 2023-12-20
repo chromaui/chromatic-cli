@@ -6,19 +6,24 @@ import readPkgUp from 'read-pkg-up';
 import type { Configuration } from "../node-src/types";
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
 
-
 const TestFrameworkType = {
     STORYBOOK: 'storybook',
     PLAYWRIGHT: 'playwright',
     CYPRESS: 'cypress'
 };
 
-const addChromaticScriptToPackageJson = async (packageJson, packagePath) => {
+const addChromaticScriptToPackageJson = async ({testFramework, packageJson, packagePath}) => {
     try {
-        const scriptName = 'chromaticTest';
-        const json = { ...packageJson };
-        if (!json.scripts) json.scripts = {};
-        json.scripts[scriptName] = `npx chromatic`;
+        const json = {
+            ...packageJson,
+            scripts: {
+                ...packageJson?.scripts,
+                ...(testFramework !== TestFrameworkType.STORYBOOK && {
+                    'build-e2e-storybook': "archive-storybook"
+                }),
+                chromaticTest: `npx chromatic`
+            }
+        }
         await writeFile(packagePath, json, { spaces: 2 });
     } catch (e) {
         console.warn(e)
@@ -49,7 +54,7 @@ export async function main() {
 
     const { path: packagePath, packageJson } = pkgInfo;
 
-    const { buildScriptName} = await prompts([
+    const { testFramework, buildScriptName } = await prompts([
         {
             type: 'select',
             name: 'testFramework',
@@ -62,19 +67,20 @@ export async function main() {
             initial: 0
         },
         {
-            type: (prev) => prev === TestFrameworkType.STORYBOOK ? "text" : null,
+            type:  "text",
             name: 'buildScriptName',
             message: "What is the name of the NPM script that builds your Storybook? (default: build-storybook)",
+            initial: (_, {testFramework}) => testFramework === TestFrameworkType.STORYBOOK ? 'build-storybook' : 'build-e2e-storybook'
         }
     ])
     const {readme, _id, ...rest} = packageJson
-    await addChromaticScriptToPackageJson(rest, packagePath);
+    await addChromaticScriptToPackageJson({packageJson:rest, packagePath, testFramework});
     await createChromaticConfigFile('chromatic.config.json', {
         autoAcceptChanges: "main",
         ...(buildScriptName && {
             buildScriptName
         }),
-        // exitOnceUploaded: true,  TODO: Only enable this option by default if project is linked.
+        exitOnceUploaded: true, // TODO: Only enable this option by default if project is linked.
         externals: ["public/**"],
         onlyChanged: true,
         skip: "dependabot/**"
