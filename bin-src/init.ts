@@ -58,8 +58,6 @@ export const installArchiveDependencies = async (packageJson: PackageJson) => {
     let installArgs = ['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', 'storybook', '@storybook/addon-essentials', '@storybook/server-webpack5', 'react', 'react-dom']
     const sbConfigPath = await getSBConfigFilePath()
     const sbVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
-    console.log('sbConfigPath', sbConfigPath)
-    console.log('sbVersion', sbVersion)
     if(sbConfigPath && sbVersion ) {
         installArgs = ['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', `@storybook/server-webpack5@${sbVersion}`]
     }
