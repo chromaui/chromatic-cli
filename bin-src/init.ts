@@ -98,14 +98,13 @@ export async function main() {
         skip: "dependabot/**"
     })
     const sbConfigPath = await getSBConfigFilePath()
-    const e2eWithStorybookInstalled = await getPackageManagerInstallCommand(['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', '@storybook/server-webpack5@<version>'])
-    const e2eWithoutStorybookInstalled = await getPackageManagerInstallCommand(['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', '@storybook/cli', '@storybook/addon-essentials', '@storybook/server-webpack5', 'react', 'react-dom'])
+    const sbVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
 
-    if(sbConfigPath) {
+    if(sbConfigPath && sbVersion) {
+        const e2eWithStorybookInstalled = await getPackageManagerInstallCommand(['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', '@storybook/server-webpack5@<version>'])
         await execaCommand(e2eWithStorybookInstalled)
-        console.log(e2eWithStorybookInstalled)
     } else {
+        const e2eWithoutStorybookInstalled = await getPackageManagerInstallCommand(['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', 'storybook', '@storybook/addon-essentials', '@storybook/server-webpack5', 'react', 'react-dom'])
         await execaCommand(e2eWithoutStorybookInstalled)
-        console.log(e2eWithoutStorybookInstalled)
     }
 }
