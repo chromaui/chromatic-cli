@@ -1,3 +1,22 @@
+# v10.2.0 (Thu Dec 21 2023)
+
+#### 🚀 Enhancement
+
+- Replace `getUploadUrls` with `uploadBuild` mutation [#876](https://github.com/chromaui/chromatic-cli/pull/876) ([@ghengeveld](https://github.com/ghengeveld))
+- Implement file hashing for to-be-uploaded files [#870](https://github.com/chromaui/chromatic-cli/pull/870) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Allow overriding `NODE_ENV` with `STORYBOOK_NODE_ENV` [#879](https://github.com/chromaui/chromatic-cli/pull/879) ([@tmeasday](https://github.com/tmeasday))
+- Use code splitting in tsup CJS output [#873](https://github.com/chromaui/chromatic-cli/pull/873) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v10.1.0 (Thu Dec 07 2023)
 
 #### 🚀 Enhancement
