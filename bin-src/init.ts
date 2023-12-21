@@ -1,7 +1,10 @@
 import boxen from "boxen";
-import {writeFile} from 'jsonfile';
+import { execaCommand } from 'execa';
+import { findUp } from 'find-up';
+import { writeFile } from 'jsonfile';
 import prompts from 'prompts';
 import readPkgUp from 'read-pkg-up';
+import { getCliCommand, parseNi } from '@antfu/ni';
 
 import type { Configuration } from "../node-src/types";
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
@@ -11,6 +14,15 @@ const TestFrameworkType = {
     PLAYWRIGHT: 'playwright',
     CYPRESS: 'cypress'
 };
+
+const getPackageManagerInstallCommand = async (args: string[]) => {
+    return getCliCommand(parseNi, args, { programmatic: true });
+};
+
+const getSBConfigFilePath = async () => {
+    // Walks up directory tree to find nearest Storybook config file.
+    return await findUp(['.storybook/main.ts', '.storybook/main.js', '.storybook/main.tsx', '.storybook/main.jsx', '.storybook/main.mjs', '.storybook/main.cjs'])
+}
 
 const addChromaticScriptToPackageJson = async ({testFramework, packageJson, packagePath}) => {
     try {
@@ -85,4 +97,15 @@ export async function main() {
         onlyChanged: true,
         skip: "dependabot/**"
     })
+    const sbConfigPath = await getSBConfigFilePath()
+    const e2eWithStorybookInstalled = await getPackageManagerInstallCommand(['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', '@storybook/server-webpack5@<version>'])
+    const e2eWithoutStorybookInstalled = await getPackageManagerInstallCommand(['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', '@storybook/cli', '@storybook/addon-essentials', '@storybook/server-webpack5', 'react', 'react-dom'])
+
+    if(sbConfigPath) {
+        await execaCommand(e2eWithStorybookInstalled)
+        console.log(e2eWithStorybookInstalled)
+    } else {
+        await execaCommand(e2eWithoutStorybookInstalled)
+        console.log(e2eWithoutStorybookInstalled)
+    }
 }
