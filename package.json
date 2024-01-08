@@ -204,6 +204,14 @@
     "zen-observable": "^0.8.15",
     "zod": "^3.22.2"
   },
+  "peerDependencies": {
+    "@chromaui/test-archiver": "0.0.53"
+  },
+  "peerDependenciesMeta": {
+    "@chromaui/test-archiver": {
+      "optional": true
+    }
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

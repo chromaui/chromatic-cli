@@ -95,38 +95,42 @@ export async function main() {
             borderColor: '#FF4400',
         })
     )
-
-    const pkgInfo = await readPkgUp({ cwd: process.cwd() });
-    if (!pkgInfo) {
-        console.error(noPackageJson());
-        process.exit(253);
-    }
-
-    const { path: packagePath, packageJson } = pkgInfo;
-    const { testFramework, buildScriptName } = await prompts([
-        {
-            type: 'select',
-            name: 'testFramework',
-            message: 'What testing framework are you using?',
-            choices: [
-                {title: 'Storybook', value: TestFramework.STORYBOOK},
-                {title: 'Playwright', value: TestFramework.PLAYWRIGHT},
-                {title: 'Cypress', value: TestFramework.CYPRESS},
-            ],
-            initial: 0
-        },
-        {
-            type:  (_ , {testFramework}) => testFramework === TestFramework.STORYBOOK ? "text" : null,
-            name: 'buildScriptName',
-            message: "What is the name of the NPM script that builds your Storybook? (default: build-storybook)",
-            initial: 'build-storybook'
+    
+    try {
+        const pkgInfo = await readPkgUp({ cwd: process.cwd() });
+        if (!pkgInfo) {
+            console.error(noPackageJson());
+            process.exit(253);
         }
-    ])
-    const { readme, _id, ...rest } = packageJson
-    await intializeChromatic({
-        buildScriptName,
-        testFramework, 
-        packageJson: rest, 
-        packagePath
-    })
+
+        const { path: packagePath, packageJson } = pkgInfo;
+        const { testFramework, buildScriptName } = await prompts([
+            {
+                type: 'select',
+                name: 'testFramework',
+                message: 'What testing framework are you using?',
+                choices: [
+                    {title: 'Storybook', value: TestFramework.STORYBOOK},
+                    {title: 'Playwright', value: TestFramework.PLAYWRIGHT},
+                    {title: 'Cypress', value: TestFramework.CYPRESS},
+                ],
+                initial: 0
+            },
+            {
+                type:  (_ , {testFramework}) => testFramework === TestFramework.STORYBOOK ? "text" : null,
+                name: 'buildScriptName',
+                message: "What is the name of the NPM script that builds your Storybook? (default: build-storybook)",
+                initial: 'build-storybook'
+            }
+        ])
+        const { readme, _id, ...rest } = packageJson
+        await intializeChromatic({
+            buildScriptName,
+            testFramework, 
+            packageJson: rest, 
+            packagePath
+        })
+    } catch (err) {
+        console.error(err);
+    }
 }
