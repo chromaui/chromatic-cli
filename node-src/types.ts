@@ -14,6 +14,9 @@ export interface Flags {
   outputDir?: string[];
   storybookBuildDir?: string[];
 
+  // E2E options
+  playwright?: boolean;
+
   // Chromatic options
   autoAcceptChanges?: string;
   branchName?: string;
@@ -90,6 +93,7 @@ export interface Options extends Configuration {
   originalArgv: string[];
 
   buildScriptName: Flags['buildScriptName'];
+  playwright: Flags['playwright'],
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
   url?: string;

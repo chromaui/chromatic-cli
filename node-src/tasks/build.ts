@@ -1,6 +1,6 @@
 import { execaCommand } from 'execa';
 import { createWriteStream, readFileSync } from 'fs';
-import path from 'path';
+import path, { dirname, resolve } from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
@@ -34,15 +34,35 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
-  ctx.buildCommand = await getPackageManagerRunCommand(
-    [
+  const buildCommandOptions = [
+    '--output-dir',
+    ctx.sourceDir,
+    ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
+    ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
+  ].filter(Boolean);
+
+  if (ctx.options.playwright) {
+    try {
+      const archiveSBLocation = dirname(require.resolve('@chromaui/archive-storybook/package.json'));
+      console.log(archiveSBLocation);
+      const binPath = resolve(archiveSBLocation, './dist/bin/build-archive-storybook');
+      ctx.buildCommand = ['node', binPath, ...buildCommandOptions].join(' ');
+      console.log(ctx.buildCommand);
+    } catch (err) {
+      if (err.code === 'MODULE_NOT_FOUND') {
+        // We should use a proper CLI error here.
+        throw new Error(
+          `It looks like you don't have '@chromaui/archive-storybook' installed, please install it!`
+        );
+      }
+      throw err;
+    }
+  } else {
+    ctx.buildCommand = await getPackageManagerRunCommand([
       ctx.options.buildScriptName,
-      '--output-dir',
-      ctx.sourceDir,
-      ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
-      ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
-    ].filter(Boolean)
-  );
+      ...buildCommandOptions,
+    ]);
+  }
 };
 
 const timeoutAfter = (ms) =>
@@ -67,7 +87,7 @@ export const buildStorybook = async (ctx: Context) => {
     const subprocess = execaCommand(ctx.buildCommand, {
       stdio: [null, logFile, logFile],
       signal,
-      env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV  || 'production' },
+      env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {

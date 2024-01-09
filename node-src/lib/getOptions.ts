@@ -71,6 +71,7 @@ export default function getOptions({
     preserveMissingSpecs: undefined,
 
     buildScriptName: undefined,
+    playwright: undefined,
     outputDir: undefined,
     allowConsoleErrors: undefined,
     storybookBuildDir: undefined,
@@ -128,6 +129,7 @@ export default function getOptions({
       flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
 
     buildScriptName: flags.buildScriptName,
+    playwright: trueIfSet(flags.playwright),
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
@@ -251,6 +253,10 @@ export default function getOptions({
 
   // Build Storybook
   if (storybookBuildDir) {
+    return options;
+  }
+
+  if (options.playwright) {
     return options;
   }
 
