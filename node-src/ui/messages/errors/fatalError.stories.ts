@@ -47,10 +47,10 @@ const context = {
   build: {
     id: '5ec5069ae0d35e0022b6a9cc',
     number: 42,
-    storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
     webUrl: 'https://www.chromatic.com/build?appId=5d67dc0374b2e300209c41e7&number=1400',
   },
-  storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+  isolatorUrl: 'https://pfkaemtlit.tunnel.chromaticqa.com/iframe.html',
+  cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
 };
 
 const stack = `Error: Oh no!

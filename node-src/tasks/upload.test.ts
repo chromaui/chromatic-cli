@@ -1,7 +1,6 @@
-import FormData from 'form-data';
 import { createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import progressStream from 'progress-stream';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
@@ -9,7 +8,6 @@ import { findChangedDependencies as findChangedDep } from '../lib/findChangedDep
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
 import { calculateFileHashes, validateFiles, traceChangedFiles, uploadStorybook } from './upload';
 
-vi.mock('form-data');
 vi.mock('fs');
 vi.mock('progress-stream');
 vi.mock('../lib/compress');
@@ -36,10 +34,6 @@ const progress = vi.mocked(progressStream);
 const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 const http = { fetch: vi.fn() };
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('validateFiles', () => {
   it('sets fileInfo on context', async () => {
@@ -260,27 +254,23 @@ describe('calculateFileHashes', () => {
 });
 
 describe('uploadStorybook', () => {
-  it('retrieves the upload locations and uploads the files', async () => {
+  it('retrieves the upload locations, puts the files there and sets the isolatorUrl on context', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
-      uploadBuild: {
-        info: {
-          targets: [
-            {
-              contentType: 'text/html',
-              filePath: 'iframe.html',
-              formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
-              formFields: {},
-            },
-            {
-              contentType: 'text/html',
-              filePath: 'index.html',
-              formAction: 'https://s3.amazonaws.com/presigned?index.html',
-              formFields: {},
-            },
-          ],
-        },
-        userErrors: [],
+      getUploadUrls: {
+        domain: 'https://asdqwe.chromatic.com',
+        urls: [
+          {
+            path: 'iframe.html',
+            url: 'https://asdqwe.chromatic.com/iframe.html',
+            contentType: 'text/html',
+          },
+          {
+            path: 'index.html',
+            url: 'https://asdqwe.chromatic.com/index.html',
+            contentType: 'text/html',
+          },
+        ],
       },
     });
 
@@ -308,48 +298,55 @@ describe('uploadStorybook', () => {
     } as any;
     await uploadStorybook(ctx, {} as any);
 
-    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/GetUploadUrlsMutation/), {
       buildId: '1',
-      files: [
-        { contentLength: 42, filePath: 'iframe.html' },
-        { contentLength: 42, filePath: 'index.html' },
-      ],
+      paths: ['iframe.html', 'index.html'],
     });
     expect(http.fetch).toHaveBeenCalledWith(
-      'https://s3.amazonaws.com/presigned?iframe.html',
-      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      'https://asdqwe.chromatic.com/iframe.html',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: {
+          'content-type': 'text/html',
+          'content-length': '42',
+          'cache-control': 'max-age=31536000',
+        },
+      }),
       expect.objectContaining({ retries: 0 })
     );
     expect(http.fetch).toHaveBeenCalledWith(
-      'https://s3.amazonaws.com/presigned?index.html',
-      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      'https://asdqwe.chromatic.com/index.html',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: {
+          'content-type': 'text/html',
+          'content-length': '42',
+          'cache-control': 'max-age=31536000',
+        },
+      }),
       expect.objectContaining({ retries: 0 })
     );
     expect(ctx.uploadedBytes).toBe(84);
-    expect(ctx.uploadedFiles).toBe(2);
+    expect(ctx.isolatorUrl).toBe('https://asdqwe.chromatic.com/iframe.html');
   });
 
-  it.skip('calls experimental_onTaskProgress with progress', async () => {
+  it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
-      uploadBuild: {
-        info: {
-          targets: [
-            {
-              contentType: 'text/html',
-              filePath: 'iframe.html',
-              formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
-              formFields: {},
-            },
-            {
-              contentType: 'text/html',
-              filePath: 'index.html',
-              formAction: 'https://s3.amazonaws.com/presigned?index.html',
-              formFields: {},
-            },
-          ],
-        },
-        userErrors: [],
+      getUploadUrls: {
+        domain: 'https://asdqwe.chromatic.com',
+        urls: [
+          {
+            path: 'iframe.html',
+            url: 'https://asdqwe.chromatic.com/iframe.html',
+            contentType: 'text/html',
+          },
+          {
+            path: 'index.html',
+            url: 'https://asdqwe.chromatic.com/index.html',
+            contentType: 'text/html',
+          },
+        ],
       },
     });
 
@@ -364,8 +361,9 @@ describe('uploadStorybook', () => {
       };
     }) as any);
     http.fetch.mockReset().mockImplementation(async (url, { body }) => {
-      // How to update progress?
-      console.log(body);
+      // body is just the mocked progress stream, as pipe returns it
+      body.sendProgress(21);
+      body.sendProgress(21);
       return { ok: true };
     });
 
@@ -416,31 +414,10 @@ describe('uploadStorybook', () => {
     it('retrieves the upload location, adds the files to an archive and uploads it', async () => {
       const client = { runQuery: vi.fn() };
       client.runQuery.mockReturnValue({
-        uploadBuild: {
-          info: {
-            targets: [
-              {
-                contentType: 'text/html',
-                filePath: 'iframe.html',
-                formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
-                formFields: {},
-              },
-              {
-                contentType: 'text/html',
-                filePath: 'index.html',
-                formAction: 'https://s3.amazonaws.com/presigned?index.html',
-                formFields: {},
-              },
-            ],
-            zipTarget: {
-              contentType: 'application/zip',
-              filePath: 'storybook.zip',
-              formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
-              formFields: {},
-              sentinelUrl: 'https://asdqwe.chromatic.com/sentinel.txt',
-            },
-          },
-          userErrors: [],
+        getZipUploadUrl: {
+          domain: 'https://asdqwe.chromatic.com',
+          url: 'https://asdqwe.chromatic.com/storybook.zip',
+          sentinelUrl: 'https://asdqwe.chromatic.com/upload.txt',
         },
       });
 
@@ -469,31 +446,22 @@ describe('uploadStorybook', () => {
       } as any;
       await uploadStorybook(ctx, {} as any);
 
-      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
-        buildId: '1',
-        files: [
-          { contentLength: 42, filePath: 'iframe.html' },
-          { contentLength: 42, filePath: 'index.html' },
-        ],
-        zip: true,
-      });
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/GetZipUploadUrlMutation/),
+        { buildId: '1' }
+      );
       expect(http.fetch).toHaveBeenCalledWith(
-        'https://s3.amazonaws.com/presigned?storybook.zip',
-        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+        'https://asdqwe.chromatic.com/storybook.zip',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/zip',
+            'content-length': '80',
+          },
+        }),
         expect.objectContaining({ retries: 0 })
       );
-      expect(http.fetch).not.toHaveBeenCalledWith(
-        'https://s3.amazonaws.com/presigned?iframe.html',
-        expect.anything(),
-        expect.anything()
-      );
-      expect(http.fetch).not.toHaveBeenCalledWith(
-        'https://s3.amazonaws.com/presigned?iframe.html',
-        expect.anything(),
-        expect.anything()
-      );
       expect(ctx.uploadedBytes).toBe(80);
-      expect(ctx.uploadedFiles).toBe(2);
     });
   });
 });

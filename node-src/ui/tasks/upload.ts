@@ -1,8 +1,7 @@
-import { filesize } from 'filesize';
 import pluralize from 'pluralize';
 
 import { getDuration } from '../../lib/tasks';
-import { isPackageManifestFile, progressBar } from '../../lib/utils';
+import { baseStorybookUrl, progressBar, isPackageManifestFile } from '../../lib/utils';
 import { Context } from '../../types';
 
 export const initial = {
@@ -99,15 +98,11 @@ export const uploading = ({ percentage }: { percentage: number }) => ({
   output: `${progressBar(percentage)} ${percentage}%`,
 });
 
-export const success = (ctx: Context) => {
-  const files = pluralize('file', ctx.uploadedFiles, true);
-  const bytes = filesize(ctx.uploadedBytes || 0);
-  return {
-    status: 'success',
-    title: ctx.uploadedBytes ? `Publish complete in ${getDuration(ctx)}` : `Publish complete`,
-    output: ctx.uploadedBytes ? `Uploaded ${files} (${bytes})` : 'No new files to upload',
-  };
-};
+export const success = (ctx: Context) => ({
+  status: 'success',
+  title: `Publish complete in ${getDuration(ctx)}`,
+  output: `View your Storybook at ${baseStorybookUrl(ctx.isolatorUrl)}`,
+});
 
 export const failed = ({ path }: { path: string }) => ({
   status: 'error',
