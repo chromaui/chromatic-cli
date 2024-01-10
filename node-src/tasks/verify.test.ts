@@ -29,7 +29,13 @@ describe('publishBuild', () => {
 
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/PublishBuildMutation/),
-      { input: { turboSnapStatus: 'UNUSED' } },
+      {
+        input: {
+          cachedUrl: ctx.cachedUrl,
+          isolatorUrl: ctx.isolatorUrl,
+          turboSnapStatus: 'UNUSED',
+        },
+      },
       { headers: { Authorization: `Bearer report-token` }, retries: 3 }
     );
     expect(ctx.announcedBuild).toEqual({ ...announcedBuild, ...publishedBuild });
@@ -45,6 +51,7 @@ describe('verifyBuild', () => {
     git: { version: 'whatever', matchesBranch: () => false },
     pkg: { version: '1.0.0' },
     storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
+    isolatorUrl: 'https://tunnel.chromaticqa.com/',
     announcedBuild: { number: 1, reportToken: 'report-token' },
   };
 
@@ -102,7 +109,7 @@ describe('verifyBuild', () => {
         build: {
           number: 1,
           status: 'IN_PROGRESS',
-          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+          cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
           features: { uiTests: true, uiReview: false },
           app: { account: {} },
           wasLimited: true,
@@ -123,7 +130,7 @@ describe('verifyBuild', () => {
         build: {
           number: 1,
           status: 'IN_PROGRESS',
-          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+          cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
           features: { uiTests: true, uiReview: false },
           app: { account: { exceededThreshold: true } },
           wasLimited: true,
@@ -144,7 +151,7 @@ describe('verifyBuild', () => {
         build: {
           number: 1,
           status: 'IN_PROGRESS',
-          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+          cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
           features: { uiTests: true, uiReview: false },
           app: { account: { paymentRequired: true } },
           wasLimited: true,
@@ -165,7 +172,7 @@ describe('verifyBuild', () => {
         build: {
           number: 1,
           status: 'IN_PROGRESS',
-          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+          cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
           features: { uiTests: false, uiReview: false },
           app: { account: { paymentRequired: true } },
           wasLimited: true,

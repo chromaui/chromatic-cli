@@ -120,7 +120,7 @@ export async function run({
     code: ctx.exitCode,
     url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.storybookUrl,
+    storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
     specCount: ctx.build?.specCount,
     componentCount: ctx.build?.componentCount,
     testCount: ctx.build?.testCount,

@@ -20,6 +20,9 @@ export default {
   decorators: [(storyFn: any) => task(storyFn())],
 };
 
+const isolatorUrl = 'https://5eb48280e78a12aeeaea33cf-kdypokzbrs.chromatic.com/iframe.html';
+// const storybookUrl = 'https://self-hosted-storybook.netlify.app';
+
 export const Initial = () => initial;
 
 export const DryRun = () => dryRun();
@@ -57,14 +60,6 @@ export const Starting = () => starting();
 
 export const Uploading = () => uploading({ percentage: 42 });
 
-export const Success = () =>
-  success({
-    now: 0,
-    startedAt: -54321,
-    uploadedBytes: 1234567,
-    uploadedFiles: 42,
-  } as any);
-
-export const SuccessNoFiles = () => success({} as any);
+export const Success = () => success({ now: 0, startedAt: -54321, isolatorUrl } as any);
 
 export const Failed = () => failed({ path: 'main.9e3e453142da82719bf4.bundle.js' });

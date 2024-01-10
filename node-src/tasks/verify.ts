@@ -26,19 +26,15 @@ const PublishBuildMutation = `
     publishBuild(id: $id, input: $input) {
       # no need for legacy:false on PublishedBuild.status
       status
-      storybookUrl
     }
   }
 `;
 interface PublishBuildMutationResult {
-  publishBuild: {
-    status: string;
-    storybookUrl: string;
-  };
+  publishBuild: Context['announcedBuild'];
 }
 
 export const publishBuild = async (ctx: Context) => {
-  const { turboSnap } = ctx;
+  const { cachedUrl, isolatorUrl, turboSnap } = ctx;
   const { id, reportToken } = ctx.announcedBuild;
   const { replacementBuildIds } = ctx.git;
   const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
@@ -55,6 +51,8 @@ export const publishBuild = async (ctx: Context) => {
     {
       id,
       input: {
+        cachedUrl,
+        isolatorUrl,
         ...(onlyStoryFiles && { onlyStoryFiles }),
         ...(onlyStoryNames && { onlyStoryNames: [].concat(onlyStoryNames) }),
         ...(replacementBuildIds && { replacementBuildIds }),
@@ -68,15 +66,12 @@ export const publishBuild = async (ctx: Context) => {
   );
 
   ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
-  ctx.storybookUrl = publishedBuild.storybookUrl;
 
   // Queueing the extract may have failed
   if (publishedBuild.status === 'FAILED') {
     setExitCode(ctx, exitCodes.BUILD_FAILED, false);
     throw new Error(publishFailed().output);
   }
-
-  ctx.log.info(storybookPublished(ctx));
 };
 
 const StartedBuildQuery = `
@@ -116,6 +111,7 @@ const VerifyBuildQuery = `
         inheritedCaptureCount
         interactionTestFailuresCount
         webUrl
+        cachedUrl
         browsers {
           browser
         }
@@ -165,7 +161,7 @@ interface VerifyBuildQueryResult {
 }
 
 export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { client } = ctx;
+  const { client, isolatorUrl } = ctx;
   const { list, onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
   const { matchesBranch } = ctx.git;
 
@@ -179,7 +175,6 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
   }
 
   const waitForBuildToStart = async () => {
-    const { storybookUrl } = ctx;
     const { number, reportToken } = ctx.announcedBuild;
     const variables = { number };
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
@@ -188,7 +183,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
       app: { build },
     } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
     if (build.failureReason) {
-      ctx.log.warn(brokenStorybook({ ...build, storybookUrl }));
+      ctx.log.warn(brokenStorybook({ ...build, isolatorUrl }));
       setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
       throw new Error(publishFailed().output);
     }
