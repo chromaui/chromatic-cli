@@ -27,7 +27,7 @@ import { readStatsFile } from './read-stats-file';
 import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
-import { uploadAsIndividualFiles, uploadAsZipFile } from '../lib/upload';
+import { uploadBuild } from '../lib/upload';
 import { getFileHashes } from '../lib/getFileHashes';
 
 interface PathSpec {
@@ -204,7 +204,15 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(preparing)(ctx, task);
 
-  const options = {
+  const files = ctx.fileInfo.paths
+    .map((path) => ({
+      contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
+      localPath: join(ctx.sourceDir, path),
+      targetPath: path,
+    }))
+    .filter((f) => f.contentLength);
+
+  await uploadBuild(ctx, files, {
     onStart: () => (task.output = starting().output),
     onProgress: throttle(
       (progress, total) => {
@@ -216,35 +224,14 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
       // Avoid spamming the logs with progress updates in non-interactive mode
       ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
     ),
-    onComplete: (uploadedBytes: number, domain: string) => {
+    onComplete: (uploadedBytes: number, uploadedFiles: number) => {
       ctx.uploadedBytes = uploadedBytes;
-      ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
+      ctx.uploadedFiles = uploadedFiles;
     },
     onError: (error: Error, path?: string) => {
       throw path === error.message ? new Error(failed({ path }).output) : error;
     },
-  };
-
-  const files = ctx.fileInfo.paths.map((path) => ({
-    localPath: join(ctx.sourceDir, path),
-    targetPath: path,
-    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
-    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[path] }),
-  }));
-
-  if (ctx.options.zip) {
-    try {
-      await uploadAsZipFile(ctx, files, options);
-    } catch (err) {
-      ctx.log.debug(
-        { err },
-        'Error uploading zip file, falling back to uploading individual files'
-      );
-      await uploadAsIndividualFiles(ctx, files, options);
-    }
-  } else {
-    await uploadAsIndividualFiles(ctx, files, options);
-  }
+  });
 };
 
 export default createTask({
