@@ -93,6 +93,7 @@ async function run() {
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
+    const configFile = getInput('configFile');
     const debug = getInput('debug');
     const diagnosticsFile = getInput('diagnosticsFile') || getInput('diagnostics');
     const dryRun = getInput('dryRun');
@@ -137,6 +138,7 @@ async function run() {
         autoAcceptChanges: maybe(autoAcceptChanges),
         branchName: maybe(branchName),
         buildScriptName: maybe(buildScriptName),
+        configFile: maybe(configFile),
         debug: maybe(debug),
         diagnosticsFile: maybe(diagnosticsFile),
         dryRun: maybe(dryRun),
