@@ -56,8 +56,8 @@ export const installArchiveDependencies = async (packageJson: PackageJson, testF
     let installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, 'storybook@next', '@storybook/addon-essentials@next', '@storybook/server-webpack5@next']
     const sbConfigPath = await getSBConfigFilePath()
     const sbVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
-    if(sbConfigPath && sbVersion ) {
-        installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, '@chromaui/archive-storybook', `@storybook/server-webpack5@${sbVersion}`]
+    if(sbConfigPath && sbVersion) {
+        installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, `@storybook/server-webpack5@${sbVersion}`]
     }
     const installCommand = await getPackageManagerInstallCommand(installArgs)
     await execaCommand(installCommand)

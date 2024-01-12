@@ -1,8 +1,10 @@
 import { execaCommand } from "execa"
+import {findUp} from "find-up"
 import { writeFile } from "jsonfile";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { TestFramework, addChromaticScriptToPackageJson, createChromaticConfigFile, installArchiveDependencies } from "./init";
+import { addChromaticScriptToPackageJson, createChromaticConfigFile, installArchiveDependencies } from "./init";
+import { beforeEach } from "node:test";
 
 vi.mock('jsonfile', async (importOriginal) => {
     return {
@@ -17,7 +19,7 @@ vi.mock('find-up', async (importOriginal) => {
     return {
         // @ts-expect-error TS does not think actual is an object, but it's fine.
         ...await importOriginal(),
-        findUp: vi.fn(() => Promise.resolve('./main.ts')),
+        findUp: vi.fn(() => Promise.resolve(undefined)),
     };
 });
 
@@ -27,7 +29,6 @@ describe('addChromaticScriptToPackageJson', () => {
     })
     it('outputs updated package.json with only chromatic script if Framework is Storybook', async () => {
         await addChromaticScriptToPackageJson({
-            testFramework: TestFramework.STORYBOOK,
             packageJson: {},
             packagePath: './package.json'
         })
@@ -41,14 +42,12 @@ describe('addChromaticScriptToPackageJson', () => {
 
     it('outputs updated package.json with e2e script if Framework is not Storybook', async () => {
         await addChromaticScriptToPackageJson({
-            testFramework: TestFramework.PLAYWRIGHT,
             packageJson: {},
             packagePath: './package.json'
         })
         expect(writeFile).toHaveBeenCalledOnce()
         expect(writeFile).toHaveBeenCalledWith('./package.json', {
             scripts: {
-                'build-e2e-storybook': "archive-storybook",
                 chromatic: `npx chromatic`
             }
         }, { spaces: 2 })
@@ -68,30 +67,38 @@ describe('createChromaticConfigFile', () => {
 })
 
 describe('installArchiveDependencies', () => {
-    afterEach(() => {
-        vi.restoreAllMocks()
-    })
-    it('successfully installs complete list of dependencies if SB package is not found and SB config is not found', async () => {
-        await installArchiveDependencies({})
-        expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D @chromaui/test-archiver @chromaui/archive-storybook storybook @storybook/addon-essentials @storybook/server-webpack5 react react-dom')
-    })
-    it('successfully installs complete list of dependencies if SB package is found and SB config is not found', async () => {
-        vi.mock('find-up', async (importOriginal) => {
+    beforeEach(() => {
+        vi.doMock('find-up', async () => {
             return {
-                // @ts-expect-error TS does not think actual is an object, but it's fine.
-                ...await importOriginal(),
-                findUp: vi.fn(() => Promise.resolve('')),
+                findUp: vi.fn(() => Promise.resolve(undefined)),
             };
         });
-        await installArchiveDependencies({devDependencies: {'storybook': 'latest'}})
+    })
+    afterEach(() => {
+        vi.clearAllMocks()
+        vi.resetModules()
+    })
+    it('successfully installs complete list of dependencies for Playwright if SB package is not found and SB config is not found', async () => {
+        await installArchiveDependencies({}, 'playwright')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D @chromaui/test-archiver @chromaui/archive-storybook storybook @storybook/addon-essentials @storybook/server-webpack5 react react-dom')
-        vi.resetAllMocks()
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright storybook@next @storybook/addon-essentials@next @storybook/server-webpack5@next')
+    })
+    it('successfully installs complete list of dependencies for Cypress if SB package is not found and SB config is not found', async () => {
+        await installArchiveDependencies({}, 'cypress')
+        expect(execaCommand).toHaveBeenCalledOnce()
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-cypress storybook@next @storybook/addon-essentials@next @storybook/server-webpack5@next')
     })
     it('successfully installs complete list of dependencies if SB package is found and SB config is not found', async () => {
-        await installArchiveDependencies({devDependencies: {storybook: 'latest'}})
+        await installArchiveDependencies({devDependencies: {'storybook': 'latest'}}, 'playwright')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D @chromaui/test-archiver @chromaui/archive-storybook @storybook/server-webpack5@latest')
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright storybook@next @storybook/addon-essentials@next @storybook/server-webpack5@next')
+    })
+    it('successfully installs complete list of dependencies if SB package is found and SB config is found', async () => {
+        vi.mocked(findUp).mockResolvedValue('./project/main.ts')
+        await installArchiveDependencies({devDependencies: {storybook: 'latest'}}, 'playwright')
+        expect(findUp).toHaveBeenCalledOnce()
+        expect(execaCommand).toHaveBeenCalledOnce()
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright @storybook/server-webpack5@latest')
+        vi.clearAllMocks()
     })
 })
