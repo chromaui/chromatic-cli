@@ -99,7 +99,9 @@ export async function uploadBuild(
   // The uploadBuild mutation has to run in batches to avoid hitting request/response payload limits
   // or running out of memory. These run sequentially to avoid too many concurrent requests.
   // The uploading itself still happens without batching, since it has its own concurrency limiter.
-  for (const batch of batches) {
+  for (const [index, batch] of batches.entries()) {
+    ctx.log.debug(`Running uploadBuild batch ${index + 1} / ${batches.length}`);
+
     const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
       UploadBuildMutation,
       {
