@@ -13,7 +13,6 @@ import {
   dryRun,
   validating,
   invalid,
-  preparing,
   tracing,
   bailed,
   traced,
@@ -202,7 +201,7 @@ export const calculateFileHashes = async (ctx: Context, task: Task) => {
 
 export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
-  transitionTo(preparing)(ctx, task);
+  transitionTo(starting)(ctx, task);
 
   const files = ctx.fileInfo.paths
     .map((path) => ({
@@ -213,21 +212,15 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     .filter((f) => f.contentLength);
 
   await uploadBuild(ctx, files, {
-    onStart: () => (task.output = starting().output),
     onProgress: throttle(
       (progress, total) => {
         const percentage = Math.round((progress / total) * 100);
         task.output = uploading({ percentage }).output;
-
         ctx.options.experimental_onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
       },
       // Avoid spamming the logs with progress updates in non-interactive mode
       ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
     ),
-    onComplete: (uploadedBytes: number, uploadedFiles: number) => {
-      ctx.uploadedBytes = uploadedBytes;
-      ctx.uploadedFiles = uploadedFiles;
-    },
     onError: (error: Error, path?: string) => {
       throw path === error.message ? new Error(failed({ path }).output) : error;
     },
