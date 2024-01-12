@@ -2,6 +2,7 @@ import boxen from "boxen";
 import { execaCommand } from 'execa';
 import { findUp } from 'find-up';
 import { writeFile } from 'jsonfile';
+import meow from 'meow';
 import prompts from 'prompts';
 import type { PackageJson } from 'read-pkg-up'
 import readPkgUp from 'read-pkg-up';
@@ -25,15 +26,12 @@ const getSBConfigFilePath = async () => {
     return await findUp(['.storybook/main.ts', '.storybook/main.js', '.storybook/main.tsx', '.storybook/main.jsx', '.storybook/main.mjs', '.storybook/main.cjs'])
 }
 
-export const addChromaticScriptToPackageJson = async ({testFramework, packageJson, packagePath}) => {
+export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath }) => {
     try {
         const json = {
             ...packageJson,
             scripts: {
                 ...packageJson?.scripts,
-                ...(testFramework !== TestFramework.STORYBOOK && {
-                    'build-e2e-storybook': "archive-storybook"
-                }),
                 chromatic: `npx chromatic`
             }
         }
@@ -54,29 +52,26 @@ export const createChromaticConfigFile = async ({configFile, buildScriptName = n
     });
 }
 
-export const installArchiveDependencies = async (packageJson: PackageJson) => {
-    let installArgs = ['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', 'storybook', '@storybook/addon-essentials', '@storybook/server-webpack5', 'react', 'react-dom']
+export const installArchiveDependencies = async (packageJson: PackageJson, testFramework: TestFrameworkType) => {
+    let installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, 'storybook@next', '@storybook/addon-essentials@next', '@storybook/server-webpack5@next']
     const sbConfigPath = await getSBConfigFilePath()
     const sbVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
     if(sbConfigPath && sbVersion ) {
-        installArgs = ['-D', '@chromaui/test-archiver', '@chromaui/archive-storybook', `@storybook/server-webpack5@${sbVersion}`]
+        installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, '@chromaui/archive-storybook', `@storybook/server-webpack5@${sbVersion}`]
     }
     const installCommand = await getPackageManagerInstallCommand(installArgs)
     await execaCommand(installCommand)
 }
 
-const intializeChromatic = async ({testFramework, packageJson, packagePath, buildScriptName}: {testFramework: TestFrameworkType, packageJson: PackageJson, packagePath: string, buildScriptName?: string }) => {
+const intializeChromatic = async ({testFramework, packageJson, packagePath}: {testFramework: TestFrameworkType, packageJson: PackageJson, packagePath: string }) => {
+    await addChromaticScriptToPackageJson({ packageJson, packagePath });
+    await createChromaticConfigFile({configFile: 'chromatic.config.json'})
     switch (testFramework) {
         case TestFramework.CYPRESS:
-        case TestFramework.PLAYWRIGHT:
-            await addChromaticScriptToPackageJson({packageJson, packagePath, testFramework});
-            await createChromaticConfigFile({configFile: 'chromatic.config.json', buildScriptName: 'build-e2e-storybook'})
-            await installArchiveDependencies(packageJson)
+            await installArchiveDependencies(packageJson, TestFramework.CYPRESS)
             break;
-        
-        case TestFramework.STORYBOOK:
-            await addChromaticScriptToPackageJson({packageJson, packagePath, testFramework});
-            await createChromaticConfigFile({configFile: 'chromatic.config.json', buildScriptName})
+        case TestFramework.PLAYWRIGHT:
+            await installArchiveDependencies(packageJson, TestFramework.PLAYWRIGHT)
             break;
     
         default:
@@ -84,7 +79,27 @@ const intializeChromatic = async ({testFramework, packageJson, packagePath, buil
     }
 }
 
-export async function main() {
+export async function main(argv: string[]) {
+    const { flags } = meow(
+        `
+        Usage
+          $ chromatic init [-f|--framework]
+
+        Options
+          --framework, -f <framework     Test Framework that you are aiming to use with Chromatic. (default: 'storybook')
+        `,
+        {
+            argv,
+            description: "Utility for setting up Chromatic",
+            flags: {
+                framework: {
+                    type: 'string',
+                    alias: 'f',
+                    default: TestFramework.STORYBOOK
+                }
+            }
+        }
+    )
     console.log(
         boxen('Welcome to Chromatic Initialization tool! This CLI will help get Chromatic setup within your project.', {
             title: 'Chromatic Init',
@@ -104,9 +119,9 @@ export async function main() {
         }
 
         const { path: packagePath, packageJson } = pkgInfo;
-        const { testFramework, buildScriptName } = await prompts([
+        const { testFramework } = await prompts([
             {
-                type: 'select',
+                type: flags.framework ? null : 'select',
                 name: 'testFramework',
                 message: 'What testing framework are you using?',
                 choices: [
@@ -115,18 +130,11 @@ export async function main() {
                     {title: 'Cypress', value: TestFramework.CYPRESS},
                 ],
                 initial: 0
-            },
-            {
-                type:  (_ , {testFramework}) => testFramework === TestFramework.STORYBOOK ? "text" : null,
-                name: 'buildScriptName',
-                message: "What is the name of the NPM script that builds your Storybook? (default: build-storybook)",
-                initial: 'build-storybook'
             }
         ])
         const { readme, _id, ...rest } = packageJson
         await intializeChromatic({
-            buildScriptName,
-            testFramework, 
+            testFramework: testFramework || flags.framework, 
             packageJson: rest, 
             packagePath
         })
