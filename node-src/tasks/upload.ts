@@ -203,13 +203,11 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(starting)(ctx, task);
 
-  const files = ctx.fileInfo.paths
-    .map((path) => ({
-      contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
-      localPath: join(ctx.sourceDir, path),
-      targetPath: path,
-    }))
-    .filter((f) => f.contentLength);
+  const files = ctx.fileInfo.paths.map((path) => ({
+    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
+    localPath: join(ctx.sourceDir, path),
+    targetPath: path,
+  }));
 
   await uploadBuild(ctx, files, {
     onProgress: throttle(
