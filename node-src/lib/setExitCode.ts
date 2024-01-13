@@ -35,6 +35,7 @@ export const exitCodes = {
   // I/O errors
   FETCH_ERROR: 201,
   GRAPHQL_ERROR: 202,
+  MISSING_DEPENDENCY: 210,
   INVALID_OPTIONS: 254,
 };
 

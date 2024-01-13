@@ -1,6 +1,6 @@
 import { execaCommand } from 'execa';
 import { createWriteStream, readFileSync } from 'fs';
-import path, { dirname, resolve } from 'path';
+import path, { dirname } from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
@@ -11,6 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
+import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -41,19 +42,17 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
   ].filter(Boolean);
 
-  if (ctx.options.playwright) {
+  if (ctx.options.playwright || ctx.options.cypress) {
+    const flag = ctx.options.playwright ? 'playwright' : 'cypress';
+    const dependencyName = `chromatic-${flag}`;
     try {
-      const archiveSBLocation = dirname(require.resolve('@chromaui/archive-storybook/package.json'));
-      console.log(archiveSBLocation);
-      const binPath = resolve(archiveSBLocation, './dist/bin/build-archive-storybook');
+      const binPath = dirname(require.resolve(`${dependencyName}/bin/build-archive-storybook`));
       ctx.buildCommand = ['node', binPath, ...buildCommandOptions].join(' ');
-      console.log(ctx.buildCommand);
     } catch (err) {
       if (err.code === 'MODULE_NOT_FOUND') {
-        // We should use a proper CLI error here.
-        throw new Error(
-          `It looks like you don't have '@chromaui/archive-storybook' installed, please install it!`
-        );
+        ctx.log.error(missingDependency({ dependencyName, flag }));
+        setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
+        throw new Error(failed(ctx).output);
       }
       throw err;
     }
