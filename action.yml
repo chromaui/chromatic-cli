@@ -23,6 +23,8 @@ inputs:
     required: false
   configFile:
     description: 'Path from where to load the Chromatic config JSON file.'
+  cypress:
+    description: 'Run build against `chromatic-cypress` test archives'
     required: false
   debug:
     description: 'Output verbose debugging information'
@@ -65,6 +67,9 @@ inputs:
     required: false
   onlyStoryFiles:
     description: 'Only run a single story or a subset of stories by their filename(s)'
+    required: false
+  playwright:
+    description: 'Run build against `chromatic-playwright` test archives'
     required: false
   preserveMissing:
     description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'

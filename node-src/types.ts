@@ -16,6 +16,7 @@ export interface Flags {
 
   // E2E options
   playwright?: boolean;
+  cypress?: boolean;
 
   // Chromatic options
   autoAcceptChanges?: string;
@@ -93,7 +94,8 @@ export interface Options extends Configuration {
   originalArgv: string[];
 
   buildScriptName: Flags['buildScriptName'];
-  playwright: Flags['playwright'],
+  playwright: Flags['playwright'];
+  cypress: Flags['cypress'];
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
   url?: string;
