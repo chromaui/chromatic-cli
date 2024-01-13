@@ -26,6 +26,7 @@ const configurationSchema = z
 
     buildScriptName: z.string(),
     playwright: z.boolean(),
+    cypress: z.boolean(),
     outputDir: z.string(),
     skip: z.union([z.string(), z.boolean()]),
 

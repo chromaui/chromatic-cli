@@ -72,6 +72,7 @@ export default function getOptions({
 
     buildScriptName: undefined,
     playwright: undefined,
+    cypress: undefined,
     outputDir: undefined,
     allowConsoleErrors: undefined,
     storybookBuildDir: undefined,
@@ -130,6 +131,7 @@ export default function getOptions({
 
     buildScriptName: flags.buildScriptName,
     playwright: trueIfSet(flags.playwright),
+    cypress: trueIfSet(flags.cypress),
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
@@ -204,6 +206,8 @@ export default function getOptions({
   const singularOpts = {
     buildScriptName: '--build-script-name',
     storybookBuildDir: '--storybook-build-dir',
+    playwright: '--playwright',
+    cypress: '--cypress',
   };
   const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
 
@@ -256,7 +260,7 @@ export default function getOptions({
     return options;
   }
 
-  if (options.playwright) {
+  if (options.playwright || options.cypress) {
     return options;
   }
 
