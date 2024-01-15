@@ -1,3 +1,29 @@
+# v10.2.2 (Fri Jan 12 2024)
+
+#### 🐛 Bug Fix
+
+- Add configFile option to GitHub Action [#885](https://github.com/chromaui/chromatic-cli/pull/885) ([@wisestuart](https://github.com/wisestuart))
+
+#### Authors: 1
+
+- Stuart Hammar ([@wisestuart](https://github.com/wisestuart))
+
+---
+
+# v10.2.1 (Wed Jan 10 2024)
+
+#### 🐛 Bug Fix
+
+- Revert "Replace `getUploadUrls` with `uploadBuild` mutation" [#883](https://github.com/chromaui/chromatic-cli/pull/883) ([@JonathanKolnik](https://github.com/JonathanKolnik))
+- Run publish-action script as afterShipIt hook [#877](https://github.com/chromaui/chromatic-cli/pull/877) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
 # v10.2.0 (Thu Dec 21 2023)
 
 #### 🚀 Enhancement

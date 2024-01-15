@@ -2,6 +2,7 @@ import reportBuilder from 'junit-report-builder';
 import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
+import { baseStorybookUrl } from '../lib/utils';
 import { Context } from '../types';
 import wroteReport from '../ui/messages/info/wroteReport';
 import { initial, pending, success } from '../ui/tasks/report';
@@ -12,8 +13,8 @@ const ReportQuery = `
       build(number: $buildNumber) {
         number
         status(legacy: false)
-        storybookUrl
         webUrl
+        cachedUrl
         createdAt
         completedAt
         tests {
@@ -43,8 +44,8 @@ interface ReportQueryResult {
     build: {
       number: number;
       status: string;
-      storybookUrl: string;
       webUrl: string;
+      cachedUrl: string;
       createdAt: number;
       completedAt: number;
       tests: {
@@ -93,7 +94,7 @@ export const generateReport = async (ctx: Context) => {
     .property('buildNumber', build.number)
     .property('buildStatus', build.status)
     .property('buildUrl', build.webUrl)
-    .property('storybookUrl', build.storybookUrl);
+    .property('storybookUrl', baseStorybookUrl(build.cachedUrl));
 
   build.tests.forEach(({ status, result, spec, parameters, mode }) => {
     const testSuffixName = mode.name || `[${parameters.viewport}px]`;

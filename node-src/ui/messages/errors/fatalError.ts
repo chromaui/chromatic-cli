@@ -7,12 +7,7 @@ import { Context, InitialContext } from '../../..';
 import link from '../../components/link';
 import { redact } from '../../../lib/utils';
 
-const buildFields = ({ id, number, storybookUrl = undefined, webUrl = undefined }) => ({
-  id,
-  number,
-  ...(storybookUrl && { storybookUrl }),
-  ...(webUrl && { webUrl }),
-});
+const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
 
 export default function fatalError(
   ctx: Context | InitialContext,
@@ -31,8 +26,9 @@ export default function fatalError(
     runtimeMetadata,
     exitCode,
     exitCodeKey,
-    announcedBuild,
-    build = announcedBuild,
+    isolatorUrl,
+    cachedUrl,
+    build,
     buildCommand,
   } = ctx;
 
@@ -58,6 +54,8 @@ export default function fatalError(
       exitCodeKey,
       errorType: errors.map((err) => err.name).join('\n'),
       errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
+      ...(isolatorUrl ? { isolatorUrl } : {}),
+      ...(cachedUrl ? { cachedUrl } : {}),
       ...(build && { build: buildFields(build) }),
     },
     'projectToken',
