@@ -4,7 +4,7 @@ import { uploadZip, waitForUnpack } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
-import skippingEmptyFiles from '../ui/messages/warnings/skippingEmptyFiles';
+import { skippingEmptyFiles } from '../ui/messages/warnings/skippingEmptyFiles';
 
 // This limit is imposed by the uploadBuild mutation
 const MAX_FILES_PER_REQUEST = 1000;

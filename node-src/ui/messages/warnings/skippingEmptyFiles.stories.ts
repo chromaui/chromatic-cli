@@ -1,4 +1,4 @@
-import skippingEmptyFiles from './skippingEmptyFiles';
+import { skippingEmptyFiles } from './skippingEmptyFiles';
 
 export default {
   title: 'CLI/Messages/Warnings',

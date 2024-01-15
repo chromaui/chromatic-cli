@@ -5,7 +5,7 @@ import { dedent } from 'ts-dedent';
 import { warning } from '../../components/icons';
 import { FileDesc } from '../../../types';
 
-export default ({ emptyFiles }: { emptyFiles: FileDesc[] }) => {
+export const skippingEmptyFiles = ({ emptyFiles }: { emptyFiles: FileDesc[] }) => {
   const listing = chalk`\n{dim →} ${emptyFiles.map((f) => f.targetPath).join(chalk`\n{dim →} `)}`;
   return dedent(chalk`
     ${warning} {bold Not uploading empty files}

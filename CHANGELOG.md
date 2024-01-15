@@ -1,3 +1,15 @@
+# v10.2.2 (Fri Jan 12 2024)
+
+#### 🐛 Bug Fix
+
+- Add configFile option to GitHub Action [#885](https://github.com/chromaui/chromatic-cli/pull/885) ([@wisestuart](https://github.com/wisestuart))
+
+#### Authors: 1
+
+- Stuart Hammar ([@wisestuart](https://github.com/wisestuart))
+
+---
+
 # v10.2.1 (Wed Jan 10 2024)
 
 #### 🐛 Bug Fix

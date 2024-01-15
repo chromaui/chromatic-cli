@@ -21,6 +21,9 @@ inputs:
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
+  configFile:
+    description: 'Path from where to load the Chromatic config JSON file.'
+    required: false
   debug:
     description: 'Output verbose debugging information'
     required: false
