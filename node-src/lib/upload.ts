@@ -4,6 +4,7 @@ import { uploadZip, waitForUnpack } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
+import { skippingEmptyFiles } from '../ui/messages/warnings/skippingEmptyFiles';
 
 // This limit is imposed by the uploadBuild mutation
 const MAX_FILES_PER_REQUEST = 1000;
@@ -162,9 +163,14 @@ export async function uploadBuild(
   }
 
   try {
-    await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, totalBytes));
+    const nonEmptyFiles = targets.filter(({ contentLength }) => contentLength > 0);
+    if (nonEmptyFiles.length !== targets.length) {
+      const emptyFiles = targets.filter(({ contentLength }) => contentLength === 0);
+      ctx.log.warn(skippingEmptyFiles({ emptyFiles }));
+    }
+    await uploadFiles(ctx, nonEmptyFiles, (progress) => options.onProgress?.(progress, totalBytes));
     ctx.uploadedBytes += totalBytes;
-    ctx.uploadedFiles += targets.length;
+    ctx.uploadedFiles += nonEmptyFiles.length;
   } catch (e) {
     return options.onError?.(e, files.some((f) => f.localPath === e.message) && e.message);
   }

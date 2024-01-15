@@ -5,7 +5,6 @@ import { createReadStream } from 'fs';
 import pLimit from 'p-limit';
 import progress from 'progress-stream';
 import { Context, FileDesc, TargetInfo } from '../types';
-import skippingEmptyFiles from '../ui/messages/warnings/skippingEmptyFiles';
 
 export async function uploadFiles(
   ctx: Context,
@@ -16,14 +15,8 @@ export async function uploadFiles(
   const limitConcurrency = pLimit(10);
   let totalProgress = 0;
 
-  const nonEmptyTargets = targets.filter(({ contentLength }) => contentLength > 0);
-  if (nonEmptyTargets.length !== targets.length) {
-    const emptyFiles = targets.filter(({ contentLength }) => contentLength === 0);
-    ctx.log.warn(skippingEmptyFiles({ emptyFiles }));
-  }
-
   await Promise.all(
-    nonEmptyTargets.map(({ contentLength, filePath, formAction, formFields, localPath }) => {
+    targets.map(({ contentLength, filePath, formAction, formFields, localPath }) => {
       let fileProgress = 0; // The bytes uploaded for this this particular file
 
       ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)})`);
