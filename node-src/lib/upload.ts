@@ -4,6 +4,10 @@ import { uploadZip, waitForUnpack } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
+import skippingEmptyFiles from '../ui/messages/warnings/skippingEmptyFiles';
+
+// This limit is imposed by the uploadBuild mutation
+const MAX_FILES_PER_REQUEST = 1000;
 
 const UploadBuildMutation = `
   mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
@@ -80,63 +84,94 @@ export async function uploadBuild(
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
-  const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
-    UploadBuildMutation,
-    {
-      buildId: ctx.announcedBuild.id,
-      files: files.map(({ contentHash, contentLength, targetPath }) => ({
-        contentHash,
-        contentLength,
-        filePath: targetPath,
-      })),
-      zip: ctx.options.zip,
-    }
-  );
+  ctx.uploadedBytes = 0;
+  ctx.uploadedFiles = 0;
 
-  if (uploadBuild.userErrors.length) {
-    uploadBuild.userErrors.forEach((e) => {
-      if (e.__typename === 'MaxFileCountExceededError') {
-        ctx.log.error(maxFileCountExceeded(e));
-      } else if (e.__typename === 'MaxFileSizeExceededError') {
-        ctx.log.error(maxFileSizeExceeded(e));
-      } else {
-        ctx.log.error(e.message);
+  const targets: (TargetInfo & FileDesc)[] = [];
+  let zipTarget: (TargetInfo & { sentinelUrl: string }) | undefined;
+
+  const batches = files.reduce<typeof files[]>((acc, file, fileIndex) => {
+    const batchIndex = Math.floor(fileIndex / MAX_FILES_PER_REQUEST);
+    if (!acc[batchIndex]) acc[batchIndex] = [];
+    acc[batchIndex].push(file);
+    return acc;
+  }, []);
+
+  // The uploadBuild mutation has to run in batches to avoid hitting request/response payload limits
+  // or running out of memory. These run sequentially to avoid too many concurrent requests.
+  // The uploading itself still happens without batching, since it has its own concurrency limiter.
+  for (const [index, batch] of batches.entries()) {
+    ctx.log.debug(`Running uploadBuild batch ${index + 1} / ${batches.length}`);
+
+    const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
+      UploadBuildMutation,
+      {
+        buildId: ctx.announcedBuild.id,
+        files: batch.map(({ contentHash, contentLength, targetPath }) => ({
+          contentHash,
+          contentLength,
+          filePath: targetPath,
+        })),
+        zip: ctx.options.zip,
       }
-    });
-    return options.onError?.(new Error('Upload rejected due to user error'));
-  }
+    );
 
-  const targets = uploadBuild.info.targets.map((target) => {
-    const file = files.find((f) => f.targetPath === target.filePath);
-    return { ...file, ...target };
-  });
+    if (uploadBuild.userErrors.length) {
+      uploadBuild.userErrors.forEach((e) => {
+        if (e.__typename === 'MaxFileCountExceededError') {
+          ctx.log.error(maxFileCountExceeded(e));
+        } else if (e.__typename === 'MaxFileSizeExceededError') {
+          ctx.log.error(maxFileSizeExceeded(e));
+        } else {
+          ctx.log.error(e.message);
+        }
+      });
+      return options.onError?.(new Error('Upload rejected due to user error'));
+    }
+
+    targets.push(
+      ...uploadBuild.info.targets.map((target) => {
+        const file = batch.find((f) => f.targetPath === target.filePath);
+        return { ...file, ...target };
+      })
+    );
+    zipTarget = uploadBuild.info.zipTarget;
+  }
 
   if (!targets.length) {
     ctx.log.debug('No new files to upload, continuing');
-    return options.onComplete?.(0, 0);
+    return;
   }
 
-  options.onStart?.();
+  // Uploading zero-length files is valid, so this might add up to 0.
+  const totalBytes = targets.reduce((sum, { contentLength }) => sum + contentLength, 0);
 
-  const total = targets.reduce((acc, { contentLength }) => acc + contentLength, 0);
-  if (uploadBuild.info.zipTarget) {
+  if (zipTarget) {
     try {
       const { path, size } = await makeZipFile(ctx, targets);
-      const compressionRate = (total - size) / total;
+      const compressionRate = totalBytes && (totalBytes - size) / totalBytes;
       ctx.log.debug(`Compression reduced upload size by ${Math.round(compressionRate * 100)}%`);
 
-      const target = { ...uploadBuild.info.zipTarget, contentLength: size, localPath: path };
+      const target = { ...zipTarget, contentLength: size, localPath: path };
       await uploadZip(ctx, target, (progress) => options.onProgress?.(progress, size));
       await waitForUnpack(ctx, target.sentinelUrl);
-      return options.onComplete?.(size, targets.length);
+      ctx.uploadedBytes += size;
+      ctx.uploadedFiles += targets.length;
+      return;
     } catch (err) {
       ctx.log.debug({ err }, 'Error uploading zip, falling back to uploading individual files');
     }
   }
 
   try {
-    await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, total));
-    return options.onComplete?.(total, targets.length);
+    const nonEmptyFiles = targets.filter(({ contentLength }) => contentLength > 0);
+    if (nonEmptyFiles.length !== targets.length) {
+      const emptyFiles = targets.filter(({ contentLength }) => contentLength === 0);
+      ctx.log.warn(skippingEmptyFiles({ emptyFiles }));
+    }
+    await uploadFiles(ctx, nonEmptyFiles, (progress) => options.onProgress?.(progress, totalBytes));
+    ctx.uploadedBytes += totalBytes;
+    ctx.uploadedFiles += nonEmptyFiles.length;
   } catch (e) {
     return options.onError?.(e, files.some((f) => f.localPath === e.message) && e.message);
   }

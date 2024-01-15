@@ -81,12 +81,6 @@ export const hashing = () => ({
   output: `Calculating file hashes`,
 });
 
-export const preparing = () => ({
-  status: 'pending',
-  title: 'Publishing your built Storybook',
-  output: `Retrieving target location`,
-});
-
 export const starting = () => ({
   status: 'pending',
   title: 'Publishing your built Storybook',

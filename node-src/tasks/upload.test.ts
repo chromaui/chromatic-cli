@@ -404,6 +404,96 @@ describe('uploadStorybook', () => {
     });
   });
 
+  it.only('batches calls to uploadBuild mutation', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValueOnce({
+      uploadBuild: {
+        info: {
+          targets: Array.from({ length: 1000 }, (_, i) => ({
+            contentType: 'application/javascript',
+            filePath: `${i}.js`,
+            formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+            formFields: {},
+          })),
+        },
+        userErrors: [],
+      },
+    });
+    client.runQuery.mockReturnValueOnce({
+      uploadBuild: {
+        info: {
+          targets: [
+            {
+              contentType: 'application/javascript',
+              filePath: `1000.js`,
+              formAction: `https://s3.amazonaws.com/presigned?1000.js`,
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn((x) => x) } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
+      paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
+      total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+    };
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledTimes(2);
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: Array.from({ length: 1000 }, (_, i) => ({
+        contentHash: undefined,
+        contentLength: i,
+        filePath: `${i}.js`,
+      })),
+    });
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentHash: undefined, contentLength: 1000, filePath: `1000.js` }], // 0-based index makes this file #1001
+    });
+
+    // Empty files are not uploaded
+    expect(http.fetch).not.toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?0.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?1.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?999.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?1000.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(ctx.uploadedBytes).toBe(500500);
+    expect(ctx.uploadedFiles).toBe(1000);
+  });
+
   describe('with file hashes', () => {
     it('retrieves file upload locations and uploads only returned targets', async () => {
       const client = { runQuery: vi.fn() };
