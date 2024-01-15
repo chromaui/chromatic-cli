@@ -283,7 +283,7 @@ export async function findFiles(...patterns: string[]) {
 }
 
 export async function mergeQueueBranchMatch(commit, branch) {
-  const mergeQueuePattern = new RegExp(`/pr-(\\d+)-${commit}$`);
+  const mergeQueuePattern = new RegExp(`gh-readonly-queue/.*/pr-(\\d+)-${commit}$`);
   const match = branch.match(mergeQueuePattern);
 
   return match ? Number(match[1]) : null;

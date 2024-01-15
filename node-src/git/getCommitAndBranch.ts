@@ -160,9 +160,15 @@ export default async function getCommitAndBranch(
     branch = branch.replace(ORIGIN_PREFIX_REGEXP, '');
   }
 
-  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(commit.commit, branch)
 
+
+  // When a PR is put into a merge queue, and prior PR is merged, the PR is retested against the latest on main. 
+  // To do this, GitHub creates a new commit and does a CI run with the branch changed to e.g. gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36
+  // If you configure merge queues to rebase in this circumstance, 
+  // we lose track of baselines as the branch name has changed so our usual rebase detection (based on branch name) doesn't work.
+  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(commit.commit, branch)
   if (mergeQueueBranchPrNumber) {
+    // This is why we extract the PR number from the branch name and use it to find the branch name of the PR that was merged.
     const branchFromMergeQueuePullRequestNumber = await getBranchFromMergeQueuePullRequestNumber(ctx, { number: mergeQueueBranchPrNumber });
    
     if (branchFromMergeQueuePullRequestNumber) {
