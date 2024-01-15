@@ -488,7 +488,7 @@ describe('uploadStorybook', () => {
     });
   });
 
-  it.only('batches calls to uploadBuild mutation', async () => {
+  it('batches calls to uploadBuild mutation', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValueOnce({
       uploadBuild: {
