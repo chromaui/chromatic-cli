@@ -207,6 +207,7 @@ vi.mock('node-fetch', () => ({
           data: {
             [key]: {
               info: {
+                sentinelUrls: [],
                 targets: variables.files.map(({ filePath }) => ({
                   contentType: contentTypes[filePath.split('.').at(-1)],
                   fileKey: '',

@@ -271,6 +271,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValue({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: [
             {
               contentType: 'text/html',
@@ -339,6 +340,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValueOnce({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: Array.from({ length: 1000 }, (_, i) => ({
             contentType: 'application/javascript',
             filePath: `${i}.js`,
@@ -352,6 +354,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValueOnce({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: [
             {
               contentType: 'application/javascript',
@@ -423,6 +426,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValue({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: [
             {
               contentType: 'text/html',
@@ -493,6 +497,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValueOnce({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: Array.from({ length: 1000 }, (_, i) => ({
             contentType: 'application/javascript',
             filePath: `${i}.js`,
@@ -506,6 +511,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValueOnce({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: [
             {
               contentType: 'application/javascript',
@@ -584,6 +590,7 @@ describe('uploadStorybook', () => {
       client.runQuery.mockReturnValue({
         uploadBuild: {
           info: {
+            sentinelUrls: [],
             targets: [
               {
                 contentType: 'text/html',
@@ -615,7 +622,7 @@ describe('uploadStorybook', () => {
         log,
         http,
         sourceDir: '/static/',
-        options: {},
+        options: { zip: false },
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
@@ -627,6 +634,7 @@ describe('uploadStorybook', () => {
           { contentHash: 'iframe', contentLength: 42, filePath: 'iframe.html' },
           { contentHash: 'index', contentLength: 42, filePath: 'index.html' },
         ],
+        zip: false,
       });
       expect(http.fetch).not.toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?iframe.html',
@@ -649,6 +657,7 @@ describe('uploadStorybook', () => {
       client.runQuery.mockReturnValue({
         uploadBuild: {
           info: {
+            sentinelUrls: ['https://asdqwe.chromatic.com/sentinel.txt'],
             targets: [
               {
                 contentType: 'text/html',
@@ -668,7 +677,6 @@ describe('uploadStorybook', () => {
               filePath: 'storybook.zip',
               formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
               formFields: {},
-              sentinelUrl: 'https://asdqwe.chromatic.com/sentinel.txt',
             },
           },
           userErrors: [],

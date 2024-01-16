@@ -3,6 +3,7 @@ import {
   bailed,
   dryRun,
   failed,
+  finalizing,
   hashing,
   initial,
   invalid,
@@ -53,6 +54,8 @@ export const Hashing = () => hashing();
 export const Starting = () => starting();
 
 export const Uploading = () => uploading({ percentage: 42 });
+
+export const Finalizing = () => finalizing();
 
 export const Success = () =>
   success({
