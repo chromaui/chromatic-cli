@@ -1,7 +1,8 @@
+import { filesize } from 'filesize';
 import pluralize from 'pluralize';
 
 import { getDuration } from '../../lib/tasks';
-import { baseStorybookUrl, progressBar, isPackageManifestFile } from '../../lib/utils';
+import { isPackageManifestFile, progressBar } from '../../lib/utils';
 import { Context } from '../../types';
 
 export const initial = {
@@ -80,12 +81,6 @@ export const hashing = () => ({
   output: `Calculating file hashes`,
 });
 
-export const preparing = () => ({
-  status: 'pending',
-  title: 'Publishing your built Storybook',
-  output: `Retrieving target location`,
-});
-
 export const starting = () => ({
   status: 'pending',
   title: 'Publishing your built Storybook',
@@ -98,11 +93,26 @@ export const uploading = ({ percentage }: { percentage: number }) => ({
   output: `${progressBar(percentage)} ${percentage}%`,
 });
 
-export const success = (ctx: Context) => ({
-  status: 'success',
-  title: `Publish complete in ${getDuration(ctx)}`,
-  output: `View your Storybook at ${baseStorybookUrl(ctx.isolatorUrl)}`,
+export const finalizing = () => ({
+  status: 'pending',
+  title: 'Publishing your built Storybook',
+  output: `Finalizing upload`,
 });
+
+export const success = (ctx: Context) => {
+  const files = pluralize('file', ctx.uploadedFiles, true);
+  const bytes = filesize(ctx.uploadedBytes || 0);
+  const skipped =
+    ctx.fileInfo.paths.length > ctx.uploadedFiles
+      ? `, skipped ${pluralize('file', ctx.fileInfo.paths.length - ctx.uploadedFiles, true)}`
+      : '';
+
+  return {
+    status: 'success',
+    title: ctx.uploadedBytes ? `Publish complete in ${getDuration(ctx)}` : `Publish complete`,
+    output: ctx.uploadedBytes ? `Uploaded ${files} (${bytes})${skipped}` : 'No new files to upload',
+  };
+};
 
 export const failed = ({ path }: { path: string }) => ({
   status: 'error',

@@ -223,8 +223,7 @@ export interface Context {
     };
     mainConfigFilePath?: string;
   };
-  isolatorUrl: string;
-  cachedUrl: string;
+  storybookUrl?: string;
   announcedBuild: {
     id: string;
     number: number;
@@ -241,7 +240,7 @@ export interface Context {
     number: number;
     status: string;
     webUrl: string;
-    cachedUrl: string;
+    storybookUrl: string;
     reportToken?: string;
     inheritedCaptureCount: number;
     actualCaptureCount: number;
@@ -294,7 +293,7 @@ export interface Context {
   buildLogFile?: string;
   fileInfo?: {
     paths: string[];
-    hashes: Record<Context['fileInfo']['paths'][number], string>;
+    hashes?: Record<Context['fileInfo']['paths'][number], string>;
     statsPath: string;
     lengths: {
       knownAs: string;
@@ -303,7 +302,9 @@ export interface Context {
     }[];
     total: number;
   };
+  sentinelUrls?: string[];
   uploadedBytes?: number;
+  uploadedFiles?: number;
   turboSnap?: Partial<{
     unavailable?: boolean;
     rootPath: string;
@@ -360,7 +361,10 @@ export interface FileDesc {
   targetPath: string;
 }
 
-export interface TargetedFile extends FileDesc {
+export interface TargetInfo {
   contentType: string;
-  targetUrl: string;
+  fileKey: string;
+  filePath: string;
+  formAction: string;
+  formFields: { [key: string]: string };
 }

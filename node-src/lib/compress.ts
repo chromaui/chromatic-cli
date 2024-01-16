@@ -24,7 +24,7 @@ export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
     archive.pipe(sink);
 
     files.forEach(({ localPath, targetPath: name }) => {
-      ctx.log.debug({ name }, 'Adding file to zip archive');
+      ctx.log.debug(`Adding to zip archive: ${name}`);
       archive.append(createReadStream(localPath), { name });
     });
 

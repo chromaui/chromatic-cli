@@ -15,6 +15,6 @@ ReferenceError: foo is not defined
     at https://61b0a4b8ebf0e344c2aa231c-nsoaxcirhi.capture.dev-chromatic.com/main.72ad6d7a.iframe.bundle.js:1:47
 `;
 
-const isolatorUrl = 'https://61b0a4b8ebf0e344c2aa231c-wdooytetbw.dev-chromatic.com';
+const storybookUrl = 'https://61b0a4b8ebf0e344c2aa231c-wdooytetbw.dev-chromatic.com/';
 
-export const BrokenStorybook = () => brokenStorybook({ failureReason, isolatorUrl });
+export const BrokenStorybook = () => brokenStorybook({ failureReason, storybookUrl });

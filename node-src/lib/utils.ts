@@ -34,8 +34,6 @@ export const activityBar = (n = 0, size = 20) => {
   return `[${track.join('')}]`;
 };
 
-export const baseStorybookUrl = (url: string) => url?.replace(/\/iframe\.html$/, '');
-
 export const rewriteErrorMessage = (err: Error, message: string) => {
   try {
     // DOMException doesn't allow setting the message, so this might fail
