@@ -3,6 +3,7 @@ import {
   bailed,
   dryRun,
   failed,
+  finalizing,
   hashing,
   initial,
   invalid,
@@ -54,14 +55,31 @@ export const Starting = () => starting();
 
 export const Uploading = () => uploading({ percentage: 42 });
 
+export const Finalizing = () => finalizing();
+
 export const Success = () =>
   success({
     now: 0,
     startedAt: -54321,
     uploadedBytes: 1234567,
     uploadedFiles: 42,
+    fileInfo: { paths: { length: 42 } },
   } as any);
 
-export const SuccessNoFiles = () => success({} as any);
+export const SuccessSkippedFiles = () =>
+  success({
+    now: 0,
+    startedAt: -54321,
+    uploadedBytes: 1234567,
+    uploadedFiles: 42,
+    fileInfo: { paths: { length: 100 } },
+  } as any);
+
+export const SuccessNoFiles = () =>
+  success({
+    uploadedBytes: 0,
+    uploadedFiles: 0,
+    fileInfo: { paths: { length: 100 } },
+  } as any);
 
 export const Failed = () => failed({ path: 'main.9e3e453142da82719bf4.bundle.js' });

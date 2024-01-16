@@ -207,6 +207,7 @@ vi.mock('node-fetch', () => ({
           data: {
             [key]: {
               info: {
+                sentinelUrls: [],
                 targets: variables.files.map(({ filePath }) => ({
                   contentType: contentTypes[filePath.split('.').at(-1)],
                   fileKey: '',
@@ -469,6 +470,7 @@ it('calls out to npm build script passed and uploads files', async () => {
     expect.any(Object),
     [
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         fileKey: '',
@@ -479,6 +481,7 @@ it('calls out to npm build script passed and uploads files', async () => {
         targetPath: 'iframe.html',
       },
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         fileKey: '',
@@ -502,6 +505,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
     expect.any(Object),
     [
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         fileKey: '',
@@ -512,6 +516,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
         targetPath: 'iframe.html',
       },
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
         fileKey: '',

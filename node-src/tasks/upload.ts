@@ -20,14 +20,16 @@ import {
   uploading,
   success,
   hashing,
+  finalizing,
 } from '../ui/tasks/upload';
-import { Context, Task } from '../types';
+import { Context, FileDesc, Task } from '../types';
 import { readStatsFile } from './read-stats-file';
 import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { uploadBuild } from '../lib/upload';
 import { getFileHashes } from '../lib/getFileHashes';
+import { waitForSentinel } from '../lib/waitForSentinel';
 
 interface PathSpec {
   pathname: string;
@@ -203,7 +205,8 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(starting)(ctx, task);
 
-  const files = ctx.fileInfo.paths.map((path) => ({
+  const files = ctx.fileInfo.paths.map<FileDesc>((path) => ({
+    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[path] }),
     contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
     localPath: join(ctx.sourceDir, path),
     targetPath: path,
@@ -225,6 +228,13 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   });
 };
 
+export const waitForSentinels = async (ctx: Context, task: Task) => {
+  if (ctx.skip || !ctx.sentinelUrls?.length) return;
+  transitionTo(finalizing)(ctx, task);
+
+  await Promise.all(ctx.sentinelUrls.map((url) => waitForSentinel(ctx, url)));
+};
+
 export default createTask({
   name: 'upload',
   title: initial.title,
@@ -239,6 +249,7 @@ export default createTask({
     traceChangedFiles,
     calculateFileHashes,
     uploadStorybook,
+    waitForSentinels,
     transitionTo(success, true),
   ],
 });

@@ -1,7 +1,7 @@
 import makeZipFile from './compress';
-import { Context, FileDesc, TargetInfo } from '../types';
-import { uploadZip, waitForUnpack } from './uploadZip';
+import { uploadZip } from './uploadZip';
 import { uploadFiles } from './uploadFiles';
+import { Context, FileDesc, TargetInfo } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 import { skippingEmptyFiles } from '../ui/messages/warnings/skippingEmptyFiles';
@@ -13,6 +13,7 @@ const UploadBuildMutation = `
   mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
     uploadBuild(buildId: $buildId, files: $files, zip: $zip) {
       info {
+        sentinelUrls
         targets {
           contentType
           fileKey
@@ -26,7 +27,6 @@ const UploadBuildMutation = `
           filePath
           formAction
           formFields
-          sentinelUrl
         }
       }
       userErrors {
@@ -50,8 +50,9 @@ const UploadBuildMutation = `
 interface UploadBuildMutationResult {
   uploadBuild: {
     info?: {
+      sentinelUrls: string[];
       targets: TargetInfo[];
-      zipTarget?: TargetInfo & { sentinelUrl: string };
+      zipTarget?: TargetInfo;
     };
     userErrors: (
       | {
@@ -80,15 +81,16 @@ export async function uploadBuild(
   options: {
     onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
-    onComplete?: (uploadedBytes: number, uploadedFiles: number) => void;
+    onComplete?: (uploadedBytes: number, uploadedFiles: number, sentinelUrls: string[]) => void;
     onError?: (error: Error, path?: string) => void;
   } = {}
 ) {
+  ctx.sentinelUrls = [];
   ctx.uploadedBytes = 0;
   ctx.uploadedFiles = 0;
 
   const targets: (TargetInfo & FileDesc)[] = [];
-  let zipTarget: (TargetInfo & { sentinelUrl: string }) | undefined;
+  let zipTarget: TargetInfo | undefined;
 
   const batches = files.reduce<typeof files[]>((acc, file, fileIndex) => {
     const batchIndex = Math.floor(fileIndex / MAX_FILES_PER_REQUEST);
@@ -128,6 +130,7 @@ export async function uploadBuild(
       return options.onError?.(new Error('Upload rejected due to user error'));
     }
 
+    ctx.sentinelUrls.push(...uploadBuild.info.sentinelUrls);
     targets.push(
       ...uploadBuild.info.targets.map((target) => {
         const file = batch.find((f) => f.targetPath === target.filePath);
@@ -153,7 +156,6 @@ export async function uploadBuild(
 
       const target = { ...zipTarget, contentLength: size, localPath: path };
       await uploadZip(ctx, target, (progress) => options.onProgress?.(progress, size));
-      await waitForUnpack(ctx, target.sentinelUrl);
       ctx.uploadedBytes += size;
       ctx.uploadedFiles += targets.length;
       return;
@@ -213,7 +215,8 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
     UploadMetadataMutation,
     {
       buildId: ctx.announcedBuild.id,
-      files: files.map(({ contentLength, targetPath }) => ({
+      files: files.map(({ contentHash, contentLength, targetPath }) => ({
+        contentHash,
         contentLength,
         filePath: targetPath,
       })),

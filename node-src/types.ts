@@ -302,6 +302,7 @@ export interface Context {
     }[];
     total: number;
   };
+  sentinelUrls?: string[];
   uploadedBytes?: number;
   uploadedFiles?: number;
   turboSnap?: Partial<{
@@ -354,6 +355,7 @@ export interface Stats {
 }
 
 export interface FileDesc {
+  contentHash?: string;
   contentLength: number;
   localPath: string;
   targetPath: string;
