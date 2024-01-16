@@ -281,3 +281,10 @@ export async function findFiles(...patterns: string[]) {
   const files = await execGitCommand(`git ls-files -z ${patterns.map((p) => `'${p}'`).join(' ')}`);
   return files.split('\0').filter(Boolean);
 }
+
+export async function mergeQueueBranchMatch(commit, branch) {
+  const mergeQueuePattern = new RegExp(`gh-readonly-queue/.*/pr-(\\d+)-${commit}$`);
+  const match = branch.match(mergeQueuePattern);
+
+  return match ? Number(match[1]) : null;
+}

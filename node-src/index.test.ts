@@ -293,6 +293,7 @@ vi.mock('./git/git', () => ({
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
   getUncommittedHash: () => Promise.resolve('abc123'),
   getUserEmail: () => Promise.resolve('test@test.com'),
+  mergeQueueBranchMatch: () => Promise.resolve(null),
 }));
 
 vi.mock('./git/getParentCommits', () => ({
