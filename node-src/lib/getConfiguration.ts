@@ -26,6 +26,7 @@ const configurationSchema = z
 
     buildScriptName: z.string(),
     outputDir: z.string(),
+    skip: z.union([z.string(), z.boolean()]),
 
     storybookBuildDir: z.string(),
     storybookBaseDir: z.string(),
