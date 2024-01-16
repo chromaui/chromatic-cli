@@ -6,6 +6,11 @@ export default {
 
 export const StorybookPublished = () =>
   storybookPublished({
+    storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+  } as any);
+
+export const StorybookPrepared = () =>
+  storybookPublished({
     build: {
       actualCaptureCount: undefined,
       actualTestCount: undefined,
@@ -14,6 +19,7 @@ export const StorybookPublished = () =>
       errorCount: undefined,
       componentCount: 5,
       specCount: 8,
-      cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
+      storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
     },
+    storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   } as any);
