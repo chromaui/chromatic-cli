@@ -1,3 +1,23 @@
+# v10.3.0 (Tue Jan 16 2024)
+
+#### 🚀 Enhancement
+
+- Add missing `skip` option to configuration schema [#890](https://github.com/chromaui/chromatic-cli/pull/890) ([@ghengeveld](https://github.com/ghengeveld))
+- Detect merge queue branch and retrieve real branch name from pull request [#884](https://github.com/chromaui/chromatic-cli/pull/884) ([@JonathanKolnik](https://github.com/JonathanKolnik) [@ghengeveld](https://github.com/ghengeveld))
+- Deduplicate files to be uploaded using file hashing [#875](https://github.com/chromaui/chromatic-cli/pull/875) ([@ghengeveld](https://github.com/ghengeveld))
+- Replace upload mechanism to use a batched mutation with a new API [#888](https://github.com/chromaui/chromatic-cli/pull/888) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Retrieve `sentinelUrls` from `uploadBuild` and wait for all of them before finishing upload task [#878](https://github.com/chromaui/chromatic-cli/pull/878) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
 # v10.2.2 (Fri Jan 12 2024)
 
 #### 🐛 Bug Fix
