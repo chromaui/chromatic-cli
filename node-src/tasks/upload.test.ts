@@ -271,6 +271,7 @@ describe('uploadStorybook', () => {
     client.runQuery.mockReturnValue({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: [
             {
               contentType: 'text/html',
@@ -334,11 +335,98 @@ describe('uploadStorybook', () => {
     expect(ctx.uploadedFiles).toBe(2);
   });
 
+  it('batches calls to uploadBuild mutation', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValueOnce({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: Array.from({ length: 1000 }, (_, i) => ({
+            contentType: 'application/javascript',
+            filePath: `${i}.js`,
+            formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+            formFields: {},
+          })),
+        },
+        userErrors: [],
+      },
+    });
+    client.runQuery.mockReturnValueOnce({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'application/javascript',
+              filePath: `1000.js`,
+              formAction: `https://s3.amazonaws.com/presigned?1000.js`,
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
+      paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
+      total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+    };
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledTimes(2);
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: Array.from({ length: 1000 }, (_, i) => ({
+        contentLength: i,
+        filePath: `${i}.js`,
+      })),
+    });
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentLength: 1000, filePath: `1000.js` }], // 0-based index makes this file #1001
+    });
+
+    // Empty files are not uploaded
+    expect(http.fetch).not.toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?0.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?999.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?1000.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(ctx.uploadedBytes).toBe(500500);
+    expect(ctx.uploadedFiles).toBe(1000);
+  });
+
   it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       uploadBuild: {
         info: {
+          sentinelUrls: [],
           targets: [
             {
               contentType: 'text/html',
@@ -410,6 +498,7 @@ describe('uploadStorybook', () => {
       client.runQuery.mockReturnValue({
         uploadBuild: {
           info: {
+            sentinelUrls: [],
             targets: [
               {
                 contentType: 'text/html',
@@ -441,7 +530,7 @@ describe('uploadStorybook', () => {
         log,
         http,
         sourceDir: '/static/',
-        options: {},
+        options: { zip: false },
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
@@ -450,9 +539,10 @@ describe('uploadStorybook', () => {
       expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
         buildId: '1',
         files: [
-          { contentHash: 'iframe', contentLength: 42, filePath: 'iframe.html' },
-          { contentHash: 'index', contentLength: 42, filePath: 'index.html' },
+          { contentLength: 42, filePath: 'iframe.html' },
+          { contentLength: 42, filePath: 'index.html' },
         ],
+        zip: false,
       });
       expect(http.fetch).not.toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?iframe.html',
@@ -475,6 +565,7 @@ describe('uploadStorybook', () => {
       client.runQuery.mockReturnValue({
         uploadBuild: {
           info: {
+            sentinelUrls: ['https://asdqwe.chromatic.com/sentinel.txt'],
             targets: [
               {
                 contentType: 'text/html',
@@ -494,7 +585,6 @@ describe('uploadStorybook', () => {
               filePath: 'storybook.zip',
               formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
               formFields: {},
-              sentinelUrl: 'https://asdqwe.chromatic.com/sentinel.txt',
             },
           },
           userErrors: [],

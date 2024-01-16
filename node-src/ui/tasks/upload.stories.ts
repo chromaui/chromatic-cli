@@ -7,7 +7,6 @@ import {
   hashing,
   initial,
   invalid,
-  preparing,
   starting,
   success,
   traced,
@@ -51,8 +50,6 @@ export const BailedSiblings = () =>
 export const Traced = () => traced({ onlyStoryFiles: Array.from({ length: 5 }) } as any);
 
 export const Hashing = () => hashing();
-
-export const Preparing = () => preparing();
 
 export const Starting = () => starting();
 
