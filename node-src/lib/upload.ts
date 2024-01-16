@@ -109,7 +109,8 @@ export async function uploadBuild(
       UploadBuildMutation,
       {
         buildId: ctx.announcedBuild.id,
-        files: batch.map(({ contentLength, targetPath }) => ({
+        files: batch.map(({ contentHash, contentLength, targetPath }) => ({
+          contentHash,
           contentLength,
           filePath: targetPath,
         })),
