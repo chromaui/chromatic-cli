@@ -1,3 +1,15 @@
+# v10.3.1 (Wed Jan 17 2024)
+
+#### 🐛 Bug Fix
+
+- Fix potential zip upload error when deduping files on a very large Storybook [#892](https://github.com/chromaui/chromatic-cli/pull/892) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v10.3.0 (Tue Jan 16 2024)
 
 #### 🚀 Enhancement
