@@ -7,10 +7,10 @@ import { Context } from '../types';
 // completed successfully and 'ERROR' if an error occurred.
 const SENTINEL_SUCCESS_VALUE = 'OK';
 
-export async function waitForSentinel(ctx: Context, url: string) {
+export async function waitForSentinel(ctx: Context, { name, url }: { name: string; url: string }) {
   const { experimental_abortSignal: signal } = ctx.options;
 
-  ctx.log.debug(`Waiting for sentinel file to appear at ${url}`);
+  ctx.log.debug(`Waiting for '${name}' sentinel file to appear at ${url}`);
 
   return retry(
     async (bail) => {
@@ -26,15 +26,15 @@ export async function waitForSentinel(ctx: Context, url: string) {
         if (response.status === 403) {
           return bail(new Error('Provided signature expired.'));
         }
-        throw new Error('Sentinel file not present.');
+        throw new Error(`Sentinel file '${name}' not present.`);
       }
 
       const result = await res.text();
       if (result !== SENTINEL_SUCCESS_VALUE) {
-        ctx.log.debug(`Sentinel file not OK, got ${result}`);
-        return bail(new Error('Sentinel file error.'));
+        ctx.log.debug(`Sentinel file '${name}' not OK, got '${result}'.`);
+        return bail(new Error(`Sentinel file '${name}' not OK.`));
       }
-      ctx.log.debug(`Sentinel file OK.`);
+      ctx.log.debug(`Sentinel file '${name}' OK.`);
     },
     {
       retries: 185, // 3 minutes and some change (matches the lambda timeout with some extra buffer)

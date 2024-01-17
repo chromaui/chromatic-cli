@@ -232,7 +232,15 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
   if (ctx.skip || !ctx.sentinelUrls?.length) return;
   transitionTo(finalizing)(ctx, task);
 
-  await Promise.all(ctx.sentinelUrls.map((url) => waitForSentinel(ctx, url)));
+  // Dedupe sentinels, ignoring query params
+  const sentinels = Object.fromEntries(
+    ctx.sentinelUrls.map((url) => {
+      const { host, pathname } = new URL(url);
+      return [host + pathname, { name: pathname.split('/').at(-1), url }];
+    })
+  );
+
+  await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
 };
 
 export default createTask({
