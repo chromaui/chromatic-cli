@@ -138,7 +138,12 @@ export async function uploadBuild(
         return { ...file, ...target };
       })
     );
-    zipTarget = uploadBuild.info.zipTarget;
+
+    // Use the last received zipTarget, as it will have the largest allowed size.
+    // If all files in the batch are copied rather than uploaded, we won't receive a zipTarget.
+    if (uploadBuild.info.zipTarget) {
+      zipTarget = uploadBuild.info.zipTarget;
+    }
   }
 
   if (!targets.length) {

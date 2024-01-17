@@ -733,5 +733,83 @@ describe('uploadStorybook', () => {
       expect(ctx.uploadedBytes).toBe(80);
       expect(ctx.uploadedFiles).toBe(2);
     });
+
+    it('handles zipTarget being undefined', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValueOnce({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: Array.from({ length: 1000 }, (_, i) => ({
+              contentType: 'application/javascript',
+              filePath: `${i}.js`,
+              formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+              formFields: {},
+            })),
+            zipTarget: {
+              contentType: 'application/zip',
+              filePath: 'storybook.zip',
+              formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
+              formFields: {},
+            },
+          },
+          userErrors: [],
+        },
+      });
+      client.runQuery.mockReturnValueOnce({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/javascript',
+                filePath: `1000.js`,
+                formAction: `https://s3.amazonaws.com/presigned?1000.js`,
+                formFields: {},
+              },
+            ],
+            zipTarget: undefined,
+          },
+          userErrors: [],
+        },
+      });
+
+      makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
+
+      const fileInfo = {
+        lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
+        paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
+        total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+      };
+      const ctx = {
+        client,
+        env,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: { zip: true },
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(http.fetch).toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?storybook.zip',
+        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+        { retries: 0 }
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?0.js',
+        expect.anything(),
+        expect.anything()
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?1000.js',
+        expect.anything(),
+        expect.anything()
+      );
+    });
   });
 });
