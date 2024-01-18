@@ -35,6 +35,7 @@ export interface Logger {
   debug: LogFn;
   queue: () => void;
   flush: () => void;
+  getLevel: () => keyof typeof LOG_LEVELS;
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
   setLogFile: (path: string | undefined) => void;
@@ -90,6 +91,9 @@ export const createLogger = () => {
     };
 
   const logger: Logger = {
+    getLevel() {
+      return level;
+    },
     setLevel(value: keyof typeof LOG_LEVELS) {
       if (value in LOG_LEVELS) level = value;
       else throw new Error(`Invalid level, expecting one of ${Object.keys(LOG_LEVELS).join(', ')}`);

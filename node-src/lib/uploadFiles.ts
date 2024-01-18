@@ -18,7 +18,7 @@ export async function uploadFiles(
     targets.map(({ contentLength, filePath, formAction, formFields, localPath }) => {
       let fileProgress = 0; // The bytes uploaded for this this particular file
 
-      ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)})`);
+      ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)}) to ${formAction}`);
 
       return limitConcurrency(() =>
         retry(
@@ -37,17 +37,16 @@ export async function uploadFiles(
             Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
             formData.append('file', blob);
 
-            const res = await ctx.http.fetch(
-              formAction,
-              { body: formData, method: 'POST', signal },
-              { retries: 0 } // already retrying the whole operation
-            );
-
-            if (!res.ok) {
-              ctx.log.debug(`Uploading ${localPath} failed: %O`, res);
+            try {
+              await ctx.http.fetch(
+                formAction,
+                { body: formData, method: 'POST', signal },
+                { retries: 0 } // already retrying the whole operation
+              );
+              ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
+            } catch (err) {
               throw new Error(localPath);
             }
-            ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
           },
           {
             retries: ctx.env.CHROMATIC_RETRIES,
