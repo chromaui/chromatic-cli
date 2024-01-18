@@ -35,7 +35,7 @@ describe('addChromaticScriptToPackageJson', () => {
         expect(writeFile).toHaveBeenCalledOnce()
         expect(writeFile).toHaveBeenCalledWith('./package.json', {
             scripts: {
-                chromatic: `npx chromatic`
+                chromatic: `npx chromatic@latest`
             }
         }, { spaces: 2 })
     })
@@ -48,7 +48,7 @@ describe('addChromaticScriptToPackageJson', () => {
         expect(writeFile).toHaveBeenCalledOnce()
         expect(writeFile).toHaveBeenCalledWith('./package.json', {
             scripts: {
-                chromatic: `npx chromatic`
+                chromatic: `npx chromatic@latest`
             }
         }, { spaces: 2 })
     })
@@ -59,8 +59,6 @@ describe('createChromaticConfigFile', () => {
         await createChromaticConfigFile({configFile: 'chromatic.config.json'})
         expect(writeFile).toHaveBeenCalledOnce()
         expect(writeFile).toHaveBeenCalledWith('chromatic.config.json', {
-            autoAcceptChanges: "main",
-            onlyChanged: true,
             skip: "dependabot/**"
         })
     })

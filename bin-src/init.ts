@@ -43,11 +43,9 @@ export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath
 
 export const createChromaticConfigFile = async ({configFile, buildScriptName = null}) => {
     await writeFile(configFile, {
-        autoAcceptChanges: "main",
         ...(buildScriptName && {
             buildScriptName
         }),
-        onlyChanged: true,
         skip: "dependabot/**"
     });
 }
