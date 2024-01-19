@@ -1,6 +1,5 @@
 import boxen from "boxen";
 import { execaCommand } from 'execa';
-import { findUp } from 'find-up';
 import { writeFile } from 'jsonfile';
 import meow from 'meow';
 import prompts from 'prompts';
@@ -20,11 +19,6 @@ type TestFrameworkType = typeof TestFramework[keyof typeof TestFramework];
 export const getPackageManagerInstallCommand = async (args: string[]) => {
     return await getCliCommand(parseNi, args, { programmatic: true });
 };
-
-const getSBConfigFilePath = async () => {
-    // Walks up directory tree to find nearest Storybook config file.
-    return await findUp(['.storybook/main.ts', '.storybook/main.js', '.storybook/main.tsx', '.storybook/main.jsx', '.storybook/main.mjs', '.storybook/main.cjs'])
-}
 
 export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath }) => {
     try {
@@ -52,10 +46,10 @@ export const createChromaticConfigFile = async ({configFile, buildScriptName = n
 
 export const installArchiveDependencies = async (packageJson: PackageJson, testFramework: TestFrameworkType) => {
     let installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, 'storybook@next', '@storybook/addon-essentials@next', '@storybook/server-webpack5@next']
-    const sbConfigPath = await getSBConfigFilePath()
-    const sbVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
-    if(sbConfigPath && sbVersion) {
-        installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, `@storybook/server-webpack5@${sbVersion}`]
+    const storybookVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
+    const essentialsVersion = packageJson?.devDependencies?.['@storybook/addon-essentials'] || packageJson?.dependencies?.['@storybook/addon-essentials']
+    if(storybookVersion && essentialsVersion) {
+        installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, `@storybook/server-webpack5@${storybookVersion}`]
     }
     const installCommand = await getPackageManagerInstallCommand(installArgs)
     await execaCommand(installCommand)
