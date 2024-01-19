@@ -39,8 +39,7 @@ export const createChromaticConfigFile = async ({configFile, buildScriptName = n
     await writeFile(configFile, {
         ...(buildScriptName && {
             buildScriptName
-        }),
-        skip: "dependabot/**"
+        })
     });
 }
 
@@ -57,7 +56,7 @@ export const installArchiveDependencies = async (packageJson: PackageJson, testF
 
 const intializeChromatic = async ({testFramework, packageJson, packagePath}: {testFramework: TestFrameworkType, packageJson: PackageJson, packagePath: string }) => {
     await addChromaticScriptToPackageJson({ packageJson, packagePath });
-    await createChromaticConfigFile({configFile: 'chromatic.config.json'})
+    //await createChromaticConfigFile({configFile: 'chromatic.config.json'})
     switch (testFramework) {
         case TestFramework.CYPRESS:
             await installArchiveDependencies(packageJson, TestFramework.CYPRESS)
@@ -87,7 +86,6 @@ export async function main(argv: string[]) {
                 framework: {
                     type: 'string',
                     alias: 'f',
-                    default: TestFramework.STORYBOOK
                 }
             }
         }
