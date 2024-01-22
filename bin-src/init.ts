@@ -42,14 +42,25 @@ export const createChromaticConfigFile = async ({configFile, buildScriptName = n
         })
     });
 }
+export const getStorybookPackages = (pkgJson: PackageJson) => {
+    const storybookVersion = pkgJson?.devDependencies?.storybook || pkgJson?.dependencies?.storybook
+    const essentialsVersion = pkgJson?.devDependencies?.['@storybook/addon-essentials'] || pkgJson?.dependencies?.['@storybook/addon-essentials']
+    if (storybookVersion && essentialsVersion) {
+        return [`@storybook/server-webpack5@${storybookVersion}`]
+    }
+    if (storybookVersion && !essentialsVersion) {
+        return [`@storybook/addon-essentials@${storybookVersion}`, `@storybook/server-webpack5@${storybookVersion}`]
+    }
+    if (!storybookVersion && essentialsVersion) {
+        return [`storybook@${essentialsVersion}`, `@storybook/server-webpack5@${essentialsVersion}`]
+    }
+    return ['storybook@latest', '@storybook/addon-essentials@latest', '@storybook/server-webpack5@latest']
+}
 
 export const installArchiveDependencies = async (packageJson: PackageJson, testFramework: TestFrameworkType) => {
-    let installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, 'storybook@latest', '@storybook/addon-essentials@latest', '@storybook/server-webpack5@latest']
-    const storybookVersion = packageJson?.devDependencies?.storybook || packageJson?.dependencies?.storybook
-    const essentialsVersion = packageJson?.devDependencies?.['@storybook/addon-essentials'] || packageJson?.dependencies?.['@storybook/addon-essentials']
-    if(storybookVersion && essentialsVersion) {
-        installArgs = ['-D', 'chromatic',`chromatic-${testFramework}`, `@storybook/server-webpack5@${storybookVersion}`]
-    }
+    const defaultInstallArgs = ['-D', 'chromatic',`chromatic-${testFramework}`]
+    const sbPackages = getStorybookPackages(packageJson)
+    const installArgs = [...defaultInstallArgs, ...sbPackages]
     const installCommand = await getPackageManagerInstallCommand(installArgs)
     await execaCommand(installCommand)
 }
