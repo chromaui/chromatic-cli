@@ -1,3 +1,15 @@
+# v10.4.0 (Tue Jan 23 2024)
+
+#### 🚀 Enhancement
+
+- Add new Init command for Project Setup [#880](https://github.com/chromaui/chromatic-cli/pull/880) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v10.3.1 (Wed Jan 17 2024)
 
 #### 🐛 Bug Fix
