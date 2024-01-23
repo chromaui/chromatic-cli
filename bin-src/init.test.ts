@@ -50,9 +50,7 @@ describe('createChromaticConfigFile', () => {
     it('outputs file without buildScriptName when not passed one', async () => {
         await createChromaticConfigFile({configFile: 'chromatic.config.json'})
         expect(writeFile).toHaveBeenCalledOnce()
-        expect(writeFile).toHaveBeenCalledWith('chromatic.config.json', {
-            skip: "dependabot/**"
-        })
+        expect(writeFile).toHaveBeenCalledWith('chromatic.config.json', {})
     })
 })
 
@@ -68,31 +66,37 @@ describe('installArchiveDependencies', () => {
         vi.clearAllMocks()
         vi.resetModules()
     })
-    it('successfully installs complete list of dependencies for Playwright if SB package is not found and Essentials is not found', async () => {
+    it('successfully installs list of dependencies for Playwright if SB package is not found and Essentials is not found', async () => {
         await installArchiveDependencies({}, 'playwright')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright storybook@next @storybook/addon-essentials@next @storybook/server-webpack5@next')
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright storybook@latest @storybook/addon-essentials@latest @storybook/server-webpack5@latest')
     })
-    it('successfully installs complete list of dependencies for Cypress if SB package is not found and Essentials is not found', async () => {
+    it('successfully installs list of dependencies for Cypress if SB package is not found and Essentials is not found', async () => {
         await installArchiveDependencies({}, 'cypress')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-cypress storybook@next @storybook/addon-essentials@next @storybook/server-webpack5@next')
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-cypress storybook@latest @storybook/addon-essentials@latest @storybook/server-webpack5@latest')
     })
-    it('successfully installs complete list of dependencies if SB package is found and Essentials is not found', async () => {
-        await installArchiveDependencies({devDependencies: {'storybook': 'latest'}}, 'playwright')
+    it('successfully installs list of dependencies if SB package is found and Essentials is not found', async () => {
+        await installArchiveDependencies({devDependencies: {'storybook': '7.6.5'}}, 'playwright')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright storybook@next @storybook/addon-essentials@next @storybook/server-webpack5@next')
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright @storybook/addon-essentials@7.6.5 @storybook/server-webpack5@7.6.5')
     })
-    it('successfully installs smaller list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
-        await installArchiveDependencies({devDependencies: {storybook: 'latest', '@storybook/addon-essentials': 'latest'}}, 'playwright')
+    it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
+        await installArchiveDependencies({devDependencies: {storybook: '7.6.5', '@storybook/addon-essentials': '7.6.5'}}, 'playwright')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright @storybook/server-webpack5@latest')
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright @storybook/server-webpack5@7.6.5')
         vi.clearAllMocks()
     })
-    it('successfully installs smaller list of dependencies if SB package is found and Essentials is found in dependencies', async () => {
-        await installArchiveDependencies({dependencies: {storybook: 'latest', '@storybook/addon-essentials': 'latest'}}, 'playwright')
+    it('successfully installs list of dependencies if SB package is found and Essentials is found in dependencies', async () => {
+        await installArchiveDependencies({dependencies: {storybook: '7.6.5', '@storybook/addon-essentials': '7.6.5'}}, 'playwright')
         expect(execaCommand).toHaveBeenCalledOnce()
-        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright @storybook/server-webpack5@latest')
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright @storybook/server-webpack5@7.6.5')
+        vi.clearAllMocks()
+    })
+    it('successfully installs list of dependencies if SB package is not found and Essentials is found in dependencies', async () => {
+        await installArchiveDependencies({dependencies: {'@storybook/addon-essentials': '7.6.5'}}, 'playwright')
+        expect(execaCommand).toHaveBeenCalledOnce()
+        expect(execaCommand).toHaveBeenCalledWith('yarn add -D chromatic chromatic-playwright storybook@7.6.5 @storybook/server-webpack5@7.6.5')
         vi.clearAllMocks()
     })
 })
