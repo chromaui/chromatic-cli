@@ -42,6 +42,7 @@ export const createChromaticConfigFile = async ({configFile, buildScriptName = n
         })
     });
 }
+
 export const getStorybookPackages = (pkgJson: PackageJson) => {
     const storybookVersion = pkgJson?.devDependencies?.storybook || pkgJson?.dependencies?.storybook
     const essentialsVersion = pkgJson?.devDependencies?.['@storybook/addon-essentials'] || pkgJson?.dependencies?.['@storybook/addon-essentials']
