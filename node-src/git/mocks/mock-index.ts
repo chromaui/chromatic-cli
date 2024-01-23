@@ -12,18 +12,20 @@
 
 // create a mock set of responses to the queries we run as part of our git algorithm
 
-const mocks = {
-  FirstCommittedAtQuery: (builds, prs, { branch, commit }) => {
-    function lastBuildOnBranch(findingBranch) {
-      return builds
-        .slice()
-        .reverse()
-        .find((b) => b.branch === findingBranch);
-    }
+type Build = { branch: string; commit: string; committedAt: number };
+type PR = { mergeCommitHash: string; headBranch: string };
+type MergeInfo = { commit: string; branch: string; }
 
-    const lastBuild = lastBuildOnBranch(branch);
-    const pr = prs.find((p) => p.mergeCommitHash === commit);
-    const prLastBuild = pr && lastBuildOnBranch(pr.headBranch);
+function lastBuildOnBranch(builds: Build[], findingBranch: string) {
+  return builds
+    .slice()
+    .reverse()
+    .find((b) => b.branch === findingBranch);
+}
+
+const mocks = {
+  FirstCommittedAtQuery: (builds: Build[], prs: PR[], { branch }: { branch: string }) => {
+    const lastBuild = lastBuildOnBranch(builds, branch);
     return {
       app: {
         firstBuild: builds[0] && {
@@ -33,25 +35,46 @@ const mocks = {
           commit: lastBuild.commit,
           committedAt: lastBuild.committedAt,
         },
-        pullRequest: prLastBuild && {
-          lastHeadBuild: {
-            commit: prLastBuild.commit,
-          },
-        },
       },
     };
   },
-  HasBuildsWithCommitsQuery: (builds, _prs, { commits }) => ({
+  HasBuildsWithCommitsQuery: (builds: Build[], prs: PR[], { commits }: { commits: string[] }) => ({
     app: {
       hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
     },
   }),
+  MergeCommitsQuery: (builds: Build[], prs: PR[], { mergeInfoList }: { mergeInfoList: MergeInfo[] }) => {
+    const mergedPrs = [];
+    for (const mergeInfo of mergeInfoList) {
+      const pr = prs.find((p) => p.mergeCommitHash === mergeInfo.commit);
+      const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
+      mergedPrs.push({
+        lastHeadBuild: prLastBuild && {
+          commit: prLastBuild.commit,
+        }
+      });
+    }
+
+    return {
+      app: {
+        mergedPullRequests: mergedPrs
+      }
+    };
+  },
 };
 
 export default function createMockIndex({ commitMap }, buildDescriptions, prDescriptions = []) {
   const builds = buildDescriptions.map(([name, branch], index) => {
-    const { hash, committedAt: committedAtSeconds } = commitMap[name];
-    const committedAt = parseInt(committedAtSeconds, 10) * 1000;
+    let hash, committedAt;
+    if (commitMap[name]) {
+      const commitInfo = commitMap[name];
+      hash = commitInfo.hash;
+      committedAt = parseInt(commitInfo.committedAt, 10) * 1000;
+    } else {
+      // Allow for test cases with a commit that is no longer in the history
+      hash = name;
+      committedAt = Date.now();
+    }
 
     const number = index + 1;
     return {

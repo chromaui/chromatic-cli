@@ -15,7 +15,17 @@ Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
 👉 Read the [Chromatic CLI docs](https://www.chromatic.com/docs/cli)
 
-📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md#readme)
+📝 View the [Changelog](https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md)
+
+## System requirements
+
+The Chromatic CLI (and GitHub Action) is built to run in a variety of environments. We provide support for the following platforms:
+
+- Latest (LTS) versions of Ubuntu, Windows (Server), macOS
+- Node.js Current, Active or Maintenance (LTS) versions, according to their [release schedule](https://github.com/nodejs/release#release-schedule)
+- Storybook 6.5+
+
+Other platforms/versions may work, but are not officially supported. Certain features may not be available on certain platforms/versions, even if otherwise supported.
 
 ## Contributing
 
@@ -71,20 +81,18 @@ We use `auto` to automate the release process. Versions are bumped, tags are cre
 
 Additionally, a PR **may** have exactly one of these labels:
 
-- `release` creates a `latest` rather than a `next` release on npm
-- `next-release` creates a `next` rather than a `latest` release on npm
-- `skip-release` does not create a release at all
+- `release` creates a `latest` release on npm
+- `skip-release` does not create a release at all (changes roll into the next release)
 
-We have three types of releases:
+We have two types of releases:
 
 - `latest` releases are the general audience production releases, used by most people. Automatically created when merging a PR with the `release` label.
-- `next` releases should be valid, working releases that can potentially be used by early adopters of new features, for example to handle a support request. Automatically created when merging a PR with the `next-release` label.
-- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR, but does not auto-publush the GitHub Action.
+- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR, but does not auto-publish the GitHub Action.
 
-> For GitHub Actions, we publish `chromaui/action-next` and `chromaui/action-canary`. The latter is only published manually, rather than for every PR.
+> For GitHub Actions, we may manually publish `chromaui/action-canary`.
 
 A script is provided to manually publish the GitHub Action, though it's typically only necessary for `action-canary` releases:
 
 ```sh
-yarn publish-action <canary|next|latest>
+yarn publish-action <canary|latest>
 ```

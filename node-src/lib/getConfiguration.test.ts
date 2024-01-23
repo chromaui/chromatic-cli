@@ -11,9 +11,97 @@ beforeEach(() => {
 });
 
 it('reads configuration successfully', async () => {
-  mockedReadFile.mockReturnValue(JSON.stringify({ projectToken: 'json-file-token' }));
+  mockedReadFile.mockReturnValue(
+    JSON.stringify({
+      projectId: 'project-id',
+      projectToken: 'project-token',
 
-  expect(await getConfiguration()).toEqual({ projectToken: 'json-file-token' });
+      onlyChanged: 'only-changed',
+      onlyStoryFiles: ['only-story-files'],
+      onlyStoryNames: ['only-story-names'],
+      untraced: ['untraced'],
+      externals: ['externals'],
+      debug: true,
+      diagnosticFile: 'diagnostic-file',
+      fileHashing: true,
+      junitReport: 'junit-report',
+      zip: true,
+      autoAcceptChanges: 'auto-accept-changes',
+      exitZeroOnChanges: 'exit-zero-on-changes',
+      exitOnceUploaded: 'exit-once-uploaded',
+      ignoreLastBuildOnBranch: 'ignore-last-build-on-branch',
+
+      buildScriptName: 'build-script-name',
+      outputDir: 'output-dir',
+      skip: 'skip',
+
+      storybookBuildDir: 'storybook-build-dir',
+      storybookBaseDir: 'storybook-base-dir',
+      storybookConfigDir: 'storybook-config-dir',
+      storybookLogFile: 'storybook-log-file',
+      logFile: 'log-file',
+      uploadMetadata: true,
+    })
+  );
+
+  expect(await getConfiguration()).toEqual({
+    projectId: 'project-id',
+    projectToken: 'project-token',
+
+    onlyChanged: 'only-changed',
+    onlyStoryFiles: ['only-story-files'],
+    onlyStoryNames: ['only-story-names'],
+    untraced: ['untraced'],
+    externals: ['externals'],
+    debug: true,
+    diagnosticFile: 'diagnostic-file',
+    fileHashing: true,
+    junitReport: 'junit-report',
+    zip: true,
+    autoAcceptChanges: 'auto-accept-changes',
+    exitZeroOnChanges: 'exit-zero-on-changes',
+    exitOnceUploaded: 'exit-once-uploaded',
+    ignoreLastBuildOnBranch: 'ignore-last-build-on-branch',
+
+    buildScriptName: 'build-script-name',
+    outputDir: 'output-dir',
+    skip: 'skip',
+
+    storybookBuildDir: 'storybook-build-dir',
+    storybookBaseDir: 'storybook-base-dir',
+    storybookConfigDir: 'storybook-config-dir',
+    storybookLogFile: 'storybook-log-file',
+    logFile: 'log-file',
+    uploadMetadata: true,
+  });
+});
+
+it('handles other side of union options', async () => {
+  mockedReadFile.mockReturnValue(
+    JSON.stringify({
+      onlyChanged: true,
+      diagnosticFile: true,
+      junitReport: true,
+      autoAcceptChanges: true,
+      exitZeroOnChanges: true,
+      exitOnceUploaded: true,
+      skip: true,
+      storybookLogFile: true,
+      logFile: true,
+    })
+  );
+
+  expect(await getConfiguration()).toEqual({
+    onlyChanged: true,
+    diagnosticFile: true,
+    junitReport: true,
+    autoAcceptChanges: true,
+    exitZeroOnChanges: true,
+    exitOnceUploaded: true,
+    skip: true,
+    storybookLogFile: true,
+    logFile: true,
+  });
 });
 
 it('reads from chromatic.config.json by default', async () => {

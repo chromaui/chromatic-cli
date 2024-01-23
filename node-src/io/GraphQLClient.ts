@@ -33,13 +33,13 @@ export default class GraphQLClient {
   async runQuery<T>(
     query: string,
     variables: Record<string, any>,
-    { headers = {}, retries = 2 } = {}
+    { endpoint = this.endpoint, headers = {}, retries = 2 } = {}
   ): Promise<T> {
     return retry(
       async (bail) => {
         const { data, errors } = await this.client
           .fetch(
-            this.endpoint,
+            endpoint,
             {
               body: JSON.stringify({ query, variables }),
               headers: { ...this.headers, ...headers },

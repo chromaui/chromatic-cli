@@ -15,7 +15,8 @@ const configurationSchema = z
     untraced: z.array(z.string()),
     externals: z.array(z.string()),
     debug: z.boolean(),
-    diagnostics: z.boolean(),
+    diagnosticFile: z.union([z.string(), z.boolean()]),
+    fileHashing: z.boolean().default(true),
     junitReport: z.union([z.string(), z.boolean()]),
     zip: z.boolean(),
     autoAcceptChanges: z.union([z.string(), z.boolean()]),
@@ -25,10 +26,13 @@ const configurationSchema = z
 
     buildScriptName: z.string(),
     outputDir: z.string(),
+    skip: z.union([z.string(), z.boolean()]),
 
     storybookBuildDir: z.string(),
     storybookBaseDir: z.string(),
     storybookConfigDir: z.string(),
+    storybookLogFile: z.union([z.string(), z.boolean()]),
+    logFile: z.union([z.string(), z.boolean()]),
     uploadMetadata: z.boolean(),
   })
   .partial()

@@ -1,3 +1,175 @@
+# v10.3.1 (Wed Jan 17 2024)
+
+#### 🐛 Bug Fix
+
+- Fix potential zip upload error when deduping files on a very large Storybook [#892](https://github.com/chromaui/chromatic-cli/pull/892) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v10.3.0 (Tue Jan 16 2024)
+
+#### 🚀 Enhancement
+
+- Add missing `skip` option to configuration schema [#890](https://github.com/chromaui/chromatic-cli/pull/890) ([@ghengeveld](https://github.com/ghengeveld))
+- Detect merge queue branch and retrieve real branch name from pull request [#884](https://github.com/chromaui/chromatic-cli/pull/884) ([@JonathanKolnik](https://github.com/JonathanKolnik) [@ghengeveld](https://github.com/ghengeveld))
+- Deduplicate files to be uploaded using file hashing [#875](https://github.com/chromaui/chromatic-cli/pull/875) ([@ghengeveld](https://github.com/ghengeveld))
+- Replace upload mechanism to use a batched mutation with a new API [#888](https://github.com/chromaui/chromatic-cli/pull/888) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Retrieve `sentinelUrls` from `uploadBuild` and wait for all of them before finishing upload task [#878](https://github.com/chromaui/chromatic-cli/pull/878) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
+# v10.2.2 (Fri Jan 12 2024)
+
+#### 🐛 Bug Fix
+
+- Add configFile option to GitHub Action [#885](https://github.com/chromaui/chromatic-cli/pull/885) ([@wisestuart](https://github.com/wisestuart))
+
+#### Authors: 1
+
+- Stuart Hammar ([@wisestuart](https://github.com/wisestuart))
+
+---
+
+# v10.2.1 (Wed Jan 10 2024)
+
+#### 🐛 Bug Fix
+
+- Revert "Replace `getUploadUrls` with `uploadBuild` mutation" [#883](https://github.com/chromaui/chromatic-cli/pull/883) ([@JonathanKolnik](https://github.com/JonathanKolnik))
+- Run publish-action script as afterShipIt hook [#877](https://github.com/chromaui/chromatic-cli/pull/877) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
+# v10.2.0 (Thu Dec 21 2023)
+
+#### 🚀 Enhancement
+
+- Replace `getUploadUrls` with `uploadBuild` mutation [#876](https://github.com/chromaui/chromatic-cli/pull/876) ([@ghengeveld](https://github.com/ghengeveld))
+- Implement file hashing for to-be-uploaded files [#870](https://github.com/chromaui/chromatic-cli/pull/870) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Allow overriding `NODE_ENV` with `STORYBOOK_NODE_ENV` [#879](https://github.com/chromaui/chromatic-cli/pull/879) ([@tmeasday](https://github.com/tmeasday))
+- Use code splitting in tsup CJS output [#873](https://github.com/chromaui/chromatic-cli/pull/873) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v10.1.0 (Thu Dec 07 2023)
+
+#### 🚀 Enhancement
+
+- Increase number of commits checked for squash merge [#866](https://github.com/chromaui/chromatic-cli/pull/866) ([@tmeasday](https://github.com/tmeasday) [@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 2
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v10.0.0 (Fri Dec 01 2023)
+
+#### 💥 Breaking Change
+
+- Force `NODE_ENV=production` for Storybook builds through the CLI [#865](https://github.com/chromaui/chromatic-cli/pull/865) ([@tmeasday](https://github.com/tmeasday))
+
+#### 🐛 Bug Fix
+
+- Support pinning GitHub Action to major or patch version [#863](https://github.com/chromaui/chromatic-cli/pull/863) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v9.1.0 (Fri Nov 17 2023)
+
+#### 🚀 Enhancement
+
+- Don't write `chromatic.log` by default, allow configuring log files [#855](https://github.com/chromaui/chromatic-cli/pull/855) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Redact `userToken` in diagnostics and fatal error output [#859](https://github.com/chromaui/chromatic-cli/pull/859) ([@ghengeveld](https://github.com/ghengeveld))
+- Bump zod from 3.22.2 to 3.22.3 [#830](https://github.com/chromaui/chromatic-cli/pull/830) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Bump word-wrap from 1.2.3 to 1.2.5 [#804](https://github.com/chromaui/chromatic-cli/pull/804) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Bump get-func-name from 2.0.0 to 2.0.2 [#824](https://github.com/chromaui/chromatic-cli/pull/824) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Bump @babel/traverse from 7.16.3 to 7.23.2 in /subdir [#838](https://github.com/chromaui/chromatic-cli/pull/838) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Fix changelog for 9.0.0 and update auto config to prevent issue in the future [#854](https://github.com/chromaui/chromatic-cli/pull/854) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### ⚠️ Pushed to `main`
+
+- Drop next-release label ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 3
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
+# v9.0.0 (Fri Nov 10 2023)
+
+#### 🚀 Enhancement
+
+- Support `projectId` + `userToken` as alternative to `projectToken` for auth [#852](https://github.com/chromaui/chromatic-cli/pull/852) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v8.0.0 (Thu Nov 09 2023)
+
+#### 💥 Breaking Change
+
+- Drop official support for Node 14/16 [#839](https://github.com/chromaui/chromatic-cli/pull/839) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🚀 Enhancement
+
+- Merge Group (Queues) GitHub Action Event Support [#825](https://github.com/chromaui/chromatic-cli/pull/825) ([@mhemmings](https://github.com/mhemmings) [@thafryer](https://github.com/thafryer))
+
+#### 🐛 Bug Fix
+
+- Bump browserify-sign from 4.2.1 to 4.2.2 [#848](https://github.com/chromaui/chromatic-cli/pull/848) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump semver from 7.3.5 to 7.5.2 [#778](https://github.com/chromaui/chromatic-cli/pull/778) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump browserify-sign from 4.2.1 to 4.2.2 in /subdir [#849](https://github.com/chromaui/chromatic-cli/pull/849) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer))
+- Configure auto with `prerelease` setting and update readme [#847](https://github.com/chromaui/chromatic-cli/pull/847) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 4
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+- Mark Hemmings ([@mhemmings](https://github.com/mhemmings))
+
+---
+
 # v7.6.0 (Tue Oct 31 2023)
 
 #### 🚀 Enhancement

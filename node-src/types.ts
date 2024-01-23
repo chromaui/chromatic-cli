@@ -1,9 +1,9 @@
-import { InitialContext } from '.';
 import type { Configuration } from './lib/getConfiguration';
 import { Env } from './lib/getEnv';
-import { LOG_LEVELS } from './lib/log';
-import HTTPClient from './io/HTTPClient';
 import GraphQLClient from './io/GraphQLClient';
+import HTTPClient from './io/HTTPClient';
+import { InitialContext } from '.';
+import { LOG_LEVELS } from './lib/log';
 
 export interface Flags {
   // Required options
@@ -36,26 +36,32 @@ export interface Flags {
 
   // Debug options
   debug?: boolean;
-  diagnostics?: boolean;
+  diagnosticsFile?: string;
   dryRun?: boolean;
+  fileHashing?: boolean;
   forceRebuild?: string;
+  interactive?: boolean;
   junitReport?: string;
   list?: boolean;
-  interactive?: boolean;
+  logFile?: string;
+  storybookLogFile?: string;
   traceChanged?: string;
   uploadMetadata?: boolean;
 
   // Deprecated options (for JSDOM and tunneled builds, among others)
   allowConsoleErrors?: boolean;
   appCode?: string[];
+  diagnostics?: boolean;
   only?: string;
   preserveMissing?: boolean;
 }
 
-export interface Options {
+export interface Options extends Configuration {
   projectToken: string;
+  userToken?: string;
 
   configFile?: Flags['configFile'];
+  logFile?: Flags['logFile'];
   onlyChanged: boolean | string;
   onlyStoryFiles: Flags['onlyStoryFiles'];
   onlyStoryNames: Flags['onlyStoryNames'];
@@ -68,9 +74,10 @@ export interface Options {
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;
   debug: boolean;
-  diagnostics: boolean;
+  diagnosticsFile?: Flags['diagnosticsFile'];
+  fileHashing: Flags['fileHashing'];
   interactive: boolean;
-  junitReport: boolean | string;
+  junitReport?: Flags['junitReport'];
   uploadMetadata?: Flags['uploadMetadata'];
   zip: Flags['zip'];
 
@@ -89,6 +96,7 @@ export interface Options {
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];
   storybookConfigDir: Flags['storybookConfigDir'];
+  storybookLogFile: Flags['storybookLogFile'];
 
   ownerName: string;
   repositorySlug: Flags['repositorySlug'];
@@ -131,6 +139,7 @@ export interface Logger {
   flush: () => void;
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
+  setLogFile: (path: string | undefined) => void;
 }
 
 export { Configuration };
@@ -230,8 +239,7 @@ export interface Context {
     };
     mainConfigFilePath?: string;
   };
-  isolatorUrl: string;
-  cachedUrl: string;
+  storybookUrl?: string;
   announcedBuild: {
     id: string;
     number: number;
@@ -248,7 +256,7 @@ export interface Context {
     number: number;
     status: string;
     webUrl: string;
-    cachedUrl: string;
+    storybookUrl: string;
     reportToken?: string;
     inheritedCaptureCount: number;
     actualCaptureCount: number;
@@ -301,6 +309,7 @@ export interface Context {
   buildLogFile?: string;
   fileInfo?: {
     paths: string[];
+    hashes?: Record<Context['fileInfo']['paths'][number], string>;
     statsPath: string;
     lengths: {
       knownAs: string;
@@ -309,7 +318,9 @@ export interface Context {
     }[];
     total: number;
   };
+  sentinelUrls?: string[];
   uploadedBytes?: number;
+  uploadedFiles?: number;
   turboSnap?: Partial<{
     unavailable?: boolean;
     rootPath: string;
@@ -360,12 +371,16 @@ export interface Stats {
 }
 
 export interface FileDesc {
+  contentHash?: string;
   contentLength: number;
   localPath: string;
   targetPath: string;
 }
 
-export interface TargetedFile extends FileDesc {
+export interface TargetInfo {
   contentType: string;
-  targetUrl: string;
+  fileKey: string;
+  filePath: string;
+  formAction: string;
+  formFields: { [key: string]: string };
 }

@@ -10,10 +10,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: lts/*
       - name: install
         run: yarn install --frozen-lockfile
-      - uses: chromaui/action-next@v1
+      - uses: chromaui/action@latest
         with:
           exitOnceUploaded: true
           onlyChanged: true
