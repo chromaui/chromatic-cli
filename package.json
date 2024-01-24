@@ -196,8 +196,8 @@
     "zod": "^3.22.2"
   },
   "peerDependencies": {
-    "chromatic-playwright": "^0.3.1",
-    "chromatic-cypress": "^0.3.2"
+    "chromatic-playwright": "^1.0.0",
+    "chromatic-cypress": "^1.0.0"
   },
   "peerDependenciesMeta": {
     "chromatic-playwright": {
