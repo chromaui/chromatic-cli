@@ -27,7 +27,6 @@ import buildCanceled from './ui/messages/errors/buildCanceled';
 import { default as fatalError } from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
-import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
@@ -97,11 +96,6 @@ export async function run({
   }
 
   const { path: packagePath, packageJson } = pkgInfo;
-  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
-    log.error(invalidPackageJson(packagePath));
-    process.exit(252);
-  }
-
   const ctx: InitialContext = {
     ...parseArgs(argv),
     ...(flags && { flags }),
@@ -164,6 +158,7 @@ export async function runAll(ctx: InitialContext) {
     const options = getOptions(ctx);
     (ctx as Context).options = options;
     ctx.log.setLogFile(options.logFile);
+
     setExitCode(ctx, exitCodes.OK);
   } catch (e) {
     return onError(e);

@@ -94,6 +94,7 @@ async function run() {
     const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
     const configFile = getInput('configFile');
+    const cypress = getInput('cypress');
     const debug = getInput('debug');
     const diagnosticsFile = getInput('diagnosticsFile') || getInput('diagnostics');
     const dryRun = getInput('dryRun');
@@ -107,6 +108,7 @@ async function run() {
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getInput('onlyStoryFiles');
     const onlyStoryNames = getInput('onlyStoryNames');
+    const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const repositorySlug = getInput('repositorySlug');
@@ -139,6 +141,7 @@ async function run() {
         branchName: maybe(branchName),
         buildScriptName: maybe(buildScriptName),
         configFile: maybe(configFile),
+        cypress: maybe(cypress),
         debug: maybe(debug),
         diagnosticsFile: maybe(diagnosticsFile),
         dryRun: maybe(dryRun),
@@ -153,6 +156,7 @@ async function run() {
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),
         onlyStoryNames: maybe(onlyStoryNames),
+        playwright: maybe(playwright),
         preserveMissing: maybe(preserveMissing),
         projectToken,
         repositorySlug: maybe(repositorySlug),
