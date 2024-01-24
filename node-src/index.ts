@@ -97,11 +97,6 @@ export async function run({
   }
 
   const { path: packagePath, packageJson } = pkgInfo;
-  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
-    log.error(invalidPackageJson(packagePath));
-    process.exit(252);
-  }
-
   const ctx: InitialContext = {
     ...parseArgs(argv),
     ...(flags && { flags }),
@@ -164,6 +159,16 @@ export async function runAll(ctx: InitialContext) {
     const options = getOptions(ctx);
     (ctx as Context).options = options;
     ctx.log.setLogFile(options.logFile);
+
+    const needsScripts = !options.playwright && !options.cypress;
+    if (
+      typeof ctx.packageJson !== 'object' ||
+      (needsScripts && typeof ctx.packageJson.scripts !== 'object')
+    ) {
+      ctx.log.error(invalidPackageJson(ctx.packagePath));
+      process.exit(252);
+    }
+
     setExitCode(ctx, exitCodes.OK);
   } catch (e) {
     return onError(e);
