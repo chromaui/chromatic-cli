@@ -1,3 +1,15 @@
+# v10.5.0 (Wed Jan 24 2024)
+
+#### 🚀 Enhancement
+
+- Add `--playwright` & `--cypress` flags [#882](https://github.com/chromaui/chromatic-cli/pull/882) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v10.4.0 (Tue Jan 23 2024)
 
 #### 🚀 Enhancement
