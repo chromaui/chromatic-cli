@@ -22,7 +22,7 @@ export default async function checkPackageJson({
   if (!options.interactive) return;
 
   try {
-    const json = { ...packageJson };
+    const { readme, _id, ...json } = packageJson;
     if (!json.scripts) json.scripts = {};
     if (findScript(json.scripts)) return;
 

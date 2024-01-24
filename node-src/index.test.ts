@@ -1,5 +1,5 @@
 import dns from 'dns';
-import { execa as execaDefault } from 'execa';
+import { execaCommand as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
@@ -38,7 +38,11 @@ beforeEach(() => {
 vi.mock('dns');
 vi.mock('execa');
 
-const execa = vi.mocked(execaDefault);
+vi.mock('./lib/getE2eBinPath', () => ({
+  getE2eBinPath: () => 'path/to/bin',
+}));
+
+const execaCommand = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
 const upload = vi.mocked(uploadFiles);
 
@@ -334,8 +338,8 @@ beforeEach(() => {
     CHROMATIC_APP_CODE: undefined,
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
-  execa.mockReset();
-  execa.mockResolvedValue({ stdout: '1.2.3' } as any);
+  execaCommand.mockReset();
+  execaCommand.mockResolvedValue({ stdout: '1.2.3' } as any);
   getCommit.mockResolvedValue({
     commit: 'commit',
     committedAt: 1234,
@@ -466,6 +470,12 @@ it('should exit with code 6 and stop the build when abortSignal is aborted', asy
 it('calls out to npm build script passed and uploads files', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
   await runAll(ctx);
+
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/build-storybook/),
+    expect.objectContaining({})
+  );
+
   expect(ctx.exitCode).toBe(1);
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
@@ -501,7 +511,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--storybook-build-dir=dirname']);
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
-  expect(execa).not.toHaveBeenCalled();
+  expect(execaCommand).not.toHaveBeenCalled();
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
     [
@@ -530,6 +540,26 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
     ],
     expect.any(Function)
   );
+});
+
+it('builds with playwright with --playwright', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--playwright']);
+  await runAll(ctx);
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/path\/to\/bin/),
+    expect.objectContaining({})
+  );
+  expect(ctx.exitCode).toBe(1);
+});
+
+it('builds with cypress with --cypress', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--cypress']);
+  await runAll(ctx);
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/path\/to\/bin/),
+    expect.objectContaining({})
+  );
+  expect(ctx.exitCode).toBe(1);
 });
 
 it('passes autoAcceptChanges to the index', async () => {

@@ -13,6 +13,7 @@ import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
+import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
@@ -39,6 +40,7 @@ export default function getOptions({
   configuration,
   log,
   packageJson,
+  packagePath,
 }: InitialContext): Options {
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
@@ -71,6 +73,8 @@ export default function getOptions({
     preserveMissingSpecs: undefined,
 
     buildScriptName: undefined,
+    playwright: undefined,
+    cypress: undefined,
     outputDir: undefined,
     allowConsoleErrors: undefined,
     storybookBuildDir: undefined,
@@ -128,6 +132,8 @@ export default function getOptions({
       flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
 
     buildScriptName: flags.buildScriptName,
+    playwright: trueIfSet(flags.playwright),
+    cypress: trueIfSet(flags.cypress),
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
@@ -202,6 +208,8 @@ export default function getOptions({
   const singularOpts = {
     buildScriptName: '--build-script-name',
     storybookBuildDir: '--storybook-build-dir',
+    playwright: '--playwright',
+    cypress: '--cypress',
   };
   const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
 
@@ -252,6 +260,15 @@ export default function getOptions({
   // Build Storybook
   if (storybookBuildDir) {
     return options;
+  }
+
+  if (options.playwright || options.cypress) {
+    return options;
+  }
+
+  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
+    log.error(invalidPackageJson(packagePath));
+    process.exit(252);
   }
 
   const { scripts } = packageJson;
