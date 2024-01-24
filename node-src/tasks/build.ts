@@ -11,6 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
+import { getE2eBinPath } from '../lib/getE2eBinPath';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -34,15 +35,22 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
-  ctx.buildCommand = await getPackageManagerRunCommand(
-    [
+  const buildCommandOptions = [
+    '--output-dir',
+    ctx.sourceDir,
+    ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
+    ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
+  ].filter(Boolean);
+
+  if (ctx.options.playwright || ctx.options.cypress) {
+    const binPath = getE2eBinPath(ctx, ctx.options.playwright ? 'playwright' : 'cypress');
+    ctx.buildCommand = ['node', binPath, ...buildCommandOptions].join(' ');
+  } else {
+    ctx.buildCommand = await getPackageManagerRunCommand([
       ctx.options.buildScriptName,
-      '--output-dir',
-      ctx.sourceDir,
-      ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
-      ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
-    ].filter(Boolean)
-  );
+      ...buildCommandOptions,
+    ]);
+  }
 };
 
 const timeoutAfter = (ms) =>
@@ -64,10 +72,11 @@ export const buildStorybook = async (ctx: Context) => {
     ctx.log.debug('Running build command:', ctx.buildCommand);
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
 
+    console.log(ctx.buildCommand);
     const subprocess = execaCommand(ctx.buildCommand, {
       stdio: [null, logFile, logFile],
       signal,
-      env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV  || 'production' },
+      env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
