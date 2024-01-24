@@ -13,6 +13,7 @@ import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
+import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
@@ -39,6 +40,7 @@ export default function getOptions({
   configuration,
   log,
   packageJson,
+  packagePath,
 }: InitialContext): Options {
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
@@ -262,6 +264,11 @@ export default function getOptions({
 
   if (options.playwright || options.cypress) {
     return options;
+  }
+
+  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
+    log.error(invalidPackageJson(packagePath));
+    process.exit(252);
   }
 
   const { scripts } = packageJson;
