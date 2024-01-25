@@ -1,3 +1,18 @@
+# v10.5.1 (Thu Jan 25 2024)
+
+#### 🐛 Bug Fix
+
+- Add "package.json" to exports map [#900](https://github.com/chromaui/chromatic-cli/pull/900) ([@yannbf](https://github.com/yannbf))
+- Improve logging around upload errors [#894](https://github.com/chromaui/chromatic-cli/pull/894) ([@ghengeveld](https://github.com/ghengeveld))
+- Don't skip uploading of empty files, it works now [#901](https://github.com/chromaui/chromatic-cli/pull/901) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Yann Braga ([@yannbf](https://github.com/yannbf))
+
+---
+
 # v10.5.0 (Wed Jan 24 2024)
 
 #### 🚀 Enhancement
