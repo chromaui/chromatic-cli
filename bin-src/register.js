@@ -4,6 +4,7 @@
 require('dotenv').config();
 
 const commands = {
+  init: () => require('./init').main(process.argv.slice(3)),
   main: () => require('./main').main(process.argv.slice(2)),
   trace: () => require('./trace').main(process.argv.slice(3)),
   'trim-stats-file': () => require('./trim-stats-file').main(process.argv.slice(3)),
