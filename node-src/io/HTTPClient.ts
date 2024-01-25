@@ -92,7 +92,8 @@ export default class HTTPClient {
           // You can only call text() or json() once, so if we are going to handle it outside of here..
           if (!opts.noLogErrorBody) {
             const body = await res.text();
-            this.log.debug({ body }, error.message);
+            this.log.debug(error.message);
+            this.log.debug(body);
           }
           throw error;
         }

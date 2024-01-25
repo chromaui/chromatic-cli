@@ -4,6 +4,7 @@ import { uploadFiles } from './uploadFiles';
 import { Context, FileDesc, TargetInfo } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
+import { uploadFailed } from '../ui/messages/errors/uploadFailed';
 
 // This limit is imposed by the uploadBuild mutation
 const MAX_FILES_PER_REQUEST = 1000;
@@ -174,7 +175,9 @@ export async function uploadBuild(
     ctx.uploadedBytes += totalBytes;
     ctx.uploadedFiles += targets.length;
   } catch (e) {
-    return options.onError?.(e, files.some((f) => f.localPath === e.message) && e.message);
+    const target = targets.find((target) => target.localPath === e.message);
+    if (target) ctx.log.error(uploadFailed({ target }, ctx.log.getLevel() === 'debug'));
+    return options.onError?.(e, target.localPath);
   }
 }
 
