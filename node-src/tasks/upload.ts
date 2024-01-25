@@ -106,8 +106,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
     ctx.turboSnap.bailReason = { missingStatsFile: true };
-    ctx.log.warn(missingStatsFile());
-    return;
+    throw new Error(missingStatsFile());
   }
 
   transitionTo(tracing)(ctx, task);
