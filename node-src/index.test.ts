@@ -1,5 +1,5 @@
 import dns from 'dns';
-import { execa as execaDefault } from 'execa';
+import { execaCommand as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
@@ -38,7 +38,11 @@ beforeEach(() => {
 vi.mock('dns');
 vi.mock('execa');
 
-const execa = vi.mocked(execaDefault);
+vi.mock('./lib/getE2eBinPath', () => ({
+  getE2eBinPath: () => 'path/to/bin',
+}));
+
+const execaCommand = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
 const upload = vi.mocked(uploadFiles);
 
@@ -98,14 +102,16 @@ vi.mock('node-fetch', () => ({
       }
 
       if (query?.match('PublishBuildMutation')) {
-        if (variables.input.isolatorUrl.startsWith('http://throw-an-error')) {
-          throw new Error('fetch error');
-        }
-        publishedBuild = { id: variables.id, ...variables.input };
+        publishedBuild = {
+          id: variables.id,
+          ...variables.input,
+          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+        };
         return {
           data: {
             publishBuild: {
               status: 'PUBLISHED',
+              storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
             },
           },
         };
@@ -132,8 +138,8 @@ vi.mock('node-fetch', () => ({
                 status: 'IN_PROGRESS',
                 specCount: 1,
                 componentCount: 1,
+                storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
                 webUrl: 'http://test.com',
-                cachedUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/iframe.html',
                 ...mockBuildFeatures,
                 app: {
                   account: {
@@ -193,7 +199,8 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      if (query?.match('GetUploadUrlsMutation')) {
+      if (query?.match('UploadBuildMutation') || query?.match('UploadMetadataMutation')) {
+        const key = query?.match('UploadBuildMutation') ? 'uploadBuild' : 'uploadMetadata';
         const contentTypes = {
           html: 'text/html',
           js: 'text/javascript',
@@ -202,13 +209,18 @@ vi.mock('node-fetch', () => ({
         };
         return {
           data: {
-            getUploadUrls: {
-              domain: 'https://chromatic.com',
-              urls: variables.paths.map((path: string) => ({
-                path,
-                url: `https://cdn.example.com/${path}`,
-                contentType: contentTypes[path.split('.').at(-1)],
-              })),
+            [key]: {
+              info: {
+                sentinelUrls: [],
+                targets: variables.files.map(({ filePath }) => ({
+                  contentType: contentTypes[filePath.split('.').at(-1)],
+                  fileKey: '',
+                  filePath,
+                  formAction: 'https://s3.amazonaws.com',
+                  formFields: {},
+                })),
+              },
+              userErrors: [],
             },
           },
         };
@@ -285,6 +297,7 @@ vi.mock('./git/git', () => ({
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
   getUncommittedHash: () => Promise.resolve('abc123'),
   getUserEmail: () => Promise.resolve('test@test.com'),
+  mergeQueueBranchMatch: () => Promise.resolve(null),
 }));
 
 vi.mock('./git/getParentCommits', () => ({
@@ -294,6 +307,11 @@ vi.mock('./git/getParentCommits', () => ({
 const getCommit = vi.mocked(git.getCommit);
 
 vi.mock('./lib/emailHash');
+
+vi.mock('./lib/getFileHashes', () => ({
+  getFileHashes: (files: string[]) =>
+    Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
+}));
 
 vi.mock('./lib/getPackageManager', () => ({
   getPackageManagerName: () => Promise.resolve('pnpm'),
@@ -320,8 +338,8 @@ beforeEach(() => {
     CHROMATIC_APP_CODE: undefined,
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
-  execa.mockReset();
-  execa.mockResolvedValue({ stdout: '1.2.3' } as any);
+  execaCommand.mockReset();
+  execaCommand.mockResolvedValue({ stdout: '1.2.3' } as any);
   getCommit.mockResolvedValue({
     commit: 'commit',
     committedAt: 1234,
@@ -400,7 +418,7 @@ it('runs in simple situations', async () => {
     storybookViewLayer: 'viewLayer',
     committerEmail: 'test@test.com',
     committerName: 'tester',
-    isolatorUrl: `https://chromatic.com/iframe.html`,
+    storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   });
 });
 
@@ -452,23 +470,37 @@ it('should exit with code 6 and stop the build when abortSignal is aborted', asy
 it('calls out to npm build script passed and uploads files', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
   await runAll(ctx);
+
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/build-storybook/),
+    expect.objectContaining({})
+  );
+
   expect(ctx.exitCode).toBe(1);
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
     [
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
+        fileKey: '',
+        filePath: 'iframe.html',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
         localPath: expect.stringMatching(/\/iframe\.html$/),
         targetPath: 'iframe.html',
-        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
+        fileKey: '',
+        filePath: 'index.html',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
         localPath: expect.stringMatching(/\/index\.html$/),
         targetPath: 'index.html',
-        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
@@ -479,27 +511,55 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--storybook-build-dir=dirname']);
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
-  expect(execa).not.toHaveBeenCalled();
+  expect(execaCommand).not.toHaveBeenCalled();
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
     [
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
+        fileKey: '',
+        filePath: 'iframe.html',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
         localPath: expect.stringMatching(/\/iframe\.html$/),
         targetPath: 'iframe.html',
-        targetUrl: 'https://cdn.example.com/iframe.html',
       },
       {
+        contentHash: 'hash',
         contentLength: 42,
         contentType: 'text/html',
+        fileKey: '',
+        filePath: 'index.html',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
         localPath: expect.stringMatching(/\/index\.html$/),
         targetPath: 'index.html',
-        targetUrl: 'https://cdn.example.com/index.html',
       },
     ],
     expect.any(Function)
   );
+});
+
+it('builds with playwright with --playwright', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--playwright']);
+  await runAll(ctx);
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/path\/to\/bin/),
+    expect.objectContaining({})
+  );
+  expect(ctx.exitCode).toBe(1);
+});
+
+it('builds with cypress with --cypress', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--cypress']);
+  await runAll(ctx);
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/path\/to\/bin/),
+    expect.objectContaining({})
+  );
+  expect(ctx.exitCode).toBe(1);
 });
 
 it('passes autoAcceptChanges to the index', async () => {
@@ -690,32 +750,44 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
   expect(upload.mock.calls.at(-1)[1]).toEqual(
     expect.arrayContaining([
       {
-        localPath: '.storybook/main.js',
-        targetPath: '.chromatic/main.js',
         contentLength: 518,
         contentType: 'text/javascript',
-        targetUrl: 'https://cdn.example.com/.chromatic/main.js',
+        fileKey: '',
+        filePath: '.chromatic/main.js',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
+        localPath: '.storybook/main.js',
+        targetPath: '.chromatic/main.js',
       },
       {
-        localPath: 'storybook-out/preview-stats.trimmed.json',
-        targetPath: '.chromatic/preview-stats.trimmed.json',
         contentLength: 457,
         contentType: 'application/json',
-        targetUrl: 'https://cdn.example.com/.chromatic/preview-stats.trimmed.json',
+        fileKey: '',
+        filePath: '.chromatic/preview-stats.trimmed.json',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
+        localPath: 'storybook-out/preview-stats.trimmed.json',
+        targetPath: '.chromatic/preview-stats.trimmed.json',
       },
       {
-        localPath: '.storybook/preview.js',
-        targetPath: '.chromatic/preview.js',
         contentLength: 1338,
         contentType: 'text/javascript',
-        targetUrl: 'https://cdn.example.com/.chromatic/preview.js',
+        fileKey: '',
+        filePath: '.chromatic/preview.js',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
+        localPath: '.storybook/preview.js',
+        targetPath: '.chromatic/preview.js',
       },
       {
-        localPath: expect.any(String),
-        targetPath: '.chromatic/index.html',
         contentLength: expect.any(Number),
         contentType: 'text/html',
-        targetUrl: 'https://cdn.example.com/.chromatic/index.html',
+        fileKey: '',
+        filePath: '.chromatic/index.html',
+        formAction: 'https://s3.amazonaws.com',
+        formFields: {},
+        localPath: expect.any(String),
+        targetPath: '.chromatic/index.html',
       },
     ])
   );

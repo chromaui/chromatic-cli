@@ -1,38 +1,48 @@
 #!/usr/bin/env node
 
 import cpy from 'cpy';
-import { execaCommand } from 'execa';
+import { $ } from 'execa';
 import tmp from 'tmp-promise';
 
-const command = (cmd, opts) => execaCommand(cmd, { stdio: 'inherit', ...opts });
+const copy = (globs, ...args) => {
+  console.info(`📦 Copying:\n   - ${globs.join('\n   - ')}`);
+  return cpy(globs, ...args);
+};
 
-const publishAction = async ({ version, repo }) => {
+const publishAction = async ({ major, version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
-  console.info(`✅ Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
+  console.info(`🚀 Publishing ${version} to ${repo} ${dryRun ? '(dry run)' : ''}`);
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
-  const run = (cmd) => command(cmd, { cwd: path });
 
-  await cpy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
-    parents: true,
+  await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
+    parents: true, // keep directory structure (i.e. action dir)
   });
-  await cpy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
+  await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
 
-  await run('git init -b main');
-  await run('git config user.name "Chromatic"');
-  await run('git config user.email "support@chromatic.com"');
-  await run(`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`);
-  await run('git add .');
-  await run(`git commit -m ${version}`);
-  await run('git tag -f v1'); // For backwards compatibility
-  await run('git tag -f latest');
+  const $$ = (strings, ...args) => {
+    console.info(strings.reduce((acc, s, i) => `${acc}${s}${args[i] || ''}`, '🏃 '));
+    return $({ cwd: path })(strings, ...args);
+  };
+
+  await $$`git init -b main`;
+  await $$`git config user.name Chromatic`;
+  await $$`git config user.email support@chromatic.com`;
+  await $$`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`;
+  await $$`git add .`;
+  await $$`git commit -m v${version}`;
+  await $$`git tag -a v${version} -m ${`v${version} without automatic upgrades (pinned)`}`;
+  await $$`git tag -a v${major} -m ${`v${version} with automatic upgrades to v${major}.x.x`}`;
+  await $$`git tag -a v1 -m ${`Deprecated, use 'latest' tag instead`}`;
+  await $$`git tag -a latest -m ${`v${version} with automatic upgrades to all versions`}`;
 
   if (dryRun) {
     console.info('✅ Skipping git push due to --dry-run');
   } else {
-    await run('git push origin HEAD:main --force');
-    await run('git push --tags --force');
+    await $$`git push origin HEAD:main --force`;
+    await $$`git push --tags --force`;
+    console.info('✅ Done');
   }
 
   return cleanup();
@@ -49,7 +59,7 @@ const publishAction = async ({ version, repo }) => {
  * Make sure to build the action before publishing manually.
  */
 (async () => {
-  const { stdout: status } = await execaCommand('git status --porcelain');
+  const { stdout: status } = await $`git status --porcelain`;
   if (status) {
     console.error(`❗️ Working directory is not clean:\n${status}`);
     return;
@@ -63,7 +73,7 @@ const publishAction = async ({ version, repo }) => {
     return;
   }
 
-  const { stdout: branch } = await execaCommand('git rev-parse --abbrev-ref HEAD');
+  const { stdout: branch } = await $`git rev-parse --abbrev-ref HEAD`;
   const defaultTag = branch === 'main' ? 'latest' : 'canary';
   const context = ['canary', 'next', 'latest'].includes(process.argv[2])
     ? process.argv[2]
@@ -76,13 +86,13 @@ const publishAction = async ({ version, repo }) => {
         console.info('Run `yarn publish-action canary` to publish a canary action.');
         return;
       }
-      await publishAction({ version: pkg.version, repo: 'chromaui/action-canary' });
+      await publishAction({ major, version: pkg.version, repo: 'chromaui/action-canary' });
       break;
     case 'next':
-      await publishAction({ version: pkg.version, repo: 'chromaui/action-next' });
+      await publishAction({ major, version: pkg.version, repo: 'chromaui/action-next' });
       break;
     case 'latest':
-      await publishAction({ version: pkg.version, repo: 'chromaui/action' });
+      await publishAction({ major, version: pkg.version, repo: 'chromaui/action' });
       break;
     default:
       console.error(`❗️ Unknown tag: ${tag}`);

@@ -13,6 +13,7 @@ import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
+import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
@@ -20,12 +21,15 @@ const takeLast = (input: string | string[]) =>
 const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input : [input]);
 
 const trueIfSet = <T>(value: T) => ((value as unknown) === '' ? true : value);
+const defaultIfSet = <T>(value: T, fallback: T) => ((value as unknown) === '' ? fallback : value);
+const defaultUnlessSet = <T>(value: T, fallback: T) =>
+  ['', true, undefined].includes(value as any) ? fallback : value;
 const undefinedIfEmpty = <T>(array: T[]) => {
   const filtered = array.filter(Boolean);
   return filtered.length ? filtered : undefined;
 };
 
-const stripUndefined = <T extends Record<string, unknown | undefined>>(object: T) =>
+const stripUndefined = (object: Partial<Options>): Partial<Options> =>
   Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
 
 export default function getOptions({
@@ -36,6 +40,7 @@ export default function getOptions({
   configuration,
   log,
   packageJson,
+  packagePath,
 }: InitialContext): Options {
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
@@ -45,11 +50,12 @@ export default function getOptions({
     autoAcceptChanges: false,
     exitZeroOnChanges: false,
     exitOnceUploaded: false,
-    diagnostics: false,
+    diagnosticsFile: undefined,
+    fileHashing: true,
+    interactive: false,
     isLocalBuild: false,
     originalArgv: argv,
 
-    // We set these to undefined just so TS doesn't complain
     onlyChanged: undefined,
     onlyStoryFiles: undefined,
     onlyStoryNames: undefined,
@@ -57,6 +63,7 @@ export default function getOptions({
     externals: undefined,
     traceChanged: undefined,
     list: undefined,
+    logFile: undefined,
     skip: undefined,
     forceRebuild: undefined,
     junitReport: undefined,
@@ -66,11 +73,14 @@ export default function getOptions({
     preserveMissingSpecs: undefined,
 
     buildScriptName: undefined,
+    playwright: undefined,
+    cypress: undefined,
     outputDir: undefined,
     allowConsoleErrors: undefined,
     storybookBuildDir: undefined,
     storybookBaseDir: undefined,
     storybookConfigDir: undefined,
+    storybookLogFile: undefined,
 
     ownerName: undefined,
     repositorySlug: undefined,
@@ -84,6 +94,11 @@ export default function getOptions({
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
+  const DEFAULT_LOG_FILE = 'chromatic.log';
+  const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
+  const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
+  const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';
+
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
     projectToken: takeLast(flags.projectToken || flags.appCode),
@@ -95,13 +110,17 @@ export default function getOptions({
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
     traceChanged: trueIfSet(flags.traceChanged),
     list: flags.list,
+    logFile: defaultIfSet(flags.logFile, DEFAULT_LOG_FILE),
     fromCI: flags.ci,
     skip: trueIfSet(flags.skip),
     dryRun: flags.dryRun,
+    fileHashing: flags.fileHashing,
     forceRebuild: trueIfSet(flags.forceRebuild),
     debug: flags.debug,
-    diagnostics: flags.diagnostics,
-    junitReport: trueIfSet(flags.junitReport),
+    diagnosticsFile:
+      defaultIfSet(flags.diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE) ||
+      defaultIfSet(flags.diagnostics && '', DEFAULT_DIAGNOSTICS_FILE), // for backwards compatibility
+    junitReport: defaultIfSet(flags.junitReport, DEFAULT_REPORT_FILE),
     zip: flags.zip,
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
@@ -113,11 +132,14 @@ export default function getOptions({
       flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
 
     buildScriptName: flags.buildScriptName,
+    playwright: trueIfSet(flags.playwright),
+    cypress: trueIfSet(flags.cypress),
     outputDir: takeLast(flags.outputDir),
     allowConsoleErrors: flags.allowConsoleErrors,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
+    storybookLogFile: defaultUnlessSet(flags.storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
 
     ownerName: branchOwner || repositoryOwner,
     repositorySlug: flags.repositorySlug,
@@ -146,6 +168,12 @@ export default function getOptions({
   if (options.debug) {
     log.setLevel('debug');
     log.setInteractive(false);
+  }
+
+  if (options.debug || options.uploadMetadata) {
+    // Implicitly enable these options unless they're already enabled or explicitly disabled
+    options.logFile = options.logFile ?? DEFAULT_LOG_FILE;
+    options.diagnosticsFile = options.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
 
   if (!options.projectToken && !(options.projectId && options.userToken)) {
@@ -180,6 +208,8 @@ export default function getOptions({
   const singularOpts = {
     buildScriptName: '--build-script-name',
     storybookBuildDir: '--storybook-build-dir',
+    playwright: '--playwright',
+    cypress: '--cypress',
   };
   const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
 
@@ -230,6 +260,15 @@ export default function getOptions({
   // Build Storybook
   if (storybookBuildDir) {
     return options;
+  }
+
+  if (options.playwright || options.cypress) {
+    return options;
+  }
+
+  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
+    log.error(invalidPackageJson(packagePath));
+    process.exit(252);
   }
 
   const { scripts } = packageJson;

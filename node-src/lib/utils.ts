@@ -34,8 +34,6 @@ export const activityBar = (n = 0, size = 20) => {
   return `[${track.join('')}]`;
 };
 
-export const baseStorybookUrl = (url: string) => url?.replace(/\/iframe\.html$/, '');
-
 export const rewriteErrorMessage = (err: Error, message: string) => {
   try {
     // DOMException doesn't allow setting the message, so this might fail
@@ -56,3 +54,11 @@ export const matchesFile = (glob: string, filepath: string) => {
 
 export const isPackageManifestFile = (filePath: string) =>
   [/^package\.json$/, /\/package\.json$/].some((re) => re.test(filePath));
+
+export const redact = <T>(value: T, ...fields: string[]): T => {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
+  const obj = { ...value };
+  for (const key in obj) obj[key] = fields.includes(key) ? undefined : redact(obj[key], ...fields);
+  return obj;
+};

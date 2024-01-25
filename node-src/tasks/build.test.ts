@@ -3,10 +3,15 @@ import mockfs from 'mock-fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildStorybook, setSourceDir, setBuildCommand } from './build';
+import { beforeEach } from 'node:test';
 
 vi.mock('execa');
 
 const command = vi.mocked(execaCommand);
+
+beforeEach(() => {
+  command.mockClear();
+})
 
 afterEach(() => {
   mockfs.restore();
@@ -110,7 +115,7 @@ describe('buildStorybook', () => {
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: { debug: vi.fn() },
-      options: {},
+      options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
@@ -131,5 +136,33 @@ describe('buildStorybook', () => {
     command.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
+  });
+
+  it('passes NODE_ENV=production', async () => {
+    const ctx = {
+      buildCommand: 'npm run build:storybook --script-args',
+      env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
+      log: { debug: vi.fn() },
+      options: { storybookLogFile: 'build-storybook.log' },
+    } as any;
+    await buildStorybook(ctx);
+    expect(command).toHaveBeenCalledWith(
+      ctx.buildCommand,
+      expect.objectContaining({ env: { NODE_ENV: 'production'} })
+    );
+  });
+
+  it('allows overriding NODE_ENV with STORYBOOK_NODE_ENV', async () => {
+    const ctx = {
+      buildCommand: 'npm run build:storybook --script-args',
+      env: { STORYBOOK_BUILD_TIMEOUT: 1000, STORYBOOK_NODE_ENV: 'test' },
+      log: { debug: vi.fn() },
+      options: { storybookLogFile: 'build-storybook.log' },
+    } as any;
+    await buildStorybook(ctx);
+    expect(command).toHaveBeenCalledWith(
+      ctx.buildCommand,
+      expect.objectContaining({ env: { NODE_ENV: 'test'} })
+    );
   });
 });

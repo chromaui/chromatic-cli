@@ -9,8 +9,6 @@ const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
 
-export const CHROMATIC_LOG_FILE = 'chromatic.log';
-
 // Top-level promise rejection handler to deal with initialization errors
 const handleRejection = (reason: string) => console.error('Unhandled promise rejection:', reason);
 process.on('unhandledRejection', handleRejection);
@@ -39,19 +37,40 @@ export interface Logger {
   flush: () => void;
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
+  setLogFile: (path: string | undefined) => void;
 }
+
+const fileLogger = {
+  queue: [] as string[],
+  append(...messages: string[]) {
+    this.queue.push(...messages);
+  },
+  disable() {
+    this.append = () => {};
+    this.queue = [];
+  },
+  initialize(path: string, onError: LogFn) {
+    unlink(path, (err) => {
+      if (err) {
+        this.disable();
+        onError(err);
+      } else {
+        const stream = createWriteStream(path, { flags: 'a' });
+        this.append = (...messages: string[]) => stream?.write(messages.join(' ') + '\n');
+        this.append(...this.queue);
+        this.queue = [];
+      }
+    });
+  },
+};
 
 export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
-  if (level !== 'silent') unlink(CHROMATIC_LOG_FILE, () => {});
 
   let interactive = !process.argv.slice(2).includes('--no-interactive');
   let enqueue = false;
   const queue = [];
-
-  const stream = level !== 'silent' ? createWriteStream(CHROMATIC_LOG_FILE, { flags: 'a' }) : null;
-  const appendToLogFile = (...messages: string[]) => stream?.write(messages.join(' ') + '\n');
 
   const log =
     (type: LogType, logFileOnly?: boolean) =>
@@ -59,7 +78,7 @@ export const createLogger = () => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
       const logs = logVerbose(type, args);
-      appendToLogFile(...logs);
+      fileLogger.append(...logs);
       if (logFileOnly) return;
 
       const messages = interactive ? logInteractive(args) : logs;
@@ -77,6 +96,10 @@ export const createLogger = () => {
     },
     setInteractive(value: boolean) {
       interactive = !!value;
+    },
+    setLogFile(path: string | undefined) {
+      if (path) fileLogger.initialize(path, log('error'));
+      else fileLogger.disable();
     },
     error: log('error'),
     warn: log('warn'),

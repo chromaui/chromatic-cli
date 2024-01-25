@@ -1,20 +1,40 @@
+import { FormData } from 'formdata-node';
 import { createReadStream, readdirSync, readFileSync, statSync } from 'fs';
-import progressStream from 'progress-stream';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
-import { validateFiles, traceChangedFiles, uploadStorybook } from './upload';
+import {
+  calculateFileHashes,
+  validateFiles,
+  traceChangedFiles,
+  uploadStorybook,
+  waitForSentinels,
+} from './upload';
 
+vi.mock('form-data');
 vi.mock('fs');
-vi.mock('progress-stream');
 vi.mock('../lib/compress');
 vi.mock('../lib/getDependentStoryFiles');
 vi.mock('../lib/findChangedDependencies');
 vi.mock('../lib/findChangedPackageFiles');
 vi.mock('./read-stats-file');
+
+vi.mock('../lib/FileReaderBlob', () => ({
+  FileReaderBlob: class {
+    constructor(path: string, length: number, onProgress: (delta: number) => void) {
+      onProgress(length / 2);
+      onProgress(length / 2);
+    }
+  },
+}));
+
+vi.mock('../lib/getFileHashes', () => ({
+  getFileHashes: (files: string[]) =>
+    Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
+}));
 
 const makeZipFile = vi.mocked(compress);
 const findChangedDependencies = vi.mocked(findChangedDep);
@@ -24,11 +44,14 @@ const createReadStreamMock = vi.mocked(createReadStream);
 const readdirSyncMock = vi.mocked(readdirSync);
 const readFileSyncMock = vi.mocked(readFileSync);
 const statSyncMock = vi.mocked(statSync);
-const progress = vi.mocked(progressStream);
 
 const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 const http = { fetch: vi.fn() };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('validateFiles', () => {
   it('sets fileInfo on context', async () => {
@@ -219,30 +242,63 @@ describe('traceChangedFiles', () => {
   });
 });
 
+describe('calculateFileHashes', () => {
+  it('sets hashes on context.fileInfo', async () => {
+    const fileInfo = {
+      lengths: [
+        { knownAs: 'iframe.html', contentLength: 42 },
+        { knownAs: 'index.html', contentLength: 42 },
+      ],
+      paths: ['iframe.html', 'index.html'],
+      total: 84,
+    };
+    const ctx = {
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: { fileHashing: true },
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+
+    await calculateFileHashes(ctx, {} as any);
+
+    expect(ctx.fileInfo.hashes).toMatchObject({
+      'iframe.html': 'hash',
+      'index.html': 'hash',
+    });
+  });
+});
+
 describe('uploadStorybook', () => {
-  it('retrieves the upload locations, puts the files there and sets the isolatorUrl on context', async () => {
+  it('retrieves the upload locations and uploads the files', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
-      getUploadUrls: {
-        domain: 'https://asdqwe.chromatic.com',
-        urls: [
-          {
-            path: 'iframe.html',
-            url: 'https://asdqwe.chromatic.com/iframe.html',
-            contentType: 'text/html',
-          },
-          {
-            path: 'index.html',
-            url: 'https://asdqwe.chromatic.com/index.html',
-            contentType: 'text/html',
-          },
-        ],
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'iframe.html',
+              formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+              formFields: {},
+            },
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
       },
     });
 
     createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
     http.fetch.mockReturnValue({ ok: true });
-    progress.mockReturnValue({ on: vi.fn() } as any);
 
     const fileInfo = {
       lengths: [
@@ -264,74 +320,54 @@ describe('uploadStorybook', () => {
     } as any;
     await uploadStorybook(ctx, {} as any);
 
-    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/GetUploadUrlsMutation/), {
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
-      paths: ['iframe.html', 'index.html'],
+      files: [
+        { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
+        { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
+      ],
     });
     expect(http.fetch).toHaveBeenCalledWith(
-      'https://asdqwe.chromatic.com/iframe.html',
-      expect.objectContaining({
-        method: 'PUT',
-        headers: {
-          'content-type': 'text/html',
-          'content-length': '42',
-          'cache-control': 'max-age=31536000',
-        },
-      }),
-      expect.objectContaining({ retries: 0 })
+      'https://s3.amazonaws.com/presigned?iframe.html',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      { retries: 0 }
     );
     expect(http.fetch).toHaveBeenCalledWith(
-      'https://asdqwe.chromatic.com/index.html',
-      expect.objectContaining({
-        method: 'PUT',
-        headers: {
-          'content-type': 'text/html',
-          'content-length': '42',
-          'cache-control': 'max-age=31536000',
-        },
-      }),
-      expect.objectContaining({ retries: 0 })
+      'https://s3.amazonaws.com/presigned?index.html',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      { retries: 0 }
     );
     expect(ctx.uploadedBytes).toBe(84);
-    expect(ctx.isolatorUrl).toBe('https://asdqwe.chromatic.com/iframe.html');
+    expect(ctx.uploadedFiles).toBe(2);
   });
 
   it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
-      getUploadUrls: {
-        domain: 'https://asdqwe.chromatic.com',
-        urls: [
-          {
-            path: 'iframe.html',
-            url: 'https://asdqwe.chromatic.com/iframe.html',
-            contentType: 'text/html',
-          },
-          {
-            path: 'index.html',
-            url: 'https://asdqwe.chromatic.com/index.html',
-            contentType: 'text/html',
-          },
-        ],
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'iframe.html',
+              formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+              formFields: {},
+            },
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
       },
     });
 
     createReadStreamMock.mockReturnValue({ pipe: vi.fn((x) => x) } as any);
-    progress.mockImplementation((() => {
-      let progressCb;
-      return {
-        on: vi.fn((name, cb) => {
-          progressCb = cb;
-        }),
-        sendProgress: (delta: number) => progressCb({ delta }),
-      };
-    }) as any);
-    http.fetch.mockReset().mockImplementation(async (url, { body }) => {
-      // body is just the mocked progress stream, as pipe returns it
-      body.sendProgress(21);
-      body.sendProgress(21);
-      return { ok: true };
-    });
+    http.fetch.mockReturnValue({ ok: true });
 
     const fileInfo = {
       lengths: [
@@ -376,21 +412,199 @@ describe('uploadStorybook', () => {
     });
   });
 
+  it('batches calls to uploadBuild mutation', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValueOnce({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: Array.from({ length: 1000 }, (_, i) => ({
+            contentType: 'application/javascript',
+            filePath: `${i}.js`,
+            formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+            formFields: {},
+          })),
+        },
+        userErrors: [],
+      },
+    });
+    client.runQuery.mockReturnValueOnce({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'application/javascript',
+              filePath: `1000.js`,
+              formAction: `https://s3.amazonaws.com/presigned?1000.js`,
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn((x) => x) } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
+      paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
+      total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+    };
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledTimes(2);
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: Array.from({ length: 1000 }, (_, i) => ({
+        contentHash: undefined,
+        contentLength: i,
+        filePath: `${i}.js`,
+      })),
+    });
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentHash: undefined, contentLength: 1000, filePath: `1000.js` }], // 0-based index makes this file #1001
+    });
+
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?0.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?1.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?999.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      'https://s3.amazonaws.com/presigned?1000.js',
+      expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+      expect.objectContaining({ retries: 0 })
+    );
+    expect(ctx.uploadedBytes).toBe(500500);
+    expect(ctx.uploadedFiles).toBe(1001);
+  });
+
+  describe('with file hashes', () => {
+    it('retrieves file upload locations and uploads only returned targets', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'index.html',
+                formAction: 'https://s3.amazonaws.com/presigned?index.html',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        hashes: { 'iframe.html': 'iframe', 'index.html': 'index' },
+        paths: ['iframe.html', 'index.html'],
+        total: 84,
+      };
+      const ctx = {
+        client,
+        env,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: { zip: false },
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+        buildId: '1',
+        files: [
+          { contentHash: 'iframe', contentLength: 42, filePath: 'iframe.html' },
+          { contentHash: 'index', contentLength: 42, filePath: 'index.html' },
+        ],
+        zip: false,
+      });
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?iframe.html',
+        expect.anything(),
+        expect.anything()
+      );
+      expect(http.fetch).toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?index.html',
+        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+        { retries: 0 }
+      );
+      expect(ctx.uploadedBytes).toBe(42);
+      expect(ctx.uploadedFiles).toBe(1);
+    });
+  });
+
   describe('with zip', () => {
     it('retrieves the upload location, adds the files to an archive and uploads it', async () => {
       const client = { runQuery: vi.fn() };
       client.runQuery.mockReturnValue({
-        getZipUploadUrl: {
-          domain: 'https://asdqwe.chromatic.com',
-          url: 'https://asdqwe.chromatic.com/storybook.zip',
-          sentinelUrl: 'https://asdqwe.chromatic.com/upload.txt',
+        uploadBuild: {
+          info: {
+            sentinelUrls: ['https://asdqwe.chromatic.com/sentinel.txt'],
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'iframe.html',
+                formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+                formFields: {},
+              },
+              {
+                contentType: 'text/html',
+                filePath: 'index.html',
+                formAction: 'https://s3.amazonaws.com/presigned?index.html',
+                formFields: {},
+              },
+            ],
+            zipTarget: {
+              contentType: 'application/zip',
+              filePath: 'storybook.zip',
+              formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
+              formFields: {},
+            },
+          },
+          userErrors: [],
         },
       });
 
       makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
       createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
       http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
-      progress.mockReturnValue({ on: vi.fn() } as any);
 
       const fileInfo = {
         lengths: [
@@ -412,22 +626,154 @@ describe('uploadStorybook', () => {
       } as any;
       await uploadStorybook(ctx, {} as any);
 
-      expect(client.runQuery).toHaveBeenCalledWith(
-        expect.stringMatching(/GetZipUploadUrlMutation/),
-        { buildId: '1' }
-      );
+      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+        buildId: '1',
+        files: [
+          { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
+          { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
+        ],
+        zip: true,
+      });
       expect(http.fetch).toHaveBeenCalledWith(
-        'https://asdqwe.chromatic.com/storybook.zip',
-        expect.objectContaining({
-          method: 'PUT',
-          headers: {
-            'content-type': 'application/zip',
-            'content-length': '80',
-          },
-        }),
-        expect.objectContaining({ retries: 0 })
+        'https://s3.amazonaws.com/presigned?storybook.zip',
+        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+        { retries: 0 }
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?iframe.html',
+        expect.anything(),
+        expect.anything()
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?iframe.html',
+        expect.anything(),
+        expect.anything()
       );
       expect(ctx.uploadedBytes).toBe(80);
+      expect(ctx.uploadedFiles).toBe(2);
     });
+
+    it('handles zipTarget being undefined', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValueOnce({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: Array.from({ length: 1000 }, (_, i) => ({
+              contentType: 'application/javascript',
+              filePath: `${i}.js`,
+              formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+              formFields: {},
+            })),
+            zipTarget: {
+              contentType: 'application/zip',
+              filePath: 'storybook.zip',
+              formAction: 'https://s3.amazonaws.com/presigned?storybook.zip',
+              formFields: {},
+            },
+          },
+          userErrors: [],
+        },
+      });
+      client.runQuery.mockReturnValueOnce({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/javascript',
+                filePath: `1000.js`,
+                formAction: `https://s3.amazonaws.com/presigned?1000.js`,
+                formFields: {},
+              },
+            ],
+            zipTarget: undefined,
+          },
+          userErrors: [],
+        },
+      });
+
+      makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
+
+      const fileInfo = {
+        lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
+        paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
+        total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+      };
+      const ctx = {
+        client,
+        env,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: { zip: true },
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(http.fetch).toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?storybook.zip',
+        expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
+        { retries: 0 }
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?0.js',
+        expect.anything(),
+        expect.anything()
+      );
+      expect(http.fetch).not.toHaveBeenCalledWith(
+        'https://s3.amazonaws.com/presigned?1000.js',
+        expect.anything(),
+        expect.anything()
+      );
+    });
+  });
+});
+
+describe('waitForSentinels', () => {
+  it('dedupes sentinel URLs before awaiting them', async () => {
+    const client = { runQuery: vi.fn() };
+    http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
+
+    const sentinelUrls = [
+      'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/files-copied.txt?foo',
+      'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/zip-unpacked.txt?bar',
+      'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/zip-unpacked.txt?baz',
+      'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/files-copied.txt?baz',
+    ];
+    const ctx = {
+      client,
+      env,
+      log,
+      http,
+      options: {},
+      sentinelUrls,
+    } as any;
+    await waitForSentinels(ctx, {} as any);
+
+    // Last one wins
+    expect(http.fetch).not.toHaveBeenCalledWith(
+      sentinelUrls[0],
+      expect.any(Object),
+      expect.any(Object)
+    );
+    expect(http.fetch).not.toHaveBeenCalledWith(
+      sentinelUrls[1],
+      expect.any(Object),
+      expect.any(Object)
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      sentinelUrls[2],
+      expect.any(Object),
+      expect.any(Object)
+    );
+    expect(http.fetch).toHaveBeenCalledWith(
+      sentinelUrls[3],
+      expect.any(Object),
+      expect.any(Object)
+    );
   });
 });

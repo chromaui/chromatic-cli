@@ -1,26 +1,24 @@
 import task from '../components/task';
 import {
-  initial,
-  dryRun,
-  validating,
-  invalid,
-  tracing,
   bailed,
-  traced,
-  preparing,
-  starting,
-  uploading,
-  success,
+  dryRun,
   failed,
+  finalizing,
+  hashing,
+  initial,
+  invalid,
+  starting,
+  success,
+  traced,
+  tracing,
+  uploading,
+  validating,
 } from './upload';
 
 export default {
   title: 'CLI/Tasks/Upload',
   decorators: [(storyFn: any) => task(storyFn())],
 };
-
-const isolatorUrl = 'https://5eb48280e78a12aeeaea33cf-kdypokzbrs.chromatic.com/iframe.html';
-// const storybookUrl = 'https://self-hosted-storybook.netlify.app';
 
 export const Initial = () => initial;
 
@@ -51,12 +49,37 @@ export const BailedSiblings = () =>
 
 export const Traced = () => traced({ onlyStoryFiles: Array.from({ length: 5 }) } as any);
 
-export const Preparing = () => preparing();
+export const Hashing = () => hashing();
 
 export const Starting = () => starting();
 
 export const Uploading = () => uploading({ percentage: 42 });
 
-export const Success = () => success({ now: 0, startedAt: -54321, isolatorUrl } as any);
+export const Finalizing = () => finalizing();
+
+export const Success = () =>
+  success({
+    now: 0,
+    startedAt: -54321,
+    uploadedBytes: 1234567,
+    uploadedFiles: 42,
+    fileInfo: { paths: { length: 42 } },
+  } as any);
+
+export const SuccessSkippedFiles = () =>
+  success({
+    now: 0,
+    startedAt: -54321,
+    uploadedBytes: 1234567,
+    uploadedFiles: 42,
+    fileInfo: { paths: { length: 100 } },
+  } as any);
+
+export const SuccessNoFiles = () =>
+  success({
+    uploadedBytes: 0,
+    uploadedFiles: 0,
+    fileInfo: { paths: { length: 100 } },
+  } as any);
 
 export const Failed = () => failed({ path: 'main.9e3e453142da82719bf4.bundle.js' });

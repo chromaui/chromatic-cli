@@ -33,14 +33,47 @@ describe('getOptions', () => {
   it('sets reasonable defaults', async () => {
     expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       projectToken: 'cli-code',
-      buildScriptName: 'build-storybook',
       fromCI: !!process.env.CI,
+      dryRun: false,
+      debug: false,
       autoAcceptChanges: false,
       exitZeroOnChanges: false,
       exitOnceUploaded: false,
+      diagnosticsFile: undefined,
       interactive: false,
-      debug: false,
+      isLocalBuild: false,
       originalArgv: ['--project-token', 'cli-code'],
+
+      onlyChanged: undefined,
+      onlyStoryFiles: undefined,
+      onlyStoryNames: undefined,
+      untraced: undefined,
+      externals: undefined,
+      traceChanged: undefined,
+      list: undefined,
+      logFile: undefined,
+      skip: undefined,
+      forceRebuild: undefined,
+      junitReport: undefined,
+      zip: undefined,
+
+      ignoreLastBuildOnBranch: undefined,
+      preserveMissingSpecs: undefined,
+
+      buildScriptName: 'build-storybook',
+      outputDir: undefined,
+      allowConsoleErrors: undefined,
+      storybookBuildDir: undefined,
+      storybookBaseDir: undefined,
+      storybookConfigDir: undefined,
+      storybookLogFile: 'build-storybook.log',
+
+      ownerName: undefined,
+      repositorySlug: undefined,
+      branchName: '',
+      patchHeadRef: undefined,
+      patchBaseRef: undefined,
+      uploadMetadata: undefined,
     });
   });
 
@@ -61,6 +94,7 @@ describe('getOptions', () => {
           '--skip',
           '--debug',
           '--no-interactive',
+          '--no-storybook-log-file',
         ])
       )
     ).toMatchObject({
@@ -71,6 +105,7 @@ describe('getOptions', () => {
       exitOnceUploaded: true,
       debug: true,
       interactive: false,
+      storybookLogFile: false,
     });
   });
 
@@ -160,6 +195,19 @@ describe('getOptions', () => {
       })
     ).toMatchObject({
       projectToken: 'extra-token',
+    });
+  });
+
+  it('implicitly enables diagnostics and log file when using debug or uploadMetadata', async () => {
+    expect(getOptions(getContext(['--debug']))).toMatchObject({
+      diagnosticsFile: 'chromatic-diagnostics.json',
+      logFile: 'chromatic.log',
+      debug: true,
+    });
+    expect(getOptions(getContext(['--upload-metadata']))).toMatchObject({
+      diagnosticsFile: 'chromatic-diagnostics.json',
+      logFile: 'chromatic.log',
+      uploadMetadata: true,
     });
   });
 });

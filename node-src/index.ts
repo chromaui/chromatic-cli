@@ -27,7 +27,6 @@ import buildCanceled from './ui/messages/errors/buildCanceled';
 import { default as fatalError } from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
-import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
@@ -97,11 +96,6 @@ export async function run({
   }
 
   const { path: packagePath, packageJson } = pkgInfo;
-  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
-    log.error(invalidPackageJson(packagePath));
-    process.exit(252);
-  }
-
   const ctx: InitialContext = {
     ...parseArgs(argv),
     ...(flags && { flags }),
@@ -120,7 +114,7 @@ export async function run({
     code: ctx.exitCode,
     url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.cachedUrl?.replace(/iframe\.html.*$/, ''),
+    storybookUrl: ctx.build?.storybookUrl,
     specCount: ctx.build?.specCount,
     componentCount: ctx.build?.componentCount,
     testCount: ctx.build?.testCount,
@@ -161,7 +155,10 @@ export async function runAll(ctx: InitialContext) {
     ctx.configuration = await getConfiguration(
       ctx.extraOptions?.configFile || ctx.flags.configFile
     );
-    (ctx as Context).options = getOptions(ctx);
+    const options = getOptions(ctx);
+    (ctx as Context).options = options;
+    ctx.log.setLogFile(options.logFile);
+
     setExitCode(ctx, exitCodes.OK);
   } catch (e) {
     return onError(e);
@@ -178,11 +175,11 @@ export async function runAll(ctx: InitialContext) {
     await checkPackageJson(ctx);
   }
 
-  if (ctx.flags?.diagnostics || ctx.extraOptions?.diagnostics) {
+  if (ctx.options.diagnosticsFile) {
     await writeChromaticDiagnostics(ctx);
   }
 
-  if (ctx.flags?.uploadMetadata || ctx.extraOptions?.uploadMetadata) {
+  if (ctx.options.uploadMetadata) {
     await uploadMetadataFiles(ctx);
   }
 }

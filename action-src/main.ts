@@ -93,18 +93,22 @@ async function run() {
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
+    const configFile = getInput('configFile');
+    const cypress = getInput('cypress');
     const debug = getInput('debug');
-    const diagnostics = getInput('diagnostics');
+    const diagnosticsFile = getInput('diagnosticsFile') || getInput('diagnostics');
     const dryRun = getInput('dryRun');
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const externals = getInput('externals');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const logFile = getInput('logFile');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getInput('onlyStoryFiles');
     const onlyStoryNames = getInput('onlyStoryNames');
+    const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const repositorySlug = getInput('repositorySlug');
@@ -112,6 +116,7 @@ async function run() {
     const storybookBaseDir = getInput('storybookBaseDir');
     const storybookBuildDir = getInput('storybookBuildDir');
     const storybookConfigDir = getInput('storybookConfigDir');
+    const storybookLogFile = getInput('storybookLogFile');
     const traceChanged = getInput('traceChanged');
     const untraced = getInput('untraced');
     const uploadMetadata = getInput('uploadMetadata');
@@ -135,8 +140,10 @@ async function run() {
         autoAcceptChanges: maybe(autoAcceptChanges),
         branchName: maybe(branchName),
         buildScriptName: maybe(buildScriptName),
+        configFile: maybe(configFile),
+        cypress: maybe(cypress),
         debug: maybe(debug),
-        diagnostics: maybe(diagnostics),
+        diagnosticsFile: maybe(diagnosticsFile),
         dryRun: maybe(dryRun),
         exitOnceUploaded: maybe(exitOnceUploaded, false),
         exitZeroOnChanges: maybe(exitZeroOnChanges, true),
@@ -144,10 +151,12 @@ async function run() {
         forceRebuild: maybe(forceRebuild),
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
         interactive: false,
+        logFile: maybe(logFile),
         only: maybe(only),
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),
         onlyStoryNames: maybe(onlyStoryNames),
+        playwright: maybe(playwright),
         preserveMissing: maybe(preserveMissing),
         projectToken,
         repositorySlug: maybe(repositorySlug),
@@ -155,11 +164,12 @@ async function run() {
         storybookBaseDir: maybe(storybookBaseDir),
         storybookBuildDir: maybe(storybookBuildDir),
         storybookConfigDir: maybe(storybookConfigDir),
+        storybookLogFile: maybe(storybookLogFile),
         traceChanged: maybe(traceChanged),
         untraced: maybe(untraced),
         uploadMetadata: maybe(uploadMetadata, false),
         zip: maybe(zip, false),
-        junitReport: maybe(junitReport, false),
+        junitReport: maybe(junitReport),
       },
     });
 

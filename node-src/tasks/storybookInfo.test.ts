@@ -7,8 +7,8 @@ vi.mock('../lib/getStorybookInfo');
 
 const getStorybookInfo = vi.mocked(storybookInfo);
 
-describe('startStorybook', () => {
-  it('starts the app and sets the isolatorUrl on context', async () => {
+describe('storybookInfo', () => {
+  it('retrieves Storybook metadata and sets it on context', async () => {
     const storybook = { version: '1.0.0', viewLayer: 'react', addons: [] };
     getStorybookInfo.mockResolvedValue(storybook);
 

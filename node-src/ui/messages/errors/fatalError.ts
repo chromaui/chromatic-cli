@@ -5,8 +5,14 @@ import { dedent } from 'ts-dedent';
 
 import { Context, InitialContext } from '../../..';
 import link from '../../components/link';
+import { redact } from '../../../lib/utils';
 
-const buildFields = ({ id, number, webUrl }) => ({ id, number, webUrl });
+const buildFields = ({ id, number, storybookUrl = undefined, webUrl = undefined }) => ({
+  id,
+  number,
+  ...(storybookUrl && { storybookUrl }),
+  ...(webUrl && { webUrl }),
+});
 
 export default function fatalError(
   ctx: Context | InitialContext,
@@ -25,36 +31,39 @@ export default function fatalError(
     runtimeMetadata,
     exitCode,
     exitCodeKey,
-    isolatorUrl,
-    cachedUrl,
-    build,
+    announcedBuild,
+    build = announcedBuild,
     buildCommand,
   } = ctx;
-  const debugInfo = {
-    timestamp,
-    sessionId,
-    gitVersion: git && git.version,
-    nodePlatform: process.platform,
-    nodeVersion: process.versions.node,
-    ...runtimeMetadata,
-    packageName: pkg.name,
-    packageVersion: pkg.version,
-    ...(storybook ? { storybook } : {}),
-    flags,
-    ...(extraOptions && { extraOptions }),
-    ...(configuration && { configuration }),
-    ...('options' in ctx && ctx.options?.buildScriptName
-      ? { buildScript: scripts[ctx.options.buildScriptName] }
-      : {}),
-    ...(buildCommand && { buildCommand }),
-    exitCode,
-    exitCodeKey,
-    errorType: errors.map((err) => err.name).join('\n'),
-    errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
-    ...(isolatorUrl ? { isolatorUrl } : {}),
-    ...(cachedUrl ? { cachedUrl } : {}),
-    ...(build && { build: buildFields(build) }),
-  };
+
+  const debugInfo = redact(
+    {
+      timestamp,
+      sessionId,
+      gitVersion: git && git.version,
+      nodePlatform: process.platform,
+      nodeVersion: process.versions.node,
+      ...runtimeMetadata,
+      packageName: pkg.name,
+      packageVersion: pkg.version,
+      ...(storybook ? { storybook } : {}),
+      flags,
+      ...(extraOptions && { extraOptions }),
+      ...(configuration && { configuration }),
+      ...('options' in ctx && ctx.options?.buildScriptName
+        ? { buildScript: scripts[ctx.options.buildScriptName] }
+        : {}),
+      ...(buildCommand && { buildCommand }),
+      exitCode,
+      exitCodeKey,
+      errorType: errors.map((err) => err.name).join('\n'),
+      errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
+      ...(build && { build: buildFields(build) }),
+    },
+    'projectToken',
+    'reportToken',
+    'userToken'
+  );
 
   const stacktraces = errors.map((err) => err.stack).filter(Boolean);
   return [

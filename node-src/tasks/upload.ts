@@ -13,20 +13,23 @@ import {
   dryRun,
   validating,
   invalid,
-  preparing,
   tracing,
   bailed,
   traced,
   starting,
   uploading,
   success,
+  hashing,
+  finalizing,
 } from '../ui/tasks/upload';
-import { Context, Task } from '../types';
+import { Context, FileDesc, Task } from '../types';
 import { readStatsFile } from './read-stats-file';
 import bailFile from '../ui/messages/warnings/bailFile';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
-import { uploadAsIndividualFiles, uploadAsZipFile } from '../lib/upload';
+import { uploadBuild } from '../lib/upload';
+import { getFileHashes } from '../lib/getFileHashes';
+import { waitForSentinel } from '../lib/waitForSentinel';
 
 interface PathSpec {
   pathname: string;
@@ -180,50 +183,64 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   }
 };
 
+export const calculateFileHashes = async (ctx: Context, task: Task) => {
+  if (ctx.skip || !ctx.options.fileHashing) return;
+  transitionTo(hashing)(ctx, task);
+
+  try {
+    const start = Date.now();
+    ctx.fileInfo.hashes = await getFileHashes(
+      ctx.fileInfo.paths,
+      ctx.sourceDir,
+      ctx.env.CHROMATIC_HASH_CONCURRENCY
+    );
+    ctx.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
+  } catch (err) {
+    ctx.log.warn('Failed to calculate file hashes');
+    ctx.log.debug(err);
+  }
+};
+
 export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
-  transitionTo(preparing)(ctx, task);
+  transitionTo(starting)(ctx, task);
 
-  const options = {
-    onStart: () => (task.output = starting().output),
+  const files = ctx.fileInfo.paths.map<FileDesc>((path) => ({
+    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[path] }),
+    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
+    localPath: join(ctx.sourceDir, path),
+    targetPath: path,
+  }));
+
+  await uploadBuild(ctx, files, {
     onProgress: throttle(
       (progress, total) => {
         const percentage = Math.round((progress / total) * 100);
         task.output = uploading({ percentage }).output;
-
         ctx.options.experimental_onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
       },
       // Avoid spamming the logs with progress updates in non-interactive mode
       ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
     ),
-    onComplete: (uploadedBytes: number, domain: string) => {
-      ctx.uploadedBytes = uploadedBytes;
-      ctx.isolatorUrl = new URL('/iframe.html', domain).toString();
-    },
     onError: (error: Error, path?: string) => {
       throw path === error.message ? new Error(failed({ path }).output) : error;
     },
-  };
+  });
+};
 
-  const files = ctx.fileInfo.paths.map((path) => ({
-    localPath: join(ctx.sourceDir, path),
-    targetPath: path,
-    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
-  }));
+export const waitForSentinels = async (ctx: Context, task: Task) => {
+  if (ctx.skip || !ctx.sentinelUrls?.length) return;
+  transitionTo(finalizing)(ctx, task);
 
-  if (ctx.options.zip) {
-    try {
-      await uploadAsZipFile(ctx, files, options);
-    } catch (err) {
-      ctx.log.debug(
-        { err },
-        'Error uploading zip file, falling back to uploading individual files'
-      );
-      await uploadAsIndividualFiles(ctx, files, options);
-    }
-  } else {
-    await uploadAsIndividualFiles(ctx, files, options);
-  }
+  // Dedupe sentinels, ignoring query params
+  const sentinels = Object.fromEntries(
+    ctx.sentinelUrls.map((url) => {
+      const { host, pathname } = new URL(url);
+      return [host + pathname, { name: pathname.split('/').at(-1), url }];
+    })
+  );
+
+  await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
 };
 
 export default createTask({
@@ -238,7 +255,9 @@ export default createTask({
     transitionTo(validating),
     validateFiles,
     traceChangedFiles,
+    calculateFileHashes,
     uploadStorybook,
+    waitForSentinels,
     transitionTo(success, true),
   ],
 });
