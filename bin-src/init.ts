@@ -26,7 +26,7 @@ export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath
             ...packageJson,
             scripts: {
                 ...packageJson?.scripts,
-                chromatic: `npx chromatic@latest`
+                chromatic: `chromatic`
             }
         }
         await writeFile(packagePath, json, { spaces: 2 });
