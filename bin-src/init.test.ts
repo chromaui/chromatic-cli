@@ -27,7 +27,7 @@ describe('addChromaticScriptToPackageJson', () => {
         expect(writeFile).toHaveBeenCalledOnce()
         expect(writeFile).toHaveBeenCalledWith('./package.json', {
             scripts: {
-                chromatic: `npx chromatic@latest`
+                chromatic: `chromatic`
             }
         }, { spaces: 2 })
     })
@@ -40,7 +40,7 @@ describe('addChromaticScriptToPackageJson', () => {
         expect(writeFile).toHaveBeenCalledOnce()
         expect(writeFile).toHaveBeenCalledWith('./package.json', {
             scripts: {
-                chromatic: `npx chromatic@latest`
+                chromatic: `chromatic`
             }
         }, { spaces: 2 })
     })
