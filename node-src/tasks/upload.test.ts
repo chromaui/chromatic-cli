@@ -479,8 +479,7 @@ describe('uploadStorybook', () => {
       files: [{ contentHash: undefined, contentLength: 1000, filePath: `1000.js` }], // 0-based index makes this file #1001
     });
 
-    // Empty files are not uploaded
-    expect(http.fetch).not.toHaveBeenCalledWith(
+    expect(http.fetch).toHaveBeenCalledWith(
       'https://s3.amazonaws.com/presigned?0.js',
       expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
       expect.objectContaining({ retries: 0 })
@@ -501,7 +500,7 @@ describe('uploadStorybook', () => {
       expect.objectContaining({ retries: 0 })
     );
     expect(ctx.uploadedBytes).toBe(500500);
-    expect(ctx.uploadedFiles).toBe(1000);
+    expect(ctx.uploadedFiles).toBe(1001);
   });
 
   describe('with file hashes', () => {
