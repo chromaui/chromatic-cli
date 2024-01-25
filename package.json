@@ -148,6 +148,7 @@
     "esm": "^3.2.25",
     "execa": "^7.2.0",
     "fake-tag": "^2.0.0",
+    "fast-glob": "^3.3.2",
     "filesize": "^10.1.0",
     "formdata-node": "^6.0.3",
     "fs-extra": "^10.0.0",

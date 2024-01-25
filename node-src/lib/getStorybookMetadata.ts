@@ -3,11 +3,13 @@ import { readJson } from 'fs-extra';
 import { readdir } from 'fs/promises';
 import meow from 'meow';
 import path, { join } from 'path';
+import { glob } from 'fast-glob';
 import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
 
 import { Context } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
+import { missingConfigValues } from '../ui/messages/warnings/missingConfigValues';
 import { viewLayers } from './viewLayers';
 import { timeout, raceFulfilled } from './promises';
 import { supportedAddons } from './supportedAddons';
@@ -208,12 +210,33 @@ export const getStorybookMetadata = async (ctx: Context) => {
 
   let mainConfig;
   let v7 = false;
+  const storybookDirectories = await glob('**/.storybook', { onlyDirectories: true });
   try {
     mainConfig = await r(path.resolve(configDir, 'main'));
+
+    if (storybookDirectories.length === 1) {
+      return;
+    } else {
+      const configDirectories = storybookDirectories.map((dir) => ({
+        storybookBaseDir: `./${dir}`.replace('/.storybook', ''),
+        storybookConfigDir: dir,
+      }));
+      ctx.log.error(missingConfigValues(configDirectories));
+    }
   } catch (storybookV6error) {
     try {
       mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
       v7 = true;
+
+      if (storybookDirectories.length === 1) {
+        return;
+      } else {
+        const configDirectories = storybookDirectories.map((dir) => ({
+          storybookBaseDir: `./${dir}`.replace('/.storybook', ''),
+          storybookConfigDir: dir,
+        }));
+        ctx.log.debug(missingConfigValues(configDirectories));
+      }
     } catch (storybookV7error) {
       mainConfig = null;
     }
