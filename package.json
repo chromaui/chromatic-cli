@@ -107,7 +107,9 @@
   "resolutions": {
     "any-observable": "^0.5.1"
   },
-  "dependencies": {},
+  "dependencies": {
+    "chromatic-playwright": "^0.4.0"
+  },
   "devDependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.0.0",
@@ -206,14 +208,14 @@
     "zod": "^3.22.2"
   },
   "peerDependencies": {
-    "chromatic-playwright": "^0.4.0 || ^1.0.0",
-    "chromatic-cypress": "^0.4.0 || ^1.0.0"
+    "chromatic-cypress": "^0.4.0 || ^1.0.0",
+    "chromatic-playwright": "^0.4.0 || ^1.0.0"
   },
   "peerDependenciesMeta": {
-    "chromatic-playwright": {
+    "chromatic-cypress": {
       "optional": true
     },
-    "chromatic-cypress": {
+    "chromatic-playwright": {
       "optional": true
     }
   },
