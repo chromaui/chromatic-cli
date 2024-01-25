@@ -1,3 +1,15 @@
+# v10.5.2 (Thu Jan 25 2024)
+
+#### 🐛 Bug Fix
+
+- Remove latest from the chromatic package in Init script [#902](https://github.com/chromaui/chromatic-cli/pull/902) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v10.5.1 (Thu Jan 25 2024)
 
 #### 🐛 Bug Fix
