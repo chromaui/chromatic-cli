@@ -38,7 +38,8 @@
       "types": "./isChromatic.d.ts",
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "main": "isChromatic.js",
   "module": "isChromatic.mjs",
