@@ -6,7 +6,7 @@ import { FileDesc, TargetInfo } from '../../../types';
 
 const encode = (path: string) => path.split('/').map(encodeURIComponent).join('/');
 
-export default function uploadFailed({ target }: { target: FileDesc & TargetInfo }, debug = false) {
+export function uploadFailed({ target }: { target: FileDesc & TargetInfo }, debug = false) {
   const diagnosis =
     encode(target.targetPath) !== target.targetPath
       ? 'It seems the file path may contain illegal characters.'

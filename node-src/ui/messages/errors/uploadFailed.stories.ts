@@ -1,4 +1,4 @@
-import uploadFailed from './uploadFailed';
+import { uploadFailed } from './uploadFailed';
 
 export default {
   title: 'CLI/Messages/Errors',
