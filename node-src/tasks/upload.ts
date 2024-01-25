@@ -6,7 +6,7 @@ import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
 import { matchesFile, rewriteErrorMessage, throttle } from '../lib/utils';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
-import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
+import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import {
   failed,
   initial,
