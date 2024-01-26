@@ -1,3 +1,15 @@
+# v10.6.0 (Fri Jan 26 2024)
+
+#### 🚀 Enhancement
+
+- CLI should throw error when using TurboSnap but missing a stats file. [#899](https://github.com/chromaui/chromatic-cli/pull/899) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v10.5.2 (Thu Jan 25 2024)
 
 #### 🐛 Bug Fix
