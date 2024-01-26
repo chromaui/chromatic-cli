@@ -1,3 +1,15 @@
+# v10.6.1 (Fri Jan 26 2024)
+
+#### 🐛 Bug Fix
+
+- Remove after-release script [#906](https://github.com/chromaui/chromatic-cli/pull/906) ([@skitterm](https://github.com/skitterm))
+
+#### Authors: 1
+
+- Steven Kitterman ([@skitterm](https://github.com/skitterm))
+
+---
+
 # v10.6.0 (Fri Jan 26 2024)
 
 #### 🚀 Enhancement
