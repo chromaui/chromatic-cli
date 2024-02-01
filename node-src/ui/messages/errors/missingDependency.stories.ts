@@ -5,4 +5,4 @@ export default {
 };
 
 export const MissingDependency = () =>
-  missingDependency({ dependencyName: 'chromatic-playwright', flag: 'playwright' });
+  missingDependency({ dependencyName: '@chromatic-com/playwright', flag: 'playwright' });
