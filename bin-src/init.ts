@@ -59,7 +59,7 @@ export const getStorybookPackages = (pkgJson: PackageJson) => {
 }
 
 export const installArchiveDependencies = async (packageJson: PackageJson, testFramework: TestFrameworkType) => {
-    const defaultInstallArgs = ['-D', 'chromatic',`chromatic-${testFramework}`]
+    const defaultInstallArgs = ['-D', 'chromatic',`@chromatic-com/${testFramework}`]
     const sbPackages = getStorybookPackages(packageJson)
     const installArgs = [...defaultInstallArgs, ...sbPackages]
     const installCommand = await getPackageManagerInstallCommand(installArgs)

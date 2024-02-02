@@ -206,14 +206,14 @@
     "zod": "^3.22.2"
   },
   "peerDependencies": {
-    "chromatic-cypress": "^0.4.0 || ^1.0.0",
-    "chromatic-playwright": "^0.4.0 || ^1.0.0"
+    "@chromatic-com/cypress": "^0.5.2 || ^1.0.0",
+    "@chromatic-com/playwright": "^0.5.2 || ^1.0.0"
   },
   "peerDependenciesMeta": {
-    "chromatic-cypress": {
+    "@chromatic-com/cypress": {
       "optional": true
     },
-    "chromatic-playwright": {
+    "@chromatic-com/playwright": {
       "optional": true
     }
   },
