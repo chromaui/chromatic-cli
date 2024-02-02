@@ -260,7 +260,12 @@ export type GitInfo = {
 };
 
 export async function getGitInfo(): Promise<GitInfo> {
-  const slug = await getSlug();
+  let slug: string;
+  try {
+    slug = await getSlug();
+  } catch {
+    slug = ''
+  }
   const branch = await getBranch();
   const commitInfo = await getCommit();
   const userEmail = await getUserEmail();

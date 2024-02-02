@@ -6,7 +6,7 @@ import fetchDefault from 'node-fetch';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runAll } from '.';
+import { runAll, getGitInfo } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import getEnv from './lib/getEnv';
@@ -291,7 +291,7 @@ vi.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
   getCommit: vi.fn(),
   getBranch: () => Promise.resolve('branch'),
-  getSlug: () => Promise.resolve('user/repo'),
+  getSlug:  vi.fn(),
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
@@ -305,6 +305,7 @@ vi.mock('./git/getParentCommits', () => ({
 }));
 
 const getCommit = vi.mocked(git.getCommit);
+const getSlug = vi.mocked(git.getSlug)
 
 vi.mock('./lib/emailHash');
 
@@ -346,6 +347,7 @@ beforeEach(() => {
     committerEmail: 'test@test.com',
     committerName: 'tester',
   });
+  getSlug.mockResolvedValue('user/repo')
 });
 afterEach(() => {
   process.env = processEnv;
@@ -792,3 +794,36 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
     ])
   );
 });
+
+describe('getGitInfo', () => {
+  it('should retreive git info', async () => {
+    const result = await getGitInfo()
+    expect(result).toMatchObject({
+      "branch": "branch",
+      "commit": "commit",
+      "committedAt": 1234,
+      "committerEmail": "test@test.com",
+      "committerName": "tester",
+      "slug": "user/repo",
+      "uncommittedHash": "abc123",
+      "userEmail": "test@test.com",
+      "userEmailHash": undefined,
+    })
+  })
+
+  it('should still return getInfo if no origin url', async () => {
+    getSlug.mockRejectedValue(new Error('no origin set'))
+    const result = await getGitInfo()
+    expect(result).toMatchObject({
+      "branch": "branch",
+      "commit": "commit",
+      "committedAt": 1234,
+      "committerEmail": "test@test.com",
+      "committerName": "tester",
+      "slug": "",
+      "uncommittedHash": "abc123",
+      "userEmail": "test@test.com",
+      "userEmailHash": undefined,
+    })
+  })
+})
