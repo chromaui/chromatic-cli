@@ -1,3 +1,15 @@
+# v10.7.0 (Fri Feb 02 2024)
+
+#### 🚀 Enhancement
+
+- Rename E2E peer dependencies [#909](https://github.com/chromaui/chromatic-cli/pull/909) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v10.6.1 (Fri Jan 26 2024)
 
 #### 🐛 Bug Fix
