@@ -1,3 +1,15 @@
+# v10.7.1 (Fri Feb 02 2024)
+
+#### 🐛 Bug Fix
+
+- Add Fallback getGitInfo if we cannot find the origin URL [#910](https://github.com/chromaui/chromatic-cli/pull/910) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v10.7.0 (Fri Feb 02 2024)
 
 #### 🚀 Enhancement
