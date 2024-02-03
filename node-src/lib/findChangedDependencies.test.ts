@@ -220,6 +220,26 @@ describe('findChangedDependencies', () => {
     );
   });
 
+  it('uses pnpm-lock.yaml if yarn.lock is missing', async () => {
+    findFiles.mockImplementation((file) => {
+      if (file.endsWith('yarn.lock'))
+        return Promise.resolve([file.replace('yarn.lock', 'pnpm-lock.yaml')]);
+      return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
+    });
+
+    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    buildDepTree.mockResolvedValue({ dependencies: {} });
+
+    await expect(findChangedDependencies(getContext(['A']))).resolves.toEqual([]);
+
+    expect(buildDepTree).toHaveBeenCalledWith(
+      '/root',
+      'A.subdir/package.json',
+      'A.subdir/pnpm-lock.yaml',
+      true
+    );
+  });
+
   it('uses package-lock.json if yarn.lock is missing', async () => {
     findFiles.mockImplementation((file) => {
       if (file.endsWith('yarn.lock'))

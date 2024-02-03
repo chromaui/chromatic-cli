@@ -14,8 +14,10 @@ type NormalizedName = string;
 const LOCKFILES = [
   /^package-lock\.json$/,
   /^yarn\.lock$/,
+  /^pnpm-lock\.yaml$/,
   /\/package-lock\.json$/,
   /\/yarn\.lock$/,
+  /\/pnpm-lock\.yaml$/,
 ];
 
 // Ignore these while tracing dependencies
