@@ -375,7 +375,13 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('does not bail on changed global file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'package.json', 'package-lock.json', 'yarn.lock'];
+    const changedFiles = [
+      'src/foo.stories.js',
+      'package.json',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+    ];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -444,7 +450,9 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const rawContext = getContext({ untraced: ['**/(package.json|package-lock.json|yarn.lock)'] });
+    const rawContext = getContext({
+      untraced: ['**/(package.json|package-lock.json|yarn.lock|pnpm-lock.yaml)'],
+    });
     const ctx = {
       ...rawContext,
       // signifying the package.json file had dependency changes
@@ -675,6 +683,7 @@ describe('getDependentStoryFiles', () => {
       'src/package.json',
       'src/package-lock.json',
       'src/yarn.lock',
+      'src/pnpm-lock.yaml',
     ];
     const modules = [
       {
@@ -699,7 +708,7 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({
-      untraced: ['**/(package**.json|yarn.lock)'],
+      untraced: ['**/(package**.json|yarn.lock|pnpm-lock.yaml)'],
     });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
