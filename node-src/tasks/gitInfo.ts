@@ -193,9 +193,13 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       // Track changed package manifest files along with the commit they were changed in.
+      const { untraced = [] } = ctx.options;
       ctx.git.packageMetadataChanges = changedFilesWithInfo.flatMap(
         ({ build, changedFiles, replacementBuild }) => {
-          const metadataFiles = changedFiles.filter(isPackageMetadataFile);
+          const metadataFiles = changedFiles
+            .filter((f) => !untraced.some((glob) => matchesFile(glob, f)))
+            .filter(isPackageMetadataFile);
+
           return metadataFiles.length
             ? [{ changedFiles: metadataFiles, commit: replacementBuild?.commit ?? build.commit }]
             : [];

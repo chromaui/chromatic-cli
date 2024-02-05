@@ -4,7 +4,7 @@ import slash from 'slash';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesFile, rewriteErrorMessage, throttle } from '../lib/utils';
+import { rewriteErrorMessage, throttle } from '../lib/utils';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
 import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import {
@@ -111,19 +111,12 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
   transitionTo(tracing)(ctx, task);
 
-  const { untraced = [] } = ctx.options;
   const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageMetadataChanges } = ctx.git;
-  const tracedMetadataChanges = packageMetadataChanges
-    ?.map(({ changedFiles, commit }) => ({
-      changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
-      commit,
-    }))
-    .filter(({ changedFiles }) => changedFiles.length > 0);
 
   try {
     let changedDependencyNames: void | string[] = [];
-    if (tracedMetadataChanges?.length > 0) {
+    if (packageMetadataChanges?.length > 0) {
       changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
         const { name, message, stack, code } = err;
         ctx.log.debug({ name, message, stack, code });
@@ -139,7 +132,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       } else {
         ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 
-        const changedPackageFiles = await findChangedPackageFiles(tracedMetadataChanges);
+        const changedPackageFiles = await findChangedPackageFiles(packageMetadataChanges);
         if (changedPackageFiles.length > 0) {
           ctx.turboSnap.bailReason = { changedPackageFiles };
           ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
