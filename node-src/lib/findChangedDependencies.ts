@@ -64,16 +64,17 @@ export const findChangedDependencies = async (ctx: Context) => {
   const filteredPathPairs = pathPairs
     .map(([manifestPath, lockfilePath]) => {
       const commits = packageMetadataChanges
-        .filter(
-          ({ changedFiles }) =>
-            changedFiles.includes(manifestPath) || changedFiles.includes(lockfilePath)
+        .filter(({ changedFiles }) =>
+          changedFiles.some((file) => file === lockfilePath || file === manifestPath)
         )
         .map(({ commit }) => commit);
 
       return [manifestPath, lockfilePath, commits] as const;
     })
-    .filter(([, , commits]) => commits.length > 0)
-    .filter(([manifestPath]) => !untraced.some((glob) => matchesFile(glob, manifestPath)));
+    .filter(
+      ([manifestPath, , commits]) =>
+        !untraced.some((glob) => matchesFile(glob, manifestPath)) && commits.length > 0
+    );
 
   ctx.log.debug(
     { filteredPathPairs },
