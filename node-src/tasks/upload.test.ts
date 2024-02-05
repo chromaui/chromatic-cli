@@ -170,6 +170,8 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+    expect(findChangedDependencies).not.toHaveBeenCalled();
+    expect(findChangedPackageFiles).not.toHaveBeenCalled();
   });
 
   it('bails on package.json changes if it fails to retrieve lockfile changes (fallback scenario)', async () => {

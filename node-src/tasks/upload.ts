@@ -114,36 +114,42 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageMetadataChanges } = ctx.git;
   try {
-    const changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
-      const { name, message, stack, code } = err;
-      ctx.log.debug({ name, message, stack, code });
-    });
-    if (changedDependencyNames) {
-      ctx.git.changedDependencyNames = changedDependencyNames;
-      if (!ctx.options.interactive) {
-        const list = changedDependencyNames.length
-          ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
-          : '';
-        ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
-      }
-    } else {
-      ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
+    let changedDependencyNames: void | string[] = [];
+    if (packageMetadataChanges?.length > 0) {
+      changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
+        const { name, message, stack, code } = err;
+        ctx.log.debug({ name, message, stack, code });
+      });
+      if (changedDependencyNames) {
+        ctx.git.changedDependencyNames = changedDependencyNames;
+        if (!ctx.options.interactive) {
+          const list = changedDependencyNames.length
+            ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
+            : '';
+          ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
+        }
+      } else {
+        ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 
-      const { untraced = [] } = ctx.options;
-      const tracedPackageManifestChanges = packageMetadataChanges
-        ?.map(({ changedFiles, commit }) => ({
-          changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
-          commit,
-        }))
-        .filter(({ changedFiles }) => changedFiles.length > 0);
+        const { untraced = [] } = ctx.options;
+        const tracedPackageManifestChanges = packageMetadataChanges
+          ?.map(({ changedFiles, commit }) => ({
+            changedFiles: changedFiles.filter(
+              (f) => !untraced.some((glob) => matchesFile(glob, f))
+            ),
+            commit,
+          }))
+          .filter(({ changedFiles }) => changedFiles.length > 0);
 
-      const changedPackageFiles = await findChangedPackageFiles(tracedPackageManifestChanges);
-      if (changedPackageFiles.length > 0) {
-        ctx.turboSnap.bailReason = { changedPackageFiles };
-        ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-        return;
+        const changedPackageFiles = await findChangedPackageFiles(tracedPackageManifestChanges);
+        if (changedPackageFiles.length > 0) {
+          ctx.turboSnap.bailReason = { changedPackageFiles };
+          ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
+          return;
+        }
       }
     }
+
     const stats = await readStatsFile(statsPath);
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,
