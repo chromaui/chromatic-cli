@@ -112,7 +112,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   transitionTo(tracing)(ctx, task);
 
   const { statsPath } = ctx.fileInfo;
-  const { changedFiles, packageManifestChanges } = ctx.git;
+  const { changedFiles, packageMetadataChanges } = ctx.git;
   try {
     const changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
       const { name, message, stack, code } = err;
@@ -130,7 +130,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 
       const { untraced = [] } = ctx.options;
-      const tracedPackageManifestChanges = packageManifestChanges
+      const tracedPackageManifestChanges = packageMetadataChanges
         ?.map(({ changedFiles, commit }) => ({
           changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
           commit,

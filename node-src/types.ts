@@ -210,7 +210,7 @@ export interface Context {
     changedDependencyNames?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: boolean | string) => boolean;
-    packageManifestChanges?: { changedFiles: string[]; commit: string }[];
+    packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
   };
   storybook: {
     version: string;
