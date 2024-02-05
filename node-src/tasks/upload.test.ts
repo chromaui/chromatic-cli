@@ -151,10 +151,8 @@ describe('traceChangedFiles', () => {
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
   });
 
-  it('ignores package.json changes if lockfile does not have changes', async () => {
+  it('does not run package dependency analysis if there are no metadata changes', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockResolvedValue([]);
-    findChangedPackageFiles.mockResolvedValue(['./package.json']);
     getDependentStoryFiles.mockResolvedValue(deps);
 
     const ctx = {
@@ -165,6 +163,28 @@ describe('traceChangedFiles', () => {
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx, {} as any);
+
+    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+    expect(findChangedDependencies).not.toHaveBeenCalled();
+    expect(findChangedPackageFiles).not.toHaveBeenCalled();
+  });
+
+  it('does not run package dependency analysis if there are no traced metadata changes', async () => {
+    const deps = { 123: ['./example.stories.js'] };
+    getDependentStoryFiles.mockResolvedValue(deps);
+
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      env,
+      log,
+      http,
+      options: { untraced: ['package.json'] },
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
     await traceChangedFiles(ctx, {} as any);
@@ -218,29 +238,6 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
     expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
-  });
-
-  it('ignores dependency changes in untraced package.json files (fallback scenario)', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
-    findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
-
-    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
-    const ctx = {
-      env,
-      log,
-      http,
-      options: { untraced: ['package.json'] },
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
-    expect(findChangedPackageFiles).toHaveBeenCalledWith([]);
   });
 });
 

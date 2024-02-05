@@ -111,11 +111,19 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
   transitionTo(tracing)(ctx, task);
 
+  const { untraced = [] } = ctx.options;
   const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageMetadataChanges } = ctx.git;
+  const tracedMetadataChanges = packageMetadataChanges
+    ?.map(({ changedFiles, commit }) => ({
+      changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
+      commit,
+    }))
+    .filter(({ changedFiles }) => changedFiles.length > 0);
+
   try {
     let changedDependencyNames: void | string[] = [];
-    if (packageMetadataChanges?.length > 0) {
+    if (tracedMetadataChanges?.length > 0) {
       changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
         const { name, message, stack, code } = err;
         ctx.log.debug({ name, message, stack, code });
@@ -131,17 +139,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       } else {
         ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 
-        const { untraced = [] } = ctx.options;
-        const tracedPackageManifestChanges = packageMetadataChanges
-          ?.map(({ changedFiles, commit }) => ({
-            changedFiles: changedFiles.filter(
-              (f) => !untraced.some((glob) => matchesFile(glob, f))
-            ),
-            commit,
-          }))
-          .filter(({ changedFiles }) => changedFiles.length > 0);
-
-        const changedPackageFiles = await findChangedPackageFiles(tracedPackageManifestChanges);
+        const changedPackageFiles = await findChangedPackageFiles(tracedMetadataChanges);
         if (changedPackageFiles.length > 0) {
           ctx.turboSnap.bailReason = { changedPackageFiles };
           ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
