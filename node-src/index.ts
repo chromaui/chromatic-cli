@@ -85,9 +85,7 @@ export async function run({
   flags?: Flags;
   options?: Partial<Options>;
 }): Promise<Output> {
-  const sessionId = uuid();
-  const env = getEnv();
-  const log = createLogger();
+  const { sessionId = uuid(), env = getEnv(), log = createLogger() } = extraOptions;
 
   const pkgInfo = await readPkgUp({ cwd: process.cwd() });
   if (!pkgInfo) {
@@ -286,3 +284,5 @@ export async function getGitInfo(): Promise<GitInfo> {
 }
 
 export { getConfiguration } from './lib/getConfiguration';
+
+export { Logger } from './lib/log';
