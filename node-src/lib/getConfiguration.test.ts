@@ -45,6 +45,7 @@ it('reads configuration successfully', async () => {
   );
 
   expect(await getConfiguration()).toEqual({
+    configFile: 'chromatic.config.json',
     projectId: 'project-id',
     projectToken: 'project-token',
 
