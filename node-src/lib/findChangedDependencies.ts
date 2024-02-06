@@ -69,7 +69,7 @@ export const findChangedDependencies = async (ctx: Context) => {
         )
         .map(({ commit }) => commit);
 
-      return [manifestPath, lockfilePath, commits] as const;
+      return [manifestPath, lockfilePath, [...new Set(commits)]] as const;
     })
     .filter(
       ([manifestPath, , commits]) =>
