@@ -22,7 +22,7 @@ it('reads configuration successfully', async () => {
       untraced: ['untraced'],
       externals: ['externals'],
       debug: true,
-      diagnosticFile: 'diagnostic-file',
+      diagnosticsFile: 'diagnostics-file',
       fileHashing: true,
       junitReport: 'junit-report',
       zip: true,
@@ -45,6 +45,7 @@ it('reads configuration successfully', async () => {
   );
 
   expect(await getConfiguration()).toEqual({
+    configFile: 'chromatic.config.json',
     projectId: 'project-id',
     projectToken: 'project-token',
 
@@ -54,7 +55,7 @@ it('reads configuration successfully', async () => {
     untraced: ['untraced'],
     externals: ['externals'],
     debug: true,
-    diagnosticFile: 'diagnostic-file',
+    diagnosticsFile: 'diagnostics-file',
     fileHashing: true,
     junitReport: 'junit-report',
     zip: true,
@@ -80,7 +81,7 @@ it('handles other side of union options', async () => {
   mockedReadFile.mockReturnValue(
     JSON.stringify({
       onlyChanged: true,
-      diagnosticFile: true,
+      diagnosticsFile: true,
       junitReport: true,
       autoAcceptChanges: true,
       exitZeroOnChanges: true,
@@ -92,8 +93,9 @@ it('handles other side of union options', async () => {
   );
 
   expect(await getConfiguration()).toEqual({
+    configFile: 'chromatic.config.json',
     onlyChanged: true,
-    diagnosticFile: true,
+    diagnosticsFile: true,
     junitReport: true,
     autoAcceptChanges: true,
     exitZeroOnChanges: true,
