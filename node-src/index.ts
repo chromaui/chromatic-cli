@@ -264,7 +264,7 @@ export type GitInfo = {
   uncommittedHash: string;
   userEmail: string;
   userEmailHash: string;
-  repositoryRoot: string;
+  repositoryRootDir: string;
 };
 
 export async function getGitInfo(): Promise<GitInfo> {
@@ -278,7 +278,7 @@ export async function getGitInfo(): Promise<GitInfo> {
   const commitInfo = await getCommit();
   const userEmail = await getUserEmail();
   const userEmailHash = emailHash(userEmail);
-  const repositoryRoot = await getRepositoryRoot();
+  const repositoryRootDir = await getRepositoryRoot();
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
@@ -291,7 +291,7 @@ export async function getGitInfo(): Promise<GitInfo> {
     uncommittedHash,
     userEmail,
     userEmailHash,
-    repositoryRoot,
+    repositoryRootDir,
   };
 }
 
