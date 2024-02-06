@@ -1,5 +1,6 @@
+import chalk from 'chalk';
 import debug from 'debug';
-import { createWriteStream, unlink } from 'fs';
+import { createWriteStream, rm } from 'fs';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
@@ -14,7 +15,7 @@ const handleRejection = (reason: string) => console.error('Unhandled promise rej
 process.on('unhandledRejection', handleRejection);
 
 // Omits any JSON metadata, returning only the message string
-const logInteractive = (args: any[]) =>
+const logInteractive = (args: any[]): string[] =>
   args.map((arg) => (arg && arg.message) || arg).filter((arg) => typeof arg === 'string');
 
 // Strips ANSI codes from messages and stringifies metadata to JSON
@@ -22,6 +23,13 @@ const logVerbose = (type: string, args: any[]) => {
   const stringify =
     type === 'error' ? (e: any) => JSON.stringify(errorSerializer(e)) : JSON.stringify;
   return args.map((arg) => (typeof arg === 'string' ? stripAnsi(arg) : stringify(arg)));
+};
+
+const withTime = (messages: string[], color = false) => {
+  if (messages.every((message) => /^\s*$/.test(message))) return messages;
+  let time = new Date().toISOString().slice(11, 23);
+  if (color) time = chalk.dim(time);
+  return [time + ' ', ...messages.map((msg) => msg.replace(/\n/g, `\n              `))];
 };
 
 type LogType = 'error' | 'warn' | 'info' | 'debug';
@@ -44,20 +52,24 @@ export interface Logger {
 const fileLogger = {
   queue: [] as string[],
   append(...messages: string[]) {
-    this.queue.push(...messages);
+    this.queue.push(...messages, '\n');
   },
   disable() {
     this.append = () => {};
     this.queue = [];
   },
   initialize(path: string, onError: LogFn) {
-    unlink(path, (err) => {
+    rm(path, { force: true }, (err) => {
       if (err) {
         this.disable();
         onError(err);
       } else {
         const stream = createWriteStream(path, { flags: 'a' });
-        this.append = (...messages: string[]) => stream?.write(messages.join(' ') + '\n');
+        this.append = (...messages: string[]) => {
+          stream?.write(
+            messages.reduce((acc, msg) => acc + msg + (msg === '\n' ? '' : ' '), '').trim() + '\n'
+          );
+        };
         this.append(...this.queue);
         this.queue = [];
       }
@@ -69,7 +81,8 @@ export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
 
-  let interactive = !process.argv.slice(2).includes('--no-interactive');
+  const args = process.argv.slice(2);
+  let interactive = !args.includes('--debug') && !args.includes('--no-interactive');
   let enqueue = false;
   const queue = [];
 
@@ -79,10 +92,10 @@ export const createLogger = () => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
       const logs = logVerbose(type, args);
-      fileLogger.append(...logs);
+      fileLogger.append(...withTime(logs));
       if (logFileOnly) return;
 
-      const messages = interactive ? logInteractive(args) : logs;
+      const messages = interactive ? logInteractive(args) : withTime(logs, true);
       if (!messages.length) return;
 
       // Queue up the logs or print them right away

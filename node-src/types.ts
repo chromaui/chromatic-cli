@@ -130,6 +130,15 @@ export interface Options extends Configuration {
 
   /** An AbortSignal that terminates the build if aborted */
   experimental_abortSignal?: AbortSignal;
+
+  /** Logger object */
+  log?: Logger;
+
+  /** Sessiond Id */
+  sessionId?: string;
+
+  /** Environment variables */
+  env?: Env;
 }
 
 export { Configuration };
