@@ -92,6 +92,7 @@ it('handles other side of union options', async () => {
   );
 
   expect(await getConfiguration()).toEqual({
+    configFile: 'chromatic.config.json',
     onlyChanged: true,
     diagnosticsFile: true,
     junitReport: true,
