@@ -1,3 +1,18 @@
+# v10.8.0 (Tue Feb 06 2024)
+
+#### 🚀 Enhancement
+
+- Expose `repositoryRootDir`, `configFile` and fix `diagnosticsFile` [#913](https://github.com/chromaui/chromatic-cli/pull/913) ([@ghengeveld](https://github.com/ghengeveld))
+- Support `env`, `sessionId` and `log` options via Node API [#897](https://github.com/chromaui/chromatic-cli/pull/897) ([@work933k](https://github.com/work933k))
+- Add timestamps to debug and file logging [#907](https://github.com/chromaui/chromatic-cli/pull/907) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- [@work933k](https://github.com/work933k)
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v10.7.1 (Fri Feb 02 2024)
 
 #### 🐛 Bug Fix
