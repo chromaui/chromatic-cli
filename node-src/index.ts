@@ -3,7 +3,14 @@ import Listr from 'listr';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
 
-import { getBranch, getCommit, getSlug, getUncommittedHash, getUserEmail } from './git/git';
+import {
+  getBranch,
+  getCommit,
+  getRepositoryRoot,
+  getSlug,
+  getUncommittedHash,
+  getUserEmail,
+} from './git/git';
 import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
 import LoggingRenderer from './lib/LoggingRenderer';
@@ -257,6 +264,7 @@ export type GitInfo = {
   uncommittedHash: string;
   userEmail: string;
   userEmailHash: string;
+  repositoryRoot: string;
 };
 
 export async function getGitInfo(): Promise<GitInfo> {
@@ -264,12 +272,13 @@ export async function getGitInfo(): Promise<GitInfo> {
   try {
     slug = await getSlug();
   } catch {
-    slug = ''
+    slug = '';
   }
   const branch = await getBranch();
   const commitInfo = await getCommit();
   const userEmail = await getUserEmail();
   const userEmailHash = emailHash(userEmail);
+  const repositoryRoot = await getRepositoryRoot();
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
@@ -282,6 +291,7 @@ export async function getGitInfo(): Promise<GitInfo> {
     uncommittedHash,
     userEmail,
     userEmailHash,
+    repositoryRoot,
   };
 }
 
