@@ -1,3 +1,16 @@
+# v10.9.0 (Wed Feb 07 2024)
+
+#### 🚀 Enhancement
+
+- Be smarter about comparing lock files [#912](https://github.com/chromaui/chromatic-cli/pull/912) ([@ghengeveld](https://github.com/ghengeveld) [@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v10.8.0 (Tue Feb 06 2024)
 
 #### 🚀 Enhancement
