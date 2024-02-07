@@ -232,7 +232,6 @@
     ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
-  "packageManager": "yarn@1.22.19+sha256.732620bac8b1690d507274f025f3c6cfdc3627a84d9642e38a07452cc00e0f2e",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
     "displayName": "Chromatic"
