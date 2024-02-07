@@ -113,6 +113,8 @@
     "@actions/github": "^5.0.0",
     "@antfu/ni": "^0.21.5",
     "@auto-it/exec": "^11.0.4",
+    "@chromatic-com/cypress": "^0.5.4",
+    "@chromatic-com/playwright": "^0.5.4",
     "@discoveryjs/json-ext": "^0.5.7",
     "@storybook/addon-essentials": "^6.5.6",
     "@storybook/builder-webpack5": "^6.5.6",
@@ -204,18 +206,6 @@
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15",
     "zod": "^3.22.2"
-  },
-  "peerDependencies": {
-    "@chromatic-com/cypress": "^0.5.2 || ^1.0.0",
-    "@chromatic-com/playwright": "^0.5.2 || ^1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@chromatic-com/cypress": {
-      "optional": true
-    },
-    "@chromatic-com/playwright": {
-      "optional": true
-    }
   },
   "publishConfig": {
     "access": "public",
