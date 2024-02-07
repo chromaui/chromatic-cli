@@ -53,7 +53,13 @@ export const matchesFile = (glob: string, filepath: string) => {
 };
 
 export const isPackageManifestFile = (filePath: string) =>
-  [/^package\.json$/, /\/package\.json$/].some((re) => re.test(filePath));
+  [/(^|\/)package\.json$/].some((re) => re.test(filePath));
+
+export const isPackageLockFile = (filePath: string) =>
+  [/(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/].some((re) => re.test(filePath));
+
+export const isPackageMetadataFile = (filePath: string) =>
+  isPackageManifestFile(filePath) || isPackageLockFile(filePath);
 
 export const redact = <T>(value: T, ...fields: string[]): T => {
   if (value === null || typeof value !== 'object') return value;

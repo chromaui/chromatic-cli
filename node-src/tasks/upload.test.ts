@@ -151,10 +151,8 @@ describe('traceChangedFiles', () => {
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
   });
 
-  it('ignores package.json changes if lockfile does not have changes', async () => {
+  it('does not run package dependency analysis if there are no metadata changes', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockResolvedValue([]);
-    findChangedPackageFiles.mockResolvedValue(['./package.json']);
     getDependentStoryFiles.mockResolvedValue(deps);
 
     const ctx = {
@@ -170,13 +168,15 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+    expect(findChangedDependencies).not.toHaveBeenCalled();
+    expect(findChangedPackageFiles).not.toHaveBeenCalled();
   });
 
   it('bails on package.json changes if it fails to retrieve lockfile changes (fallback scenario)', async () => {
     findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
     findChangedPackageFiles.mockResolvedValue(['./package.json']);
 
-    const packageManifestChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
       env,
       log,
@@ -184,13 +184,13 @@ describe('traceChangedFiles', () => {
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageManifestChanges },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageManifestChanges);
+    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
@@ -200,7 +200,7 @@ describe('traceChangedFiles', () => {
     findChangedPackageFiles.mockResolvedValue([]); // no dependency changes
     getDependentStoryFiles.mockResolvedValue(deps);
 
-    const packageManifestChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
       env,
       log,
@@ -208,37 +208,14 @@ describe('traceChangedFiles', () => {
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageManifestChanges },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageManifestChanges);
-  });
-
-  it('ignores dependency changes in untraced package.json files (fallback scenario)', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
-    findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
-
-    const packageManifestChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
-    const ctx = {
-      env,
-      log,
-      http,
-      options: { untraced: ['package.json'] },
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageManifestChanges },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
-    expect(findChangedPackageFiles).toHaveBeenCalledWith([]);
+    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
   });
 });
 

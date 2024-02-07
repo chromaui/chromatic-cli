@@ -13,17 +13,17 @@ const YARN_LOCK = 'yarn.lock';
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
 export const findChangedDependencies = async (ctx: Context) => {
-  const { baselineCommits } = ctx.git;
+  const { packageMetadataChanges } = ctx.git;
   const { untraced = [] } = ctx.options;
 
-  if (!baselineCommits.length) {
-    ctx.log.debug('No baseline commits found');
+  if (!packageMetadataChanges.length) {
+    ctx.log.debug('No package metadata changed found');
     return [];
   }
 
   ctx.log.debug(
-    { baselineCommits },
-    `Finding changed dependencies for ${baselineCommits.length} baselines`
+    { packageMetadataChanges },
+    `Finding changed dependencies for ${packageMetadataChanges.length} baselines`
   );
 
   const rootPath = await getRepositoryRoot();
@@ -40,7 +40,7 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   // Handle monorepos with (multiple) nested package.json files.
   const nestedManifestPaths = await findFiles(`**/${PACKAGE_JSON}`);
-  const pathPairs = await Promise.all(
+  const metadataPathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
       const [lockfilePath] = await findFiles(
@@ -53,28 +53,47 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   if (rootManifestPath && rootLockfilePath) {
-    pathPairs.unshift([rootManifestPath, rootLockfilePath]);
-  } else if (!pathPairs.length) {
+    metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
+  } else if (!metadataPathPairs.length) {
     throw new Error(`Could not find any pairs of ${PACKAGE_JSON} + ${PACKAGE_LOCK} / ${YARN_LOCK}`);
   }
 
-  ctx.log.debug({ pathPairs }, `Found ${pathPairs.length} manifest/lockfile pairs to check`);
+  ctx.log.debug(
+    { pathPairs: metadataPathPairs },
+    `Found ${metadataPathPairs.length} manifest/lockfile pairs to check`
+  );
 
-  const tracedPairs = pathPairs.filter(([manifestPath, lockfilePath]) => {
-    if (untraced.some((glob) => matchesFile(glob, manifestPath))) return false;
-    if (untraced.some((glob) => matchesFile(glob, lockfilePath))) return false;
-    return true;
-  });
-  const untracedCount = pathPairs.length - tracedPairs.length;
-  if (untracedCount) {
-    ctx.log.debug(`Skipping ${untracedCount} manifest/lockfile pairs due to --untraced`);
+  // Now filter out any pairs that don't have git changes, or for which the manifest is untraced
+  const filteredPathPairs = metadataPathPairs
+    .map(([manifestPath, lockfilePath]) => {
+      const commits = packageMetadataChanges
+        .filter(({ changedFiles }) =>
+          changedFiles.some((file) => file === lockfilePath || file === manifestPath)
+        )
+        .map(({ commit }) => commit);
+
+      return [manifestPath, lockfilePath, [...new Set(commits)]] as const;
+    })
+    .filter(
+      ([manifestPath, , commits]) =>
+        !untraced.some((glob) => matchesFile(glob, manifestPath)) && commits.length > 0
+    );
+
+  ctx.log.debug(
+    { filteredPathPairs },
+    `Found ${filteredPathPairs.length} manifest/lockfile pairs to diff`
+  );
+
+  // Short circuit
+  if (filteredPathPairs.length === 0) {
+    return [];
   }
 
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
 
   await Promise.all(
-    tracedPairs.map(async ([manifestPath, lockfilePath]) => {
+    filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
       const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
       ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
 
@@ -82,7 +101,7 @@ export const findChangedDependencies = async (ctx: Context) => {
       // A change means either the version number is different or the dependency was added/removed.
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
       await Promise.all(
-        baselineCommits.map(async (ref) => {
+        commits.map(async (ref) => {
           const baselineChanges = await compareBaseline(ctx, headDependencies, {
             ref,
             rootPath,

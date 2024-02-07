@@ -1,4 +1,5 @@
 import { execGitCommand } from '../git/git';
+import { isPackageMetadataFile } from './utils';
 
 const isEqual = (left: unknown = {}, right: unknown = {}) => {
   if (typeof left !== typeof right) {
@@ -77,12 +78,14 @@ const getManifestFilesWithChangedDependencies = async (manifestFiles: string[], 
 
 // Yields a list of package.json files with dependency-related changes compared to the baseline.
 export const findChangedPackageFiles = async (
-  packageManifestChanges: { changedFiles: string[]; commit: string }[]
+  packageMetadataChanges: { changedFiles: string[]; commit: string }[]
 ) => {
   const changedManifestFiles = await Promise.all(
-    packageManifestChanges.map(({ changedFiles, commit }) =>
-      getManifestFilesWithChangedDependencies(changedFiles, commit)
-    )
+    packageMetadataChanges.map(({ changedFiles, commit }) => {
+      const changedManifestFiles = changedFiles.filter(isPackageMetadataFile);
+      if (!changedManifestFiles) return [];
+      return getManifestFilesWithChangedDependencies(changedManifestFiles, commit);
+    })
   );
   // Remove duplicate entries (in case multiple ancestor builds changed the same package.json)
   return Array.from(new Set(changedManifestFiles.flat()));

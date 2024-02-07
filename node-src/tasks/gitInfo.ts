@@ -6,7 +6,7 @@ import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { isPackageManifestFile, matchesFile } from '../lib/utils';
+import { isPackageMetadataFile, matchesFile } from '../lib/utils';
 import {
   initial,
   pending,
@@ -193,11 +193,15 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       // Track changed package manifest files along with the commit they were changed in.
-      ctx.git.packageManifestChanges = changedFilesWithInfo.flatMap(
+      const { untraced = [] } = ctx.options;
+      ctx.git.packageMetadataChanges = changedFilesWithInfo.flatMap(
         ({ build, changedFiles, replacementBuild }) => {
-          const manifestFiles = changedFiles.filter(isPackageManifestFile);
-          return manifestFiles.length
-            ? [{ changedFiles: manifestFiles, commit: replacementBuild?.commit ?? build.commit }]
+          const metadataFiles = changedFiles
+            .filter((f) => !untraced.some((glob) => matchesFile(glob, f)))
+            .filter(isPackageMetadataFile);
+
+          return metadataFiles.length
+            ? [{ changedFiles: metadataFiles, commit: replacementBuild?.commit ?? build.commit }]
             : [];
         }
       );
