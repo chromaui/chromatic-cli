@@ -12,6 +12,7 @@ const configurationSchema = z
     onlyChanged: z.union([z.string(), z.boolean()]),
     onlyStoryFiles: z.array(z.string()),
     onlyStoryNames: z.array(z.string()),
+    traceChanged: z.union([z.string(), z.boolean()]),
     untraced: z.array(z.string()),
     externals: z.array(z.string()),
     debug: z.boolean(),
