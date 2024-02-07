@@ -40,7 +40,7 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   // Handle monorepos with (multiple) nested package.json files.
   const nestedManifestPaths = await findFiles(`**/${PACKAGE_JSON}`);
-  const pathPairs = await Promise.all(
+  const metadataPathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
       const [lockfilePath] = await findFiles(
@@ -53,15 +53,18 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   if (rootManifestPath && rootLockfilePath) {
-    pathPairs.unshift([rootManifestPath, rootLockfilePath]);
-  } else if (!pathPairs.length) {
+    metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
+  } else if (!metadataPathPairs.length) {
     throw new Error(`Could not find any pairs of ${PACKAGE_JSON} + ${PACKAGE_LOCK} / ${YARN_LOCK}`);
   }
 
-  ctx.log.debug({ pathPairs }, `Found ${pathPairs.length} manifest/lockfile pairs to check`);
+  ctx.log.debug(
+    { pathPairs: metadataPathPairs },
+    `Found ${metadataPathPairs.length} manifest/lockfile pairs to check`
+  );
 
   // Now filter out any pairs that don't have git changes, or for which the manifest is untraced
-  const filteredPathPairs = pathPairs
+  const filteredPathPairs = metadataPathPairs
     .map(([manifestPath, lockfilePath]) => {
       const commits = packageMetadataChanges
         .filter(({ changedFiles }) =>
