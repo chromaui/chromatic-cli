@@ -10,10 +10,10 @@ import { failed } from '../ui/tasks/build';
 // We should probably PR this up to ni
 const parseNexec = <Runner>((agent, args) => {
   const map = {
-    npm: 'npm exec ${0}',
-    yarn: 'yarn run ${0}',
-    'yarn@berry': 'yarn run ${0}',
-    pnpm: 'pnpm exec ${0}',
+    npm: 'npm exec {0}',
+    yarn: 'yarn run {0}',
+    'yarn@berry': 'yarn run {0}',
+    pnpm: 'pnpm exec {0}',
   };
 
   const quote = (arg: string) =>
