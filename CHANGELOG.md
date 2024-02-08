@@ -1,3 +1,15 @@
+# v10.9.2 (Thu Feb 08 2024)
+
+#### 🐛 Bug Fix
+
+- Directly execute build-archive-storybook if we can't resolve it [#917](https://github.com/chromaui/chromatic-cli/pull/917) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v10.9.1 (Thu Feb 08 2024)
 
 #### 🐛 Bug Fix
