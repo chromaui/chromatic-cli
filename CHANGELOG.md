@@ -1,3 +1,15 @@
+# v10.9.1 (Thu Feb 08 2024)
+
+#### 🐛 Bug Fix
+
+- Add missing `fileHashing` option to GitHub Action [#918](https://github.com/chromaui/chromatic-cli/pull/918) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v10.9.0 (Wed Feb 07 2024)
 
 #### 🚀 Enhancement
