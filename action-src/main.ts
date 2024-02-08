@@ -135,6 +135,9 @@ async function run() {
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
     const output = await runNode({
+      options: {
+        inAction: true,
+      },
       flags: {
         allowConsoleErrors: maybe(allowConsoleErrors, false),
         autoAcceptChanges: maybe(autoAcceptChanges),
