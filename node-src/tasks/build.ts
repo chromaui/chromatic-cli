@@ -11,7 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { getE2eBinPath } from '../lib/getE2eBinPath';
+import { getE2eBuildCommand } from '../lib/getE2eBuildCommand';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -43,8 +43,11 @@ export const setBuildCommand = async (ctx: Context) => {
   ].filter(Boolean);
 
   if (ctx.options.playwright || ctx.options.cypress) {
-    const binPath = await getE2eBinPath(ctx, ctx.options.playwright ? 'playwright' : 'cypress');
-    ctx.buildCommand = ['node', binPath, ...buildCommandOptions].join(' ');
+    ctx.buildCommand = await getE2eBuildCommand(
+      ctx,
+      ctx.options.playwright ? 'playwright' : 'cypress',
+      buildCommandOptions
+    );
   } else {
     ctx.buildCommand = await getPackageManagerRunCommand([
       ctx.options.buildScriptName,

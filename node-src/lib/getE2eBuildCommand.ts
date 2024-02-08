@@ -27,14 +27,28 @@ const parseNexec = <Runner>((agent, args) => {
   return command.replace('{0}', args.map(quote).join(' ')).trim();
 });
 
-export async function getE2eBinPath(ctx: Context, flag: 'playwright' | 'cypress') {
+export async function getE2eBuildCommand(
+  ctx: Context,
+  flag: 'playwright' | 'cypress',
+  buildCommandOptions: string[]
+) {
   const dependencyName = `@chromatic-com/${flag}`;
   try {
-    return require.resolve(`${dependencyName}/bin/build-archive-storybook`);
+    return [
+      'node',
+      require.resolve(`${dependencyName}/bin/build-archive-storybook`),
+      ...buildCommandOptions,
+    ].join(' ');
   } catch (err) {
     if (err.code === 'MODULE_NOT_FOUND') {
       try {
-        return await getCliCommand(parseNexec, ['build-archive-storybook'], { programmatic: true });
+        return await getCliCommand(
+          parseNexec,
+          ['build-archive-storybook', ...buildCommandOptions],
+          {
+            programmatic: true,
+          }
+        );
       } catch (err) {
         ctx.log.error(missingDependency({ dependencyName, flag }));
         setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
