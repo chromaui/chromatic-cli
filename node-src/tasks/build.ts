@@ -94,6 +94,7 @@ export const buildStorybook = async (ctx: Context) => {
       const flag = ctx.options.playwright ? 'playwright' : 'cypress';
       const dependencyName = `@chromatic-com/${flag}`;
       ctx.log.error(missingDependency({ dependencyName, flag, workingDir: process.cwd() }));
+      ctx.log.debug(e);
       setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
       throw new Error(failed(ctx).output);
     }
