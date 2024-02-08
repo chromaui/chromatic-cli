@@ -11,7 +11,8 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { getE2eBuildCommand } from '../lib/getE2eBuildCommand';
+import { buildBinName as e2EbuildBinName, getE2eBuildCommand } from '../lib/getE2eBuildCommand';
+import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -75,7 +76,6 @@ export const buildStorybook = async (ctx: Context) => {
     ctx.log.debug('Running build command:', ctx.buildCommand);
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
 
-    console.log(ctx.buildCommand);
     const subprocess = execaCommand(ctx.buildCommand, {
       stdio: [null, logFile, logFile],
       signal,
@@ -83,6 +83,21 @@ export const buildStorybook = async (ctx: Context) => {
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
+    // If we tried to run the E2E package's bin directly (due to being in the action)
+    // and it failed, that means we couldn't find it. This probably means they haven't
+    // installed the right dependency or run from the right directory
+    if (
+      ctx.options.inAction &&
+      (ctx.options.playwright || ctx.options.cypress) &&
+      e.message.match(e2EbuildBinName)
+    ) {
+      const flag = ctx.options.playwright ? 'playwright' : 'cypress';
+      const dependencyName = `@chromatic-com/${flag}`;
+      ctx.log.error(missingDependency({ dependencyName, flag, workingDir: process.cwd() }));
+      setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
+      throw new Error(failed(ctx).output);
+    }
+
     signal?.throwIfAborted();
 
     const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
