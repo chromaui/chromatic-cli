@@ -47,6 +47,9 @@ inputs:
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'
     required: false
+  fileHashing:
+    description: 'Whether to apply file hashing to skip uploading unchanged files (default: true)'
+    required: false
   forceRebuild:
     description: 'Do not skip build when a rebuild is detected'
     required: false
