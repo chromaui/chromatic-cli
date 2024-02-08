@@ -43,7 +43,7 @@ export const setBuildCommand = async (ctx: Context) => {
   ].filter(Boolean);
 
   if (ctx.options.playwright || ctx.options.cypress) {
-    const binPath = getE2eBinPath(ctx, ctx.options.playwright ? 'playwright' : 'cypress');
+    const binPath = await getE2eBinPath(ctx, ctx.options.playwright ? 'playwright' : 'cypress');
     ctx.buildCommand = ['node', binPath, ...buildCommandOptions].join(' ');
   } else {
     ctx.buildCommand = await getPackageManagerRunCommand([
