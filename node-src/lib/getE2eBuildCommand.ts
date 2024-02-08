@@ -32,6 +32,8 @@ export async function getE2eBuildCommand(
   flag: 'playwright' | 'cypress',
   buildCommandOptions: string[]
 ) {
+  console.log('here', ctx.options.inAction);
+
   // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec
   // the binary directly.
   if (ctx.options.inAction) {

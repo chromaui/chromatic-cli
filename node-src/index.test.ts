@@ -38,8 +38,11 @@ beforeEach(() => {
 vi.mock('dns');
 vi.mock('execa');
 
-vi.mock('./lib/getE2eBinPath', () => ({
-  getE2eBinPath: () => 'path/to/bin',
+// NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
+// vitest doesn't allow you to do that.
+const mockedBuildCommand = 'mocked build command';
+vi.mock('./lib/getE2eBuildCommand', () => ({
+  getE2eBuildCommand: () => mockedBuildCommand,
 }));
 
 const execaCommand = vi.mocked(execaDefault);
@@ -291,7 +294,7 @@ vi.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
   getCommit: vi.fn(),
   getBranch: () => Promise.resolve('branch'),
-  getSlug:  vi.fn(),
+  getSlug: vi.fn(),
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
@@ -305,7 +308,7 @@ vi.mock('./git/getParentCommits', () => ({
 }));
 
 const getCommit = vi.mocked(git.getCommit);
-const getSlug = vi.mocked(git.getSlug)
+const getSlug = vi.mocked(git.getSlug);
 
 vi.mock('./lib/emailHash');
 
@@ -347,7 +350,7 @@ beforeEach(() => {
     committerEmail: 'test@test.com',
     committerName: 'tester',
   });
-  getSlug.mockResolvedValue('user/repo')
+  getSlug.mockResolvedValue('user/repo');
 });
 afterEach(() => {
   process.env = processEnv;
@@ -547,20 +550,14 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
 it('builds with playwright with --playwright', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--playwright']);
   await runAll(ctx);
-  expect(execaCommand).toHaveBeenCalledWith(
-    expect.stringMatching(/path\/to\/bin/),
-    expect.objectContaining({})
-  );
+  expect(execaCommand).toHaveBeenCalledWith(mockedBuildCommand, expect.objectContaining({}));
   expect(ctx.exitCode).toBe(1);
 });
 
 it('builds with cypress with --cypress', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--cypress']);
   await runAll(ctx);
-  expect(execaCommand).toHaveBeenCalledWith(
-    expect.stringMatching(/path\/to\/bin/),
-    expect.objectContaining({})
-  );
+  expect(execaCommand).toHaveBeenCalledWith(mockedBuildCommand, expect.objectContaining({}));
   expect(ctx.exitCode).toBe(1);
 });
 
@@ -797,33 +794,33 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
 
 describe('getGitInfo', () => {
   it('should retreive git info', async () => {
-    const result = await getGitInfo()
+    const result = await getGitInfo();
     expect(result).toMatchObject({
-      "branch": "branch",
-      "commit": "commit",
-      "committedAt": 1234,
-      "committerEmail": "test@test.com",
-      "committerName": "tester",
-      "slug": "user/repo",
-      "uncommittedHash": "abc123",
-      "userEmail": "test@test.com",
-      "userEmailHash": undefined,
-    })
-  })
+      branch: 'branch',
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+      slug: 'user/repo',
+      uncommittedHash: 'abc123',
+      userEmail: 'test@test.com',
+      userEmailHash: undefined,
+    });
+  });
 
   it('should still return getInfo if no origin url', async () => {
-    getSlug.mockRejectedValue(new Error('no origin set'))
-    const result = await getGitInfo()
+    getSlug.mockRejectedValue(new Error('no origin set'));
+    const result = await getGitInfo();
     expect(result).toMatchObject({
-      "branch": "branch",
-      "commit": "commit",
-      "committedAt": 1234,
-      "committerEmail": "test@test.com",
-      "committerName": "tester",
-      "slug": "",
-      "uncommittedHash": "abc123",
-      "userEmail": "test@test.com",
-      "userEmailHash": undefined,
-    })
-  })
-})
+      branch: 'branch',
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+      slug: '',
+      uncommittedHash: 'abc123',
+      userEmail: 'test@test.com',
+      userEmailHash: undefined,
+    });
+  });
+});
