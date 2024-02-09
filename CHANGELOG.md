@@ -1,3 +1,15 @@
+# v10.9.3 (Fri Feb 09 2024)
+
+#### 🐛 Bug Fix
+
+- clean up debug log as it's too much noise [#919](https://github.com/chromaui/chromatic-cli/pull/919) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v10.9.2 (Thu Feb 08 2024)
 
 #### 🐛 Bug Fix
