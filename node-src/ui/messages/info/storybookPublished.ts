@@ -10,11 +10,11 @@ export default ({ build, storybookUrl }: Pick<Context, 'build' | 'storybookUrl'>
   // `ctx.build` is initialized and overwritten in many ways, which means that
   // this can be any kind of build without component and stories information,
   // like PASSED builds, for example
-  const buildStats = build ? stats({ build }) : null;
-  if (buildStats?.components && buildStats?.stories) {
+  if (build?.componentCount && build?.specCount) {
+    const { components, stories } = stats({ build });
     return dedent(chalk`
       ${success} {bold Storybook published}
-      We found ${buildStats.components} with ${buildStats.stories}.
+      We found ${components} with ${stories}.
       ${info} View your Storybook at ${link(storybookUrl)}
     `);
   }
