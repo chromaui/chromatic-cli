@@ -7,11 +7,14 @@ import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 
 export default ({ build, storybookUrl }: Pick<Context, 'build' | 'storybookUrl'>) => {
-  if (build) {
-    const { components, stories } = stats({ build });
+  // `ctx.build` is initialized and overwritten in many ways, which means that
+  // this can be any kind of build without component and stories information,
+  // like PASSED builds, for example
+  const buildStats = build ? stats({ build }) : null;
+  if (buildStats?.components && buildStats?.stories) {
     return dedent(chalk`
       ${success} {bold Storybook published}
-      We found ${components} with ${stories}.
+      We found ${buildStats.components} with ${buildStats.stories}.
       ${info} View your Storybook at ${link(storybookUrl)}
     `);
   }
