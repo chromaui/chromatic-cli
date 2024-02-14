@@ -23,3 +23,18 @@ export const StorybookPrepared = () =>
     },
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   } as any);
+
+  export const StorybookPreparedWithIncompleteBuild = () =>
+  storybookPublished({
+    build: {
+      actualCaptureCount: undefined,
+      actualTestCount: undefined,
+      testCount: undefined,
+      changeCount: undefined,
+      errorCount: undefined,
+      componentCount: undefined,
+      specCount: undefined,
+      storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+    },
+    storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+  } as any);
