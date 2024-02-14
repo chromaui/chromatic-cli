@@ -1,3 +1,15 @@
+# v10.9.5 (Wed Feb 14 2024)
+
+#### 🐛 Bug Fix
+
+- Fix Storybook published messaging [#920](https://github.com/chromaui/chromatic-cli/pull/920) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v10.9.4 (Mon Feb 12 2024)
 
 #### 🐛 Bug Fix
