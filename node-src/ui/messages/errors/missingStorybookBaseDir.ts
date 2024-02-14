@@ -5,6 +5,6 @@ import { error } from '../../components/icons';
 
 export default () =>
   dedent(chalk`
-    ${error} Invalid Storybook base directory ({bold --storybook-base-dir})
+    ${error} Missing Storybook base directory ({bold --storybook-base-dir})
     The value should be the relative path from repository root to Storybook project root.
   `);
