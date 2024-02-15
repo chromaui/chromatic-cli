@@ -2,6 +2,7 @@
 
 import cpy from 'cpy';
 import { $ } from 'execa';
+import { readFileSync } from 'fs';
 import tmp from 'tmp-promise';
 
 const copy = (globs, ...args) => {
@@ -65,7 +66,7 @@ const publishAction = async ({ major, version, repo }) => {
     return;
   }
 
-  const { default: pkg } = await import('../package.json', { assert: { type: 'json' } });
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
   const [, major, minor, patch, tag] = pkg.version.match(/(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
   if (!major || !minor || !patch) {
