@@ -3,21 +3,66 @@ import checkStorybookBaseDir from './checkStorybookBaseDir';
 import path from 'path';
 
 describe('checkStorybookBaseDir', () => {
-  it('should return if the file in the first preview-status module exists at the path prepended by the storybookBaseDir', () => {
-    const storybookBaseDir = path.join(__dirname, '../__mocks__');
+  it('should return if a js module in stats exists at the path prepended by the storybookBaseDir', () => {
+    const storybookBaseDir = path.join(__dirname, '../../');
     const stats = {
-      modules: [{ name: './index.html' }],
+      modules: [
+        { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
+        { name: './README.md' },
+        { name: './test-stories/A.js' },
+      ],
     };
 
-    const result = checkStorybookBaseDir(storybookBaseDir, stats);
-
-    expect(result).toBe(true);
+    expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).not.toThrow();
   });
 
-  it('should throw an error if the file in the first preview-stats module does not exist at the path prepended by the storybookBaseDir', () => {
+  it('should return if a jsx module in stats exists at the path prepended by the storybookBaseDir', () => {
+    const storybookBaseDir = path.join(__dirname, '../__mocks__/storybookBaseDir');
+    const stats = {
+      modules: [
+        { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
+        { name: './index.html' },
+        { name: './subdir/test.jsx' },
+      ],
+    };
+
+    expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).not.toThrow();
+  });
+
+  it('should return if a ts module in stats exists at the path prepended by the storybookBaseDir', () => {
+    const storybookBaseDir = path.join(__dirname, '../__mocks__/storybookBaseDir');
+    const stats = {
+      modules: [
+        { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
+        { name: './index.html' },
+        { name: './subdir/test.ts' },
+      ],
+    };
+
+    expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).not.toThrow();
+  });
+
+  it('should return if a tsx module in stats exists at the path prepended by the storybookBaseDir', () => {
+    const storybookBaseDir = path.join(__dirname, '../__mocks__/storybookBaseDir');
+    const stats = {
+      modules: [
+        { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
+        { name: './index.html' },
+        { name: './test.tsx' },
+      ],
+    };
+
+    expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).not.toThrow();
+  });
+
+  it('should throw an error if none of the modules in stats exist at the path prepended by the storybookBaseDir', () => {
     const storybookBaseDir = path.join(__dirname, '../__mocks__/wrong');
     const stats = {
-      modules: [{ name: './index.html' }],
+      modules: [
+        { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
+        { name: './index.html' },
+        { name: './subdir/test.jsx' },
+      ],
     };
 
     expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).toThrow();
