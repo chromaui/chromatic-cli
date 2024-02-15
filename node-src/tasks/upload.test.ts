@@ -194,6 +194,27 @@ describe('traceChangedFiles', () => {
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
+  it('throws an error if storybookBaseDir is incorrect', async () => {
+    const deps = { 123: ['./example.stories.js'] };
+    findChangedDependencies.mockResolvedValue([]);
+    findChangedPackageFiles.mockResolvedValue([]);
+    getDependentStoryFiles.mockResolvedValue(deps);
+
+    const ctx = {
+      env,
+      log,
+      http,
+      options: { storybookBaseDir: '/wrong' },
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
+    } as any;
+    await expect(traceChangedFiles(ctx, {} as any)).rejects.toThrow(
+      'The storybookBaseDir configuration is incorrect'
+    );
+  });
+
   it('continues story file tracing if no dependencies are changed in package.json (fallback scenario)', async () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
