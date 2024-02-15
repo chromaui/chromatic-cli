@@ -17,6 +17,7 @@ it('reads configuration successfully', async () => {
       projectToken: 'project-token',
 
       onlyChanged: 'only-changed',
+      traceChanged: 'expanded',
       onlyStoryFiles: ['only-story-files'],
       onlyStoryNames: ['only-story-names'],
       untraced: ['untraced'],
@@ -50,6 +51,7 @@ it('reads configuration successfully', async () => {
     projectToken: 'project-token',
 
     onlyChanged: 'only-changed',
+    traceChanged: 'expanded',
     onlyStoryFiles: ['only-story-files'],
     onlyStoryNames: ['only-story-names'],
     untraced: ['untraced'],
@@ -81,6 +83,7 @@ it('handles other side of union options', async () => {
   mockedReadFile.mockReturnValue(
     JSON.stringify({
       onlyChanged: true,
+      traceChanged: true,
       diagnosticsFile: true,
       junitReport: true,
       autoAcceptChanges: true,
@@ -95,6 +98,7 @@ it('handles other side of union options', async () => {
   expect(await getConfiguration()).toEqual({
     configFile: 'chromatic.config.json',
     onlyChanged: true,
+    traceChanged: true,
     diagnosticsFile: true,
     junitReport: true,
     autoAcceptChanges: true,

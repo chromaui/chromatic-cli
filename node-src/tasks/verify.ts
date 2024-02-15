@@ -75,8 +75,6 @@ export const publishBuild = async (ctx: Context) => {
     setExitCode(ctx, exitCodes.BUILD_FAILED, false);
     throw new Error(publishFailed().output);
   }
-
-  ctx.log.info(storybookPublished(ctx));
 };
 
 const StartedBuildQuery = `
@@ -244,12 +242,13 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     }
   }
 
+  ctx.log.info(storybookPublished(ctx));
+
   transitionTo(success, true)(ctx, task);
 
   if (list || ctx.isPublishOnly || matchesBranch(ctx.options.exitOnceUploaded)) {
     setExitCode(ctx, exitCodes.OK);
     ctx.skipSnapshots = true;
-    ctx.log.info(storybookPublished(ctx));
   }
 };
 
