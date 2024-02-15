@@ -30,7 +30,7 @@ import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { uploadBuild } from '../lib/upload';
 import { getFileHashes } from '../lib/getFileHashes';
 import { waitForSentinel } from '../lib/waitForSentinel';
-import checkStorybookBaseDir from '../lib/checkStorybookBaseDir';
+import { checkStorybookBaseDir } from '../lib/checkStorybookBaseDir';
 
 interface PathSpec {
   pathname: string;
@@ -144,7 +144,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
     const stats = await readStatsFile(statsPath);
 
-    checkStorybookBaseDir(ctx.options.storybookBaseDir, stats);
+    checkStorybookBaseDir(ctx, stats);
 
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,

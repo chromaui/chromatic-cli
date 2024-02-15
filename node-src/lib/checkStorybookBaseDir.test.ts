@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import checkStorybookBaseDir from './checkStorybookBaseDir';
+import { checkStorybookBaseDir } from './checkStorybookBaseDir';
 import path from 'path';
 import TestLogger from './testLogger';
 

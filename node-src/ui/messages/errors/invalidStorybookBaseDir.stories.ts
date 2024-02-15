@@ -1,4 +1,4 @@
-import invalidStorybookBaseDir from './invalidStorybookBaseDir';
+import { invalidStorybookBaseDir } from './invalidStorybookBaseDir';
 
 export default {
   title: 'CLI/Messages/Errors',

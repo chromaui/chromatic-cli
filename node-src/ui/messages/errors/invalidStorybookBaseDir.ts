@@ -3,7 +3,7 @@ import { dedent } from 'ts-dedent';
 
 import { error } from '../../components/icons';
 
-export default () =>
+export const invalidStorybookBaseDir = () =>
   dedent(chalk`
     ${error} Invalid Storybook base directory
     In order to properly trace files for TurboSnap, the Storybook base directory must be a valid path.
