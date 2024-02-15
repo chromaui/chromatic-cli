@@ -56,12 +56,11 @@ describe('checkStorybookBaseDir', () => {
   });
 
   it('should throw an "invalid" error if none of the modules in stats exist at the path prepended by the storybookBaseDir', () => {
-    const storybookBaseDir = path.join(__dirname, '../__mocks__/wrong');
+    const storybookBaseDir = path.join(__dirname, '../../');
     const stats = {
       modules: [
         { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
         { name: './index.html' },
-        { name: './subdir/test.jsx' },
       ],
     };
 
