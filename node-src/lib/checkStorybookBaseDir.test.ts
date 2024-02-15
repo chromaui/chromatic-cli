@@ -55,7 +55,7 @@ describe('checkStorybookBaseDir', () => {
     expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).not.toThrow();
   });
 
-  it('should throw an error if none of the modules in stats exist at the path prepended by the storybookBaseDir', () => {
+  it('should throw an "invalid" error if none of the modules in stats exist at the path prepended by the storybookBaseDir', () => {
     const storybookBaseDir = path.join(__dirname, '../__mocks__/wrong');
     const stats = {
       modules: [
@@ -65,6 +65,18 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).toThrow();
+    expect(() => checkStorybookBaseDir(storybookBaseDir, stats)).toThrow(/Invalid/);
+  });
+
+  it('should throw a "missing" error if none of the modules in stats exist at the path prepended by the storybookBaseDir', () => {
+    const stats = {
+      modules: [
+        { name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js' },
+        { name: './index.html' },
+        { name: './subdir/test.jsx' },
+      ],
+    };
+
+    expect(() => checkStorybookBaseDir(undefined, stats)).toThrow(/Missing/);
   });
 });

@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import invalidStorybookBaseDir from '../ui/messages/errors/invalidStorybookBaseDir';
+import missingStorybookBaseDir from '../ui/messages/errors/missingStorybookBaseDir';
 
 export default function checkStorybookBaseDir(storybookBaseDir: string, stats: any) {
   // Find all js(x)/ts(x) files in stats that are not in node_modules
@@ -9,13 +11,11 @@ export default function checkStorybookBaseDir(storybookBaseDir: string, stats: a
 
   // Check if any of the source module files exist in the storybookBaseDir
   for (const file of sourceModuleFiles) {
-    const absolutePath = path.join(storybookBaseDir, file.name);
+    const absolutePath = path.join(storybookBaseDir || '', file.name);
     if (fs.existsSync(absolutePath)) {
       return true;
     }
   }
 
-  throw new Error(
-    `The storybookBaseDir configuration is incorrect. Please use the VTA to check for configuration issues.`
-  );
+  throw new Error(storybookBaseDir ? invalidStorybookBaseDir() : missingStorybookBaseDir());
 }
