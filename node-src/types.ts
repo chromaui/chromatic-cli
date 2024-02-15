@@ -74,6 +74,7 @@ export interface Options extends Configuration {
   traceChanged: boolean | string;
   list: Flags['list'];
   fromCI: boolean;
+  inAction: boolean;
   skip: boolean | string;
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;

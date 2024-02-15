@@ -6,3 +6,10 @@ export default {
 
 export const MissingDependency = () =>
   missingDependency({ dependencyName: '@chromatic-com/playwright', flag: 'playwright' });
+
+export const MissingDependencyFromAction = () =>
+  missingDependency({
+    dependencyName: '@chromatic-com/playwright',
+    flag: 'playwright',
+    workingDir: '/opt/bin/chromatic',
+  });

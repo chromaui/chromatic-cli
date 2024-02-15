@@ -1,3 +1,51 @@
+# v10.9.5 (Wed Feb 14 2024)
+
+#### 🐛 Bug Fix
+
+- Fix Storybook published messaging [#920](https://github.com/chromaui/chromatic-cli/pull/920) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v10.9.4 (Mon Feb 12 2024)
+
+#### 🐛 Bug Fix
+
+- Allow `traceChanged` in Chromatic config spec [#916](https://github.com/chromaui/chromatic-cli/pull/916) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v10.9.3 (Fri Feb 09 2024)
+
+#### 🐛 Bug Fix
+
+- clean up debug log as it's too much noise [#919](https://github.com/chromaui/chromatic-cli/pull/919) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
+# v10.9.2 (Thu Feb 08 2024)
+
+#### 🐛 Bug Fix
+
+- Directly execute build-archive-storybook if we can't resolve it [#917](https://github.com/chromaui/chromatic-cli/pull/917) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v10.9.1 (Thu Feb 08 2024)
 
 #### 🐛 Bug Fix

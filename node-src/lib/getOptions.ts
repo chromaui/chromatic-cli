@@ -45,6 +45,7 @@ export default function getOptions({
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
     fromCI: !!process.env.CI,
+    inAction: false,
     dryRun: false,
     debug: false,
     autoAcceptChanges: false,
