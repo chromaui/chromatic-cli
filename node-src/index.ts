@@ -203,6 +203,7 @@ async function runBuild(ctx: Context) {
         ctx.log.queue();
       }
       await new Listr(getTasks(ctx.options), options).run(ctx);
+      ctx.log.debug('Tasks completed');
     } catch (err) {
       endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
