@@ -7,8 +7,13 @@ run({
   flags: {
     projectToken: process.env.CHROMATIC_PROJECT_TOKEN,
   },
-}).catch((err) => {
-  // eslint-disable-next-line no-console
-  console.log(err);
-  process.exit(1);
-});
+}).then(
+  ({ code }) => {
+    process.exit(code);
+  },
+  (err) => {
+    // eslint-disable-next-line no-console
+    console.log(err);
+    process.exit(1);
+  }
+);
