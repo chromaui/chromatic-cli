@@ -29,11 +29,14 @@ export async function waitForSentinel(ctx: Context, { name, url }: { name: strin
         const { message, response = {} } = e;
         if (response.status === 403) {
           return bail(new Error('Provided signature expired.'));
-        } else if (response.status !== 404) {
-          if (this.log.getLevel() === 'debug') this.log.debug(await response.text());
-          return bail(new Error(message));
         }
-        throw new Error(`Sentinel file '${name}' not present.`);
+        if (response.status === 404) {
+          throw new Error(`Sentinel file '${name}' not present.`);
+        }
+        if (this.log.getLevel() === 'debug') {
+          this.log.debug(await response.text());
+        }
+        return bail(new Error(message));
       }
     },
     {
