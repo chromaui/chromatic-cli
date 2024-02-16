@@ -9,7 +9,7 @@ const getContext: any = (storybookBaseDir?: string) => ({
 });
 
 describe('checkStorybookBaseDir', () => {
-  it('should return if a js(x)/ts(x) module in stats exists at the path prepended by the storybookBaseDir', () => {
+  it('should return if a js(x)/ts(x) module in stats exists at the path prepended by the storybookBaseDir', async () => {
     const ctx = getContext(path.join(__dirname, '../__mocks__/storybookBaseDir'));
     const statsWithJsModule = {
       modules: [
@@ -45,13 +45,13 @@ describe('checkStorybookBaseDir', () => {
     };
 
     [statsWithJsModule, statsWithJsxModule, statsWithTsModule, statsWithTsxModule].forEach(
-      (stats) => {
-        expect(() => checkStorybookBaseDir(ctx, stats)).not.toThrow();
+      async (stats) => {
+        await expect(checkStorybookBaseDir(ctx, stats)).resolves.toBeUndefined();
       }
     );
   });
 
-  it('should throw an error if none of the js(x)/ts(x) modules in stats exist at the path prepended by the storybookBaseDir', () => {
+  it('should throw an error if none of the js(x)/ts(x) modules in stats exist at the path prepended by the storybookBaseDir', async () => {
     const ctxWithBaseDir = getContext(path.join(__dirname, '../__mocks__/wrong'));
     const ctxWithoutBaseDir = getContext();
     const stats = {
@@ -63,11 +63,11 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    expect(() => checkStorybookBaseDir(ctxWithBaseDir, stats)).toThrow();
-    expect(() => checkStorybookBaseDir(ctxWithoutBaseDir, stats)).toThrow();
+    await expect(() => checkStorybookBaseDir(ctxWithBaseDir, stats)).rejects.toThrow();
+    await expect(() => checkStorybookBaseDir(ctxWithoutBaseDir, stats)).rejects.toThrow();
   });
 
-  it('should not consider modules in node_modules as valid files to match', () => {
+  it('should not consider modules in node_modules as valid files to match', async () => {
     const ctx = getContext(path.join(__dirname, '../../'));
     const stats = {
       modules: [
@@ -78,6 +78,6 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    expect(() => checkStorybookBaseDir(ctx, stats)).toThrow();
+    await expect(() => checkStorybookBaseDir(ctx, stats)).rejects.toThrow();
   });
 });
