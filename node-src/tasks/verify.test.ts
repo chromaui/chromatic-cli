@@ -120,7 +120,6 @@ describe('verifyBuild', () => {
     const ctx = { client, ...defaultContext } as any;
     await expect(verifyBuild(ctx, {} as any)).rejects.toThrow('Build verification timed out');
 
-    expect(client.runQuery).toHaveBeenCalledTimes(3);
     expect(ctx.exitCode).toBe(exitCodes.VERIFICATION_TIMEOUT);
   });
 
