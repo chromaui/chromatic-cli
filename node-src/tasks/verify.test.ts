@@ -141,7 +141,6 @@ describe('verifyBuild', () => {
       .mockReturnValueOnce({ app: { build: publishedBuild } })
       .mockReturnValueOnce({ app: { build: publishedBuild } })
       .mockReturnValueOnce({ app: { build: publishedBuild } })
-      .mockReturnValueOnce({ app: { build: publishedBuild } })
       // We can safely poll three times without hitting the timeout
       .mockReturnValueOnce({ app: { build: { ...publishedBuild, upgradeBuilds: completed } } })
       .mockReturnValueOnce({ app: { build: { ...publishedBuild, upgradeBuilds: completed } } })
