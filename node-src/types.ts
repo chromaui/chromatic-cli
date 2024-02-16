@@ -212,6 +212,8 @@ export interface Context {
     committerEmail?: string;
     committedAt: number;
     slug?: string;
+    fromCI: boolean;
+    ciService?: string;
     mergeCommit?: string;
     uncommittedHash?: string;
     parentCommits?: string[];
