@@ -204,7 +204,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
       // Upgrade builds can take a long time to complete, so we can't apply a hard timeout yet,
       // instead we only timeout on the actual build verification, after upgrades are complete.
       if (build.upgradeBuilds?.some((upgrade) => !upgrade.completedAt)) {
-        task.output = awaitingUpgrades(build).output;
+        task.output = awaitingUpgrades(ctx, build.upgradeBuilds).output;
         timeoutStart = Date.now() + ctx.env.CHROMATIC_POLL_INTERVAL;
       } else if (Date.now() - timeoutStart > ctx.env.STORYBOOK_VERIFY_TIMEOUT) {
         setExitCode(ctx, exitCodes.VERIFICATION_TIMEOUT);
