@@ -6,6 +6,7 @@ import { run } from '../dist/node.js';
 run({
   flags: {
     projectToken: process.env.CHROMATIC_PROJECT_TOKEN,
+    exitZeroOnChanges: true,
   },
 }).then(
   ({ code }) => {
