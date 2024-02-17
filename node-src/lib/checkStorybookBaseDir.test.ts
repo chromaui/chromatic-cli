@@ -38,8 +38,8 @@ describe('checkStorybookBaseDir', () => {
     const statsWithTsxModule = {
       modules: [
         {
-          id: './test.tsx',
-          name: './test.tsx',
+          id: './subdir/test.tsx',
+          name: './subdir/test.tsx',
         },
       ],
     };
