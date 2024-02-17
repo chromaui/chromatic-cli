@@ -12,6 +12,7 @@ import {
   pending,
   runOnlyFiles,
   runOnlyNames,
+  awaitingUpgrades,
   success,
   publishFailed,
 } from '../ui/tasks/verify';
@@ -83,6 +84,9 @@ const StartedBuildQuery = `
       build(number: $number) {
         startedAt
         failureReason
+        upgradeBuilds {
+          completedAt
+        }
       }
     }
   }
@@ -90,8 +94,11 @@ const StartedBuildQuery = `
 interface StartedBuildQueryResult {
   app: {
     build: {
-      startedAt: number;
-      failureReason: string;
+      startedAt?: number;
+      failureReason?: string;
+      upgradeBuilds?: {
+        completedAt?: number;
+      }[];
     };
   };
 }
@@ -176,6 +183,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     transitionTo(runOnlyNames)(ctx, task);
   }
 
+  let timeoutStart = Date.now();
   const waitForBuildToStart = async () => {
     const { storybookUrl } = ctx;
     const { number, reportToken } = ctx.announcedBuild;
@@ -185,12 +193,24 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     const {
       app: { build },
     } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
+
     if (build.failureReason) {
-      ctx.log.warn(brokenStorybook({ ...build, storybookUrl }));
+      ctx.log.warn(brokenStorybook({ failureReason: build.failureReason, storybookUrl }));
       setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
       throw new Error(publishFailed().output);
     }
+
     if (!build.startedAt) {
+      // Upgrade builds can take a long time to complete, so we can't apply a hard timeout yet,
+      // instead we only timeout on the actual build verification, after upgrades are complete.
+      if (build.upgradeBuilds?.some((upgrade) => !upgrade.completedAt)) {
+        task.output = awaitingUpgrades(ctx, build.upgradeBuilds).output;
+        timeoutStart = Date.now() + ctx.env.CHROMATIC_POLL_INTERVAL;
+      } else if (Date.now() - timeoutStart > ctx.env.STORYBOOK_VERIFY_TIMEOUT) {
+        setExitCode(ctx, exitCodes.VERIFICATION_TIMEOUT);
+        throw new Error('Build verification timed out');
+      }
+
       await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
       await waitForBuildToStart();
       return;
@@ -207,8 +227,8 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     new Promise((_, reject) =>
       setTimeout(
         reject,
-        ctx.env.STORYBOOK_VERIFY_TIMEOUT,
-        new Error('Build verification timed out')
+        ctx.env.CHROMATIC_UPGRADE_TIMEOUT,
+        new Error('Timed out waiting for upgrade builds to complete')
       )
     ),
   ]);

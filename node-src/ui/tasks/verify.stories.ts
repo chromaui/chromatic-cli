@@ -5,6 +5,7 @@ import {
   pending,
   runOnlyFiles,
   runOnlyNames,
+  awaitingUpgrades,
   success,
   failed,
   publishFailed,
@@ -44,6 +45,9 @@ export const RunOnlyNames = () =>
   runOnlyNames({
     options: { onlyStoryNames: ['MyComponent/**'] },
   } as any);
+
+export const AwaitingUpgrades = () =>
+  awaitingUpgrades({} as any, [{ completedAt: 123 }, { completedAt: null }]);
 
 export const Started = () => success({ build } as any);
 
