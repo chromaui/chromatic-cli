@@ -144,7 +144,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
     const stats = await readStatsFile(statsPath);
 
-    checkStorybookBaseDir(ctx, stats);
+    await checkStorybookBaseDir(ctx, stats);
 
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,
