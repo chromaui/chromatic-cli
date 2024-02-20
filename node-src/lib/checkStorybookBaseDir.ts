@@ -26,9 +26,9 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
           return new Promise((resolve, reject) =>
             fs.access(absolutePath, (err) => {
               if (err) {
+                ctx.log.debug('Not found:', absolutePath);
                 reject();
               } else {
-                ctx.log.debug('Found:', absolutePath);
                 resolve(true);
               }
             })
@@ -37,7 +37,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
       })
     );
   } catch (err) {
-    ctx.log.debug('No modules found in:', storybookBaseDir);
+    ctx.log.debug('No modules from stats file found in:', storybookBaseDir);
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());
   }
