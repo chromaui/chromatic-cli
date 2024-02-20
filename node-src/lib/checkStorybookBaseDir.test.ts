@@ -44,11 +44,10 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    [statsWithJsModule, statsWithJsxModule, statsWithTsModule, statsWithTsxModule].forEach(
-      async (stats) => {
-        await expect(checkStorybookBaseDir(ctx, stats)).resolves.toBeUndefined();
-      }
-    );
+    await expect(checkStorybookBaseDir(ctx, statsWithJsModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDir(ctx, statsWithJsxModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDir(ctx, statsWithTsModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDir(ctx, statsWithTsxModule)).resolves.toBeUndefined();
   });
 
   it('should throw an error if none of the js(x)/ts(x) modules in stats exist at the path prepended by the storybookBaseDir', async () => {
