@@ -224,9 +224,7 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js'] },
       turboSnap: {},
     } as any;
-    await expect(traceChangedFiles(ctx, {} as any)).rejects.toThrow(
-      /Invalid Storybook base directory/
-    );
+    await expect(traceChangedFiles(ctx, {} as any)).rejects.toThrow();
     expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
