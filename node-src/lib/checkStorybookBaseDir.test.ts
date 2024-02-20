@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { checkStorybookBaseDir } from './checkStorybookBaseDir';
 import path from 'path';
 import TestLogger from './testLogger';
+import { exitCodes } from './setExitCode';
 
 const getContext: any = (storybookBaseDir?: string) => ({
   log: new TestLogger(),
@@ -11,6 +12,7 @@ const getContext: any = (storybookBaseDir?: string) => ({
 describe('checkStorybookBaseDir', () => {
   it('should return if a js(x)/ts(x) module in stats exists at the path prepended by the storybookBaseDir', async () => {
     const ctx = getContext(path.join(__dirname, '../__mocks__/storybookBaseDir'));
+
     const statsWithJsModule = {
       modules: [
         {
@@ -19,6 +21,8 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
+    await expect(checkStorybookBaseDir(ctx, statsWithJsModule)).resolves.toBeUndefined();
+
     const statsWithJsxModule = {
       modules: [
         {
@@ -27,6 +31,8 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
+    await expect(checkStorybookBaseDir(ctx, statsWithJsxModule)).resolves.toBeUndefined();
+
     const statsWithTsModule = {
       modules: [
         {
@@ -35,6 +41,8 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
+    await expect(checkStorybookBaseDir(ctx, statsWithTsModule)).resolves.toBeUndefined();
+
     const statsWithTsxModule = {
       modules: [
         {
@@ -43,16 +51,10 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
-
-    await expect(checkStorybookBaseDir(ctx, statsWithJsModule)).resolves.toBeUndefined();
-    await expect(checkStorybookBaseDir(ctx, statsWithJsxModule)).resolves.toBeUndefined();
-    await expect(checkStorybookBaseDir(ctx, statsWithTsModule)).resolves.toBeUndefined();
     await expect(checkStorybookBaseDir(ctx, statsWithTsxModule)).resolves.toBeUndefined();
   });
 
   it('should throw an error if none of the js(x)/ts(x) modules in stats exist at the path prepended by the storybookBaseDir', async () => {
-    const ctxWithBaseDir = getContext(path.join(__dirname, '../__mocks__/wrong'));
-    const ctxWithoutBaseDir = getContext();
     const stats = {
       modules: [
         {
@@ -62,8 +64,13 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
+    const ctxWithBaseDir = getContext(path.join(__dirname, '../__mocks__/wrong'));
     await expect(() => checkStorybookBaseDir(ctxWithBaseDir, stats)).rejects.toThrow();
+    expect(ctxWithBaseDir.exitCode).toBe(exitCodes.INVALID_OPTIONS);
+
+    const ctxWithoutBaseDir = getContext();
     await expect(() => checkStorybookBaseDir(ctxWithoutBaseDir, stats)).rejects.toThrow();
+    expect(ctxWithoutBaseDir.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
   it('should not consider modules in node_modules as valid files to match', async () => {

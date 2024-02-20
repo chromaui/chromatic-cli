@@ -13,6 +13,7 @@ import {
   validateFiles,
   waitForSentinels,
 } from './upload';
+import { exitCodes } from '../lib/setExitCode';
 
 vi.mock('form-data');
 vi.mock('fs');
@@ -226,6 +227,7 @@ describe('traceChangedFiles', () => {
     await expect(traceChangedFiles(ctx, {} as any)).rejects.toThrow(
       /Invalid Storybook base directory/
     );
+    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
   it('continues story file tracing if no dependencies are changed in package.json (fallback scenario)', async () => {

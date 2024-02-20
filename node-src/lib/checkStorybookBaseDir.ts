@@ -3,6 +3,7 @@ import * as path from 'path';
 import { invalidStorybookBaseDir } from '../ui/messages/errors/invalidStorybookBaseDir';
 import { Context, Stats } from '../types';
 import pLimit from 'p-limit';
+import { exitCodes, setExitCode } from './setExitCode';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
   const { storybookBaseDir } = ctx.options;
@@ -37,6 +38,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
     );
   } catch (err) {
     ctx.log.debug('No modules found in:', storybookBaseDir);
+    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());
   }
 }
