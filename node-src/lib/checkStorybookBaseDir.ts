@@ -6,10 +6,10 @@ import pLimit from 'p-limit';
 import { exitCodes, setExitCode } from './setExitCode';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
-  return;
-
   const { storybookBaseDir } = ctx.options;
   ctx.log.debug('Storybook base directory:', storybookBaseDir);
+
+  return;
 
   // Find all js(x)/ts(x) files in stats that are not in node_modules
   const sourceModuleFiles = stats.modules.filter(
