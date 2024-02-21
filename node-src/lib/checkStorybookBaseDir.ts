@@ -7,7 +7,7 @@ import { exitCodes, setExitCode } from './setExitCode';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
   const { storybookBaseDir } = ctx.options;
-  ctx.log.debug('Storybook base directory:', storybookBaseDir);
+  // ctx.log.debug('Storybook base directory:', storybookBaseDir);
 
   return;
 
