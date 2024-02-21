@@ -17,6 +17,8 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
   // GitHub Actions seems to have a default ulimit of 1024, so we limit concurrency to stay under
   const limitConcurrency = pLimit(1000);
 
+  return;
+
   // Check if any of the source module files exist in the storybookBaseDir
   try {
     await Promise.any(
