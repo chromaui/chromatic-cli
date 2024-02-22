@@ -69,6 +69,7 @@ export default function getOptions({
     forceRebuild: undefined,
     junitReport: undefined,
     zip: undefined,
+    skipUpdateCheck: undefined,
 
     ignoreLastBuildOnBranch: undefined,
     preserveMissingSpecs: undefined,
