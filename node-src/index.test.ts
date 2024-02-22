@@ -287,6 +287,7 @@ vi.mock('fs', async (importOriginal) => {
       if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
       return { isDirectory: () => false, size: 42 };
     }),
+    access: vi.fn((path, callback) => Promise.resolve(callback(undefined))),
   };
 });
 
