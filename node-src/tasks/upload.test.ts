@@ -207,7 +207,7 @@ describe('traceChangedFiles', () => {
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
-  it.skip('throws an error if storybookBaseDir is incorrect', async () => {
+  it('throws an error if storybookBaseDir is incorrect', async () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
