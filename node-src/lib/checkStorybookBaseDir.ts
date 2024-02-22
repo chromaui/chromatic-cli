@@ -6,7 +6,7 @@ import pLimit from 'p-limit';
 import { exitCodes, setExitCode } from './setExitCode';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
-  const { storybookBaseDir } = ctx.options;
+  const { storybookBaseDir = '' } = ctx.options;
   ctx.log.debug('Storybook base directory:', storybookBaseDir);
 
   // Find all js(x)/ts(x) files in stats that are not in node_modules
@@ -22,7 +22,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
     await Promise.any(
       sourceModuleFiles.map((file) => {
         return limitConcurrency(() => {
-          const absolutePath = path.join(storybookBaseDir || '', file.name);
+          const absolutePath = path.join(storybookBaseDir, file.name);
           return new Promise((resolve, reject) =>
             fs.access(absolutePath, (err) => {
               if (err) {
