@@ -6,6 +6,7 @@ import pLimit from 'p-limit';
 import { exitCodes, setExitCode } from './setExitCode';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
+  ctx.log.warn('ctx.options:', ctx.options);
   const { storybookBaseDir } = ctx.options;
   // ctx.log.debug('Storybook base directory:', storybookBaseDir);
 
