@@ -96,14 +96,12 @@ gpg: Can't check signature: No public key
 describe('mergeQueueBranchMatch', () => {
   it('returns pr number if it is a merge queue branch', async () => {
     const branch = "gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36"
-    const commit = "da07417adc889156224d03a7466ac712c647cd36"
-    expect(await mergeQueueBranchMatch(commit, branch)).toEqual(4);
+    expect(await mergeQueueBranchMatch(branch)).toEqual(4);
   });
 
   it('returns null if it is not a merge queue branch', async () => {
     const branch = "develop"
-    const commit = "da07417adc889156224d03a7466ac712c647cd36"
-    expect(await mergeQueueBranchMatch(commit, branch)).toEqual(
+    expect(await mergeQueueBranchMatch(branch)).toEqual(
       null
     );
   });
