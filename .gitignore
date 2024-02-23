@@ -12,6 +12,6 @@ chromatic-build-*.xml
 chromatic-diagnostics.json
 dist
 bin
-# action
+action
 node
 storybook-out
