@@ -207,7 +207,6 @@ export default function getOptions({
 
   // We can only have one of these arguments
   const singularOpts = {
-    buildScriptName: '--build-script-name',
     storybookBuildDir: '--storybook-build-dir',
     playwright: '--playwright',
     cypress: '--cypress',

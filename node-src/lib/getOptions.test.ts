@@ -115,10 +115,10 @@ describe('getOptions', () => {
     });
   });
 
-  it('throws if you try to pass a build script and a directory', async () => {
+  it('allows you to pass both a build script and a directory', async () => {
     await expect(() =>
-      getOptions(getContext(['-b', '/tmp/dir', '--storybook-build-dir', '/tmp/dir']))
-    ).toThrow(/You can only use one of --build-script-name, --storybook-build-dir/);
+      getOptions(getContext(['-b', 'build:storybook', '--storybook-build-dir', '/tmp/dir']))
+    ).not.toThrow()
   });
 
   it('allows you to specify the branch name', async () => {
