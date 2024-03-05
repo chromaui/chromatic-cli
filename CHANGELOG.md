@@ -1,3 +1,15 @@
+# v11.0.1 (Tue Mar 05 2024)
+
+#### 🐛 Bug Fix
+
+- Allow commit hash to not be known when finding merge queue PR number [#929](https://github.com/chromaui/chromatic-cli/pull/929) ([@adrianbruntonsagecom](https://github.com/adrianbruntonsagecom))
+
+#### Authors: 1
+
+- Adrian Brunton ([@adrianbruntonsagecom](https://github.com/adrianbruntonsagecom))
+
+---
+
 # v11.0.0 (Thu Feb 22 2024)
 
 #### 💥 Breaking Change
