@@ -1,18 +1,19 @@
 import { FormData } from 'formdata-node';
-import { createReadStream, readdirSync, readFileSync, statSync } from 'fs';
+import { access, createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
-import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
+import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import {
   calculateFileHashes,
-  validateFiles,
   traceChangedFiles,
   uploadStorybook,
+  validateFiles,
   waitForSentinels,
 } from './upload';
+import { exitCodes } from '../lib/setExitCode';
 
 vi.mock('form-data');
 vi.mock('fs');
@@ -20,7 +21,17 @@ vi.mock('../lib/compress');
 vi.mock('../lib/getDependentStoryFiles');
 vi.mock('../lib/findChangedDependencies');
 vi.mock('../lib/findChangedPackageFiles');
-vi.mock('./read-stats-file');
+vi.mock('./read-stats-file', () => ({
+  readStatsFile: () =>
+    Promise.resolve({
+      modules: [
+        {
+          id: '../__mocks__/storybookBaseDir/test.ts',
+          name: '../__mocks__/storybookBaseDir/test.ts',
+        },
+      ],
+    }),
+}));
 
 vi.mock('../lib/FileReaderBlob', () => ({
   FileReaderBlob: class {
@@ -40,6 +51,7 @@ const makeZipFile = vi.mocked(compress);
 const findChangedDependencies = vi.mocked(findChangedDep);
 const findChangedPackageFiles = vi.mocked(findChangedPkg);
 const getDependentStoryFiles = vi.mocked(getDepStoryFiles);
+const accessMock = vi.mocked(access);
 const createReadStreamMock = vi.mocked(createReadStream);
 const readdirSyncMock = vi.mocked(readdirSync);
 const readFileSyncMock = vi.mocked(readFileSync);
@@ -128,6 +140,7 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockReset();
     findChangedPackageFiles.mockReset();
     getDependentStoryFiles.mockReset();
+    accessMock.mockImplementation((path, callback) => Promise.resolve(callback(undefined)));
   });
 
   it('sets onlyStoryFiles on context', async () => {
@@ -192,6 +205,27 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
     expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
+  });
+
+  it('throws an error if storybookBaseDir is incorrect', async () => {
+    const deps = { 123: ['./example.stories.js'] };
+    findChangedDependencies.mockResolvedValue([]);
+    findChangedPackageFiles.mockResolvedValue([]);
+    getDependentStoryFiles.mockResolvedValue(deps);
+    accessMock.mockImplementation((path, callback) => Promise.resolve(callback(new Error())));
+
+    const ctx = {
+      env,
+      log,
+      http,
+      options: { storybookBaseDir: '/wrong' },
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
+    } as any;
+    await expect(traceChangedFiles(ctx, {} as any)).rejects.toThrow();
+    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
   it('continues story file tracing if no dependencies are changed in package.json (fallback scenario)', async () => {

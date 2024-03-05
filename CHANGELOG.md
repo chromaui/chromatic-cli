@@ -1,3 +1,16 @@
+# v11.0.0 (Thu Feb 22 2024)
+
+#### 💥 Breaking Change
+
+- Add new invalid sb base dir error message and validator function [#921](https://github.com/chromaui/chromatic-cli/pull/921) ([@andrewortwein](https://github.com/andrewortwein) [@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 2
+
+- Andrew Ortwein ([@andrewortwein](https://github.com/andrewortwein))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v10.9.6 (Fri Feb 16 2024)
 
 #### 🐛 Bug Fix
