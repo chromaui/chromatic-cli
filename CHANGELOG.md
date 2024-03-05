@@ -1,3 +1,15 @@
+# v11.0.2 (Tue Mar 05 2024)
+
+#### 🐛 Bug Fix
+
+- Fix support for boolean value to `junitReport` option [#937](https://github.com/chromaui/chromatic-cli/pull/937) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v11.0.1 (Tue Mar 05 2024)
 
 #### 🐛 Bug Fix
