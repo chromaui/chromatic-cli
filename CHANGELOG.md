@@ -1,3 +1,15 @@
+# v11.0.3 (Wed Mar 06 2024)
+
+#### 🐛 Bug Fix
+
+- Display full error message when storybookBaseDir is invalid [#932](https://github.com/chromaui/chromatic-cli/pull/932) ([@andrewortwein](https://github.com/andrewortwein))
+
+#### Authors: 1
+
+- Andrew Ortwein ([@andrewortwein](https://github.com/andrewortwein))
+
+---
+
 # v11.0.2 (Tue Mar 05 2024)
 
 #### 🐛 Bug Fix
