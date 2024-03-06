@@ -1,3 +1,27 @@
+# v11.0.2 (Tue Mar 05 2024)
+
+#### 🐛 Bug Fix
+
+- Fix support for boolean value to `junitReport` option [#937](https://github.com/chromaui/chromatic-cli/pull/937) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
+# v11.0.1 (Tue Mar 05 2024)
+
+#### 🐛 Bug Fix
+
+- Allow commit hash to not be known when finding merge queue PR number [#929](https://github.com/chromaui/chromatic-cli/pull/929) ([@adrianbruntonsagecom](https://github.com/adrianbruntonsagecom))
+
+#### Authors: 1
+
+- Adrian Brunton ([@adrianbruntonsagecom](https://github.com/adrianbruntonsagecom))
+
+---
+
 # v11.0.0 (Thu Feb 22 2024)
 
 #### 💥 Breaking Change
