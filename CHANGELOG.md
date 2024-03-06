@@ -1,3 +1,15 @@
+# v11.0.4 (Wed Mar 06 2024)
+
+#### 🐛 Bug Fix
+
+- Do not prompt to install chromatic script during E2E builds [#941](https://github.com/chromaui/chromatic-cli/pull/941) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.0.3 (Wed Mar 06 2024)
 
 #### 🐛 Bug Fix
