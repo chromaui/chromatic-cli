@@ -12,7 +12,7 @@ import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { buildBinName as e2EbuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
-import missingDependency from '../ui/messages/errors/missingDependency';
+import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -87,15 +87,12 @@ export const buildStorybook = async (ctx: Context) => {
     // and it failed, that means we couldn't find it. This probably means they haven't
     // installed the right dependency or run from the right directory
     if (
-      ctx.options.inAction &&
-      (isE2EBuild(ctx.options)) &&
-      e.message.match(e2EbuildBinName)
+      e.message.match(e2EbuildBinName) &&
+      isE2EBuild(ctx.options)
     ) {
       const flag = ctx.options.playwright ? 'playwright' : 'cypress';
-      const dependencyName = `@chromatic-com/${flag}`;
-      ctx.log.error(missingDependency({ dependencyName, flag, workingDir: process.cwd() }));
-      ctx.log.debug(e);
-      setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
+      ctx.log.error(e2eBuildFailed({ flag, errorMessage: e.message }));
+      setExitCode(ctx, exitCodes.E2E_BUILD_FAILED, true);
       throw new Error(failed(ctx).output);
     }
 
