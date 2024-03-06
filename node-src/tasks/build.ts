@@ -11,8 +11,9 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
+import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -60,6 +61,34 @@ export const setBuildCommand = async (ctx: Context) => {
 const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
+function isE2EBuildCommandNotFoundError(err) {
+  // It's hard to know if this is the case as each package manager has a different type of
+  // error for this, but we'll try to figure it out.
+  const msg = err.message as string;
+  const errorRegexes = ['command not found', `[\\W]?${e2eBuildBinName}[\\W]? not found`, 'code E404', 'exit code 127', `command failed.*${e2eBuildBinName}.*$`];
+  return errorRegexes.some((regex) => msg.match(new RegExp(regex, 'gi')));
+}
+
+function e2eBuildErrorMessage(err, workingDir, ctx: Context): { exitCode: number, message: string } {
+  const flag = ctx.options.playwright ? 'playwright' : 'cypress';
+
+  // If we tried to run the E2E package's bin directly (due to being in the action)
+  // and it failed, that means we couldn't find it. This probably means they haven't
+  // installed the right dependency or run from the right directory.
+  if (isE2EBuildCommandNotFoundError(err)) {
+    const dependencyName = `@chromatic-com/${flag}`;
+    return {
+      exitCode: exitCodes.MISSING_DEPENDENCY,
+      message: missingDependency({ dependencyName, flag, workingDir }),
+    };
+  }
+
+  return {
+    exitCode: exitCodes.E2E_BUILD_FAILED,
+    message: e2eBuildFailed({ flag, errorMessage: err.message }),
+  };
+}
+
 export const buildStorybook = async (ctx: Context) => {
   let logFile = null;
   if (ctx.options.storybookLogFile) {
@@ -87,9 +116,9 @@ export const buildStorybook = async (ctx: Context) => {
     // and it failed, that means we couldn't find it. This probably means they haven't
     // installed the right dependency or run from the right directory
     if (isE2EBuild(ctx.options)) {
-      const flag = ctx.options.playwright ? 'playwright' : 'cypress';
-      ctx.log.error(e2eBuildFailed({ flag, errorMessage: e.message }));
-      setExitCode(ctx, exitCodes.E2E_BUILD_FAILED, true);
+      const errorInfo = e2eBuildErrorMessage(e, process.cwd(), ctx);
+      ctx.log.error(errorInfo.message);
+      setExitCode(ctx, errorInfo.exitCode, true);
       throw new Error(failed(ctx).output);
     }
 
