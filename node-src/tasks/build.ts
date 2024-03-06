@@ -11,7 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2EbuildBinName, getE2EBuildCommand } from '../lib/e2e';
+import { buildBinName as e2EbuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
 import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {
@@ -43,7 +43,7 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
   ].filter(Boolean);
 
-  if (ctx.options.playwright || ctx.options.cypress) {
+  if (isE2EBuild(ctx.options)) {
     ctx.buildCommand = await getE2EBuildCommand(
       ctx,
       ctx.options.playwright ? 'playwright' : 'cypress',
@@ -88,7 +88,7 @@ export const buildStorybook = async (ctx: Context) => {
     // installed the right dependency or run from the right directory
     if (
       ctx.options.inAction &&
-      (ctx.options.playwright || ctx.options.cypress) &&
+      (isE2EBuild(ctx.options)) &&
       e.message.match(e2EbuildBinName)
     ) {
       const flag = ctx.options.playwright ? 'playwright' : 'cypress';

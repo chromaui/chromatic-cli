@@ -1,6 +1,6 @@
 import { getCliCommand, Runner, AGENTS } from '@antfu/ni';
 
-import { Context } from '../types';
+import { Context, Options } from '../types';
 import missingDependency from '../ui/messages/errors/missingDependency';
 import { exitCodes, setExitCode } from './setExitCode';
 import { failed } from '../ui/tasks/build';
@@ -58,4 +58,8 @@ export async function getE2EBuildCommand(
 
     throw err;
   }
+}
+
+export function isE2EBuild(options: Options) {
+  return options.playwright || options.cypress;
 }

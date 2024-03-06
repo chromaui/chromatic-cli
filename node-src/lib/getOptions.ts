@@ -14,6 +14,7 @@ import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
+import { isE2EBuild } from './e2e';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
@@ -263,7 +264,7 @@ export default function getOptions({
     return options;
   }
 
-  if (options.playwright || options.cypress) {
+  if (isE2EBuild(options)) {
     return options;
   }
 
