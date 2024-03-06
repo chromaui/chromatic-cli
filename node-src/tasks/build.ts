@@ -77,7 +77,7 @@ export const buildStorybook = async (ctx: Context) => {
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
 
     const subprocess = execaCommand(ctx.buildCommand, {
-      stdio: [null, logFile, logFile],
+      stdio: [null, logFile, null],
       signal,
       env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
     });
