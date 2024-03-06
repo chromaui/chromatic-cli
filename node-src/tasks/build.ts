@@ -11,7 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2EbuildBinName, getE2eBuildCommand } from '../lib/e2e';
+import { buildBinName as e2EbuildBinName, getE2EBuildCommand } from '../lib/e2e';
 import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {
@@ -44,7 +44,7 @@ export const setBuildCommand = async (ctx: Context) => {
   ].filter(Boolean);
 
   if (ctx.options.playwright || ctx.options.cypress) {
-    ctx.buildCommand = await getE2eBuildCommand(
+    ctx.buildCommand = await getE2EBuildCommand(
       ctx,
       ctx.options.playwright ? 'playwright' : 'cypress',
       buildCommandOptions

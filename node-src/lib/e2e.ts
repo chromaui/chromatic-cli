@@ -27,7 +27,7 @@ const parseNexec = <Runner>((agent, args) => {
   return command.replace('{0}', args.map(quote).join(' ')).trim();
 });
 
-export async function getE2eBuildCommand(
+export async function getE2EBuildCommand(
   ctx: Context,
   flag: 'playwright' | 'cypress',
   buildCommandOptions: string[]
