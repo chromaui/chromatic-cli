@@ -11,7 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2EbuildBinName, getE2eBuildCommand } from '../lib/getE2eBuildCommand';
+import { buildBinName as e2EbuildBinName, getE2eBuildCommand } from '../lib/e2e';
 import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {

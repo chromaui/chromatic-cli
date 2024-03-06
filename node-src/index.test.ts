@@ -41,7 +41,7 @@ vi.mock('execa');
 // NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
 // vitest doesn't allow you to do that.
 const mockedBuildCommand = 'mocked build command';
-vi.mock('./lib/getE2eBuildCommand', () => ({
+vi.mock('./lib/e2e', () => ({
   getE2eBuildCommand: () => mockedBuildCommand,
 }));
 
