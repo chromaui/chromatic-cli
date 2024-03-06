@@ -11,7 +11,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2EbuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import { getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 
 export const setSourceDir = async (ctx: Context) => {
@@ -86,10 +86,7 @@ export const buildStorybook = async (ctx: Context) => {
     // If we tried to run the E2E package's bin directly (due to being in the action)
     // and it failed, that means we couldn't find it. This probably means they haven't
     // installed the right dependency or run from the right directory
-    if (
-      e.message.match(e2EbuildBinName) &&
-      isE2EBuild(ctx.options)
-    ) {
+    if (isE2EBuild(ctx.options)) {
       const flag = ctx.options.playwright ? 'playwright' : 'cypress';
       ctx.log.error(e2eBuildFailed({ flag, errorMessage: e.message }));
       setExitCode(ctx, exitCodes.E2E_BUILD_FAILED, true);
