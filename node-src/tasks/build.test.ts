@@ -166,3 +166,45 @@ describe('buildStorybook', () => {
     );
   });
 });
+
+describe('buildStorybook E2E', () => {
+  it('fails with missing dependency error when dependency not installed', async () => {
+    const ctx = {
+      buildCommand: 'npm exec build-archive-storybook',
+      options: { buildScriptName: '', playwright: true },
+      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+      log: { debug: vi.fn(), error: vi.fn() },
+    } as any;
+
+    const missingDependencyErrorMessages = [
+      'Command not found: build-archive-storybook',
+      'Command "build-archive-storybook" not found',
+      'NPM error code E404\n\nMore error info',
+      'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe'
+    ];
+
+    for(const errorMessage of missingDependencyErrorMessages) {
+      command.mockRejectedValueOnce(new Error(errorMessage));
+      await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
+      expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Failed to import `@chromatic-com/playwright`'));
+      
+      ctx.log.error.mockClear();
+    };
+  });
+
+  it('fails with generic error message when not missing dependency error', async () => {
+    const ctx = {
+      buildCommand: 'npm exec build-archive-storybook',
+      options: { buildScriptName: '', playwright: true },
+      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+      log: { debug: vi.fn(), error: vi.fn() },
+    } as any;
+
+    const errorMessage = 'Cannot find archive directory\n\nOther info';
+    command.mockRejectedValueOnce(new Error(errorMessage));
+    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
+    expect(ctx.log.error).not.toHaveBeenCalledWith(expect.stringContaining('Failed to import `@chromatic-com/playwright`'));
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Failed to run `chromatic --playwright`'));
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+  });
+});
