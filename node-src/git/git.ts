@@ -282,8 +282,8 @@ export async function findFiles(...patterns: string[]) {
   return files.split('\0').filter(Boolean);
 }
 
-export async function mergeQueueBranchMatch(commit, branch) {
-  const mergeQueuePattern = new RegExp(`gh-readonly-queue/.*/pr-(\\d+)-${commit}$`);
+export async function mergeQueueBranchMatch(branch) {
+  const mergeQueuePattern = new RegExp(/gh-readonly-queue\/.*\/pr-(\d+)-[a-f0-9]{30}/);
   const match = branch.match(mergeQueuePattern);
 
   return match ? Number(match[1]) : null;

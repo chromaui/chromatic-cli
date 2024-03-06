@@ -37,7 +37,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
       })
     );
   } catch (err) {
-    ctx.log.debug('No modules from stats file found in:', storybookBaseDir);
+    ctx.log.error(invalidStorybookBaseDir());
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());
   }

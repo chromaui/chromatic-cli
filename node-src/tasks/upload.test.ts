@@ -58,7 +58,7 @@ const readFileSyncMock = vi.mocked(readFileSync);
 const statSyncMock = vi.mocked(statSync);
 
 const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
 const http = { fetch: vi.fn() };
 
 afterEach(() => {
