@@ -1,3 +1,15 @@
+# v11.0.5 (Thu Mar 07 2024)
+
+#### 🐛 Bug Fix
+
+- escape special characters in onlyStoryFiles filenames [#942](https://github.com/chromaui/chromatic-cli/pull/942) ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+#### Authors: 1
+
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
 # v11.0.4 (Wed Mar 06 2024)
 
 #### 🐛 Bug Fix
