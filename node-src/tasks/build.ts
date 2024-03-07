@@ -64,7 +64,13 @@ const timeoutAfter = (ms) =>
 function isE2EBuildCommandNotFoundError(errorMessage: string) {
   // It's hard to know if this is the case as each package manager has a different type of
   // error for this, but we'll try to figure it out.
-  const errorRegexes = ['command not found', `[\\W]?${e2eBuildBinName}[\\W]? not found`, 'code E404', 'exit code 127', `command failed.*${e2eBuildBinName}.*$`];
+  const errorRegexes = [
+    'command not found', // `Command not found: build-archive-storybook`
+    `[\\W]?${e2eBuildBinName}[\\W]? not found`, // `Command "build-archive-storybook" not found`
+    'code E404', // npm not found error can include this code
+    'exit code 127', // Exit code 127 is a generic not found exit code
+    `command failed.*${e2eBuildBinName}.*$`]; // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
+
   return errorRegexes.some((regex) => errorMessage.match(new RegExp(regex, 'gi')));
 }
 
