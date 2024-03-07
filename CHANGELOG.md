@@ -1,3 +1,15 @@
+# v11.0.6 (Thu Mar 07 2024)
+
+#### 🐛 Bug Fix
+
+- Expose E2E build errors [#940](https://github.com/chromaui/chromatic-cli/pull/940) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.0.5 (Thu Mar 07 2024)
 
 #### 🐛 Bug Fix
