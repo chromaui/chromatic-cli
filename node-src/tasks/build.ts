@@ -71,7 +71,7 @@ function isE2EBuildCommandNotFoundError(errorMessage: string) {
     'exit code 127', // Exit code 127 is a generic not found exit code
     `command failed.*${e2eBuildBinName}.*$`]; // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
 
-  return errorRegexes.some((regex) => errorMessage.match(new RegExp(regex, 'gi')));
+  return errorRegexes.some((regex) => (new RegExp(regex, 'gi')).test(errorMessage));
 }
 
 function e2eBuildErrorMessage(err, workingDir: string, ctx: Context): { exitCode: number, message: string } {
