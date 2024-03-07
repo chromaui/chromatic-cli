@@ -200,7 +200,7 @@ describe('buildStorybook E2E', () => {
       log: { debug: vi.fn(), error: vi.fn() },
     } as any;
 
-    const errorMessage = 'Cannot find archive directory\n\nOther info';
+    const errorMessage = 'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe\n\nMore error message lines\n\nAnd more';
     command.mockRejectedValueOnce(new Error(errorMessage));
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).not.toHaveBeenCalledWith(expect.stringContaining('Failed to import `@chromatic-com/playwright`'));
