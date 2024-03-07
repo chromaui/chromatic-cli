@@ -37,6 +37,9 @@ interface PathSpec {
   contentLength: number;
 }
 
+const escapedSpecialChars = '`$^*+?()[]';
+const specialCharsRegex = new RegExp(`([${escapedSpecialChars.split('').join('\\')}])`);
+
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
 // paths will be like iframe.html rather than storybook-static/iframe.html
@@ -154,7 +157,9 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       changedDependencyNames || []
     );
     if (onlyStoryFiles) {
-      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
+      // Escape special characters in the filename so it does not conflict with picomatch
+      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) => key.split(specialCharsRegex).join('\\'));
+
       if (!ctx.options.interactive) {
         if (!ctx.options.traceChanged) {
           ctx.log.info(
