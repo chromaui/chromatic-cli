@@ -1,3 +1,15 @@
+# v11.0.7 (Fri Mar 08 2024)
+
+#### 🐛 Bug Fix
+
+- Prevent non-string or null message in timestamp logging from causing exit code 254 during build. [#931](https://github.com/chromaui/chromatic-cli/pull/931) ([@BenjaminEllisSo](https://github.com/BenjaminEllisSo))
+
+#### Authors: 1
+
+- [@BenjaminEllisSo](https://github.com/BenjaminEllisSo)
+
+---
+
 # v11.0.6 (Thu Mar 07 2024)
 
 #### 🐛 Bug Fix
