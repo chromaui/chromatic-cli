@@ -1,3 +1,15 @@
+# v11.0.8 (Mon Mar 11 2024)
+
+#### 🐛 Bug Fix
+
+- Fix e2e peer dep versions [#943](https://github.com/chromaui/chromatic-cli/pull/943) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.0.7 (Fri Mar 08 2024)
 
 #### 🐛 Bug Fix
