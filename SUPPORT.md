@@ -1,3 +1,3 @@
 # Support
 
-👉 https://www.chromatic.com/docs/support
+👉 <https://www.chromatic.com/docs/support>
