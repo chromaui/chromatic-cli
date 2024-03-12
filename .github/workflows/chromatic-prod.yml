@@ -1,6 +1,9 @@
 name: Chromatic
 on: push
 
+permissions:
+  contents: read
+
 jobs:
   chromatic:
     runs-on: ubuntu-latest
