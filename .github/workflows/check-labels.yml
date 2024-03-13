@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
 
+permissions: {}
+
 jobs:
   check-labels:
     runs-on: ubuntu-latest

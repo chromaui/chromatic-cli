@@ -21,6 +21,10 @@ on:
       - package.json
       - storybook-addon.*
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
