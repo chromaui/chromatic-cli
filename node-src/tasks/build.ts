@@ -64,17 +64,26 @@ const timeoutAfter = (ms) =>
 function isE2EBuildCommandNotFoundError(errorMessage: string) {
   // It's hard to know if this is the case as each package manager has a different type of
   // error for this, but we'll try to figure it out.
-  const errorRegexes = [
-    'command not found', // `Command not found: build-archive-storybook`
-    `[\\W]?${e2eBuildBinName}[\\W]? not found`, // `Command "build-archive-storybook" not found`
-    'code E404', // npm not found error can include this code
-    'exit code 127', // Exit code 127 is a generic not found exit code
-    `command failed.*${e2eBuildBinName}.*$`]; // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
-
-  return errorRegexes.some((regex) => (new RegExp(regex, 'gi')).test(errorMessage));
+  const ERROR_PATTERNS = [
+    // `Command not found: build-archive-storybook`
+    'command not found',
+    // `Command "build-archive-storybook" not found`
+    `[\\W]?${e2eBuildBinName}[\\W]? not found`,
+    // npm not found error can include this code
+    'code E404',
+    // Exit code 127 is a generic not found exit code
+    'exit code 127',
+    // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
+    `command failed.*${e2eBuildBinName}.*$`,
+  ];
+  return ERROR_PATTERNS.some((PATTERN) => new RegExp(PATTERN, 'gi').test(errorMessage));
 }
 
-function e2eBuildErrorMessage(err, workingDir: string, ctx: Context): { exitCode: number, message: string } {
+function e2eBuildErrorMessage(
+  err,
+  workingDir: string,
+  ctx: Context
+): { exitCode: number; message: string } {
   const flag = ctx.options.playwright ? 'playwright' : 'cypress';
   const errorMessage = err.message;
 
