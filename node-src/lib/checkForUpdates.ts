@@ -10,7 +10,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   Promise.race([promise, rejectIn(ms)]);
 
 export default async function checkForUpdates(ctx: InitialContext) {
-  if (ctx.extraOptions.skipUpdateCheck === true) {
+  if (ctx.options.skipUpdateCheck === true) {
     ctx.log.info(`Skipping update check`);
     return;
   }
