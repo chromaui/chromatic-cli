@@ -39,6 +39,7 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+import { isE2EBuild } from './lib/e2e';
 
 /**
  Make keys of `T` outside of `R` optional.
@@ -176,7 +177,7 @@ export async function runAll(ctx: InitialContext) {
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch(onError);
 
-  if ([0, 1].includes(ctx.exitCode)) {
+  if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
   }
 

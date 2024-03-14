@@ -166,3 +166,47 @@ describe('buildStorybook', () => {
     );
   });
 });
+
+describe('buildStorybook E2E', () => {
+  // Error messages that we expect to result in the missing dependency error
+  const missingDependencyErrorMessages = [
+    { name: 'not found 1', error: 'Command not found: build-archive-storybook' },
+    { name: 'not found 2', error: 'Command "build-archive-storybook" not found' },
+    { name: 'npm not found', error: 'NPM error code E404\n\nMore error info' },
+    { name: 'exit code not found', error: 'Command failed with exit code 127: some command\n\nsome error line\n\n' },
+    { name: 'single line command failure', error: 'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe' },
+  ];
+
+  it.each(
+    missingDependencyErrorMessages
+  )('fails with missing dependency error when error message is $name', async ({ error }) => {
+    const ctx = {
+      buildCommand: 'npm exec build-archive-storybook',
+      options: { buildScriptName: '', playwright: true },
+      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+      log: { debug: vi.fn(), error: vi.fn() },
+    } as any;
+
+    command.mockRejectedValueOnce(new Error(error));
+    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Failed to import `@chromatic-com/playwright`'));
+    
+    ctx.log.error.mockClear();
+  });
+
+  it('fails with generic error message when not missing dependency error', async () => {
+    const ctx = {
+      buildCommand: 'npm exec build-archive-storybook',
+      options: { buildScriptName: '', playwright: true },
+      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+      log: { debug: vi.fn(), error: vi.fn() },
+    } as any;
+
+    const errorMessage = 'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe\n\nMore error message lines\n\nAnd more';
+    command.mockRejectedValueOnce(new Error(errorMessage));
+    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
+    expect(ctx.log.error).not.toHaveBeenCalledWith(expect.stringContaining('Failed to import `@chromatic-com/playwright`'));
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Failed to run `chromatic --playwright`'));
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+  });
+});

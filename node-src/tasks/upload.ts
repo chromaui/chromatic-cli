@@ -31,11 +31,14 @@ import { uploadBuild } from '../lib/upload';
 import { getFileHashes } from '../lib/getFileHashes';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { checkStorybookBaseDir } from '../lib/checkStorybookBaseDir';
+import semver from 'semver';
 
 interface PathSpec {
   pathname: string;
   contentLength: number;
 }
+
+const SPECIAL_CHARS_REGEXP = new RegExp(`([${'`$^*+?()[]'.split('').join('\\')}])`);
 
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
@@ -106,8 +109,12 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
+    // If we don't know the SB version, we should assume we don't support `--stats-json`
+    const nonLegacyStatsSupported =
+      ctx.storybook?.version && semver.gte(semver.coerce(ctx.storybook.version), '8.0.0');
+
     ctx.turboSnap.bailReason = { missingStatsFile: true };
-    throw new Error(missingStatsFile());
+    throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
   transitionTo(tracing)(ctx, task);
@@ -154,7 +161,11 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       changedDependencyNames || []
     );
     if (onlyStoryFiles) {
-      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
+      // Escape special characters in the filename so it does not conflict with picomatch
+      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
+        key.split(SPECIAL_CHARS_REGEXP).join('\\')
+      );
+
       if (!ctx.options.interactive) {
         if (!ctx.options.traceChanged) {
           ctx.log.info(

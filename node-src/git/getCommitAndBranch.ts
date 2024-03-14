@@ -166,7 +166,7 @@ export default async function getCommitAndBranch(
   // To do this, GitHub creates a new commit and does a CI run with the branch changed to e.g. gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36
   // If you configure merge queues to rebase in this circumstance, 
   // we lose track of baselines as the branch name has changed so our usual rebase detection (based on branch name) doesn't work.
-  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(commit.commit, branch)
+  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(branch)
   if (mergeQueueBranchPrNumber) {
     // This is why we extract the PR number from the branch name and use it to find the branch name of the PR that was merged.
     const branchFromMergeQueuePullRequestNumber = await getBranchFromMergeQueuePullRequestNumber(ctx, { number: mergeQueueBranchPrNumber });
