@@ -85,7 +85,7 @@
     "trace": "./dist/bin.js trace",
     "trim-stats": "./dist/bin.js trim-stats-file",
     "storybook": "start-storybook -p 9009 -s static",
-    "test": "vitest run && vitest run -c vitest.no-threads.config.ts",
+    "test": "vitest run --coverage && vitest run -c vitest.no-threads.config.ts",
     "prepare": "husky install && npm run build",
     "dev": "tsup --watch",
     "lint-staged": "lint-staged"
@@ -134,6 +134,7 @@
     "@types/semver": "^7.3.9",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
+    "@vitest/coverage-v8": "^0.34.4",
     "ansi-html": "0.0.8",
     "any-observable": "^0.5.1",
     "archiver": "^5.3.0",
