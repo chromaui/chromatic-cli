@@ -4,9 +4,13 @@ import path from 'path';
 
 import { run as runNode } from '../node-src';
 
-const maybe = (a: string, b: any = undefined) => {
+const maybe = (a: string | string[], b: any = undefined) => {
   if (!a) {
     return b;
+  }
+
+  if (Array.isArray(a)) {
+    return a;
   }
 
   try {
