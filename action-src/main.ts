@@ -1,4 +1,4 @@
-import { error, getInput, setFailed, setOutput } from '@actions/core';
+import { error, getInput, getMultilineInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
 import path from 'path';
 
@@ -100,15 +100,15 @@ async function run() {
     const dryRun = getInput('dryRun');
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
-    const externals = getInput('externals');
+    const externals = getMultilineInput('externals');
     const fileHashing = getInput('fileHashing');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
     const logFile = getInput('logFile');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
-    const onlyStoryFiles = getInput('onlyStoryFiles');
-    const onlyStoryNames = getInput('onlyStoryNames');
+    const onlyStoryFiles = getMultilineInput('onlyStoryFiles');
+    const onlyStoryNames = getMultilineInput('onlyStoryNames');
     const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
@@ -119,7 +119,7 @@ async function run() {
     const storybookConfigDir = getInput('storybookConfigDir');
     const storybookLogFile = getInput('storybookLogFile');
     const traceChanged = getInput('traceChanged');
-    const untraced = getInput('untraced');
+    const untraced = getMultilineInput('untraced');
     const uploadMetadata = getInput('uploadMetadata');
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
