@@ -53,9 +53,9 @@ const publishAction = async ({ major, version, repo }) => {
  * Generally, this script is invoked by auto's `afterShipIt` hook.
  *
  * For manual (local) use:
- *   yarn publish-action [context] [--dry-run]
+ *   yarn publish-action {context} [--dry-run]
  *   e.g. yarn publish-action canary
- *   or   yarn publish-action --dry-run
+ *   or   yarn publish-action latest --dry-run
  *
  * Make sure to build the action before publishing manually.
  */
@@ -66,19 +66,26 @@ const publishAction = async ({ major, version, repo }) => {
     return;
   }
 
-  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-
-  const [, major, minor, patch, tag] = pkg.version.match(/(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
-  if (!major || !minor || !patch) {
-    console.error(`❗️ Invalid version: ${pkg.version}`);
-    return;
+  let context, version;
+  if (['canary', 'next', 'latest'].includes(process.argv[2])) {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    context = process.argv[2];
+    version = pkg.version;
+    console.info(`📌 Using context arg: ${context}`);
+    console.info(`📌 Using package.json version: ${version}`);
+  } else {
+    const data = JSON.parse(process.env.ARG_0);
+    context = data.context;
+    version = data.newVersion;
+    console.info(`📌 Using auto shipIt context: ${context}`);
+    console.info(`📌 Using auto shipIt version: ${version}`);
   }
 
-  const { stdout: branch } = await $`git rev-parse --abbrev-ref HEAD`;
-  const defaultTag = branch === 'main' ? 'latest' : 'canary';
-  const context = ['canary', 'next', 'latest'].includes(process.argv[2])
-    ? process.argv[2]
-    : tag || defaultTag;
+  const [, major, minor, patch] = version.match(/(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
+  if (!major || !minor || !patch) {
+    console.error(`❗️ Invalid version: ${version}`);
+    return;
+  }
 
   switch (context) {
     case 'canary':
@@ -87,15 +94,15 @@ const publishAction = async ({ major, version, repo }) => {
         console.info('Run `yarn publish-action canary` to publish a canary action.');
         return;
       }
-      await publishAction({ major, version: pkg.version, repo: 'chromaui/action-canary' });
+      await publishAction({ major, version, repo: 'chromaui/action-canary' });
       break;
     case 'next':
-      await publishAction({ major, version: pkg.version, repo: 'chromaui/action-next' });
+      await publishAction({ major, version, repo: 'chromaui/action-next' });
       break;
     case 'latest':
-      await publishAction({ major, version: pkg.version, repo: 'chromaui/action' });
+      await publishAction({ major, version, repo: 'chromaui/action' });
       break;
     default:
-      console.error(`❗️ Unknown tag: ${tag}`);
+      console.error(`❗️ Unknown context: ${context}`);
   }
 })();
