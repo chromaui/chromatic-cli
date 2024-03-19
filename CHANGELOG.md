@@ -1,3 +1,25 @@
+# v11.1.0 (Tue Mar 19 2024)
+
+#### 🚀 Enhancement
+
+- Add `skipUpdateCheck` option [#928](https://github.com/chromaui/chromatic-cli/pull/928) ([@work933k](https://github.com/work933k) [@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Report code coverage to Codacy [#950](https://github.com/chromaui/chromatic-cli/pull/950) ([@paulelliott](https://github.com/paulelliott))
+- Fixes for various issues reported by Codacy [#947](https://github.com/chromaui/chromatic-cli/pull/947) ([@ghengeveld](https://github.com/ghengeveld))
+- Restrict permissions in GitHub Action workflows [#946](https://github.com/chromaui/chromatic-cli/pull/946) ([@ghengeveld](https://github.com/ghengeveld))
+- Tell SB8 users to pass `--stats-json` rather than `--webpack-stats-json` [#948](https://github.com/chromaui/chromatic-cli/pull/948) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 4
+
+- [@work933k](https://github.com/work933k)
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Paul Elliott ([@paulelliott](https://github.com/paulelliott))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.0.8 (Mon Mar 11 2024)
 
 #### 🐛 Bug Fix
