@@ -58,7 +58,7 @@ const readFileSyncMock = vi.mocked(readFileSync);
 const statSyncMock = vi.mocked(statSync);
 
 const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
 const http = { fetch: vi.fn() };
 
 afterEach(() => {
@@ -162,6 +162,27 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+  });
+
+  it('escapes special characters on context', async () => {
+    const deps = { './example-(new).stories.js': ['./example-(new).stories.js'] };
+    findChangedDependencies.mockResolvedValue([]);
+    findChangedPackageFiles.mockResolvedValue([]);
+    getDependentStoryFiles.mockResolvedValue(deps);
+
+    const ctx = {
+      env,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js'] },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx, {} as any);
+
+    expect(ctx.onlyStoryFiles).toStrictEqual(["./example-\\(\\new\\)\\.stories.js"]);
   });
 
   it('does not run package dependency analysis if there are no metadata changes', async () => {

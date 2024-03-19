@@ -14,6 +14,7 @@ import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
+import { isE2EBuild } from './e2e';
 
 const takeLast = (input: string | string[]) =>
   Array.isArray(input) ? input[input.length - 1] : input;
@@ -69,6 +70,7 @@ export default function getOptions({
     forceRebuild: undefined,
     junitReport: undefined,
     zip: undefined,
+    skipUpdateCheck: undefined,
 
     ignoreLastBuildOnBranch: undefined,
     preserveMissingSpecs: undefined,
@@ -123,6 +125,7 @@ export default function getOptions({
       defaultIfSet(flags.diagnostics && '', DEFAULT_DIAGNOSTICS_FILE), // for backwards compatibility
     junitReport: defaultIfSet(flags.junitReport, DEFAULT_REPORT_FILE),
     zip: flags.zip,
+    skipUpdateCheck: flags.skipUpdateCheck,
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
@@ -263,7 +266,7 @@ export default function getOptions({
     return options;
   }
 
-  if (options.playwright || options.cypress) {
+  if (isE2EBuild(options)) {
     return options;
   }
 

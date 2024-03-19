@@ -12,6 +12,7 @@ import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
+import * as checkPackageJson from './lib/checkPackageJson';
 import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
@@ -41,8 +42,9 @@ vi.mock('execa');
 // NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
 // vitest doesn't allow you to do that.
 const mockedBuildCommand = 'mocked build command';
-vi.mock('./lib/getE2eBuildCommand', () => ({
-  getE2eBuildCommand: () => mockedBuildCommand,
+vi.mock('./lib/e2e', async (importOriginal) => ({
+  ...await importOriginal(),
+  getE2EBuildCommand: () => mockedBuildCommand,
 }));
 
 const execaCommand = vi.mocked(execaDefault);
@@ -709,6 +711,14 @@ it('prompts you to add a script to your package.json', async () => {
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
   expect(confirm).toHaveBeenCalled();
+});
+
+it('does not propmpt you to add a script to your package.json for E2E builds', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--playwright']);
+  await runAll(ctx);
+  const spy = vi.spyOn(checkPackageJson, 'default');
+  expect(spy).not.toHaveBeenCalled();
+  expect(confirm).not.toHaveBeenCalled();
 });
 
 it('ctx should be JSON serializable', async () => {
