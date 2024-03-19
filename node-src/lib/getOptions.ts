@@ -169,9 +169,22 @@ export default function getOptions({
       process.env.NODE_ENV !== 'test',
   };
 
+  const combinedCliOptions = {
+    ...optionsFromFlags,
+    ...extraOptions,
+  }
+
   if (options.debug) {
     log.setLevel('debug');
     log.setInteractive(false);
+  }
+
+  if (combinedCliOptions.buildScriptName && combinedCliOptions.storybookBuildDir){
+    log.info('Both --build-script-name and --storybook-build-dir are specified as arguments, --build-script-name is ignored when using static storybook builds')
+  }
+
+  if (configuration && configuration.buildScriptName && configuration.storybookBuildDir) {
+    log.warn('Both buildScriptName and storybookBuildDir are specified in configuration, buildScriptName is ignored when using static storybook builds')
   }
 
   if (options.debug || options.uploadMetadata) {
@@ -206,7 +219,6 @@ export default function getOptions({
   }
 
   const { storybookBuildDir } = options;
-  let { buildScriptName } = options;
 
   // We can only have one of these arguments
   const singularOpts = {
@@ -275,6 +287,7 @@ export default function getOptions({
   }
 
   const { scripts } = packageJson;
+  let { buildScriptName } = options;
   if (typeof buildScriptName !== 'string') {
     buildScriptName = 'build-storybook';
     if (!scripts[buildScriptName]) {
