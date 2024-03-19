@@ -14,6 +14,10 @@ export interface Flags {
   outputDir?: string[];
   storybookBuildDir?: string[];
 
+  // E2E options
+  playwright?: boolean;
+  cypress?: boolean;
+
   // Chromatic options
   autoAcceptChanges?: string;
   branchName?: string;
@@ -33,6 +37,7 @@ export interface Flags {
   storybookConfigDir?: string;
   untraced?: string[];
   zip?: boolean;
+  skipUpdateCheck?: boolean;
 
   // Debug options
   debug?: boolean;
@@ -70,6 +75,7 @@ export interface Options extends Configuration {
   traceChanged: boolean | string;
   list: Flags['list'];
   fromCI: boolean;
+  inAction: boolean;
   skip: boolean | string;
   dryRun: Flags['dryRun'];
   forceRebuild: boolean | string;
@@ -90,6 +96,8 @@ export interface Options extends Configuration {
   originalArgv: string[];
 
   buildScriptName: Flags['buildScriptName'];
+  playwright: Flags['playwright'];
+  cypress: Flags['cypress'];
   outputDir: string;
   allowConsoleErrors: Flags['allowConsoleErrors'];
   url?: string;
@@ -124,6 +132,17 @@ export interface Options extends Configuration {
 
   /** An AbortSignal that terminates the build if aborted */
   experimental_abortSignal?: AbortSignal;
+
+  /** Logger object */
+  log?: Logger;
+
+  /** Sessiond Id */
+  sessionId?: string;
+
+  /** Environment variables */
+  env?: Env;
+
+  skipUpdateCheck: Flags['skipUpdateCheck'];
 }
 
 export { Configuration };
@@ -204,7 +223,7 @@ export interface Context {
     changedDependencyNames?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: boolean | string) => boolean;
-    packageManifestChanges?: { changedFiles: string[]; commit: string }[];
+    packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
   };
   storybook: {
     version: string;

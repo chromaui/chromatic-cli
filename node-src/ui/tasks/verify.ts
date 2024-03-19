@@ -1,3 +1,5 @@
+import pluralize from 'pluralize';
+
 import { Context } from '../../types';
 
 export const initial = {
@@ -40,6 +42,16 @@ export const runOnlyNames = (ctx: Context) => ({
     .map((v) => `'${v}'`)
     .join(', ')}`,
 });
+
+export const awaitingUpgrades = (ctx: Context, upgradeBuilds: { completedAt?: number }[]) => {
+  const pending = upgradeBuilds!.filter((upgrade) => !upgrade.completedAt).length;
+  const upgrades = pluralize('upgrade build', upgradeBuilds.length, true);
+  return {
+    status: 'pending',
+    title: 'Verifying your Storybook',
+    output: `Waiting for ${pending}/${upgrades} to complete`,
+  };
+};
 
 export const success = (ctx: Context) => ({
   status: 'success',

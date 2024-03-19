@@ -4,9 +4,9 @@ import slash from 'slash';
 
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { createTask, transitionTo } from '../lib/tasks';
-import { matchesFile, rewriteErrorMessage, throttle } from '../lib/utils';
+import { rewriteErrorMessage, throttle } from '../lib/utils';
 import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
-import missingStatsFile from '../ui/messages/warnings/missingStatsFile';
+import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import {
   failed,
   initial,
@@ -30,11 +30,15 @@ import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { uploadBuild } from '../lib/upload';
 import { getFileHashes } from '../lib/getFileHashes';
 import { waitForSentinel } from '../lib/waitForSentinel';
+import { checkStorybookBaseDir } from '../lib/checkStorybookBaseDir';
+import semver from 'semver';
 
 interface PathSpec {
   pathname: string;
   contentLength: number;
 }
+
+const SPECIAL_CHARS_REGEXP = new RegExp(`([${'`$^*+?()[]'.split('').join('\\')}])`);
 
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
@@ -105,47 +109,50 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
   if (!ctx.fileInfo.statsPath) {
+    // If we don't know the SB version, we should assume we don't support `--stats-json`
+    const nonLegacyStatsSupported =
+      ctx.storybook?.version && semver.gte(semver.coerce(ctx.storybook.version), '8.0.0');
+
     ctx.turboSnap.bailReason = { missingStatsFile: true };
-    ctx.log.warn(missingStatsFile());
-    return;
+    throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
   transitionTo(tracing)(ctx, task);
 
   const { statsPath } = ctx.fileInfo;
-  const { changedFiles, packageManifestChanges } = ctx.git;
+  const { changedFiles, packageMetadataChanges } = ctx.git;
+
   try {
-    const changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
-      const { name, message, stack, code } = err;
-      ctx.log.debug({ name, message, stack, code });
-    });
-    if (changedDependencyNames) {
-      ctx.git.changedDependencyNames = changedDependencyNames;
-      if (!ctx.options.interactive) {
-        const list = changedDependencyNames.length
-          ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
-          : '';
-        ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
-      }
-    } else {
-      ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
+    let changedDependencyNames: void | string[] = [];
+    if (packageMetadataChanges?.length > 0) {
+      changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
+        const { name, message, stack, code } = err;
+        ctx.log.debug({ name, message, stack, code });
+      });
+      if (changedDependencyNames) {
+        ctx.git.changedDependencyNames = changedDependencyNames;
+        if (!ctx.options.interactive) {
+          const list = changedDependencyNames.length
+            ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
+            : '';
+          ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
+        }
+      } else {
+        ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 
-      const { untraced = [] } = ctx.options;
-      const tracedPackageManifestChanges = packageManifestChanges
-        ?.map(({ changedFiles, commit }) => ({
-          changedFiles: changedFiles.filter((f) => !untraced.some((glob) => matchesFile(glob, f))),
-          commit,
-        }))
-        .filter(({ changedFiles }) => changedFiles.length > 0);
-
-      const changedPackageFiles = await findChangedPackageFiles(tracedPackageManifestChanges);
-      if (changedPackageFiles.length > 0) {
-        ctx.turboSnap.bailReason = { changedPackageFiles };
-        ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-        return;
+        const changedPackageFiles = await findChangedPackageFiles(packageMetadataChanges);
+        if (changedPackageFiles.length > 0) {
+          ctx.turboSnap.bailReason = { changedPackageFiles };
+          ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
+          return;
+        }
       }
     }
+
     const stats = await readStatsFile(statsPath);
+
+    await checkStorybookBaseDir(ctx, stats);
+
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,
       stats,
@@ -154,7 +161,11 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       changedDependencyNames || []
     );
     if (onlyStoryFiles) {
-      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
+      // Escape special characters in the filename so it does not conflict with picomatch
+      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
+        key.split(SPECIAL_CHARS_REGEXP).join('\\')
+      );
+
       if (!ctx.options.interactive) {
         if (!ctx.options.traceChanged) {
           ctx.log.info(

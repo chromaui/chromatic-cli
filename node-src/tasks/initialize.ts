@@ -66,7 +66,7 @@ export const announceBuild = async (ctx: Context) => {
     replacementBuildIds,
     committedAt,
     baselineCommits,
-    packageManifestChanges,
+    packageMetadataChanges,
     gitUserEmail,
     ...commitInfo
   } = ctx.git; // omit some fields;

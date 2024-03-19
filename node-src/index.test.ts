@@ -1,17 +1,18 @@
 import dns from 'dns';
-import { execa as execaDefault } from 'execa';
+import { execaCommand as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runAll } from '.';
+import { runAll, getGitInfo } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
+import * as checkPackageJson from './lib/checkPackageJson';
 import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
@@ -38,7 +39,15 @@ beforeEach(() => {
 vi.mock('dns');
 vi.mock('execa');
 
-const execa = vi.mocked(execaDefault);
+// NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
+// vitest doesn't allow you to do that.
+const mockedBuildCommand = 'mocked build command';
+vi.mock('./lib/e2e', async (importOriginal) => ({
+  ...await importOriginal(),
+  getE2EBuildCommand: () => mockedBuildCommand,
+}));
+
+const execaCommand = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
 const upload = vi.mocked(uploadFiles);
 
@@ -280,6 +289,7 @@ vi.mock('fs', async (importOriginal) => {
       if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
       return { isDirectory: () => false, size: 42 };
     }),
+    access: vi.fn((path, callback) => Promise.resolve(callback(undefined))),
   };
 });
 
@@ -287,7 +297,7 @@ vi.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
   getCommit: vi.fn(),
   getBranch: () => Promise.resolve('branch'),
-  getSlug: () => Promise.resolve('user/repo'),
+  getSlug: vi.fn(),
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
@@ -301,6 +311,7 @@ vi.mock('./git/getParentCommits', () => ({
 }));
 
 const getCommit = vi.mocked(git.getCommit);
+const getSlug = vi.mocked(git.getSlug);
 
 vi.mock('./lib/emailHash');
 
@@ -334,14 +345,15 @@ beforeEach(() => {
     CHROMATIC_APP_CODE: undefined,
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
-  execa.mockReset();
-  execa.mockResolvedValue({ stdout: '1.2.3' } as any);
+  execaCommand.mockReset();
+  execaCommand.mockResolvedValue({ stdout: '1.2.3' } as any);
   getCommit.mockResolvedValue({
     commit: 'commit',
     committedAt: 1234,
     committerEmail: 'test@test.com',
     committerName: 'tester',
   });
+  getSlug.mockResolvedValue('user/repo');
 });
 afterEach(() => {
   process.env = processEnv;
@@ -466,6 +478,12 @@ it('should exit with code 6 and stop the build when abortSignal is aborted', asy
 it('calls out to npm build script passed and uploads files', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
   await runAll(ctx);
+
+  expect(execaCommand).toHaveBeenCalledWith(
+    expect.stringMatching(/build-storybook/),
+    expect.objectContaining({})
+  );
+
   expect(ctx.exitCode).toBe(1);
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
@@ -501,7 +519,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--storybook-build-dir=dirname']);
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
-  expect(execa).not.toHaveBeenCalled();
+  expect(execaCommand).not.toHaveBeenCalled();
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
     [
@@ -530,6 +548,20 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
     ],
     expect.any(Function)
   );
+});
+
+it('builds with playwright with --playwright', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--playwright']);
+  await runAll(ctx);
+  expect(execaCommand).toHaveBeenCalledWith(mockedBuildCommand, expect.objectContaining({}));
+  expect(ctx.exitCode).toBe(1);
+});
+
+it('builds with cypress with --cypress', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--cypress']);
+  await runAll(ctx);
+  expect(execaCommand).toHaveBeenCalledWith(mockedBuildCommand, expect.objectContaining({}));
+  expect(ctx.exitCode).toBe(1);
 });
 
 it('passes autoAcceptChanges to the index', async () => {
@@ -681,6 +713,14 @@ it('prompts you to add a script to your package.json', async () => {
   expect(confirm).toHaveBeenCalled();
 });
 
+it('does not propmpt you to add a script to your package.json for E2E builds', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--playwright']);
+  await runAll(ctx);
+  const spy = vi.spyOn(checkPackageJson, 'default');
+  expect(spy).not.toHaveBeenCalled();
+  expect(confirm).not.toHaveBeenCalled();
+});
+
 it('ctx should be JSON serializable', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
@@ -761,4 +801,37 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
       },
     ])
   );
+});
+
+describe('getGitInfo', () => {
+  it('should retreive git info', async () => {
+    const result = await getGitInfo();
+    expect(result).toMatchObject({
+      branch: 'branch',
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+      slug: 'user/repo',
+      uncommittedHash: 'abc123',
+      userEmail: 'test@test.com',
+      userEmailHash: undefined,
+    });
+  });
+
+  it('should still return getInfo if no origin url', async () => {
+    getSlug.mockRejectedValue(new Error('no origin set'));
+    const result = await getGitInfo();
+    expect(result).toMatchObject({
+      branch: 'branch',
+      commit: 'commit',
+      committedAt: 1234,
+      committerEmail: 'test@test.com',
+      committerName: 'tester',
+      slug: '',
+      uncommittedHash: 'abc123',
+      userEmail: 'test@test.com',
+      userEmailHash: undefined,
+    });
+  });
 });

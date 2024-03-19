@@ -1,6 +1,9 @@
 name: Chromatic (staging)
 on: push
 
+permissions:
+  contents: read
+
 jobs:
   chromatic:
     runs-on: ubuntu-latest

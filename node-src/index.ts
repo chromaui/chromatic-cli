@@ -3,7 +3,14 @@ import Listr from 'listr';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
 
-import { getBranch, getCommit, getSlug, getUncommittedHash, getUserEmail } from './git/git';
+import {
+  getBranch,
+  getCommit,
+  getRepositoryRoot,
+  getSlug,
+  getUncommittedHash,
+  getUserEmail,
+} from './git/git';
 import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
 import LoggingRenderer from './lib/LoggingRenderer';
@@ -27,12 +34,12 @@ import buildCanceled from './ui/messages/errors/buildCanceled';
 import { default as fatalError } from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
-import invalidPackageJson from './ui/messages/errors/invalidPackageJson';
 import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+import { isE2EBuild } from './lib/e2e';
 
 /**
  Make keys of `T` outside of `R` optional.
@@ -86,9 +93,7 @@ export async function run({
   flags?: Flags;
   options?: Partial<Options>;
 }): Promise<Output> {
-  const sessionId = uuid();
-  const env = getEnv();
-  const log = createLogger();
+  const { sessionId = uuid(), env = getEnv(), log = createLogger() } = extraOptions || {};
 
   const pkgInfo = await readPkgUp({ cwd: process.cwd() });
   if (!pkgInfo) {
@@ -97,11 +102,6 @@ export async function run({
   }
 
   const { path: packagePath, packageJson } = pkgInfo;
-  if (typeof packageJson !== 'object' || typeof packageJson.scripts !== 'object') {
-    log.error(invalidPackageJson(packagePath));
-    process.exit(252);
-  }
-
   const ctx: InitialContext = {
     ...parseArgs(argv),
     ...(flags && { flags }),
@@ -164,6 +164,7 @@ export async function runAll(ctx: InitialContext) {
     const options = getOptions(ctx);
     (ctx as Context).options = options;
     ctx.log.setLogFile(options.logFile);
+
     setExitCode(ctx, exitCodes.OK);
   } catch (e) {
     return onError(e);
@@ -176,7 +177,7 @@ export async function runAll(ctx: InitialContext) {
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch(onError);
 
-  if ([0, 1].includes(ctx.exitCode)) {
+  if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
   }
 
@@ -203,6 +204,7 @@ async function runBuild(ctx: Context) {
         ctx.log.queue();
       }
       await new Listr(getTasks(ctx.options), options).run(ctx);
+      ctx.log.debug('Tasks completed');
     } catch (err) {
       endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
@@ -262,14 +264,21 @@ export type GitInfo = {
   uncommittedHash: string;
   userEmail: string;
   userEmailHash: string;
+  repositoryRootDir: string;
 };
 
 export async function getGitInfo(): Promise<GitInfo> {
-  const slug = await getSlug();
+  let slug: string;
+  try {
+    slug = await getSlug();
+  } catch {
+    slug = '';
+  }
   const branch = await getBranch();
   const commitInfo = await getCommit();
   const userEmail = await getUserEmail();
   const userEmailHash = emailHash(userEmail);
+  const repositoryRootDir = await getRepositoryRoot();
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && !rest.length;
@@ -282,7 +291,10 @@ export async function getGitInfo(): Promise<GitInfo> {
     uncommittedHash,
     userEmail,
     userEmailHash,
+    repositoryRootDir,
   };
 }
 
 export { getConfiguration } from './lib/getConfiguration';
+
+export { Logger } from './lib/log';

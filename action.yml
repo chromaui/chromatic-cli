@@ -23,6 +23,8 @@ inputs:
     required: false
   configFile:
     description: 'Path from where to load the Chromatic config JSON file.'
+  cypress:
+    description: 'Run build against `@chromatic-com/cypress` test archives'
     required: false
   debug:
     description: 'Output verbose debugging information'
@@ -45,6 +47,9 @@ inputs:
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'
     required: false
+  fileHashing:
+    description: 'Whether to apply file hashing to skip uploading unchanged files (default: true)'
+    required: false
   forceRebuild:
     description: 'Do not skip build when a rebuild is detected'
     required: false
@@ -65,6 +70,9 @@ inputs:
     required: false
   onlyStoryFiles:
     description: 'Only run a single story or a subset of stories by their filename(s)'
+    required: false
+  playwright:
+    description: 'Run build against `@chromatic-com/playwright` test archives'
     required: false
   preserveMissing:
     description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'

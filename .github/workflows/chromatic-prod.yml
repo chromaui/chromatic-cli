@@ -1,6 +1,9 @@
 name: Chromatic
 on: push
 
+permissions:
+  contents: read
+
 jobs:
   chromatic:
     runs-on: ubuntu-latest
@@ -19,6 +22,7 @@ jobs:
           onlyChanged: true
           traceChanged: true
           diagnostics: true
+          debug: true
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
       - uses: actions/upload-artifact@v2

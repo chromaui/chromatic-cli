@@ -1,3 +1,333 @@
+# v11.1.0 (Tue Mar 19 2024)
+
+#### 🚀 Enhancement
+
+- Add `skipUpdateCheck` option [#928](https://github.com/chromaui/chromatic-cli/pull/928) ([@work933k](https://github.com/work933k) [@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Report code coverage to Codacy [#950](https://github.com/chromaui/chromatic-cli/pull/950) ([@paulelliott](https://github.com/paulelliott))
+- Fixes for various issues reported by Codacy [#947](https://github.com/chromaui/chromatic-cli/pull/947) ([@ghengeveld](https://github.com/ghengeveld))
+- Restrict permissions in GitHub Action workflows [#946](https://github.com/chromaui/chromatic-cli/pull/946) ([@ghengeveld](https://github.com/ghengeveld))
+- Tell SB8 users to pass `--stats-json` rather than `--webpack-stats-json` [#948](https://github.com/chromaui/chromatic-cli/pull/948) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 4
+
+- [@work933k](https://github.com/work933k)
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Paul Elliott ([@paulelliott](https://github.com/paulelliott))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v11.0.8 (Mon Mar 11 2024)
+
+#### 🐛 Bug Fix
+
+- Fix e2e peer dep versions [#943](https://github.com/chromaui/chromatic-cli/pull/943) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v11.0.7 (Fri Mar 08 2024)
+
+#### 🐛 Bug Fix
+
+- Prevent non-string or null message in timestamp logging from causing exit code 254 during build. [#931](https://github.com/chromaui/chromatic-cli/pull/931) ([@BenjaminEllisSo](https://github.com/BenjaminEllisSo))
+
+#### Authors: 1
+
+- [@BenjaminEllisSo](https://github.com/BenjaminEllisSo)
+
+---
+
+# v11.0.6 (Thu Mar 07 2024)
+
+#### 🐛 Bug Fix
+
+- Expose E2E build errors [#940](https://github.com/chromaui/chromatic-cli/pull/940) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v11.0.5 (Thu Mar 07 2024)
+
+#### 🐛 Bug Fix
+
+- escape special characters in onlyStoryFiles filenames [#942](https://github.com/chromaui/chromatic-cli/pull/942) ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+#### Authors: 1
+
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
+# v11.0.4 (Wed Mar 06 2024)
+
+#### 🐛 Bug Fix
+
+- Do not prompt to install chromatic script during E2E builds [#941](https://github.com/chromaui/chromatic-cli/pull/941) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v11.0.3 (Wed Mar 06 2024)
+
+#### 🐛 Bug Fix
+
+- Display full error message when storybookBaseDir is invalid [#932](https://github.com/chromaui/chromatic-cli/pull/932) ([@andrewortwein](https://github.com/andrewortwein))
+
+#### Authors: 1
+
+- Andrew Ortwein ([@andrewortwein](https://github.com/andrewortwein))
+
+---
+
+# v11.0.2 (Tue Mar 05 2024)
+
+#### 🐛 Bug Fix
+
+- Fix support for boolean value to `junitReport` option [#937](https://github.com/chromaui/chromatic-cli/pull/937) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
+# v11.0.1 (Tue Mar 05 2024)
+
+#### 🐛 Bug Fix
+
+- Allow commit hash to not be known when finding merge queue PR number [#929](https://github.com/chromaui/chromatic-cli/pull/929) ([@adrianbruntonsagecom](https://github.com/adrianbruntonsagecom))
+
+#### Authors: 1
+
+- Adrian Brunton ([@adrianbruntonsagecom](https://github.com/adrianbruntonsagecom))
+
+---
+
+# v11.0.0 (Thu Feb 22 2024)
+
+#### 💥 Breaking Change
+
+- Add new invalid sb base dir error message and validator function [#921](https://github.com/chromaui/chromatic-cli/pull/921) ([@andrewortwein](https://github.com/andrewortwein) [@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 2
+
+- Andrew Ortwein ([@andrewortwein](https://github.com/andrewortwein))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
+# v10.9.6 (Fri Feb 16 2024)
+
+#### 🐛 Bug Fix
+
+- Avoid build verify timeout when waiting for upgrade builds [#922](https://github.com/chromaui/chromatic-cli/pull/922) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v10.9.5 (Wed Feb 14 2024)
+
+#### 🐛 Bug Fix
+
+- Fix Storybook published messaging [#920](https://github.com/chromaui/chromatic-cli/pull/920) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v10.9.4 (Mon Feb 12 2024)
+
+#### 🐛 Bug Fix
+
+- Allow `traceChanged` in Chromatic config spec [#916](https://github.com/chromaui/chromatic-cli/pull/916) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v10.9.3 (Fri Feb 09 2024)
+
+#### 🐛 Bug Fix
+
+- clean up debug log as it's too much noise [#919](https://github.com/chromaui/chromatic-cli/pull/919) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
+# v10.9.2 (Thu Feb 08 2024)
+
+#### 🐛 Bug Fix
+
+- Directly execute build-archive-storybook if we can't resolve it [#917](https://github.com/chromaui/chromatic-cli/pull/917) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v10.9.1 (Thu Feb 08 2024)
+
+#### 🐛 Bug Fix
+
+- Add missing `fileHashing` option to GitHub Action [#918](https://github.com/chromaui/chromatic-cli/pull/918) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v10.9.0 (Wed Feb 07 2024)
+
+#### 🚀 Enhancement
+
+- Be smarter about comparing lock files [#912](https://github.com/chromaui/chromatic-cli/pull/912) ([@ghengeveld](https://github.com/ghengeveld) [@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v10.8.0 (Tue Feb 06 2024)
+
+#### 🚀 Enhancement
+
+- Expose `repositoryRootDir`, `configFile` and fix `diagnosticsFile` [#913](https://github.com/chromaui/chromatic-cli/pull/913) ([@ghengeveld](https://github.com/ghengeveld))
+- Support `env`, `sessionId` and `log` options via Node API [#897](https://github.com/chromaui/chromatic-cli/pull/897) ([@work933k](https://github.com/work933k))
+- Add timestamps to debug and file logging [#907](https://github.com/chromaui/chromatic-cli/pull/907) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- [@work933k](https://github.com/work933k)
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v10.7.1 (Fri Feb 02 2024)
+
+#### 🐛 Bug Fix
+
+- Add Fallback getGitInfo if we cannot find the origin URL [#910](https://github.com/chromaui/chromatic-cli/pull/910) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
+# v10.7.0 (Fri Feb 02 2024)
+
+#### 🚀 Enhancement
+
+- Rename E2E peer dependencies [#909](https://github.com/chromaui/chromatic-cli/pull/909) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v10.6.1 (Fri Jan 26 2024)
+
+#### 🐛 Bug Fix
+
+- Remove after-release script [#906](https://github.com/chromaui/chromatic-cli/pull/906) ([@skitterm](https://github.com/skitterm))
+
+#### Authors: 1
+
+- Steven Kitterman ([@skitterm](https://github.com/skitterm))
+
+---
+
+# v10.6.0 (Fri Jan 26 2024)
+
+#### 🚀 Enhancement
+
+- CLI should throw error when using TurboSnap but missing a stats file. [#899](https://github.com/chromaui/chromatic-cli/pull/899) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
+# v10.5.2 (Thu Jan 25 2024)
+
+#### 🐛 Bug Fix
+
+- Remove latest from the chromatic package in Init script [#902](https://github.com/chromaui/chromatic-cli/pull/902) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
+# v10.5.1 (Thu Jan 25 2024)
+
+#### 🐛 Bug Fix
+
+- Add "package.json" to exports map [#900](https://github.com/chromaui/chromatic-cli/pull/900) ([@yannbf](https://github.com/yannbf))
+- Improve logging around upload errors [#894](https://github.com/chromaui/chromatic-cli/pull/894) ([@ghengeveld](https://github.com/ghengeveld))
+- Don't skip uploading of empty files, it works now [#901](https://github.com/chromaui/chromatic-cli/pull/901) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Yann Braga ([@yannbf](https://github.com/yannbf))
+
+---
+
+# v10.5.0 (Wed Jan 24 2024)
+
+#### 🚀 Enhancement
+
+- Add `--playwright` & `--cypress` flags [#882](https://github.com/chromaui/chromatic-cli/pull/882) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v10.4.0 (Tue Jan 23 2024)
+
+#### 🚀 Enhancement
+
+- Add new Init command for Project Setup [#880](https://github.com/chromaui/chromatic-cli/pull/880) ([@thafryer](https://github.com/thafryer))
+
+#### Authors: 1
+
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+
+---
+
 # v10.3.1 (Wed Jan 17 2024)
 
 #### 🐛 Bug Fix

@@ -12,10 +12,11 @@ const configurationSchema = z
     onlyChanged: z.union([z.string(), z.boolean()]),
     onlyStoryFiles: z.array(z.string()),
     onlyStoryNames: z.array(z.string()),
+    traceChanged: z.union([z.string(), z.boolean()]),
     untraced: z.array(z.string()),
     externals: z.array(z.string()),
     debug: z.boolean(),
-    diagnosticFile: z.union([z.string(), z.boolean()]),
+    diagnosticsFile: z.union([z.string(), z.boolean()]),
     fileHashing: z.boolean().default(true),
     junitReport: z.union([z.string(), z.boolean()]),
     zip: z.boolean(),
@@ -25,6 +26,8 @@ const configurationSchema = z
     ignoreLastBuildOnBranch: z.string(),
 
     buildScriptName: z.string(),
+    playwright: z.boolean(),
+    cypress: z.boolean(),
     outputDir: z.string(),
     skip: z.union([z.string(), z.boolean()]),
 
@@ -40,12 +43,14 @@ const configurationSchema = z
 
 export type Configuration = z.infer<typeof configurationSchema>;
 
-export async function getConfiguration(configFile?: string) {
+export async function getConfiguration(
+  configFile?: string
+): Promise<Configuration & { configFile?: string }> {
   const usedConfigFile = configFile || 'chromatic.config.json';
   try {
     const rawJson = readFileSync(usedConfigFile, 'utf8');
-
-    return configurationSchema.parse(JSON.parse(rawJson));
+    const configuration = configurationSchema.parse(JSON.parse(rawJson));
+    return { configFile: usedConfigFile, ...configuration };
   } catch (err) {
     // Config file does not exist
     if (err.message.match(/ENOENT/)) {
