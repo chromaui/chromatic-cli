@@ -79,6 +79,8 @@ const publishAction = async ({ major, version, repo }) => {
     version = data.newVersion;
     console.info(`📌 Using auto shipIt context: ${context}`);
     console.info(`📌 Using auto shipIt version: ${version}`);
+    console.info(`Commits in release:`);
+    data.commitsInRelease.forEach((c) => console.info(`- ${c.hash.slice(0, 8)} ${c.subject}`));
   }
 
   const [, major, minor, patch] = version.match(/(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
