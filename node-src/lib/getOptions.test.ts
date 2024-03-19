@@ -122,7 +122,7 @@ describe('getOptions', () => {
       getOptions(context)
     ).not.toThrow()
 
-    expect(log.entries).to.include('Note: Both --build-script-name and --storybook-build-dir are specified as arguments, --build-script-name is ignored when using static storybook builds')
+    expect(log.entries).to.include('Both --build-script-name and --storybook-build-dir are specified as arguments, --build-script-name is ignored when using static storybook builds')
   });
 
   it('warns when both buildScriptName and storybookBuildDir are specified in configuration', () => {
