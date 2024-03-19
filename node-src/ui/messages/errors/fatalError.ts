@@ -40,7 +40,11 @@ export default function fatalError(
     {
       timestamp,
       sessionId,
-      gitVersion: git && git.version,
+      gitVersion: git?.version,
+      gitBranch: git?.branch,
+      gitSlug: git?.slug,
+      fromCI: git?.fromCI,
+      ciService: git?.ciService,
       nodePlatform: process.platform,
       nodeVersion: process.versions.node,
       ...runtimeMetadata,
@@ -50,6 +54,9 @@ export default function fatalError(
       flags,
       ...(extraOptions && { extraOptions }),
       ...(configuration && { configuration }),
+      ...('options' in ctx && ctx.options?.isLocalBuild
+        ? { isLocalBuild: ctx.options.isLocalBuild }
+        : {}),
       ...('options' in ctx && ctx.options?.buildScriptName
         ? { buildScript: scripts[ctx.options.buildScriptName] }
         : {}),

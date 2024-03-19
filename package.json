@@ -229,7 +229,13 @@
     },
     "plugins": [
       "npm",
-      "released"
+      "released",
+      [
+        "exec",
+        {
+          "afterShipIt": "yarn run publish-action"
+        }
+      ]
     ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
