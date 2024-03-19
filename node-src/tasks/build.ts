@@ -11,7 +11,8 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2EbuildBinName, getE2eBuildCommand } from '../lib/getE2eBuildCommand';
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
 
 export const setSourceDir = async (ctx: Context) => {
@@ -43,8 +44,8 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
   ].filter(Boolean);
 
-  if (ctx.options.playwright || ctx.options.cypress) {
-    ctx.buildCommand = await getE2eBuildCommand(
+  if (isE2EBuild(ctx.options)) {
+    ctx.buildCommand = await getE2EBuildCommand(
       ctx,
       ctx.options.playwright ? 'playwright' : 'cypress',
       buildCommandOptions
@@ -59,6 +60,49 @@ export const setBuildCommand = async (ctx: Context) => {
 
 const timeoutAfter = (ms) =>
   new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
+
+function isE2EBuildCommandNotFoundError(errorMessage: string) {
+  // It's hard to know if this is the case as each package manager has a different type of
+  // error for this, but we'll try to figure it out.
+  const ERROR_PATTERNS = [
+    // `Command not found: build-archive-storybook`
+    'command not found',
+    // `Command "build-archive-storybook" not found`
+    `[\\W]?${e2eBuildBinName}[\\W]? not found`,
+    // npm not found error can include this code
+    'code E404',
+    // Exit code 127 is a generic not found exit code
+    'exit code 127',
+    // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
+    `command failed.*${e2eBuildBinName}.*$`,
+  ];
+  return ERROR_PATTERNS.some((PATTERN) => new RegExp(PATTERN, 'gi').test(errorMessage));
+}
+
+function e2eBuildErrorMessage(
+  err,
+  workingDir: string,
+  ctx: Context
+): { exitCode: number; message: string } {
+  const flag = ctx.options.playwright ? 'playwright' : 'cypress';
+  const errorMessage = err.message;
+
+  // If we tried to run the E2E package's bin directly (due to being in the action)
+  // and it failed, that means we couldn't find it. This probably means they haven't
+  // installed the right dependency or run from the right directory.
+  if (isE2EBuildCommandNotFoundError(errorMessage)) {
+    const dependencyName = `@chromatic-com/${flag}`;
+    return {
+      exitCode: exitCodes.MISSING_DEPENDENCY,
+      message: missingDependency({ dependencyName, flag, workingDir }),
+    };
+  }
+
+  return {
+    exitCode: exitCodes.E2E_BUILD_FAILED,
+    message: e2eBuildFailed({ flag, errorMessage }),
+  };
+}
 
 export const buildStorybook = async (ctx: Context) => {
   let logFile = null;
@@ -77,7 +121,7 @@ export const buildStorybook = async (ctx: Context) => {
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
 
     const subprocess = execaCommand(ctx.buildCommand, {
-      stdio: [null, logFile, logFile],
+      stdio: [null, logFile, null],
       signal,
       env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
     });
@@ -86,16 +130,10 @@ export const buildStorybook = async (ctx: Context) => {
     // If we tried to run the E2E package's bin directly (due to being in the action)
     // and it failed, that means we couldn't find it. This probably means they haven't
     // installed the right dependency or run from the right directory
-    if (
-      ctx.options.inAction &&
-      (ctx.options.playwright || ctx.options.cypress) &&
-      e.message.match(e2EbuildBinName)
-    ) {
-      const flag = ctx.options.playwright ? 'playwright' : 'cypress';
-      const dependencyName = `@chromatic-com/${flag}`;
-      ctx.log.error(missingDependency({ dependencyName, flag, workingDir: process.cwd() }));
-      ctx.log.debug(e);
-      setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
+    if (isE2EBuild(ctx.options)) {
+      const errorInfo = e2eBuildErrorMessage(e, process.cwd(), ctx);
+      ctx.log.error(errorInfo.message);
+      setExitCode(ctx, errorInfo.exitCode, true);
       throw new Error(failed(ctx).output);
     }
 

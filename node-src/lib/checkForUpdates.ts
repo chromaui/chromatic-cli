@@ -10,6 +10,11 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   Promise.race([promise, rejectIn(ms)]);
 
 export default async function checkForUpdates(ctx: InitialContext) {
+  if (ctx.options.skipUpdateCheck === true) {
+    ctx.log.info(`Skipping update check`);
+    return;
+  }
+
   if (!semver.valid(ctx.pkg.version)) {
     ctx.log.warn(`Invalid semver version in package.json: ${ctx.pkg.version}`);
     return;

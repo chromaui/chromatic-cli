@@ -37,6 +37,7 @@ export interface Flags {
   storybookConfigDir?: string;
   untraced?: string[];
   zip?: boolean;
+  skipUpdateCheck?: boolean;
 
   // Debug options
   debug?: boolean;
@@ -140,6 +141,8 @@ export interface Options extends Configuration {
 
   /** Environment variables */
   env?: Env;
+
+  skipUpdateCheck: Flags['skipUpdateCheck'];
 }
 
 export { Configuration };
