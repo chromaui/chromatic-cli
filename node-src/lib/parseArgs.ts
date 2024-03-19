@@ -39,6 +39,7 @@ export default function parseArgs(argv: string[]) {
       --storybook-config-dir <dirname>          Relative path from where you run Chromatic to your Storybook config directory ('.storybook'). Use with --only-changed and --storybook-build-dir when using a custom --config-dir (-c) flag for Storybook. [.storybook]
       --untraced <filepath>                     Disregard these files and their dependencies when tracing dependent stories for TurboSnap. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --zip                                     Publish your Storybook to Chromatic as a single zip file instead of individual content files.
+      --skip-update-check                       Skip checking for available Chromatic package update.
 
     Debug options
       --debug                          Output verbose debugging information. This option implies --no-interactive, --diagnostics-file, --log-file.

@@ -25,6 +25,9 @@ export const exitCodes = {
   STORYBOOK_START_FAILED: 22,
   STORYBOOK_BROKEN: 23,
 
+  // E2E errors
+  E2E_BUILD_FAILED: 51,
+
   // Subprocess errors
   GIT_NOT_CLEAN: 101,
   GIT_OUT_OF_DATE: 102,

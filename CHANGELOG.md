@@ -1,3 +1,73 @@
+# v11.1.0 (Tue Mar 19 2024)
+
+#### 🚀 Enhancement
+
+- Add `skipUpdateCheck` option [#928](https://github.com/chromaui/chromatic-cli/pull/928) ([@work933k](https://github.com/work933k) [@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Report code coverage to Codacy [#950](https://github.com/chromaui/chromatic-cli/pull/950) ([@paulelliott](https://github.com/paulelliott))
+- Fixes for various issues reported by Codacy [#947](https://github.com/chromaui/chromatic-cli/pull/947) ([@ghengeveld](https://github.com/ghengeveld))
+- Restrict permissions in GitHub Action workflows [#946](https://github.com/chromaui/chromatic-cli/pull/946) ([@ghengeveld](https://github.com/ghengeveld))
+- Tell SB8 users to pass `--stats-json` rather than `--webpack-stats-json` [#948](https://github.com/chromaui/chromatic-cli/pull/948) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 4
+
+- [@work933k](https://github.com/work933k)
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Paul Elliott ([@paulelliott](https://github.com/paulelliott))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v11.0.8 (Mon Mar 11 2024)
+
+#### 🐛 Bug Fix
+
+- Fix e2e peer dep versions [#943](https://github.com/chromaui/chromatic-cli/pull/943) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v11.0.7 (Fri Mar 08 2024)
+
+#### 🐛 Bug Fix
+
+- Prevent non-string or null message in timestamp logging from causing exit code 254 during build. [#931](https://github.com/chromaui/chromatic-cli/pull/931) ([@BenjaminEllisSo](https://github.com/BenjaminEllisSo))
+
+#### Authors: 1
+
+- [@BenjaminEllisSo](https://github.com/BenjaminEllisSo)
+
+---
+
+# v11.0.6 (Thu Mar 07 2024)
+
+#### 🐛 Bug Fix
+
+- Expose E2E build errors [#940](https://github.com/chromaui/chromatic-cli/pull/940) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
+# v11.0.5 (Thu Mar 07 2024)
+
+#### 🐛 Bug Fix
+
+- escape special characters in onlyStoryFiles filenames [#942](https://github.com/chromaui/chromatic-cli/pull/942) ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+#### Authors: 1
+
+- Jono Kolnik ([@JonathanKolnik](https://github.com/JonathanKolnik))
+
+---
+
 # v11.0.4 (Wed Mar 06 2024)
 
 #### 🐛 Bug Fix

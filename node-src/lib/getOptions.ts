@@ -70,6 +70,7 @@ export default function getOptions({
     forceRebuild: undefined,
     junitReport: undefined,
     zip: undefined,
+    skipUpdateCheck: undefined,
 
     ignoreLastBuildOnBranch: undefined,
     preserveMissingSpecs: undefined,
@@ -124,6 +125,7 @@ export default function getOptions({
       defaultIfSet(flags.diagnostics && '', DEFAULT_DIAGNOSTICS_FILE), // for backwards compatibility
     junitReport: defaultIfSet(flags.junitReport, DEFAULT_REPORT_FILE),
     zip: flags.zip,
+    skipUpdateCheck: flags.skipUpdateCheck,
 
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),

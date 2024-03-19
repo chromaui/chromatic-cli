@@ -6,6 +6,9 @@ on:
   pull_request:
     types: [assigned, ready_for_review, review_requested]
 
+permissions:
+  contents: read
+
 jobs:
   chromatic:
     runs-on: ubuntu-latest
