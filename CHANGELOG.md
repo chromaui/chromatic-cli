@@ -1,3 +1,17 @@
+# v11.2.0 (Wed Mar 20 2024)
+
+#### 🚀 Enhancement
+
+- Allow passing both `buildScriptName` and `storybookBuildDir` [#934](https://github.com/chromaui/chromatic-cli/pull/934) (WOU@kmd.dk [@woutervanvliet](https://github.com/woutervanvliet) [@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 3
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Wouter van Vliet ([@woutervanvliet](https://github.com/woutervanvliet))
+- Wouter van Vliet (WOU) (WOU@kmd.dk)
+
+---
+
 # v11.1.1 (Wed Mar 20 2024)
 
 #### 🐛 Bug Fix
