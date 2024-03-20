@@ -1,3 +1,23 @@
+# v11.1.1 (Wed Mar 20 2024)
+
+#### 🐛 Bug Fix
+
+- Properly handle GitHub Action inputs that can have multiple values [#951](https://github.com/chromaui/chromatic-cli/pull/951) ([@tevanoff](https://github.com/tevanoff))
+- Fix GitHub Action release script using data from Auto shipIt hook rather than from Git [#956](https://github.com/chromaui/chromatic-cli/pull/956) ([@ghengeveld](https://github.com/ghengeveld))
+- Bump ip from 2.0.0 to 2.0.1 [#925](https://github.com/chromaui/chromatic-cli/pull/925) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@ghengeveld](https://github.com/ghengeveld))
+- Bump vite from 4.4.9 to 4.5.2 [#895](https://github.com/chromaui/chromatic-cli/pull/895) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@ghengeveld](https://github.com/ghengeveld))
+- Bump ip from 1.1.5 to 1.1.9 in /subdir [#926](https://github.com/chromaui/chromatic-cli/pull/926) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@ghengeveld](https://github.com/ghengeveld))
+- Bump semver from 5.7.1 to 5.7.2 in /subdir [#786](https://github.com/chromaui/chromatic-cli/pull/786) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@thafryer](https://github.com/thafryer) [@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 4
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.1.0 (Tue Mar 19 2024)
 
 #### 🚀 Enhancement
