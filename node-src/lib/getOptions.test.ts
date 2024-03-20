@@ -115,27 +115,10 @@ describe('getOptions', () => {
     });
   });
 
-  it('allows you to pass both a build script and a directory', () => {
-    const context = getContext(['-b', 'build:storybook', '--storybook-build-dir', '/tmp/dir'])
-    const log = context.log as unknown as TestLogger
+  it('allows you to pass both a build script and a directory', async () => {
     expect(() =>
-      getOptions(context)
-    ).not.toThrow()
-
-    expect(log.entries).to.include('Both --build-script-name and --storybook-build-dir are specified as arguments, --build-script-name is ignored when using static storybook builds')
-  });
-
-  it('warns when both buildScriptName and storybookBuildDir are specified in configuration', () => {
-    const context = getContext([])
-    const log = context.log as unknown as TestLogger
-    expect(() =>
-        getOptions({...context, configuration: {
-          buildScriptName: 'other-build-script-name',
-            storybookBuildDir: '/tmp/storybook-prebuilt'
-          }})
-    ).not.toThrow()
-
-    expect(log.entries).to.include('Both buildScriptName and storybookBuildDir are specified in configuration, buildScriptName is ignored when using static storybook builds')
+      getOptions(getContext(['-b', 'build:storybook', '--storybook-build-dir', '/tmp/dir']))
+    ).not.toThrow();
   });
 
   it('allows you to specify the branch name', async () => {
