@@ -62,7 +62,10 @@ export async function getConfiguration(
         throw new Error(missingConfigurationFile(configFile));
       }
     }
-    if (err.message.match('Unexpected string')) {
+    if (
+      err.message.match('Unexpected string') ||
+      err.message.match('Unexpected end of JSON input')
+    ) {
       throw new Error(unparseableConfigurationFile(usedConfigFile, err));
     }
     if (err instanceof ZodError) {
