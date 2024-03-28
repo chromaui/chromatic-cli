@@ -83,12 +83,11 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   }
 
   if (!ctx.git.slug) {
-    await getSlug().then(
-      (slug) => {
-        ctx.git.slug = slug;
-      },
-      (e) => ctx.log.warn('Failed to retrieve slug', e)
-    );
+    try {
+      ctx.git.slug = await getSlug();
+    } catch (e) {
+      ctx.log.debug('Failed to retrieve Git repository slug', e);
+    }
   }
 
   if (ownerName) {
