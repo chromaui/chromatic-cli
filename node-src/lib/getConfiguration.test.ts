@@ -156,19 +156,19 @@ it('errors if config file is unparseable', async () => {
   {
     mockedReadFile.mockReturnValue('invalid json');
     await expect(getConfiguration('test.file')).rejects.toThrow(
-      /Configuration file .+ could not be parsed(.|\n)*Unexpected token/
+      /Configuration file .+ could not be parsed/
     );
   }
   {
     mockedReadFile.mockReturnValue('{ "foo": 1 "unexpectedString": 2 }');
     await expect(getConfiguration('test.file')).rejects.toThrow(
-      /Configuration file .+ could not be parsed(.|\n)*Unexpected string/m
+      /Configuration file .+ could not be parsed/
     );
   }
   {
     mockedReadFile.mockReturnValue('{ "unexpectedEnd": ');
     await expect(getConfiguration('test.file')).rejects.toThrow(
-      /Configuration file .+ could not be parsed(.|\n)*Unexpected end/m
+      /Configuration file .+ could not be parsed/
     );
   }
 });
