@@ -151,3 +151,24 @@ it('errors if config file contains unknown keys', async () => {
 
   await expect(getConfiguration('test.file')).rejects.toThrow(/random/);
 });
+
+it('errors if config file is unparseable', async () => {
+  {
+    mockedReadFile.mockReturnValue('invalid json');
+    await expect(getConfiguration('test.file')).rejects.toThrow(
+      /Configuration file .+ could not be parsed(.|\n)*Unexpected token i in JSON/
+    );
+  }
+  {
+    mockedReadFile.mockReturnValue('{ "foo": 1 "unexpectedString": 2 }');
+    await expect(getConfiguration('test.file')).rejects.toThrow(
+      /Configuration file .+ could not be parsed(.|\n)*Unexpected string in JSON/m
+    );
+  }
+  {
+    mockedReadFile.mockReturnValue('{ "unexpectedEnd": ');
+    await expect(getConfiguration('test.file')).rejects.toThrow(
+      /Configuration file .+ could not be parsed(.|\n)*Unexpected end of JSON input/m
+    );
+  }
+});
