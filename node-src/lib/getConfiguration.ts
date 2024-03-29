@@ -62,7 +62,7 @@ export async function getConfiguration(
         throw new Error(missingConfigurationFile(configFile));
       }
     }
-    if (err.message.match('Unexpected string')) {
+    if (err instanceof SyntaxError) {
       throw new Error(unparseableConfigurationFile(usedConfigFile, err));
     }
     if (err instanceof ZodError) {
