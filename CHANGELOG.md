@@ -1,3 +1,20 @@
+# v11.3.0 (Fri Mar 29 2024)
+
+#### 🚀 Enhancement
+
+- Throw user-friendly error when config file fails to parse as JSON [#961](https://github.com/chromaui/chromatic-cli/pull/961) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Suppress issues caused by missing Git remote [#962](https://github.com/chromaui/chromatic-cli/pull/962) ([@ghengeveld](https://github.com/ghengeveld))
+- Trim `v` prefix from shipIt's version to avoid double prefixing tags [#960](https://github.com/chromaui/chromatic-cli/pull/960) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.2.0 (Wed Mar 20 2024)
 
 #### 🚀 Enhancement
