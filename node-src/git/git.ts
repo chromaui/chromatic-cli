@@ -148,10 +148,15 @@ export async function getChangedFiles(baseCommit: string, headCommit = '') {
 
 /**
  * Returns a boolean indicating whether the workspace is up-to-date (neither ahead nor behind) with
- * the remote.
+ * the remote. Returns true on error, assuming the workspace is up-to-date.
  */
 export async function isUpToDate({ log }: Pick<Context, 'log'>) {
-  execGitCommand(`git remote update`);
+  try {
+    await execGitCommand(`git remote update`);
+  } catch (e) {
+    log.warn(e);
+    return true;
+  }
 
   let localCommit;
   try {
