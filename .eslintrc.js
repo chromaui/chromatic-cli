@@ -32,6 +32,11 @@ module.exports = {
     ],
   },
   settings: {
+    'import/resolver': {
+      node: {
+        extensions: ['.ts'],
+      },
+    },
     react: {
       version: 'detect',
     },
