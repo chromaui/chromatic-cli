@@ -4,10 +4,12 @@ import { invalidStorybookBaseDir } from '../ui/messages/errors/invalidStorybookB
 import { Context, Stats } from '../types';
 import pLimit from 'p-limit';
 import { exitCodes, setExitCode } from './setExitCode';
+import { getRepositoryRoot } from '../git/git';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
+  const repositoryRoot = await getRepositoryRoot();
   const { storybookBaseDir = '' } = ctx.options;
-  ctx.log.debug('Storybook base directory:', storybookBaseDir);
+  ctx.log.debug('Storybook base directory:', path.join(repositoryRoot, storybookBaseDir));
 
   // Find all js(x)/ts(x) files in stats that are not in node_modules
   const sourceModuleFiles = stats.modules.filter(
@@ -22,7 +24,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
     await Promise.any(
       sourceModuleFiles.map((file) => {
         return limitConcurrency(() => {
-          const absolutePath = path.join(storybookBaseDir, file.name);
+          const absolutePath = path.join(repositoryRoot, storybookBaseDir, file.name);
           return new Promise((resolve, reject) =>
             fs.access(absolutePath, (err) => {
               if (err) {
