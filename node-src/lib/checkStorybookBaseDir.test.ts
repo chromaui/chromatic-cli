@@ -1,8 +1,21 @@
-import { describe, expect, it } from 'vitest';
-import { checkStorybookBaseDir } from './checkStorybookBaseDir';
 import path from 'path';
-import TestLogger from './testLogger';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import * as git from '../git/git';
+import { checkStorybookBaseDir } from './checkStorybookBaseDir';
 import { exitCodes } from './setExitCode';
+import TestLogger from './testLogger';
+
+vi.mock('../git/git');
+
+const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
+
+beforeEach(() => {
+  getRepositoryRoot.mockResolvedValue(path.join(__dirname, '../__mocks__'));
+});
+afterEach(() => {
+  getRepositoryRoot.mockReset();
+});
 
 const getContext: any = (storybookBaseDir?: string) => ({
   log: new TestLogger(),
@@ -11,7 +24,7 @@ const getContext: any = (storybookBaseDir?: string) => ({
 
 describe('checkStorybookBaseDir', () => {
   it('should return if a js(x)/ts(x) module in stats exists at the path prepended by the storybookBaseDir', async () => {
-    const ctx = getContext(path.join(__dirname, '../__mocks__/storybookBaseDir'));
+    const ctx = getContext('storybookBaseDir');
 
     const statsWithJsModule = {
       modules: [
@@ -64,7 +77,7 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    const ctxWithBaseDir = getContext(path.join(__dirname, '../__mocks__/wrong'));
+    const ctxWithBaseDir = getContext('wrong');
     await expect(() => checkStorybookBaseDir(ctxWithBaseDir, stats)).rejects.toThrow();
     expect(ctxWithBaseDir.exitCode).toBe(exitCodes.INVALID_OPTIONS);
 
@@ -74,12 +87,12 @@ describe('checkStorybookBaseDir', () => {
   });
 
   it('should not consider modules in node_modules as valid files to match', async () => {
-    const ctx = getContext(path.join(__dirname, '../../'));
+    const ctx = getContext('../..');
     const stats = {
       modules: [
         {
-          id: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js',
-          name: './node_modules/@storybook/core-client/dist/esm/globals/polyfills.js',
+          id: './node_modules/env-ci/index.js',
+          name: './node_modules/env-ci/index.js',
         },
       ],
     };
