@@ -1,3 +1,15 @@
+# v11.3.1 (Tue May 07 2024)
+
+#### 🐛 Bug Fix
+
+- Properly check `storybookBaseDir` against repository root rather than CWD [#974](https://github.com/chromaui/chromatic-cli/pull/974) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.3.0 (Fri Mar 29 2024)
 
 #### 🚀 Enhancement
