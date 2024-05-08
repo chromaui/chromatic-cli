@@ -8,8 +8,9 @@ import { getRepositoryRoot } from '../git/git';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
   const repositoryRoot = await getRepositoryRoot();
-  const { storybookBaseDir = '' } = ctx.options;
-  ctx.log.debug('Storybook base directory:', path.join(repositoryRoot, storybookBaseDir));
+
+  // Assume CWD if no storybookBaseDir is provided
+  const { storybookBaseDir = path.relative(repositoryRoot, '') } = ctx.options;
 
   // Find all js(x)/ts(x) files in stats that are not in node_modules
   const sourceModuleFiles = stats.modules.filter(
@@ -39,7 +40,6 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
       })
     );
   } catch (err) {
-    ctx.log.error(invalidStorybookBaseDir());
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());
   }

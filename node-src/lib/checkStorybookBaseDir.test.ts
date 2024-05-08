@@ -99,4 +99,22 @@ describe('checkStorybookBaseDir', () => {
 
     await expect(() => checkStorybookBaseDir(ctx, stats)).rejects.toThrow();
   });
+
+  it('should assume current working directory if no storybookBaseDir is specified', async () => {
+    const ctx = getContext();
+    const stats = {
+      modules: [
+        {
+          id: './node-src/index.ts',
+          name: './node-src/index.ts',
+        },
+      ],
+    };
+
+    getRepositoryRoot.mockResolvedValueOnce(process.cwd());
+    await expect(checkStorybookBaseDir(ctx, stats)).resolves.toBeUndefined();
+
+    getRepositoryRoot.mockResolvedValueOnce(path.resolve(process.cwd(), '..'));
+    await expect(checkStorybookBaseDir(ctx, stats)).resolves.toBeUndefined();
+  });
 });
