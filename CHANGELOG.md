@@ -1,3 +1,15 @@
+# v11.3.2 (Wed May 08 2024)
+
+#### 🐛 Bug Fix
+
+- Use current working directory as default value for `storybookBaseDir` [#976](https://github.com/chromaui/chromatic-cli/pull/976) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.3.1 (Tue May 07 2024)
 
 #### 🐛 Bug Fix
