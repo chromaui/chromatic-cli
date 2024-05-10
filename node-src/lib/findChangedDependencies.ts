@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { checkoutFile, findFiles, getRepositoryRoot } from '../git/git';
+import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../git/git';
 import { Context } from '../types';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
@@ -27,8 +27,8 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   const rootPath = await getRepositoryRoot();
-  const [rootManifestPath] = await findFiles(PACKAGE_JSON);
-  const [rootLockfilePath] = await findFiles(YARN_LOCK, PACKAGE_LOCK);
+  const [rootManifestPath] = await findFilesFromRepositoryRoot(PACKAGE_JSON);
+  const [rootLockfilePath] = await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK);
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -39,11 +39,11 @@ export const findChangedDependencies = async (ctx: Context) => {
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
   // Handle monorepos with (multiple) nested package.json files.
-  const nestedManifestPaths = await findFiles(`**/${PACKAGE_JSON}`);
+  const nestedManifestPaths = await findFilesFromRepositoryRoot(PACKAGE_JSON, `**/${PACKAGE_JSON}`);
   const metadataPathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
-      const [lockfilePath] = await findFiles(
+      const [lockfilePath] = await findFilesFromRepositoryRoot(
         `${dirname}/${YARN_LOCK}`,
         `${dirname}/${PACKAGE_LOCK}`
       );

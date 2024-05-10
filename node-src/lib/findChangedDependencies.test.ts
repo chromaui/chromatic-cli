@@ -12,17 +12,17 @@ vi.mock('../git/git');
 
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
-const findFiles = vi.mocked(git.findFiles);
+const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
 const buildDepTree = vi.mocked(buildDepTreeFromFiles);
 
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
-  findFiles.mockImplementation((file) => Promise.resolve(file.startsWith('**') ? [] : [file]));
+  findFilesFromRepositoryRoot.mockImplementation((file) => Promise.resolve(file.startsWith('**') ? [] : [file]));
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
   checkoutFile.mockReset();
-  findFiles.mockReset();
+  findFilesFromRepositoryRoot.mockReset();
   buildDepTree.mockReset();
 });
 
@@ -214,7 +214,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('looks for manifest and lock files in subpackages', async () => {
-    findFiles.mockImplementation((file) =>
+    findFilesFromRepositoryRoot.mockImplementation((file) =>
       Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file])
     );
 
@@ -266,7 +266,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
-    findFiles.mockImplementation((file) => {
+    findFilesFromRepositoryRoot.mockImplementation((file) => {
       if (file === 'subdir/yarn.lock') return Promise.resolve([]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
@@ -291,7 +291,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('ignores lockfile changes if metadata file is untraced', async () => {
-    findFiles.mockImplementation((file) => {
+    findFilesFromRepositoryRoot.mockImplementation((file) => {
       if (file === 'subdir/yarn.lock') return Promise.resolve([]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
@@ -313,7 +313,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses package-lock.json if yarn.lock is missing', async () => {
-    findFiles.mockImplementation((file) => {
+    findFilesFromRepositoryRoot.mockImplementation((file) => {
       if (file.endsWith('yarn.lock'))
         return Promise.resolve([file.replace('yarn.lock', 'package-lock.json')]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);

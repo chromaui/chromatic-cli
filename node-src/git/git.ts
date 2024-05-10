@@ -8,6 +8,7 @@ import { Context } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
+import path from 'node:path';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 
@@ -282,8 +283,18 @@ export async function getRepositoryRoot() {
   return execGitCommand(`git rev-parse --show-toplevel`);
 }
 
-export async function findFiles(...patterns: string[]) {
-  const files = await execGitCommand(`git ls-files -z ${patterns.map((p) => `'${p}'`).join(' ')}`);
+export async function findFilesFromRepositoryRoot(...patterns: string[]) {
+  const repoRoot = await getRepositoryRoot();
+
+  // Ensure patterns are referenced from the repository root so that running
+  // from within a subdirectory does not skip the directories above
+  // e.g. /root/package.json and /root/**/package.json
+  const patternsFromRoot = patterns.map((pattern) => path.join(repoRoot, pattern));
+  
+  // Uses `--full-name` to ensure that all files found are relative to the repository root,
+  // not the directory in which this is executed from
+  const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `'${p}'`).join(' ')}`;
+  const files = await execGitCommand(gitCommand);
   return files.split('\0').filter(Boolean);
 }
 
