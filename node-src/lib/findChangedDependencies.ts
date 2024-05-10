@@ -39,7 +39,7 @@ export const findChangedDependencies = async (ctx: Context) => {
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
   // Handle monorepos with (multiple) nested package.json files.
-  const nestedManifestPaths = await findFilesFromRepositoryRoot(PACKAGE_JSON, `**/${PACKAGE_JSON}`);
+  const nestedManifestPaths = await findFilesFromRepositoryRoot(`**/${PACKAGE_JSON}`);
   const metadataPathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
