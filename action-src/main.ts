@@ -43,12 +43,13 @@ const getBuildInfo = (event: typeof context) => {
     }
     case 'workflow_run': {
       const { repository } = event.payload;
-      const { head_sha, head_branch } = event.payload.workflow_run;
+      const { head_sha, head_branch, event: triggerEvent, head_commit } = event.payload.workflow_run;
 
       return {
         sha: head_sha,
         branch: head_branch.replace('refs/heads/', ''),
         slug: repository.full_name,
+        mergeCommit: triggerEvent === 'pull_request' ? head_commit.id : undefined,
       };
     }
     case 'workflow_dispatch':
