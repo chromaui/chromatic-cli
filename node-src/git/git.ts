@@ -11,6 +11,7 @@ import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 import path from 'node:path';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
+export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
 
 export async function execGitCommand(command: string) {
   try {
@@ -295,7 +296,7 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
   // not the directory in which this is executed from
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `'${p}'`).join(' ')}`;
   const files = await execGitCommand(gitCommand);
-  return files.split('\0').filter(Boolean);
+  return files.split(NULL_BYTE).filter(Boolean);
 }
 
 export async function mergeQueueBranchMatch(branch) {
