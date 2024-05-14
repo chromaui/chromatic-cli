@@ -136,7 +136,7 @@ describe('findFilesFromRepositoryRoot', () => {
     const results = await findFilesFromRepositoryRoot('package.json', '**/package.json');
 
     expect(command).toBeCalledTimes(2);
-    expect(command).toHaveBeenNthCalledWith(2, "git ls-files --full-name -z '/root/package.json' '/root/**/package.json'", expect.any(Object));
+    expect(command).toHaveBeenNthCalledWith(2, 'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"', expect.any(Object));
     expect(results).toEqual(filesFound);
   });
 });

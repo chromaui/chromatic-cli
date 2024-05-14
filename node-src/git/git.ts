@@ -295,7 +295,7 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
   
   // Uses `--full-name` to ensure that all files found are relative to the repository root,
   // not the directory in which this is executed from
-  const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `'${p}'`).join(' ')}`;
+  const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
   const files = await execGitCommand(gitCommand);
   return files.split(NULL_BYTE).filter(Boolean);
 }
