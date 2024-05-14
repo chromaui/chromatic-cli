@@ -8,7 +8,6 @@ import { Context } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
-import path from 'node:path';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
@@ -289,8 +288,10 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
 
   // Ensure patterns are referenced from the repository root so that running
   // from within a subdirectory does not skip the directories above
-  // e.g. /root/package.json and /root/**/package.json
-  const patternsFromRoot = patterns.map((pattern) => path.join(repoRoot, pattern));
+  // e.g. /root/package.json, /root/**/package.json
+  // Note that this does not use `path.join` to concatenate the file paths because
+  // git uses forward slashes, even on windows
+  const patternsFromRoot = patterns.map((pattern) => `${repoRoot}/${pattern}`);
   
   // Uses `--full-name` to ensure that all files found are relative to the repository root,
   // not the directory in which this is executed from
