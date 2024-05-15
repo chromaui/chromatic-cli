@@ -1,11 +1,15 @@
 import { execaCommand } from 'execa';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getCommit, getSlug, hasPreviousCommit, mergeQueueBranchMatch } from './git';
+import { NULL_BYTE, findFilesFromRepositoryRoot, getCommit, getSlug, hasPreviousCommit, mergeQueueBranchMatch } from './git';
 
 vi.mock('execa');
 
 const command = vi.mocked(execaCommand);
+
+afterEach(() => {
+  vi.clearAllMocks();
+})
 
 describe('getCommit', () => {
   it('parses log output', async () => {
@@ -104,5 +108,35 @@ describe('mergeQueueBranchMatch', () => {
     expect(await mergeQueueBranchMatch(branch)).toEqual(
       null
     );
+  });
+});
+
+describe('findFilesFromRepositoryRoot', () => {
+  it('finds files relative to the repository root', async () => {
+    const filesFound = [
+      'package.json',
+      'another/package/package.json',
+    ];
+
+    // first call from getRepositoryRoot()
+    command.mockImplementationOnce(
+      () =>
+        Promise.resolve({
+          all: '/root',
+        }) as any
+    );
+
+    command.mockImplementationOnce(
+      () =>
+        Promise.resolve({
+          all: filesFound.join(NULL_BYTE),
+        }) as any
+    );
+    
+    const results = await findFilesFromRepositoryRoot('package.json', '**/package.json');
+
+    expect(command).toBeCalledTimes(2);
+    expect(command).toHaveBeenNthCalledWith(2, "git ls-files --full-name -z '/root/package.json' '/root/**/package.json'", expect.any(Object));
+    expect(results).toEqual(filesFound);
   });
 });

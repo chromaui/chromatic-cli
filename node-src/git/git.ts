@@ -10,6 +10,7 @@ import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
+export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
 
 export async function execGitCommand(command: string) {
   try {
@@ -282,9 +283,21 @@ export async function getRepositoryRoot() {
   return execGitCommand(`git rev-parse --show-toplevel`);
 }
 
-export async function findFiles(...patterns: string[]) {
-  const files = await execGitCommand(`git ls-files -z ${patterns.map((p) => `'${p}'`).join(' ')}`);
-  return files.split('\0').filter(Boolean);
+export async function findFilesFromRepositoryRoot(...patterns: string[]) {
+  const repoRoot = await getRepositoryRoot();
+
+  // Ensure patterns are referenced from the repository root so that running
+  // from within a subdirectory does not skip the directories above
+  // e.g. /root/package.json, /root/**/package.json
+  // Note that this does not use `path.join` to concatenate the file paths because
+  // git uses forward slashes, even on windows
+  const patternsFromRoot = patterns.map((pattern) => `${repoRoot}/${pattern}`);
+  
+  // Uses `--full-name` to ensure that all files found are relative to the repository root,
+  // not the directory in which this is executed from
+  const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `'${p}'`).join(' ')}`;
+  const files = await execGitCommand(gitCommand);
+  return files.split(NULL_BYTE).filter(Boolean);
 }
 
 export async function mergeQueueBranchMatch(branch) {
