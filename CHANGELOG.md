@@ -1,3 +1,15 @@
+# v11.3.4 (Wed May 15 2024)
+
+#### 🐛 Bug Fix
+
+- Fix dependency tracing when running from a subdirectory [#982](https://github.com/chromaui/chromatic-cli/pull/982) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.3.3 (Wed May 15 2024)
 
 #### 🐛 Bug Fix
