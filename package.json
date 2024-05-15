@@ -25,7 +25,7 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/node.d.ts",
+      "types": "./isChromatic.d.ts",
       "require": "./isChromatic.js",
       "import": "./isChromatic.mjs"
     },
