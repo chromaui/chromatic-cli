@@ -1,3 +1,19 @@
+# v11.3.3 (Wed May 15 2024)
+
+#### 🐛 Bug Fix
+
+- Fix type declaration for `isChromatic` import [#986](https://github.com/chromaui/chromatic-cli/pull/986) ([@quantizor](https://github.com/quantizor) [@ethriel3695](https://github.com/ethriel3695))
+- Specify the ts import resolver in the eslint config [#965](https://github.com/chromaui/chromatic-cli/pull/965) ([@paulelliott](https://github.com/paulelliott) [@thafryer](https://github.com/thafryer))
+
+#### Authors: 4
+
+- Evan Jacobs ([@quantizor](https://github.com/quantizor))
+- Jarel Fryer ([@thafryer](https://github.com/thafryer))
+- Paul Elliott ([@paulelliott](https://github.com/paulelliott))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v11.3.2 (Wed May 08 2024)
 
 #### 🐛 Bug Fix
