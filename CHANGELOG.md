@@ -1,3 +1,15 @@
+# v11.3.5 (Wed May 15 2024)
+
+#### 🐛 Bug Fix
+
+- Use double quotes around command arguments [#985](https://github.com/chromaui/chromatic-cli/pull/985) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.3.4 (Wed May 15 2024)
 
 #### 🐛 Bug Fix
