@@ -1,9 +1,10 @@
 import path from 'path';
+
 import { describe, expect, it } from 'vitest';
 
-import { getDependencies } from './getDependencies';
 import packageJson from '../../package.json';
 import { checkoutFile } from '../git/git';
+import { getDependencies } from './getDependencies';
 import TestLogger from './testLogger';
 
 const ctx = { log: new TestLogger() } as any;
@@ -13,7 +14,7 @@ describe('getDependencies', () => {
     const dependencies = await getDependencies(ctx, {
       rootPath: path.join(__dirname, '../../'),
       manifestPath: 'package.json',
-      lockfilePath: 'yarn.lock',
+      lockfilePath: 'pnpm-lock.yaml',
     });
 
     const [dep] = dependencies;
@@ -32,7 +33,7 @@ describe('getDependencies', () => {
     const dependencies = await getDependencies(ctx, {
       rootPath: '/',
       manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json'),
-      lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock'),
+      lockfilePath: await checkoutFile(ctx, 'HEAD', 'pnpm-lock.yaml'),
     });
 
     const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);
@@ -51,7 +52,7 @@ describe('getDependencies', () => {
     const dependencies = await getDependencies(ctx, {
       rootPath: '/',
       manifestPath: await checkoutFile(ctx, commit, 'package.json'),
-      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock'),
+      lockfilePath: await checkoutFile(ctx, commit, 'pnpm-lock.yaml'),
     });
 
     const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);

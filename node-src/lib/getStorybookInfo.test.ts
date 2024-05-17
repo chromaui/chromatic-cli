@@ -33,7 +33,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
       })
     );
   });
@@ -60,13 +60,7 @@ describe('getStorybookInfo', () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual(
       expect.objectContaining({
-        addons: [
-          {
-            name: 'viewport',
-            packageName: '@storybook/addon-viewport',
-          },
-        ],
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
       })
     );
   });
@@ -77,7 +71,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -94,7 +88,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -105,7 +99,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -114,13 +108,7 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          addons: [
-            {
-              name: 'viewport',
-              packageName: '@storybook/addon-viewport',
-            },
-          ],
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -129,13 +117,7 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          addons: [
-            {
-              name: 'viewport',
-              packageName: '@storybook/addon-viewport',
-            },
-          ],
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });

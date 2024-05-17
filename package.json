@@ -86,6 +86,7 @@
     "trim-stats": "./dist/bin.js trim-stats-file",
     "storybook": "storybook dev -p 9009",
     "test": "vitest run --coverage && vitest run -c vitest.no-threads.config.ts",
+    "test:watch": "vitest watch --coverage",
     "prepare": "husky install && npm run build",
     "dev": "tsup --watch",
     "lint-staged": "lint-staged"
