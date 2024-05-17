@@ -16,7 +16,7 @@ jobs:
           node-version: 18
       - uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
       - run: pnpm install
       - run: pnpm run build
       - uses: ./
