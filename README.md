@@ -47,14 +47,14 @@ To facilitate upgrading in the future, removing and adding features, this is the
 
 ### Building and running locally
 
-1. Ensure all dependencies are installed with `yarn install`
-2. Build + watch the code locally: `yarn dev`
-3. Run a build of all the CLI's stories against a Chromatic project: `yarn chromatic -t <token>`.
+1. Ensure all dependencies are installed with `pnpm install`
+2. Build + watch the code locally: `pnpm run dev`
+3. Run a build of all the CLI's stories against a Chromatic project: `pnpm run chromatic -t <token>`.
 
 #### Running against staging
 
 ```bash
-CHROMATIC_INDEX_URL=https://index.staging-chromatic.com yarn chromatic -t <token>
+CHROMATIC_INDEX_URL=https://index.staging-chromatic.com pnpm run chromatic -t <token>
 ```
 
 #### Running against development
@@ -62,13 +62,13 @@ CHROMATIC_INDEX_URL=https://index.staging-chromatic.com yarn chromatic -t <token
 To test against a local development version of the Chromatic stack, use
 
 ```bash
-CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
+CHROMATIC_INDEX_URL=https://index.dev-chromatic.com pnpm run chromatic -t <token>
 ```
 
 To only test a small number of test stories as a smoke test, use:
 
 ```bash
-SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
+SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com pnpm run chromatic -t <token>
 ```
 
 ### Publishing a new version
@@ -94,5 +94,5 @@ We have two types of releases:
 A script is provided to manually publish the GitHub Action, though it's typically only necessary for `action-canary` releases:
 
 ```sh
-yarn publish-action <canary|latest>
+pnpm run publish-action <canary|latest>
 ```

@@ -72,15 +72,15 @@
     "build": "tsup",
     "build-storybook": "build-storybook -s static",
     "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
-    "build-subdir": "cd subdir ; yarn build ; cd ..",
+    "build-subdir": "cd subdir ; pnpm run build ; cd ..",
     "chromatic": "./dist/bin.js",
     "chromatic-prebuilt": "./dist/bin.js --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.js",
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.js",
-    "lint": "yarn lint:js .storybook bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
+    "lint": "pnpm run lint:js .storybook bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "release": "yarn run build && auto shipit",
+    "release": "pnpm run run build && auto shipit",
     "publish-action": "./scripts/publish-action.mjs",
     "trace": "./dist/bin.js trace",
     "trim-stats": "./dist/bin.js trim-stats-file",
@@ -92,16 +92,16 @@
   },
   "lint-staged": {
     "*.ts": [
-      "yarn lint:js --fix"
+      "pnpm run lint:js --fix"
     ],
     "*.js": [
-      "yarn lint:js --fix"
+      "pnpm run lint:js --fix"
     ],
     "*.json": [
-      "yarn lint:js --fix"
+      "pnpm run lint:js --fix"
     ],
     "package.json": [
-      "yarn lint:package"
+      "pnpm run lint:package"
     ]
   },
   "resolutions": {
@@ -233,7 +233,7 @@
       [
         "exec",
         {
-          "afterShipIt": "yarn run publish-action"
+          "afterShipIt": "pnpm run run publish-action"
         }
       ]
     ]

@@ -14,6 +14,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: latest
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
       - run: yarn
       - name: run chromatic via node
         run: ./scripts/run-via-node.mjs

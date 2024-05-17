@@ -12,6 +12,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
       - uses: chromaui/pr-label-checker-action@main
         with:
           one-of: |

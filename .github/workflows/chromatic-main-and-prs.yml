@@ -19,8 +19,11 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: lts/*
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
       - name: install
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - uses: chromaui/action@latest
         with:
           # 👇 Chromatic projectToken, refer to the manage page to obtain it.

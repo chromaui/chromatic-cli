@@ -14,8 +14,11 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
-      - run: yarn
-      - run: yarn build
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - run: pnpm install
+      - run: pnpm run build
       - uses: ./
         with:
           buildScriptName: build-test-storybook

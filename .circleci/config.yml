@@ -12,23 +12,25 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "yarn.lock" }}
+            - v1-dependencies-{{ checksum "pnpm-lock.yaml" }}
             - v1-dependencies-
 
-      - run: yarn install
+      - run: curl -fsSL https://get.pnpm.io/install.sh | sh -
+
+      - run: pnpm install
 
       - save_cache:
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "yarn.lock" }}
+          key: v1-dependencies-{{ checksum "pnpm-lock.yaml" }}
 
-      - run: yarn lint
+      - run: pnpm run lint
 
       # unit test
-      - run: yarn test
+      - run: pnpm run test
 
       # publish code coverage results
       - run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
 
       # test if dist is correctly generated from src
-      - run: yarn build && git status --porcelain
+      - run: pnpm run build && git status --porcelain
