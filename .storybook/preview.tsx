@@ -14,7 +14,6 @@ ansiHTML.setColors({
   cyan: '5fb3b2',
 });
 
-chalk.enabled = true;
 chalk.level = 3;
 
 const codeStyle = {
