@@ -3,7 +3,7 @@ module.exports = {
   addons: [
     '@storybook/addon-viewport',
     '@storybook/addon-webpack5-compiler-swc',
-    '@chromatic-com/storybook'
+    '@chromatic-com/storybook',
   ],
 
   features: {
@@ -12,7 +12,7 @@ module.exports = {
 
   framework: {
     name: '@storybook/react-webpack5',
-    options: {}
+    options: {},
   },
 
   webpackFinal: async (config) => {
@@ -30,6 +30,8 @@ module.exports = {
   docs: {},
 
   typescript: {
-    reactDocgen: 'react-docgen-typescript'
-  }
+    reactDocgen: 'react-docgen-typescript',
+  },
+
+  static: ['../static'],
 };

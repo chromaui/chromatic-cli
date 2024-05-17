@@ -10,35 +10,32 @@ export default {
   parameters: { chromatic: { viewports: [600, 1200] }, layout: 'padded' },
 };
 
-export const WithViewports = () => {
-  let bg = null;
-  if (window.matchMedia('(max-width: 400px)').matches) {
-    bg = 'cyan';
-  } else if (window.matchMedia('(max-width: 800px)').matches) {
-    bg = 'orange';
-  }
-  return (
-    <AComponent backgroundColor={bg} thing={() => {}}>
-      Contents
-    </AComponent>
-  );
-};
+export const WithViewports = {
+  render: () => {
+    let bg = null;
+    if (window.matchMedia('(max-width: 400px)').matches) {
+      bg = 'cyan';
+    } else if (window.matchMedia('(max-width: 800px)').matches) {
+      bg = 'orange';
+    }
+    return (
+      <AComponent backgroundColor={bg} thing={() => {}}>
+        Contents
+      </AComponent>
+    );
+  },
 
-WithViewports.story = {
   parameters: { chromatic: { viewports: [320, 600, 1200] } },
 };
 
-export const WithDelay = () => (
-  <AComponent thing={() => {}}>{isChromatic() ? 'Chromatic' : 'Second'}</AComponent>
-);
+export const WithDelay = {
+  render: () => <AComponent thing={() => {}}>{isChromatic() ? 'Chromatic' : 'Second'}</AComponent>,
 
-WithDelay.story = {
   parameters: { chromatic: { delay: 1000 } },
 };
 
-export const DisabledStory = () => <AComponent thing={() => {}}>Disabled story</AComponent>;
-
-DisabledStory.story = {
+export const DisabledStory = {
+  render: () => <AComponent thing={() => {}}>Disabled story</AComponent>,
   parameters: { chromatic: { disable: true } },
 };
 
