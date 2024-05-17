@@ -56,3 +56,4 @@ export const decorators = [
 ];
 
 export const render = (args, { component }) => component(args);
+export const tags = ['autodocs'];
