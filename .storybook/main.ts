@@ -1,10 +1,6 @@
 module.exports = {
   stories: ['../node-src/**/*.@(mdx|stories.*)'],
-  addons: [
-    '@storybook/addon-viewport',
-    '@storybook/addon-webpack5-compiler-swc',
-    '@chromatic-com/storybook',
-  ],
+  addons: ['@storybook/addon-webpack5-compiler-swc', '@chromatic-com/storybook'],
 
   features: {
     postcss: false,
