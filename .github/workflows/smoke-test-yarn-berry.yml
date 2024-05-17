@@ -24,7 +24,7 @@ jobs:
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
       - name: run chromatic
-        run: yarn dlx chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+        run: npx chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
