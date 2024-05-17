@@ -2,10 +2,11 @@ import { getChangedFiles } from './git';
 import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 import { Context } from '../types';
 
-type BuildWithCommit = {
+type BuildWithCommitInfo = {
   id: string;
   number: number;
   commit: string;
+  uncommittedHash: string;
 };
 
 /**
@@ -18,9 +19,10 @@ type BuildWithCommit = {
  */
 export async function getChangedFilesWithReplacement(
   context: Context,
-  build: BuildWithCommit
-): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommit }> {
+  build: BuildWithCommitInfo
+): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommitInfo }> {
   try {
+    if (build.uncommittedHash) throw new Error('Build had uncommitted changes');
     const changedFiles = await getChangedFiles(build.commit);
     return { changedFiles };
   } catch (err) {
@@ -28,7 +30,7 @@ export async function getChangedFilesWithReplacement(
       `Got error fetching commit for #${build.number}(${build.commit}): ${err.message}`
     );
 
-    if (err.message.match(/bad object/)) {
+    if (err.message.match(/(bad object|uncommitted changes)/)) {
       const replacementBuild = await findAncestorBuildWithCommit(context, build.number);
 
       if (replacementBuild) {

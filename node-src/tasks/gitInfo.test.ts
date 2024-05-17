@@ -111,6 +111,7 @@ describe('setGitInfo', () => {
         id: 'parent',
         number: 1,
         commit: '987bca',
+        uncommittedHash: '',
       },
     });
     const ctx = { log, options: { onlyChanged: true }, client } as any;

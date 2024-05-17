@@ -178,7 +178,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
     try {
       // Map the baseline builds to their changed files, falling back to an earlier "replacement"
-      // build if the baseline commit no longer exists (e.g. due to force-pushing).
+      // build if the baseline commit no longer exists or the baseline had uncommitted changes.
       const changedFilesWithInfo = await Promise.all(
         baselineBuilds.map(async (build) => {
           const changedFilesWithReplacement = await getChangedFilesWithReplacement(ctx, build);
