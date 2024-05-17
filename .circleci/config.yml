@@ -15,8 +15,6 @@ jobs:
             - v1-dependencies-{{ checksum "pnpm-lock.yaml" }}
             - v1-dependencies-
 
-      - run: npm install --global pnpm && SHELL=bash pnpm setup && source /root/.bashrc
-
       - run: pnpm install
 
       - save_cache:
