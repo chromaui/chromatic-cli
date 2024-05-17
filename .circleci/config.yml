@@ -15,7 +15,7 @@ jobs:
             - v1-dependencies-{{ checksum "pnpm-lock.yaml" }}
             - v1-dependencies-
 
-      - run: curl -fsSL https://get.pnpm.io/install.sh | bash -
+      - run: npm install --global pnpm && SHELL=bash pnpm setup && source /root/.bashrc
 
       - run: pnpm install
 
