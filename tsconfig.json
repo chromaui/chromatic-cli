@@ -7,7 +7,6 @@
     "moduleResolution": "Bundler",
     "strict": false,
     "noImplicitAny": false,
-    "resolveJsonModule": true,
-    "types": ["webpack-env"]
+    "resolveJsonModule": true
   }
 }

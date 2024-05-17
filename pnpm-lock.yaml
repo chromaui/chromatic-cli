@@ -192,6 +192,9 @@ importers:
       listr:
         specifier: 0.14.3
         version: 0.14.3(zen-observable@0.8.15)
+      listr-update-renderer:
+        specifier: ^0.5.0
+        version: 0.5.0(listr@0.14.3(zen-observable@0.8.15))
       meow:
         specifier: ^9.0.0
         version: 9.0.0
