@@ -14,9 +14,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: lts/*
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      # - uses: pnpm/action-setup@v4
+      #   with:
+      #     version: 9
       - run: rm -rf subdir # remove conflicting subproject
       - run: yarn set version berry
       - name: install
