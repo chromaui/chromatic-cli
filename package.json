@@ -80,7 +80,7 @@
     "lint": "pnpm run lint:js .storybook bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "release": "pnpm run run build && auto shipit",
+    "release": "pnpm run build && auto shipit",
     "publish-action": "./scripts/publish-action.mjs",
     "trace": "./dist/bin.js trace",
     "trim-stats": "./dist/bin.js trim-stats-file",
@@ -235,7 +235,7 @@
       [
         "exec",
         {
-          "afterShipIt": "pnpm run run publish-action"
+          "afterShipIt": "pnpm run publish-action"
         }
       ]
     ]
