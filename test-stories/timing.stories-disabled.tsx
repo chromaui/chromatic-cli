@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 
 // A component that guarantees the load event won't load for timeout seconds
 // Note that the img loading tends to take a little longer so this is a minimum
-const WaitFor = ({ seconds }) => {
+const WaitFor = ({ seconds }: { seconds: number }) => {
   const [count, setCount] = useState(seconds - 1);
 
   if (count > 0) {
