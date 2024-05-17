@@ -14,6 +14,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: lts/*
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - run: yarn install
       - run: yarn build
       - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
