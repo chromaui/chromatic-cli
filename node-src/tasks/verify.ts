@@ -57,7 +57,7 @@ export const publishBuild = async (ctx: Context) => {
       id,
       input: {
         ...(onlyStoryFiles && { onlyStoryFiles }),
-        ...(onlyStoryNames && { onlyStoryNames: [].concat(onlyStoryNames) }),
+        ...(onlyStoryNames && { onlyStoryNames: [onlyStoryNames] }),
         ...(replacementBuildIds && { replacementBuildIds }),
         // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
@@ -233,10 +233,10 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     ),
   ]);
 
-  ctx.isPublishOnly = !ctx.build.features.uiReview && !ctx.build.features.uiTests;
+  ctx.isPublishOnly = !ctx.build.features?.uiReview && !ctx.build.features?.uiTests;
 
   if (list) {
-    ctx.log.info(listingStories(ctx.build.tests));
+    ctx.log.info(listingStories(ctx.build.tests || []));
   }
 
   if (ctx.turboSnap) {
@@ -249,7 +249,10 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 
   if (ctx.build.wasLimited) {
     const { account } = ctx.build.app;
-    if (account.exceededThreshold) {
+    if (!account) {
+      ctx.log.warn('No Account');
+      setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+    } else if (account.exceededThreshold) {
       ctx.log.warn(snapshotQuotaReached(account));
       setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
     } else if (account.paymentRequired) {
@@ -266,7 +269,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 
   transitionTo(success, true)(ctx, task);
 
-  if (list || ctx.isPublishOnly || matchesBranch(ctx.options.exitOnceUploaded)) {
+  if (list || ctx.isPublishOnly || (matchesBranch && matchesBranch(ctx.options.exitOnceUploaded))) {
     setExitCode(ctx, exitCodes.OK);
     ctx.skipSnapshots = true;
   }

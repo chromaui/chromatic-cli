@@ -1,4 +1,6 @@
 /* eslint-env browser */
+import type { Preview } from '@storybook/react';
+
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';
 import React from 'react';
@@ -35,9 +37,13 @@ const htmlStyle = {
   padding: 20,
 };
 
-export const parameters = {
-  layout: 'fullscreen',
+const preview: Preview = {
+  parameters: {
+    layout: 'fullscreen',
+  },
 };
+
+export default preview;
 
 export const decorators = [
   (storyFn, { kind }) => {

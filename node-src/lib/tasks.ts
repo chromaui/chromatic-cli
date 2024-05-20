@@ -47,14 +47,14 @@ export const setOutput = (output: ValueFn) => (ctx: Context, task: Task) => {
 export const transitionTo =
   (stateFn: (ctx: Context) => Task, last = false) =>
   (ctx: Context, task: Task) => {
-    const { title, output } = stateFn(ctx);
-    setTitle(title, last ? output : undefined)(ctx, task);
+    const { title, output = '' } = stateFn(ctx);
+    setTitle(title, last ? output : '')(ctx, task);
     if (!last && output) setOutput(output)(ctx, task);
   };
 
 export const getDuration = (ctx: Context) => {
   const now = Number.isInteger(ctx.now) ? ctx.now : new Date().getTime();
-  const duration = Math.round((now - ctx.startedAt) / 1000);
+  const duration = Math.round(((now ?? 0) - (ctx.startedAt ?? 0)) / 1000);
   const seconds = pluralize('second', Math.floor(duration % 60), true);
   if (duration < 60) return seconds;
   const minutes = pluralize('minute', Math.floor(duration / 60), true);

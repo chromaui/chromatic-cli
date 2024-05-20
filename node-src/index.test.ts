@@ -42,10 +42,13 @@ vi.mock('execa');
 // NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
 // vitest doesn't allow you to do that.
 const mockedBuildCommand = 'mocked build command';
-vi.mock('./lib/e2e', async (importOriginal) => ({
-  ...await importOriginal(),
-  getE2EBuildCommand: () => mockedBuildCommand,
-}));
+vi.mock('./lib/e2e', async (importOriginal) => {
+  const importOriginalObject: object = await importOriginal();
+  return {
+    ...importOriginalObject,
+    getE2EBuildCommand: () => mockedBuildCommand,
+  };
+});
 
 const execaCommand = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
@@ -69,7 +72,8 @@ vi.mock('node-fetch', () => ({
   default: vi.fn(async (url, { body } = {}) => ({
     ok: true,
     json: async () => {
-      let query: string, variables: { [key: string]: any };
+      let query: string = '',
+        variables: { [key: string]: any } = {};
       try {
         const data = JSON.parse(body);
         query = data.query;
@@ -211,6 +215,8 @@ vi.mock('node-fetch', () => ({
           js: 'text/javascript',
           json: 'application/json',
           log: 'text/plain',
+          ts: 'text/typescript',
+          tsx: 'text/typescript',
         };
         return {
           data: {
@@ -401,7 +407,7 @@ it('passes options error to experimental_onTaskError', async () => {
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runAll(ctx);
 
-  expect(ctx.extraOptions.experimental_onTaskError).toHaveBeenCalledWith(
+  expect(ctx?.extraOptions?.experimental_onTaskError).toHaveBeenCalledWith(
     expect.anything(), // Context
     expect.objectContaining({
       formattedError: expect.stringContaining('Missing project token'), // Long formatted error fatalError https://github.com/chromaui/chromatic-cli/blob/217e77671179748eb4ddb8becde78444db93d067/node-src/ui/messages/errors/fatalError.ts#L11
@@ -757,17 +763,17 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
     '--only-changed',
   ]);
   await runAll(ctx);
-  expect(upload.mock.calls.at(-1)[1]).toEqual(
+  expect(upload.mock.calls.at(-1)?.[1]).toEqual(
     expect.arrayContaining([
       {
-        contentLength: 518,
-        contentType: 'text/javascript',
+        contentLength: 672,
+        contentType: 'text/typescript',
         fileKey: '',
-        filePath: '.chromatic/main.js',
+        filePath: '.chromatic/main.ts',
         formAction: 'https://s3.amazonaws.com',
         formFields: {},
-        localPath: '.storybook/main.js',
-        targetPath: '.chromatic/main.js',
+        localPath: '.storybook/main.ts',
+        targetPath: '.chromatic/main.ts',
       },
       {
         contentLength: 457,
@@ -780,14 +786,14 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         targetPath: '.chromatic/preview-stats.trimmed.json',
       },
       {
-        contentLength: 1338,
-        contentType: 'text/javascript',
+        contentLength: 1427,
+        contentType: 'text/typescript',
         fileKey: '',
-        filePath: '.chromatic/preview.js',
+        filePath: '.chromatic/preview.tsx',
         formAction: 'https://s3.amazonaws.com',
         formFields: {},
-        localPath: '.storybook/preview.js',
-        targetPath: '.chromatic/preview.js',
+        localPath: '.storybook/preview.tsx',
+        targetPath: '.chromatic/preview.tsx',
       },
       {
         contentLength: expect.any(Number),
