@@ -786,7 +786,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         targetPath: '.chromatic/preview-stats.trimmed.json',
       },
       {
-        contentLength: 1427,
+        contentLength: 1413,
         contentType: 'text/typescript',
         fileKey: '',
         filePath: '.chromatic/preview.tsx',
