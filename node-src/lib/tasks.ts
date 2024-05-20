@@ -47,8 +47,8 @@ export const setOutput = (output: ValueFn) => (ctx: Context, task: Task) => {
 export const transitionTo =
   (stateFn: (ctx: Context) => Task, last = false) =>
   (ctx: Context, task: Task) => {
-    const { title, output = '' } = stateFn(ctx);
-    setTitle(title, last ? output : '')(ctx, task);
+    const { title, output } = stateFn(ctx);
+    setTitle(title, last ? output : undefined)(ctx, task);
     if (!last && output) setOutput(output)(ctx, task);
   };
 
