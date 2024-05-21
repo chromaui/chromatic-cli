@@ -250,8 +250,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
   if (ctx.build.wasLimited) {
     const { account } = ctx.build.app;
     if (!account) {
-      ctx.log.warn('No Account');
-      setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+      throw new Error('Failed to retrieve account information');
     } else if (account.exceededThreshold) {
       ctx.log.warn(snapshotQuotaReached(account));
       setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
