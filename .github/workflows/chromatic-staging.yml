@@ -14,8 +14,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: lts/*
+      - run: yarn set version berry
       - name: install
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
       - uses: chromaui/action-canary@latest
         with:
           exitOnceUploaded: true
