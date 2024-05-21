@@ -762,7 +762,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
   expect(upload.mock.calls.at(-1)[1]).toEqual(
     expect.arrayContaining([
       {
-        contentLength: 720,
+        contentLength: 675,
         contentType: 'text/typescript',
         fileKey: '',
         filePath: '.chromatic/main.ts',

@@ -33,7 +33,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
       })
     );
   });
@@ -69,12 +69,8 @@ describe('getStorybookInfo', () => {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
           },
-          {
-            name: 'chromatic-com',
-            packageName: '@chromatic-com/storybook',
-          },
         ],
-        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
       })
     );
   });
@@ -85,7 +81,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -102,7 +98,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
         })
       );
     });
@@ -113,7 +109,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
         })
       );
     });
@@ -131,12 +127,8 @@ describe('getStorybookInfo', () => {
               name: 'compiler-swc',
               packageName: '@storybook/addon-webpack5-compiler-swc',
             },
-            {
-              name: 'chromatic-com',
-              packageName: '@chromatic-com/storybook',
-            },
           ],
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
         })
       );
     });
@@ -154,12 +146,8 @@ describe('getStorybookInfo', () => {
               name: 'compiler-swc',
               packageName: '@storybook/addon-webpack5-compiler-swc',
             },
-            {
-              name: 'chromatic-com',
-              packageName: '@chromatic-com/storybook',
-            },
           ],
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.2' },
         })
       );
     });
@@ -176,21 +164,16 @@ describe('getStorybookInfo', () => {
           {
             name: 'essentials',
             packageName: '@storybook/addon-essentials',
-            packageVersion: '8.1.1',
+            packageVersion: '8.1.2',
           },
           {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
             packageVersion: '1.0.2',
           },
-          {
-            name: 'chromatic-com',
-            packageName: '@chromatic-com/storybook',
-            packageVersion: '1.4.0',
-          },
         ],
-        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.1' },
-        version: '8.1.1',
+        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.2' },
+        version: '8.1.2',
         viewLayer: '@storybook/react-webpack5',
       });
     });
@@ -218,21 +201,16 @@ describe('getStorybookInfo', () => {
           {
             name: 'essentials',
             packageName: '@storybook/addon-essentials',
-            packageVersion: '8.1.1',
+            packageVersion: '8.1.2',
           },
           {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
             packageVersion: '1.0.2',
           },
-          {
-            name: 'chromatic-com',
-            packageName: '@chromatic-com/storybook',
-            packageVersion: '1.4.0',
-          },
         ],
-        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.1' },
-        version: '8.1.1',
+        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.2' },
+        version: '8.1.2',
         viewLayer: '@storybook/react-webpack5',
       });
     });

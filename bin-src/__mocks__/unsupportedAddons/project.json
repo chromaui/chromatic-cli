@@ -11,20 +11,19 @@
   "framework": { "name": "@storybook/react-webpack5", "options": {} },
   "builder": "@storybook/builder-webpack5",
   "renderer": "@storybook/react",
-  "storybookVersion": "8.1.1",
-  "storybookVersionSpecifier": "^8.1.1",
+  "storybookVersion": "8.1.2",
+  "storybookVersionSpecifier": "^8.1.2",
   "language": "typescript",
   "storybookPackages": {
-    "@storybook/csf-tools": { "version": "8.1.1" },
+    "@storybook/csf-tools": { "version": "8.1.2" },
     "@storybook/linter-config": { "version": "4.0.0" },
-    "@storybook/react": { "version": "8.1.1" },
-    "@storybook/react-webpack5": { "version": "8.1.1" },
-    "storybook": { "version": "8.1.1" }
+    "@storybook/react": { "version": "8.1.2" },
+    "@storybook/react-webpack5": { "version": "8.1.2" },
+    "storybook": { "version": "8.1.2" }
   },
   "addons": {
-    "@storybook/addon-essentials": { "version": "8.1.1" },
+    "@storybook/addon-essentials": { "version": "8.1.2" },
     "@storybook/addon-webpack5-compiler-swc": { "version": "1.0.2" },
-    "@chromatic-com/storybook": { "version": "1.4.0" },
     "chromatic": { "version": "11.4.0", "versionSpecifier": "latest" },
     "storybook-addon-apollo-client": {
       "version": "4.0.11"
