@@ -26,4 +26,6 @@ export const supportedAddons = {
   '@storybook/addon-storysource': 'storysource',
   '@storybook/addon-viewport': 'viewport',
   '@storybook/addon-interactions': 'interactions',
+  '@storybook/addon-webpack5-compiler-swc': 'compiler-swc',
+  '@chromatic-com/storybook': 'chromatic-com',
 } as Record<string, string>;

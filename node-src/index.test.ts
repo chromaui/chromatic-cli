@@ -43,7 +43,7 @@ vi.mock('execa');
 // vitest doesn't allow you to do that.
 const mockedBuildCommand = 'mocked build command';
 vi.mock('./lib/e2e', async (importOriginal) => ({
-  ...await importOriginal(),
+  ...(await importOriginal()),
   getE2EBuildCommand: () => mockedBuildCommand,
 }));
 
@@ -211,6 +211,8 @@ vi.mock('node-fetch', () => ({
           js: 'text/javascript',
           json: 'application/json',
           log: 'text/plain',
+          ts: 'text/typescript',
+          tsx: 'text/typescript',
         };
         return {
           data: {
@@ -760,14 +762,14 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
   expect(upload.mock.calls.at(-1)[1]).toEqual(
     expect.arrayContaining([
       {
-        contentLength: 518,
-        contentType: 'text/javascript',
+        contentLength: 720,
+        contentType: 'text/typescript',
         fileKey: '',
-        filePath: '.chromatic/main.js',
+        filePath: '.chromatic/main.ts',
         formAction: 'https://s3.amazonaws.com',
         formFields: {},
-        localPath: '.storybook/main.js',
-        targetPath: '.chromatic/main.js',
+        localPath: '.storybook/main.ts',
+        targetPath: '.chromatic/main.ts',
       },
       {
         contentLength: 457,
@@ -780,14 +782,14 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         targetPath: '.chromatic/preview-stats.trimmed.json',
       },
       {
-        contentLength: 1338,
-        contentType: 'text/javascript',
+        contentLength: 1456,
+        contentType: 'text/typescript',
         fileKey: '',
-        filePath: '.chromatic/preview.js',
+        filePath: '.chromatic/preview.tsx',
         formAction: 'https://s3.amazonaws.com',
         formFields: {},
-        localPath: '.storybook/preview.js',
-        targetPath: '.chromatic/preview.js',
+        localPath: '.storybook/preview.tsx',
+        targetPath: '.chromatic/preview.tsx',
       },
       {
         contentLength: expect.any(Number),

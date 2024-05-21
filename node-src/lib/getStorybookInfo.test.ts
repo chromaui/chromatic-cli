@@ -33,7 +33,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
       })
     );
   });
@@ -62,11 +62,19 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         addons: [
           {
-            name: 'viewport',
-            packageName: '@storybook/addon-viewport',
+            name: 'essentials',
+            packageName: '@storybook/addon-essentials',
+          },
+          {
+            name: 'compiler-swc',
+            packageName: '@storybook/addon-webpack5-compiler-swc',
+          },
+          {
+            name: 'chromatic-com',
+            packageName: '@chromatic-com/storybook',
           },
         ],
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
       })
     );
   });
@@ -77,7 +85,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -94,7 +102,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -105,7 +113,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -116,11 +124,19 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           addons: [
             {
-              name: 'viewport',
-              packageName: '@storybook/addon-viewport',
+              name: 'essentials',
+              packageName: '@storybook/addon-essentials',
+            },
+            {
+              name: 'compiler-swc',
+              packageName: '@storybook/addon-webpack5-compiler-swc',
+            },
+            {
+              name: 'chromatic-com',
+              packageName: '@chromatic-com/storybook',
             },
           ],
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -131,11 +147,19 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           addons: [
             {
-              name: 'viewport',
-              packageName: '@storybook/addon-viewport',
+              name: 'essentials',
+              packageName: '@storybook/addon-essentials',
+            },
+            {
+              name: 'compiler-swc',
+              packageName: '@storybook/addon-webpack5-compiler-swc',
+            },
+            {
+              name: 'chromatic-com',
+              packageName: '@chromatic-com/storybook',
             },
           ],
-          builder: { name: 'webpack5', packageVersion: '6.5.6' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.1' },
         })
       );
     });
@@ -150,14 +174,24 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual({
         addons: [
           {
-            name: 'viewport',
-            packageName: '@storybook/addon-viewport',
-            packageVersion: '6.5.6',
+            name: 'essentials',
+            packageName: '@storybook/addon-essentials',
+            packageVersion: '8.1.1',
+          },
+          {
+            name: 'compiler-swc',
+            packageName: '@storybook/addon-webpack5-compiler-swc',
+            packageVersion: '1.0.2',
+          },
+          {
+            name: 'chromatic-com',
+            packageName: '@chromatic-com/storybook',
+            packageVersion: '1.4.0',
           },
         ],
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
-        version: '6.5.6',
-        viewLayer: 'react',
+        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.1' },
+        version: '8.1.1',
+        viewLayer: '@storybook/react-webpack5',
       });
     });
 
@@ -182,14 +216,24 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual({
         addons: [
           {
-            name: 'viewport',
-            packageName: '@storybook/addon-viewport',
-            packageVersion: '6.5.6',
+            name: 'essentials',
+            packageName: '@storybook/addon-essentials',
+            packageVersion: '8.1.1',
+          },
+          {
+            name: 'compiler-swc',
+            packageName: '@storybook/addon-webpack5-compiler-swc',
+            packageVersion: '1.0.2',
+          },
+          {
+            name: 'chromatic-com',
+            packageName: '@chromatic-com/storybook',
+            packageVersion: '1.4.0',
           },
         ],
-        builder: { name: 'webpack5', packageVersion: '6.5.6' },
-        version: '6.5.6',
-        viewLayer: 'react',
+        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.1' },
+        version: '8.1.1',
+        viewLayer: '@storybook/react-webpack5',
       });
     });
   });

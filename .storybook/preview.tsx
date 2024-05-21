@@ -1,4 +1,6 @@
 /* eslint-env browser */
+import type { Preview } from '@storybook/react';
+
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';
 import React from 'react';
@@ -14,7 +16,6 @@ ansiHTML.setColors({
   cyan: '5fb3b2',
 });
 
-chalk.enabled = true;
 chalk.level = 3;
 
 const codeStyle = {
@@ -23,7 +24,7 @@ const codeStyle = {
   padding: '1rem',
   fontSize: 12,
   fontFamily: '"Source Code Pro", monospace',
-  whiteSpace: 'pre-wrap',
+  whiteSpace: 'pre-wrap' as const,
   lineHeight: '1rem',
   color: '#c0c4cd',
 };
@@ -36,9 +37,13 @@ const htmlStyle = {
   padding: 20,
 };
 
-export const parameters = {
-  layout: 'fullscreen',
+const preview: Preview = {
+  parameters: {
+    layout: 'fullscreen',
+  },
 };
+
+export default preview;
 
 export const decorators = [
   (storyFn, { kind }) => {
@@ -56,3 +61,4 @@ export const decorators = [
 ];
 
 export const render = (args, { component }) => component(args);
+export const tags = ['autodocs'];

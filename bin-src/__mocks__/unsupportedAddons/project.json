@@ -1,49 +1,31 @@
 {
-  "generatedAt": 1654054690474,
-  "builder": {
-    "name": "webpack5"
-  },
+  "generatedAt": 1716299331397,
   "hasCustomBabel": false,
   "hasCustomWebpack": true,
-  "hasStaticDirs": false,
+  "hasStaticDirs": true,
   "hasStorybookEslint": false,
   "refCount": 0,
-  "packageManager": {
-    "type": "yarn",
-    "version": "1.22.18"
-  },
-  "features": {
-    "postcss": false
-  },
-  "storybookVersion": "6.5.6",
+  "packageManager": { "type": "yarn", "version": "1.22.19" },
+  "typescriptOptions": { "reactDocgen": "react-docgen-typescript" },
+  "preview": { "usesGlobals": false },
+  "framework": { "name": "@storybook/react-webpack5", "options": {} },
+  "builder": "@storybook/builder-webpack5",
+  "renderer": "@storybook/react",
+  "storybookVersion": "8.1.1",
+  "storybookVersionSpecifier": "^8.1.1",
   "language": "typescript",
   "storybookPackages": {
-    "@storybook/addon-essentials": {
-      "version": "6.5.6"
-    },
-    "@storybook/builder-webpack5": {
-      "version": "6.5.6"
-    },
-    "@storybook/eslint-config-storybook": {
-      "version": "3.1.2"
-    },
-    "@storybook/linter-config": {
-      "version": "3.1.2"
-    },
-    "@storybook/manager-webpack5": {
-      "version": "6.5.6"
-    },
-    "@storybook/react": {
-      "version": "6.5.6"
-    }
-  },
-  "framework": {
-    "name": "react"
+    "@storybook/csf-tools": { "version": "8.1.1" },
+    "@storybook/linter-config": { "version": "4.0.0" },
+    "@storybook/react": { "version": "8.1.1" },
+    "@storybook/react-webpack5": { "version": "8.1.1" },
+    "storybook": { "version": "8.1.1" }
   },
   "addons": {
-    "@storybook/addon-viewport": {
-      "version": "6.5.6"
-    },
+    "@storybook/addon-essentials": { "version": "8.1.1" },
+    "@storybook/addon-webpack5-compiler-swc": { "version": "1.0.2" },
+    "@chromatic-com/storybook": { "version": "1.4.0" },
+    "chromatic": { "version": "11.4.0", "versionSpecifier": "latest" },
     "storybook-addon-apollo-client": {
       "version": "4.0.11"
     }
