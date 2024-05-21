@@ -11,6 +11,7 @@ const AncestorBuildsQuery = gql`
           id
           number
           commit
+          uncommittedHash
         }
       }
     }
@@ -24,6 +25,7 @@ export interface AncestorBuildsQueryResult {
         id: string;
         number: number;
         commit: string;
+        uncommittedHash: string;
       }[];
     };
   };
@@ -31,13 +33,13 @@ export interface AncestorBuildsQueryResult {
 
 /**
  * If we have a build who's commit no longer exists in the repository (likely a rebase/force-pushed
- * commit), search for an ancestor build which *does* have one.
+ * commit) or it had uncommitted changes, search for an ancestor build which has a clean commit.
  *
  * To do this we use the `Build.ancestorBuilds` API on the index, which will give us a set of builds
  * in reverse "git-chronological" order. That is, if we pick the first build that the API gives us
  * that has a commit, it is guaranteed to be the min number of builds "back" in Chromatic's history.
  *
- * The purpose here is to allow us to substitute a build with a known commit when doing TurboSnap.
+ * The purpose here is to allow us to substitute a build with a known clean commit for TurboSnap.
  *
  * @param {Context} context
  * @param {int} number The build number to start searching from
@@ -66,7 +68,7 @@ export async function findAncestorBuildWithCommit(
         return [build, exists] as const;
       })
     );
-    const result = results.find(([_, exists]) => exists);
+    const result = results.find(([build, exists]) => !build.uncommittedHash && exists);
 
     if (result) return result[0];
 
