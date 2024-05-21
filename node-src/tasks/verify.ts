@@ -57,7 +57,7 @@ export const publishBuild = async (ctx: Context) => {
       id,
       input: {
         ...(onlyStoryFiles && { onlyStoryFiles }),
-        ...(onlyStoryNames && { onlyStoryNames: [onlyStoryNames] }),
+        ...(onlyStoryNames && { onlyStoryNames: [].concat(onlyStoryNames) }),
         ...(replacementBuildIds && { replacementBuildIds }),
         // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
