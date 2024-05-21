@@ -20,7 +20,12 @@ describe('getChangedFilesWithReplacements', () => {
 
   it('passes changedFiles on through on the happy path', async () => {
     expect(
-      await getChangedFilesWithReplacement(context, { id: 'id', number: 3, commit: 'exists' })
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: '',
+      })
     ).toEqual({
       changedFiles: ['changed', 'files'],
     });
@@ -28,12 +33,46 @@ describe('getChangedFilesWithReplacements', () => {
     expect(client.runQuery).not.toHaveBeenCalled();
   });
 
-  it('uses a replacement when there is one', async () => {
-    const replacementBuild = { id: 'replacement', number: 2, commit: 'exists' };
+  it('uses a replacement when build has missing commit', async () => {
+    const replacementBuild = {
+      id: 'replacement',
+      number: 2,
+      commit: 'exists',
+      uncommittedHash: '',
+    };
     client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
 
     expect(
-      await getChangedFilesWithReplacement(context, { id: 'id', number: 3, commit: 'missing' })
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'missing',
+        uncommittedHash: '',
+      })
+    ).toEqual({
+      changedFiles: ['changed', 'files'],
+      replacementBuild,
+    });
+
+    expect(client.runQuery).toHaveBeenCalled();
+  });
+
+  it('uses a replacement when build has uncommitted changes', async () => {
+    const replacementBuild = {
+      id: 'replacement',
+      number: 2,
+      commit: 'exists',
+      uncommittedHash: '',
+    };
+    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+
+    expect(
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: 'abcdef',
+      })
     ).toEqual({
       changedFiles: ['changed', 'files'],
       replacementBuild,
@@ -43,11 +82,21 @@ describe('getChangedFilesWithReplacements', () => {
   });
 
   it('throws if there is no replacement', async () => {
-    const replacementBuild = { id: 'replacement', number: 2, commit: 'also-missing' };
+    const replacementBuild = {
+      id: 'replacement',
+      number: 2,
+      commit: 'also-missing',
+      uncommittedHash: '',
+    };
     client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
 
     await expect(
-      getChangedFilesWithReplacement(context, { id: 'id', number: 3, commit: 'missing' })
+      getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'missing',
+        uncommittedHash: '',
+      })
     ).rejects.toThrow(/fatal: bad object missing/);
   });
 });

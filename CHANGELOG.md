@@ -1,3 +1,20 @@
+# v11.4.0 (Tue May 21 2024)
+
+#### 🚀 Enhancement
+
+- Use replacement build for baseline build with uncommitted changes [#988](https://github.com/chromaui/chromatic-cli/pull/988) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### 🐛 Bug Fix
+
+- Remove console log [#979](https://github.com/chromaui/chromatic-cli/pull/979) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.3.5 (Wed May 15 2024)
 
 #### 🐛 Bug Fix

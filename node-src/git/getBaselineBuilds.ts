@@ -16,6 +16,7 @@ const BaselineCommitsQuery = gql`
         status(legacy: false)
         commit
         committedAt
+        uncommittedHash
         changeCount
       }
     }
@@ -29,6 +30,7 @@ interface BaselineCommitsQueryResult {
       status: string;
       commit: string;
       committedAt: number;
+      uncommittedHash: string;
       changeCount: number;
     }[];
   };

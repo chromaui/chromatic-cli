@@ -14,6 +14,7 @@ const makeBuild = (build: Partial<Build> = {}): Build => ({
   id: 'id',
   number: 1,
   commit: 'missing',
+  uncommittedHash: '',
   ...build,
 });
 const makeResult = (ancestorBuilds: Build[]): AncestorBuildsQueryResult => ({
@@ -33,6 +34,14 @@ describe('findAncestorBuildWithCommit', () => {
     expect(await findAncestorBuildWithCommit({ client }, 1)).toEqual(toFind);
     expect(client.runQuery).toHaveBeenCalledTimes(1);
     expect(client.runQuery.mock.calls[0][1]).toMatchObject({ buildNumber: 1 });
+  });
+
+  it('does not return build with uncommitted changes', async () => {
+    client.runQuery.mockReturnValue(
+      makeResult([makeBuild({ commit: 'exists', uncommittedHash: 'abc123' })])
+    );
+
+    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 1, limit: 1 })).toBeNull();
   });
 
   it('passes skip and limit and recurse', async () => {
