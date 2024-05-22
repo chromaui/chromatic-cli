@@ -17,8 +17,6 @@ jobs:
       - run: yarn set version berry
       - name: install
         run: yarn && git status --porcelain
-      - name: prep package
-        run: ./scripts/rename.js storybook-chromatic
       - run: yarn build
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild

@@ -16,6 +16,7 @@ jobs:
           node-version: latest
       - run: yarn set version berry
       - run: yarn
+      - run: yarn build
       - name: run chromatic via node
         run: ./scripts/run-via-node.mjs
         env:

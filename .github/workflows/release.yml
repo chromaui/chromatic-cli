@@ -36,7 +36,7 @@ jobs:
 
       - name: Prepare repository
         run: git fetch --unshallow --tags
-
+      - run: yarn set version berry
       - name: Install dependencies
         run: yarn install --ignore-scripts
 

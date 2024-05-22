@@ -14,7 +14,7 @@ jobs:
           keys:
             - v4-dependencies-{{ checksum "yarn.lock" }}
             - v4-dependencies-
-
+      - run: yarn set version berry
       - run: yarn install
 
       - save_cache:
