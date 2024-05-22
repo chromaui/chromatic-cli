@@ -25,8 +25,7 @@ describe('Test trace script from package.json', () => {
 
     // Execute the script as a child process
     const output = execSync(`yarn ${scriptName}`).toString().trim();
-    console.log(output);
-
+    
     const expandedStoryModule = `node-src/ui/messages/errors/invalidReportPath.stories.ts`;
     const expandedFileModule = `node-src/ui/messages/errors/invalidReportPath.ts`;
 

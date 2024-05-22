@@ -14,7 +14,6 @@ jobs:
           keys:
             - v4-dependencies-{{ checksum "yarn.lock" }}
             - v4-dependencies-
-      - run: corepack enable
       - run: yarn set version berry
       - run: yarn install
 

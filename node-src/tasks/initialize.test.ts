@@ -47,6 +47,8 @@ describe('setRuntimeMetadata', () => {
     } as any;
     await setRuntimeMetadata(ctx);
 
+    console.log(ctx.runtimeMetadata);
+
     expect(ctx.runtimeMetadata).toEqual({
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
       nodeVersion: process.versions.node,
