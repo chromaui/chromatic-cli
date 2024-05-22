@@ -8,15 +8,20 @@ jobs:
   chromatic:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      - name: install
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
+      - name: Install dependencies
         run: pnpm install && git status --porcelain
-      - run: pnpm build
+      - run: pnpm build && git status --porcelain
       - name: run chromatic
         run: pnpm dlx chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
