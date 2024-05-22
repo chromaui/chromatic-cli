@@ -1,7 +1,9 @@
 import { StorybookConfig } from '@storybook/react-webpack5';
 
 const config: StorybookConfig = {
-  stories: ['../node-src/**/*.@(mdx|stories.*)'],
+  stories: process.env.SMOKE_TEST
+    ? ['../test-stories/*.stories.*']
+    : ['../node-src/**/*.@(mdx|stories.*)'],
   addons: ['@storybook/addon-essentials', '@storybook/addon-webpack5-compiler-swc'],
   framework: {
     name: '@storybook/react-webpack5',

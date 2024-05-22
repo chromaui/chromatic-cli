@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const pkgUp = require('pkg-up');
-const { readFile, writeFile } = require('jsonfile');
+import pkgUp from 'pkg-up';
+import { readFile, writeFile } from 'jsonfile';
 
 const packageJson = {
   async read() {

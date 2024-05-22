@@ -18,6 +18,8 @@ describe('Test trace script from package.json', () => {
     // Execute the script as a child process
     const output = execSync(`yarn ${scriptName}`).toString().trim();
 
+    console.log(output);
+    console.log(scriptCommand);
     // Add your assertions based on the expected output or behavior of the script
     expect(output).toContain(scriptCommand);
 
