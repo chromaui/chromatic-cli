@@ -18,7 +18,7 @@ jobs:
         run: npm install && git status --porcelain
       - run: npm run build
       - name: run chromatic
-        run: npm run chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+        run: npm run chromatic -- --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
