@@ -22,7 +22,7 @@ describe('getDependencies', () => {
     const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
-        ...Object.keys(packageJson.dependencies),
+        ...Object.keys(packageJson.dependencies || {}),
         ...Object.keys(packageJson.devDependencies),
       ])
     );
