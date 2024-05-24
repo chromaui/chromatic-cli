@@ -122,8 +122,9 @@ export const buildStorybook = async (ctx: Context) => {
 
     const subprocess = execaCommand(ctx.buildCommand, {
       stdio: [null, logFile, null],
+      preferLocal: true,
       signal,
-      env: { NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
+      env: { CI: '1', NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (e) {
