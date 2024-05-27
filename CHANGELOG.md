@@ -1,3 +1,16 @@
+# v11.4.1 (Mon May 27 2024)
+
+#### 🐛 Bug Fix
+
+- Pass `CI=1` environment variable to Storybook build command to disable prompts [#991](https://github.com/chromaui/chromatic-cli/pull/991) ([@ghengeveld](https://github.com/ghengeveld))
+- Setup Slack plugin for auto to notify on new CLI releases [#990](https://github.com/chromaui/chromatic-cli/pull/990) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.4.0 (Tue May 21 2024)
 
 #### 🚀 Enhancement
