@@ -14,11 +14,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: lts/*
+      - run: corepack enable
+      - run: yarn set version berry
       - name: install
-        run: npm install && git status --porcelain
-      - run: npm run build
+        run: yarn && git status --porcelain
+      - run: yarn build
       - name: run chromatic
-        run: npm run chromatic -- --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+        run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
