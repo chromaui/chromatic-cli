@@ -39,7 +39,7 @@ jobs:
       - run: corepack enable
       - run: yarn set version berry
       - name: Install dependencies
-        run: yarn install --ignore-scripts
+        run: yarn install --immutable
 
       - name: Create Release
         run: yarn run release
