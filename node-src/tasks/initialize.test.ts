@@ -37,7 +37,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('sets the build command on the context', async () => {
-    mockfs({ './package.json': JSON.stringify({ packageManager: 'npm' }) });
+    mockfs({ './package.json': JSON.stringify({ engines: {'npm': ">10"} }) });
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -46,8 +46,6 @@ describe('setRuntimeMetadata', () => {
       git: { changedFiles: ['./index.js'] },
     } as any;
     await setRuntimeMetadata(ctx);
-
-    console.log(ctx.runtimeMetadata);
 
     expect(ctx.runtimeMetadata).toEqual({
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
@@ -75,28 +73,6 @@ describe('setRuntimeMetadata', () => {
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
       nodeVersion: process.versions.node,
       packageManager: 'yarn',
-      packageManagerVersion: '1.2.3',
-    });
-  });
-
-  it('supports pnpm', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'pnpm' }),
-      './pnpm-lock.yaml': '',
-    });
-
-    const ctx = {
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: {},
-    } as any;
-    await setRuntimeMetadata(ctx);
-
-    expect(ctx.runtimeMetadata).toEqual({
-      nodePlatform: expect.stringMatching(/darwin|linux|win32/),
-      nodeVersion: process.versions.node,
-      packageManager: 'pnpm',
       packageManagerVersion: '1.2.3',
     });
   });

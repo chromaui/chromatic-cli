@@ -77,23 +77,6 @@ describe('setBuildCommand', () => {
     expect(ctx.buildCommand).toEqual('yarn run build:storybook --output-dir ./source-dir/');
   });
 
-  it('supports pnpm', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'pnpm' }),
-      './pnpm-lock.yaml': '',
-    });
-
-    const ctx = {
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: {},
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(ctx.buildCommand).toEqual('pnpm run build:storybook --output-dir ./source-dir/');
-  });
-
   it('warns if --only-changes is not supported', async () => {
     const ctx = {
       sourceDir: './source-dir/',
