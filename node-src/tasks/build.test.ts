@@ -45,7 +45,7 @@ describe('setSourceDir', () => {
 
 describe('setBuildCommand', () => {
   it('sets the build command on the context', async () => {
-    mockfs({ './package.json': JSON.stringify({ packageManager: 'npm' }) });
+    mockfs({ './package.json': JSON.stringify({ engines: {'npm': ">10"} }) });
 
     const ctx = {
       sourceDir: './source-dir/',
