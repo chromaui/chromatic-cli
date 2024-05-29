@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "11.4.0",
+  "version": "11.4.1",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -112,6 +112,7 @@
     "@actions/github": "^5.0.0",
     "@antfu/ni": "^0.21.5",
     "@auto-it/exec": "^11.0.4",
+    "@auto-it/slack": "^11.1.6",
     "@discoveryjs/json-ext": "^0.5.7",
     "@storybook/addon-essentials": "^8.1.2",
     "@storybook/addon-webpack5-compiler-swc": "^1.0.2",
@@ -236,6 +237,13 @@
         "exec",
         {
           "afterShipIt": "yarn run publish-action"
+        }
+      ],
+      [
+        "slack",
+        {
+          "atTarget": "support-team",
+          "iconEmoji": ":package:"
         }
       ]
     ]

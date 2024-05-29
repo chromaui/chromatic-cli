@@ -153,7 +153,7 @@ describe('buildStorybook', () => {
     await buildStorybook(ctx);
     expect(command).toHaveBeenCalledWith(
       ctx.buildCommand,
-      expect.objectContaining({ env: { NODE_ENV: 'production' } })
+      expect.objectContaining({ env: { CI: '1', NODE_ENV: 'production' } })
     );
   });
 
@@ -167,7 +167,7 @@ describe('buildStorybook', () => {
     await buildStorybook(ctx);
     expect(command).toHaveBeenCalledWith(
       ctx.buildCommand,
-      expect.objectContaining({ env: { NODE_ENV: 'test' } })
+      expect.objectContaining({ env: { CI: '1', NODE_ENV: 'test' } })
     );
   });
 });

@@ -16,7 +16,7 @@ jobs:
             - v4-dependencies-
       - run: corepack use yarn@4.2.2
       - run: yarn set version berry
-      - run: yarn install
+      - run: yarn install --immutable
 
       - save_cache:
           paths:

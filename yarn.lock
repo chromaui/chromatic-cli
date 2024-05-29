@@ -71,6 +71,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@atomist/slack-messages@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@atomist/slack-messages@npm:1.2.2"
+  checksum: 10c0/1d060a0a19a047e3f95596c9bb08051d7309c88a8fcbc08d172ec6c415bca0a3b08f8497a05dbaeb5320bf6f5dbc98d8134168bbd4cc12e8107204479e3ab6af
+  languageName: node
+  linkType: hard
+
 "@auto-it/bot-list@npm:11.1.6":
   version: 11.1.6
   resolution: "@auto-it/bot-list@npm:11.1.6"
@@ -188,6 +195,22 @@ __metadata:
     io-ts: "npm:^2.1.2"
     tslib: "npm:2.1.0"
   checksum: 10c0/3b0991f5736235cf19714a59f8022753086beb68d4bc94a291b274cee5f4fe72ceb850864694adeb4c7cce0f6b162c4feb4e83affea81186816ffc5f380c3337
+  languageName: node
+  linkType: hard
+
+"@auto-it/slack@npm:^11.1.6":
+  version: 11.1.6
+  resolution: "@auto-it/slack@npm:11.1.6"
+  dependencies:
+    "@atomist/slack-messages": "npm:^1.2.2"
+    "@auto-it/core": "npm:11.1.6"
+    "@octokit/rest": "npm:^18.12.0"
+    fp-ts: "npm:^2.5.3"
+    https-proxy-agent: "npm:^5.0.0"
+    io-ts: "npm:^2.1.2"
+    node-fetch: "npm:2.6.7"
+    tslib: "npm:2.1.0"
+  checksum: 10c0/8e68d0b97836184e50bb4ba297a5230d2da6faf1c46f856df3deda31bacd926983d576a87edf365ee1891ea0f36dff77b47f3af0f7e05cc7717f9513d8970b38
   languageName: node
   linkType: hard
 
@@ -6491,6 +6514,7 @@ __metadata:
     "@actions/github": "npm:^5.0.0"
     "@antfu/ni": "npm:^0.21.5"
     "@auto-it/exec": "npm:^11.0.4"
+    "@auto-it/slack": "npm:^11.1.6"
     "@discoveryjs/json-ext": "npm:^0.5.7"
     "@storybook/addon-essentials": "npm:^8.1.2"
     "@storybook/addon-webpack5-compiler-swc": "npm:^1.0.2"
