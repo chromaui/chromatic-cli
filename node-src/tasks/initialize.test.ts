@@ -1,17 +1,15 @@
 import { execa as execaDefault, execaCommand } from 'execa';
-import mockfs from 'mock-fs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
 
 vi.mock('execa');
+vi.mock('@antfu/ni');
 
 const execa = vi.mocked(execaDefault);
 const command = vi.mocked(execaCommand);
-
-afterEach(() => {
-  mockfs.restore();
-});
+const getCliCommand = vi.mocked(getCliCommandDefault);
 
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
@@ -37,7 +35,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('sets the build command on the context', async () => {
-    mockfs({ './package.json': JSON.stringify({ engines: {'npm': ">10"} }) });
+    getCliCommand.mockReturnValue(Promise.resolve('npm'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -56,10 +54,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports yarn', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'yarn' }),
-      './yarn.lock': '',
-    });
+    getCliCommand.mockReturnValue(Promise.resolve('yarn'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -73,6 +68,25 @@ describe('setRuntimeMetadata', () => {
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
       nodeVersion: process.versions.node,
       packageManager: 'yarn',
+      packageManagerVersion: '1.2.3',
+    });
+  });
+
+  it('supports pnpm', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('pnpm'));
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '6.1.0' },
+      git: {},
+    } as any;
+    await setRuntimeMetadata(ctx);
+
+    expect(ctx.runtimeMetadata).toEqual({
+      nodePlatform: expect.stringMatching(/darwin|linux|win32/),
+      nodeVersion: process.versions.node,
+      packageManager: 'pnpm',
       packageManagerVersion: '1.2.3',
     });
   });
