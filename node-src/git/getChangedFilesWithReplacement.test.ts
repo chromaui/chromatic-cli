@@ -25,6 +25,7 @@ describe('getChangedFilesWithReplacements', () => {
         number: 3,
         commit: 'exists',
         uncommittedHash: '',
+        isLocalBuild: false,
       })
     ).toEqual({
       changedFiles: ['changed', 'files'],
@@ -48,6 +49,7 @@ describe('getChangedFilesWithReplacements', () => {
         number: 3,
         commit: 'missing',
         uncommittedHash: '',
+        isLocalBuild: false,
       })
     ).toEqual({
       changedFiles: ['changed', 'files'],
@@ -57,7 +59,7 @@ describe('getChangedFilesWithReplacements', () => {
     expect(client.runQuery).toHaveBeenCalled();
   });
 
-  it('uses a replacement when build has uncommitted changes', async () => {
+  it('uses a replacement when local build has uncommitted changes', async () => {
     const replacementBuild = {
       id: 'replacement',
       number: 2,
@@ -72,6 +74,7 @@ describe('getChangedFilesWithReplacements', () => {
         number: 3,
         commit: 'exists',
         uncommittedHash: 'abcdef',
+        isLocalBuild: true,
       })
     ).toEqual({
       changedFiles: ['changed', 'files'],
@@ -79,6 +82,28 @@ describe('getChangedFilesWithReplacements', () => {
     });
 
     expect(client.runQuery).toHaveBeenCalled();
+  });
+
+  it('does not use a replacement when non-local build has uncommitted changes', async () => {
+    const replacementBuild = {
+      id: 'replacement',
+      number: 2,
+      commit: 'exists',
+      uncommittedHash: '',
+    };
+    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+
+    expect(
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: 'abcdef',
+        isLocalBuild: false,
+      })
+    ).toEqual({
+      changedFiles: ['changed', 'files'],
+    });
   });
 
   it('throws if there is no replacement', async () => {
@@ -96,6 +121,7 @@ describe('getChangedFilesWithReplacements', () => {
         number: 3,
         commit: 'missing',
         uncommittedHash: '',
+        isLocalBuild: false,
       })
     ).rejects.toThrow(/fatal: bad object missing/);
   });

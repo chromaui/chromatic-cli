@@ -112,6 +112,7 @@ describe('setGitInfo', () => {
         number: 1,
         commit: '987bca',
         uncommittedHash: '',
+        isLocalBuild: false,
       },
     });
     const ctx = { log, options: { onlyChanged: true }, client } as any;

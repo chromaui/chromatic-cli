@@ -17,6 +17,7 @@ const BaselineCommitsQuery = gql`
         commit
         committedAt
         uncommittedHash
+        isLocalBuild
         changeCount
       }
     }
@@ -31,6 +32,7 @@ interface BaselineCommitsQueryResult {
       commit: string;
       committedAt: number;
       uncommittedHash: string;
+      isLocalBuild: boolean;
       changeCount: number;
     }[];
   };
