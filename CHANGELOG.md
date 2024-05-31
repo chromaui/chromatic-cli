@@ -1,3 +1,20 @@
+# v11.5.0 (Fri May 31 2024)
+
+#### 🚀 Enhancement
+
+- Upgrade Storybook to 8.1 [#989](https://github.com/chromaui/chromatic-cli/pull/989) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### 🐛 Bug Fix
+
+- Pass `SLACK_WEBHOOK_URL` to release script [#992](https://github.com/chromaui/chromatic-cli/pull/992) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v11.4.1 (Mon May 27 2024)
 
 #### 🐛 Bug Fix
