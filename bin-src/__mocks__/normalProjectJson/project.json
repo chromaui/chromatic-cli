@@ -11,18 +11,18 @@
   "framework": { "name": "@storybook/react-webpack5", "options": {} },
   "builder": "@storybook/builder-webpack5",
   "renderer": "@storybook/react",
-  "storybookVersion": "8.1.2",
-  "storybookVersionSpecifier": "^8.1.2",
+  "storybookVersion": "8.1.5",
+  "storybookVersionSpecifier": "^8.1.5",
   "language": "typescript",
   "storybookPackages": {
-    "@storybook/csf-tools": { "version": "8.1.2" },
+    "@storybook/csf-tools": { "version": "8.1.5" },
     "@storybook/linter-config": { "version": "4.0.0" },
-    "@storybook/react": { "version": "8.1.2" },
-    "@storybook/react-webpack5": { "version": "8.1.2" },
-    "storybook": { "version": "8.1.2" }
+    "@storybook/react": { "version": "8.1.5" },
+    "@storybook/react-webpack5": { "version": "8.1.5" },
+    "storybook": { "version": "8.1.5" }
   },
   "addons": {
-    "@storybook/addon-essentials": { "version": "8.1.2" },
+    "@storybook/addon-essentials": { "version": "8.1.5" },
     "@storybook/addon-webpack5-compiler-swc": { "version": "1.0.2" },
     "chromatic": { "version": "11.4.0", "versionSpecifier": "latest" }
   }
