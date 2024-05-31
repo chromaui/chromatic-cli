@@ -15,7 +15,6 @@ jobs:
         with:
           node-version: latest
       - run: corepack enable
-      - run: yarn set version berry
       - run: yarn
       - run: yarn build
       - name: run chromatic via node

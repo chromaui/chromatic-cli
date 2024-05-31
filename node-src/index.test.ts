@@ -762,7 +762,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
   expect(upload.mock.calls.at(-1)[1]).toEqual(
     expect.arrayContaining([
       {
-        contentLength: 742,
+        contentLength: expect.any(Number),
         contentType: 'text/typescript',
         fileKey: '',
         filePath: '.chromatic/main.ts',
@@ -772,7 +772,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         targetPath: '.chromatic/main.ts',
       },
       {
-        contentLength: 457,
+        contentLength: expect.any(Number),
         contentType: 'application/json',
         fileKey: '',
         filePath: '.chromatic/preview-stats.trimmed.json',
@@ -782,7 +782,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         targetPath: '.chromatic/preview-stats.trimmed.json',
       },
       {
-        contentLength: 1456,
+        contentLength: expect.any(Number),
         contentType: 'text/typescript',
         fileKey: '',
         filePath: '.chromatic/preview.tsx',

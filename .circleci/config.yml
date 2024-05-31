@@ -15,7 +15,6 @@ jobs:
             - v4-dependencies-{{ checksum "yarn.lock" }}
             - v4-dependencies-
       - run: corepack use yarn@4.2.2
-      - run: yarn set version berry
       - run: yarn install --immutable
 
       - save_cache:

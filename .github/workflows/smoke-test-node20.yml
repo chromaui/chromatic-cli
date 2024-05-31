@@ -15,7 +15,6 @@ jobs:
         with:
           node-version: 20
       - run: corepack enable
-      - run: yarn set version berry
       - run: yarn
       - run: yarn build
       - uses: ./

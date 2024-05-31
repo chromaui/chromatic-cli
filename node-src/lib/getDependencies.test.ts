@@ -2,7 +2,7 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { getDependencies } from './getDependencies';
-import packageJson from '../../package.json';
+import packageJson from '../__mocks__/dependencyChanges/plain-package.json';
 import { checkoutFile } from '../git/git';
 import TestLogger from './testLogger';
 
@@ -11,9 +11,9 @@ const ctx = { log: new TestLogger() } as any;
 describe('getDependencies', () => {
   it('should return a set of dependencies', async () => {
     const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../../'),
-      manifestPath: 'package.json',
-      lockfilePath: 'yarn.lock',
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'plain-package.json',
+      lockfilePath: 'plain-yarn.lock',
     });
 
     const [dep] = dependencies;
@@ -22,7 +22,7 @@ describe('getDependencies', () => {
     const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
-        ...Object.keys(packageJson.dependencies || {}),
+        ...Object.keys(packageJson.dependencies),
         ...Object.keys(packageJson.devDependencies),
       ])
     );

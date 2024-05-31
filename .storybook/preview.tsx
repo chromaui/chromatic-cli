@@ -16,6 +16,9 @@ ansiHTML.setColors({
   cyan: '5fb3b2',
 });
 
+// @ts-expect-error chalk is not fully typed
+chalk.enabled = true;
+
 chalk.level = 3;
 
 const codeStyle = {

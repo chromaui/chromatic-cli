@@ -15,7 +15,6 @@ jobs:
         with:
           node-version: lts/*
       - run: corepack enable
-      - run: yarn set version berry
       - name: install
         run: yarn install --immutable
       - uses: chromaui/action-canary@latest

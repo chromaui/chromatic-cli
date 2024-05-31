@@ -15,7 +15,6 @@ jobs:
         with:
           node-version: lts/*
       - run: corepack enable
-      - run: yarn set version berry
       - run: yarn
       - run: yarn build
       - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild

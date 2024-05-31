@@ -37,7 +37,6 @@ jobs:
       - name: Prepare repository
         run: git fetch --unshallow --tags
       - run: corepack enable
-      - run: yarn set version berry
       - name: Install dependencies
         run: yarn install --immutable
 
