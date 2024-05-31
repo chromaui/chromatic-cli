@@ -1,17 +1,15 @@
 import { execa as execaDefault, execaCommand } from 'execa';
-import mockfs from 'mock-fs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
 
 vi.mock('execa');
+vi.mock('@antfu/ni');
 
 const execa = vi.mocked(execaDefault);
 const command = vi.mocked(execaCommand);
-
-afterEach(() => {
-  mockfs.restore();
-});
+const getCliCommand = vi.mocked(getCliCommandDefault);
 
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
@@ -37,7 +35,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('sets the build command on the context', async () => {
-    mockfs({ './package.json': JSON.stringify({ packageManager: 'npm' }) });
+    getCliCommand.mockReturnValue(Promise.resolve('npm'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -56,10 +54,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports yarn', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'yarn' }),
-      './yarn.lock': '',
-    });
+    getCliCommand.mockReturnValue(Promise.resolve('yarn'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -78,10 +73,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports pnpm', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'pnpm' }),
-      './pnpm-lock.yaml': '',
-    });
+    getCliCommand.mockReturnValue(Promise.resolve('pnpm'));
 
     const ctx = {
       sourceDir: './source-dir/',

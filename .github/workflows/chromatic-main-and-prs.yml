@@ -19,8 +19,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: lts/*
+      - run: corepack enable
       - name: install
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
       - uses: chromaui/action@latest
         with:
           # 👇 Chromatic projectToken, refer to the manage page to obtain it.
