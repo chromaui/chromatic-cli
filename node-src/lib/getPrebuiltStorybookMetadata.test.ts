@@ -1,61 +1,93 @@
 import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 
-import { readFile } from 'jsonfile';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-vi.mock('jsonfile', async (importOriginal) => {
-  return {
-    // @ts-expect-error TS does not think actual is an object, but it's fine.
-    ...(await importOriginal()),
-    readFile: vi.fn(() =>
-      Promise.resolve({
-        addons: {
-          '@storybook/addon-essentials': { version: '8.1.0' },
-          '@storybook/addon-links': { version: '8.1.0' },
-        },
-        builder: 'webpack5',
-        framework: { name: 'react' },
-        storybookVersion: '8.1.0',
-        storybookPackages: {
-          '@storybook/react': { version: '8.1.0' },
-          '@storybook/builder-webpack5': { version: '8.1.0' },
-          '@storybook/addon-essentials': { version: '8.1.0' },
-          '@storybook/addon-links': { version: '8.1.0' },
-        },
-      })
-    ),
-  };
-});
+import { describe, expect, it } from 'vitest';
 
 describe('getStorybookMetadataFromProjectJson', () => {
   it('should return the metadata from the project.json file', async () => {
-    const projectJsonPath = 'path/to/project.json';
+    const projectJsonPath = 'bin-src/__mocks__/normalProjectJson/project.json';
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: 'react',
-      version: '8.1.0',
+      viewLayer: '@storybook/react-webpack5',
+      version: '8.1.5',
       builder: {
-        name: 'webpack5',
-        packageVersion: '8.1.0',
+        name: '@storybook/builder-webpack5',
+        packageVersion: '8.1.5',
       },
       addons: [
         {
           name: 'essentials',
           packageName: '@storybook/addon-essentials',
-          packageVersion: '8.1.0',
+          packageVersion: '8.1.5',
         },
         {
-          name: 'links',
-          packageName: '@storybook/addon-links',
-          packageVersion: '8.1.0',
+          name: 'compiler-swc',
+          packageName: '@storybook/addon-webpack5-compiler-swc',
+          packageVersion: '1.0.2',
         },
       ],
     });
-    expect(readFile).toHaveBeenCalledWith(projectJsonPath);
+  });
+
+  it('should return the metadata from a Storybook 6 project.json file', async () => {
+    const projectJsonPath = 'bin-src/__mocks__/sb6ProjectJson/project.json';
+    const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
+
+    expect(metadata).toEqual({
+      viewLayer: 'react',
+      version: '6.5.16',
+      builder: {
+        name: 'webpack4',
+        packageVersion: '6.5.16',
+      },
+      addons: [
+        {
+          name: 'links',
+          packageName: '@storybook/addon-links',
+          packageVersion: '6.5.16',
+        },
+        {
+          name: 'essentials',
+          packageName: '@storybook/addon-essentials',
+          packageVersion: '6.5.16',
+        },
+        {
+          name: 'interactions',
+          packageName: '@storybook/addon-interactions',
+          packageVersion: '6.5.16',
+        },
+      ],
+    });
+  });
+
+  it('should return the metadata from the project.json file when the builder is missing', async () => {
+    const projectJsonPath = 'bin-src/__mocks__/sb6ProjectJsonMissingBuilder/project.json';
+    const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
+
+    expect(metadata).toEqual({
+      viewLayer: 'react',
+      version: '6.5.16',
+      builder: {
+        name: 'webpack4',
+        packageVersion: '6.5.16',
+      },
+      addons: [
+        {
+          name: 'links',
+          packageName: '@storybook/addon-links',
+          packageVersion: '6.5.16',
+        },
+        {
+          name: 'essentials',
+          packageName: '@storybook/addon-essentials',
+          packageVersion: '6.5.16',
+        },
+        {
+          name: 'interactions',
+          packageName: '@storybook/addon-interactions',
+          packageVersion: '6.5.16',
+        },
+      ],
+    });
   });
 });
