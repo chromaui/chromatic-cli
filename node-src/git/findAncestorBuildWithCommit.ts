@@ -12,6 +12,7 @@ const AncestorBuildsQuery = gql`
           number
           commit
           uncommittedHash
+          isLocalBuild
         }
       }
     }
@@ -26,6 +27,7 @@ export interface AncestorBuildsQueryResult {
         number: number;
         commit: string;
         uncommittedHash: string;
+        isLocalBuild: boolean;
       }[];
     };
   };

@@ -7,6 +7,7 @@ type BuildWithCommitInfo = {
   number: number;
   commit: string;
   uncommittedHash: string;
+  isLocalBuild: boolean;
 };
 
 /**
@@ -22,7 +23,10 @@ export async function getChangedFilesWithReplacement(
   build: BuildWithCommitInfo
 ): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommitInfo }> {
   try {
-    if (build.uncommittedHash) throw new Error('Build had uncommitted changes');
+    if (build.isLocalBuild && build.uncommittedHash) {
+      throw new Error('Local build had uncommitted changes');
+    }
+
     const changedFiles = await getChangedFiles(build.commit);
     return { changedFiles };
   } catch (err) {
