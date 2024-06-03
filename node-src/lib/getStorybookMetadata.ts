@@ -134,7 +134,7 @@ const findAddons = async (ctx, mainConfig, v7) => {
         return {
           name: supportedAddons[name],
           packageName: name,
-          packageVersion: allDependencies[name],
+          packageVersion: allDependencies[name] || addon.version,
         };
       }),
     };
@@ -210,11 +210,15 @@ export const getStorybookMetadata = async (ctx: Context) => {
   let v7 = false;
   try {
     mainConfig = await r(path.resolve(configDir, 'main'));
+    ctx.log.debug({ configDir, mainConfig });
   } catch (storybookV6error) {
+    ctx.log.debug({ storybookV6error });
     try {
       mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
+      ctx.log.debug({ configDir, mainConfig });
       v7 = true;
     } catch (storybookV7error) {
+      ctx.log.debug({ storybookV7error });
       mainConfig = null;
     }
   }

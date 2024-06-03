@@ -12,7 +12,7 @@ import { viewLayers } from './viewLayers';
 
 export interface SBProjectJson {
   addons: Record<string, { version: string; options: any }>;
-  builder?: string;
+  builder?: string | { name: string };
   framework: {
     name: string;
   };
@@ -22,15 +22,10 @@ export interface SBProjectJson {
 
 const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersion: string } => {
   const { builder, storybookPackages, storybookVersion } = sbProjectJson;
-  return builder
-    ? {
-        name: builder,
-        packageVersion: storybookPackages[builders[builder]].version,
-      }
-    : {
-        name: 'webpack4', // the default builder for Storybook v6
-        packageVersion: storybookVersion,
-      };
+  const name = typeof builder === 'string' ? builder : builder?.name;
+  return name
+    ? { name, packageVersion: storybookPackages[builders[name]]?.version }
+    : { name: 'webpack4', packageVersion: storybookVersion }; // the default builder for Storybook v6
 };
 
 export const getStorybookMetadataFromProjectJson = async (

@@ -64,10 +64,12 @@ describe('getStorybookInfo', () => {
           {
             name: 'essentials',
             packageName: '@storybook/addon-essentials',
+            packageVersion: expect.any(String),
           },
           {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
+            packageVersion: expect.any(String),
           },
         ],
         builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
@@ -80,7 +82,19 @@ describe('getStorybookInfo', () => {
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
         viewLayer: 'react',
-        version: expect.any(String),
+        version: '8.1.5',
+        addons: expect.arrayContaining([
+          expect.objectContaining({
+            name: 'essentials',
+            packageName: '@storybook/addon-essentials',
+            packageVersion: expect.any(String),
+          }),
+          expect.objectContaining({
+            name: 'compiler-swc',
+            packageName: '@storybook/addon-webpack5-compiler-swc',
+            packageVersion: expect.any(String),
+          }),
+        ]),
         builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
       })
     );
@@ -212,6 +226,35 @@ describe('getStorybookInfo', () => {
         builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.5' },
         version: '8.1.5',
         viewLayer: '@storybook/react-webpack5',
+      });
+    });
+
+    it('returns the correct metadata for Storybook 6', async () => {
+      const ctx = getContext({
+        options: { storybookBuildDir: 'bin-src/__mocks__/sb6ProjectJson' },
+        packageJson: { dependencies: REACT },
+      });
+      expect(await getStorybookInfo(ctx)).toEqual({
+        addons: [
+          {
+            name: 'links',
+            packageName: '@storybook/addon-links',
+            packageVersion: '6.5.16',
+          },
+          {
+            name: 'essentials',
+            packageName: '@storybook/addon-essentials',
+            packageVersion: '6.5.16',
+          },
+          {
+            name: 'interactions',
+            packageName: '@storybook/addon-interactions',
+            packageVersion: '6.5.16',
+          },
+        ],
+        builder: { name: 'webpack4', packageVersion: '6.5.16' },
+        version: '6.5.16',
+        viewLayer: 'react',
       });
     });
   });
