@@ -6545,6 +6545,7 @@ __metadata:
     auto: "npm:^11.0.5"
     boxen: "npm:^7.1.1"
     chalk: "npm:^4.1.2"
+    clean-package: "npm:^2.2.0"
     cpy: "npm:^8.1.2"
     cross-env: "npm:^7.0.3"
     cross-spawn: "npm:^7.0.2"
@@ -6680,6 +6681,17 @@ __metadata:
   dependencies:
     source-map: "npm:~0.6.0"
   checksum: 10c0/381de7523e23f3762eb180e327dcc0cedafaf8cb1cd8c26b7cc1fc56e0829a92e734729c4f955394d65ed72fb62f82d8baf78af34b33b8a7d41ebad2accdd6fb
+  languageName: node
+  linkType: hard
+
+"clean-package@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "clean-package@npm:2.2.0"
+  dependencies:
+    dot-prop: "npm:^6.0.1"
+  bin:
+    clean-package: bin/main.js
+  checksum: 10c0/014192ddd9ccb48288e934f9b4378ed86c57fdf7b65e38c1a61069e73d79845135d2645142f565ed4ff835a8660fa70387e5cd2a26348253cae699d4d3cedd26
   languageName: node
   linkType: hard
 
@@ -7733,6 +7745,15 @@ __metadata:
     no-case: "npm:^3.0.4"
     tslib: "npm:^2.0.3"
   checksum: 10c0/5b859ea65097a7ea870e2c91b5768b72ddf7fa947223fd29e167bcdff58fe731d941c48e47a38ec8aa8e43044c8fbd15cd8fa21689a526bc34b6548197cd5b05
+  languageName: node
+  linkType: hard
+
+"dot-prop@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "dot-prop@npm:6.0.1"
+  dependencies:
+    is-obj: "npm:^2.0.0"
+  checksum: 10c0/30e51ec6408978a6951b21e7bc4938aad01a86f2fdf779efe52330205c6bb8a8ea12f35925c2029d6dc9d1df22f916f32f828ce1e9b259b1371c580541c22b5a
   languageName: node
   linkType: hard
 
@@ -10670,6 +10691,13 @@ __metadata:
   version: 1.0.1
   resolution: "is-obj@npm:1.0.1"
   checksum: 10c0/5003acba0af7aa47dfe0760e545a89bbac89af37c12092c3efadc755372cdaec034f130e7a3653a59eb3c1843cfc72ca71eaf1a6c3bafe5a0bab3611a47f9945
+  languageName: node
+  linkType: hard
+
+"is-obj@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "is-obj@npm:2.0.0"
+  checksum: 10c0/85044ed7ba8bd169e2c2af3a178cacb92a97aa75de9569d02efef7f443a824b5e153eba72b9ae3aca6f8ce81955271aa2dc7da67a8b720575d3e38104208cb4e
   languageName: node
   linkType: hard
 
