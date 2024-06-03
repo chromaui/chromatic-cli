@@ -17,10 +17,12 @@ const publishAction = async ({ major, version, repo }) => {
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
 
+  await $`yarn clean-package`;
   await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
     parents: true, // keep directory structure (i.e. action dir)
   });
   await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
+  await $`yarn clean-package restore`;
 
   const $$ = (strings, ...args) => {
     console.info(strings.reduce((acc, s, i) => `${acc}${s}${args[i] || ''}`, '🏃 '));

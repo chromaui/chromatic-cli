@@ -81,6 +81,8 @@
     "lint:js": "cross-env NODE_ENV=production eslint --fix --cache --cache-location=.cache/eslint --ext .js,.json,.mjs,.ts,.cjs --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "yarn run build && auto shipit",
+    "prepack": "clean-package",
+    "postpack": "clean-package restore",
     "publish-action": "./scripts/publish-action.mjs",
     "trace": "./dist/bin.js trace",
     "trim-stats": "./dist/bin.js trim-stats-file",
@@ -143,6 +145,7 @@
     "auto": "^11.0.5",
     "boxen": "^7.1.1",
     "chalk": "^4.1.2",
+    "clean-package": "^2.2.0",
     "cpy": "^8.1.2",
     "cross-env": "^7.0.3",
     "cross-spawn": "^7.0.2",
@@ -246,6 +249,16 @@
           "iconEmoji": ":package:"
         }
       ]
+    ]
+  },
+  "clean-package": {
+    "indent": 2,
+    "remove": [
+      "auto",
+      "clean-package",
+      "lint-staged",
+      "packageManager",
+      "scripts"
     ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
