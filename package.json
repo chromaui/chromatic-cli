@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "11.4.1",
+  "version": "11.5.0",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -70,8 +70,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "build-storybook": "build-storybook -s static",
-    "build-test-storybook": "cross-env SMOKE_TEST=true build-storybook -o test-storybook",
+    "build-storybook": "storybook build --stats-json",
+    "build-test-storybook": "cross-env SMOKE_TEST=true storybook build -o test-storybook --stats-json",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./dist/bin.js",
     "chromatic-prebuilt": "./dist/bin.js --storybook-build-dir=\"storybook-static\"",
@@ -84,7 +84,7 @@
     "publish-action": "./scripts/publish-action.mjs",
     "trace": "./dist/bin.js trace",
     "trim-stats": "./dist/bin.js trim-stats-file",
-    "storybook": "start-storybook -p 9009 -s static",
+    "storybook": "storybook dev -p 9009",
     "test": "vitest run --coverage && vitest run -c vitest.no-threads.config.ts",
     "prepare": "husky install && npm run build",
     "dev": "tsup --watch",
@@ -107,7 +107,6 @@
   "resolutions": {
     "any-observable": "^0.5.1"
   },
-  "dependencies": {},
   "devDependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.0.0",
@@ -115,12 +114,12 @@
     "@auto-it/exec": "^11.0.4",
     "@auto-it/slack": "^11.1.6",
     "@discoveryjs/json-ext": "^0.5.7",
-    "@storybook/addon-essentials": "^6.5.6",
-    "@storybook/builder-webpack5": "^6.5.6",
-    "@storybook/csf-tools": "^7.0.12",
-    "@storybook/linter-config": "^3.1.2",
-    "@storybook/manager-webpack5": "^6.5.6",
-    "@storybook/react": "^6.5.6",
+    "@storybook/addon-essentials": "^8.1.5",
+    "@storybook/addon-webpack5-compiler-swc": "^1.0.3",
+    "@storybook/csf-tools": "^8.1.5",
+    "@storybook/linter-config": "^4.0.0",
+    "@storybook/react": "^8.1.5",
+    "@storybook/react-webpack5": "^8.1.5",
     "@tsconfig/node16": "^16.1.1",
     "@types/archiver": "^5.3.1",
     "@types/async-retry": "^1.4.3",
@@ -133,6 +132,7 @@
     "@types/progress-stream": "^2.0.2",
     "@types/prompts": "^2.4.9",
     "@types/semver": "^7.3.9",
+    "@types/webpack-env": "^1.18.5",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
     "@vitest/coverage-v8": "^0.34.4",
@@ -167,6 +167,7 @@
     "junit-report-builder": "2.1.0",
     "lint-staged": "^11.1.2",
     "listr": "0.14.3",
+    "listr-update-renderer": "^0.5.0",
     "meow": "^9.0.0",
     "mock-fs": "^5.1.2",
     "no-proxy": "^1.0.3",
@@ -190,6 +191,7 @@
     "slash": "^3.0.0",
     "snyk-nodejs-lockfile-parser": "^1.52.1",
     "sort-package-json": "1.50.0",
+    "storybook": "^8.1.5",
     "string-argv": "^0.3.1",
     "strip-ansi": "6.0.0",
     "tmp-promise": "3.0.2",
@@ -247,6 +249,7 @@
     ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
+  "packageManager": "yarn@4.2.2",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
     "displayName": "Chromatic"

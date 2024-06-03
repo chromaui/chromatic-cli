@@ -12,9 +12,7 @@ import { viewLayers } from './viewLayers';
 
 export interface SBProjectJson {
   addons: Record<string, { version: string; options: any }>;
-  builder?: {
-    name: string;
-  };
+  builder?: string;
   framework: {
     name: string;
   };
@@ -26,8 +24,8 @@ const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersio
   const { builder, storybookPackages, storybookVersion } = sbProjectJson;
   return builder
     ? {
-        name: builder.name,
-        packageVersion: storybookPackages[builders[builder.name]].version,
+        name: builder,
+        packageVersion: storybookPackages[builders[builder]].version,
       }
     : {
         name: 'webpack4', // the default builder for Storybook v6

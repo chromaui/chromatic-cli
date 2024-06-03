@@ -1,20 +1,18 @@
 import { execaCommand } from 'execa';
-import mockfs from 'mock-fs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildStorybook, setSourceDir, setBuildCommand } from './build';
 import { beforeEach } from 'node:test';
 
 vi.mock('execa');
+vi.mock('@antfu/ni');
 
 const command = vi.mocked(execaCommand);
+const getCliCommand = vi.mocked(getCliCommandDefault);
 
 beforeEach(() => {
   command.mockClear();
-});
-
-afterEach(() => {
-  mockfs.restore();
 });
 
 describe('setSourceDir', () => {
@@ -45,7 +43,7 @@ describe('setSourceDir', () => {
 
 describe('setBuildCommand', () => {
   it('sets the build command on the context', async () => {
-    mockfs({ './package.json': JSON.stringify({ packageManager: 'npm' }) });
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -55,16 +53,16 @@ describe('setBuildCommand', () => {
     } as any;
     await setBuildCommand(ctx);
 
-    expect(ctx.buildCommand).toEqual(
-      'npm run build:storybook -- --output-dir ./source-dir/ --webpack-stats-json ./source-dir/'
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir', './source-dir/', '--webpack-stats-json', './source-dir/'],
+      { programmatic: true }
     );
+    expect(ctx.buildCommand).toEqual('npm run build:storybook');
   });
 
   it('supports yarn', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'yarn' }),
-      './yarn.lock': '',
-    });
+    getCliCommand.mockReturnValue(Promise.resolve('yarn run build:storybook'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -74,14 +72,16 @@ describe('setBuildCommand', () => {
     } as any;
     await setBuildCommand(ctx);
 
-    expect(ctx.buildCommand).toEqual('yarn run build:storybook --output-dir ./source-dir/');
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir', './source-dir/', '--webpack-stats-json', './source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('yarn run build:storybook');
   });
 
   it('supports pnpm', async () => {
-    mockfs({
-      './package.json': JSON.stringify({ packageManager: 'pnpm' }),
-      './pnpm-lock.yaml': '',
-    });
+    getCliCommand.mockReturnValue(Promise.resolve('pnpm run build:storybook'));
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -91,7 +91,12 @@ describe('setBuildCommand', () => {
     } as any;
     await setBuildCommand(ctx);
 
-    expect(ctx.buildCommand).toEqual('pnpm run build:storybook --output-dir ./source-dir/');
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir', './source-dir/', '--webpack-stats-json', './source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('pnpm run build:storybook');
   });
 
   it('warns if --only-changes is not supported', async () => {

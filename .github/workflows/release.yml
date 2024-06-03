@@ -36,9 +36,9 @@ jobs:
 
       - name: Prepare repository
         run: git fetch --unshallow --tags
-
+      - run: corepack enable
       - name: Install dependencies
-        run: yarn install --ignore-scripts
+        run: yarn install --immutable
 
       - name: Create Release
         run: yarn run release

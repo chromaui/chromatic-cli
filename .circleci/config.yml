@@ -12,16 +12,20 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "yarn.lock" }}
-
-      - run: yarn install --frozen-lockfile
+            - v4-dependencies-{{ checksum "yarn.lock" }}
+            - v4-dependencies-
+      - run: corepack use yarn@4.2.2
+      - run: yarn install --immutable
 
       - save_cache:
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "yarn.lock" }}
+          key: v4-dependencies-{{ checksum "yarn.lock" }}
 
       - run: yarn lint
+
+      # test if dist is correctly generated from src
+      - run: yarn build && git status --porcelain
 
       # unit test
       - run: yarn test
@@ -29,5 +33,4 @@ jobs:
       # publish code coverage results
       - run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
 
-      # test if dist is correctly generated from src
-      - run: yarn build && git status --porcelain
+     
