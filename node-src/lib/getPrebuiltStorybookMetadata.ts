@@ -22,23 +22,10 @@ export interface SBProjectJson {
 
 const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersion: string } => {
   const { builder, storybookPackages, storybookVersion } = sbProjectJson;
-  switch (typeof builder) {
-    case 'string':
-      return {
-        name: builder,
-        packageVersion: storybookPackages[builders[builder]].version,
-      };
-    case 'object':
-      return {
-        name: builder.name,
-        packageVersion: storybookPackages[builders[builder.name]].version,
-      };
-    default:
-      return {
-        name: 'webpack4', // the default builder for Storybook v6
-        packageVersion: storybookVersion,
-      };
-  }
+  const name = typeof builder === 'string' ? builder : builder?.name;
+  return name
+    ? { name, packageVersion: storybookPackages[builders[name]]?.version }
+    : { name: 'webpack4', packageVersion: storybookVersion }; // the default builder for Storybook v6
 };
 
 export const getStorybookMetadataFromProjectJson = async (
