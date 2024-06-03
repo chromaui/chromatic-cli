@@ -204,21 +204,21 @@ export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => 
 
 export const getStorybookMetadata = async (ctx: Context) => {
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
-  console.log(configDir);
   const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
 
   let mainConfig;
   let v7 = false;
   try {
     mainConfig = await r(path.resolve(configDir, 'main'));
-    console.log(mainConfig);
+    ctx.log.debug({ configDir, mainConfig });
   } catch (storybookV6error) {
-    console.log(storybookV6error);
+    ctx.log.debug({ storybookV6error });
     try {
       mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
-      console.log(mainConfig);
+      ctx.log.debug({ configDir, mainConfig });
       v7 = true;
     } catch (storybookV7error) {
+      ctx.log.debug({ storybookV7error });
       mainConfig = null;
     }
   }
