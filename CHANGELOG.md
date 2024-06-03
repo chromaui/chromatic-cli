@@ -1,3 +1,18 @@
+# v11.5.1 (Mon Jun 03 2024)
+
+#### 🐛 Bug Fix
+
+- Add fallback type for Storybook 6 builder syntax [#1001](https://github.com/chromaui/chromatic-cli/pull/1001) ([@ethriel3695](https://github.com/ethriel3695) [@ghengeveld](https://github.com/ghengeveld))
+- Only replace *local* builds with uncommitted changes [#994](https://github.com/chromaui/chromatic-cli/pull/994) ([@ghengeveld](https://github.com/ghengeveld))
+- Clean package.json before publishing [#999](https://github.com/chromaui/chromatic-cli/pull/999) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v11.5.0 (Fri May 31 2024)
 
 #### 🚀 Enhancement
