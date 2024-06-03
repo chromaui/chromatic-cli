@@ -8,7 +8,7 @@
   "packageManager": { "type": "yarn", "version": "1.22.19" },
   "typescriptOptions": { "reactDocgen": "react-docgen-typescript" },
   "preview": { "usesGlobals": false },
-  "framework": { "name": "@storybook/react-webpack5", "options": {} },
+  "framework": { "name": "@storybook/react-webpack5", "options": {}, "version": "8.1.5" },
   "builder": "@storybook/builder-webpack5",
   "renderer": "@storybook/react",
   "storybookVersion": "8.1.5",
