@@ -165,27 +165,8 @@ describe('traceChangedFiles', () => {
   });
 
   it('escapes special characters on context', async () => {
-    const deps = { './example-(new).stories.js': ['./example-(new).stories.js'] };
-    findChangedDependencies.mockResolvedValue([]);
-    findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
-
-    const ctx = {
-      env,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.onlyStoryFiles).toStrictEqual(['./example-\\(\\new\\)\\.stories.js']);
-  });
-  it('escapes double special characters on context', async () => {
     const deps = {
+      './example-(new).stories.js': ['./example-(new).stories.js'],
       './example[[lang=language]].stories.js': ['./example[[lang=language]].stories.js'],
     };
     findChangedDependencies.mockResolvedValue([]);
@@ -204,7 +185,10 @@ describe('traceChangedFiles', () => {
     } as any;
     await traceChangedFiles(ctx, {} as any);
 
-    expect(ctx.onlyStoryFiles).toStrictEqual(['./example\\[\\[\\lang=language\\]\\]\\.stories.js']);
+    expect(ctx.onlyStoryFiles).toStrictEqual([
+      './example-\\(\\new\\)\\.stories.js',
+      './example\\[\\[\\lang=language\\]\\]\\.stories.js',
+    ]);
   });
 
   it('does not run package dependency analysis if there are no metadata changes', async () => {
