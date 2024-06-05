@@ -4,4 +4,4 @@ export default {
   title: 'CLI/Components/Link',
 };
 
-export const Default = () => link('https://www.chromatic.com');
+export const Default = () => link('https://www.chromatic.com/start');
