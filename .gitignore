@@ -17,3 +17,4 @@ action
 node
 storybook-out
 coverage
+package.json.backup
