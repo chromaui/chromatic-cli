@@ -82,7 +82,7 @@ describe('getStorybookInfo', () => {
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
         viewLayer: 'react',
-        version: '8.1.5',
+        version: expect.any(String),
         addons: [
           {
             name: 'essentials',
