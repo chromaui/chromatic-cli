@@ -165,7 +165,10 @@ describe('traceChangedFiles', () => {
   });
 
   it('escapes special characters on context', async () => {
-    const deps = { './example-(new).stories.js': ['./example-(new).stories.js'] };
+    const deps = {
+      './example-(new).stories.js': ['./example-(new).stories.js'],
+      './example[[lang=language]].stories.js': ['./example[[lang=language]].stories.js'],
+    };
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue(deps);
@@ -182,7 +185,10 @@ describe('traceChangedFiles', () => {
     } as any;
     await traceChangedFiles(ctx, {} as any);
 
-    expect(ctx.onlyStoryFiles).toStrictEqual(["./example-\\(\\new\\)\\.stories.js"]);
+    expect(ctx.onlyStoryFiles).toStrictEqual([
+      './example-\\(\\new\\)\\.stories.js',
+      './example\\[\\[\\lang=language\\]\\]\\.stories.js',
+    ]);
   });
 
   it('does not run package dependency analysis if there are no metadata changes', async () => {
