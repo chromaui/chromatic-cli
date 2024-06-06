@@ -1,3 +1,15 @@
+# v11.5.3 (Thu Jun 06 2024)
+
+#### 🐛 Bug Fix
+
+- Clean package.json before compiling into source [#1003](https://github.com/chromaui/chromatic-cli/pull/1003) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.5.2 (Thu Jun 06 2024)
 
 #### 🐛 Bug Fix
