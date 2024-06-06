@@ -33,7 +33,7 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: expect.any(String),
-        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
     );
   });
@@ -72,7 +72,7 @@ describe('getStorybookInfo', () => {
             packageVersion: expect.any(String),
           },
         ],
-        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+        builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
     );
   });
@@ -83,19 +83,19 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         viewLayer: 'react',
         version: '8.1.5',
-        addons: expect.arrayContaining([
-          expect.objectContaining({
+        addons: [
+          {
             name: 'essentials',
             packageName: '@storybook/addon-essentials',
             packageVersion: expect.any(String),
-          }),
-          expect.objectContaining({
+          },
+          {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
             packageVersion: expect.any(String),
-          }),
-        ]),
-        builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+          },
+        ],
+        builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -112,7 +112,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
       );
     });
@@ -123,7 +123,7 @@ describe('getStorybookInfo', () => {
         expect.objectContaining({
           viewLayer: 'react',
           version: '3.2.1',
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
       );
     });
@@ -132,17 +132,19 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          addons: expect.arrayContaining([
-            expect.objectContaining({
+          addons: [
+            {
               name: 'essentials',
               packageName: '@storybook/addon-essentials',
-            }),
-            expect.objectContaining({
+              packageVersion: expect.any(String),
+            },
+            {
               name: 'compiler-swc',
               packageName: '@storybook/addon-webpack5-compiler-swc',
-            }),
-          ]),
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+              packageVersion: expect.any(String),
+            },
+          ],
+          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
       );
     });
@@ -151,17 +153,19 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          addons: expect.arrayContaining([
-            expect.objectContaining({
+          addons: [
+            {
               name: 'essentials',
               packageName: '@storybook/addon-essentials',
-            }),
-            expect.objectContaining({
+              packageVersion: expect.any(String),
+            },
+            {
               name: 'compiler-swc',
               packageName: '@storybook/addon-webpack5-compiler-swc',
-            }),
-          ]),
-          builder: { name: '@storybook/react-webpack5', packageVersion: '8.1.5' },
+              packageVersion: expect.any(String),
+            },
+          ],
+          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
       );
     });
@@ -178,16 +182,16 @@ describe('getStorybookInfo', () => {
           {
             name: 'essentials',
             packageName: '@storybook/addon-essentials',
-            packageVersion: '8.1.5',
+            packageVersion: expect.any(String),
           },
           {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
-            packageVersion: '1.0.2',
+            packageVersion: expect.any(String),
           },
         ],
-        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.5' },
-        version: '8.1.5',
+        builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
+        version: expect.any(String),
         viewLayer: '@storybook/react-webpack5',
       });
     });
@@ -215,16 +219,16 @@ describe('getStorybookInfo', () => {
           {
             name: 'essentials',
             packageName: '@storybook/addon-essentials',
-            packageVersion: '8.1.5',
+            packageVersion: expect.any(String),
           },
           {
             name: 'compiler-swc',
             packageName: '@storybook/addon-webpack5-compiler-swc',
-            packageVersion: '1.0.2',
+            packageVersion: expect.any(String),
           },
         ],
-        builder: { name: '@storybook/builder-webpack5', packageVersion: '8.1.5' },
-        version: '8.1.5',
+        builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
+        version: expect.any(String),
         viewLayer: '@storybook/react-webpack5',
       });
     });
