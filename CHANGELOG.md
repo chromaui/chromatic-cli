@@ -1,3 +1,15 @@
+# v11.5.2 (Thu Jun 06 2024)
+
+#### 🐛 Bug Fix
+
+- Chore: Update the RegEx filter to pull out empty strings [#1004](https://github.com/chromaui/chromatic-cli/pull/1004) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v11.5.1 (Mon Jun 03 2024)
 
 #### 🐛 Bug Fix
