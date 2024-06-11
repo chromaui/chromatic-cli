@@ -14,6 +14,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+
+      - name: Add engines to package.json to enforce above version of node
+        run: echo "`jq '.engines.node="18.x"' package.json`" > package.json
+
       - run: corepack enable
       - run: yarn
       - run: yarn build
@@ -27,3 +31,6 @@ jobs:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+      - name: Revert engines addition to package.json
+        run: echo "`jq 'del(.engines)' package.json`" > package.json
