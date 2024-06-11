@@ -47,9 +47,12 @@ To facilitate upgrading in the future, removing and adding features, this is the
 
 ### Building and running locally
 
-1. Ensure all dependencies are installed with `yarn install`
-2. Build + watch the code locally: `yarn dev`
-3. Run a build of all the CLI's stories against a Chromatic project: `yarn chromatic -t <token>`.
+This project uses `yarn 4`. If you have `yarn 1` installed globally, it is recommended that you run `corepack enable` so that the version of yarn set in `packageManager` in `package.json` is used for this project. You may have to install `corepack`, [see the installation instructions](https://yarnpkg.com/corepack#installation) for more information.
+
+1. Ensure `yarn -v` shows that you're using `yarn 4` for the project
+2. Install all dependencies with `yarn install`
+3. Build + watch the code locally: `yarn dev`
+4. Run a build of all the CLI's stories against a Chromatic project: `yarn chromatic -t <token>`.
 
 #### Running against staging
 
