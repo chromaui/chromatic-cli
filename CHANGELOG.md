@@ -1,3 +1,16 @@
+# v11.5.4 (Wed Jun 12 2024)
+
+#### 🐛 Bug Fix
+
+- Ensure GitHub Action runs in specified version of node [#1006](https://github.com/chromaui/chromatic-cli/pull/1006) ([@tevanoff](https://github.com/tevanoff))
+- Recommended files and ignored paths for yarn 4 [#1005](https://github.com/chromaui/chromatic-cli/pull/1005) ([@tevanoff](https://github.com/tevanoff))
+
+#### Authors: 1
+
+- Todd Evanoff ([@tevanoff](https://github.com/tevanoff))
+
+---
+
 # v11.5.3 (Thu Jun 06 2024)
 
 #### 🐛 Bug Fix
