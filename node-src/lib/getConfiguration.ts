@@ -30,6 +30,7 @@ const configurationSchema = z
     cypress: z.boolean(),
     outputDir: z.string(),
     skip: z.union([z.string(), z.boolean()]),
+    skipUpdateCheck: z.boolean(),
 
     storybookBuildDir: z.string(),
     storybookBaseDir: z.string(),
