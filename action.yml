@@ -86,6 +86,9 @@ inputs:
   skip:
     description: 'Skip Chromatic tests, but mark the commit as passing'
     required: false
+  skipUpdateCheck:
+    description: 'Skips Chromatic CLI update check'
+    required: false
   storybookBaseDir:
     description: 'Relative path from repository root to Storybook project root'
     required: false
