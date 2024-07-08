@@ -35,7 +35,7 @@ it('reads configuration successfully', async () => {
       buildScriptName: 'build-script-name',
       outputDir: 'output-dir',
       skip: 'skip',
-      skipUpdateCheck: true,
+      skipUpdateCheck: false,
 
       storybookBuildDir: 'storybook-build-dir',
       storybookBaseDir: 'storybook-base-dir',
@@ -70,7 +70,7 @@ it('reads configuration successfully', async () => {
     buildScriptName: 'build-script-name',
     outputDir: 'output-dir',
     skip: 'skip',
-    skipUpdateCheck: true,
+    skipUpdateCheck: false,
 
     storybookBuildDir: 'storybook-build-dir',
     storybookBaseDir: 'storybook-base-dir',
@@ -92,7 +92,7 @@ it('handles other side of union options', async () => {
       exitZeroOnChanges: true,
       exitOnceUploaded: true,
       skip: true,
-      skipUpdateCheck: true,
+      skipUpdateCheck: false,
       storybookLogFile: true,
       logFile: true,
     })
@@ -108,7 +108,7 @@ it('handles other side of union options', async () => {
     exitZeroOnChanges: true,
     exitOnceUploaded: true,
     skip: true,
-    skipUpdateCheck: true,
+    skipUpdateCheck: false,
     storybookLogFile: true,
     logFile: true,
   });
