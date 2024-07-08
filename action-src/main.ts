@@ -118,6 +118,7 @@ async function run() {
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
     const repositorySlug = getInput('repositorySlug');
     const skip = getInput('skip');
+    const skipUpdateCheck = getInput('skipUpdateCheck');
     const storybookBaseDir = getInput('storybookBaseDir');
     const storybookBuildDir = getInput('storybookBuildDir');
     const storybookConfigDir = getInput('storybookConfigDir');
@@ -170,6 +171,7 @@ async function run() {
         projectToken,
         repositorySlug: maybe(repositorySlug),
         skip: maybe(skip),
+        skipUpdateCheck: maybe(skipUpdateCheck),
         storybookBaseDir: maybe(storybookBaseDir),
         storybookBuildDir: maybe(storybookBuildDir),
         storybookConfigDir: maybe(storybookConfigDir),
