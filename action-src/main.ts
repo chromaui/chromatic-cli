@@ -171,7 +171,7 @@ async function run() {
         projectToken,
         repositorySlug: maybe(repositorySlug),
         skip: maybe(skip),
-        skipUpdateCheck: maybe(skipUpdateCheck),
+        skipUpdateCheck: maybe(skipUpdateCheck, false),
         storybookBaseDir: maybe(storybookBaseDir),
         storybookBuildDir: maybe(storybookBuildDir),
         storybookConfigDir: maybe(storybookConfigDir),
