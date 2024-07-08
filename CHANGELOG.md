@@ -1,3 +1,15 @@
+# v11.5.5 (Mon Jul 08 2024)
+
+#### 🐛 Bug Fix
+
+- Add missing skipUpdateCheck option to config schema [#1011](https://github.com/chromaui/chromatic-cli/pull/1011) ([@ryan-case-ml](https://github.com/ryan-case-ml))
+
+#### Authors: 1
+
+- Ryan Case ([@ryan-case-ml](https://github.com/ryan-case-ml))
+
+---
+
 # v11.5.4 (Wed Jun 12 2024)
 
 #### 🐛 Bug Fix
