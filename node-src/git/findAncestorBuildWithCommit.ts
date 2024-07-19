@@ -70,7 +70,9 @@ export async function findAncestorBuildWithCommit(
         return [build, exists] as const;
       })
     );
-    const result = results.find(([build, exists]) => !build.uncommittedHash && exists);
+    const result = results.find(
+      ([build, exists]) => !(build.isLocalBuild && build.uncommittedHash) && exists
+    );
 
     if (result) return result[0];
 
