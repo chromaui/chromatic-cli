@@ -1,3 +1,16 @@
+# v11.5.6 (Fri Jul 19 2024)
+
+#### 🐛 Bug Fix
+
+- Support non-local ancestor builds with `uncommittedHash` [#1015](https://github.com/chromaui/chromatic-cli/pull/1015) ([@skitterm](https://github.com/skitterm) [@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 2
+
+- Steven Kitterman ([@skitterm](https://github.com/skitterm))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.5.5 (Mon Jul 08 2024)
 
 #### 🐛 Bug Fix
