@@ -168,6 +168,9 @@ describe('traceChangedFiles', () => {
     const deps = {
       './example-(new).stories.js': ['./example-(new).stories.js'],
       './example[[lang=language]].stories.js': ['./example[[lang=language]].stories.js'],
+      '[./example/[account]/[id]/[unit]/language/example.stories.tsx]': [
+        '[./example/[account]/[id]/[unit]/language/example.stories.tsx]',
+      ],
     };
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
@@ -188,6 +191,7 @@ describe('traceChangedFiles', () => {
     expect(ctx.onlyStoryFiles).toStrictEqual([
       './example-\\(\\new\\)\\.stories.js',
       './example\\[\\[\\lang=language\\]\\]\\.stories.js',
+      '\\[\\./example/\\[\\account\\]\\/\\[\\id\\]\\/\\[\\unit\\]\\/language/example.stories.tsx\\]\\',
     ]);
   });
 

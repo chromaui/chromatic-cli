@@ -161,9 +161,14 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       changedDependencyNames || []
     );
     if (onlyStoryFiles) {
+      let filteredArray = [];
       // Escape special characters in the filename so it does not conflict with picomatch
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) => {
-        const filteredArray = key.split(SPECIAL_CHARS_REGEXP).filter((item) => item !== '');
+        if (key.split(SPECIAL_CHARS_REGEXP)[0] === '') {
+          filteredArray = key.split(SPECIAL_CHARS_REGEXP);
+        } else {
+          filteredArray = key.split(SPECIAL_CHARS_REGEXP).filter((item) => item !== '');
+        }
         return filteredArray.join('\\');
       });
 
