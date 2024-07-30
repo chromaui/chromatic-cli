@@ -189,9 +189,9 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx, {} as any);
 
     expect(ctx.onlyStoryFiles).toStrictEqual([
-      './example-(new).stories.js',
-      './example[[lang=language]].stories.js',
-      '[./example/[account]/[id]/[unit]/language/example.stories.tsx]',
+      'example-(new).stories.js',
+      'example[[lang=language]].stories.js',
+      '[example/[account]/[id]/[unit]/language/example.stories.tsx]',
     ]);
   });
 

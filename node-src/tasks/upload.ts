@@ -159,7 +159,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       changedDependencyNames || []
     );
     if (onlyStoryFiles) {
-      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles);
+      console.log(onlyStoryFiles);
+      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).flatMap((value) =>
+        value.replace(/\.\//, '')
+      );
 
       if (!ctx.options.interactive) {
         if (!ctx.options.traceChanged) {
