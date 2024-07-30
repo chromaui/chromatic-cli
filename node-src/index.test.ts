@@ -595,8 +595,8 @@ describe('with TurboSnap', () => {
     await runAll(ctx);
 
     expect(ctx.exitCode).toBe(1);
-    expect(ctx.onlyStoryFiles).toEqual(['src/foo.stories.js']);
-    expect(publishedBuild.onlyStoryFiles).toEqual(['src/foo.stories.js']);
+    expect(ctx.onlyStoryFiles).toEqual(['./src/foo.stories.js']);
+    expect(publishedBuild.onlyStoryFiles).toEqual(['./src/foo.stories.js']);
   });
 });
 
