@@ -17,7 +17,9 @@ const buildDepTree = vi.mocked(buildDepTreeFromFiles);
 
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
-  findFilesFromRepositoryRoot.mockImplementation((file) => Promise.resolve(file.startsWith('**') ? [] : [file]));
+  findFilesFromRepositoryRoot.mockImplementation((file) =>
+    Promise.resolve(file.startsWith('**') ? [] : [file])
+  );
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
@@ -247,21 +249,29 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(context)).resolves.toEqual(['react', 'lodash']);
 
     // Root manifest and lock files are checked
-    expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true);
-    expect(buildDepTree).toHaveBeenCalledWith('/root', 'A.package.json', 'A.yarn.lock', true);
+    expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true, false);
+    expect(buildDepTree).toHaveBeenCalledWith(
+      '/root',
+      'A.package.json',
+      'A.yarn.lock',
+      true,
+      false
+    );
 
     // Subpackage manifest and lock files are checked
     expect(buildDepTree).toHaveBeenCalledWith(
       '/root',
       'subdir/package.json',
       'subdir/yarn.lock',
-      true
+      true,
+      false
     );
     expect(buildDepTree).toHaveBeenCalledWith(
       '/root',
       'A.subdir/package.json',
       'A.subdir/yarn.lock',
-      true
+      true,
+      false
     );
   });
 
@@ -286,7 +296,8 @@ describe('findChangedDependencies', () => {
       '/root',
       'A.subdir/package.json',
       'A.yarn.lock', // root lockfile
-      true
+      true,
+      false
     );
   });
 
@@ -334,7 +345,8 @@ describe('findChangedDependencies', () => {
       '/root',
       'A.subdir/package.json',
       'A.subdir/package-lock.json',
-      true
+      true,
+      false
     );
   });
 });
