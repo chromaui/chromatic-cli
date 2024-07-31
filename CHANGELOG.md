@@ -1,3 +1,15 @@
+# v11.6.0 (Wed Jul 31 2024)
+
+#### 🚀 Enhancement
+
+- Added logic to account for parentheses at the beginning [#1016](https://github.com/chromaui/chromatic-cli/pull/1016) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v11.5.6 (Fri Jul 19 2024)
 
 #### 🐛 Bug Fix
