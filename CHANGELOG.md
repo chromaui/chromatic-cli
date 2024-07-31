@@ -1,3 +1,15 @@
+# v11.7.0 (Wed Jul 31 2024)
+
+#### 🚀 Enhancement
+
+- test setting outOfSync to false [#1018](https://github.com/chromaui/chromatic-cli/pull/1018) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v11.6.0 (Wed Jul 31 2024)
 
 #### 🚀 Enhancement
