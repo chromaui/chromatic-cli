@@ -195,6 +195,7 @@ describe('traceChangedFiles', () => {
       './\\+example-new.stories.js',
       './example-\\(new\\).stories.js',
       './example\\[\\[lang=language\\]\\].stories.js',
+      '\\[./example/\\[account\\]/\\[id\\]/\\[unit\\]/language/example.stories.tsx\\]',
     ]);
   });
 
