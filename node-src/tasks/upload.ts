@@ -37,8 +37,9 @@ interface PathSpec {
   pathname: string;
   contentLength: number;
 }
-
-const SPECIAL_CHARS_REGEXP = new RegExp(`([${'`$^*+?()[]'.split('').join('\\')}])`);
+// These are the special characters that need to be escaped in the filename
+// because they are used as special characters in picomatch
+const SPECIAL_CHARS_REGEXP = /([$^*+?()[\]])/g;
 
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
@@ -162,10 +163,9 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     );
     if (onlyStoryFiles) {
       // Escape special characters in the filename so it does not conflict with picomatch
-      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) => {
-        const filteredArray = key.split(SPECIAL_CHARS_REGEXP).filter((item) => item !== '');
-        return filteredArray.join('\\');
-      });
+      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
+        key.replace(SPECIAL_CHARS_REGEXP, '\\$1')
+      );
 
       if (!ctx.options.interactive) {
         if (!ctx.options.traceChanged) {
