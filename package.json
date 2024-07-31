@@ -192,7 +192,7 @@
     "read-pkg-up": "^7.0.1",
     "semver": "^7.3.5",
     "slash": "^3.0.0",
-    "snyk-nodejs-lockfile-parser": "^1.52.1",
+    "snyk-nodejs-lockfile-parser": "^1.58.7",
     "sort-package-json": "1.50.0",
     "storybook": "^8.1.5",
     "string-argv": "^0.3.1",

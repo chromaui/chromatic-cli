@@ -6592,7 +6592,7 @@ __metadata:
     read-pkg-up: "npm:^7.0.1"
     semver: "npm:^7.3.5"
     slash: "npm:^3.0.0"
-    snyk-nodejs-lockfile-parser: "npm:^1.52.1"
+    snyk-nodejs-lockfile-parser: "npm:^1.58.7"
     sort-package-json: "npm:1.50.0"
     storybook: "npm:^8.1.5"
     string-argv: "npm:^0.3.1"
@@ -12774,7 +12774,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"micromatch@npm:^4.0.0, micromatch@npm:^4.0.2, micromatch@npm:^4.0.4, micromatch@npm:^4.0.5":
+"micromatch@npm:^4.0.0, micromatch@npm:^4.0.2, micromatch@npm:^4.0.4, micromatch@npm:^4.0.7":
   version: 4.0.7
   resolution: "micromatch@npm:4.0.7"
   dependencies:
@@ -16230,9 +16230,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"snyk-nodejs-lockfile-parser@npm:^1.52.1":
-  version: 1.56.1
-  resolution: "snyk-nodejs-lockfile-parser@npm:1.56.1"
+"snyk-nodejs-lockfile-parser@npm:^1.58.7":
+  version: 1.58.7
+  resolution: "snyk-nodejs-lockfile-parser@npm:1.58.7"
   dependencies:
     "@snyk/dep-graph": "npm:^2.3.0"
     "@snyk/error-catalog-nodejs-public": "npm:^5.16.0"
@@ -16246,7 +16246,7 @@ __metadata:
     lodash.flatmap: "npm:^4.5.0"
     lodash.isempty: "npm:^4.4.0"
     lodash.topairs: "npm:^4.3.0"
-    micromatch: "npm:^4.0.5"
+    micromatch: "npm:^4.0.7"
     p-map: "npm:^4.0.0"
     semver: "npm:^7.6.0"
     snyk-config: "npm:^5.0.0"
@@ -16254,7 +16254,7 @@ __metadata:
     uuid: "npm:^8.3.0"
   bin:
     parse-nodejs-lockfile: bin/index.js
-  checksum: 10c0/3f1c8fa8af06569d4590f4f735deb9e7506bb46719a737f7f5701fc3f2f3073a0484ca8535bffdbfe09a5dce62e4796b2722ff3538ad0443a48ba8beac5d4ef5
+  checksum: 10c0/e205e0184a3b945653b5afec292afadcb877d8ad9e776abf13989404c6f6e75c5224d62f5a5297228010be2a0f5a2f9950ac4f6a247bdb101ec69a257e13fdef
   languageName: node
   linkType: hard
 
