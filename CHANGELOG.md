@@ -1,3 +1,15 @@
+# v11.7.1 (Wed Aug 14 2024)
+
+#### 🐛 Bug Fix
+
+- Add  key to configuration to fix #1022 [#1023](https://github.com/chromaui/chromatic-cli/pull/1023) ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+#### Authors: 1
+
+- Varun Vachhar ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+---
+
 # v11.7.0 (Wed Jul 31 2024)
 
 #### 🚀 Enhancement
