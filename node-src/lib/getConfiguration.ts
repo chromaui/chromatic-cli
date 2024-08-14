@@ -6,6 +6,8 @@ import { invalidConfigurationFile } from '../ui/messages/errors/invalidConfigura
 
 const configurationSchema = z
   .object({
+    $schema: z.string(),
+
     projectId: z.string(),
     projectToken: z.string(), // deprecated
 

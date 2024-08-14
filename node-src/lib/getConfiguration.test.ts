@@ -13,6 +13,7 @@ beforeEach(() => {
 it('reads configuration successfully', async () => {
   mockedReadFile.mockReturnValue(
     JSON.stringify({
+      $schema: 'https://www.chromatic.com/config-file.schema.json',
       projectId: 'project-id',
       projectToken: 'project-token',
 
@@ -47,6 +48,7 @@ it('reads configuration successfully', async () => {
   );
 
   expect(await getConfiguration()).toEqual({
+    $schema: 'https://www.chromatic.com/config-file.schema.json',
     configFile: 'chromatic.config.json',
     projectId: 'project-id',
     projectToken: 'project-token',
