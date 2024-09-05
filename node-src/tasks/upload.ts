@@ -46,7 +46,7 @@ const SPECIAL_CHARS_REGEXP = /([$^*+?()[\]])/g;
 // paths will be like iframe.html rather than storybook-static/iframe.html
 function getPathsInDir(ctx: Context, rootDir: string, dirname = '.'): PathSpec[] {
   // .chromatic is a special directory reserved for internal use and should not be uploaded
-  if(dirname === '.chromatic') {
+  if (dirname === '.chromatic') {
     return [];
   }
 
