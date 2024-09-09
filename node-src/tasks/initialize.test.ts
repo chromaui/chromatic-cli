@@ -21,7 +21,7 @@ describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
     const ctx = { env, log } as any;
     await setEnvironment(ctx);
-    expect(ctx.environment).toContain({
+    expect(ctx.environment).toMatchObject({
       GERRIT_BRANCH: 'foo/bar',
       TRAVIS_EVENT_TYPE: 'pull_request',
     });

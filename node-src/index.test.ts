@@ -42,7 +42,7 @@ vi.mock('execa');
 // NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
 // vitest doesn't allow you to do that.
 const mockedBuildCommand = 'mocked build command';
-vi.mock('./lib/e2e', async (importOriginal) => ({
+vi.mock(import('./lib/e2e'), async (importOriginal) => ({
   ...(await importOriginal()),
   getE2EBuildCommand: () => mockedBuildCommand,
 }));
@@ -625,6 +625,8 @@ describe('in CI', () => {
 
   it('detects Netlify CI', async () => {
     process.env = { REPOSITORY_URL: 'foo', DISABLE_LOGGING: 'true' };
+    process.stdout.isTTY = false; // vitest 2.0+ adds this property
+
     const ctx = getContext(['--project-token=asdf1234']);
     await runAll(ctx);
     expect(ctx.exitCode).toBe(1);
