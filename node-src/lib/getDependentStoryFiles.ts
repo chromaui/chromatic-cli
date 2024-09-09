@@ -82,7 +82,7 @@ export async function getDependentStoryFiles(
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
   const normalize = (posixPath: FilePath): NormalizedName => {
-    const CSF_REGEX = /\s+sync\s+/g;
+    const CSF_REGEX = /\s+(sync|lazy)\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
     const newPath = normalizePath(posixPath, rootPath, baseDir);
     // Trim query params such as `?ngResource` which are sometimes present
@@ -110,6 +110,8 @@ export async function getDependentStoryFiles(
     `./storybook-stories.js`,
     // vite builder
     `/virtual:/@storybook/builder-vite/vite-app.js`,
+    // rspack builder
+    `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`
   ].map(normalize);
 
   const modulesByName = new Map<NormalizedName, Module>();
