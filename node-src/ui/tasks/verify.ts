@@ -43,8 +43,8 @@ export const runOnlyNames = (ctx: Context) => ({
     .join(', ')}`,
 });
 
-export const awaitingUpgrades = (ctx: Context, upgradeBuilds: { completedAt?: number }[]) => {
-  const pending = upgradeBuilds!.filter((upgrade) => !upgrade.completedAt).length;
+export const awaitingUpgrades = (_ctx: Context, upgradeBuilds: { completedAt?: number }[]) => {
+  const pending = upgradeBuilds.filter((upgrade) => !upgrade.completedAt).length;
   const upgrades = pluralize('upgrade build', upgradeBuilds.length, true);
   return {
     status: 'pending',

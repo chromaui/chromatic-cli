@@ -1,17 +1,17 @@
 import { readConfig } from '@storybook/csf-tools';
-import { readJson } from 'fs-extra';
 import { readdir } from 'fs/promises';
+import { readJson } from 'fs-extra';
 import meow from 'meow';
 import path, { join } from 'path';
-import { parseArgsStringToArgv } from 'string-argv';
 import semver from 'semver';
+import { parseArgsStringToArgv } from 'string-argv';
 
 import { Context } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
-import { viewLayers } from './viewLayers';
-import { timeout, raceFulfilled } from './promises';
-import { supportedAddons } from './supportedAddons';
 import { builders } from './builders';
+import { raceFulfilled, timeout } from './promises';
+import { supportedAddons } from './supportedAddons';
+import { viewLayers } from './viewLayers';
 
 export const resolvePackageJson = (pkg: string) => {
   try {

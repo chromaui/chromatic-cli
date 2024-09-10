@@ -4,16 +4,16 @@ import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
-import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
-import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
+import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {

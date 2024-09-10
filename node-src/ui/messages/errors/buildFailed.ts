@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { EOL } from 'os';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
 
+import { Context } from '../../../types';
 import { info } from '../../components/icons';
 import link from '../../components/link';
 

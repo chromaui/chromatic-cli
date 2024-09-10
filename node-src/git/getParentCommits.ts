@@ -1,9 +1,8 @@
 import gql from 'fake-tag';
 
-import { Context } from '../types';
-
-import { execGitCommand, commitExists } from './git';
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
+import { Context } from '../types';
+import { commitExists, execGitCommand } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -58,11 +57,13 @@ const MergeCommitsQuery = gql`
 `;
 interface MergeCommitsQueryResult {
   app: {
-    mergedPullRequests: [{
-      lastHeadBuild: {
-        commit: string;
-      };
-    }];
+    mergedPullRequests: [
+      {
+        lastHeadBuild: {
+          commit: string;
+        };
+      },
+    ];
   };
 }
 
@@ -260,7 +261,9 @@ export async function getParentCommits(
   const mergeInfoList = visitedCommitsWithoutBuilds.map((commit) => {
     return { commit, baseRefName: branch };
   });
-  const { app: { mergedPullRequests } } = await client.runQuery<MergeCommitsQueryResult>(
+  const {
+    app: { mergedPullRequests },
+  } = await client.runQuery<MergeCommitsQueryResult>(
     MergeCommitsQuery,
     { mergeInfoList: mergeInfoList.slice(0, 100) }, // Limit amount sent in API call
     { retries: 5 } // This query requires a request to an upstream provider which may fail
@@ -273,9 +276,7 @@ export async function getParentCommits(
     const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
     if (lastHeadBuildCommit) {
       if (await commitExists(lastHeadBuildCommit)) {
-        log.debug(
-          `Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`
-        );
+        log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
       } else {
         log.debug(

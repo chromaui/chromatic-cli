@@ -2,8 +2,8 @@ import { execSync } from 'child_process';
 import { describe, expect, it } from 'vitest';
 
 import {
-  rootDirNote,
   baseDirNote,
+  rootDirNote,
   storybookDirNote,
   traceSuggestions,
 } from '../node-src/ui/messages/info/tracedAffectedFiles';
@@ -21,11 +21,11 @@ describe('Test trace script from package.json', () => {
   });
   it('outputs directory info when -m expanded is passed', () => {
     const scriptName =
-      'chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m \'expanded\'';
+      "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m 'expanded'";
 
     // Execute the script as a child process
     const output = execSync(`yarn ${scriptName}`).toString().trim();
-    
+
     const expandedStoryModule = `node-src/ui/messages/errors/invalidReportPath.stories.ts`;
     const expandedFileModule = `node-src/ui/messages/errors/invalidReportPath.ts`;
 
@@ -39,7 +39,7 @@ describe('Test trace script from package.json', () => {
   });
   it('outputs untraced info when --mode expanded is passed with -u and an untraced file', () => {
     const scriptName =
-      'chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m expanded -u \'./node-src/ui/messages/errors/invalidReportPath.ts\'';
+      "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m expanded -u './node-src/ui/messages/errors/invalidReportPath.ts'";
 
     // Execute the script as a child process
     const output = execSync(`yarn ${scriptName}`).toString().trim();

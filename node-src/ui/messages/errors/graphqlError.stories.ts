@@ -1,5 +1,5 @@
-import graphqlError from './graphqlError';
 import { GraphQLError } from '../../../io/GraphQLClient';
+import graphqlError from './graphqlError';
 
 export default {
   title: 'CLI/Messages/Errors',

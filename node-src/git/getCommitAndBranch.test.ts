@@ -1,9 +1,9 @@
 import envCi from 'env-ci';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as git from './git';
 import * as mergeQueue from './getBranchFromMergeQueuePullRequestNumber';
 import getCommitAndBranch from './getCommitAndBranch';
+import * as git from './git';
 
 vi.mock('env-ci');
 vi.mock('./git');
@@ -13,7 +13,7 @@ const getBranch = vi.mocked(git.getBranch);
 const getCommit = vi.mocked(git.getCommit);
 const hasPreviousCommit = vi.mocked(git.hasPreviousCommit);
 const getBranchFromMergeQueue = vi.mocked(mergeQueue.getBranchFromMergeQueuePullRequestNumber);
-const mergeQueueBranchMatch = vi.mocked(git.mergeQueueBranchMatch );
+const mergeQueueBranchMatch = vi.mocked(git.mergeQueueBranchMatch);
 
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
@@ -238,9 +238,13 @@ describe('getCommitAndBranch', () => {
     it('uses PRs branchName as branch instead of temporary mergeQueue branch', async () => {
       mergeQueueBranchMatch.mockResolvedValue(4);
       getBranchFromMergeQueue.mockResolvedValue('branch-before-merge-queue');
-      const info = await getCommitAndBranch({ log }, {
-        branchName: 'this-is-merge-queue-branch-format/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb',
-      });
+      const info = await getCommitAndBranch(
+        { log },
+        {
+          branchName:
+            'this-is-merge-queue-branch-format/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb',
+        }
+      );
       expect(info).toMatchObject({ branch: 'branch-before-merge-queue' });
     });
   });

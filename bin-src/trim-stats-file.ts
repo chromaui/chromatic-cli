@@ -1,4 +1,5 @@
 import { outputFile } from 'fs-extra';
+
 import { readStatsFile } from '../node-src/tasks/read-stats-file';
 
 const dedupe = <T>(arr: T[]) => Array.from(new Set(arr));

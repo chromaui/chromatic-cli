@@ -7,15 +7,15 @@ import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import buildPassedMessage from '../ui/messages/info/buildPassed';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import {
-  buildComplete,
-  buildPassed,
   buildBroken,
-  buildFailed,
   buildCanceled,
-  initial,
+  buildComplete,
+  buildFailed,
+  buildPassed,
   dryRun,
-  skipped,
+  initial,
   pending,
+  skipped,
 } from '../ui/tasks/snapshot';
 
 const SnapshotBuildQuery = `

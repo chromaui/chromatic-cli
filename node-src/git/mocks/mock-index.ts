@@ -12,9 +12,19 @@
 
 // create a mock set of responses to the queries we run as part of our git algorithm
 
-type Build = { branch: string; commit: string; committedAt: number };
-type PR = { mergeCommitHash: string; headBranch: string };
-type MergeInfo = { commit: string; branch: string; }
+interface Build {
+  branch: string;
+  commit: string;
+  committedAt: number;
+}
+interface PR {
+  mergeCommitHash: string;
+  headBranch: string;
+}
+interface MergeInfo {
+  commit: string;
+  branch: string;
+}
 
 function lastBuildOnBranch(builds: Build[], findingBranch: string) {
   return builds
@@ -43,7 +53,11 @@ const mocks = {
       hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
     },
   }),
-  MergeCommitsQuery: (builds: Build[], prs: PR[], { mergeInfoList }: { mergeInfoList: MergeInfo[] }) => {
+  MergeCommitsQuery: (
+    builds: Build[],
+    prs: PR[],
+    { mergeInfoList }: { mergeInfoList: MergeInfo[] }
+  ) => {
     const mergedPrs = [];
     for (const mergeInfo of mergeInfoList) {
       const pr = prs.find((p) => p.mergeCommitHash === mergeInfo.commit);
@@ -51,14 +65,14 @@ const mocks = {
       mergedPrs.push({
         lastHeadBuild: prLastBuild && {
           commit: prLastBuild.commit,
-        }
+        },
       });
     }
 
     return {
       app: {
-        mergedPullRequests: mergedPrs
-      }
+        mergedPullRequests: mergedPrs,
+      },
     };
   },
 };

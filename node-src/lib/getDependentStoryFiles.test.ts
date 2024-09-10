@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 import * as git from '../git/git';
+import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 vi.mock('../git/git');
 

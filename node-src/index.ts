@@ -1,4 +1,5 @@
 import 'any-observable/register/zen';
+
 import Listr from 'listr';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
@@ -13,15 +14,16 @@ import {
 } from './git/git';
 import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
-import LoggingRenderer from './lib/LoggingRenderer';
-import NonTTYRenderer from './lib/NonTTYRenderer';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
+import { isE2EBuild } from './lib/e2e';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnv from './lib/getEnv';
 import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
+import LoggingRenderer from './lib/LoggingRenderer';
+import NonTTYRenderer from './lib/NonTTYRenderer';
 import parseArgs from './lib/parseArgs';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
@@ -39,7 +41,6 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
-import { isE2EBuild } from './lib/e2e';
 
 /**
  Make keys of `T` outside of `R` optional.
@@ -254,7 +255,7 @@ async function runBuild(ctx: Context) {
   }
 }
 
-export type GitInfo = {
+export interface GitInfo {
   slug: string;
   branch: string;
   commit: string;
@@ -265,7 +266,7 @@ export type GitInfo = {
   userEmail: string;
   userEmailHash: string;
   repositoryRootDir: string;
-};
+}
 
 export async function getGitInfo(): Promise<GitInfo> {
   let slug: string;
@@ -296,5 +297,4 @@ export async function getGitInfo(): Promise<GitInfo> {
 }
 
 export { getConfiguration } from './lib/getConfiguration';
-
 export { Logger } from './lib/log';

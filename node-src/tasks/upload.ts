@@ -1,37 +1,37 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import semver from 'semver';
 import slash from 'slash';
 
-import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
-import { createTask, transitionTo } from '../lib/tasks';
-import { rewriteErrorMessage, throttle } from '../lib/utils';
-import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
-import missingStatsFile from '../ui/messages/errors/missingStatsFile';
-import {
-  failed,
-  initial,
-  dryRun,
-  validating,
-  invalid,
-  tracing,
-  bailed,
-  traced,
-  starting,
-  uploading,
-  success,
-  hashing,
-  finalizing,
-} from '../ui/tasks/upload';
-import { Context, FileDesc, Task } from '../types';
-import { readStatsFile } from './read-stats-file';
-import bailFile from '../ui/messages/warnings/bailFile';
-import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
-import { findChangedDependencies } from '../lib/findChangedDependencies';
-import { uploadBuild } from '../lib/upload';
-import { getFileHashes } from '../lib/getFileHashes';
-import { waitForSentinel } from '../lib/waitForSentinel';
 import { checkStorybookBaseDir } from '../lib/checkStorybookBaseDir';
-import semver from 'semver';
+import { findChangedDependencies } from '../lib/findChangedDependencies';
+import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
+import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
+import { getFileHashes } from '../lib/getFileHashes';
+import { createTask, transitionTo } from '../lib/tasks';
+import { uploadBuild } from '../lib/upload';
+import { rewriteErrorMessage, throttle } from '../lib/utils';
+import { waitForSentinel } from '../lib/waitForSentinel';
+import { Context, FileDesc, Task } from '../types';
+import missingStatsFile from '../ui/messages/errors/missingStatsFile';
+import bailFile from '../ui/messages/warnings/bailFile';
+import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
+import {
+  bailed,
+  dryRun,
+  failed,
+  finalizing,
+  hashing,
+  initial,
+  invalid,
+  starting,
+  success,
+  traced,
+  tracing,
+  uploading,
+  validating,
+} from '../ui/tasks/upload';
+import { readStatsFile } from './read-stats-file';
 
 interface PathSpec {
   pathname: string;

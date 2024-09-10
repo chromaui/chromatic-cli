@@ -1,11 +1,11 @@
 import path from 'path';
 
-import { isPackageManifestFile, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
-import bailFile from '../ui/messages/warnings/bailFile';
+import { Context, Module, Reason, Stats } from '../types';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
-import { Context, Module, Reason, Stats } from '../types';
+import bailFile from '../ui/messages/warnings/bailFile';
+import { isPackageManifestFile, matchesFile } from './utils';
 
 type FilePath = string;
 type NormalizedName = string;

@@ -1,4 +1,5 @@
 import { buildDepTreeFromFiles, PkgTree } from 'snyk-nodejs-lockfile-parser';
+
 import { Context } from '../types';
 
 const flattenDependencyTree = (

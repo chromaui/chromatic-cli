@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
-import { isPackageManifestFile } from '../../../lib/utils';
 
-import { warning, info } from '../../components/icons';
+import { isPackageManifestFile } from '../../../lib/utils';
+import { Context } from '../../../types';
+import { info, warning } from '../../components/icons';
 import link from '../../components/link';
 
 const docsUrl = 'https://www.chromatic.com/docs/turbosnap#how-it-works';

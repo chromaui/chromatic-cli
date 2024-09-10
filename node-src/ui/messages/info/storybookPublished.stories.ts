@@ -24,7 +24,7 @@ export const StorybookPrepared = () =>
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   } as any);
 
-  export const StorybookPreparedWithIncompleteBuild = () =>
+export const StorybookPreparedWithIncompleteBuild = () =>
   storybookPublished({
     build: {
       actualCaptureCount: undefined,

@@ -4,8 +4,8 @@ import stripAnsi from 'strip-ansi';
 import { dedent } from 'ts-dedent';
 
 import { Context, InitialContext } from '../../..';
-import link from '../../components/link';
 import { redact } from '../../../lib/utils';
+import link from '../../components/link';
 
 const buildFields = ({ id, number, storybookUrl = undefined, webUrl = undefined }) => ({
   id,

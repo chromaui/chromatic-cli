@@ -4,7 +4,6 @@ import pLimit from 'p-limit';
 import { file as tmpFile } from 'tmp-promise';
 
 import { Context } from '../types';
-
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
@@ -292,7 +291,7 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
   // Note that this does not use `path.join` to concatenate the file paths because
   // git uses forward slashes, even on windows
   const patternsFromRoot = patterns.map((pattern) => `${repoRoot}/${pattern}`);
-  
+
   // Uses `--full-name` to ensure that all files found are relative to the repository root,
   // not the directory in which this is executed from
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;

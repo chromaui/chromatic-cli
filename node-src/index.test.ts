@@ -6,13 +6,13 @@ import fetchDefault from 'node-fetch';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runAll, getGitInfo } from '.';
+import { getGitInfo, runAll } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
+import * as checkPackageJson from './lib/checkPackageJson';
 import getEnv from './lib/getEnv';
 import parseArgs from './lib/parseArgs';
 import TestLogger from './lib/testLogger';
-import * as checkPackageJson from './lib/checkPackageJson';
 import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
@@ -69,7 +69,7 @@ vi.mock('node-fetch', () => ({
   default: vi.fn(async (url, { body } = {}) => ({
     ok: true,
     json: async () => {
-      let query: string, variables: { [key: string]: any };
+      let query: string, variables: Record<string, any>;
       try {
         const data = JSON.parse(body);
         query = data.query;

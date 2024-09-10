@@ -1,5 +1,5 @@
-import { execa as execaDefault, execaCommand } from 'execa';
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { execa as execaDefault, execaCommand } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';

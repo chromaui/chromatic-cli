@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { invalidConfigurationFile } from './invalidConfigurationFile';
 
 export default {

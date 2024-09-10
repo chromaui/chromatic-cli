@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { matchesFile, isPackageManifestFile } from './utils';
+import { isPackageManifestFile, matchesFile } from './utils';
 
 describe('matchesFile', () => {
   it('matches file names', () => {

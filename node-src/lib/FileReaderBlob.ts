@@ -1,4 +1,4 @@
-import { ReadStream, createReadStream } from 'fs';
+import { createReadStream, ReadStream } from 'fs';
 
 export class FileReaderBlob {
   readStream: ReadStream;

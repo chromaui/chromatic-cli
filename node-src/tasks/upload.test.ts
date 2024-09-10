@@ -6,6 +6,7 @@ import { default as compress } from '../lib/compress';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
+import { exitCodes } from '../lib/setExitCode';
 import {
   calculateFileHashes,
   traceChangedFiles,
@@ -13,7 +14,6 @@ import {
   validateFiles,
   waitForSentinels,
 } from './upload';
-import { exitCodes } from '../lib/setExitCode';
 
 vi.mock('form-data');
 vi.mock('fs');
@@ -101,18 +101,18 @@ describe('validateFiles', () => {
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
-  it("does not include the .chromatic directory in the file list", async () => {
+  it('does not include the .chromatic directory in the file list', async () => {
     readdirSyncMock.mockImplementation((path) => {
-      if(path === ".chromatic") {
-        return ['zip-unpacked.txt'] as any
+      if (path === '.chromatic') {
+        return ['zip-unpacked.txt'] as any;
       }
-      return ['iframe.html', 'index.html', '.chromatic'] as any
+      return ['iframe.html', 'index.html', '.chromatic'] as any;
     });
     statSyncMock.mockImplementation((path) => {
-      if(path === ".chromatic") {
-        return { isDirectory: () => true, size: 42 } as any
+      if (path === '.chromatic') {
+        return { isDirectory: () => true, size: 42 } as any;
       }
-      return { isDirectory: () => false, size: 42 } as any
+      return { isDirectory: () => false, size: 42 } as any;
     });
 
     const ctx = { env, log, http, sourceDir: '.' } as any;

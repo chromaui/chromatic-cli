@@ -1,29 +1,29 @@
 import picomatch from 'picomatch';
 
-import getCommitAndBranch from '../git/getCommitAndBranch';
-import { getSlug, getUserEmail, getUncommittedHash, getVersion } from '../git/git';
-import { getParentCommits } from '../git/getParentCommits';
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
+import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
+import getCommitAndBranch from '../git/getCommitAndBranch';
+import { getParentCommits } from '../git/getParentCommits';
+import { getSlug, getUncommittedHash, getUserEmail, getVersion } from '../git/git';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { isPackageMetadataFile, matchesFile } from '../lib/utils';
+import { Context, Task } from '../types';
+import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
+import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
+import replacedBuild from '../ui/messages/info/replacedBuild';
+import externalsChanged from '../ui/messages/warnings/externalsChanged';
+import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
+import isRebuild from '../ui/messages/warnings/isRebuild';
 import {
   initial,
   pending,
   skipFailed,
-  skippingBuild,
   skippedForCommit,
   skippedRebuild,
+  skippingBuild,
   success,
 } from '../ui/tasks/gitInfo';
-import externalsChanged from '../ui/messages/warnings/externalsChanged';
-import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
-import isRebuild from '../ui/messages/warnings/isRebuild';
-import { Context, Task } from '../types';
-import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
-import replacedBuild from '../ui/messages/info/replacedBuild';
-import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
-import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {

@@ -1,14 +1,13 @@
 export default class NonTTYRenderer {
+  static get nonTTY() {
+    return true;
+  }
   tasks;
   options;
 
   constructor(tasks: any, options: any) {
     this.tasks = tasks;
     this.options = options;
-  }
-
-  static get nonTTY() {
-    return true;
   }
 
   render() {

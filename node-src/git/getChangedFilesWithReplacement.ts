@@ -1,14 +1,14 @@
-import { getChangedFiles } from './git';
-import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 import { Context } from '../types';
+import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
+import { getChangedFiles } from './git';
 
-type BuildWithCommitInfo = {
+interface BuildWithCommitInfo {
   id: string;
   number: number;
   commit: string;
   uncommittedHash: string;
   isLocalBuild: boolean;
-};
+}
 
 /**
  * Find the set of files that have changed (according to git) between the historical build's commit

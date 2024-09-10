@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import TestLogger from '../lib/testLogger';
+import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 
 vi.mock('./git', () => ({
   getChangedFiles: (hash) => {

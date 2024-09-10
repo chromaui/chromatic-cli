@@ -1,10 +1,10 @@
-import makeZipFile from './compress';
-import { uploadZip } from './uploadZip';
-import { uploadFiles } from './uploadFiles';
 import { Context, FileDesc, TargetInfo } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 import { uploadFailed } from '../ui/messages/errors/uploadFailed';
+import makeZipFile from './compress';
+import { uploadFiles } from './uploadFiles';
+import { uploadZip } from './uploadZip';
 
 // This limit is imposed by the uploadBuild mutation
 const MAX_FILES_PER_REQUEST = 1000;
@@ -92,7 +92,7 @@ export async function uploadBuild(
   const targets: (TargetInfo & FileDesc)[] = [];
   let zipTarget: TargetInfo | undefined;
 
-  const batches = files.reduce<typeof files[]>((acc, file, fileIndex) => {
+  const batches = files.reduce<(typeof files)[]>((acc, file, fileIndex) => {
     const batchIndex = Math.floor(fileIndex / MAX_FILES_PER_REQUEST);
     if (!acc[batchIndex]) acc[batchIndex] = [];
     acc[batchIndex].push(file);

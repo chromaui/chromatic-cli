@@ -76,4 +76,4 @@ export default () =>
     STORYBOOK_CLI_FLAGS_BY_VERSION,
     STORYBOOK_VERIFY_TIMEOUT: parseInt(STORYBOOK_VERIFY_TIMEOUT, 10),
     STORYBOOK_NODE_ENV,
-  } as Env);
+  }) as Env;

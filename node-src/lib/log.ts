@@ -29,7 +29,12 @@ const withTime = (messages: string[], color = false) => {
   if (messages.every((message) => /^\s*$/.test(message))) return messages;
   let time = new Date().toISOString().slice(11, 23);
   if (color) time = chalk.dim(time);
-  return [time + ' ', ...messages.map((msg) => typeof msg === 'string' ? msg.replace(/\n/g, `\n              `) : msg)];
+  return [
+    time + ' ',
+    ...messages.map((msg) =>
+      typeof msg === 'string' ? msg.replace(/\n/g, `\n              `) : msg
+    ),
+  ];
 };
 
 type LogType = 'error' | 'warn' | 'info' | 'debug';

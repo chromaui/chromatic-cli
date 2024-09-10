@@ -1,6 +1,6 @@
-import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
-
 import { describe, expect, it } from 'vitest';
+
+import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 
 describe('getStorybookMetadataFromProjectJson', () => {
   it('should return the metadata from the project.json file', async () => {

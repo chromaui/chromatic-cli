@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as git from '../git/git';
 import {
   arePackageDependenciesEqual,
   clearFileCache,
   findChangedPackageFiles,
 } from './findChangedPackageFiles';
-import * as git from '../git/git';
 
 vi.mock('../git/git');
 

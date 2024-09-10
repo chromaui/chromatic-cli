@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
 
-import { info } from '../../components/icons';
 import { FileDesc } from '../../../types';
+import { info } from '../../components/icons';
 import link from '../../components/link';
 
 export default (directoryUrl: string, files: FileDesc[]) => {
