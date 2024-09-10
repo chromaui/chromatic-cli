@@ -38,10 +38,8 @@ export const setBuildCommand = async (ctx: Context) => {
   }
 
   const buildCommandOptions = [
-    '--output-dir',
-    ctx.sourceDir,
-    ctx.git.changedFiles && webpackStatsSupported && '--webpack-stats-json',
-    ctx.git.changedFiles && webpackStatsSupported && ctx.sourceDir,
+    `--output-dir=${ctx.sourceDir}`,
+    ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
   ].filter(Boolean);
 
   if (isE2EBuild(ctx.options)) {
