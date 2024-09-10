@@ -1,3 +1,16 @@
+# v11.8.0 (Tue Sep 10 2024)
+
+#### 🚀 Enhancement
+
+- Don't upload files from `.chromatic` directory [#1028](https://github.com/chromaui/chromatic-cli/pull/1028) ([@jmhobbs](https://github.com/jmhobbs) [@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 2
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.7.1 (Wed Aug 14 2024)
 
 #### 🐛 Bug Fix
