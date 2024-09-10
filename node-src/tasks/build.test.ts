@@ -113,6 +113,25 @@ describe('setBuildCommand', () => {
       'Storybook version 6.2.0 or later is required to use the --only-changed flag'
     );
   });
+
+  it('uses the correct flag for webpack stats for >= 8.0.0', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '8.0.0' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setBuildCommand(ctx);
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('npm run build:storybook');
+  });
 });
 
 describe('buildStorybook', () => {

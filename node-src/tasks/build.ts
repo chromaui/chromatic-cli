@@ -33,13 +33,18 @@ export const setBuildCommand = async (ctx: Context) => {
       ? semver.gte(semver.coerce(ctx.storybook.version), '6.2.0')
       : true;
 
+  const webpackStatsFlag =
+    webpackStatsSupported && semver.gte(semver.coerce(ctx.storybook.version), '8.0.0')
+      ? '--stats-json'
+      : '--webpack-stats-json';
+
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
   const buildCommandOptions = [
     `--output-dir=${ctx.sourceDir}`,
-    ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
+    ctx.git.changedFiles && webpackStatsSupported && `${webpackStatsFlag}=${ctx.sourceDir}`,
   ].filter(Boolean);
 
   if (isE2EBuild(ctx.options)) {
