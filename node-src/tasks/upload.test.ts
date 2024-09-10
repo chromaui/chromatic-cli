@@ -101,6 +101,35 @@ describe('validateFiles', () => {
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
+  it("does not include the .chromatic directory in the file list", async () => {
+    readdirSyncMock.mockImplementation((path) => {
+      if(path === ".chromatic") {
+        return ['zip-unpacked.txt'] as any
+      }
+      return ['iframe.html', 'index.html', '.chromatic'] as any
+    });
+    statSyncMock.mockImplementation((path) => {
+      if(path === ".chromatic") {
+        return { isDirectory: () => true, size: 42 } as any
+      }
+      return { isDirectory: () => false, size: 42 } as any
+    });
+
+    const ctx = { env, log, http, sourceDir: '.' } as any;
+    await validateFiles(ctx);
+
+    expect(ctx.fileInfo).toEqual(
+      expect.objectContaining({
+        lengths: [
+          { contentLength: 42, knownAs: 'iframe.html', pathname: 'iframe.html' },
+          { contentLength: 42, knownAs: 'index.html', pathname: 'index.html' },
+        ],
+        paths: ['iframe.html', 'index.html'],
+        total: 84,
+      })
+    );
+  });
+
   describe('with buildLogFile', () => {
     it('retries using outputDir from build-storybook.log', async () => {
       readdirSyncMock.mockReturnValueOnce([]);
