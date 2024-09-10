@@ -103,6 +103,7 @@
     "@auto-it/slack": "^11.1.6",
     "@discoveryjs/json-ext": "^0.5.7",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.3.0",
+    "@sentry/node": "^8.30.0",
     "@storybook/addon-essentials": "^8.1.5",
     "@storybook/addon-webpack5-compiler-swc": "^1.0.3",
     "@storybook/csf-tools": "^8.1.5",
