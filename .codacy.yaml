@@ -1,0 +1,4 @@
+---
+exclude_paths:
+  - 'CHANGELOG.md'
+  - 'vitest.no-threads.config.ts'
