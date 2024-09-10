@@ -45,7 +45,7 @@ export async function uploadFiles(
                 { retries: 0 } // already retrying the whole operation
               );
               ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
-            } catch (err) {
+            } catch (_err) {
               throw new Error(localPath);
             }
           },

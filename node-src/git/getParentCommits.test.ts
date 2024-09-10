@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { exec } from 'child_process';
 import process from 'process';
 import tmp from 'tmp-promise';

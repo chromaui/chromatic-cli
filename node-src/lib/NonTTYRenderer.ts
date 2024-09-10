@@ -1,7 +1,5 @@
 export default class NonTTYRenderer {
-  static get nonTTY() {
-    return true;
-  }
+  static readonly nonTTY = true;
   tasks;
   options;
 

@@ -14,6 +14,8 @@ const buildFields = ({ id, number, storybookUrl = undefined, webUrl = undefined 
   ...(webUrl && { webUrl }),
 });
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export default function fatalError(
   ctx: Context | InitialContext,
   error: Error | Error[],

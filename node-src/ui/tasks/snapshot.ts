@@ -39,6 +39,8 @@ export const stats = ({
   };
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
   const { build, options, onlyStoryFiles } = ctx;
   if (build.actualTestCount === 0) {

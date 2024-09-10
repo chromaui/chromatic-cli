@@ -34,7 +34,7 @@ function lastBuildOnBranch(builds: Build[], findingBranch: string) {
 }
 
 const mocks = {
-  FirstCommittedAtQuery: (builds: Build[], prs: PR[], { branch }: { branch: string }) => {
+  FirstCommittedAtQuery: (builds: Build[], _prs: PR[], { branch }: { branch: string }) => {
     const lastBuild = lastBuildOnBranch(builds, branch);
     return {
       app: {
@@ -48,7 +48,7 @@ const mocks = {
       },
     };
   },
-  HasBuildsWithCommitsQuery: (builds: Build[], prs: PR[], { commits }: { commits: string[] }) => ({
+  HasBuildsWithCommitsQuery: (builds: Build[], _prs: PR[], { commits }: { commits: string[] }) => ({
     app: {
       hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
     },

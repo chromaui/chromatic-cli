@@ -111,6 +111,8 @@ export const validateFiles = async (ctx: Context) => {
   }
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
@@ -129,6 +131,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   const { changedFiles, packageMetadataChanges } = ctx.git;
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
     let changedDependencyNames: void | string[] = [];
     if (packageMetadataChanges?.length > 0) {
       changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {

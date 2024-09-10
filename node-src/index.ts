@@ -85,6 +85,8 @@ export type InitialContext = Omit<
 const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
 
 // Entry point for the CLI, GitHub Action, and Node API
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export async function run({
   argv = [],
   flags,
@@ -191,10 +193,15 @@ export async function runAll(ctx: InitialContext) {
   }
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 async function runBuild(ctx: Context) {
   try {
     try {
-      const options = {
+      // This is an `any` because any parameters set here will be passed in as `options` to the
+      // `renderer` class. Therefore, `log` here isn't available on the Listr type but does make it
+      // into the `renderer` constructor.
+      const options: any = {
         log: ctx.log,
         renderer: NonTTYRenderer,
       };

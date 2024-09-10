@@ -1,9 +1,7 @@
 import UpdateRenderer from 'listr-update-renderer';
 
 export default class LoggingRenderer {
-  static get nonTTY() {
-    return false;
-  }
+  static readonly nonTTY = false;
   tasks;
   options;
   updateRenderer;

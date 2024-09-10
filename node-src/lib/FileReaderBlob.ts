@@ -4,6 +4,7 @@ export class FileReaderBlob {
   readStream: ReadStream;
   size: number;
 
+  readonly [Symbol.toStringTag] = 'Blob';
   constructor(filePath: string, contentLength: number, onProgress: (delta: number) => void) {
     this.size = contentLength;
     this.readStream = createReadStream(filePath);
@@ -12,9 +13,5 @@ export class FileReaderBlob {
 
   stream() {
     return this.readStream;
-  }
-
-  get [Symbol.toStringTag]() {
-    return 'Blob';
   }
 }

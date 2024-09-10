@@ -33,6 +33,8 @@ const undefinedIfEmpty = <T>(array: T[]) => {
 const stripUndefined = (object: Partial<Options>): Partial<Options> =>
   Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export default function getOptions({
   argv,
   env,

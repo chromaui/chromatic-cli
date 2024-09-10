@@ -230,7 +230,7 @@ describe('findChangedDependencies', () => {
     });
 
     // Baseline A
-    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValueOnce({
       dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
     });
@@ -281,7 +281,7 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
     const context = getContext({
@@ -330,7 +330,7 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
     const context = getContext({

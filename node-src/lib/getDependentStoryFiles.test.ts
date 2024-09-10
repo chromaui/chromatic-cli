@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import chalk from 'chalk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

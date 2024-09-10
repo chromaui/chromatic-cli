@@ -75,6 +75,8 @@ interface UploadBuildMutationResult {
   };
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export async function uploadBuild(
   ctx: Context,
   files: FileDesc[],

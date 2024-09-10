@@ -21,6 +21,8 @@ interface CommitInfo {
   mergeCommit?: string;
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export default async function getCommitAndBranch(
   ctx,
   {

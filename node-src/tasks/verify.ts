@@ -169,6 +169,8 @@ interface VerifyBuildQueryResult {
   };
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export const verifyBuild = async (ctx: Context, task: Task) => {
   const { client } = ctx;
   const { list, onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;

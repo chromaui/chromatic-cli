@@ -84,13 +84,13 @@ export async function getBranch() {
     // Yields an empty string when in detached HEAD state
     const branch = await execGitCommand('git branch --show-current');
     return branch || 'HEAD';
-  } catch (e) {
+  } catch (_err) {
     try {
       // Git v1.8 and above
       // Throws when in detached HEAD state
       const ref = await execGitCommand('git symbolic-ref HEAD');
       return ref.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
-    } catch (ex) {
+    } catch (_ex) {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
       const ref = await execGitCommand('git rev-parse --abbrev-ref HEAD');
@@ -135,7 +135,7 @@ export async function commitExists(commit: string) {
   try {
     await execGitCommand(`git cat-file -e "${commit}^{commit}"`);
     return true;
-  } catch (error) {
+  } catch (_err) {
     return false;
   }
 }

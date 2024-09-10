@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { FormData } from 'formdata-node';
 import { access, createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,8 +35,9 @@ vi.mock('./read-stats-file', () => ({
 }));
 
 vi.mock('../lib/FileReaderBlob', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
   FileReaderBlob: class {
-    constructor(path: string, length: number, onProgress: (delta: number) => void) {
+    constructor(_path: string, length: number, onProgress: (delta: number) => void) {
       onProgress(length / 2);
       onProgress(length / 2);
     }
@@ -169,7 +171,7 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockReset();
     findChangedPackageFiles.mockReset();
     getDependentStoryFiles.mockReset();
-    accessMock.mockImplementation((path, callback) => Promise.resolve(callback(undefined)));
+    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(undefined)));
   });
 
   it('sets onlyStoryFiles on context', async () => {
@@ -276,7 +278,7 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue(deps);
-    accessMock.mockImplementation((path, callback) => Promise.resolve(callback(new Error())));
+    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(new Error())));
 
     const ctx = {
       env,

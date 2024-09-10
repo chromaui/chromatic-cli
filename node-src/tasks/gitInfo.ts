@@ -52,6 +52,8 @@ interface LastBuildQueryResult {
   };
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export const setGitInfo = async (ctx: Context, task: Task) => {
   const {
     branchName,

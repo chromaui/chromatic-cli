@@ -196,6 +196,8 @@ async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits
   return maxCommits;
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export async function getParentCommits(
   { options, client, git, log }: Context,
   { ignoreLastBuildOnBranch = false } = {}

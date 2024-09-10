@@ -49,6 +49,8 @@ interface BuildQueryResult {
   };
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const takeSnapshots = async (ctx: Context, task: Task) => {
   const { client, log, uploadedBytes } = ctx;
   const { app, number, tests, testCount, actualTestCount, reportToken } = ctx.build;

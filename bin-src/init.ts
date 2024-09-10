@@ -43,6 +43,8 @@ export const createChromaticConfigFile = async ({ configFile, buildScriptName = 
   });
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const getStorybookPackages = (pkgJson: PackageJson) => {
   const storybookVersion = pkgJson?.devDependencies?.storybook || pkgJson?.dependencies?.storybook;
   const essentialsVersion =

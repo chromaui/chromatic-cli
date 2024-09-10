@@ -40,7 +40,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
         });
       })
     );
-  } catch (err) {
+  } catch (_err) {
     ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDir}`);
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());

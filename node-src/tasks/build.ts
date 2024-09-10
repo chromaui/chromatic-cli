@@ -27,6 +27,8 @@ export const setSourceDir = async (ctx: Context) => {
   }
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
@@ -57,7 +59,7 @@ export const setBuildCommand = async (ctx: Context) => {
 };
 
 const timeoutAfter = (ms) =>
-  new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
+  new Promise((_resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 function isE2EBuildCommandNotFoundError(errorMessage: string) {
   // It's hard to know if this is the case as each package manager has a different type of
@@ -74,6 +76,7 @@ function isE2EBuildCommandNotFoundError(errorMessage: string) {
     // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
     `command failed.*${e2eBuildBinName}.*$`,
   ];
+  // eslint-disable-next-line security/detect-non-literal-regexp
   return ERROR_PATTERNS.some((PATTERN) => new RegExp(PATTERN, 'gi').test(errorMessage));
 }
 

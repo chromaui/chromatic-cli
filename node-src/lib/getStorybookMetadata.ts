@@ -162,6 +162,8 @@ const findConfigFlags = async ({ options, packageJson }) => {
   };
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const findBuilder = async (mainConfig, v7) => {
   if (!mainConfig) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
