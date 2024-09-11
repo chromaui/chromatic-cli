@@ -1,5 +1,9 @@
+import setup from '../node-src/errorMonitoring';
+setup('action');
+
 import { error, getInput, getMultilineInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
+import * as Sentry from '@sentry/node';
 import path from 'path';
 
 import { run as runNode } from '../node-src';
@@ -204,7 +208,8 @@ async function run() {
     process.exit(1);
   }
 }
+
 run().catch((e) => {
   error(e);
   setFailed(e.message);
-});
+}).finally(() => Sentry.flush(1000));
