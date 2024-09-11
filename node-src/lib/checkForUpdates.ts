@@ -1,7 +1,7 @@
 import semver from 'semver';
 import { hasYarn } from 'yarn-or-npm';
 
-import { InitialContext } from '..';
+import { Context } from '..';
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
 import spawn from './spawn';
 
@@ -9,7 +9,7 @@ const rejectIn = (ms: number) => new Promise<any>((_, reject) => setTimeout(reje
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   Promise.race([promise, rejectIn(ms)]);
 
-export default async function checkForUpdates(ctx: InitialContext) {
+export default async function checkForUpdates(ctx: Context) {
   if (ctx.options.skipUpdateCheck === true) {
     ctx.log.info(`Skipping update check`);
     return;

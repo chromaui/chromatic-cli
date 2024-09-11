@@ -8,6 +8,7 @@
     "strict": false,
     "noImplicitAny": false,
     "resolveJsonModule": true,
-    "types": ["webpack-env"]
+    "types": ["webpack-env"],
+    "lib": ["es5", "es6", "dom"]
   }
 }
