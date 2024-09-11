@@ -18,7 +18,7 @@ const WaitFor = ({ seconds }) => {
 
   return (
     <div>
-      {Array.from(new Array(seconds - count)).map((_x, index) => (
+      {Array.from(new Array(seconds - count)).map((_, index) => (
         <img
           key={index}
           src={`http://deelay.me/1000/http://fpoimg.com/100x100?text=${index}`}
