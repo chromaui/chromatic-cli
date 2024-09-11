@@ -1,4 +1,5 @@
 import { Response } from 'node-fetch';
+
 import fetchError from './fetchError';
 
 export default {

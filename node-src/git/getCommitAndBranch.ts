@@ -5,11 +5,10 @@ import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
 import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import customGitHubAction from '../ui/messages/info/customGitHubAction';
-import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import noCommitDetails from '../ui/messages/warnings/noCommitDetails';
-import { getBranch, getCommit, hasPreviousCommit, mergeQueueBranchMatch } from './git';
-
+import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
 import { getBranchFromMergeQueuePullRequestNumber } from './getBranchFromMergeQueuePullRequestNumber';
+import { getBranch, getCommit, hasPreviousCommit, mergeQueueBranchMatch } from './git';
 
 const ORIGIN_PREFIX_REGEXP = /^origin\//;
 const notHead = (branch) => (branch && branch !== 'HEAD' ? branch : false);
@@ -22,6 +21,8 @@ interface CommitInfo {
   mergeCommit?: string;
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export default async function getCommitAndBranch(
   ctx,
   {
@@ -160,17 +161,18 @@ export default async function getCommitAndBranch(
     branch = branch.replace(ORIGIN_PREFIX_REGEXP, '');
   }
 
-
-
-  // When a PR is put into a merge queue, and prior PR is merged, the PR is retested against the latest on main. 
+  // When a PR is put into a merge queue, and prior PR is merged, the PR is retested against the latest on main.
   // To do this, GitHub creates a new commit and does a CI run with the branch changed to e.g. gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36
-  // If you configure merge queues to rebase in this circumstance, 
+  // If you configure merge queues to rebase in this circumstance,
   // we lose track of baselines as the branch name has changed so our usual rebase detection (based on branch name) doesn't work.
-  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(branch)
+  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(branch);
   if (mergeQueueBranchPrNumber) {
     // This is why we extract the PR number from the branch name and use it to find the branch name of the PR that was merged.
-    const branchFromMergeQueuePullRequestNumber = await getBranchFromMergeQueuePullRequestNumber(ctx, { number: mergeQueueBranchPrNumber });
-   
+    const branchFromMergeQueuePullRequestNumber = await getBranchFromMergeQueuePullRequestNumber(
+      ctx,
+      { number: mergeQueueBranchPrNumber }
+    );
+
     if (branchFromMergeQueuePullRequestNumber) {
       branch = branchFromMergeQueuePullRequestNumber;
     }

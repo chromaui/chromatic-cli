@@ -1,14 +1,14 @@
 import task from '../components/task';
 import {
-  initial,
+  awaitingUpgrades,
   dryRun,
+  failed,
+  initial,
   pending,
+  publishFailed,
   runOnlyFiles,
   runOnlyNames,
-  awaitingUpgrades,
   success,
-  failed,
-  publishFailed,
 } from './verify';
 
 export default {

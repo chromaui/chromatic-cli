@@ -29,6 +29,6 @@ export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
     });
 
     ctx.log.debug('Finalizing zip archive');
-    archive.finalize();
+    archive.finalize().catch((err) => reject(err));
   });
 }

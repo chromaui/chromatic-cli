@@ -1,9 +1,10 @@
-import { execaCommand } from 'execa';
+import { beforeEach } from 'node:test';
+
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { execaCommand } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildStorybook, setSourceDir, setBuildCommand } from './build';
-import { beforeEach } from 'node:test';
+import { buildStorybook, setBuildCommand, setSourceDir } from './build';
 
 vi.mock('execa');
 vi.mock('@antfu/ni');

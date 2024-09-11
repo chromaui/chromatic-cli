@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
-import { Context, Module } from '../../../types';
 
+import { Context, Module } from '../../../types';
 import { info } from '../../components/icons';
 
 const printFilePath = (filepath: string, basedir: string, expanded: boolean) => {
@@ -26,6 +26,8 @@ export const traceSuggestions = `If you are having trouble with tracing, please 
   3. Make sure you have the correct storybook config file path.\nYou can either set the flags storybook-base-dir or storybook-config-dir to help TurboSnap find the correct storybook config file.\n
 `;
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export default (
   ctx: Context,
   {

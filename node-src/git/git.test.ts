@@ -1,7 +1,14 @@
 import { execaCommand } from 'execa';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { NULL_BYTE, findFilesFromRepositoryRoot, getCommit, getSlug, hasPreviousCommit, mergeQueueBranchMatch } from './git';
+import {
+  findFilesFromRepositoryRoot,
+  getCommit,
+  getSlug,
+  hasPreviousCommit,
+  mergeQueueBranchMatch,
+  NULL_BYTE,
+} from './git';
 
 vi.mock('execa');
 
@@ -9,7 +16,7 @@ const command = vi.mocked(execaCommand);
 
 afterEach(() => {
   vi.clearAllMocks();
-})
+});
 
 describe('getCommit', () => {
   it('parses log output', async () => {
@@ -96,27 +103,21 @@ gpg: Can't check signature: No public key
   });
 });
 
-
 describe('mergeQueueBranchMatch', () => {
   it('returns pr number if it is a merge queue branch', async () => {
-    const branch = "gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36"
+    const branch = 'gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36';
     expect(await mergeQueueBranchMatch(branch)).toEqual(4);
   });
 
   it('returns null if it is not a merge queue branch', async () => {
-    const branch = "develop"
-    expect(await mergeQueueBranchMatch(branch)).toEqual(
-      null
-    );
+    const branch = 'develop';
+    expect(await mergeQueueBranchMatch(branch)).toEqual(null);
   });
 });
 
 describe('findFilesFromRepositoryRoot', () => {
   it('finds files relative to the repository root', async () => {
-    const filesFound = [
-      'package.json',
-      'another/package/package.json',
-    ];
+    const filesFound = ['package.json', 'another/package/package.json'];
 
     // first call from getRepositoryRoot()
     command.mockImplementationOnce(
@@ -132,11 +133,15 @@ describe('findFilesFromRepositoryRoot', () => {
           all: filesFound.join(NULL_BYTE),
         }) as any
     );
-    
+
     const results = await findFilesFromRepositoryRoot('package.json', '**/package.json');
 
     expect(command).toBeCalledTimes(2);
-    expect(command).toHaveBeenNthCalledWith(2, 'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"', expect.any(Object));
+    expect(command).toHaveBeenNthCalledWith(
+      2,
+      'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"',
+      expect.any(Object)
+    );
     expect(results).toEqual(filesFound);
   });
 });

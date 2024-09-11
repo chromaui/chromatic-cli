@@ -1,13 +1,13 @@
 import { exitCodes } from '../../lib/setExitCode';
 import task from '../components/task';
 import {
-  buildComplete,
   buildBroken,
-  buildPassed,
-  buildFailed,
   buildCanceled,
-  initial,
+  buildComplete,
+  buildFailed,
+  buildPassed,
   dryRun,
+  initial,
   pending,
   skipped,
 } from './snapshot';

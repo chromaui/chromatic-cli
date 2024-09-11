@@ -1,7 +1,8 @@
 import reportBuilder from 'junit-report-builder';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateReport } from './report';
 import path from 'path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { generateReport } from './report';
 
 const log = { error: vi.fn(), info: vi.fn() };
 const mockTests = [

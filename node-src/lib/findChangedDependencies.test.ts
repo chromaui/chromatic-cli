@@ -1,10 +1,10 @@
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { Context } from '..';
 import * as git from '../git/git';
 import { findChangedDependencies } from './findChangedDependencies';
 import TestLogger from './testLogger';
-import { Context } from '..';
 
 vi.mock('snyk-nodejs-lockfile-parser');
 vi.mock('yarn-or-npm');
@@ -38,7 +38,7 @@ const getContext = (
     log: new TestLogger(),
     options: {},
     ...input,
-  } as Context);
+  }) as Context;
 
 const AMetadataChanges = [{ changedFiles: ['package.json'], commit: 'A' }];
 
@@ -230,7 +230,7 @@ describe('findChangedDependencies', () => {
     });
 
     // Baseline A
-    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValueOnce({
       dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
     });
@@ -281,7 +281,7 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
     const context = getContext({
@@ -330,7 +330,7 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
     buildDepTree.mockResolvedValue({ dependencies: {} });
 
     const context = getContext({

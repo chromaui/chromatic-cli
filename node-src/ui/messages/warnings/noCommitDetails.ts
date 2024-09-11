@@ -4,8 +4,16 @@ import { dedent } from 'ts-dedent';
 import { info, warning } from '../../components/icons';
 import link from '../../components/link';
 
-type BranchRef = { ref: string; sha: string; env: string };
-type CommitRef = { ref?: never; sha: string; env?: string };
+interface BranchRef {
+  ref: string;
+  sha: string;
+  env: string;
+}
+interface CommitRef {
+  ref?: never;
+  sha: string;
+  env?: string;
+}
 
 export default ({ ref, sha, env }: BranchRef | CommitRef) => {
   if (ref) {

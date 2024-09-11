@@ -1,16 +1,16 @@
+/* eslint-disable max-lines */
 import { exec } from 'child_process';
 import process from 'process';
 import tmp from 'tmp-promise';
 import { promisify } from 'util';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { getCommit } from './git';
-import { getParentCommits } from './getParentCommits';
 import generateGitRepository from './generateGitRepository';
-
+import { getParentCommits } from './getParentCommits';
+import { getCommit } from './git';
+import doubleLoopDescription from './mocks/double-loop';
 import longLineDescription from './mocks/long-line';
 import longLoopDescription from './mocks/long-loop';
-import doubleLoopDescription from './mocks/double-loop';
 import createMockIndex from './mocks/mock-index';
 import simpleLoopDescription from './mocks/simple-loop';
 import threeParentsDescription from './mocks/three-parents';
@@ -720,9 +720,7 @@ describe('getParentCommits', () => {
       await checkoutCommit('G', 'main', repository);
       const client = createClient({
         repository,
-        builds: [
-          ['C', 'main'],
-        ],
+        builds: [['C', 'main']],
         // Talking to GH (etc) tells us that commit E is the merge commit for "branch"
         prs: [['E', 'branch']],
       });
@@ -776,7 +774,10 @@ describe('getParentCommits', () => {
           ['F', 'branch2'],
         ],
         // Talking to GH (etc) tells us that commit G is the merge commit for "branch"
-        prs: [['D', 'branch'], ['E', 'branch2']],
+        prs: [
+          ['D', 'branch'],
+          ['E', 'branch2'],
+        ],
       });
       const git = { branch: 'main', ...(await getCommit()) };
 
@@ -801,7 +802,7 @@ describe('getParentCommits', () => {
         prs: [['F', 'branch']],
       });
       const git = { branch: 'main', ...(await getCommit()) };
-  
+
       const parentCommits = await getParentCommits({ client, log, git, options } as any);
       expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
     });

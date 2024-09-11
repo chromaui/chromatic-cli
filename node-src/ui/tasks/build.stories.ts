@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { initial, pending, skipped, success, failed } from './build';
+import { failed, initial, pending, skipped, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',

@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import Listr from 'listr';
 import pluralize from 'pluralize';
+
 import { Context, Task, TaskName } from '../types';
 
 type ValueFn = string | ((ctx: Context, task: Task) => string);

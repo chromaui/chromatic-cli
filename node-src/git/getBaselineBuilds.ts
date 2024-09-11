@@ -1,7 +1,7 @@
 import gql from 'fake-tag';
 
-import { Context } from '../types';
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
+import { Context } from '../types';
 
 const BaselineCommitsQuery = gql`
   query BaselineCommitsQuery(

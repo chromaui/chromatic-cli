@@ -1,6 +1,8 @@
 import { execGitCommand } from '../git/git';
 import { isPackageMetadataFile } from './utils';
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 const isEqual = (left: unknown = {}, right: unknown = {}) => {
   if (typeof left !== typeof right) {
     return false;
@@ -67,7 +69,7 @@ const getManifestFilesWithChangedDependencies = async (manifestFiles: string[], 
         const base = await readGitFile(fileName, commit);
         const head = await readGitFile(fileName);
         return arePackageDependenciesEqual(JSON.parse(base), JSON.parse(head)) ? [] : [fileName];
-      } catch (e) {
+      } catch (_err) {
         // Consider the dependencies changed if we failed to compare files.
         return [fileName];
       }

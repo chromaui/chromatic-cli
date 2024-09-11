@@ -1,10 +1,12 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
 
+import { Context } from '../../../types';
 import { error, warning } from '../../components/icons';
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export default function runtimeError({
   options,
   runtimeErrors = [],

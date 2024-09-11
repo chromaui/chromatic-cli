@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as getCommitInfo from '../git/getCommitAndBranch';
-import * as git from '../git/git';
-import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
 import { getBaselineBuilds as getBaselineBuildsUnmocked } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement as getChangedFilesWithReplacementUnmocked } from '../git/getChangedFilesWithReplacement';
+import * as getCommitInfo from '../git/getCommitAndBranch';
+import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
+import * as git from '../git/git';
 import { setGitInfo } from './gitInfo';
 
 vi.mock('../git/getCommitAndBranch');

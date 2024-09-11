@@ -1,6 +1,7 @@
 import UpdateRenderer from 'listr-update-renderer';
 
 export default class LoggingRenderer {
+  static readonly nonTTY = false;
   tasks;
   options;
   updateRenderer;
@@ -9,10 +10,6 @@ export default class LoggingRenderer {
     this.tasks = tasks;
     this.options = options;
     this.updateRenderer = new UpdateRenderer(tasks, options);
-  }
-
-  static get nonTTY() {
-    return false;
   }
 
   render() {

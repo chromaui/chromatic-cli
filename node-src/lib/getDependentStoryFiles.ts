@@ -1,11 +1,11 @@
 import path from 'path';
 
-import { isPackageManifestFile, matchesFile } from './utils';
 import { getRepositoryRoot } from '../git/git';
-import bailFile from '../ui/messages/warnings/bailFile';
+import { Context, Module, Reason, Stats } from '../types';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
-import { Context, Module, Reason, Stats } from '../types';
+import bailFile from '../ui/messages/warnings/bailFile';
+import { isPackageManifestFile, matchesFile } from './utils';
 
 type FilePath = string;
 type NormalizedName = string;
@@ -59,6 +59,8 @@ export function normalizePath(posixPath: string, rootPath: string, baseDir = '')
  * the changed git files. The result is a map of Module ID => file path. In the end we'll only send
  * the Module IDs to Chromatic, the file paths are only for logging purposes.
  */
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export async function getDependentStoryFiles(
   ctx: Context,
   stats: Stats,
@@ -227,6 +229,8 @@ export async function getDependentStoryFiles(
     return false;
   }
 
+  // TODO: refactor this function
+  // eslint-disable-next-line complexity
   function traceName(name: string, tracePath: string[] = []) {
     if (ctx.turboSnap.bailReason || isCsfGlob(name)) return;
     if (shouldBail(name)) return;

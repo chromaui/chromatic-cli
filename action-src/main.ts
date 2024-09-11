@@ -15,11 +15,13 @@ const maybe = (a: string | string[], b: any = undefined) => {
 
   try {
     return JSON.parse(a);
-  } catch (e) {
+  } catch (_err) {
     return a;
   }
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 const getBuildInfo = (event: typeof context) => {
   switch (event.eventName) {
     case 'pull_request':
@@ -87,6 +89,8 @@ const getBuildInfo = (event: typeof context) => {
   }
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 async function run() {
   const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;

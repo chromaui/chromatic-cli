@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
-import { error as icon } from '../../components/icons';
 import { FileDesc, TargetInfo } from '../../../types';
+import { error as icon } from '../../components/icons';
 
 const encode = (path: string) => path.split('/').map(encodeURIComponent).join('/');
 

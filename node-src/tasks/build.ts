@@ -4,16 +4,16 @@ import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
-import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
-import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
+import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
 export const setSourceDir = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -57,7 +57,7 @@ export const setBuildCommand = async (ctx: Context) => {
 };
 
 const timeoutAfter = (ms) =>
-  new Promise((resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
+  new Promise((_resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
 
 function isE2EBuildCommandNotFoundError(errorMessage: string) {
   // It's hard to know if this is the case as each package manager has a different type of
@@ -74,6 +74,7 @@ function isE2EBuildCommandNotFoundError(errorMessage: string) {
     // A single line error from execa like `Command failed: yarn build-archive-storybook ...`
     `command failed.*${e2eBuildBinName}.*$`,
   ];
+  // eslint-disable-next-line security/detect-non-literal-regexp
   return ERROR_PATTERNS.some((PATTERN) => new RegExp(PATTERN, 'gi').test(errorMessage));
 }
 

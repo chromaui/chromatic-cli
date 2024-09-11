@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
-import { GraphQLError } from '../../../io/GraphQLClient';
 
+import { GraphQLError } from '../../../io/GraphQLClient';
 import { error as icon } from '../../components/icons';
 import link from '../../components/link';
 

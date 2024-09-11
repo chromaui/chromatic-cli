@@ -1,4 +1,4 @@
-import { parseNr, getCliCommand, parseNa } from '@antfu/ni';
+import { getCliCommand, parseNa, parseNr } from '@antfu/ni';
 import { execa } from 'execa';
 
 // 'npm' | 'pnpm' | 'yarn' | 'bun'

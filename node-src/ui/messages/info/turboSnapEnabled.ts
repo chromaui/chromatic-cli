@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
 
+import { Context } from '../../../types';
 import { success } from '../../components/icons';
 
 export default ({

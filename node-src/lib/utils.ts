@@ -39,7 +39,7 @@ export const rewriteErrorMessage = (err: Error, message: string) => {
     // DOMException doesn't allow setting the message, so this might fail
     err.message = message;
     return err;
-  } catch (ex) {
+  } catch (_err) {
     const error = new Error(message);
     error.stack = err.stack; // try to preserve the original stack
     return error;

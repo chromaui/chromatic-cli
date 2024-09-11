@@ -1,10 +1,11 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import { invalidStorybookBaseDir } from '../ui/messages/errors/invalidStorybookBaseDir';
-import { Context, Stats } from '../types';
 import pLimit from 'p-limit';
-import { exitCodes, setExitCode } from './setExitCode';
+import * as path from 'path';
+
 import { getRepositoryRoot } from '../git/git';
+import { Context, Stats } from '../types';
+import { invalidStorybookBaseDir } from '../ui/messages/errors/invalidStorybookBaseDir';
+import { exitCodes, setExitCode } from './setExitCode';
 
 export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
   const repositoryRoot = await getRepositoryRoot();
@@ -39,7 +40,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
         });
       })
     );
-  } catch (err) {
+  } catch (_err) {
     ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDir}`);
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { FormData } from 'formdata-node';
 import { access, createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +7,7 @@ import { default as compress } from '../lib/compress';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
+import { exitCodes } from '../lib/setExitCode';
 import {
   calculateFileHashes,
   traceChangedFiles,
@@ -13,7 +15,6 @@ import {
   validateFiles,
   waitForSentinels,
 } from './upload';
-import { exitCodes } from '../lib/setExitCode';
 
 vi.mock('form-data');
 vi.mock('fs');
@@ -34,8 +35,9 @@ vi.mock('./read-stats-file', () => ({
 }));
 
 vi.mock('../lib/FileReaderBlob', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
   FileReaderBlob: class {
-    constructor(path: string, length: number, onProgress: (delta: number) => void) {
+    constructor(_path: string, length: number, onProgress: (delta: number) => void) {
       onProgress(length / 2);
       onProgress(length / 2);
     }
@@ -101,18 +103,18 @@ describe('validateFiles', () => {
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
-  it("does not include the .chromatic directory in the file list", async () => {
+  it('does not include the .chromatic directory in the file list', async () => {
     readdirSyncMock.mockImplementation((path) => {
-      if(path === ".chromatic") {
-        return ['zip-unpacked.txt'] as any
+      if (path === '.chromatic') {
+        return ['zip-unpacked.txt'] as any;
       }
-      return ['iframe.html', 'index.html', '.chromatic'] as any
+      return ['iframe.html', 'index.html', '.chromatic'] as any;
     });
     statSyncMock.mockImplementation((path) => {
-      if(path === ".chromatic") {
-        return { isDirectory: () => true, size: 42 } as any
+      if (path === '.chromatic') {
+        return { isDirectory: () => true, size: 42 } as any;
       }
-      return { isDirectory: () => false, size: 42 } as any
+      return { isDirectory: () => false, size: 42 } as any;
     });
 
     const ctx = { env, log, http, sourceDir: '.' } as any;
@@ -169,7 +171,7 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockReset();
     findChangedPackageFiles.mockReset();
     getDependentStoryFiles.mockReset();
-    accessMock.mockImplementation((path, callback) => Promise.resolve(callback(undefined)));
+    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(undefined)));
   });
 
   it('sets onlyStoryFiles on context', async () => {
@@ -276,7 +278,7 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue(deps);
-    accessMock.mockImplementation((path, callback) => Promise.resolve(callback(new Error())));
+    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(new Error())));
 
     const ctx = {
       env,

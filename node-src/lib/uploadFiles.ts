@@ -2,6 +2,7 @@ import retry from 'async-retry';
 import { filesize } from 'filesize';
 import { FormData } from 'formdata-node';
 import pLimit from 'p-limit';
+
 import { Context, FileDesc, TargetInfo } from '../types';
 import { FileReaderBlob } from './FileReaderBlob';
 
@@ -44,7 +45,7 @@ export async function uploadFiles(
                 { retries: 0 } // already retrying the whole operation
               );
               ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
-            } catch (err) {
+            } catch (_err) {
               throw new Error(localPath);
             }
           },

@@ -15,8 +15,8 @@ afterEach(() => {
 describe('Trim Stats File', () => {
   it('readStatsFile returns expected output', async () => {
     const result = await readStatsFile('./storybook-static/preview-stats.json');
-    expect(result.modules.some(({ id }) => id === './node-src/ui/components/icons.stories.ts')).toBe(
-      true
-    );
+    expect(
+      result.modules.some(({ id }) => id === './node-src/ui/components/icons.stories.ts')
+    ).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { filesize } from 'filesize';
+
 import { Context, FileDesc } from '../../types';
 
 const linkIcon =
@@ -56,8 +57,8 @@ export default (
   </head>
   <body>
     <h1>Build ${announcedBuild.number} ${
-  build ? `<a href="${build.webUrl}">${linkIcon}</a>` : ''
-} </h1>
+      build ? `<a href="${build.webUrl}">${linkIcon}</a>` : ''
+    } </h1>
     <span>Metadata files</span>
     <ul>
     ${files

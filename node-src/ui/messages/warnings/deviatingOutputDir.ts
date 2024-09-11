@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
-import { Context } from '../../../types';
 
+import { Context } from '../../../types';
 import { warning } from '../../components/icons';
 
 const getHint = (buildScriptName: string, buildScript: string) => {

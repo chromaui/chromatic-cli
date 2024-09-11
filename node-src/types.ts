@@ -1,9 +1,9 @@
 import { InitialContext } from '.';
+import GraphQLClient from './io/GraphQLClient';
+import HTTPClient from './io/HTTPClient';
 import type { Configuration } from './lib/getConfiguration';
 import { Env } from './lib/getEnv';
 import { Logger } from './lib/log';
-import HTTPClient from './io/HTTPClient';
-import GraphQLClient from './io/GraphQLClient';
 
 export interface Flags {
   // Required options
@@ -171,7 +171,7 @@ export interface Context {
     docs: string;
   };
   sessionId: string;
-  packageJson: { [key: string]: any };
+  packageJson: Record<string, any>;
   packagePath: string;
   help: any;
   argv: string[];
@@ -387,5 +387,5 @@ export interface TargetInfo {
   fileKey: string;
   filePath: string;
   formAction: string;
-  formFields: { [key: string]: string };
+  formFields: Record<string, string>;
 }

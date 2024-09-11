@@ -1,9 +1,9 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { getDependencies } from './getDependencies';
 import packageJson from '../__mocks__/dependencyChanges/plain-package.json';
 import { checkoutFile } from '../git/git';
+import { getDependencies } from './getDependencies';
 import TestLogger from './testLogger';
 
 const ctx = { log: new TestLogger() } as any;

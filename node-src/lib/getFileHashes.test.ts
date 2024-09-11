@@ -1,5 +1,7 @@
 import { describe } from 'node:test';
+
 import { expect, it } from 'vitest';
+
 import { getFileHashes } from './getFileHashes';
 
 describe('getFileHashes', () => {

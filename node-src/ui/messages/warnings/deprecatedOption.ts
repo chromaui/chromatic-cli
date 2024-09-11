@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
-import { Flags } from '../../../types';
 
+import { Flags } from '../../../types';
 import { warning } from '../../components/icons';
 import link from '../../components/link';
 

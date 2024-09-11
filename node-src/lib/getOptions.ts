@@ -6,6 +6,7 @@ import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
 import invalidOnlyStoryNames from '../ui/messages/errors/invalidOnlyStoryNames';
 import invalidOwnerName from '../ui/messages/errors/invalidOwnerName';
+import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
 import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidRepositorySlug from '../ui/messages/errors/invalidRepositorySlug';
@@ -13,7 +14,6 @@ import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
-import invalidPackageJson from '../ui/messages/errors/invalidPackageJson';
 import { isE2EBuild } from './e2e';
 
 const takeLast = (input: string | string[]) =>
@@ -33,6 +33,8 @@ const undefinedIfEmpty = <T>(array: T[]) => {
 const stripUndefined = (object: Partial<Options>): Partial<Options> =>
   Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
 export default function getOptions({
   argv,
   env,

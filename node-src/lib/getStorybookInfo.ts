@@ -3,7 +3,6 @@ import path from 'path';
 
 import { Context } from '../types';
 import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
-
 import { getStorybookMetadata } from './getStorybookMetadata';
 
 export default async function getStorybookInfo(

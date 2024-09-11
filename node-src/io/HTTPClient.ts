@@ -1,10 +1,9 @@
 import retry from 'async-retry';
 import dns from 'dns';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
-import fetch, { Response, RequestInit } from 'node-fetch';
+import fetch, { RequestInit, Response } from 'node-fetch';
 
 import { Context } from '../types';
-
 import getDNSResolveAgent from './getDNSResolveAgent';
 import getProxyAgent from './getProxyAgent';
 

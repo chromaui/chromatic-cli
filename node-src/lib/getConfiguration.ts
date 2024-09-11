@@ -1,8 +1,9 @@
 import { readFileSync } from 'fs';
-import { ZodError, z } from 'zod';
+import { z, ZodError } from 'zod';
+
+import { invalidConfigurationFile } from '../ui/messages/errors/invalidConfigurationFile';
 import { missingConfigurationFile } from '../ui/messages/errors/missingConfigurationFile';
 import { unparseableConfigurationFile } from '../ui/messages/errors/unparseableConfigurationFile';
-import { invalidConfigurationFile } from '../ui/messages/errors/invalidConfigurationFile';
 
 const configurationSchema = z
   .object({
