@@ -89,23 +89,8 @@
     "storybook": "storybook dev -p 9009",
     "test": "vitest run --coverage && vitest run -c vitest.no-threads.config.ts",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
-    "prepare": "husky install && npm run build",
-    "dev": "tsup --watch",
-    "lint-staged": "lint-staged"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "yarn lint:js --fix"
-    ],
-    "*.js": [
-      "yarn lint:js --fix"
-    ],
-    "*.json": [
-      "yarn lint:js --fix"
-    ],
-    "package.json": [
-      "yarn lint:package"
-    ]
+    "prepare": "yarn run build",
+    "dev": "tsup --watch"
   },
   "resolutions": {
     "any-observable": "^0.5.1"
@@ -175,7 +160,6 @@
     "husky": "^7.0.0",
     "jsonfile": "^6.0.1",
     "junit-report-builder": "2.1.0",
-    "lint-staged": "^11.1.2",
     "listr": "0.14.3",
     "listr-update-renderer": "^0.5.0",
     "meow": "^9.0.0",
