@@ -51,7 +51,7 @@ export default [
   // lint comments
   comments.recommended,
   {
-    files: ['**/*.js', '**/*.ts'],
+    files: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
     rules: {
       '@eslint-community/eslint-comments/disable-enable-pair': ['error', { allowWholeFile: true }],
     },
@@ -109,16 +109,20 @@ export default [
   unicorn.configs['flat/recommended'],
   {
     rules: {
-      'unicorn/filename-case': ['error', { case: 'camelCase' }],
+      // TODO: Switch this to 'error' when we are ready to enforce this rule
+      'unicorn/filename-case': ['off', { case: 'camelCase' }],
       // Chromatic uses err as our catch convention.
       // This is baked into pino transforms as well.
       'unicorn/prevent-abbreviations': [
-        'error',
+        'off', // TODO: Switch this to 'error' when we are ready to enforce this rule
         {
           allowList: {
             err: true,
             props: true,
             ctx: true,
+            str: true,
+            args: true,
+            docsUrl: true,
           },
         },
       ],
@@ -130,6 +134,18 @@ export default [
         },
       ],
       'unicorn/switch-case-braces': 'off',
+      'unicorn/no-process-exit': 'off',
+      'unicorn/prefer-node-protocol': 'off', // This will error our Webpack build
+      // TODO: remove the following lines when we are ready to enforce this rule
+      'unicorn/no-anonymous-default-export': 'off',
+      'unicorn/no-null': 'off',
+      'unicorn/better-regex': 'off',
+      'unicorn/no-array-reduce': 'off',
+      'unicorn/no-array-callback-reference': 'off',
+      'unicorn/prefer-string-raw': 'off',
+      'unicorn/prefer-module': 'off',
+      'unicorn/no-array-for-each': 'off',
+      'unicorn/prefer-spread': 'off',
     },
   },
   // prefer TS to complain when we miss an arg vs. sending an intentional undefined
