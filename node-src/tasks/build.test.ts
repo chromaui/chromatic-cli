@@ -55,7 +55,7 @@ describe('setBuildCommand', () => {
 
     expect(getCliCommand).toHaveBeenCalledWith(
       expect.anything(),
-      ['build:storybook', '--output-dir', './source-dir/', '--webpack-stats-json', './source-dir/'],
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
       { programmatic: true }
     );
     expect(ctx.buildCommand).toEqual('npm run build:storybook');
@@ -74,7 +74,7 @@ describe('setBuildCommand', () => {
 
     expect(getCliCommand).toHaveBeenCalledWith(
       expect.anything(),
-      ['build:storybook', '--output-dir', './source-dir/', '--webpack-stats-json', './source-dir/'],
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
       { programmatic: true }
     );
     expect(ctx.buildCommand).toEqual('yarn run build:storybook');
@@ -93,7 +93,7 @@ describe('setBuildCommand', () => {
 
     expect(getCliCommand).toHaveBeenCalledWith(
       expect.anything(),
-      ['build:storybook', '--output-dir', './source-dir/', '--webpack-stats-json', './source-dir/'],
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
       { programmatic: true }
     );
     expect(ctx.buildCommand).toEqual('pnpm run build:storybook');
