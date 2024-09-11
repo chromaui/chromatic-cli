@@ -1,3 +1,20 @@
+# v11.9.0 (Wed Sep 11 2024)
+
+#### 🚀 Enhancement
+
+- Fix initial TypeScript errors [#1033](https://github.com/chromaui/chromatic-cli/pull/1033) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Use the `--flag=value` format for Storybook build options [#1034](https://github.com/chromaui/chromatic-cli/pull/1034) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.8.0 (Tue Sep 10 2024)
 
 #### 🚀 Enhancement
