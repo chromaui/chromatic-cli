@@ -6,7 +6,7 @@ import prettier from 'eslint-plugin-prettier';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import sortClassMembers from 'eslint-plugin-sort-class-members';
-// import unicorn from 'eslint-plugin-unicorn';
+import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -106,37 +106,39 @@ export default [
     },
   },
   // additional lints from unicorn
-  //   unicorn.configs['flat/recommended'],
-  //   {
-  //     rules: {
-  //       'unicorn/filename-case': ['error', { case: 'camelCase' }],
-  //       // Chromatic uses err as our catch convention.
-  //       // This is baked into pino transforms as well.
-  //       'unicorn/prevent-abbreviations': [
-  //         'error',
-  //         {
-  //           allowList: {
-  //             err: true,
-  //           },
-  //         },
-  //       ],
-  //       'unicorn/catch-error-name': [
-  //         'error',
-  //         {
-  //           name: 'err',
-  //           ignore: ['^err.*$'],
-  //         },
-  //       ],
-  //       'unicorn/switch-case-braces': 'off',
-  //     },
-  //   },
+  unicorn.configs['flat/recommended'],
+  {
+    rules: {
+      'unicorn/filename-case': ['error', { case: 'camelCase' }],
+      // Chromatic uses err as our catch convention.
+      // This is baked into pino transforms as well.
+      'unicorn/prevent-abbreviations': [
+        'error',
+        {
+          allowList: {
+            err: true,
+            props: true,
+            ctx: true,
+          },
+        },
+      ],
+      'unicorn/catch-error-name': [
+        'error',
+        {
+          name: 'err',
+          ignore: ['^err.*$'],
+        },
+      ],
+      'unicorn/switch-case-braces': 'off',
+    },
+  },
   // prefer TS to complain when we miss an arg vs. sending an intentional undefined
-  //   {
-  //     files: ['**/*.ts'],
-  //     rules: {
-  //       'unicorn/no-useless-undefined': 'off',
-  //     },
-  //   },
+  {
+    files: ['**/*.ts'],
+    rules: {
+      'unicorn/no-useless-undefined': 'off',
+    },
+  },
   // security related lints
   security.configs.recommended,
   {
