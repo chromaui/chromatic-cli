@@ -26,6 +26,6 @@ export const startActivity = async (ctx: Context, task: Task) => {
   });
 };
 
-export const endActivity = async (ctx: Context) => {
+export const endActivity = (ctx: Context) => {
   if (ctx.activity) ctx.activity.end();
 };
