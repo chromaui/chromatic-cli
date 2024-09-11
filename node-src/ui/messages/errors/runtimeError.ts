@@ -18,9 +18,10 @@ export default function runtimeError({
   const stacktraces = [...runtimeErrors, ...runtimeWarnings]
     .map((err) => err.stack)
     .filter(Boolean);
-  const viewStacktraces = stacktraces.length
-    ? chalk`\n{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}`
-    : '';
+  const viewStacktraces =
+    stacktraces.length > 0
+      ? chalk`\n{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}`
+      : '';
 
   const errorCount = runtimeErrors.length;
   const warningCount = runtimeWarnings.length;
@@ -51,6 +52,6 @@ export default function runtimeError({
     Run your Storybook locally and check your browser console for errors.
 
     ${errorCount ? errorHint : warningHint}
-    ${stacktraces.length ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : ''}
+    ${stacktraces.length > 0 ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : ''}
   `);
 }

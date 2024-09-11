@@ -75,7 +75,7 @@ export default (
   if (ctx.options.traceChanged === 'compact') {
     let submodules = false;
     const affectedFiles = Object.values(affectedModules).map(([firstFile, ...otherFiles]) => {
-      if (!otherFiles.length) return firstFile;
+      if (otherFiles.length === 0) return firstFile;
       submodules = true;
       return `${firstFile} + ${otherFiles.length} modules`;
     });
@@ -95,7 +95,7 @@ export default (
   };
 
   const seen = new Set();
-  const traces = Array.from(ctx.turboSnap.tracedPaths).map((p) => {
+  const traces = [...ctx.turboSnap.tracedPaths].map((p) => {
     const parts = p.split('\n');
     return parts
       .reduce((acc, part, index) => {

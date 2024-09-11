@@ -21,7 +21,8 @@ export const throttle = (fn: (...args: any[]) => void, wait: number) => {
   };
 };
 
-export const repeat = (n: number, char: string) => [...new Array(Math.round(n))].map(() => char);
+export const repeat = (n: number, char: string) =>
+  Array.from({ length: Math.round(n) }).map(() => char);
 export const progressBar = (percentage: number, size = 20) => {
   const track = repeat(size, ' ');
   const completed = repeat((percentage / 100) * size || 0, '=');
@@ -39,7 +40,7 @@ export const rewriteErrorMessage = (err: Error, message: string) => {
     // DOMException doesn't allow setting the message, so this might fail
     err.message = message;
     return err;
-  } catch (_err) {
+  } catch {
     const error = new Error(message);
     error.stack = err.stack; // try to preserve the original stack
     return error;

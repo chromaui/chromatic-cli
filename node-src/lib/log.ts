@@ -32,7 +32,7 @@ const withTime = (messages: string[], color = false) => {
   return [
     time + ' ',
     ...messages.map((msg) =>
-      typeof msg === 'string' ? msg.replace(/\n/g, `\n              `) : msg
+      typeof msg === 'string' ? msg.replaceAll('\n', `\n              `) : msg
     ),
   ];
 };
@@ -86,8 +86,8 @@ export const createLogger = () => {
   let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
 
-  const args = process.argv.slice(2);
-  let interactive = !args.includes('--debug') && !args.includes('--no-interactive');
+  const args = new Set(process.argv.slice(2));
+  let interactive = !args.has('--debug') && !args.has('--no-interactive');
   let enqueue = false;
   const queue = [];
 
@@ -101,7 +101,7 @@ export const createLogger = () => {
       if (logFileOnly) return;
 
       const messages = interactive ? logInteractive(args) : withTime(logs, true);
-      if (!messages.length) return;
+      if (messages.length === 0) return;
 
       // Queue up the logs or print them right away
       if (enqueue) queue.push({ type, messages });

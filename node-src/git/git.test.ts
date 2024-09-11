@@ -28,7 +28,7 @@ describe('getCommit', () => {
     );
     expect(await getCommit()).toEqual({
       commit: '19b6c9c5b3d34d9fc55627fcaf8a85bd5d5e5b2a',
-      committedAt: 1696588814 * 1000,
+      committedAt: 1_696_588_814 * 1000,
       committerEmail: 'info@ghengeveld.nl',
       committerName: 'Gert Hengeveld',
     });
@@ -48,7 +48,7 @@ gpg: Can't check signature: No public key
     );
     expect(await getCommit()).toEqual({
       commit: '19b6c9c5b3d34d9fc55627fcaf8a85bd5d5e5b2a',
-      committedAt: 1696588814 * 1000,
+      committedAt: 1_696_588_814 * 1000,
       committerEmail: 'info@ghengeveld.nl',
       committerName: 'Gert Hengeveld',
     });

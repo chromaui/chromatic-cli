@@ -5,4 +5,4 @@ export default {
 };
 
 export const MaxFileSizeExceeded = () =>
-  maxFileSizeExceeded({ filePaths: ['index.js', 'main.js'], maxFileSize: 12345 });
+  maxFileSizeExceeded({ filePaths: ['index.js', 'main.js'], maxFileSize: 12_345 });

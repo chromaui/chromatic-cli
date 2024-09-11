@@ -18,7 +18,7 @@ const WaitFor = ({ seconds }) => {
 
   return (
     <div>
-      {Array.from(new Array(seconds - count)).map((_, index) => (
+      {Array.from({ length: seconds - count }).map((_, index) => (
         <img
           key={index}
           src={`http://deelay.me/1000/http://fpoimg.com/100x100?text=${index}`}
@@ -38,5 +38,5 @@ storiesOf('Timing', module)
 // the story has been rendered.
 // For some reason this is not an issue in real Storybooks
 const img = document.createElement('img');
-document.body.appendChild(img);
+document.body.append(img);
 img.outerHTML = `<img style="visibility: hidden; position: absolute;" src="http://deelay.me/1000/http://fpoimg.com/100x100?text=foobar" />`;

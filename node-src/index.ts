@@ -144,9 +144,9 @@ export async function runAll(ctx: InitialContext) {
 
   const onError = (e: Error | Error[]) => {
     ctx.log.info('');
-    ctx.log.error(fatalError(ctx, [].concat(e)));
+    ctx.log.error(fatalError(ctx, [e].flat()));
     ctx.extraOptions?.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, [].concat(e)),
+      formattedError: fatalError(ctx, [e].flat()),
       originalError: e,
     });
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
@@ -169,8 +169,8 @@ export async function runAll(ctx: InitialContext) {
     ctx.log.setLogFile(options.logFile);
 
     setExitCode(ctx, exitCodes.OK);
-  } catch (e) {
-    return onError(e);
+  } catch (err) {
+    return onError(err);
   }
 
   if (!isContext(ctx)) {
@@ -235,7 +235,10 @@ async function runBuild(ctx: Context) {
     } finally {
       // Handle potential runtime errors from JSDOM
       const { runtimeErrors, runtimeWarnings } = ctx;
-      if ((runtimeErrors && runtimeErrors.length) || (runtimeWarnings && runtimeWarnings.length)) {
+      if (
+        (runtimeErrors && runtimeErrors.length > 0) ||
+        (runtimeWarnings && runtimeWarnings.length > 0)
+      ) {
         ctx.log.info('');
         ctx.log.error(runtimeError(ctx));
       }
@@ -243,7 +246,7 @@ async function runBuild(ctx: Context) {
       ctx.log.flush();
     }
   } catch (error) {
-    const errors = [].concat(error); // GraphQLClient might throw an array of errors
+    const errors = [error].flat(); // GraphQLClient might throw an array of errors
     const formattedError = fatalError(ctx, errors);
 
     ctx.options.experimental_onTaskError?.(ctx, {
@@ -289,7 +292,7 @@ export async function getGitInfo(): Promise<GitInfo> {
   const repositoryRootDir = await getRepositoryRoot();
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
-  const isValidSlug = !!ownerName && !!repoName && !rest.length;
+  const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
   const uncommittedHash = await getUncommittedHash();
   return {

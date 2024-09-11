@@ -16,8 +16,7 @@ import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import { isE2EBuild } from './e2e';
 
-const takeLast = (input: string | string[]) =>
-  Array.isArray(input) ? input[input.length - 1] : input;
+const takeLast = (input: string | string[]) => (Array.isArray(input) ? input.at(-1) : input);
 
 const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input : [input]);
 
@@ -27,7 +26,7 @@ const defaultUnlessSet = <T>(value: T, fallback: T) =>
   ['', true, undefined].includes(value as any) ? fallback : value;
 const undefinedIfEmpty = <T>(array: T[]) => {
   const filtered = array.filter(Boolean);
-  return filtered.length ? filtered : undefined;
+  return filtered.length > 0 ? filtered : undefined;
 };
 
 const stripUndefined = (object: Partial<Options>): Partial<Options> =>
@@ -186,7 +185,7 @@ export default function getOptions({
     throw new Error(missingProjectToken());
   }
 
-  if (repositoryOwner && (!repositoryName || rest.length)) {
+  if (repositoryOwner && (!repositoryName || rest.length > 0)) {
     throw new Error(invalidRepositorySlug());
   }
 

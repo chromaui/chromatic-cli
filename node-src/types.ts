@@ -145,8 +145,6 @@ export interface Options extends Configuration {
   skipUpdateCheck: Flags['skipUpdateCheck'];
 }
 
-export { Configuration };
-
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -389,3 +387,5 @@ export interface TargetInfo {
   formAction: string;
   formFields: Record<string, string>;
 }
+
+export { type Configuration } from './lib/getConfiguration';

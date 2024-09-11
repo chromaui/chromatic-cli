@@ -69,12 +69,12 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   ctx.git = {
     version: await getVersion(),
-    gitUserEmail: await getUserEmail().catch((e) => {
-      ctx.log.debug('Failed to retrieve Git user email', e);
+    gitUserEmail: await getUserEmail().catch((err) => {
+      ctx.log.debug('Failed to retrieve Git user email', err);
       return null;
     }),
-    uncommittedHash: await getUncommittedHash().catch((e) => {
-      ctx.log.warn('Failed to retrieve uncommitted files hash', e);
+    uncommittedHash: await getUncommittedHash().catch((err) => {
+      ctx.log.warn('Failed to retrieve uncommitted files hash', err);
       return null;
     }),
     ...commitAndBranchInfo,
@@ -87,8 +87,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   if (!ctx.git.slug) {
     try {
       ctx.git.slug = await getSlug();
-    } catch (e) {
-      ctx.log.debug('Failed to retrieve Git repository slug', e);
+    } catch (err) {
+      ctx.log.debug('Failed to retrieve Git repository slug', err);
     }
   }
 
@@ -100,7 +100,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   const { branch, commit, slug } = ctx.git;
 
   ctx.git.matchesBranch = (glob: true | string) =>
-    typeof glob === 'string' && glob.length ? picomatch(glob, { bash: true })(branch) : !!glob;
+    typeof glob === 'string' && glob.length > 0 ? picomatch(glob, { bash: true })(branch) : !!glob;
 
   if (ctx.git.matchesBranch(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
@@ -189,9 +189,9 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       // Take the distinct union of changed files across all baselines.
-      ctx.git.changedFiles = Array.from(
-        new Set(changedFilesWithInfo.flatMap(({ changedFiles }) => changedFiles))
-      );
+      ctx.git.changedFiles = [
+        ...new Set(changedFilesWithInfo.flatMap(({ changedFiles }) => changedFiles)),
+      ];
 
       // Track changed package manifest files along with the commit they were changed in.
       const { untraced = [] } = ctx.options;
@@ -201,7 +201,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
             .filter((f) => !untraced.some((glob) => matchesFile(glob, f)))
             .filter(isPackageMetadataFile);
 
-          return metadataFiles.length
+          return metadataFiles.length > 0
             ? [{ changedFiles: metadataFiles, commit: replacementBuild?.commit ?? build.commit }]
             : [];
         }
@@ -217,23 +217,24 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         });
 
       if (!interactive) {
-        const list = ctx.git.changedFiles.length
-          ? `:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`
-          : '';
+        const list =
+          ctx.git.changedFiles.length > 0
+            ? `:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`
+            : '';
         ctx.log.info(`Found ${ctx.git.changedFiles.length} changed files${list}`);
       }
-    } catch (e) {
+    } catch (err) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
       ctx.git.changedFiles = null;
       ctx.git.replacementBuildIds = null;
       ctx.log.warn(invalidChangedFiles());
-      ctx.log.debug(e);
+      ctx.log.debug(err);
     }
 
-    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length) {
+    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length > 0) {
       for (const glob of ctx.options.externals) {
         const matches = ctx.git.changedFiles.filter((filepath) => matchesFile(glob, filepath));
-        if (matches.length) {
+        if (matches.length > 0) {
           ctx.turboSnap.bailReason = { changedExternalFiles: matches };
           ctx.log.warn(externalsChanged(matches));
           ctx.git.changedFiles = null;

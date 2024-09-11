@@ -31,7 +31,7 @@ const build = {
 const options = {};
 
 const now = 0;
-const startedAt = -123456;
+const startedAt = -123_456;
 
 export const Initial = () => initial;
 

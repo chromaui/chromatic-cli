@@ -2,11 +2,11 @@ import { outputFile } from 'fs-extra';
 
 import { readStatsFile } from '../node-src/tasks/read-stats-file';
 
-const dedupe = <T>(arr: T[]) => Array.from(new Set(arr));
+const dedupe = <T>(arr: T[]) => [...new Set(arr)];
 const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: string }) =>
   moduleName &&
   !moduleName.startsWith('(webpack)') &&
-  !moduleName.match(/(node_modules|webpack\/runtime)\//);
+  !/(node_modules|webpack\/runtime)\//.test(moduleName);
 
 /**
  * Utility to trim down a `preview-stats.json` file to the bare minimum, so that it can be used to
@@ -41,8 +41,8 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
     await outputFile(
       targetFile,
       JSON.stringify({ modules: trimmedModules }, null, 2)
-        .replace(/{\n {10}/g, '{ ')
-        .replace(/\n {8}}/g, ' }')
+        .replaceAll(/{\n {10}/g, '{ ')
+        .replaceAll(/\n {8}}/g, ' }')
     );
 
     console.log(`Wrote ${targetFile}`);

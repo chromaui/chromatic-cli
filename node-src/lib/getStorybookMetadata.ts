@@ -2,7 +2,7 @@ import { readConfig } from '@storybook/csf-tools';
 import { readdir } from 'fs/promises';
 import { readJson } from 'fs-extra';
 import meow from 'meow';
-import path, { join } from 'path';
+import path from 'path';
 import semver from 'semver';
 import { parseArgsStringToArgv } from 'string-argv';
 
@@ -82,8 +82,10 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     return Promise.race([
       resolvePackageJson(pkg)
         .then((json) => ({ viewLayer, version: json.version }))
-        .catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
-      timeout(10000),
+        .catch(() => {
+          throw new Error(packageDoesNotExist(pkg));
+        }),
+      timeout(10_000),
     ]);
   }
 
@@ -100,8 +102,10 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
         const json = await resolvePackageJson(key);
         return { viewLayer: value, version: json.version };
       })
-    ).catch(() => Promise.reject(new Error(packageDoesNotExist(pkg)))),
-    timeout(10000),
+    ).catch(() => {
+      throw new Error(packageDoesNotExist(pkg));
+    }),
+    timeout(10_000),
   ]);
 };
 
@@ -124,12 +128,7 @@ const findAddons = async (ctx, mainConfig, v7) => {
     };
     return {
       addons: addons.map((addon) => {
-        let name: string;
-        if (typeof addon === 'string') {
-          name = addon.replace('/register', '');
-        } else {
-          name = addon.name;
-        }
+        const name = typeof addon === 'string' ? addon.replace('/register', '') : addon.name;
 
         return {
           name: supportedAddons[name],
@@ -178,8 +177,10 @@ export const findBuilder = async (mainConfig, v7) => {
     return Promise.race([
       resolvePackageJson(sbV7BuilderName)
         .then((json) => ({ builder: { name: sbV7BuilderName, packageVersion: json.version } }))
-        .catch(() => Promise.reject(new Error(packageDoesNotExist(sbV7BuilderName)))),
-      timeout(10000),
+        .catch(() => {
+          throw new Error(packageDoesNotExist(sbV7BuilderName));
+        }),
+      timeout(10_000),
     ]);
   }
 
@@ -192,8 +193,10 @@ export const findBuilder = async (mainConfig, v7) => {
   return Promise.race([
     resolvePackageJson(builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
-      .catch(() => Promise.reject(new Error(packageDoesNotExist(builders[name])))),
-    timeout(10000),
+      .catch(() => {
+        throw new Error(packageDoesNotExist(builders[name]));
+      }),
+    timeout(10_000),
   ]);
 };
 
@@ -201,26 +204,26 @@ export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => 
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
   const files = await readdir(configDir);
   const configFile = files.find((file) => pattern.test(file));
-  return configFile && join(configDir, configFile);
+  return configFile && path.join(configDir, configFile);
 };
 
 export const getStorybookMetadata = async (ctx: Context) => {
   const configDir = ctx.options.storybookConfigDir ?? '.storybook';
-  const r = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
+  const r = typeof __non_webpack_require__ === 'undefined' ? require : __non_webpack_require__;
 
   let mainConfig;
   let v7 = false;
   try {
     mainConfig = await r(path.resolve(configDir, 'main'));
     ctx.log.debug({ configDir, mainConfig });
-  } catch (storybookV6error) {
-    ctx.log.debug({ storybookV6error });
+  } catch (err) {
+    ctx.log.debug({ storybookV6error: err });
     try {
       mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
       ctx.log.debug({ configDir, mainConfig });
       v7 = true;
-    } catch (storybookV7error) {
-      ctx.log.debug({ storybookV7error });
+    } catch (err) {
+      ctx.log.debug({ storybookV7error: err });
       mainConfig = null;
     }
   }

@@ -27,10 +27,7 @@ interface MergeInfo {
 }
 
 function lastBuildOnBranch(builds: Build[], findingBranch: string) {
-  return builds
-    .slice()
-    .reverse()
-    .find((b) => b.branch === findingBranch);
+  return [...builds].reverse().find((b) => b.branch === findingBranch);
 }
 
 const mocks = {
@@ -50,7 +47,7 @@ const mocks = {
   },
   HasBuildsWithCommitsQuery: (builds: Build[], _prs: PR[], { commits }: { commits: string[] }) => ({
     app: {
-      hasBuildsWithCommits: commits.filter((commit) => !!builds.find((b) => b.commit === commit)),
+      hasBuildsWithCommits: commits.filter((commit) => !!builds.some((b) => b.commit === commit)),
     },
   }),
   MergeCommitsQuery: (
@@ -83,7 +80,7 @@ export default function createMockIndex({ commitMap }, buildDescriptions, prDesc
     if (commitMap[name]) {
       const commitInfo = commitMap[name];
       hash = commitInfo.hash;
-      committedAt = parseInt(commitInfo.committedAt, 10) * 1000;
+      committedAt = Number.parseInt(commitInfo.committedAt, 10) * 1000;
     } else {
       // Allow for test cases with a commit that is no longer in the history
       hash = name;

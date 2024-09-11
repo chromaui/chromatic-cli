@@ -1,5 +1,5 @@
 import { stat, writeFileSync } from 'fs';
-import { basename } from 'path';
+import path from 'path';
 import { withFile } from 'tmp-promise';
 
 import { main as trimStatsFile } from '../../bin-src/trim-stats-file';
@@ -30,7 +30,7 @@ export async function uploadMetadataFiles(ctx: Context) {
   const files = await Promise.all<FileDesc>(
     metadataFiles.map(async (localPath) => {
       const contentLength = await fileSize(localPath);
-      const targetPath = `.chromatic/${basename(localPath)}`;
+      const targetPath = `.chromatic/${path.basename(localPath)}`;
       return contentLength && { contentLength, localPath, targetPath };
     })
   ).then((files) =>
@@ -39,7 +39,7 @@ export async function uploadMetadataFiles(ctx: Context) {
       .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }))
   );
 
-  if (!files.length) {
+  if (files.length === 0) {
     ctx.log.warn('No metadata files found, skipping metadata upload.');
     return;
   }

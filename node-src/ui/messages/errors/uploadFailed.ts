@@ -8,9 +8,9 @@ const encode = (path: string) => path.split('/').map(encodeURIComponent).join('/
 
 export function uploadFailed({ target }: { target: FileDesc & TargetInfo }, debug = false) {
   const diagnosis =
-    encode(target.targetPath) !== target.targetPath
-      ? 'It seems the file path may contain illegal characters.'
-      : 'The file may have been modified during the upload process.';
+    encode(target.targetPath) === target.targetPath
+      ? 'The file may have been modified during the upload process.'
+      : 'It seems the file path may contain illegal characters.';
   const message = dedent(chalk`
     ${icon} Failed to upload {bold ${target.localPath}} to {bold ${target.targetPath}}
     ${diagnosis}

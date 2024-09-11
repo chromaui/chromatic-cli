@@ -7,8 +7,8 @@ it('strips off envPairs', () => {
   let err;
   try {
     execSync('some hot garbage', { stdio: 'ignore' });
-  } catch (e) {
-    err = e;
+  } catch (err_) {
+    err = err_;
   }
   expect((errorSerializer(err) as any).envPairs).toBeUndefined();
 });

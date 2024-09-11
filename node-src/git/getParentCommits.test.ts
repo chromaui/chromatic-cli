@@ -56,7 +56,7 @@ function expectCommitsToEqualNames(hashes, names, { commitMap }) {
 
 async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
   process.chdir(dirname);
-  await runGit(`git checkout ${branch !== 'HEAD' ? `-B ${branch}` : ''} ${commitMap[name].hash}`);
+  await runGit(`git checkout ${branch === 'HEAD' ? '' : `-B ${branch}`} ${commitMap[name].hash}`);
 
   return commitMap[name].hash;
 }
@@ -77,7 +77,7 @@ const repositories: Record<string, Repository> = {};
 beforeAll(async () => {
   await Promise.all(
     Object.keys(descriptions).map(async (key) => {
-      const dirname = (await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` })).path;
+      const { path: dirname } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` });
       const runGit = makeRunGit(dirname);
       const commitMap = await generateGitRepository(runGit, descriptions[key]);
       repositories[key] = { dirname, runGit, commitMap };

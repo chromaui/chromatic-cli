@@ -87,7 +87,7 @@ export async function getDependentStoryFiles(
     const newPath = normalizePath(posixPath, rootPath, baseDir);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
-      ? newPath.replace(URL_PARAM_REGEX, '')
+      ? newPath.replaceAll(URL_PARAM_REGEX, '')
       : newPath;
   };
 
@@ -99,20 +99,22 @@ export async function getDependentStoryFiles(
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
-  const storiesEntryFiles = [
-    // v6 store (SB <= 6.3)
-    `${storybookConfigDir}/generated-stories-entry.js`,
-    // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
-    `./generated-stories-entry.js`,
-    // v6 store with .cjs extension (SB 6.5)
-    `./generated-stories-entry.cjs`,
-    // v7 store (SB >= 6.4)
-    `./storybook-stories.js`,
-    // vite builder
-    `/virtual:/@storybook/builder-vite/vite-app.js`,
-    // rspack builder
-    `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
-  ].map(normalize);
+  const storiesEntryFiles = new Set(
+    [
+      // v6 store (SB <= 6.3)
+      `${storybookConfigDir}/generated-stories-entry.js`,
+      // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
+      `./generated-stories-entry.js`,
+      // v6 store with .cjs extension (SB 6.5)
+      `./generated-stories-entry.cjs`,
+      // v7 store (SB >= 6.4)
+      `./storybook-stories.js`,
+      // vite builder
+      `/virtual:/@storybook/builder-vite/vite-app.js`,
+      // rspack builder
+      `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
+    ].map(normalize)
+  );
 
   const modulesByName = new Map<NormalizedName, Module>();
   const nodeModules = new Map<string, NormalizedName[]>();
@@ -145,7 +147,7 @@ export async function getDependentStoryFiles(
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
       reasonsById.set(mod.id, normalizedReasons);
 
-      if (reasonsById.get(mod.id).some((reason) => storiesEntryFiles.includes(reason))) {
+      if (reasonsById.get(mod.id).some((reason) => storiesEntryFiles.has(reason))) {
         csfGlobsByName.add(normalizedName);
       }
     });
@@ -155,7 +157,7 @@ export async function getDependentStoryFiles(
     // does not use configDir in the entry file path so there's no fix to recommend there.
     const storiesEntryRegExp = /^(.+\/)?generated-stories-entry\.js$/;
     const foundEntry = stats.modules.find(
-      (mod) => storiesEntryRegExp.test(mod.name) && !storiesEntryFiles.includes(normalize(mod.name))
+      (mod) => storiesEntryRegExp.test(mod.name) && !storiesEntryFiles.has(normalize(mod.name))
     );
     const entryFile = foundEntry && normalize(foundEntry.name);
     ctx.log.error(noCSFGlobs({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLayer }));
@@ -164,7 +166,7 @@ export async function getDependentStoryFiles(
 
   const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);
   const isStorybookFile = (name: string) =>
-    name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.includes(name);
+    name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.has(name);
   const isStaticFile = (name: string) =>
     staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
 
@@ -199,8 +201,8 @@ export async function getDependentStoryFiles(
     baseDir,
     storybookDir,
     staticDirs,
-    globs: Array.from(csfGlobsByName),
-    modules: Array.from(modulesByName.keys()),
+    globs: [...csfGlobsByName],
+    modules: [...modulesByName.keys()],
     tracedFiles,
     tracedPaths,
     affectedModuleIds,
@@ -268,7 +270,7 @@ export async function getDependentStoryFiles(
   }
   const affectedModules = Object.fromEntries(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
-    Array.from(affectedModuleIds).map((id) => [String(id), files(namesById.get(id))])
+    [...affectedModuleIds].map((id) => [String(id), files(namesById.get(id))])
   );
 
   if (ctx.options.traceChanged) {

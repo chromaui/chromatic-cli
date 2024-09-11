@@ -26,8 +26,8 @@ export async function waitForSentinel(ctx: Context, { name, url }: { name: strin
           return bail(new Error(`Sentinel file '${name}' not OK.`));
         }
         ctx.log.debug(`Sentinel file '${name}' OK.`);
-      } catch (e) {
-        const { message, response = {} } = e;
+      } catch (err) {
+        const { message, response = {} } = err;
         if (response.status === 403) {
           return bail(new Error('Provided signature expired.'));
         }

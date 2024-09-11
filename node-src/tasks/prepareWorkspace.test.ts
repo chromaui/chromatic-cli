@@ -72,7 +72,7 @@ describe('runPrepareWorkspace', () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
-    installDependencies.mockRejectedValue(new Error(''));
+    installDependencies.mockRejectedValue(new Error('some error'));
     const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
 
     await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(

@@ -32,7 +32,7 @@ export const Invalid = () =>
     buildLogFile: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log',
   } as any);
 
-export const Tracing = () => tracing({ git: { changedFiles: new Array(3) } } as any);
+export const Tracing = () => tracing({ git: { changedFiles: Array.from({ length: 3 }) } } as any);
 
 export const BailedPackageFile = () =>
   bailed({ turboSnap: { bailReason: { changedPackageFiles: ['package.json'] } } } as any);
@@ -60,8 +60,8 @@ export const Finalizing = () => finalizing();
 export const Success = () =>
   success({
     now: 0,
-    startedAt: -54321,
-    uploadedBytes: 1234567,
+    startedAt: -54_321,
+    uploadedBytes: 1_234_567,
     uploadedFiles: 42,
     fileInfo: { paths: { length: 42 } },
   } as any);
@@ -69,8 +69,8 @@ export const Success = () =>
 export const SuccessSkippedFiles = () =>
   success({
     now: 0,
-    startedAt: -54321,
-    uploadedBytes: 1234567,
+    startedAt: -54_321,
+    uploadedBytes: 1_234_567,
     uploadedFiles: 42,
     fileInfo: { paths: { length: 100 } },
   } as any);

@@ -78,7 +78,7 @@ export const generateReport = async (ctx: Context) => {
     typeof junitReport === 'boolean' && junitReport
       ? 'chromatic-build-{buildNumber}.xml'
       : junitReport;
-  ctx.reportPath = path.resolve(file.replace(/{buildNumber}/g, String(buildNumber)));
+  ctx.reportPath = path.resolve(file.replaceAll('{buildNumber}', String(buildNumber)));
 
   const {
     app: { build },
@@ -104,7 +104,7 @@ export const generateReport = async (ctx: Context) => {
     const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
     const testCase = suite
       .testCase()
-      .className(spec.component.name.replace(/[|/]/g, '.')) // transform story path to class path
+      .className(spec.component.name.replaceAll(/[|/]/g, '.')) // transform story path to class path
       .name(`${spec.name} ${suffix}`);
 
     switch (status) {

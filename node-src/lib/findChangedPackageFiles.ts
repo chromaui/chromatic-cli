@@ -20,8 +20,7 @@ const isEqual = (left: unknown = {}, right: unknown = {}) => {
   }
 
   // depends on always having consistent ordering of keys
-  for (let i = 0; i < entriesA.length; i++) {
-    const [keyA, valueA] = entriesA[i];
+  for (const [i, [keyA, valueA]] of entriesA.entries()) {
     const [keyB, valueB] = entriesB[i];
 
     // values might be objects, so recursively compare
@@ -69,7 +68,7 @@ const getManifestFilesWithChangedDependencies = async (manifestFiles: string[], 
         const base = await readGitFile(fileName, commit);
         const head = await readGitFile(fileName);
         return arePackageDependenciesEqual(JSON.parse(base), JSON.parse(head)) ? [] : [fileName];
-      } catch (_err) {
+      } catch {
         // Consider the dependencies changed if we failed to compare files.
         return [fileName];
       }
@@ -90,5 +89,5 @@ export const findChangedPackageFiles = async (
     })
   );
   // Remove duplicate entries (in case multiple ancestor builds changed the same package.json)
-  return Array.from(new Set(changedManifestFiles.flat()));
+  return [...new Set(changedManifestFiles.flat())];
 };
