@@ -27,8 +27,6 @@ export const setSourceDir = async (ctx: Context) => {
   }
 };
 
-// TODO: refactor this function
-// eslint-disable-next-line complexity
 export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
