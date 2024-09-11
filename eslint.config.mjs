@@ -129,8 +129,7 @@ export default [
       'unicorn/catch-error-name': [
         'error',
         {
-          name: 'err',
-          ignore: ['^err.*$'],
+          ignore: ['err'],
         },
       ],
       'unicorn/switch-case-braces': 'off',
