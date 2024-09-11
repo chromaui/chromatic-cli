@@ -108,13 +108,13 @@ export async function getUncommittedHash() {
   const listUntrackedFiles = 'git ls-files --others --exclude-standard';
   const listUncommittedFiles = [listStagedFiles, listUnstagedFiles, listUntrackedFiles].join(';');
 
-  let uncommittedHash = await execGitCommand(
+  const uncommittedHashWithPadding = await execGitCommand(
     // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
     // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
     // stdin to avoid the limit on command line arguments.
     `(${listUncommittedFiles}) | git hash-object --stdin-paths | git hash-object --stdin`
   );
-  uncommittedHash = uncommittedHash.trim();
+  const uncommittedHash = uncommittedHashWithPadding.trim();
 
   // In case there are no uncommited changes (empty list), we always get this same hash.
   const noChangesHash = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391';
