@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+import path from 'path';
 import semver from 'semver';
 import slash from 'slash';
 
@@ -51,16 +51,16 @@ function getPathsInDir(ctx: Context, rootDir: string, dirname = '.'): PathSpec[]
   }
 
   try {
-    return readdirSync(join(rootDir, dirname)).flatMap((p: string) => {
-      const pathname = join(dirname, p);
-      const stats = statSync(join(rootDir, pathname));
+    return readdirSync(path.join(rootDir, dirname)).flatMap((p: string) => {
+      const pathname = path.join(dirname, p);
+      const stats = statSync(path.join(rootDir, pathname));
       return stats.isDirectory()
         ? getPathsInDir(ctx, rootDir, pathname)
         : [{ pathname, contentLength: stats.size }];
     });
-  } catch (e) {
-    ctx.log.debug(e);
-    throw new Error(invalid({ sourceDir: rootDir } as any, e).output);
+  } catch (err) {
+    ctx.log.debug(err);
+    throw new Error(invalid({ sourceDir: rootDir } as any, err).output);
   }
 }
 
@@ -80,7 +80,7 @@ function getFileInfo(ctx: Context, sourceDir: string) {
   const paths: string[] = [];
   let statsPath: string;
   for (const { knownAs } of lengths) {
-    if (knownAs.endsWith('preview-stats.json')) statsPath = join(sourceDir, knownAs);
+    if (knownAs.endsWith('preview-stats.json')) statsPath = path.join(sourceDir, knownAs);
     else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
   }
   return { lengths, paths, statsPath, total };
@@ -101,8 +101,8 @@ export const validateFiles = async (ctx: Context) => {
         ctx.sourceDir = outputDir;
         ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
       }
-    } catch (e) {
-      ctx.log.debug(e);
+    } catch (err) {
+      ctx.log.debug(err);
     }
   }
 
@@ -141,9 +141,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       if (changedDependencyNames) {
         ctx.git.changedDependencyNames = changedDependencyNames;
         if (!ctx.options.interactive) {
-          const list = changedDependencyNames.length
-            ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
-            : '';
+          const list =
+            changedDependencyNames.length > 0
+              ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
+              : '';
           ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
         }
       } else {
@@ -172,7 +173,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     if (onlyStoryFiles) {
       // Escape special characters in the filename so it does not conflict with picomatch
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
-        key.replace(SPECIAL_CHARS_REGEXP, '\\$1')
+        key.replaceAll(SPECIAL_CHARS_REGEXP, '\\$1')
       );
 
       if (!ctx.options.interactive) {
@@ -183,7 +184,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
               .join('\n')}`
           );
         }
-        if (ctx.untracedFiles && ctx.untracedFiles.length) {
+        if (ctx.untracedFiles && ctx.untracedFiles.length > 0) {
           ctx.log.info(
             `Encountered ${ctx.untracedFiles.length} untraced files:\n${ctx.untracedFiles
               .map((f) => `  ${f}`)
@@ -225,11 +226,11 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(starting)(ctx, task);
 
-  const files = ctx.fileInfo.paths.map<FileDesc>((path) => ({
-    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[path] }),
-    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === path).contentLength,
-    localPath: join(ctx.sourceDir, path),
-    targetPath: path,
+  const files = ctx.fileInfo.paths.map<FileDesc>((filePath) => ({
+    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
+    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === filePath).contentLength,
+    localPath: path.join(ctx.sourceDir, filePath),
+    targetPath: filePath,
   }));
 
   await uploadBuild(ctx, files, {

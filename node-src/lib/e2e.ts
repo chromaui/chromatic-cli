@@ -7,6 +7,9 @@ import { exitCodes, setExitCode } from './setExitCode';
 
 export const buildBinName = 'build-archive-storybook';
 
+const quote = (arg: string) =>
+  !arg.startsWith('--') && arg.includes(' ') ? JSON.stringify(arg) : arg;
+
 // ni doesn't currently have a "exec" command (equivalent to `npm exec`).
 // It has a "download & exec" command (equivalent to `npx`).
 // We should probably PR this up to ni
@@ -19,9 +22,6 @@ const parseNexec = ((agent, args) => {
     'pnpm@6': 'pnpm exec {0}',
     bun: 'bun run {0}',
   };
-
-  const quote = (arg: string) =>
-    !arg.startsWith('--') && arg.includes(' ') ? JSON.stringify(arg) : arg;
 
   const command = map[agent];
   return command.replace('{0}', args.map(quote).join(' ')).trim();

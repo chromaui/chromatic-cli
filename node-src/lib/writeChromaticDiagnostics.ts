@@ -12,9 +12,11 @@ export function getDiagnostics(ctx: Context) {
   const data = redact(rest, 'projectToken', 'reportToken', 'userToken');
 
   // Sort top-level fields alphabetically
-  return Object.keys(data)
-    .sort((a, b) => a.localeCompare(b))
-    .reduce((acc, key) => ({ ...acc, [key]: data[key] }), {});
+  return Object.fromEntries(
+    Object.keys(data)
+      .sort((a, b) => a.localeCompare(b))
+      .map((key) => [key, data[key]])
+  );
 }
 
 // Extract important information from ctx, sort it and output into a json file

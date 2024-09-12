@@ -25,7 +25,7 @@ export default function fatalError(
   const { scripts = {} } = packageJson;
   const email = link(pkg.bugs.email);
   const website = link(pkg.docs);
-  const errors = [].concat(error);
+  const errors = [error].flat();
 
   const {
     git,
@@ -77,7 +77,7 @@ export default function fatalError(
   const stacktraces = errors.map((err) => err.stack).filter(Boolean);
   return [
     errors.map((err) => err.message).join('\n'),
-    stacktraces.length
+    stacktraces.length > 0
       ? chalk`{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}\n`
       : '',
     dedent(chalk`
@@ -87,6 +87,6 @@ export default function fatalError(
       Please provide us with the above CLI output and the following info:
     `),
     chalk`{bold ${JSON.stringify(debugInfo, null, 2)}}`,
-    stacktraces.length ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : '',
+    stacktraces.length > 0 ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : '',
   ].join('\n');
 }

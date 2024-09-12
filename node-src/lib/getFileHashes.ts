@@ -1,6 +1,6 @@
 import { close, open, read } from 'fs';
 import pLimit from 'p-limit';
-import { join } from 'path';
+import path from 'path';
 import xxHashWasm, { XXHash, XXHashAPI } from 'xxhash-wasm';
 
 const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<string> => {
@@ -64,7 +64,7 @@ export const getFileHashes = async (files: string[], dir: string, concurrency: n
 
   const hashes = await Promise.all(
     buffers.map(([buffer, file]) =>
-      limit(async () => [file, await hashFile(buffer, join(dir, file), xxhash)] as const)
+      limit(async () => [file, await hashFile(buffer, path.join(dir, file), xxhash)] as const)
     )
   );
 

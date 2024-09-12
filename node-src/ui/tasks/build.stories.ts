@@ -15,7 +15,7 @@ export const Building = () => pending({ buildCommand } as any);
 export const Built = () =>
   success({
     now: 0,
-    startedAt: -32100,
+    startedAt: -32_100,
     buildLogFile: '/users/me/project/build-storybook.log',
   } as any);
 

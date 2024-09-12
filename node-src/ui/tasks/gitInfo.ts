@@ -9,7 +9,7 @@ const infoMessage = (
 ) => {
   const turboSnapStatus = turboSnap.bailReason ? '; TurboSnap disabled' : '';
   const branchName = ownerName ? `${ownerName}:${branch}` : branch;
-  let message = `Commit '${commit.substr(0, 7)}' on branch '${branchName}'`;
+  let message = `Commit '${commit.slice(0, 7)}' on branch '${branchName}'`;
   if (parentCommits.length > 0) {
     message += `; found ${pluralize('parent build', parentCommits.length, true)}`;
     if (changedFiles) {
@@ -33,13 +33,13 @@ export const pending = () => ({
 export const skippingBuild = (ctx: Context) => ({
   status: 'pending',
   title: 'Skipping build',
-  output: `Skipping build for commit ${ctx.git.commit.substr(0, 7)}`,
+  output: `Skipping build for commit ${ctx.git.commit.slice(0, 7)}`,
 });
 
 export const skippedForCommit = (ctx: Context) => ({
   status: 'success',
   title: 'Skipping build',
-  output: `Skipped build for commit ${ctx.git.commit.substr(0, 7)} due to --skip`,
+  output: `Skipped build for commit ${ctx.git.commit.slice(0, 7)} due to --skip`,
 });
 
 export const skipFailed = () => ({

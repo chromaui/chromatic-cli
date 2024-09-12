@@ -36,8 +36,8 @@ export const getDependencies = async (
       strictOutOfSync
     );
     return flattenDependencyTree(headTree.dependencies);
-  } catch (e) {
+  } catch (err) {
     ctx.log.debug({ rootPath, manifestPath, lockfilePath }, 'Failed to get dependencies');
-    throw e;
+    throw err;
   }
 };

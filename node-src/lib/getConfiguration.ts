@@ -57,7 +57,7 @@ export async function getConfiguration(
     return { configFile: usedConfigFile, ...configuration };
   } catch (err) {
     // Config file does not exist
-    if (err.message.match(/ENOENT/)) {
+    if (/ENOENT/.test(err.message)) {
       // The user passed no configFile option so it's OK for the file not to exist
       if (!configFile) {
         return {};
@@ -67,10 +67,10 @@ export async function getConfiguration(
       }
     }
     if (err instanceof SyntaxError) {
-      throw new Error(unparseableConfigurationFile(usedConfigFile, err));
+      throw new TypeError(unparseableConfigurationFile(usedConfigFile, err));
     }
     if (err instanceof ZodError) {
-      throw new Error(invalidConfigurationFile(usedConfigFile, err));
+      throw new TypeError(invalidConfigurationFile(usedConfigFile, err));
     }
     throw err;
   }

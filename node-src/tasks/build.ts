@@ -42,18 +42,13 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
   ].filter(Boolean);
 
-  if (isE2EBuild(ctx.options)) {
-    ctx.buildCommand = await getE2EBuildCommand(
-      ctx,
-      ctx.options.playwright ? 'playwright' : 'cypress',
-      buildCommandOptions
-    );
-  } else {
-    ctx.buildCommand = await getPackageManagerRunCommand([
-      ctx.options.buildScriptName,
-      ...buildCommandOptions,
-    ]);
-  }
+  ctx.buildCommand = await (isE2EBuild(ctx.options)
+    ? getE2EBuildCommand(
+        ctx,
+        ctx.options.playwright ? 'playwright' : 'cypress',
+        buildCommandOptions
+      )
+    : getPackageManagerRunCommand([ctx.options.buildScriptName, ...buildCommandOptions]));
 };
 
 const timeoutAfter = (ms) =>
@@ -128,12 +123,12 @@ export const buildStorybook = async (ctx: Context) => {
       env: { CI: '1', NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
-  } catch (e) {
+  } catch (err) {
     // If we tried to run the E2E package's bin directly (due to being in the action)
     // and it failed, that means we couldn't find it. This probably means they haven't
     // installed the right dependency or run from the right directory
     if (isE2EBuild(ctx.options)) {
-      const errorInfo = e2eBuildErrorMessage(e, process.cwd(), ctx);
+      const errorInfo = e2eBuildErrorMessage(err, process.cwd(), ctx);
       ctx.log.error(errorInfo.message);
       setExitCode(ctx, errorInfo.exitCode, true);
       throw new Error(failed(ctx).output);
@@ -142,7 +137,7 @@ export const buildStorybook = async (ctx: Context) => {
     signal?.throwIfAborted();
 
     const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
-    ctx.log.error(buildFailed(ctx, e, buildLog));
+    ctx.log.error(buildFailed(ctx, err, buildLog));
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(failed(ctx).output);
   } finally {

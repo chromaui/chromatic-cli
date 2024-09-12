@@ -10,7 +10,7 @@ export const invalidConfigurationFile = (configFile: string, err: ZodError) => {
   return dedent(chalk`
     ${error} Configuration file {bold ${configFile}} was invalid, please check the allowed keys.
     ${
-      formErrors.length
+      formErrors.length > 0
         ? `\n${formErrors.map((msg) => chalk`- {bold ${msg}}`).join('\n    ')}\n\n`
         : ''
     }

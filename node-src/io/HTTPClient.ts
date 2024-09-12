@@ -60,14 +60,14 @@ export default class HTTPClient {
   async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
     let agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
 
-    if (this.env.CHROMATIC_DNS_SERVERS.length) {
+    if (this.env.CHROMATIC_DNS_SERVERS.length > 0) {
       this.log.debug(`Using custom DNS servers: ${this.env.CHROMATIC_DNS_SERVERS.join(', ')}`);
       dns.setServers(this.env.CHROMATIC_DNS_SERVERS);
       agent = getDNSResolveAgent();
     }
 
     // The user can override retries and set it to 0
-    const retries = typeof opts.retries !== 'undefined' ? opts.retries : this.retries;
+    const retries = opts.retries === undefined ? this.retries : opts.retries;
     const onRetry = (err, n) => {
       this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
       // node-fetch includes ENOTFOUND in the message, but undici (native fetch in ts-node) doesn't.
@@ -75,7 +75,7 @@ export default class HTTPClient {
         if (!agent) {
           this.log.warn('Fetch failed due to DNS lookup; switching to custom DNS resolver');
           agent = getDNSResolveAgent();
-        } else if (this.env.CHROMATIC_DNS_FAILOVER_SERVERS.length) {
+        } else if (this.env.CHROMATIC_DNS_FAILOVER_SERVERS.length > 0) {
           this.log.warn('Fetch failed due to DNS lookup; switching to failover DNS servers');
           dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_SERVERS);
         }

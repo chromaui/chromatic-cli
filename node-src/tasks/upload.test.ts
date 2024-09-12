@@ -278,7 +278,9 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue(deps);
-    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(new Error())));
+    accessMock.mockImplementation((_path, callback) =>
+      Promise.resolve(callback(new Error('some error')))
+    );
 
     const ctx = {
       env,
@@ -576,7 +578,7 @@ describe('uploadStorybook', () => {
       expect.objectContaining({ body: expect.any(FormData), method: 'POST' }),
       expect.objectContaining({ retries: 0 })
     );
-    expect(ctx.uploadedBytes).toBe(500500);
+    expect(ctx.uploadedBytes).toBe(500_500);
     expect(ctx.uploadedFiles).toBe(1001);
   });
 

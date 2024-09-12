@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import pLimit from 'p-limit';
-import * as path from 'path';
+import path from 'path';
 
 import { getRepositoryRoot } from '../git/git';
 import { Context, Stats } from '../types';
@@ -40,7 +40,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
         });
       })
     );
-  } catch (_err) {
+  } catch {
     ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDir}`);
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(invalidStorybookBaseDir());

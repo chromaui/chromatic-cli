@@ -5,7 +5,7 @@ import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement
 
 vi.mock('./git', () => ({
   getChangedFiles: (hash) => {
-    if (hash.match(/exists/)) return ['changed', 'files'];
+    if (/exists/.test(hash)) return ['changed', 'files'];
     throw new Error(`fatal: bad object ${hash}`);
   },
   commitExists: (hash) => hash.match(/exists/),

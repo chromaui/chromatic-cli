@@ -77,7 +77,7 @@ vi.mock('node-fetch', () => ({
         const data = JSON.parse(body);
         query = data.query;
         variables = data.variables;
-      } catch (_err) {
+      } catch {
         // Do nothing
       }
 
@@ -174,7 +174,7 @@ vi.mock('node-fetch', () => ({
       if (query?.match('SnapshotBuildQuery')) {
         return {
           data: {
-            app: { build: { status: 'PENDING', changeCount: 1, completedAt: 12345 } },
+            app: { build: { status: 'PENDING', changeCount: 1, completedAt: 12_345 } },
           },
         };
       }
@@ -198,7 +198,7 @@ vi.mock('node-fetch', () => ({
                   status: 'PASSED',
                   commit: 'baseline',
                   committedAt: 1234,
-                  completedAt: 12345,
+                  completedAt: 12_345,
                   changeCount: 1,
                 },
               ],

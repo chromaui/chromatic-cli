@@ -26,7 +26,7 @@ const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
 const commitInfo = {
   commit: '123asdf',
-  committedAt: 1640131292,
+  committedAt: 1_640_131_292,
   committerName: 'Gert Hengeveld',
   committerEmail: 'gert@chromatic.com',
   branch: 'something',

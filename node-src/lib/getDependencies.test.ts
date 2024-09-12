@@ -19,7 +19,7 @@ describe('getDependencies', () => {
     const [dep] = dependencies;
     expect(dep).toMatch(/^[\w@/-]+@@[\d.]+$/);
 
-    const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         ...Object.keys(packageJson.dependencies),
@@ -35,7 +35,7 @@ describe('getDependencies', () => {
       lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock'),
     });
 
-    const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         ...Object.keys(packageJson.dependencies),
@@ -54,7 +54,7 @@ describe('getDependencies', () => {
       lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock'),
     });
 
-    const dependencyNames = Array.from(dependencies).map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         // @see https://github.com/chromaui/chromatic-cli/blob/e61c2688597a6fda61a7057c866ebfabde955784/package.json#L75-L170

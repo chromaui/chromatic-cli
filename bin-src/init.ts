@@ -30,8 +30,8 @@ export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath
       },
     };
     await writeFile(packagePath, json, { spaces: 2 });
-  } catch (e) {
-    console.warn(e);
+  } catch (err) {
+    console.warn(err);
   }
 };
 

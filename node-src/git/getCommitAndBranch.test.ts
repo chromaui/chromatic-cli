@@ -24,7 +24,7 @@ beforeEach(() => {
   getBranch.mockResolvedValue('main');
   getCommit.mockResolvedValue({
     commit: '48e0c83fadbf504c191bc868040b7a969a4f1feb',
-    committedAt: 1640094096000,
+    committedAt: 1_640_094_096_000,
     committerName: 'GitHub',
     committerEmail: 'noreply@github.com',
   });
@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 const commitInfo = {
-  committedAt: 1640131292,
+  committedAt: 1_640_131_292,
   committerName: 'Gert Hengeveld',
   committerEmail: 'gert@chromatic.com',
 };
@@ -51,7 +51,7 @@ describe('getCommitAndBranch', () => {
     expect(info).toMatchObject({
       branch: 'main',
       commit: '48e0c83fadbf504c191bc868040b7a969a4f1feb',
-      committedAt: 1640094096000,
+      committedAt: 1_640_094_096_000,
       committerName: 'GitHub',
       committerEmail: 'noreply@github.com',
       slug: undefined,

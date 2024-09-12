@@ -18,12 +18,12 @@ async function generateCommit(
   [name, parentNames]: Line,
   commitMap: CommitMap
 ) {
-  const parentCommits = []
-    .concat(parentNames)
-    .filter((parentName) => commitMap[parentName])
-    .map((parentName) => commitMap[parentName].hash);
+  const parentCommits = [parentNames]
+    .flat()
+    .filter((parentName) => parentName && commitMap[parentName])
+    .map((parentName) => parentName && commitMap[parentName].hash);
 
-  const randomBranchName = `temp-${Math.random().toString().substring(2)}`;
+  const randomBranchName = `temp-${Math.random().toString().slice(2)}`;
   const commitEnv = `GIT_COMMITTER_DATE='${nextDate()}'`;
   // No parent, check out nothing
   if (parentCommits.length === 0) {
@@ -34,15 +34,14 @@ async function generateCommit(
     await runGit(`git checkout ${parentCommits[0]}`);
 
     // If more parents, create merge commit
-    if (parentCommits.length > 1) {
-      await runGit(`${commitEnv} git merge -m ${name} ${parentCommits.slice(1).join(' ')}`);
-    } else {
-      await runGit(`${commitEnv} git commit -m ${name} --allow-empty`);
-    }
+    await (parentCommits.length > 1
+      ? runGit(`${commitEnv} git merge -m ${name} ${parentCommits.slice(1).join(' ')}`)
+      : runGit(`${commitEnv} git commit -m ${name} --allow-empty`));
   }
-  const [hash, committedAt] = (await runGit(`git show --format=%H,%ct`)).stdout.trim().split(',');
+  const gitShowStr = await runGit(`git show --format=%H,%ct`);
+  const [hash, committedAt] = gitShowStr.stdout.trim().split(',');
 
-  return { hash, committedAt: parseInt(committedAt, 10) };
+  return { hash, committedAt: Number.parseInt(committedAt, 10) };
 }
 
 // Take a repository description in the following format:

@@ -4,7 +4,7 @@ import { dedent } from 'ts-dedent';
 import { info } from '../../components/icons';
 
 function commit(build) {
-  return build.commit.substr(0, 7);
+  return build.commit.slice(0, 7);
 }
 
 export default ({ replacedBuild, replacementBuild }) =>

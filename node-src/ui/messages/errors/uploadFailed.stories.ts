@@ -5,7 +5,7 @@ export default {
 };
 
 const target = {
-  contentLength: 12345,
+  contentLength: 12_345,
   localPath: 'local/path/to/file.js',
   targetPath: 'file.js',
   contentType: 'text/javascript',

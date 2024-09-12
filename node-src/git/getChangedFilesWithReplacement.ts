@@ -34,7 +34,7 @@ export async function getChangedFilesWithReplacement(
       `Got error fetching commit for #${build.number}(${build.commit}): ${err.message}`
     );
 
-    if (err.message.match(/(bad object|uncommitted changes)/)) {
+    if (/(bad object|uncommitted changes)/.test(err.message)) {
       const replacementBuild = await findAncestorBuildWithCommit(context, build.number);
 
       if (replacementBuild) {

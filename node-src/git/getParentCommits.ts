@@ -107,7 +107,8 @@ async function nextCommits(
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
   log.debug(`running ${command}`);
-  const commits = (await execGitCommand(command)).split('\n').filter(Boolean);
+  const commitsString = await execGitCommand(command);
+  const commits = commitsString.split('\n').filter(Boolean);
   log.debug(`command output: ${commits}`);
 
   // Later on we want to know which commits we visited on the way to finding the ancestor commits
@@ -190,7 +191,8 @@ async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
   log.debug(`running ${command}`);
-  const maxCommits = (await execGitCommand(command)).split('\n').filter(Boolean);
+  const maxCommitsString = await execGitCommand(command);
+  const maxCommits = maxCommitsString.split('\n').filter(Boolean);
   log.debug(`command output: ${maxCommits}`);
 
   return maxCommits;

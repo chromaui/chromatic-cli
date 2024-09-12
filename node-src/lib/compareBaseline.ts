@@ -3,7 +3,7 @@ import { getDependencies } from './getDependencies';
 
 // Retrieve a set of values which is in either set, but not both.
 const xor = <T>(left: Set<T>, right: Set<T>) =>
-  Array.from(right.values()).reduce((acc, value) => {
+  [...right.values()].reduce((acc, value) => {
     if (acc.has(value)) acc.delete(value);
     else acc.add(value);
     return acc;

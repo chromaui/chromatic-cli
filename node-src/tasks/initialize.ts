@@ -31,7 +31,7 @@ export const setEnvironment = async (ctx: Context) => {
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
   ctx.environment = Object.entries(process.env).reduce((acc, [key, value]) => {
-    if (ctx.env.ENVIRONMENT_WHITELIST.find((regex) => key.match(regex))) {
+    if (ctx.env.ENVIRONMENT_WHITELIST.some((regex) => key.match(regex))) {
       acc[key] = value;
     }
     return acc;
@@ -51,8 +51,8 @@ export const setRuntimeMetadata = async (ctx: Context) => {
     ctx.runtimeMetadata.packageManager = packageManager as any;
     const packageManagerVersion = await getPackageManagerVersion(packageManager);
     ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
-  } catch (e) {
-    ctx.log.debug(`Failed to set runtime metadata: ${e.message}`);
+  } catch (err) {
+    ctx.log.debug(`Failed to set runtime metadata: ${err.message}`);
   }
 };
 

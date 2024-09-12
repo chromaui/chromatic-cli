@@ -37,9 +37,9 @@ export default async function checkForUpdates(ctx: Context) {
       return;
     }
     latestVersion = distTags.latest;
-  } catch (e) {
+  } catch (err) {
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
-    ctx.log.warn(e);
+    ctx.log.warn(err);
     return;
   }
 

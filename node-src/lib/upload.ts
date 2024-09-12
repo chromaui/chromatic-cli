@@ -120,7 +120,7 @@ export async function uploadBuild(
       }
     );
 
-    if (uploadBuild.userErrors.length) {
+    if (uploadBuild.userErrors.length > 0) {
       uploadBuild.userErrors.forEach((e) => {
         if (e.__typename === 'MaxFileCountExceededError') {
           ctx.log.error(maxFileCountExceeded(e));
@@ -148,7 +148,7 @@ export async function uploadBuild(
     }
   }
 
-  if (!targets.length) {
+  if (targets.length === 0) {
     ctx.log.debug('No new files to upload, continuing');
     return;
   }
@@ -176,10 +176,10 @@ export async function uploadBuild(
     await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, totalBytes));
     ctx.uploadedBytes += totalBytes;
     ctx.uploadedFiles += targets.length;
-  } catch (e) {
-    const target = targets.find((target) => target.localPath === e.message);
+  } catch (err) {
+    const target = targets.find((target) => target.localPath === err.message);
     if (target) ctx.log.error(uploadFailed({ target }, ctx.log.getLevel() === 'debug'));
-    return options.onError?.(e, target.localPath);
+    return options.onError?.(err, target.localPath);
   }
 }
 
@@ -236,7 +236,7 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
     await uploadFiles(ctx, targets);
   }
 
-  if (uploadMetadata.userErrors.length) {
+  if (uploadMetadata.userErrors.length > 0) {
     uploadMetadata.userErrors.forEach((e) => ctx.log.warn(e.message));
   }
 }

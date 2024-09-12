@@ -7,7 +7,7 @@ import link from '../../components/link';
 
 const changelogUrl = 'https://github.com/chromaui/chromatic-cli/blob/main/CHANGELOG.md';
 
-const snakify = (option: string) => `--${option.replace(/[A-Z]/g, '-$&').toLowerCase()}`;
+const snakify = (option: string) => `--${option.replaceAll(/[A-Z]/g, '-$&').toLowerCase()}`;
 
 export default ({ flag, replacement }: { flag: keyof Flags; replacement?: keyof Flags }) =>
   dedent(chalk`

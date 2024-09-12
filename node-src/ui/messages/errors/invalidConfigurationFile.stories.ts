@@ -12,8 +12,8 @@ try {
     a: z.string(),
     b: z.number(),
   }).parse({ a: 1, b: '1' });
-} catch (aErr) {
-  err = aErr;
+} catch (error) {
+  err = error;
 }
 
 export const InvalidConfigurationFile = () => invalidConfigurationFile('./my.config.json', err);

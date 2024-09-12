@@ -7,8 +7,8 @@ export default {
 let err;
 try {
   JSON.parse('foo');
-} catch (aErr) {
-  err = aErr;
+} catch (error) {
+  err = error;
 }
 
 export const UnparseableConfigurationFile = () =>

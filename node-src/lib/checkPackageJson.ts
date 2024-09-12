@@ -38,7 +38,7 @@ export default async function checkPackageJson({
       log.info('');
       log.info(notAddedScript(scriptName, scriptCommand));
     }
-  } catch (e) {
-    log.warn(e);
+  } catch (err) {
+    log.warn(err);
   }
 }

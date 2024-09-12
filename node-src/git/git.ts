@@ -15,7 +15,7 @@ export async function execGitCommand(command: string) {
   try {
     const { all } = await execaCommand(command, {
       env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-      timeout: 20000, // 20 seconds
+      timeout: 20_000, // 20 seconds
       all: true, // interleave stdout and stderr
       shell: true, // we'll deal with escaping ourselves (for now)
     });
@@ -84,13 +84,13 @@ export async function getBranch() {
     // Yields an empty string when in detached HEAD state
     const branch = await execGitCommand('git branch --show-current');
     return branch || 'HEAD';
-  } catch (_err) {
+  } catch {
     try {
       // Git v1.8 and above
       // Throws when in detached HEAD state
       const ref = await execGitCommand('git symbolic-ref HEAD');
       return ref.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
-    } catch (_ex) {
+    } catch {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
       const ref = await execGitCommand('git rev-parse --abbrev-ref HEAD');
@@ -108,14 +108,13 @@ export async function getUncommittedHash() {
   const listUntrackedFiles = 'git ls-files --others --exclude-standard';
   const listUncommittedFiles = [listStagedFiles, listUnstagedFiles, listUntrackedFiles].join(';');
 
-  const uncommittedHash = (
-    await execGitCommand(
-      // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
-      // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
-      // stdin to avoid the limit on command line arguments.
-      `(${listUncommittedFiles}) | git hash-object --stdin-paths | git hash-object --stdin`
-    )
-  ).trim();
+  const uncommittedHashWithPadding = await execGitCommand(
+    // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
+    // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
+    // stdin to avoid the limit on command line arguments.
+    `(${listUncommittedFiles}) | git hash-object --stdin-paths | git hash-object --stdin`
+  );
+  const uncommittedHash = uncommittedHashWithPadding.trim();
 
   // In case there are no uncommited changes (empty list), we always get this same hash.
   const noChangesHash = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391';
@@ -135,7 +134,7 @@ export async function commitExists(commit: string) {
   try {
     await execGitCommand(`git cat-file -e "${commit}^{commit}"`);
     return true;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -153,8 +152,8 @@ export async function getChangedFiles(baseCommit: string, headCommit = '') {
 export async function isUpToDate({ log }: Pick<Context, 'log'>) {
   try {
     await execGitCommand(`git remote update`);
-  } catch (e) {
-    log.warn(e);
+  } catch (err) {
+    log.warn(err);
     return true;
   }
 
@@ -162,8 +161,8 @@ export async function isUpToDate({ log }: Pick<Context, 'log'>) {
   try {
     localCommit = await execGitCommand('git rev-parse HEAD');
     if (!localCommit) throw new Error('Failed to retrieve last local commit hash');
-  } catch (e) {
-    log.warn(e);
+  } catch (err) {
+    log.warn(err);
     return true;
   }
 
@@ -171,8 +170,8 @@ export async function isUpToDate({ log }: Pick<Context, 'log'>) {
   try {
     remoteCommit = await execGitCommand('git rev-parse "@{upstream}"');
     if (!remoteCommit) throw new Error('Failed to retrieve last remote commit hash');
-  } catch (e) {
-    log.warn(e);
+  } catch (err) {
+    log.warn(err);
     return true;
   }
 
@@ -245,7 +244,7 @@ export async function findMergeBase(headRef: string, baseRef: string) {
       return name.replace(/~[0-9]+$/, ''); // Drop the potential suffix
     })
   );
-  const baseRefIndex = branchNames.findIndex((branch) => branch === baseRef);
+  const baseRefIndex = branchNames.indexOf(baseRef);
   return mergeBases[baseRefIndex] || mergeBases[0];
 }
 
@@ -260,7 +259,7 @@ export async function checkoutFile({ log }: Pick<Context, 'log'>, ref: string, f
   if (!fileCache[pathspec]) {
     fileCache[pathspec] = limitConcurrency(async () => {
       const { path: targetFileName } = await tmpFile({
-        postfix: `-${fileName.replace(/\//g, '--')}`,
+        postfix: `-${fileName.replaceAll('/', '--')}`,
       });
       log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
       await execGitCommand(`git show ${pathspec} > ${targetFileName}`);

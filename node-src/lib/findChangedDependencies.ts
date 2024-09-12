@@ -16,7 +16,7 @@ export const findChangedDependencies = async (ctx: Context) => {
   const { packageMetadataChanges } = ctx.git;
   const { untraced = [] } = ctx.options;
 
-  if (!packageMetadataChanges.length) {
+  if (packageMetadataChanges.length === 0) {
     ctx.log.debug('No package metadata changed found');
     return [];
   }
@@ -56,7 +56,7 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   if (rootManifestPath && rootLockfilePath) {
     metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
-  } else if (!metadataPathPairs.length) {
+  } else if (metadataPathPairs.length === 0) {
     throw new Error(`Could not find any pairs of ${PACKAGE_JSON} + ${PACKAGE_LOCK} / ${YARN_LOCK}`);
   }
 
@@ -116,5 +116,5 @@ export const findChangedDependencies = async (ctx: Context) => {
     })
   );
 
-  return Array.from(changedDependencyNames);
+  return [...changedDependencyNames];
 };
