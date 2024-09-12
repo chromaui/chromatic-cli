@@ -27,16 +27,16 @@ export const setSourceDir = async (ctx: Context) => {
   }
 };
 
+// Storybook 8.0.0 deprecated --webpack-stats-json in favor of --stats-json.
+const webpackStatsFlag = (version: string) => {
+  return semver.gte(semver.coerce(version), '8.0.0') ? '--stats-json' : '--webpack-stats-json';
+};
+
 export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
       ? semver.gte(semver.coerce(ctx.storybook.version), '6.2.0')
       : true;
-
-  const webpackStatsFlag =
-    webpackStatsSupported && semver.gte(semver.coerce(ctx.storybook.version), '8.0.0')
-      ? '--stats-json'
-      : '--webpack-stats-json';
 
   if (ctx.git.changedFiles && !webpackStatsSupported) {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
@@ -44,7 +44,9 @@ export const setBuildCommand = async (ctx: Context) => {
 
   const buildCommandOptions = [
     `--output-dir=${ctx.sourceDir}`,
-    ctx.git.changedFiles && webpackStatsSupported && `${webpackStatsFlag}=${ctx.sourceDir}`,
+    ctx.git.changedFiles &&
+      webpackStatsSupported &&
+      `${webpackStatsFlag(ctx.storybook.version)}=${ctx.sourceDir}`,
   ].filter(Boolean);
 
   if (isE2EBuild(ctx.options)) {
