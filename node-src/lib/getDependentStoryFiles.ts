@@ -111,7 +111,7 @@ export async function getDependentStoryFiles(
     // vite builder
     `/virtual:/@storybook/builder-vite/vite-app.js`,
     // rspack builder
-    `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`
+    `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
   ].map(normalize);
 
   const modulesByName = new Map<NormalizedName, Module>();
