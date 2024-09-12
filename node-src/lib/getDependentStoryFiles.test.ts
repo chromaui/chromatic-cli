@@ -162,6 +162,36 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('detects direct changes to CSF files, rspack', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        name: './src/foo.stories.js',
+        id: './src/foo.stories.js',
+        reasons: [
+          {
+            moduleName:
+              '/path/to/project|/^\\.\\/.*$/|include: /(?!.*node_modules)(?:\\/\\.\\.\\/(?!\\.)(?=.)[^/]*?\\.stories\\.js)$/|chunkName: [request]|groupOptions: {}|namespace object',
+          },
+        ],
+      },
+      {
+        name: '/path/to/project|/^\\.\\/.*$/|include: /(?!.*node_modules)(?:\\/\\.\\.\\/(?!\\.)(?=.)[^/]*?\\.stories\\.js)$/|chunkName: [request]|groupOptions: {}|namespace object',
+        id: './src lazy recursive ^\\.\\/.*$',
+        reasons: [
+          {
+            moduleName: './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
+          },
+        ],
+      },
+    ];
+    const ctx = getContext();
+    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(res).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
   it('detects indirect changes to CSF files', async () => {
     const changedFiles = ['src/foo.js'];
     const modules = [
