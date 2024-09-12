@@ -26,7 +26,7 @@ jobs:
           debug: true
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: chromatic-build-artifacts-${{ github.run_id }}
