@@ -31,7 +31,7 @@ jobs:
           traceChanged: true
           diagnostics: true
           skip: ${{ github.event.pull_request.draft == true }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: chromatic-build-artifacts-${{ github.run_id }}
