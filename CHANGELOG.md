@@ -1,3 +1,18 @@
+# v11.10.1 (Thu Sep 12 2024)
+
+#### 🐛 Bug Fix
+
+- Use --stats-json flag for SB 8.0.0+ [#1035](https://github.com/chromaui/chromatic-cli/pull/1035) ([@jmhobbs](https://github.com/jmhobbs))
+- Add basic `unicorn` setup to ESLint config [#1041](https://github.com/chromaui/chromatic-cli/pull/1041) ([@codykaup](https://github.com/codykaup))
+- Update actions/upload-artifact to v4 [#1042](https://github.com/chromaui/chromatic-cli/pull/1042) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.10.0 (Thu Sep 12 2024)
 
 #### 🚀 Enhancement
