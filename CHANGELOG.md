@@ -1,3 +1,22 @@
+# v11.10.0 (Thu Sep 12 2024)
+
+#### 🚀 Enhancement
+
+- Support storybook-rsbuild [#1032](https://github.com/chromaui/chromatic-cli/pull/1032) ([@joshwooding](https://github.com/joshwooding) [@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Remove pre-commit hook [#1039](https://github.com/chromaui/chromatic-cli/pull/1039) ([@codykaup](https://github.com/codykaup))
+- Add initial ESLint config based on internal repo [#1037](https://github.com/chromaui/chromatic-cli/pull/1037) ([@codykaup](https://github.com/codykaup))
+- Remove Chromatic staging CI step [#1038](https://github.com/chromaui/chromatic-cli/pull/1038) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Josh Wooding ([@joshwooding](https://github.com/joshwooding))
+
+---
+
 # v11.9.0 (Wed Sep 11 2024)
 
 #### 🚀 Enhancement
