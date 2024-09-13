@@ -173,7 +173,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     if (onlyStoryFiles) {
       // Escape special characters in the filename so it does not conflict with picomatch
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
-        key.replaceAll(SPECIAL_CHARS_REGEXP, '\\$1')
+        key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
       );
 
       if (!ctx.options.interactive) {

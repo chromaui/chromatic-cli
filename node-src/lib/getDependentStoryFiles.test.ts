@@ -7,7 +7,7 @@ import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles'
 
 vi.mock('../git/git');
 
-const CSF_GLOB = './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$';
+const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
@@ -170,14 +170,13 @@ describe('getDependentStoryFiles', () => {
         id: './src/foo.stories.js',
         reasons: [
           {
-            moduleName:
-              '/path/to/project|/^\\.\\/.*$/|include: /(?!.*node_modules)(?:\\/\\.\\.\\/(?!\\.)(?=.)[^/]*?\\.stories\\.js)$/|chunkName: [request]|groupOptions: {}|namespace object',
+            moduleName: String.raw`/path/to/project|/^\.\/.*$/|include: /(?!.*node_modules)(?:\/\.\.\/(?!\.)(?=.)[^/]*?\.stories\.js)$/|chunkName: [request]|groupOptions: {}|namespace object`,
           },
         ],
       },
       {
-        name: '/path/to/project|/^\\.\\/.*$/|include: /(?!.*node_modules)(?:\\/\\.\\.\\/(?!\\.)(?=.)[^/]*?\\.stories\\.js)$/|chunkName: [request]|groupOptions: {}|namespace object',
-        id: './src lazy recursive ^\\.\\/.*$',
+        name: String.raw`/path/to/project|/^\.\/.*$/|include: /(?!.*node_modules)(?:\/\.\.\/(?!\.)(?=.)[^/]*?\.stories\.js)$/|chunkName: [request]|groupOptions: {}|namespace object`,
+        id: String.raw`./src lazy recursive ^\.\/.*$`,
         reasons: [
           {
             moduleName: './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
@@ -791,8 +790,8 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
     const modules = [
       {
-        id: './packages/website/containers/ weak ^\\.\\/.*\\/index$',
-        name: './packages/website/containers/ weak ^\\.\\/.*\\/index$',
+        id: String.raw`./packages/website/containers/ weak ^\.\/.*\/index$`,
+        name: String.raw`./packages/website/containers/ weak ^\.\/.*\/index$`,
         reasons: [{ moduleName: './src/packages/design-system/components/button.jsx' }],
       },
       {
