@@ -1,8 +1,8 @@
-import setup from '../node-src/errorMonitoring';
-setup('cli');
+import '../node-src/errorMonitoring';
+
+import * as Sentry from '@sentry/node';
 
 import { run } from '../node-src';
-import * as Sentry from '@sentry/node';
 
 /**
  * The main entrypoint for the CLI.
@@ -14,6 +14,6 @@ export async function main(argv: string[]) {
     const { code } = await run({ argv });
     process.exitCode = code;
   } finally {
-    await Sentry.flush(1000);
+    await Sentry.close(1000);
   }
 }
