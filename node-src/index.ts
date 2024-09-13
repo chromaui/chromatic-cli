@@ -1,5 +1,6 @@
 import 'any-observable/register/zen';
 
+import * as Sentry from '@sentry/node';
 import Listr from 'listr';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
@@ -161,6 +162,7 @@ export async function runAll(ctx: InitialContext) {
   ctx.log.info('');
 
   const onError = (err: Error | Error[]) => {
+    Sentry.captureException(err);
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [err].flat()));
     ctx.extraOptions?.experimental_onTaskError?.(ctx, {
@@ -264,6 +266,8 @@ async function runBuild(ctx: Context) {
       ctx.log.flush();
     }
   } catch (error) {
+    Sentry.captureException(error);
+
     const errors = [error].flat(); // GraphQLClient might throw an array of errors
     const formattedError = fatalError(ctx, errors);
 

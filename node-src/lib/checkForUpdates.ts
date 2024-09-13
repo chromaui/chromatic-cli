@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import semver from 'semver';
 import { hasYarn } from 'yarn-or-npm';
 
@@ -45,6 +46,7 @@ export default async function checkForUpdates(ctx: Context) {
     }
     latestVersion = distributionTags.latest;
   } catch (err) {
+    Sentry.captureException(err);
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
     ctx.log.warn(err);
     return;

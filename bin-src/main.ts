@@ -13,7 +13,10 @@ export async function main(argv: string[]) {
   try {
     const { code } = await run({ argv });
     process.exitCode = code;
+  } catch (err) {
+    Sentry.captureException(err);
   } finally {
-    await Sentry.close(1000);
+    await Sentry.flush(2500);
+    process.exit();
   }
 }

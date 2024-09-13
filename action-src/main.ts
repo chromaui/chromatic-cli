@@ -209,8 +209,9 @@ async function run() {
 }
 
 run()
-  .catch((error_) => {
-    error(error_);
-    setFailed(error_.message);
+  .catch((runError) => {
+    error(runError);
+    setFailed(runError.message);
+    Sentry.captureException(runError);
   })
-  .finally(() => Sentry.close(1000));
+  .finally(() => Sentry.flush(2500).finally(() => process.exit()));
