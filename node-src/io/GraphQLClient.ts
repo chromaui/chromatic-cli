@@ -55,7 +55,7 @@ export default class GraphQLClient {
 
         // GraphQL typically returns a list of errors
         this.client.log.debug({ errors }, 'GraphQL errors');
-        errors.forEach((err) => {
+        for (const err of errors) {
           // Throw an error to retry the query if it's safe to do so, otherwise bail
           if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
 
@@ -63,7 +63,7 @@ export default class GraphQLClient {
           err.at = `${err.path.join('.')} ${err.locations
             .map((l) => `${l.line}:${l.column}`)
             .join(', ')}`;
-        });
+        }
         return bail(errors.length === 1 ? errors[0] : errors);
       },
       { retries }

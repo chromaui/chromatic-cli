@@ -28,7 +28,9 @@ export async function uploadZip(
       });
 
       const formData = new FormData();
-      Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
+      for (const [k, v] of Object.entries(formFields)) {
+        formData.append(k, v);
+      }
       formData.append('file', blob);
 
       const res = await ctx.http.fetch(

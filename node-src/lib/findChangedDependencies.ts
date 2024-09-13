@@ -110,7 +110,9 @@ export const findChangedDependencies = async (ctx: Context) => {
             manifestPath: await checkoutFile(ctx, ref, manifestPath),
             lockfilePath: await checkoutFile(ctx, ref, lockfilePath),
           });
-          baselineChanges.forEach((change) => changedDependencyNames.add(change));
+          for (const change of baselineChanges) {
+            changedDependencyNames.add(change);
+          }
         })
       );
     })

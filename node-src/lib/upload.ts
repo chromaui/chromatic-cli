@@ -121,15 +121,15 @@ export async function uploadBuild(
     );
 
     if (uploadBuild.userErrors.length > 0) {
-      uploadBuild.userErrors.forEach((e) => {
-        if (e.__typename === 'MaxFileCountExceededError') {
-          ctx.log.error(maxFileCountExceeded(e));
-        } else if (e.__typename === 'MaxFileSizeExceededError') {
-          ctx.log.error(maxFileSizeExceeded(e));
+      for (const err of uploadBuild.userErrors) {
+        if (err.__typename === 'MaxFileCountExceededError') {
+          ctx.log.error(maxFileCountExceeded(err));
+        } else if (err.__typename === 'MaxFileSizeExceededError') {
+          ctx.log.error(maxFileSizeExceeded(err));
         } else {
-          ctx.log.error(e.message);
+          ctx.log.error(err.message);
         }
-      });
+      }
       return options.onError?.(new Error('Upload rejected due to user error'));
     }
 
@@ -237,6 +237,6 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   }
 
   if (uploadMetadata.userErrors.length > 0) {
-    uploadMetadata.userErrors.forEach((e) => ctx.log.warn(e.message));
+    uploadMetadata.userErrors.map((e) => ctx.log.warn(e.message));
   }
 }

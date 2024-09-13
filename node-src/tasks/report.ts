@@ -69,6 +69,8 @@ interface ReportQueryResult {
   };
 }
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const generateReport = async (ctx: Context) => {
   const { client, log } = ctx;
   const { junitReport } = ctx.options;
@@ -99,7 +101,7 @@ export const generateReport = async (ctx: Context) => {
     .property('buildUrl', build.webUrl)
     .property('storybookUrl', build.storybookUrl);
 
-  build.tests.forEach(({ status, result, spec, parameters, mode }) => {
+  for (const { status, result, spec, parameters, mode } of build.tests) {
     const testSuffixName = mode.name || `[${parameters.viewport}px]`;
     const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
     const testCase = suite
@@ -126,7 +128,7 @@ export const generateReport = async (ctx: Context) => {
         }
       }
     }
-  });
+  }
 
   reportBuilder.writeTo(ctx.reportPath);
   log.info(wroteReport(ctx.reportPath, 'JUnit XML'));

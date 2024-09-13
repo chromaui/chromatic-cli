@@ -143,7 +143,6 @@ export default [
       'unicorn/no-array-callback-reference': 'off',
       'unicorn/prefer-string-raw': 'off',
       'unicorn/prefer-module': 'off',
-      'unicorn/no-array-for-each': 'off',
       'unicorn/prefer-spread': 'off',
     },
   },

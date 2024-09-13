@@ -124,7 +124,7 @@ export async function getDependentStoryFiles(
 
   stats.modules
     .filter((mod) => isUserModule(mod))
-    .forEach((mod) => {
+    .map((mod) => {
       const normalizedName = normalize(mod.name);
       modulesByName.set(normalizedName, mod);
       namesById.set(mod.id, normalizedName);
@@ -139,7 +139,9 @@ export async function getDependentStoryFiles(
       }
 
       if (mod.modules) {
-        mod.modules.forEach((m) => modulesByName.set(normalize(m.name), mod));
+        for (const m of mod.modules) {
+          modulesByName.set(normalize(m.name), mod);
+        }
       }
 
       const normalizedReasons = mod.reasons
@@ -258,7 +260,7 @@ export async function getDependentStoryFiles(
   }
 
   // First, check the files that have changed according to git
-  tracedFiles.forEach((posixPath) => traceName(posixPath));
+  tracedFiles.map((posixPath) => traceName(posixPath));
   // If more were found during that process, check them too.
   while (toCheck.length > 0) {
     const [id, tracePath] = toCheck.pop();
@@ -266,7 +268,7 @@ export async function getDependentStoryFiles(
     reasonsById
       .get(id)
       .filter(untrace)
-      .forEach((reason) => traceName(reason, tracePath));
+      .map((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
