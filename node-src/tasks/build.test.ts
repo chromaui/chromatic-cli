@@ -132,6 +132,24 @@ describe('setBuildCommand', () => {
     );
     expect(ctx.buildCommand).toEqual('npm run build:storybook');
   });
+
+  it('uses the old flag when it storybook version is undetected', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setBuildCommand(ctx);
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('npm run build:storybook');
+  });
 });
 
 describe('buildStorybook', () => {
