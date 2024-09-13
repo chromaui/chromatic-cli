@@ -1,10 +1,13 @@
-import { spawn } from 'yarn-or-npm';
+import { spawn as packageCommand } from 'yarn-or-npm';
 
-export default (args: Parameters<typeof spawn>[0], options: Parameters<typeof spawn>[1] = {}) =>
-  new Promise<string>((resolve, reject) => {
+export default function spawn(
+  args: Parameters<typeof packageCommand>[0],
+  options: Parameters<typeof packageCommand>[1] = {}
+) {
+  return new Promise<string>((resolve, reject) => {
     let stdout = '';
     let stderr = '';
-    const child = spawn(args, options);
+    const child = packageCommand(args, options);
     child.stdout.on('data', (chunk) => {
       stdout += chunk;
     });
@@ -17,3 +20,4 @@ export default (args: Parameters<typeof spawn>[0], options: Parameters<typeof sp
       else reject(new Error(stderr));
     });
   });
+}
