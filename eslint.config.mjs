@@ -135,8 +135,7 @@ export default [
       'unicorn/switch-case-braces': 'off',
       'unicorn/no-process-exit': 'off',
       'unicorn/prefer-node-protocol': 'off', // This will error our Webpack build
-      // TODO: remove the following lines when we are ready to enforce this rule
-      'unicorn/no-anonymous-default-export': 'off',
+      // TODO: remove the following lines when we are ready to enforce these rules
       'unicorn/no-null': 'off',
       'unicorn/better-regex': 'off',
       'unicorn/no-array-reduce': 'off',
@@ -151,6 +150,12 @@ export default [
     files: ['**/*.ts'],
     rules: {
       'unicorn/no-useless-undefined': 'off',
+    },
+  },
+  {
+    files: ['node-src/ui/**'],
+    rules: {
+      'unicorn/no-anonymous-default-export': 'off',
     },
   },
   // security related lints

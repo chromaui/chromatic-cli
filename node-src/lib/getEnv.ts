@@ -51,8 +51,8 @@ const CHROMATIC_PROJECT_TOKEN =
   process.env.CHROMATIC_APP_CODE || // backwards compatibility
   process.env.CHROMA_APP_CODE; // backwards compatibility
 
-export default () =>
-  ({
+export default function getEnv(): Env {
+  return {
     CHROMATIC_DNS_FAILOVER_SERVERS: CHROMATIC_DNS_FAILOVER_SERVERS.split(',')
       .map((ip) => ip.trim())
       .filter(Boolean),
@@ -76,4 +76,5 @@ export default () =>
     STORYBOOK_CLI_FLAGS_BY_VERSION,
     STORYBOOK_VERIFY_TIMEOUT: Number.parseInt(STORYBOOK_VERIFY_TIMEOUT, 10),
     STORYBOOK_NODE_ENV,
-  }) as Env;
+  };
+}
