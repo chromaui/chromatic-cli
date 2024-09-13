@@ -113,7 +113,7 @@ export async function getDependentStoryFiles(
       `/virtual:/@storybook/builder-vite/vite-app.js`,
       // rspack builder
       `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
-    ].map(normalize)
+    ].map((file) => normalize(file))
   );
 
   const modulesByName = new Map<NormalizedName, Module>();
@@ -192,7 +192,7 @@ export async function getDependentStoryFiles(
     // Convert dependency names into their corresponding files which occur in the stats file.
     ...changedDependencies.flatMap((packageName) => nodeModules.get(packageName) || []),
     ...changedFiles,
-  ].filter(untrace);
+  ].filter((file) => untrace(file));
   const tracedPaths = new Set<string>();
   const affectedModuleIds = new Set<string | number>();
   const checkedIds = {};
@@ -211,14 +211,14 @@ export async function getDependentStoryFiles(
     bailReason: undefined,
   };
 
-  const changedPackageLockFiles = tracedFiles.filter(isPackageLockFile);
+  const changedPackageLockFiles = tracedFiles.filter((file) => isPackageLockFile(file));
 
   if (nodeModules.size === 0 && changedDependencies.length > 0) {
     // If we didn't find any node_modules in the stats file, it's probably incomplete and we can't
     // trace changed dependencies, so we bail just in case.
     ctx.turboSnap.bailReason = {
       changedPackageFiles: ctx.git.changedFiles
-        .filter(isPackageManifestFile)
+        .filter((file) => isPackageManifestFile(file))
         .concat(changedPackageLockFiles),
     };
   }
@@ -248,7 +248,7 @@ export async function getDependentStoryFiles(
     // Queue this id for tracing
     toCheck.push([id, [...tracePath, id]]);
 
-    if (reasonsById.get(id).some(isCsfGlob)) {
+    if (reasonsById.get(id).some((reason) => isCsfGlob(reason))) {
       affectedModuleIds.add(id);
       tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
@@ -267,7 +267,7 @@ export async function getDependentStoryFiles(
     checkedIds[id] = true;
     reasonsById
       .get(id)
-      .filter(untrace)
+      .filter((file) => untrace(file))
       .map((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(

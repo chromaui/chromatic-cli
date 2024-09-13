@@ -24,7 +24,7 @@ const parseNexec = ((agent, args) => {
   };
 
   const command = map[agent];
-  return command.replace('{0}', args.map(quote).join(' ')).trim();
+  return command.replace('{0}', args.map((c) => quote(c)).join(' ')).trim();
 }) as Runner;
 
 export async function getE2EBuildCommand(

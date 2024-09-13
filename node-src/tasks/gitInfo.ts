@@ -199,7 +199,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         ({ build, changedFiles, replacementBuild }) => {
           const metadataFiles = changedFiles
             .filter((f) => !untraced.some((glob) => matchesFile(glob, f)))
-            .filter(isPackageMetadataFile);
+            .filter((f) => isPackageMetadataFile(f));
 
           return metadataFiles.length > 0
             ? [{ changedFiles: metadataFiles, commit: replacementBuild?.commit ?? build.commit }]
