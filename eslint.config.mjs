@@ -153,6 +153,12 @@ export default [
       'unicorn/no-useless-undefined': 'off',
     },
   },
+  {
+    files: ['node-src/ui/**'],
+    rules: {
+      'unicorn/no-anonymous-default-export': 'off',
+    },
+  },
   // security related lints
   security.configs.recommended,
   {
