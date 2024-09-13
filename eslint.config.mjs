@@ -139,7 +139,6 @@ export default [
       'unicorn/no-null': 'off',
       'unicorn/better-regex': 'off',
       'unicorn/no-array-reduce': 'off',
-      'unicorn/prefer-string-raw': 'off',
       'unicorn/prefer-module': 'off',
       'unicorn/prefer-spread': 'off',
     },

@@ -264,11 +264,11 @@ const mockStats = {
     {
       id: './src/foo.stories.js',
       name: './src/foo.stories.js',
-      reasons: [{ moduleName: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$' }],
+      reasons: [{ moduleName: String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$` }],
     },
     {
-      id: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
-      name: './src sync ^\\.\\/(?:(?!\\.)(?=.)[^/]*?\\.stories\\.js)$',
+      id: String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`,
+      name: String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`,
       reasons: [{ moduleName: './storybook-stories.js' }],
     },
   ],
