@@ -23,10 +23,10 @@ export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
     });
     archive.pipe(sink);
 
-    files.forEach(({ localPath, targetPath: name }) => {
+    for (const { localPath, targetPath: name } of files) {
       ctx.log.debug(`Adding to zip archive: ${name}`);
       archive.append(createReadStream(localPath), { name });
-    });
+    }
 
     ctx.log.debug('Finalizing zip archive');
     archive.finalize().catch((err) => reject(err));

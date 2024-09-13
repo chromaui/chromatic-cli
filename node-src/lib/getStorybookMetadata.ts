@@ -237,13 +237,13 @@ export const getStorybookMetadata = async (ctx: Context) => {
 
   ctx.log.debug(info);
   let metadata = {};
-  info.forEach((sbItem) => {
+  for (const sbItem of info) {
     if (sbItem.status === 'fulfilled') {
       metadata = {
         ...metadata,
         ...(sbItem?.value as any),
       };
     }
-  });
+  }
   return metadata;
 };
