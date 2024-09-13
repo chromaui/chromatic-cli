@@ -1,3 +1,18 @@
+# v11.10.2 (Fri Sep 13 2024)
+
+#### 🐛 Bug Fix
+
+- Revert "Use --stats-json flag for SB 8.0.0+" [#1046](https://github.com/chromaui/chromatic-cli/pull/1046) ([@maxcorbin](https://github.com/maxcorbin))
+- Fix flaky verify timeout test [#1044](https://github.com/chromaui/chromatic-cli/pull/1044) ([@codykaup](https://github.com/codykaup))
+- Fix flaky missing dependency test [#1043](https://github.com/chromaui/chromatic-cli/pull/1043) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Maxie ([@maxcorbin](https://github.com/maxcorbin))
+
+---
+
 # v11.10.1 (Thu Sep 12 2024)
 
 #### 🐛 Bug Fix
