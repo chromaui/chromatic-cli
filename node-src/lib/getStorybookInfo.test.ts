@@ -81,7 +81,9 @@ describe('getStorybookInfo', () => {
     await expect(getStorybookInfo(context)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
-        viewLayer: 'react',
+        // We're currently using `react` and `@storybook/react-webpack5` so the we can end up with
+        // either one based on when those promises resolve.
+        viewLayer: expect.stringMatching(/(react|@storybook\/react-webpack5)/),
         version: expect.any(String),
         addons: [
           {

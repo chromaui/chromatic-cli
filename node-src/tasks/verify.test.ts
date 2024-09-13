@@ -102,20 +102,15 @@ describe('verifyBuild', () => {
   });
 
   it('times out if build takes too long to start', async () => {
-    const build = {
-      status: 'IN_PROGRESS',
+    const publishedBuild = {
+      status: 'PUBLISHED',
       features: { uiTests: true, uiReview: false },
       app: {},
-      startedAt: Date.now(),
+      startedAt: null,
+      upgradeBuilds: [],
     };
-    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: null, upgradeBuilds: [] };
     const client = { runQuery: vi.fn() };
-    client.runQuery
-      // Polling four times is going to hit the timeout
-      .mockReturnValueOnce({ app: { build: publishedBuild } })
-      .mockReturnValueOnce({ app: { build: publishedBuild } })
-      .mockReturnValueOnce({ app: { build: publishedBuild } })
-      .mockReturnValue({ app: { build } });
+    client.runQuery.mockReturnValue({ app: { build: publishedBuild } });
 
     const ctx = { client, ...defaultContext } as any;
     await expect(verifyBuild(ctx, {} as any)).rejects.toThrow('Build verification timed out');
