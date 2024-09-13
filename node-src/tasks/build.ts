@@ -28,24 +28,36 @@ export const setSourceDirectory = async (ctx: Context) => {
   }
 };
 
-// TODO: refactor this function
-// eslint-disable-next-line complexity
-export const setBuildCommand = async (ctx: Context) => {
-  const webpackStatsSupported =
-    ctx.storybook && ctx.storybook.version
-      ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
-      : true;
+const isStatsFlagSupported = (ctx: Context) => {
+  return ctx.storybook && ctx.storybook.version
+    ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
+    : true;
+};
 
-  if (ctx.git.changedFiles && !webpackStatsSupported) {
-    ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
+// Storybook 8.0.0 deprecated --webpack-stats-json in favor of --stats-json.
+// However, the angular builder did not support it until 8.5.0
+const getStatsFlag = (ctx: Context) => {
+  return ctx?.storybook?.version &&
+    semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.5.0')
+    ? '--stats-json'
+    : '--webpack-stats-json';
+};
+
+export const setBuildCommand = async (ctx: Context) => {
+  const buildCommand = ctx.flags?.buildCommand || ctx.options.buildCommand;
+  const buildCommandOptions: string[] = [];
+
+  if (!buildCommand) {
+    buildCommandOptions.push(`--output-dir=${ctx.sourceDir}`);
   }
 
-  const buildCommand = ctx.flags.buildCommand || ctx.options.buildCommand;
-
-  const buildCommandOptions = [
-    !buildCommand && `--output-dir=${ctx.sourceDir}`,
-    ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
-  ].filter((c): c is string => !!c);
+  if (ctx.git.changedFiles) {
+    if (isStatsFlagSupported(ctx)) {
+      buildCommandOptions.push(`${getStatsFlag(ctx)}=${ctx.sourceDir}`);
+    } else {
+      ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
+    }
+  }
 
   if (buildCommand) {
     ctx.buildCommand = `${buildCommand} ${buildCommandOptions.join(' ')}`;
