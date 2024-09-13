@@ -225,8 +225,8 @@ export interface Context {
     matchesBranch?: (glob: boolean | string) => boolean;
     packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
   };
-  storybook: {
-    version: string;
+  storybook?: {
+    version?: string;
     configDir: string;
     staticDir: string[];
     viewLayer: string;
