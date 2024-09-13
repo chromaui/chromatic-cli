@@ -14,7 +14,7 @@ const snapshotRow = ({ spec }: { spec: Spec }) =>
 export default (snapshots: { spec: Spec }[]) =>
   dedent(chalk`
     {bold Listing available stories:}
-    ${snapshots.map(snapshotRow).join('\n')}
+    ${snapshots.map((snapshot) => snapshotRow(snapshot)).join('\n')}
 
     ${info} Use {bold --only-story-names} to run a build for a specific component or story.
     Globs are supported, for example: {bold --only-story-names "${

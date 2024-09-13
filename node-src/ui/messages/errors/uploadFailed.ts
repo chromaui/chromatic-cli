@@ -4,7 +4,11 @@ import { dedent } from 'ts-dedent';
 import { FileDesc, TargetInfo } from '../../../types';
 import { error as icon } from '../../components/icons';
 
-const encode = (path: string) => path.split('/').map(encodeURIComponent).join('/');
+const encode = (path: string) =>
+  path
+    .split('/')
+    .map((component) => encodeURIComponent(component))
+    .join('/');
 
 export function uploadFailed({ target }: { target: FileDesc & TargetInfo }, debug = false) {
   const diagnosis =

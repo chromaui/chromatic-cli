@@ -5,7 +5,7 @@ const invert = (promise: Promise<any>) =>
   new Promise<any>((resolve, reject) => promise.then(reject, resolve));
 
 export const raceFulfilled = <T>(promises: Promise<T>[]): Promise<T> =>
-  invert(Promise.all(promises.map(invert)).then((arr) => arr[0]));
+  invert(Promise.all(promises.map((promise) => invert(promise))).then((arr) => arr[0]));
 
 export const timeout = (ms: number) =>
   new Promise((_, rej) => {

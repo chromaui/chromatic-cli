@@ -24,15 +24,15 @@ export const resolvePackageJson = (pkg: string) => {
 
 const findDependency = (
   { dependencies, devDependencies, peerDependencies },
-  predicate: Parameters<typeof Array.prototype.find>[0]
+  predicate: (key: string) => string
 ) => [
-  Object.entries(dependencies || {}).find(predicate),
-  Object.entries(devDependencies || {}).find(predicate),
-  Object.entries(peerDependencies || {}).find(predicate),
+  Object.keys(dependencies || {}).find((dependency) => predicate(dependency)),
+  Object.keys(devDependencies || {}).find((dependency) => predicate(dependency)),
+  Object.keys(peerDependencies || {}).find((dependency) => predicate(dependency)),
 ];
 
 const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, string>) => {
-  const [dep, devDep, peerDep] = findDependency(packageJson, ([key]) => dependencyMap[key]);
+  const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
   const [pkg, version] = dep || devDep || peerDep || [];
   const dependency = viewLayers[pkg];
 
