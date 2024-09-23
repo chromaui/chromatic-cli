@@ -44,7 +44,7 @@ function createClient({
   const mockIndex = createMockIndex(repository, builds, prs);
   return {
     runQuery(query, variables) {
-      const queryName = query.match(/query ([a-zA-Z]+)/)[1];
+      const queryName = query.match(/query ([A-Za-z]+)/)[1];
       return mockIndex(queryName, variables);
     },
   };
@@ -403,7 +403,7 @@ describe('getParentCommits', () => {
     };
     const client = {
       runQuery(query, variables) {
-        const queryName = query.match(/query ([a-zA-Z]+)/)[1];
+        const queryName = query.match(/query ([A-Za-z]+)/)[1];
         return mockIndexWithNullFirstBuildCommittedAt(queryName, variables);
       },
     };

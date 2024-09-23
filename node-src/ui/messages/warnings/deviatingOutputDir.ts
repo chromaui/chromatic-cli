@@ -13,7 +13,7 @@ const getHint = (buildScriptName: string, buildScript: string) => {
       You can fix this by invoking {bold build-storybook} from your {bold "${buildScriptName}"} script directly.
     `);
 
-  const invokesBuild = /(^|[ ])build-storybook([ ]|;|&&)/.test(buildScript);
+  const invokesBuild = /(^| )build-storybook( |;|&&)/.test(buildScript);
   const isChained = /build-storybook.*(&&|;)/.test(buildScript);
   if (invokesBuild && isChained)
     return dedent(chalk`

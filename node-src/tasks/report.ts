@@ -106,7 +106,7 @@ export const generateReport = async (ctx: Context) => {
     const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
     const testCase = suite
       .testCase()
-      .className(spec.component.name.replaceAll(/[|/]/g, '.')) // transform story path to class path
+      .className(spec.component.name.replaceAll(/[/|]/g, '.')) // transform story path to class path
       .name(`${spec.name} ${suffix}`);
 
     switch (status) {

@@ -7,7 +7,7 @@ export default function getStorybookConfiguration(
   longName?: string
 ) {
   if (!storybookScript) return null;
-  const parts = storybookScript.split(/[\s='"]+/);
+  const parts = storybookScript.split(/[\s"'=]+/);
   let index = parts.indexOf(longName);
   if (index === -1) {
     index = parts.indexOf(shortName);
