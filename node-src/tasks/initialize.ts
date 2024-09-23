@@ -27,15 +27,18 @@ interface AnnounceBuildMutationResult {
 }
 
 export const setEnvironment = async (ctx: Context) => {
+  if (!ctx.environment) {
+    ctx.environment = {};
+  }
+
   // We send up all environment variables provided by these complicated systems.
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
-  ctx.environment = Object.entries(process.env).reduce((acc, [key, value]) => {
+  for (const [key, value] of Object.entries(process.env)) {
     if (ctx.env.ENVIRONMENT_WHITELIST.some((regex) => key.match(regex))) {
-      acc[key] = value;
+      ctx.environment[key] = value;
     }
-    return acc;
-  }, {});
+  }
 
   ctx.log.debug(`Got environment:\n${JSON.stringify(ctx.environment, null, 2)}`);
 };

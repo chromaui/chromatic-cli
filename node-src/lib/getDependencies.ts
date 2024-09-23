@@ -2,15 +2,6 @@ import { buildDepTreeFromFiles, PkgTree } from 'snyk-nodejs-lockfile-parser';
 
 import { Context } from '../types';
 
-const flattenDependencyTree = (
-  tree: PkgTree['dependencies'],
-  results = new Set<string>()
-): Set<string> =>
-  Object.values(tree).reduce((acc, dep) => {
-    acc.add(`${dep.name}@@${dep.version}`);
-    return flattenDependencyTree(dep.dependencies || {}, acc);
-  }, results);
-
 export const getDependencies = async (
   ctx: Context,
   {
@@ -41,3 +32,12 @@ export const getDependencies = async (
     throw err;
   }
 };
+
+function flattenDependencyTree(tree: PkgTree['dependencies'], results = new Set<string>()) {
+  for (const dep of Object.values(tree)) {
+    results.add(`${dep.name}@@${dep.version}`);
+    flattenDependencyTree(dep.dependencies || {}, results);
+  }
+
+  return results;
+}
