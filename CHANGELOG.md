@@ -1,3 +1,21 @@
+# v11.10.3 (Mon Sep 23 2024)
+
+#### 🐛 Bug Fix
+
+- Use --stats-json flag for SB 8.0.0+ [#1049](https://github.com/chromaui/chromatic-cli/pull/1049) ([@jmhobbs](https://github.com/jmhobbs))
+- Enable `unicorn/no-array-callback-reference` ESLint rule [#1051](https://github.com/chromaui/chromatic-cli/pull/1051) ([@codykaup](https://github.com/codykaup))
+- Enable `unicorn/prefer-string-raw` ESLint rule [#1050](https://github.com/chromaui/chromatic-cli/pull/1050) ([@codykaup](https://github.com/codykaup))
+- Enable `unicorn/no-anonymous-default-export` ESLint rule [#1047](https://github.com/chromaui/chromatic-cli/pull/1047) ([@codykaup](https://github.com/codykaup))
+- Enable`unicorn/no-array-for-each` ESLint rule [#1048](https://github.com/chromaui/chromatic-cli/pull/1048) ([@codykaup](https://github.com/codykaup))
+- GitHub action to add package size comment to PR [#1040](https://github.com/chromaui/chromatic-cli/pull/1040) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.10.2 (Fri Sep 13 2024)
 
 #### 🐛 Bug Fix
