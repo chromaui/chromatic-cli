@@ -29,5 +29,5 @@ export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorksp
 export default function index(options: Context['options']): Listr.ListrTask<Context>[] {
   const tasks = options.patchHeadRef && options.patchBaseRef ? runUploadBuild : runUploadBuild;
 
-  return options.junitReport ? tasks.concat(report) : tasks;
+  return options.junitReport ? [...tasks, report] : tasks;
 }

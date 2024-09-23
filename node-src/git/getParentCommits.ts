@@ -296,6 +296,6 @@ export async function getParentCommits(
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
   const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
 
-  const ancestorCommits = extraParentCommits.concat(descendentCommits);
+  const ancestorCommits = [...extraParentCommits, ...descendentCommits];
   return ancestorCommits;
 }

@@ -139,7 +139,6 @@ export default [
       'unicorn/no-null': 'off',
       'unicorn/no-array-reduce': 'off',
       'unicorn/prefer-module': 'off',
-      'unicorn/prefer-spread': 'off',
     },
   },
   // prefer TS to complain when we miss an arg vs. sending an intentional undefined

@@ -217,9 +217,10 @@ export async function getDependentStoryFiles(
     // If we didn't find any node_modules in the stats file, it's probably incomplete and we can't
     // trace changed dependencies, so we bail just in case.
     ctx.turboSnap.bailReason = {
-      changedPackageFiles: ctx.git.changedFiles
-        .filter((file) => isPackageManifestFile(file))
-        .concat(changedPackageLockFiles),
+      changedPackageFiles: [
+        ...ctx.git.changedFiles.filter((file) => isPackageManifestFile(file)),
+        ...changedPackageLockFiles,
+      ],
     };
   }
 
