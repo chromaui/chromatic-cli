@@ -137,7 +137,6 @@ export default [
       'unicorn/prefer-node-protocol': 'off', // This will error our Webpack build
       // TODO: remove the following lines when we are ready to enforce these rules
       'unicorn/no-null': 'off',
-      'unicorn/better-regex': 'off',
       'unicorn/no-array-reduce': 'off',
       'unicorn/prefer-module': 'off',
       'unicorn/prefer-spread': 'off',
