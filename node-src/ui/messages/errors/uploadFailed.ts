@@ -20,5 +20,5 @@ export function uploadFailed({ target }: { target: FileDesc & TargetInfo }, debu
     ${diagnosis}
     ${debug ? '' : chalk`Enable the {bold debug} option to get more information.`}
   `);
-  return debug ? message + JSON.stringify(target, null, 2) : message;
+  return debug ? message + JSON.stringify(target, undefined, 2) : message;
 }

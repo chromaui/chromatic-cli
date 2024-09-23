@@ -35,7 +35,7 @@ export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath
   }
 };
 
-export const createChromaticConfigFile = async ({ configFile, buildScriptName = null }) => {
+export const createChromaticConfigFile = async ({ configFile, buildScriptName = undefined }) => {
   await writeFile(configFile, {
     ...(buildScriptName && {
       buildScriptName,
@@ -148,7 +148,7 @@ export async function main(argv: string[]) {
     const { path: packagePath, packageJson } = pkgInfo;
     const { testFramework } = await prompts([
       {
-        type: flags.framework ? null : 'select',
+        type: flags.framework ? undefined : 'select',
         name: 'testFramework',
         message: 'What testing framework are you using?',
         choices: [

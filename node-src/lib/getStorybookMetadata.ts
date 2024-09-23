@@ -224,7 +224,6 @@ export const getStorybookMetadata = async (ctx: Context) => {
       v7 = true;
     } catch (err) {
       ctx.log.debug({ storybookV7error: err });
-      mainConfig = null;
     }
   }
 

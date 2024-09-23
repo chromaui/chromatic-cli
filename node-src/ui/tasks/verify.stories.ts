@@ -46,8 +46,7 @@ export const RunOnlyNames = () =>
     options: { onlyStoryNames: ['MyComponent/**'] },
   } as any);
 
-export const AwaitingUpgrades = () =>
-  awaitingUpgrades({} as any, [{ completedAt: 123 }, { completedAt: null }]);
+export const AwaitingUpgrades = () => awaitingUpgrades({} as any, [{ completedAt: 123 }, {}]);
 
 export const Started = () => success({ build } as any);
 

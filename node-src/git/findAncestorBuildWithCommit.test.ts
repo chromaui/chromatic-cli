@@ -42,7 +42,7 @@ describe('findAncestorBuildWithCommit', () => {
       makeResult([makeBuild({ commit: 'exists', uncommittedHash: 'abc123', isLocalBuild: true })])
     );
 
-    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 1, limit: 1 })).toBeNull();
+    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 1, limit: 1 })).toBeUndefined();
   });
 
   it('DOES return a CI build with uncommitted changes', async () => {
@@ -74,7 +74,7 @@ describe('findAncestorBuildWithCommit', () => {
       .mockReturnValueOnce(makeResult([makeBuild(), makeBuild()]))
       .mockReturnValueOnce(makeResult([makeBuild(), makeBuild()]));
 
-    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 2, limit: 3 })).toBeNull();
+    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 2, limit: 3 })).toBeUndefined();
     expect(client.runQuery).toHaveBeenCalledTimes(2);
     expect(client.runQuery.mock.calls[0][1]).toMatchObject({ buildNumber: 1, skip: 0, limit: 2 });
     expect(client.runQuery.mock.calls[1][1]).toMatchObject({ buildNumber: 1, skip: 2, limit: 1 });
@@ -83,7 +83,7 @@ describe('findAncestorBuildWithCommit', () => {
   it('stops querying when the results run out', async () => {
     client.runQuery.mockReturnValueOnce(makeResult([makeBuild()]));
 
-    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 2, limit: 3 })).toBeNull();
+    expect(await findAncestorBuildWithCommit({ client }, 1, { page: 2, limit: 3 })).toBeUndefined();
     expect(client.runQuery).toHaveBeenCalledTimes(1);
   });
 });

@@ -99,7 +99,7 @@ function e2eBuildErrorMessage(
 }
 
 export const buildStorybook = async (ctx: Context) => {
-  let logFile = null;
+  let logFile;
   if (ctx.options.storybookLogFile) {
     ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
     logFile = createWriteStream(ctx.buildLogFile);
@@ -112,10 +112,10 @@ export const buildStorybook = async (ctx: Context) => {
   const { experimental_abortSignal: signal } = ctx.options;
   try {
     ctx.log.debug('Running build command:', ctx.buildCommand);
-    ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, null, 2));
+    ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, undefined, 2));
 
     const subprocess = execaCommand(ctx.buildCommand, {
-      stdio: [null, logFile, null],
+      stdio: [undefined, logFile, undefined],
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow
       preferLocal: false,

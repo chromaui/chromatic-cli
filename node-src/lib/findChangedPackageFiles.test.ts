@@ -141,7 +141,7 @@ describe('findChangedPackageFiles', () => {
   it('considers the file changed if it fails to parse', async () => {
     mockFileContents({
       'package.json': {
-        A: null,
+        A: '',
         HEAD: { dependencies: { a: '2' } },
       },
     });
@@ -445,6 +445,7 @@ describe('arePackageDependenciesEqual', () => {
   });
 
   it('returns true if dependencies are null', () => {
+    // eslint-disable-next-line unicorn/no-null
     expect(arePackageDependenciesEqual({ dependencies: null }, { dependencies: null })).toBe(true);
   });
 });

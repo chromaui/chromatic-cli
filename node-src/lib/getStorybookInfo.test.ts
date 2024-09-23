@@ -203,12 +203,7 @@ describe('getStorybookInfo', () => {
         options: { storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson' },
         packageJson: { dependencies: REACT },
       });
-      expect(await getStorybookInfo(ctx)).toEqual({
-        addons: [],
-        version: null,
-        viewLayer: null,
-        builder: null,
-      });
+      expect(await getStorybookInfo(ctx)).toEqual({});
     });
 
     it('does not return unsupported addons in metadata', async () => {

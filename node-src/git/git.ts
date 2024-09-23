@@ -302,5 +302,5 @@ export async function mergeQueueBranchMatch(branch) {
   const mergeQueuePattern = new RegExp(/gh-readonly-queue\/.*\/pr-(\d+)-[\da-f]{30}/);
   const match = branch.match(mergeQueuePattern);
 
-  return match ? Number(match[1]) : null;
+  return match ? Number(match[1]) : undefined;
 }

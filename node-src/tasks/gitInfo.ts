@@ -71,11 +71,11 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     version: await getVersion(),
     gitUserEmail: await getUserEmail().catch((err) => {
       ctx.log.debug('Failed to retrieve Git user email', err);
-      return null;
+      return undefined;
     }),
     uncommittedHash: await getUncommittedHash().catch((err) => {
       ctx.log.warn('Failed to retrieve uncommitted files hash', err);
-      return null;
+      return undefined;
     }),
     ...commitAndBranchInfo,
   };
@@ -225,8 +225,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       }
     } catch (err) {
       ctx.turboSnap.bailReason = { invalidChangedFiles: true };
-      ctx.git.changedFiles = null;
-      ctx.git.replacementBuildIds = null;
+      delete ctx.git.changedFiles;
+      delete ctx.git.replacementBuildIds;
       ctx.log.warn(invalidChangedFiles());
       ctx.log.debug(err);
     }
@@ -237,8 +237,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         if (matches.length > 0) {
           ctx.turboSnap.bailReason = { changedExternalFiles: matches };
           ctx.log.warn(externalsChanged(matches));
-          ctx.git.changedFiles = null;
-          ctx.git.replacementBuildIds = null;
+          delete ctx.git.changedFiles;
+          delete ctx.git.replacementBuildIds;
           break;
         }
       }

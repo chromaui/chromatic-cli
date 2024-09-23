@@ -111,7 +111,7 @@ describe('mergeQueueBranchMatch', () => {
 
   it('returns null if it is not a merge queue branch', async () => {
     const branch = 'develop';
-    expect(await mergeQueueBranchMatch(branch)).toEqual(null);
+    expect(await mergeQueueBranchMatch(branch)).toBeUndefined();
   });
 });
 

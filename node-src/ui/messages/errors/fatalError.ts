@@ -86,7 +86,7 @@ export default function fatalError(
 
       Please provide us with the above CLI output and the following info:
     `),
-    chalk`{bold ${JSON.stringify(debugInfo, null, 2)}}`,
+    chalk`{bold ${JSON.stringify(debugInfo, undefined, 2)}}`,
     stacktraces.length > 0 ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : '',
   ].join('\n');
 }

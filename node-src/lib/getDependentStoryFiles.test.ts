@@ -221,7 +221,7 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.css'];
     const modules = [
       {
-        id: null,
+        id: '',
         name: './src/foo.css?ngResource ',
         reasons: [{ moduleName: './src/foo.component.ts' }],
       },
@@ -503,7 +503,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -530,7 +530,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -558,7 +558,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
     });
@@ -585,7 +585,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ staticDir: ['path/to/statics'] });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStaticFiles: ['path/to/statics/image.png'],
     });
@@ -614,22 +614,22 @@ describe('getDependentStoryFiles', () => {
         ],
       },
       {
-        id: null,
+        id: '',
         name: './src/stories/Page.jsx', // changed
         reasons: [{ moduleName: './src/stories/Page.stories.jsx' }],
       },
       {
-        id: null,
+        id: '',
         name: './src/stories/button.css',
         reasons: [{ moduleName: './src/stories/Button.jsx' }],
       },
       {
-        id: null,
+        id: '',
         name: './src/stories/header.css',
         reasons: [{ moduleName: './src/stories/Header.jsx' }],
       },
       {
-        id: null,
+        id: '',
         name: './src/stories/page.css',
         reasons: [{ moduleName: './src/stories/Page.jsx' }],
       },

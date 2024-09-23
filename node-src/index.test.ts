@@ -180,7 +180,7 @@ vi.mock('node-fetch', () => ({
       }
 
       if (query?.match('FirstCommittedAtQuery')) {
-        return { data: { app: { firstBuild: { committedAt: null } } } };
+        return { data: { app: { firstBuild: {} } } };
       }
 
       if (query?.match('HasBuildsWithCommitsQuery')) {
@@ -308,7 +308,7 @@ vi.mock('./git/git', () => ({
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
   getUncommittedHash: () => Promise.resolve('abc123'),
   getUserEmail: () => Promise.resolve('test@test.com'),
-  mergeQueueBranchMatch: () => Promise.resolve(null),
+  mergeQueueBranchMatch: () => Promise.resolve(undefined),
 }));
 
 vi.mock('./git/getParentCommits', () => ({

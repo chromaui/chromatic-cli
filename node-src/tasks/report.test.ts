@@ -32,14 +32,14 @@ const mockTests = [
     result: '',
     spec: { name: '', component: { name: '' } },
     parameters: { viewportIsDefault: true, viewport: 1080 },
-    mode: { name: null },
+    mode: { name: '' },
   },
   {
     status: 'FAILED',
     result: '',
     spec: { name: '', component: { name: '' } },
     parameters: { viewportIsDefault: false, viewport: 1080 },
-    mode: { name: null },
+    mode: { name: '' },
   },
 ];
 

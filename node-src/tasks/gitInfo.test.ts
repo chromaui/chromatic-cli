@@ -128,7 +128,7 @@ describe('setGitInfo', () => {
     });
     const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] }, client } as any;
     await setGitInfo(ctx, {} as any);
-    expect(ctx.git.changedFiles).toBeNull();
+    expect(ctx.git.changedFiles).toBeUndefined();
   });
 
   it('forces rebuild automatically if app is onboarding', async () => {

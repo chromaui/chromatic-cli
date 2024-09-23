@@ -7,7 +7,7 @@ import { Context, FileDesc } from '../types';
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
   const archive = archiver('zip', { zlib: { level: 9 } });
   const tmp = await tempFile({ postfix: '.zip' });
-  const sink = createWriteStream(null, { fd: tmp.fd });
+  const sink = createWriteStream(undefined, { fd: tmp.fd });
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
     sink.on('close', () => {

@@ -18,7 +18,7 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
     };
 
     const readIncremental = (fd: number, hash: XXHash<bigint>) => {
-      read(fd, buffer, null, BUFFER_SIZE, -1, (readErr, bytesRead) => {
+      read(fd, buffer, undefined, BUFFER_SIZE, -1, (readErr, bytesRead) => {
         if (readErr) {
           return close(fd, () => reject(readErr));
         }
@@ -36,7 +36,7 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
       if (openErr) {
         return reject(openErr);
       }
-      read(fd, buffer, null, BUFFER_SIZE, -1, (readErr, bytesRead) => {
+      read(fd, buffer, undefined, BUFFER_SIZE, -1, (readErr, bytesRead) => {
         if (readErr) {
           return close(fd, () => reject(readErr));
         }
