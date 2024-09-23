@@ -39,7 +39,7 @@ interface PathSpec {
 }
 // These are the special characters that need to be escaped in the filename
 // because they are used as special characters in picomatch
-const SPECIAL_CHARS_REGEXP = /([$^*+?()[\]])/g;
+const SPECIAL_CHARS_REGEXP = /([$()*+?[\]^])/g;
 
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,

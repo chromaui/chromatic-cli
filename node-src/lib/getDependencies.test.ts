@@ -17,7 +17,7 @@ describe('getDependencies', () => {
     });
 
     const [dep] = dependencies;
-    expect(dep).toMatch(/^[\w@/-]+@@[\d.]+$/);
+    expect(dep).toMatch(/^[\w/@-]+@@[\d.]+$/);
 
     const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
     expect(dependencyNames).toEqual(

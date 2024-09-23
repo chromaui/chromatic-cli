@@ -241,7 +241,7 @@ export async function findMergeBase(headRef: string, baseRef: string) {
   const branchNames = await Promise.all(
     mergeBases.map(async (sha) => {
       const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
-      return name.replace(/~[0-9]+$/, ''); // Drop the potential suffix
+      return name.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
   const baseRefIndex = branchNames.indexOf(baseRef);
@@ -299,7 +299,7 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
 }
 
 export async function mergeQueueBranchMatch(branch) {
-  const mergeQueuePattern = new RegExp(/gh-readonly-queue\/.*\/pr-(\d+)-[a-f0-9]{30}/);
+  const mergeQueuePattern = new RegExp(/gh-readonly-queue\/.*\/pr-(\d+)-[\da-f]{30}/);
   const match = branch.match(mergeQueuePattern);
 
   return match ? Number(match[1]) : null;
