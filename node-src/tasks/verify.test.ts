@@ -60,12 +60,7 @@ describe('verifyBuild', () => {
       app: {},
       startedAt: Date.now(),
     };
-    const publishedBuild = {
-      ...build,
-      status: 'PUBLISHED',
-      startedAt: undefined,
-      upgradeBuilds: [],
-    };
+    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: null, upgradeBuilds: [] };
     const client = { runQuery: vi.fn() };
     client.runQuery
       // We can safely poll three times without hitting the timeout
@@ -111,6 +106,7 @@ describe('verifyBuild', () => {
       status: 'PUBLISHED',
       features: { uiTests: true, uiReview: false },
       app: {},
+      startedAt: null,
       upgradeBuilds: [],
     };
     const client = { runQuery: vi.fn() };
@@ -129,9 +125,9 @@ describe('verifyBuild', () => {
       app: {},
       startedAt: Date.now(),
     };
-    const upgradeBuilds = [{}];
+    const upgradeBuilds = [{ completedAt: null }];
     const completed = [{ completedAt: Date.now() }];
-    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: undefined, upgradeBuilds };
+    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: null, upgradeBuilds };
     const client = { runQuery: vi.fn() };
     client.runQuery
       // Polling while upgrade builds are in progress is irrelevant
@@ -159,8 +155,8 @@ describe('verifyBuild', () => {
       app: {},
       startedAt: Date.now(),
     };
-    const upgradeBuilds = [{}];
-    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: undefined, upgradeBuilds };
+    const upgradeBuilds = [{ completedAt: null }];
+    const publishedBuild = { ...build, status: 'PUBLISHED', startedAt: null, upgradeBuilds };
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ app: { build: publishedBuild } });
 

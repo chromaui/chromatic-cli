@@ -258,6 +258,7 @@ export default [
       'no-secrets/no-secrets': 'warn',
       'max-lines': 'warn',
       'jsdoc/require-jsdoc': 'off',
+      'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value
     },
   },
 ];

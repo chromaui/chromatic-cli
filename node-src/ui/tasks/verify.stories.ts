@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-null -- GraphQL returns `null` if a value doesn't exist */
 import task from '../components/task';
 import {
   awaitingUpgrades,
@@ -46,7 +47,8 @@ export const RunOnlyNames = () =>
     options: { onlyStoryNames: ['MyComponent/**'] },
   } as any);
 
-export const AwaitingUpgrades = () => awaitingUpgrades({} as any, [{ completedAt: 123 }, {}]);
+export const AwaitingUpgrades = () =>
+  awaitingUpgrades({} as any, [{ completedAt: 123 }, { completedAt: null }]);
 
 export const Started = () => success({ build } as any);
 

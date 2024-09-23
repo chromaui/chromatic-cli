@@ -397,7 +397,7 @@ describe('getParentCommits', () => {
     const mockIndex = createMockIndex(repository, [['A', 'main']]);
     const mockIndexWithNullFirstBuildCommittedAt = (queryName, variables) => {
       if (queryName === 'FirstCommittedAtQuery') {
-        return { app: { firstBuild: {} } };
+        return { app: { firstBuild: { committedAt: null } } };
       }
       return mockIndex(queryName, variables);
     };

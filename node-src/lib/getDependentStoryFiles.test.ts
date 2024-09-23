@@ -221,7 +221,7 @@ describe('getDependentStoryFiles', () => {
     const changedFiles = ['src/foo.css'];
     const modules = [
       {
-        id: '',
+        id: null,
         name: './src/foo.css?ngResource ',
         reasons: [{ moduleName: './src/foo.component.ts' }],
       },
@@ -614,22 +614,22 @@ describe('getDependentStoryFiles', () => {
         ],
       },
       {
-        id: '',
+        id: null,
         name: './src/stories/Page.jsx', // changed
         reasons: [{ moduleName: './src/stories/Page.stories.jsx' }],
       },
       {
-        id: '',
+        id: null,
         name: './src/stories/button.css',
         reasons: [{ moduleName: './src/stories/Button.jsx' }],
       },
       {
-        id: '',
+        id: null,
         name: './src/stories/header.css',
         reasons: [{ moduleName: './src/stories/Header.jsx' }],
       },
       {
-        id: '',
+        id: null,
         name: './src/stories/page.css',
         reasons: [{ moduleName: './src/stories/Page.jsx' }],
       },

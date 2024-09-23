@@ -180,7 +180,7 @@ vi.mock('node-fetch', () => ({
       }
 
       if (query?.match('FirstCommittedAtQuery')) {
-        return { data: { app: { firstBuild: {} } } };
+        return { data: { app: { firstBuild: { committedAt: null } } } };
       }
 
       if (query?.match('HasBuildsWithCommitsQuery')) {
