@@ -136,7 +136,6 @@ export default [
       'unicorn/no-process-exit': 'off',
       'unicorn/prefer-node-protocol': 'off', // This will error our Webpack build
       // TODO: remove the following lines when we are ready to enforce these rules
-      'unicorn/no-null': 'off',
       'unicorn/prefer-module': 'off',
     },
   },
