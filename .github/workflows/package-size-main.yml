@@ -1,0 +1,33 @@
+name: Chromatic Package Size Update
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+      - run: corepack enable
+      - name: install
+        run: yarn install --immutable
+      - name: build
+        run: yarn build
+      - name: Get Package Size
+        id: package_size
+        run: |
+          export DIST_SIZE="$(du -k ./dist | cut -f1)"
+          echo "Package Size: $DIST_SIZE KB"
+          echo "size=$DIST_SIZE" >> "$GITHUB_OUTPUT"
+      - name: Update Database
+        run: |
+          curl "${{ secrets.UPSTASH_REDIS_REST_URL }}/set/$GITHUB_SHA/${{ steps.package_size.outputs.size }}" -H "Authorization: Bearer ${{ secrets.UPSTASH_API_KEY }}"

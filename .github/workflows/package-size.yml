@@ -30,6 +30,20 @@ jobs:
           export DIST_SIZE="$(du -k ./dist | cut -f1)"
           echo "Package Size: $DIST_SIZE KB"
           echo "size=$DIST_SIZE" >> "$GITHUB_OUTPUT"
+      - name: Update Database
+        run: |
+          curl "${{ secrets.UPSTASH_REDIS_REST_URL }}/set/$GITHUB_SHA/${{ steps.package_size.outputs.size }}" -H "Authorization: Bearer ${{ secrets.UPSTASH_API_KEY }}"
+      - name: Get Previous Size
+        id: previous
+        run: |
+          export MAIN_HEAD_SHA="$(git rev-parse origin/main)"
+          echo "origin/main: $MAIN_HEAD_SHA"
+
+          export MAIN_HEAD_SIZE="$(curl -s "${{ secrets.UPSTASH_REDIS_REST_URL }}/get/$MAIN_HEAD_SHA" -H "Authorization: Bearer ${{ secrets.UPSTASH_API_KEY }}")"
+          echo "origin/main: $MAIN_HEAD_SIZE"
+
+          echo "main_head_sha=$MAIN_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "main_head_size=$MAIN_HEAD_SIZE" >> "$GITHUB_OUTPUT"
       - uses: actions/github-script@v7
         with:
           script: |
@@ -39,24 +53,33 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
             })
+
             const botComment = comments.find(comment => {
               return comment.user.type === 'Bot' && comment.body.includes('Package Size')
-            })
+            });
 
-            const output = "📦 Package Size: ${{ steps.package_size.outputs.size }} KB";
+            const output = ["📦 Package Size: ${{ steps.package_size.outputs.size }} KB"];
+
+            const main_head_json = JSON.parse(`${{ steps.previous.outputs.main_head_size }}`);
+            if(main_head_json && main_head_json.result) {
+              const diff = parseInt("${{ steps.package_size.outputs.size }}") - parseInt(main_head_json.result);
+              const diffEmoji = diff > 0 ? '⚠️' : '✅';
+              const diffSymbol = diff > 0 ? '+' : '';
+              output.push(`${diffEmoji} Compared to main: ${diffSymbol}${diff} KB ${{ steps.previous.outputs.main_head_sha }} (${main_head_json.result} KB)`);
+            }
 
             if (botComment) {
               github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 comment_id: botComment.id,
-                body: output
+                body: output.join('\n'),
               })
             } else {
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: output
+                body: output.join('\n'),
               })
             }
