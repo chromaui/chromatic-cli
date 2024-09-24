@@ -1,3 +1,18 @@
+# v11.10.4 (Tue Sep 24 2024)
+
+#### 🐛 Bug Fix
+
+- Revert "Use --stats-json flag for SB 8.0.0+" [#1058](https://github.com/chromaui/chromatic-cli/pull/1058) ([@jmhobbs](https://github.com/jmhobbs))
+- Enable `unicorn/prefer-spread` ESLint rule [#1052](https://github.com/chromaui/chromatic-cli/pull/1052) ([@codykaup](https://github.com/codykaup))
+- Enable `unicorn/better-regex` ESLint rule [#1055](https://github.com/chromaui/chromatic-cli/pull/1055) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.10.3 (Mon Sep 23 2024)
 
 #### 🐛 Bug Fix
