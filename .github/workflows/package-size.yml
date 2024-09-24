@@ -65,7 +65,7 @@ jobs:
               const diff = parseInt("${{ steps.package_size.outputs.size }}") - parseInt(main_head_json.result);
               const diffEmoji = diff > 0 ? '⚠️' : '✅';
               const diffSymbol = diff > 0 ? '+' : '';
-              output.push(`${diffEmoji} Compared to main: ${main_head_json.result} KB (${diffSymbol}${diff}) ${{ steps.previous.outputs.main_head_sha }}`);
+              output.push(`${diffEmoji} Compared to main: ${diffSymbol}${diff} KB ${{ steps.previous.outputs.main_head_sha }} (${main_head_json.result} KB)`);
             }
 
             if (botComment) {
