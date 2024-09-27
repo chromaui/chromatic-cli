@@ -2,7 +2,7 @@ import { stat, writeFileSync } from 'fs';
 import path from 'path';
 import { withFile } from 'tmp-promise';
 
-import { main as trimStatsFile } from '../../bin-src/trim-stats-file';
+import { main as trimStatsFile } from '../../bin-src/trimStatsFile';
 import { Context, FileDesc } from '../types';
 import metadataHtml from '../ui/html/metadata.html';
 import uploadingMetadata from '../ui/messages/info/uploadingMetadata';

@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getGitInfo, runAll } from '.';
 import * as git from './git/git';
-import { DNSResolveAgent } from './io/getDNSResolveAgent';
+import { DNSResolveAgent } from './io/getDnsResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
@@ -275,7 +275,7 @@ const mockStats = {
 };
 const mockStatsFile = Readable.from([JSON.stringify(mockStats)]);
 
-vi.mock('./tasks/read-stats-file', () => ({
+vi.mock('./tasks/readStatsFile', () => ({
   readStatsFile: () => Promise.resolve(mockStats),
 }));
 

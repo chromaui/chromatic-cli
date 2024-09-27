@@ -22,7 +22,7 @@ vi.mock('../lib/compress');
 vi.mock('../lib/getDependentStoryFiles');
 vi.mock('../lib/findChangedDependencies');
 vi.mock('../lib/findChangedPackageFiles');
-vi.mock('./read-stats-file', () => ({
+vi.mock('./readStatsFile', () => ({
   readStatsFile: () =>
     Promise.resolve({
       modules: [
@@ -34,7 +34,7 @@ vi.mock('./read-stats-file', () => ({
     }),
 }));
 
-vi.mock('../lib/FileReaderBlob', () => ({
+vi.mock('../lib/fileReaderBlob', () => ({
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class
   FileReaderBlob: class {
     constructor(_path: string, length: number, onProgress: (delta: number) => void) {

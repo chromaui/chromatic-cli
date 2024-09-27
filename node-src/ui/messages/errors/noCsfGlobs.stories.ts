@@ -1,4 +1,4 @@
-import noCSFGlobs from './noCSFGlobs';
+import noCSFGlobs from './noCsfGlobs';
 
 export default {
   title: 'CLI/Messages/Errors',

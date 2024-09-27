@@ -1,7 +1,7 @@
 import retry from 'async-retry';
 
 import { InitialContext } from '..';
-import HTTPClient, { HTTPClientOptions } from './HTTPClient';
+import HTTPClient, { HTTPClientOptions } from './httpClient';
 
 const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 

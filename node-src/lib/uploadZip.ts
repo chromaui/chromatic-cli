@@ -3,7 +3,7 @@ import { filesize } from 'filesize';
 import { FormData } from 'formdata-node';
 
 import { Context, TargetInfo } from '../types';
-import { FileReaderBlob } from './FileReaderBlob';
+import { FileReaderBlob } from './fileReaderBlob';
 
 /**
  * Upload a zip to Chromatic instead of individual files.
