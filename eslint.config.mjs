@@ -137,8 +137,6 @@ export default [
       'unicorn/switch-case-braces': 'off',
       'unicorn/no-process-exit': 'off',
       'unicorn/prefer-node-protocol': 'off', // This will error our Webpack build
-      // TODO: remove the following lines when we are ready to enforce these rules
-      'unicorn/prefer-module': 'off',
     },
   },
   // prefer TS to complain when we miss an arg vs. sending an intentional undefined
