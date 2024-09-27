@@ -1,14 +1,6 @@
 import { Context } from '../types';
 import { getDependencies } from './getDependencies';
 
-// Retrieve a set of values which is in either set, but not both.
-const xor = <T>(left: Set<T>, right: Set<T>) =>
-  [...right.values()].reduce((acc, value) => {
-    if (acc.has(value)) acc.delete(value);
-    else acc.add(value);
-    return acc;
-  }, new Set(left));
-
 interface BaselineConfig {
   ref: string;
   rootPath: string;
@@ -31,3 +23,14 @@ export const compareBaseline = async (
   }
   return changedDependencyNames;
 };
+
+// Retrieve a set of values which is in either set, but not both.
+function xor<T>(left: Set<T>, right: Set<T>) {
+  const result = new Set(left);
+
+  for (const value of right.values()) {
+    result.has(value) ? result.delete(value) : result.add(value);
+  }
+
+  return result;
+}

@@ -94,12 +94,14 @@ export async function uploadBuild(
   const targets: (TargetInfo & FileDesc)[] = [];
   let zipTarget: TargetInfo | undefined;
 
-  const batches = files.reduce<(typeof files)[]>((acc, file, fileIndex) => {
+  const batches: FileDesc[][] = [];
+  for (const [fileIndex, file] of files.entries()) {
     const batchIndex = Math.floor(fileIndex / MAX_FILES_PER_REQUEST);
-    if (!acc[batchIndex]) acc[batchIndex] = [];
-    acc[batchIndex].push(file);
-    return acc;
-  }, []);
+    if (!batches[batchIndex]) {
+      batches[batchIndex] = [];
+    }
+    batches[batchIndex].push(file);
+  }
 
   // The uploadBuild mutation has to run in batches to avoid hitting request/response payload limits
   // or running out of memory. These run sequentially to avoid too many concurrent requests.

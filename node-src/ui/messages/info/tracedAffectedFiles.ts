@@ -88,29 +88,41 @@ export default (
 
   const printModules = (moduleName, indent = '') => {
     if (!expanded) return '';
+
     const { modules } = modulesByName[moduleName] || {};
-    return modules
-      ? modules.reduce((acc, mod) => chalk`${acc}\n${indent}  ⎸  {dim ${normalize(mod.name)}}`, '')
-      : '';
+    if (!modules) return '';
+
+    let result = '';
+    for (const module of modules) {
+      result += chalk`\n${indent}  ⎸  {dim ${normalize(module.name)}}`;
+    }
+    return result;
   };
 
   const seen = new Set();
   const traces = [...ctx.turboSnap.tracedPaths].map((p) => {
     const parts = p.split('\n');
-    const traceParts = parts.reduce((acc, part, index) => {
-      if (index === 0) return chalk`— ${printPath(part)} {cyan [changed]}${printModules(part)}`;
-      const indent = '  '.repeat(index);
+
+    let results = '';
+    for (const [index, part] of parts.entries()) {
+      if (index === 0) {
+        results = chalk`— ${printPath(part)} {cyan [changed]}${printModules(part)}`;
+        continue;
+      }
+
       let note = '';
       if (index === parts.length - 1) {
         if (seen.has(part)) note = chalk` {yellow [duplicate]}`;
         else seen.add(part);
       }
-      return chalk`${
-        expanded ? `File Path: ${part}\n\nBase Directory: ${basedir}\n\n` : ''
-      }${acc}\n${indent}∟ ${printPath(part)}${note}${printModules(part, indent)}`;
-    }, '');
 
-    return traceParts + chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`;
+      const indent = '  '.repeat(index);
+      results = chalk`${
+        expanded ? `File Path: ${part}\n\nBase Directory: ${basedir}\n\n` : ''
+      }${results}\n${indent}∟ ${printPath(part)}${note}${printModules(part, indent)}`;
+    }
+
+    return results + chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`;
   });
 
   const note = chalk`\n\nSet {bold ${flag}} to {bold 'expanded'} to reveal underlying modules.`;
