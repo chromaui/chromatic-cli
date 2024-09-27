@@ -1,8 +1,11 @@
 import reportBuilder from 'junit-report-builder';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateReport } from './report';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const log = { error: vi.fn(), info: vi.fn() };
 const mockTests = [

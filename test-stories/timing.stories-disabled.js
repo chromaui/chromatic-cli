@@ -29,6 +29,7 @@ const WaitFor = ({ seconds }) => {
   );
 };
 
+// eslint-disable-next-line unicorn/prefer-module
 storiesOf('Timing', module)
   .add('5s', () => <WaitFor seconds={5} />)
   .add('40s', () => <WaitFor seconds={40} />)

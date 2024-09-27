@@ -1,9 +1,12 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { describe, expect, it } from 'vitest';
 
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 import TestLogger from './testLogger';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const getContext: any = (baselineCommits: string[]) => ({
   log: new TestLogger(),
