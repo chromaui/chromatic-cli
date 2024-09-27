@@ -11,7 +11,7 @@ export default {
 };
 
 export const WithViewports = () => {
-  let bg = null;
+  let bg;
   if (window.matchMedia('(max-width: 400px)').matches) {
     bg = 'cyan';
   } else if (window.matchMedia('(max-width: 800px)').matches) {

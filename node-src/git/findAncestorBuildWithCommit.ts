@@ -76,9 +76,9 @@ export async function findAncestorBuildWithCommit(
 
     if (result) return result[0];
 
-    if (results.length < page) return null;
+    if (results.length < page) return;
 
     skip += page;
   }
-  return null;
+  return;
 }

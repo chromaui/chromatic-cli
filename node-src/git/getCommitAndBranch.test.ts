@@ -29,7 +29,7 @@ beforeEach(() => {
     committerEmail: 'noreply@github.com',
   });
   hasPreviousCommit.mockResolvedValue(true);
-  mergeQueueBranchMatch.mockResolvedValue(null);
+  mergeQueueBranchMatch.mockResolvedValue(undefined);
 });
 
 afterEach(() => {

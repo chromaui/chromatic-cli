@@ -42,7 +42,7 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
     const targetFile = statsFile.replace('.json', '.trimmed.json');
     await outputFile(
       targetFile,
-      JSON.stringify({ modules: trimmedModules }, null, 2)
+      JSON.stringify({ modules: trimmedModules }, undefined, 2)
         .replaceAll(/{\n {10}/g, '{ ')
         .replaceAll(/\n {8}}/g, ' }')
     );

@@ -295,7 +295,7 @@ export async function getDependentStoryFiles(
 
   if (ctx.turboSnap.bailReason) {
     ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-    return null;
+    return;
   }
 
   return affectedModules;

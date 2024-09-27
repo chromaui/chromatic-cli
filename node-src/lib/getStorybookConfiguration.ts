@@ -6,14 +6,14 @@ export default function getStorybookConfiguration(
   shortName: string,
   longName?: string
 ) {
-  if (!storybookScript) return null;
+  if (!storybookScript) return;
   const parts = storybookScript.split(/[\s"'=]+/);
   let index = parts.indexOf(longName);
   if (index === -1) {
     index = parts.indexOf(shortName);
   }
   if (index === -1) {
-    return null;
+    return;
   }
   return parts[index + 1];
 }

@@ -26,7 +26,7 @@ export default (
     `),
     message,
     chalk`${info} Build command:\n{dim ${buildCommand}}`,
-    chalk`${info} Runtime metadata:\n{dim ${JSON.stringify(runtimeMetadata, null, 2)}}`,
+    chalk`${info} Runtime metadata:\n{dim ${JSON.stringify(runtimeMetadata, undefined, 2)}}`,
     chalk`${info} Storybook build output:\n{dim ${buildLogFile}}`,
     lines.join(`\n`),
   ].join('\n\n');

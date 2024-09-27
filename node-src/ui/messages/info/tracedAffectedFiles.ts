@@ -51,7 +51,7 @@ export default (
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
 
-  let directoryDebug = null;
+  let directoryDebug;
 
   if (expanded) {
     const bailReason = ctx.turboSnap?.bailReason ? `${ctx.turboSnap.bailReason}\n\n` : '';

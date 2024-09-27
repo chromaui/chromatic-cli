@@ -503,7 +503,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -530,7 +530,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -558,7 +558,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
     });
@@ -585,7 +585,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ staticDir: ['path/to/statics'] });
     const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual(null);
+    expect(res).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStaticFiles: ['path/to/statics/image.png'],
     });

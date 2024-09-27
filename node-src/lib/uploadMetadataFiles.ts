@@ -22,8 +22,8 @@ export async function uploadMetadataFiles(ctx: Context) {
     ctx.options.logFile,
     ctx.options.diagnosticsFile,
     ctx.options.storybookLogFile,
-    await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/).catch(() => null),
-    await findStorybookConfigFile(ctx, /^preview\.[jt]sx?$/).catch(() => null),
+    await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/).catch(() => undefined),
+    await findStorybookConfigFile(ctx, /^preview\.[jt]sx?$/).catch(() => undefined),
     ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
   ].filter(Boolean);
 

@@ -40,7 +40,7 @@ export const setEnvironment = async (ctx: Context) => {
     }
   }
 
-  ctx.log.debug(`Got environment:\n${JSON.stringify(ctx.environment, null, 2)}`);
+  ctx.log.debug(`Got environment:\n${JSON.stringify(ctx.environment, undefined, 2)}`);
 };
 
 export const setRuntimeMetadata = async (ctx: Context) => {
