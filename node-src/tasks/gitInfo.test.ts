@@ -137,4 +137,21 @@ describe('setGitInfo', () => {
     await setGitInfo(ctx, {} as any);
     expect(ctx.options.forceRebuild).toBe(true);
   });
+
+  it('sets storybookUrl and rebuildForBuild on skipped rebuild', async () => {
+    const lastBuild = {
+      id: 'parent',
+      status: 'ACCEPTED',
+      webUrl: 'some-web-url',
+      storybookUrl: 'some-storybook-url',
+    };
+
+    getParentCommits.mockResolvedValue([commitInfo.commit]);
+    client.runQuery.mockReturnValue({ app: { lastBuild } });
+
+    const ctx = { log, options: {}, client } as any;
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.rebuildForBuild).toEqual(lastBuild);
+    expect(ctx.storybookUrl).toEqual(lastBuild.storybookUrl);
+  });
 });

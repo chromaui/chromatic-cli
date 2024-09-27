@@ -38,6 +38,8 @@ const LastBuildQuery = `
       lastBuild(ref: $commit, branch: $branch) {
         id
         status(legacy: false)
+        storybookUrl
+        webUrl
       }
     }
   }
@@ -48,6 +50,8 @@ interface LastBuildQueryResult {
     lastBuild: {
       id: string;
       status: string;
+      storybookUrl: string;
+      webUrl: string;
     };
   };
 }
@@ -141,6 +145,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         !ctx.git.matchesBranch(ctx.options.forceRebuild)
       ) {
         ctx.skip = true;
+        ctx.rebuildForBuild = result.app.lastBuild;
+        ctx.storybookUrl = result.app.lastBuild.storybookUrl;
         transitionTo(skippedRebuild, true)(ctx, task);
         ctx.log.info(forceRebuildHint());
         ctx.exitCode = 0;
