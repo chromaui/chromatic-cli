@@ -234,6 +234,7 @@ async function runBuild(ctx: Context) {
       await new Listr(getTasks(ctx.options), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
+      Sentry.captureException(err);
       endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);
@@ -266,8 +267,6 @@ async function runBuild(ctx: Context) {
       ctx.log.flush();
     }
   } catch (error) {
-    Sentry.captureException(error);
-
     const errors = [error].flat(); // GraphQLClient might throw an array of errors
     const formattedError = fatalError(ctx, errors);
 
