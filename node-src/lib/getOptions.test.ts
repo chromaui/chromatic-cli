@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { Context } from '../types';
 import getEnvironment from './getEnvironment';
 import getOptions from './getOptions';
-import getStorybookConfiguration from './getStorybookConfiguration';
 import parseArguments from './parseArguments';
 import TestLogger from './testLogger';
 
@@ -209,33 +208,5 @@ describe('getOptions', () => {
       logFile: 'chromatic.log',
       uploadMetadata: true,
     });
-  });
-});
-
-describe('getStorybookConfiguration', () => {
-  it('handles short names', async () => {
-    const port = getStorybookConfiguration('start-storybook -p 9001', '-p', '--port');
-    expect(port).toBe('9001');
-  });
-  it('handles long names', async () => {
-    const port = getStorybookConfiguration('start-storybook --port 9001', '-p', '--port');
-    expect(port).toBe('9001');
-  });
-  it('handles equals', async () => {
-    const port = getStorybookConfiguration('start-storybook --port=9001', '-p', '--port');
-    expect(port).toBe('9001');
-  });
-  it('handles double space', async () => {
-    const port = getStorybookConfiguration('start-storybook --port  9001', '-p', '--port');
-    expect(port).toBe('9001');
-  });
-
-  it('handles complex scripts', async () => {
-    const port = getStorybookConfiguration(
-      "node verify-node-version.js && concurrently --raw --kill-others 'yarn relay --watch' 'start-storybook -s ./public -p 9001'",
-      '-p',
-      '--port'
-    );
-    expect(port).toBe('9001');
   });
 });
