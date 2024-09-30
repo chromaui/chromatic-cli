@@ -30,13 +30,13 @@ export default async function checkForUpdates(ctx: Context) {
     }
 
     const pkgUrl = new URL(ctx.pkg.name, registryUrl).href;
-    const res = await withTimeout(ctx.http.fetch(pkgUrl), 5000); // If not fetched within 5 seconds, nevermind.
-    const { 'dist-tags': distTags = {} } = (await res.json()) as any;
-    if (!semver.valid(distTags.latest)) {
+    const result = await withTimeout(ctx.http.fetch(pkgUrl), 5000); // If not fetched within 5 seconds, nevermind.
+    const { 'dist-tags': distributionTags = {} } = (await result.json()) as any;
+    if (!semver.valid(distributionTags.latest)) {
       ctx.log.warn(`Invalid dist-tag 'latest' returned from registry; skipping update check`);
       return;
     }
-    latestVersion = distTags.latest;
+    latestVersion = distributionTags.latest;
   } catch (err) {
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
     ctx.log.warn(err);

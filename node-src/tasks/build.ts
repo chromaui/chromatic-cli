@@ -15,15 +15,15 @@ import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 
-export const setSourceDir = async (ctx: Context) => {
+export const setSourceDirectory = async (ctx: Context) => {
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
   } else if (ctx.storybook && ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
     // Storybook v4 doesn't support absolute paths like tmp.dir would yield
     ctx.sourceDir = 'storybook-static';
   } else {
-    const tmpDir = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
-    ctx.sourceDir = tmpDir.path;
+    const temporaryDirectory = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
+    ctx.sourceDir = temporaryDirectory.path;
   }
 };
 
@@ -75,7 +75,7 @@ function isE2EBuildCommandNotFoundError(errorMessage: string) {
 
 function e2eBuildErrorMessage(
   err,
-  workingDir: string,
+  workingDirectory: string,
   ctx: Context
 ): { exitCode: number; message: string } {
   const flag = ctx.options.playwright ? 'playwright' : 'cypress';
@@ -88,7 +88,7 @@ function e2eBuildErrorMessage(
     const dependencyName = `@chromatic-com/${flag}`;
     return {
       exitCode: exitCodes.MISSING_DEPENDENCY,
-      message: missingDependency({ dependencyName, flag, workingDir }),
+      message: missingDependency({ dependencyName, flag, workingDir: workingDirectory }),
     };
   }
 
@@ -157,7 +157,7 @@ export default createTask({
     return false;
   },
   steps: [
-    setSourceDir,
+    setSourceDirectory,
     setBuildCommand,
     transitionTo(pending),
     startActivity,

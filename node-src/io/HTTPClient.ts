@@ -10,8 +10,8 @@ import getProxyAgent from './getProxyAgent';
 export class HTTPClientError extends Error {
   response: Response;
 
-  constructor(fetchResponse: Response, message?: string, ...params: any[]) {
-    super(...params);
+  constructor(fetchResponse: Response, message?: string, ...parameters: any[]) {
+    super(...parameters);
 
     // Maintains proper stack trace for where our error was thrown (only available on V8)
     if (Error.captureStackTrace) {
@@ -57,8 +57,9 @@ export default class HTTPClient {
     this.retries = retries;
   }
 
-  async fetch(url: string, options: RequestInit = {}, opts: HTTPClientFetchOptions = {}) {
-    let agent = options.agent || getProxyAgent({ env: this.env, log: this.log }, url, opts.proxy);
+  async fetch(url: string, options: RequestInit = {}, options_: HTTPClientFetchOptions = {}) {
+    let agent =
+      options.agent || getProxyAgent({ env: this.env, log: this.log }, url, options_.proxy);
 
     if (this.env.CHROMATIC_DNS_SERVERS.length > 0) {
       this.log.debug(`Using custom DNS servers: ${this.env.CHROMATIC_DNS_SERVERS.join(', ')}`);
@@ -67,7 +68,7 @@ export default class HTTPClient {
     }
 
     // The user can override retries and set it to 0
-    const retries = opts.retries === undefined ? this.retries : opts.retries;
+    const retries = options_.retries === undefined ? this.retries : options_.retries;
     const onRetry = (err, n) => {
       this.log.debug({ url, err }, `Fetch failed; retrying ${n}/${retries}`);
       // node-fetch includes ENOTFOUND in the message, but undici (native fetch in ts-node) doesn't.
@@ -85,25 +86,25 @@ export default class HTTPClient {
     return retry(
       async () => {
         const headers = { ...this.headers, ...options.headers };
-        const res = await fetch(url, { ...options, agent, headers });
-        if (!res.ok) {
-          const error = new HTTPClientError(res);
+        const result = await fetch(url, { ...options, agent, headers });
+        if (!result.ok) {
+          const error = new HTTPClientError(result);
           // You can only call text() or json() once, so if we are going to handle it outside of here..
-          if (!opts.noLogErrorBody) {
-            const body = await res.text();
+          if (!options_.noLogErrorBody) {
+            const body = await result.text();
             this.log.debug(error.message);
             this.log.debug(body);
           }
           throw error;
         }
-        return res;
+        return result;
       },
       { retries, onRetry }
     );
   }
 
   async fetchBuffer(url, options) {
-    const res = await this.fetch(url, options);
-    return res.buffer();
+    const result = await this.fetch(url, options);
+    return result.buffer();
   }
 }

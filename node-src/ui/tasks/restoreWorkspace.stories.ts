@@ -3,7 +3,7 @@ import { initial, pending, success } from './restoreWorkspace';
 
 export default {
   title: 'CLI/Tasks/RestoreWorkspace',
-  decorators: [(storyFn: any) => task(storyFn())],
+  decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
 export const Initial = () => initial;

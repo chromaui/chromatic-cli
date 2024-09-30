@@ -11,11 +11,11 @@ export const invalidConfigurationFile = (configFile: string, err: ZodError) => {
     ${error} Configuration file {bold ${configFile}} was invalid, please check the allowed keys.
     ${
       formErrors.length > 0
-        ? `\n${formErrors.map((msg) => chalk`- {bold ${msg}}`).join('\n    ')}\n\n`
+        ? `\n${formErrors.map((message) => chalk`- {bold ${message}}`).join('\n    ')}\n\n`
         : ''
     }
     ${Object.entries(fieldErrors)
-      .map(([field, msg]) => chalk`- {bold ${field}}: ${msg}`)
+      .map(([field, message]) => chalk`- {bold ${field}}: ${message}`)
       .join('\n    ')}
   `);
 };

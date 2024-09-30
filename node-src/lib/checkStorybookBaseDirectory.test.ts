@@ -2,7 +2,7 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
-import { checkStorybookBaseDir } from './checkStorybookBaseDir';
+import { checkStorybookBaseDirectory } from './checkStorybookBaseDirectory';
 import { exitCodes } from './setExitCode';
 import TestLogger from './testLogger';
 
@@ -17,9 +17,9 @@ afterEach(() => {
   getRepositoryRoot.mockReset();
 });
 
-const getContext: any = (storybookBaseDir?: string) => ({
+const getContext: any = (storybookBaseDirectory?: string) => ({
   log: new TestLogger(),
-  options: { storybookBaseDir },
+  options: { storybookBaseDir: storybookBaseDirectory },
 });
 
 describe('checkStorybookBaseDir', () => {
@@ -34,7 +34,7 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
-    await expect(checkStorybookBaseDir(ctx, statsWithJsModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDirectory(ctx, statsWithJsModule)).resolves.toBeUndefined();
 
     const statsWithJsxModule = {
       modules: [
@@ -44,7 +44,7 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
-    await expect(checkStorybookBaseDir(ctx, statsWithJsxModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDirectory(ctx, statsWithJsxModule)).resolves.toBeUndefined();
 
     const statsWithTsModule = {
       modules: [
@@ -54,7 +54,7 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
-    await expect(checkStorybookBaseDir(ctx, statsWithTsModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDirectory(ctx, statsWithTsModule)).resolves.toBeUndefined();
 
     const statsWithTsxModule = {
       modules: [
@@ -64,7 +64,7 @@ describe('checkStorybookBaseDir', () => {
         },
       ],
     };
-    await expect(checkStorybookBaseDir(ctx, statsWithTsxModule)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDirectory(ctx, statsWithTsxModule)).resolves.toBeUndefined();
   });
 
   it('should throw an error if none of the js(x)/ts(x) modules in stats exist at the path prepended by the storybookBaseDir', async () => {
@@ -77,13 +77,15 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    const ctxWithBaseDir = getContext('wrong');
-    await expect(() => checkStorybookBaseDir(ctxWithBaseDir, stats)).rejects.toThrow();
-    expect(ctxWithBaseDir.exitCode).toBe(exitCodes.INVALID_OPTIONS);
+    const ctxWithBaseDirectory = getContext('wrong');
+    await expect(() => checkStorybookBaseDirectory(ctxWithBaseDirectory, stats)).rejects.toThrow();
+    expect(ctxWithBaseDirectory.exitCode).toBe(exitCodes.INVALID_OPTIONS);
 
-    const ctxWithoutBaseDir = getContext();
-    await expect(() => checkStorybookBaseDir(ctxWithoutBaseDir, stats)).rejects.toThrow();
-    expect(ctxWithoutBaseDir.exitCode).toBe(exitCodes.INVALID_OPTIONS);
+    const ctxWithoutBaseDirectory = getContext();
+    await expect(() =>
+      checkStorybookBaseDirectory(ctxWithoutBaseDirectory, stats)
+    ).rejects.toThrow();
+    expect(ctxWithoutBaseDirectory.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
   it('should not consider modules in node_modules as valid files to match', async () => {
@@ -97,7 +99,7 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    await expect(() => checkStorybookBaseDir(ctx, stats)).rejects.toThrow();
+    await expect(() => checkStorybookBaseDirectory(ctx, stats)).rejects.toThrow();
   });
 
   it('should assume current working directory if no storybookBaseDir is specified', async () => {
@@ -112,9 +114,9 @@ describe('checkStorybookBaseDir', () => {
     };
 
     getRepositoryRoot.mockResolvedValueOnce(process.cwd());
-    await expect(checkStorybookBaseDir(ctx, stats)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDirectory(ctx, stats)).resolves.toBeUndefined();
 
     getRepositoryRoot.mockResolvedValueOnce(path.resolve(process.cwd(), '..'));
-    await expect(checkStorybookBaseDir(ctx, stats)).resolves.toBeUndefined();
+    await expect(checkStorybookBaseDirectory(ctx, stats)).resolves.toBeUndefined();
   });
 });

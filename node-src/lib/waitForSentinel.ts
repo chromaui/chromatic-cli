@@ -19,8 +19,12 @@ export async function waitForSentinel(ctx: Context, { name, url }: { name: strin
       }
 
       try {
-        const res = await ctx.http.fetch(url, { signal }, { retries: 0, noLogErrorBody: true });
-        const result = await res.text();
+        const response = await ctx.http.fetch(
+          url,
+          { signal },
+          { retries: 0, noLogErrorBody: true }
+        );
+        const result = await response.text();
         if (result !== SENTINEL_SUCCESS_VALUE) {
           ctx.log.debug(`Sentinel file '${name}' not OK, got '${result}'.`);
           return bail(new Error(`Sentinel file '${name}' not OK.`));

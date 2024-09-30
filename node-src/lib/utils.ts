@@ -3,19 +3,19 @@ import picomatch, { Matcher } from 'picomatch';
 export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.slice(1)}`;
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-export const tick = async (times: number, interval: number, fn: (i: number) => any) => {
-  for (let i = 0; i < times; i += 1) {
+export const tick = async (times: number, interval: number, callback: (index: number) => any) => {
+  for (let index = 0; index < times; index += 1) {
     await delay(interval);
-    fn(i);
+    callback(index);
   }
 };
 
 export const throttle = (fn: (...args: any[]) => void, wait: number) => {
-  let prev = 0;
+  let previous = 0;
   return (...args: any[]) => {
     const now = Date.now();
-    if (now - prev >= wait) {
-      prev = now;
+    if (now - previous >= wait) {
+      previous = now;
       fn(...args);
     }
   };
@@ -30,8 +30,8 @@ export const progressBar = (percentage: number, size = 20) => {
 };
 export const activityBar = (n = 0, size = 20) => {
   const track = repeat(size, ' ');
-  const i = n % ((size - 1) * 2);
-  track[i >= size ? (size - 1) * 2 - i : i] = '*';
+  const index = n % ((size - 1) * 2);
+  track[index >= size ? (size - 1) * 2 - index : index] = '*';
   return `[${track.join('')}]`;
 };
 
@@ -65,7 +65,8 @@ export const isPackageMetadataFile = (filePath: string) =>
 export const redact = <T>(value: T, ...fields: string[]): T => {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
-  const obj = { ...value };
-  for (const key in obj) obj[key] = fields.includes(key) ? undefined : redact(obj[key], ...fields);
-  return obj;
+  const object = { ...value };
+  for (const key in object)
+    object[key] = fields.includes(key) ? undefined : redact(object[key], ...fields);
+  return object;
 };

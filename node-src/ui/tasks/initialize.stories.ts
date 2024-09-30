@@ -3,7 +3,7 @@ import { initial, pending, success } from './initialize';
 
 export default {
   title: 'CLI/Tasks/Initialize',
-  decorators: [(storyFn: any) => task(storyFn())],
+  decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
 const announcedBuild = {

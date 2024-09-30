@@ -32,6 +32,7 @@ const findDependency = (
 ];
 
 const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, string>) => {
+  // eslint-disable-next-line unicorn/prevent-abbreviations
   const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
   const [pkg, version] = dep || devDep || peerDep || [];
   const dependency = viewLayers[pkg];
@@ -201,26 +202,26 @@ export const findBuilder = async (mainConfig, v7) => {
 };
 
 export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => {
-  const configDir = ctx.options.storybookConfigDir ?? '.storybook';
-  const files = await readdir(configDir);
+  const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
+  const files = await readdir(configDirectory);
   const configFile = files.find((file) => pattern.test(file));
-  return configFile && path.join(configDir, configFile);
+  return configFile && path.join(configDirectory, configFile);
 };
 
 export const getStorybookMetadata = async (ctx: Context) => {
-  const configDir = ctx.options.storybookConfigDir ?? '.storybook';
+  const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
   const r = typeof __non_webpack_require__ === 'undefined' ? require : __non_webpack_require__;
 
   let mainConfig;
   let v7 = false;
   try {
-    mainConfig = await r(path.resolve(configDir, 'main'));
-    ctx.log.debug({ configDir, mainConfig });
+    mainConfig = await r(path.resolve(configDirectory, 'main'));
+    ctx.log.debug({ configDirectory, mainConfig });
   } catch (err) {
     ctx.log.debug({ storybookV6error: err });
     try {
       mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
-      ctx.log.debug({ configDir, mainConfig });
+      ctx.log.debug({ configDirectory, mainConfig });
       v7 = true;
     } catch (err) {
       ctx.log.debug({ storybookV7error: err });

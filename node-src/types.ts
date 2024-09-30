@@ -2,7 +2,7 @@ import { InitialContext } from '.';
 import GraphQLClient from './io/GraphQLClient';
 import HTTPClient from './io/HTTPClient';
 import type { Configuration } from './lib/getConfiguration';
-import { Env } from './lib/getEnv';
+import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
 
 export interface Flags {
@@ -140,7 +140,7 @@ export interface Options extends Configuration {
   sessionId?: string;
 
   /** Environment variables */
-  env?: Env;
+  env?: Environment;
 
   skipUpdateCheck: Flags['skipUpdateCheck'];
 }
@@ -159,7 +159,7 @@ export type TaskName =
   | 'restoreWorkspace';
 
 export interface Context {
-  env: Env;
+  env: Environment;
   log: Logger;
   pkg: {
     name: string;

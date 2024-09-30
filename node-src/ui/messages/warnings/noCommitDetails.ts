@@ -4,18 +4,18 @@ import { dedent } from 'ts-dedent';
 import { info, warning } from '../../components/icons';
 import link from '../../components/link';
 
-interface BranchRef {
+interface BranchReference {
   ref: string;
   sha: string;
   env: string;
 }
-interface CommitRef {
+interface CommitReference {
   ref?: never;
   sha: string;
   env?: string;
 }
 
-export default ({ ref, sha, env }: BranchRef | CommitRef) => {
+export default ({ ref, sha, env }: BranchReference | CommitReference) => {
   if (ref) {
     return dedent(chalk`
       ${warning} {bold Branch '${ref}' does not exist}

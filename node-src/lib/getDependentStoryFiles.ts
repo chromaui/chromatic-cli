@@ -22,10 +22,10 @@ const LOCKFILES = [
 const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
 const isPackageLockFile = (name: string) => LOCKFILES.some((re) => re.test(name));
-const isUserModule = (mod: Module | Reason) =>
-  (mod as Module).id !== undefined &&
-  (mod as Module).id !== null &&
-  !INTERNALS.some((re) => re.test((mod as Module).name || (mod as Reason).moduleName));
+const isUserModule = (module_: Module | Reason) =>
+  (module_ as Module).id !== undefined &&
+  (module_ as Module).id !== null &&
+  !INTERNALS.some((re) => re.test((module_ as Module).name || (module_ as Reason).moduleName));
 
 // Replaces Windows-style backslash path separators with POSIX-style forward slashes, because the
 // Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
@@ -47,11 +47,11 @@ const getPackageName = (modulePath: string) => {
  * The result is a relative POSIX path compatible with `git diff --name-only`.
  * Virtual paths (e.g. Vite) are returned as-is.
  */
-export function normalizePath(posixPath: string, rootPath: string, baseDir = '') {
+export function normalizePath(posixPath: string, rootPath: string, baseDirectory = '') {
   if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
   return path.posix.isAbsolute(posixPath)
     ? path.posix.relative(rootPath, posixPath)
-    : path.posix.join(baseDir, posixPath);
+    : path.posix.join(baseDirectory, posixPath);
 }
 
 /**
@@ -68,34 +68,41 @@ export async function getDependentStoryFiles(
   changedFiles: string[],
   changedDependencies: string[] = []
 ) {
-  const { configDir = '.storybook', staticDir = [], viewLayer } = ctx.storybook || {};
+  const {
+    configDir: configDirectory = '.storybook',
+    staticDir: staticDirectory = [],
+    viewLayer,
+  } = ctx.storybook || {};
   const {
     storybookBuildDir,
     storybookBaseDir,
-    storybookConfigDir = configDir,
+    // eslint-disable-next-line unicorn/prevent-abbreviations
+    storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
 
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
-  const baseDir = storybookBaseDir ? posix(storybookBaseDir) : path.posix.relative(rootPath, '');
+  const baseDirectory = storybookBaseDir
+    ? posix(storybookBaseDir)
+    : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
   const normalize = (posixPath: FilePath): NormalizedName => {
     const CSF_REGEX = /\s+(sync|lazy)\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
-    const newPath = normalizePath(posixPath, rootPath, baseDir);
+    const newPath = normalizePath(posixPath, rootPath, baseDirectory);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
       ? newPath.replaceAll(URL_PARAM_REGEX, '')
       : newPath;
   };
 
-  const storybookDir = normalize(posix(storybookConfigDir));
-  const staticDirs = staticDir.map((dir: string) => normalize(posix(dir)));
+  const storybookDirectory = normalize(posix(storybookConfigDir));
+  const staticDirectories = staticDirectory.map((directory: string) => normalize(posix(directory)));
 
-  ctx.log.debug('BASE Directory:', baseDir);
-  ctx.log.debug('Storybook CONFIG Directory:', storybookDir);
+  ctx.log.debug('BASE Directory:', baseDirectory);
+  ctx.log.debug('Storybook CONFIG Directory:', storybookDirectory);
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
@@ -123,13 +130,13 @@ export async function getDependentStoryFiles(
   const csfGlobsByName = new Set<NormalizedName>();
 
   stats.modules
-    .filter((mod) => isUserModule(mod))
-    .map((mod) => {
-      const normalizedName = normalize(mod.name);
-      modulesByName.set(normalizedName, mod);
-      namesById.set(mod.id, normalizedName);
+    .filter((module_) => isUserModule(module_))
+    .map((module_) => {
+      const normalizedName = normalize(module_.name);
+      modulesByName.set(normalizedName, module_);
+      namesById.set(module_.id, normalizedName);
 
-      const packageName = getPackageName(mod.name);
+      const packageName = getPackageName(module_.name);
       if (packageName) {
         // Track all modules from any node_modules directory by their package name, so we can mark
         // all those files "changed" if a dependency (version) changes, while still being able to
@@ -138,18 +145,18 @@ export async function getDependentStoryFiles(
         nodeModules.get(packageName).push(normalizedName);
       }
 
-      if (mod.modules) {
-        for (const m of mod.modules) {
-          modulesByName.set(normalize(m.name), mod);
+      if (module_.modules) {
+        for (const m of module_.modules) {
+          modulesByName.set(normalize(m.name), module_);
         }
       }
 
-      const normalizedReasons = mod.reasons
+      const normalizedReasons = module_.reasons
         .map((reason) => normalize(reason.moduleName))
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
-      reasonsById.set(mod.id, normalizedReasons);
+      reasonsById.set(module_.id, normalizedReasons);
 
-      if (reasonsById.get(mod.id).some((reason) => storiesEntryFiles.has(reason))) {
+      if (reasonsById.get(module_.id).some((reason) => storiesEntryFiles.has(reason))) {
         csfGlobsByName.add(normalizedName);
       }
     });
@@ -159,18 +166,27 @@ export async function getDependentStoryFiles(
     // does not use configDir in the entry file path so there's no fix to recommend there.
     const storiesEntryRegExp = /^(.+\/)?generated-stories-entry\.js$/;
     const foundEntry = stats.modules.find(
-      (mod) => storiesEntryRegExp.test(mod.name) && !storiesEntryFiles.has(normalize(mod.name))
+      (module_) =>
+        storiesEntryRegExp.test(module_.name) && !storiesEntryFiles.has(normalize(module_.name))
     );
     const entryFile = foundEntry && normalize(foundEntry.name);
-    ctx.log.error(noCSFGlobs({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLayer }));
+    ctx.log.error(
+      noCSFGlobs({
+        statsPath,
+        storybookDir: storybookDirectory,
+        storybookBuildDir,
+        entryFile,
+        viewLayer,
+      })
+    );
     throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 
   const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);
   const isStorybookFile = (name: string) =>
-    name && name.startsWith(`${storybookDir}/`) && !storiesEntryFiles.has(name);
+    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
   const isStaticFile = (name: string) =>
-    staticDirs.some((dir) => name && name.startsWith(`${dir}/`));
+    staticDirectories.some((directory) => name && name.startsWith(`${directory}/`));
 
   ctx.untracedFiles = [];
   function untrace(filepath: string) {
@@ -182,10 +198,12 @@ export async function getDependentStoryFiles(
   }
 
   function files(moduleName: string) {
-    const mod = modulesByName.get(moduleName);
-    if (!mod) return [moduleName];
+    const module_ = modulesByName.get(moduleName);
+    if (!module_) return [moduleName];
     // Normalize module names, if there are any
-    return mod.modules?.length ? mod.modules.map((m) => normalize(m.name)) : [normalize(mod.name)];
+    return module_.modules?.length
+      ? module_.modules.map((m) => normalize(m.name))
+      : [normalize(module_.name)];
   }
 
   const tracedFiles = [
@@ -200,9 +218,9 @@ export async function getDependentStoryFiles(
 
   ctx.turboSnap = {
     rootPath,
-    baseDir,
-    storybookDir,
-    staticDirs,
+    baseDir: baseDirectory,
+    storybookDir: storybookDirectory,
+    staticDirs: staticDirectories,
     globs: [...csfGlobsByName],
     modules: [...modulesByName.keys()],
     tracedFiles,

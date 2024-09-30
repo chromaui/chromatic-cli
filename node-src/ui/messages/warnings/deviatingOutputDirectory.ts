@@ -26,7 +26,7 @@ const getHint = (buildScriptName: string, buildScript: string) => {
 
 export default (
   { sourceDir, options, packageJson }: Pick<Context, 'sourceDir' | 'options' | 'packageJson'>,
-  outputDir: string
+  outputDirectory: string
 ) => {
   const { buildScriptName } = options;
   const buildScript = packageJson.scripts && packageJson.scripts[buildScriptName];
@@ -34,7 +34,7 @@ export default (
   return dedent(chalk`
     ${warning} {bold Unexpected build directory}
     The CLI tried to build your Storybook at {bold ${sourceDir}}
-    but instead it was built at {bold ${outputDir}}
+    but instead it was built at {bold ${outputDirectory}}
     Make sure your {bold "${buildScriptName}"} script forwards the {bold --output-dir (-o)} flag to the {bold build-storybook} CLI.
 
     ${getHint(buildScriptName, buildScript)}

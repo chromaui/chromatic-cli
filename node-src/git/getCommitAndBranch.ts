@@ -56,7 +56,7 @@ export default async function getCommitAndBranch(
   } = process.env;
   const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
 
-  const isFromEnvVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
+  const isFromEnvironmentVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
   const isGitHubAction = GITHUB_ACTIONS === 'true';
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
@@ -70,7 +70,7 @@ export default async function getCommitAndBranch(
     }
   }
 
-  if (isFromEnvVariable) {
+  if (isFromEnvironmentVariable) {
     commit = await getCommit(CHROMATIC_SHA).catch((err) => {
       log.warn(noCommitDetails({ sha: CHROMATIC_SHA, env: 'CHROMATIC_SHA' }));
       log.debug(err);
@@ -156,7 +156,7 @@ export default async function getCommitAndBranch(
     !!process.env.GITHUB_REPOSITORY;
 
   // Strip off any `origin/` prefix that's added sometimes.
-  if (!branchName && !isFromEnvVariable && ORIGIN_PREFIX_REGEXP.test(branch)) {
+  if (!branchName && !isFromEnvironmentVariable && ORIGIN_PREFIX_REGEXP.test(branch)) {
     log.warn(`Ignoring 'origin/' prefix in branch name.`);
     branch = branch.replace(ORIGIN_PREFIX_REGEXP, '');
   }

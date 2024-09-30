@@ -19,12 +19,12 @@ import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2e';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
-import getEnv from './lib/getEnv';
+import getEnvironment from './lib/getEnvironment';
 import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/LoggingRenderer';
 import NonTTYRenderer from './lib/NonTTYRenderer';
-import parseArgs from './lib/parseArgs';
+import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utils';
@@ -96,22 +96,26 @@ export async function run({
   flags?: Flags;
   options?: Partial<Options>;
 }): Promise<Output> {
-  const { sessionId = uuid(), env = getEnv(), log = createLogger() } = extraOptions || {};
+  const {
+    sessionId = uuid(),
+    env: environment = getEnvironment(),
+    log = createLogger(),
+  } = extraOptions || {};
 
-  const pkgInfo = await readPkgUp({ cwd: process.cwd() });
-  if (!pkgInfo) {
+  const packageInfo = await readPkgUp({ cwd: process.cwd() });
+  if (!packageInfo) {
     log.error(noPackageJson());
     process.exit(253);
   }
 
-  const { path: packagePath, packageJson } = pkgInfo;
+  const { path: packagePath, packageJson } = packageInfo;
   const ctx: InitialContext = {
-    ...parseArgs(argv),
+    ...parseArguments(argv),
     ...(flags && { flags }),
     ...(extraOptions && { extraOptions }),
     packagePath,
     packageJson,
-    env,
+    env: environment,
     log,
     sessionId,
   };
@@ -142,12 +146,12 @@ export async function runAll(ctx: InitialContext) {
   ctx.log.info(intro(ctx));
   ctx.log.info('');
 
-  const onError = (e: Error | Error[]) => {
+  const onError = (err: Error | Error[]) => {
     ctx.log.info('');
-    ctx.log.error(fatalError(ctx, [e].flat()));
+    ctx.log.error(fatalError(ctx, [err].flat()));
     ctx.extraOptions?.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, [e].flat()),
-      originalError: e,
+      formattedError: fatalError(ctx, [err].flat()),
+      originalError: err,
     });
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
   };
@@ -278,6 +282,8 @@ export interface GitInfo {
   repositoryRootDir: string;
 }
 
+// Although this function may not be used directly in this project, it can be used externally (such
+// as https://github.com/chromaui/addon-visual-tests).
 export async function getGitInfo(): Promise<GitInfo> {
   let slug: string;
   try {
@@ -289,7 +295,7 @@ export async function getGitInfo(): Promise<GitInfo> {
   const commitInfo = await getCommit();
   const userEmail = await getUserEmail();
   const userEmailHash = emailHash(userEmail);
-  const repositoryRootDir = await getRepositoryRoot();
+  const repositoryRootDirectory = await getRepositoryRoot();
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
@@ -302,7 +308,7 @@ export async function getGitInfo(): Promise<GitInfo> {
     uncommittedHash,
     userEmail,
     userEmailHash,
-    repositoryRootDir,
+    repositoryRootDir: repositoryRootDirectory,
   };
 }
 

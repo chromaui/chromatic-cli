@@ -1,7 +1,7 @@
 import { execaCommand } from 'execa';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
-import { file as tmpFile } from 'tmp-promise';
+import { file as temporaryFile } from 'tmp-promise';
 
 import { Context } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
@@ -88,13 +88,13 @@ export async function getBranch() {
     try {
       // Git v1.8 and above
       // Throws when in detached HEAD state
-      const ref = await execGitCommand('git symbolic-ref HEAD');
-      return ref.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
+      const reference = await execGitCommand('git symbolic-ref HEAD');
+      return reference.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
     } catch {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
-      const ref = await execGitCommand('git rev-parse --abbrev-ref HEAD');
-      return ref.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
+      const reference = await execGitCommand('git rev-parse --abbrev-ref HEAD');
+      return reference.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
 }
@@ -230,8 +230,8 @@ export async function getUpdateMessage() {
  * @param {string} headRef Name of the head branch
  * @param {string} baseRef Name of the base branch
  */
-export async function findMergeBase(headRef: string, baseRef: string) {
-  const result = await execGitCommand(`git merge-base --all ${headRef} ${baseRef}`);
+export async function findMergeBase(headReference: string, baseReference: string) {
+  const result = await execGitCommand(`git merge-base --all ${headReference} ${baseReference}`);
   const mergeBases = result.split(newline).filter((line) => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
@@ -244,21 +244,25 @@ export async function findMergeBase(headRef: string, baseRef: string) {
       return name.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
-  const baseRefIndex = branchNames.indexOf(baseRef);
-  return mergeBases[baseRefIndex] || mergeBases[0];
+  const baseReferenceIndex = branchNames.indexOf(baseReference);
+  return mergeBases[baseReferenceIndex] || mergeBases[0];
 }
 
-export async function checkout(ref: string) {
-  return execGitCommand(`git checkout ${ref}`);
+export async function checkout(reference: string) {
+  return execGitCommand(`git checkout ${reference}`);
 }
 
 const fileCache = {};
 const limitConcurrency = pLimit(10);
-export async function checkoutFile({ log }: Pick<Context, 'log'>, ref: string, fileName: string) {
-  const pathspec = `${ref}:${fileName}`;
+export async function checkoutFile(
+  { log }: Pick<Context, 'log'>,
+  reference: string,
+  fileName: string
+) {
+  const pathspec = `${reference}:${fileName}`;
   if (!fileCache[pathspec]) {
     fileCache[pathspec] = limitConcurrency(async () => {
-      const { path: targetFileName } = await tmpFile({
+      const { path: targetFileName } = await temporaryFile({
         postfix: `-${fileName.replaceAll('/', '--')}`,
       });
       log.debug(`Checking out file ${pathspec} at ${targetFileName}`);

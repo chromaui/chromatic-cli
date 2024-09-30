@@ -2,9 +2,9 @@ import { execSync } from 'child_process';
 import { describe, expect, it } from 'vitest';
 
 import {
-  baseDirNote,
-  rootDirNote,
-  storybookDirNote,
+  baseDirectoryNote,
+  rootDirectoryNote,
+  storybookDirectoryNote,
   traceSuggestions,
 } from '../node-src/ui/messages/info/tracedAffectedFiles';
 
@@ -17,7 +17,7 @@ describe('Test trace script from package.json', () => {
     const output = execSync(`yarn ${scriptName}`).toString().trim();
 
     // Verify that the output does not contain the expanded output
-    expect(output).not.toContain(rootDirNote);
+    expect(output).not.toContain(rootDirectoryNote);
   });
   it('outputs directory info when -m expanded is passed', () => {
     const scriptName =
@@ -30,9 +30,9 @@ describe('Test trace script from package.json', () => {
     const expandedFileModule = `node-src/ui/messages/errors/invalidReportPath.ts`;
 
     // Add your assertions based on the expected output or behavior of the script
-    expect(output).toContain(rootDirNote);
-    expect(output).toContain(baseDirNote);
-    expect(output).toContain(storybookDirNote);
+    expect(output).toContain(rootDirectoryNote);
+    expect(output).toContain(baseDirectoryNote);
+    expect(output).toContain(storybookDirectoryNote);
     expect(output).toContain(traceSuggestions);
     expect(output).toContain(expandedStoryModule);
     expect(output).toContain(expandedFileModule);

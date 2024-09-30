@@ -17,9 +17,9 @@ const mergeQueueBranchMatch = vi.mocked(git.mergeQueueBranchMatch);
 
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
-const processEnv = process.env;
+const processEnvironment = process.env;
 beforeEach(() => {
-  process.env = { ...processEnv };
+  process.env = { ...processEnvironment };
   envCi.mockReturnValue({});
   getBranch.mockResolvedValue('main');
   getCommit.mockResolvedValue({

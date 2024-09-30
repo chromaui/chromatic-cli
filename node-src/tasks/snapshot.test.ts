@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { takeSnapshots } from './snapshot';
 
-const env = { CHROMATIC_POLL_INTERVAL: 0, CHROMATIC_OUTPUT_INTERVAL: 0 };
+const environment = { CHROMATIC_POLL_INTERVAL: 0, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { error: vi.fn(), info: vi.fn() };
 const matchesBranch = () => false;
 
@@ -17,7 +17,7 @@ describe('takeSnapshots', () => {
     };
     const ctx = {
       client,
-      env,
+      env: environment,
       git: { matchesBranch },
       log,
       options: {},
@@ -45,7 +45,7 @@ describe('takeSnapshots', () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       client,
-      env,
+      env: environment,
       git: { matchesBranch },
       log,
       options: {},
@@ -68,7 +68,7 @@ describe('takeSnapshots', () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       client,
-      env,
+      env: environment,
       git: { matchesBranch },
       log,
       options: {},
@@ -91,7 +91,7 @@ describe('takeSnapshots', () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       client,
-      env,
+      env: environment,
       git: { matchesBranch },
       log,
       options: {},
@@ -121,7 +121,7 @@ describe('takeSnapshots', () => {
     };
     const ctx = {
       client,
-      env,
+      env: environment,
       git: { matchesBranch },
       log,
       options: { experimental_onTaskProgress: vi.fn() },

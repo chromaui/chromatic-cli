@@ -103,12 +103,12 @@ export const findChangedDependencies = async (ctx: Context) => {
       // A change means either the version number is different or the dependency was added/removed.
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
       await Promise.all(
-        commits.map(async (ref) => {
+        commits.map(async (reference) => {
           const baselineChanges = await compareBaseline(ctx, headDependencies, {
-            ref,
+            ref: reference,
             rootPath,
-            manifestPath: await checkoutFile(ctx, ref, manifestPath),
-            lockfilePath: await checkoutFile(ctx, ref, lockfilePath),
+            manifestPath: await checkoutFile(ctx, reference, manifestPath),
+            lockfilePath: await checkoutFile(ctx, reference, lockfilePath),
           });
           for (const change of baselineChanges) {
             changedDependencyNames.add(change);

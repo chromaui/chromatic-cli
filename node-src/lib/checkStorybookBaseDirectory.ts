@@ -4,14 +4,15 @@ import path from 'path';
 
 import { getRepositoryRoot } from '../git/git';
 import { Context, Stats } from '../types';
-import { invalidStorybookBaseDir } from '../ui/messages/errors/invalidStorybookBaseDir';
+import { invalidStorybookBaseDirectory } from '../ui/messages/errors/invalidStorybookBaseDirectory';
 import { exitCodes, setExitCode } from './setExitCode';
 
-export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
+export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   const repositoryRoot = await getRepositoryRoot();
 
   // Assume CWD if no storybookBaseDir is provided
-  const { storybookBaseDir = path.relative(repositoryRoot, '') } = ctx.options;
+  const { storybookBaseDir: storybookBaseDirectory = path.relative(repositoryRoot, '') } =
+    ctx.options;
 
   // Find all js(x)/ts(x) files in stats that are not in node_modules
   const sourceModuleFiles = stats.modules.filter(
@@ -26,7 +27,7 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
     await Promise.any(
       sourceModuleFiles.map((file) => {
         return limitConcurrency(() => {
-          const absolutePath = path.join(repositoryRoot, storybookBaseDir, file.name);
+          const absolutePath = path.join(repositoryRoot, storybookBaseDirectory, file.name);
           return new Promise((resolve, reject) =>
             fs.access(absolutePath, (err) => {
               if (err) {
@@ -41,8 +42,8 @@ export async function checkStorybookBaseDir(ctx: Context, stats: Stats) {
       })
     );
   } catch {
-    ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDir}`);
+    ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDirectory}`);
     setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-    throw new Error(invalidStorybookBaseDir());
+    throw new Error(invalidStorybookBaseDirectory());
   }
 }

@@ -3,7 +3,7 @@ import { initial, pending, success } from './storybookInfo';
 
 export default {
   title: 'CLI/Tasks/StorybookInfo',
-  decorators: [(storyFn: any) => task(storyFn())],
+  decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
 const storybook = {

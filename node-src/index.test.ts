@@ -11,8 +11,8 @@ import { getGitInfo, runAll } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
-import getEnv from './lib/getEnv';
-import parseArgs from './lib/parseArgs';
+import getEnvironment from './lib/getEnvironment';
+import parseArguments from './lib/parseArguments';
 import TestLogger from './lib/testLogger';
 import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
@@ -342,9 +342,9 @@ vi.mock('./lib/uploadFiles');
 
 vi.mock('./lib/spawn', () => ({ default: () => Promise.resolve('https://npm.example.com') }));
 
-let processEnv;
+let processEnvironment;
 beforeEach(() => {
-  processEnv = process.env;
+  processEnvironment = process.env;
   process.env = {
     DISABLE_LOGGING: 'true',
     CHROMATIC_APP_CODE: undefined,
@@ -361,14 +361,14 @@ beforeEach(() => {
   getSlug.mockResolvedValue('user/repo');
 });
 afterEach(() => {
-  process.env = processEnv;
+  process.env = processEnvironment;
 });
 
 const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
   const testLogger = new TestLogger();
   return {
     title: '',
-    env: getEnv(),
+    env: getEnvironment(),
     log: testLogger,
     testLogger,
     sessionId: ':sessionId',
@@ -384,7 +384,7 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
     packagePath: '',
     statsPath: 'preview-stats.json',
     options: {},
-    ...parseArgs(argv),
+    ...parseArguments(argv),
   } as any;
 };
 

@@ -113,7 +113,7 @@ export default [
       // Chromatic uses err as our catch convention.
       // This is baked into pino transforms as well.
       'unicorn/prevent-abbreviations': [
-        'off', // TODO: Switch this to 'error' when we are ready to enforce this rule
+        'error',
         {
           allowList: {
             err: true,
@@ -122,7 +122,10 @@ export default [
             str: true,
             args: true,
             docsUrl: true,
+            fn: true,
+            pkg: true,
           },
+          ignore: [/.*e2e.*/, /\w+[Dd]ocs\w*/],
         },
       ],
       'unicorn/catch-error-name': [

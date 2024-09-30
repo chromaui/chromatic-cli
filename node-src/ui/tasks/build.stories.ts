@@ -3,7 +3,7 @@ import { failed, initial, pending, skipped, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
-  decorators: [(storyFn) => task(storyFn())],
+  decorators: [(storyFunction) => task(storyFunction())],
 };
 
 const buildCommand = 'yarn run build-storybook -o storybook-static';

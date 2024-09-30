@@ -14,12 +14,12 @@ const getCliCommand = vi.mocked(getCliCommandDefault);
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
 
-const env = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
+const environment = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
-    const ctx = { env, log } as any;
+    const ctx = { env: environment, log } as any;
     await setEnvironment(ctx);
     expect(ctx.environment).toMatchObject({
       GERRIT_BRANCH: 'foo/bar',
@@ -94,7 +94,7 @@ describe('setRuntimeMetadata', () => {
 
 describe('announceBuild', () => {
   const defaultContext = {
-    env,
+    env: environment,
     log,
     options: {},
     environment: ':environment',

@@ -10,7 +10,7 @@ import {
 
 export default {
   title: 'CLI/Tasks/PrepareWorkspace',
-  decorators: [(storyFn: any) => task(storyFn())],
+  decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
 const options = {

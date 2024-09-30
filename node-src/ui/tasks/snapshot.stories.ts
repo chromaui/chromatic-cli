@@ -14,7 +14,7 @@ import {
 
 export default {
   title: 'CLI/Tasks/Snapshot',
-  decorators: [(storyFn) => task(storyFn())],
+  decorators: [(storyFunction) => task(storyFunction())],
 };
 
 const build = {

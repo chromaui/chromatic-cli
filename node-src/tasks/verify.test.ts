@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { exitCodes } from '../lib/setExitCode';
 import { publishBuild, verifyBuild } from './verify';
 
-const env = {
+const environment = {
   CHROMATIC_POLL_INTERVAL: 10,
   CHROMATIC_UPGRADE_TIMEOUT: 100,
   STORYBOOK_VERIFY_TIMEOUT: 20,
@@ -19,7 +19,7 @@ describe('publishBuild', () => {
     client.runQuery.mockReturnValue({ publishBuild: publishedBuild });
 
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       client,
@@ -43,7 +43,7 @@ describe('publishBuild', () => {
 
 describe('verifyBuild', () => {
   const defaultContext = {
-    env,
+    env: environment,
     log,
     options: {},
     environment: ':environment',
