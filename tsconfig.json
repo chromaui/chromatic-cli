@@ -6,7 +6,9 @@
     "module": "es2022",
     "moduleResolution": "Bundler",
     "strict": false,
-    "noImplicitAny": false,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false, // Let this be a warning from ESLint until it becomes required
+    "useUnknownInCatchVariables": false, // Treat caught errors as 'any' for now
     "resolveJsonModule": true,
     "types": ["webpack-env"],
     "lib": ["es5", "es6", "dom"]
