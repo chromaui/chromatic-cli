@@ -1,3 +1,23 @@
+# v11.11.0 (Mon Sep 30 2024)
+
+#### 🚀 Enhancement
+
+- Include `storybookUrl` and `webUrl` on skipped rebuild [#1060](https://github.com/chromaui/chromatic-cli/pull/1060) ([@codykaup](https://github.com/codykaup))
+- Enable `@typescript-eslint/no-floating-promises` ESLint rule [#1065](https://github.com/chromaui/chromatic-cli/pull/1065) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Enable `unicorn/no-null` ESLint rule [#1057](https://github.com/chromaui/chromatic-cli/pull/1057) ([@codykaup](https://github.com/codykaup))
+- Enable `unicorn/no-array-reduce` ESLint rule [#1056](https://github.com/chromaui/chromatic-cli/pull/1056) ([@codykaup](https://github.com/codykaup))
+- Track package size over time. [#1059](https://github.com/chromaui/chromatic-cli/pull/1059) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.10.4 (Tue Sep 24 2024)
 
 #### 🐛 Bug Fix
