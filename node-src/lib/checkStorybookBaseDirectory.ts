@@ -7,6 +7,12 @@ import { Context, Stats } from '../types';
 import { invalidStorybookBaseDirectory } from '../ui/messages/errors/invalidStorybookBaseDirectory';
 import { exitCodes, setExitCode } from './setExitCode';
 
+/**
+ * Ensure the base directory for Storybook is setup correctly before running TurboSnap.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param stats The stats file information from the project's builder (Webpack, for example).
+ */
 export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   const repositoryRoot = await getRepositoryRoot();
 

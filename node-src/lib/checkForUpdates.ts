@@ -9,6 +9,13 @@ const rejectIn = (ms: number) => new Promise<any>((_, reject) => setTimeout(reje
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   Promise.race([promise, rejectIn(ms)]);
 
+/**
+ * Check for a newer version of the CLI.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A promise that resolves when we're done checking for new CLI versions.
+ */
 export default async function checkForUpdates(ctx: Context) {
   if (ctx.options.skipUpdateCheck === true) {
     ctx.log.info(`Skipping update check`);

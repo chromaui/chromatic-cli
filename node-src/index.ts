@@ -42,9 +42,7 @@ import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
 
-/**
- Make keys of `T` outside of `R` optional.
-*/
+// Make keys of `T` outside of `R` optional.
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
 
 interface Output {
@@ -84,7 +82,17 @@ export type InitialContext = Omit<
 
 const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
 
-// Entry point for the CLI, GitHub Action, and Node API
+/**
+ * Entry point for the CLI, GitHub Action, and Node API
+ *
+ * @param args The arguments set by the environment in which the CLI is running (CLI, GitHub Action,
+ * or Node API)
+ * @param args.argv The list of arguments passed.
+ * @param args.flags Any flags that were passed.
+ * @param args.options Any options that were passed.
+ *
+ * @returns An object with details from the result of the new build.
+ */
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export async function run({
@@ -140,7 +148,13 @@ export async function run({
   };
 }
 
-// Entry point for testing only (typically invoked via `run` above)
+/**
+ * Entry point for testing only (typically invoked via `run` above)
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A promise that resolves when all steps are completed.
+ */
 export async function runAll(ctx: InitialContext) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
@@ -282,8 +296,14 @@ export interface GitInfo {
   repositoryRootDir: string;
 }
 
-// Although this function may not be used directly in this project, it can be used externally (such
-// as https://github.com/chromaui/addon-visual-tests).
+/**
+ * Parse git information from the local repository.
+ *
+ * Although this function may not be used directly in this project, it can be used externally (such
+ * as https://github.com/chromaui/addon-visual-tests).
+ *
+ * @returns Any git information we were able to gather.
+ */
 export async function getGitInfo(): Promise<GitInfo> {
   let slug: string;
   try {

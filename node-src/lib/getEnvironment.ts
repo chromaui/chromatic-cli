@@ -49,6 +49,11 @@ const CHROMATIC_PROJECT_TOKEN =
   process.env.CHROMATIC_APP_CODE || // backwards compatibility
   process.env.CHROMA_APP_CODE; // backwards compatibility
 
+/**
+ * Parse variables from the process environment.
+ *
+ * @returns An object containing parsed environment variables.
+ */
 export default function getEnvironment(): Environment {
   return {
     CHROMATIC_DNS_FAILOVER_SERVERS: CHROMATIC_DNS_FAILOVER_SERVERS.split(',')

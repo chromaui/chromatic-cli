@@ -9,6 +9,13 @@ const style = {
   backgroundColor: 'blueviolet',
 };
 
+/**
+ * A span used for test stories.
+ *
+ * @param props Additional properties for a <span> element.
+ *
+ * @returns A styled span element.
+ */
 export default function B(props) {
   return <span {...props} style={style} />;
 }

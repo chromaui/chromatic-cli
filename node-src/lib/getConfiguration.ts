@@ -47,6 +47,14 @@ const configurationSchema = z
 
 export type Configuration = z.infer<typeof configurationSchema>;
 
+/**
+ * Parse configuration details from a local config file (typically chromatic.config.json).
+ *
+ * @param configFile The path to a custom config file (outside of the normal chromatic.config.json
+ * file)
+ *
+ * @returns A parsed configration object from the local config file.
+ */
 export async function getConfiguration(
   configFile?: string
 ): Promise<Configuration & { configFile?: string }> {

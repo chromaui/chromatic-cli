@@ -1,6 +1,13 @@
 import { Context } from '../types';
 import { emailHash } from './emailHash';
 
+/**
+ * Include local build information when querying Chromatic for build information.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns Local build information used in GraphQL queries for build information.
+ */
 export function localBuildsSpecifier(ctx: Pick<Context, 'options' | 'git'>) {
   if (ctx.options.isLocalBuild) return { localBuildEmailHash: emailHash(ctx.git.gitUserEmail) };
 

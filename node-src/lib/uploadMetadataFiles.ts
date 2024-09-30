@@ -12,6 +12,13 @@ import { uploadMetadata } from './upload';
 const fileSize = (path: string): Promise<number> =>
   new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
 
+/**
+ * Upload metadata files to Chromatic for debugging issues with Chromatic support.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A promise that resolves when all metadata files are uploaded.
+ */
 export async function uploadMetadataFiles(ctx: Context) {
   if (!ctx.announcedBuild) {
     ctx.log.warn('No build announced, skipping metadata upload.');

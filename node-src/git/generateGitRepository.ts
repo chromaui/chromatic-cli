@@ -44,15 +44,22 @@ async function generateCommit(
   return { hash, committedAt: Number.parseInt(committedAt, 10) };
 }
 
-// Take a repository description in the following format:
-//  [[name, parentNames]], where:
-//    - name is a string
-//    - parentNames can be false (no parent), a single string or array of strings
-//
-// This function will take such a description and create a git repository with commits
-// following the structure above. Note commit times are assumed to be increasing down the list.
-//
-// Returns a map: name => commitHash
+/**
+ * Take a repository description in the following format:
+ *  [[name, parentNames]], where:
+ *    - name is a string
+ *    - parentNames can be false (no parent), a single string or array of strings
+ *
+ * This function will take such a description and create a git repository with commits
+ * following the structure above. Note commit times are assumed to be increasing down the list.
+ *
+ * Returns a map: name => commitHash
+ *
+ * @param runGit A function for running Git commands.
+ * @param description A description of the Git history to use.
+ *
+ * @returns The commit map of the generated repository.
+ */
 export default async function generateGitRepository(runGit, description) {
   await runGit(`git init`);
   await runGit(`git config user.email test@test.com`);

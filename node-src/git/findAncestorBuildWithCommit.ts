@@ -43,14 +43,15 @@ export interface AncestorBuildsQueryResult {
  *
  * The purpose here is to allow us to substitute a build with a known clean commit for TurboSnap.
  *
- * @param {Context} context
- * @param {int} number The build number to start searching from
- * @param {object} options Page size and limit options
- * @param {int} options.page How many builds to fetch each time
- * @param {int} options.steps How far back to look
+ * @param ctx The context set when executing the CLI.
+ * @param ctx.client The GraphQL client within the context.
+ * @param buildNumber The build number to start searching from
+ * @param options Page size and limit options
+ * @param options.page How many builds to fetch each time
+ * @param options.limit How many builds to gather per query.
  *
- * @returns {Build | void} A build to be substituted
- * */
+ * @returns A build to be substituted
+ */
 export async function findAncestorBuildWithCommit(
   { client }: Pick<Context, 'client'>,
   buildNumber: number,

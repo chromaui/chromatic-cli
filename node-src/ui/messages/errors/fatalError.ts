@@ -14,6 +14,15 @@ const buildFields = ({ id, number, storybookUrl = undefined, webUrl = undefined 
   ...(webUrl && { webUrl }),
 });
 
+/**
+ * Generate an error message from a fatal error that occurred when executing the CLI.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param error The error received.
+ * @param timestamp When the error occurred.
+ *
+ * @returns A formatted error message for the provided fatal error.
+ */
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export default function fatalError(

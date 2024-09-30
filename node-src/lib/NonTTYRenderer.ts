@@ -1,3 +1,6 @@
+/**
+ * A Listr renderer to handle non-TTY environments.
+ */
 export default class NonTTYRenderer {
   static readonly nonTTY = true;
   tasks;

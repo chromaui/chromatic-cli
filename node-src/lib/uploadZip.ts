@@ -5,6 +5,15 @@ import { FormData } from 'formdata-node';
 import { Context, TargetInfo } from '../types';
 import { FileReaderBlob } from './FileReaderBlob';
 
+/**
+ * Upload a zip to Chromatic instead of individual files.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param target The zip information to upload.
+ * @param onProgress A callback to report progress on the upload.
+ *
+ * @returns A promise that resolves when the zip is uploaded.
+ */
 export async function uploadZip(
   ctx: Context,
   target: TargetInfo & { contentLength: number; localPath: string },

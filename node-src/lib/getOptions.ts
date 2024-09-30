@@ -32,18 +32,18 @@ const undefinedIfEmpty = <T>(array: T[]) => {
 const stripUndefined = (object: Partial<Options>): Partial<Options> =>
   Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
 
+/**
+ * Parse options set when executing the CLI.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns An object containing parsed options
+ */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
-export default function getOptions({
-  argv,
-  env,
-  flags,
-  extraOptions,
-  configuration,
-  log,
-  packageJson,
-  packagePath,
-}: InitialContext): Options {
+export default function getOptions(ctx: InitialContext): Options {
+  const { argv, env, flags, extraOptions, configuration, log, packageJson, packagePath } = ctx;
+
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
     fromCI: !!process.env.CI,

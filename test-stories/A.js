@@ -10,6 +10,14 @@ const style = {
   backgroundColor: 'darkkhaki',
 };
 
+/**
+ * A div used for test stories.
+ *
+ * @param param0 Additional properties for a <div> element.
+ * @param param0.backgroundColor The desired background color for the div.
+ *
+ * @returns A stsyled div element.
+ */
 export default function A({ backgroundColor, ...props }) {
   let computedStyle = style;
   if (backgroundColor) {
