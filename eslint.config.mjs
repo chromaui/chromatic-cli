@@ -71,8 +71,7 @@ export default [
       // TODO: make this an error when we have time to deal with it
       '@typescript-eslint/no-explicit-any': 'off',
       //   '@typescript-eslint/no-explicit-any': 'warn',
-      // TODO: make this an error when we have time to deal with it
-      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-floating-promises': 'error',
     },
   },
   {
