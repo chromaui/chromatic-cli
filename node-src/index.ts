@@ -282,6 +282,8 @@ export interface GitInfo {
   repositoryRootDir: string;
 }
 
+// Although this function may not be used directly in this project, it can be used externally (such
+// as https://github.com/chromaui/addon-visual-tests).
 export async function getGitInfo(): Promise<GitInfo> {
   let slug: string;
   try {
