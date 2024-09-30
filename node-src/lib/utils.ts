@@ -3,10 +3,10 @@ import picomatch, { Matcher } from 'picomatch';
 export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.slice(1)}`;
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-export const tick = async (times: number, interval: number, function_: (index: number) => any) => {
+export const tick = async (times: number, interval: number, callback: (index: number) => any) => {
   for (let index = 0; index < times; index += 1) {
     await delay(interval);
-    function_(index);
+    callback(index);
   }
 };
 
