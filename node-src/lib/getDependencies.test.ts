@@ -1,10 +1,13 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { describe, expect, it } from 'vitest';
 
 import packageJson from '../__mocks__/dependencyChanges/plain-package.json';
 import { checkoutFile } from '../git/git';
 import { getDependencies } from './getDependencies';
 import TestLogger from './testLogger';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const ctx = { log: new TestLogger() } as any;
 

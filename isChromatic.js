@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prefer-module */
 /* eslint-env browser */
 
 module.exports = function isChromatic(windowArgument) {

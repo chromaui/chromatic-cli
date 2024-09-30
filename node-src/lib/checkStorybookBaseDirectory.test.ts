@@ -1,10 +1,13 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
 import { checkStorybookBaseDirectory } from './checkStorybookBaseDirectory';
 import { exitCodes } from './setExitCode';
 import TestLogger from './testLogger';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 vi.mock('../git/git');
 

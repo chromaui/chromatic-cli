@@ -44,6 +44,7 @@ export async function getE2EBuildCommand(
   try {
     return [
       'node',
+      // eslint-disable-next-line unicorn/prefer-module
       require.resolve(`${dependencyName}/bin/${buildBinName}`),
       ...buildCommandOptions,
     ].join(' ');

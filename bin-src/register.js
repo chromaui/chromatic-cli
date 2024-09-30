@@ -1,13 +1,19 @@
 #!/usr/bin/env node
-/* eslint-disable @typescript-eslint/no-var-requires */
 
-require('dotenv').config();
+import { config } from 'dotenv';
+
+import { main as initMain } from './init';
+import { main } from './main';
+import { main as traceMain } from './trace';
+import { main as trimMain } from './trim-stats-file';
+
+config();
 
 const commands = {
-  init: () => require('./init').main(process.argv.slice(3)),
-  main: () => require('./main').main(process.argv.slice(2)),
-  trace: () => require('./trace').main(process.argv.slice(3)),
-  'trim-stats-file': () => require('./trim-stats-file').main(process.argv.slice(3)),
+  init: () => initMain(process.argv.slice(3)),
+  main: () => main(process.argv.slice(2)),
+  trace: () => traceMain(process.argv.slice(3)),
+  'trim-stats-file': () => trimMain(process.argv.slice(3)),
 };
 
 (commands[process.argv[2]] || commands.main)();
