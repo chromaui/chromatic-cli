@@ -307,6 +307,12 @@ export interface Context {
       };
     }[];
   };
+  rebuildForBuild: {
+    id: string;
+    status: string;
+    webUrl: string;
+    storybookUrl: string;
+  };
   sourceDir: string;
   buildCommand?: string;
   buildLogFile?: string;
