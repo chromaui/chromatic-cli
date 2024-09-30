@@ -1,6 +1,6 @@
 import eslint from '@eslint/js';
 import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
-// import jsdoc from 'eslint-plugin-jsdoc';
+import jsdoc from 'eslint-plugin-jsdoc';
 import noSecrets from 'eslint-plugin-no-secrets';
 import prettier from 'eslint-plugin-prettier';
 import security from 'eslint-plugin-security';
@@ -186,31 +186,31 @@ export default [
     },
   },
   // lint jsdoc
-  //   {
-  //     files: ['**/*.js', '**/*.ts'],
-  //     plugins: {
-  //       jsdoc,
-  //     },
-  //     rules: {
-  //       ...jsdoc.configs['flat/recommended-typescript'].rules,
-  //       'jsdoc/require-jsdoc': [
-  //         'error',
-  //         {
-  //           publicOnly: true,
-  //           require: { ClassDeclaration: true, FunctionDeclaration: true },
-  //           enableFixer: false,
-  //         },
-  //       ],
-  //       'jsdoc/require-returns': ['warn', { enableFixer: true }],
-  //       'jsdoc/sort-tags': [
-  //         'error',
-  //         {
-  //           tagSequence: [{ tags: ['param'] }, { tags: ['returns'] }],
-  //         },
-  //       ],
-  //       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
-  //     },
-  //   },
+  {
+    files: ['**/*.js', '**/*.ts'],
+    plugins: {
+      jsdoc,
+    },
+    rules: {
+      ...jsdoc.configs['flat/recommended-typescript'].rules,
+      'jsdoc/require-jsdoc': [
+        'error',
+        {
+          publicOnly: true,
+          require: { ClassDeclaration: true, FunctionDeclaration: true },
+          enableFixer: false,
+        },
+      ],
+      'jsdoc/require-returns': ['warn', { enableFixer: true }],
+      'jsdoc/sort-tags': [
+        'error',
+        {
+          tagSequence: [{ tags: ['param'] }, { tags: ['returns'] }],
+        },
+      ],
+      'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
+    },
+  },
   // sort your imports
   {
     plugins: {

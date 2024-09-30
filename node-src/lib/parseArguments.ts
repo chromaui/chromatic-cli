@@ -3,6 +3,13 @@ import meow from 'meow';
 import pkg from '../../package.json';
 import { Flags } from '../types';
 
+/**
+ * Parse arguments passed to the CLI.
+ *
+ * @param argv An array of arguments passed from the user.
+ *
+ * @returns An object containing the parsed arguments.
+ */
 export default function parseArguments(argv: string[]) {
   const { input, flags, help } = meow(
     `

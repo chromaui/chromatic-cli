@@ -14,6 +14,9 @@ export interface GraphQLError {
   };
 }
 
+/**
+ * Interact with a GraphQL server using fetch and retries.
+ */
 export default class GraphQLClient {
   endpoint: string;
   headers: HTTPClientOptions['headers'];

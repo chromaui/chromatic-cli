@@ -198,12 +198,20 @@ async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits
   return maxCommits;
 }
 
+/**
+ * Gather the parent commits from Git.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param options Additional options for changing function flow.
+ * @param options.ignoreLastBuildOnBranch Ignore the last Chromatic build associated with this
+ * branch.
+ *
+ * @returns A list of parent commits associated with this branch.
+ */
 // TODO: refactor this function
-// eslint-disable-next-line complexity
-export async function getParentCommits(
-  { options, client, git, log }: Context,
-  { ignoreLastBuildOnBranch = false } = {}
-) {
+// eslint-disable-next-line complexity, max-statements
+export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch = false } = {}) {
+  const { options, client, git, log } = ctx;
   const { branch, committedAt } = git;
 
   // Include the latest build from this branch as an ancestor of the current build

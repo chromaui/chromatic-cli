@@ -19,6 +19,15 @@ interface MergeQueueOriginalBranchQueryResult {
   };
 }
 
+/**
+ * Get branch name from a pull request number via the Index service.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param options Options to pass to the Index query.
+ * @param options.number The pull request number.
+ *
+ * @returns The branch name, if available.
+ */
 export async function getBranchFromMergeQueuePullRequestNumber(
   ctx: Pick<Context, 'options' | 'client' | 'git'>,
   { number }: { number: number }

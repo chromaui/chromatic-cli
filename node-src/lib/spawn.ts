@@ -1,5 +1,13 @@
 import { spawn as packageCommand } from 'yarn-or-npm';
 
+/**
+ * Spawn a subprocess to interact with the user's package manager.
+ * 
+ * @param args Command arguments to pass to the package manager.
+ * @param options Options to pass to the package manager.
+ 
+ * @returns The result from the package manager command.
+ */
 export default function spawn(
   args: Parameters<typeof packageCommand>[0],
   options: Parameters<typeof packageCommand>[1] = {}

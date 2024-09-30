@@ -1,5 +1,8 @@
 import UpdateRenderer from 'listr-update-renderer';
 
+/**
+ * The default Listr renderer to show the TUI. This also updates a log file at the same time.
+ */
 export default class LoggingRenderer {
   static readonly nonTTY = false;
   tasks;

@@ -32,6 +32,11 @@ import { Context } from '../node-src/types';
 
 const { STORYBOOK_BASE_DIR, STORYBOOK_CONFIG_DIR, WEBPACK_STATS_FILE } = process.env;
 
+/**
+ * The main entrypoint for `chromatic trace`.
+ *
+ * @param argv A list of arguments passed.
+ */
 export async function main(argv: string[]) {
   const { flags, input } = meow(
     `

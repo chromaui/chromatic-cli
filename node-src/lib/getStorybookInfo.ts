@@ -5,6 +5,14 @@ import { Context } from '../types';
 import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 import { getStorybookMetadata } from './getStorybookMetadata';
 
+/**
+ * Get Storybook information from the user's local project.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns Any Storybook information we can find from the user's local project (which may be
+ * nothing).
+ */
 export default async function getStorybookInfo(
   ctx: Context
 ): Promise<Partial<Context['storybook']>> {

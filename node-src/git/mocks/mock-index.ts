@@ -74,6 +74,16 @@ const mocks = {
   },
 };
 
+/**
+ * Create a sample Index service for running tests.
+ *
+ * @param repository Details on the local repository.
+ * @param repository.commitMap A map of commits in the repository.
+ * @param buildDescriptions A list of builds for the project.
+ * @param prDescriptions A list of PRs for the project.
+ *
+ * @returns A mock Index service for testing.
+ */
 export default function createMockIndex({ commitMap }, buildDescriptions, prDescriptions = []) {
   const builds = buildDescriptions.map(([name, branch], index) => {
     let hash, committedAt;

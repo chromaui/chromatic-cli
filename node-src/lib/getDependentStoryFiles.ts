@@ -43,9 +43,15 @@ const getPackageName = (modulePath: string) => {
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
- * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary.
- * The result is a relative POSIX path compatible with `git diff --name-only`.
- * Virtual paths (e.g. Vite) are returned as-is.
+ * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary. The
+ * result is a relative POSIX path compatible with `git diff --name-only`. Virtual paths (e.g. Vite)
+ * are returned as-is.
+ *
+ * @param posixPath The POSIX path to the file.
+ * @param rootPath The project root path.
+ * @param baseDirectory The base directory to the file.
+ *
+ * @returns A normalized path to the file.
  */
 export function normalizePath(posixPath: string, rootPath: string, baseDirectory = '') {
   if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
@@ -58,6 +64,15 @@ export function normalizePath(posixPath: string, rootPath: string, baseDirectory
  * This traverses the webpack module stats to retrieve a set of CSF files that somehow trace back to
  * the changed git files. The result is a map of Module ID => file path. In the end we'll only send
  * the Module IDs to Chromatic, the file paths are only for logging purposes.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param stats The stats file information from the project's builder (Webpack, for example).
+ * @param statsPath The path to the stats file generated from the project's builder (Webpack, for
+ * example).
+ * @param changedFiles A list of changed files.
+ * @param changedDependencies A list of changed dependencies.
+ *
+ * @returns Any story files that are impacted by the list of changed files and dependencies.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements

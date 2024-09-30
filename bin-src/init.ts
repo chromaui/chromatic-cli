@@ -104,6 +104,11 @@ const intializeChromatic = async ({
   }
 };
 
+/**
+ * The main entrypoint for `chromatic init`.
+ *
+ * @param argv A list of arguments passed.
+ */
 export async function main(argv: string[]) {
   const { flags } = meow(
     `

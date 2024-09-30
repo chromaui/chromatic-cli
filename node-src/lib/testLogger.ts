@@ -1,3 +1,6 @@
+/**
+ * A noop logger used during tests.
+ */
 export default class TestLogger {
   entries: any[];
 

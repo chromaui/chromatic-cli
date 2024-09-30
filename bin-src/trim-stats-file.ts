@@ -15,10 +15,14 @@ const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: s
  * `.trimmed.json` as file extension.
  *
  * Usage examples:
- *   yarn chromatic trim-stats-file
- *   yarn chromatic trim-stats-file ./path/to/preview-stats.json
+ * yarn chromatic trim-stats-file
+ * yarn chromatic trim-stats-file ./path/to/preview-stats.json
+ *
+ * @param argv A list of arguments passed.
+ * @param argv."0" The stats file location passed in as a positional argument.
+ *
+ * @returns The file path to the trimmed stats file.
  */
-
 export async function main([statsFile = './storybook-static/preview-stats.json']) {
   try {
     const stats = await readStatsFile(statsFile);

@@ -1,5 +1,6 @@
 import envCi from 'env-ci';
 
+import { Context } from '../types';
 import forksUnsupported from '../ui/messages/errors/forksUnsupported';
 import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
@@ -21,10 +22,21 @@ interface CommitInfo {
   mergeCommit?: string;
 }
 
+/**
+ *  Gather commit and branch information from Git and the local environment.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param options Some extra details about the repository.
+ * @param options.branchName The name of the branch.
+ * @param options.patchBaseRef The reference to the base side of a patch.
+ * @param options.ci If we're running in a CI pipeline or not.
+ *
+ * @returns Commit and branch information.
+ */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export default async function getCommitAndBranch(
-  ctx,
+  ctx: Context,
   {
     branchName,
     patchBaseRef,

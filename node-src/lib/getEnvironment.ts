@@ -13,7 +13,6 @@ export interface Environment {
   ENVIRONMENT_WHITELIST: RegExp[];
   HTTP_PROXY: string;
   HTTPS_PROXY: string;
-  LOGGLY_CUSTOMER_TOKEN: string;
   STORYBOOK_BUILD_TIMEOUT: number;
   STORYBOOK_CLI_FLAGS_BY_VERSION: typeof STORYBOOK_CLI_FLAGS_BY_VERSION;
   STORYBOOK_VERIFY_TIMEOUT: number;
@@ -33,7 +32,6 @@ const {
   CHROMATIC_UPGRADE_TIMEOUT = String(60 * 60 * 1000),
   HTTP_PROXY = process.env.http_proxy,
   HTTPS_PROXY = process.env.https_proxy,
-  LOGGLY_CUSTOMER_TOKEN = 'b5e26204-cdc5-4c78-a9cc-c69eb7fabad3',
   STORYBOOK_BUILD_TIMEOUT = String(10 * 60 * 1000),
   STORYBOOK_VERIFY_TIMEOUT = String(3 * 60 * 1000),
   STORYBOOK_NODE_ENV = 'production',
@@ -51,6 +49,11 @@ const CHROMATIC_PROJECT_TOKEN =
   process.env.CHROMATIC_APP_CODE || // backwards compatibility
   process.env.CHROMA_APP_CODE; // backwards compatibility
 
+/**
+ * Parse variables from the process environment.
+ *
+ * @returns An object containing parsed environment variables.
+ */
 export default function getEnvironment(): Environment {
   return {
     CHROMATIC_DNS_FAILOVER_SERVERS: CHROMATIC_DNS_FAILOVER_SERVERS.split(',')
@@ -71,7 +74,6 @@ export default function getEnvironment(): Environment {
     ENVIRONMENT_WHITELIST,
     HTTP_PROXY,
     HTTPS_PROXY,
-    LOGGLY_CUSTOMER_TOKEN,
     STORYBOOK_BUILD_TIMEOUT: Number.parseInt(STORYBOOK_BUILD_TIMEOUT, 10),
     STORYBOOK_CLI_FLAGS_BY_VERSION,
     STORYBOOK_VERIFY_TIMEOUT: Number.parseInt(STORYBOOK_VERIFY_TIMEOUT, 10),

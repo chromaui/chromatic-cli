@@ -7,6 +7,9 @@ import { Context } from '../types';
 import getDNSResolveAgent from './getDNSResolveAgent';
 import getProxyAgent from './getProxyAgent';
 
+/**
+ * A custom HTTP client error.
+ */
 export class HTTPClientError extends Error {
   response: Response;
 
@@ -36,7 +39,9 @@ export interface HTTPClientFetchOptions {
   retries?: number;
 }
 
-// A basic wrapper class for fetch with the ability to retry fetches
+/**
+ * A basic wrapper class for fetch with the ability to retry fetches
+ */
 export default class HTTPClient {
   env: Context['env'];
 

@@ -4,6 +4,14 @@ import { file as temporaryFile } from 'tmp-promise';
 
 import { Context, FileDesc } from '../types';
 
+/**
+ * Make a zip file with a list of files (usually used to zip build files to upload to Chromatic).
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param files The list of files to add to the zip.
+ *
+ * @returns A promise that resolves with details of the created zip.
+ */
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
   const archive = archiver('zip', { zlib: { level: 9 } });
   const temporary = await temporaryFile({ postfix: '.zip' });

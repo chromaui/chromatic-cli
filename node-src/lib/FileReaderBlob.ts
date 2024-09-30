@@ -1,5 +1,8 @@
 import { createReadStream, ReadStream } from 'fs';
 
+/**
+ * A file reader which offers a callback for tracking progress updates.
+ */
 export class FileReaderBlob {
   readStream: ReadStream;
   size: number;

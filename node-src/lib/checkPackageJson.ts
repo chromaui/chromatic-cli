@@ -13,12 +13,17 @@ const scriptName = 'chromatic';
 const findScript = (scripts: Record<string, string>) =>
   scripts[scriptName] || Object.values(scripts).find((cmd) => cmd.startsWith(scriptName));
 
-export default async function checkPackageJson({
-  log,
-  options,
-  packageJson,
-  packagePath,
-}: Context) {
+/**
+ * Check the local package.json file if it has a script for running Chromatic.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A promise that resolves when we're done checking (and maybe adding) the Chromatic script
+ * to the local package.json
+ */
+export default async function checkPackageJson(ctx: Context) {
+  const { log, options, packageJson, packagePath } = ctx;
+
   if (!options.interactive) return;
 
   try {

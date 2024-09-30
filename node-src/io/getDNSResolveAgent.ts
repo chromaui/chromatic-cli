@@ -1,6 +1,9 @@
 import dns from 'dns';
 import { Agent, AgentOptions } from 'https';
 
+/**
+ * A DNS resolver for interacting with a custom DNS server, if provided.
+ */
 export class DNSResolveAgent extends Agent {
   constructor(options: AgentOptions = {}) {
     super({

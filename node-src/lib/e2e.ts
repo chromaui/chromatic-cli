@@ -27,6 +27,14 @@ const parseNexec = ((agent, args) => {
   return command.replace('{0}', args.map((c) => quote(c)).join(' ')).trim();
 }) as Runner;
 
+/**
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param flag The E2E testing tool used for the build.
+ * @param buildCommandOptions Options to pass to the build command (such as --output-dir).
+ *
+ * @returns The command for building the E2E project.
+ */
 export async function getE2EBuildCommand(
   ctx: Context,
   flag: 'playwright' | 'cypress',
@@ -59,6 +67,13 @@ export async function getE2EBuildCommand(
   }
 }
 
+/**
+ * Determine if the build is an E2E build.
+ *
+ * @param options Parsed options when executing the CLI (usually from the context).
+ *
+ * @returns true if the build is an E2E build.
+ */
 export function isE2EBuild(options: Options) {
   return options.playwright || options.cypress;
 }

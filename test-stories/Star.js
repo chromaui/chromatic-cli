@@ -1,5 +1,10 @@
 import React from 'react';
 
+/**
+ * A star svg used for test stories.
+ *
+ * @returns A star svg.
+ */
 export default function Star() {
   return (
     <svg>

@@ -75,6 +75,19 @@ interface UploadBuildMutationResult {
   };
 }
 
+/**
+ * Upload build files to Chromatic.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param files The list of files to upload.
+ * @param options A collection of callbacks for each stage of the upload.
+ * @param options.onStart A callback for when the build upload starts.
+ * @param options.onProgress A callback to track progress of the upload.
+ * @param options.onComplete A callback for when the build upload completes.
+ * @param options.onError A callback for when the build upload errors.
+ *
+ * @returns A promise that resolves when the build is uploaded to Chromatic.
+ */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export async function uploadBuild(
@@ -217,6 +230,14 @@ interface UploadMetadataMutationResult {
   };
 }
 
+/**
+ * Upload metadata files to Chromatic for debugging issues with Chromatic support.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param files The list of metadata files to upload.
+ *
+ * @returns A promise that resolves when all metadata files are uploaded.
+ */
 export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   const { uploadMetadata } = await ctx.client.runQuery<UploadMetadataMutationResult>(
     UploadMetadataMutation,
