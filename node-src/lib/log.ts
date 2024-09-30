@@ -16,13 +16,17 @@ process.on('unhandledRejection', handleRejection);
 
 // Omits any JSON metadata, returning only the message string
 const logInteractive = (args: any[]): string[] =>
-  args.map((arg) => (arg && arg.message) || arg).filter((arg) => typeof arg === 'string');
+  args
+    .map((argument) => (argument && argument.message) || argument)
+    .filter((argument) => typeof argument === 'string');
 
 // Strips ANSI codes from messages and stringifies metadata to JSON
 const logVerbose = (type: string, args: any[]) => {
   const stringify =
-    type === 'error' ? (e: any) => JSON.stringify(errorSerializer(e)) : JSON.stringify;
-  return args.map((arg) => (typeof arg === 'string' ? stripAnsi(arg) : stringify(arg)));
+    type === 'error' ? (err: any) => JSON.stringify(errorSerializer(err)) : JSON.stringify;
+  return args.map((argument) =>
+    typeof argument === 'string' ? stripAnsi(argument) : stringify(argument)
+  );
 };
 
 const withTime = (messages: string[], color = false) => {
@@ -31,21 +35,21 @@ const withTime = (messages: string[], color = false) => {
   if (color) time = chalk.dim(time);
   return [
     time + ' ',
-    ...messages.map((msg) =>
-      typeof msg === 'string' ? msg.replaceAll('\n', `\n              `) : msg
+    ...messages.map((message) =>
+      typeof message === 'string' ? message.replaceAll('\n', `\n              `) : message
     ),
   ];
 };
 
 type LogType = 'error' | 'warn' | 'info' | 'debug';
-type LogFn = (...args: any[]) => void;
+type LogFunction = (...args: any[]) => void;
 export interface Logger {
-  error: LogFn;
-  warn: LogFn;
-  info: LogFn;
-  log: LogFn;
-  file: LogFn;
-  debug: LogFn;
+  error: LogFunction;
+  warn: LogFunction;
+  info: LogFunction;
+  log: LogFunction;
+  file: LogFunction;
+  debug: LogFunction;
   queue: () => void;
   flush: () => void;
   getLevel: () => keyof typeof LOG_LEVELS;
@@ -63,7 +67,7 @@ const fileLogger = {
     this.append = () => {};
     this.queue = [];
   },
-  initialize(path: string, onError: LogFn) {
+  initialize(path: string, onError: LogFunction) {
     rm(path, { force: true }, (err) => {
       if (err) {
         this.disable();
@@ -72,7 +76,9 @@ const fileLogger = {
         const stream = createWriteStream(path, { flags: 'a' });
         this.append = (...messages: string[]) => {
           stream?.write(
-            messages.reduce((acc, msg) => acc + msg + (msg === '\n' ? '' : ' '), '').trim() + '\n'
+            messages
+              .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
+              .trim() + '\n'
           );
         };
         this.append(...this.queue);

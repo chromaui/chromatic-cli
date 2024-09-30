@@ -3,7 +3,7 @@ import { dedent } from 'ts-dedent';
 
 import { error } from '../../components/icons';
 
-export const invalidStorybookBaseDir = () =>
+export const invalidStorybookBaseDirectory = () =>
   dedent(chalk`
     ${error} TurboSnap disabled until base directory is set correctly
     The base directory allows TurboSnap to trace files.

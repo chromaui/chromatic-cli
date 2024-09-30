@@ -2,21 +2,21 @@ import chalk from 'chalk';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Context } from '../types';
-import getEnv from './getEnv';
+import getEnvironment from './getEnvironment';
 import getOptions from './getOptions';
 import getStorybookConfiguration from './getStorybookConfiguration';
-import parseArgs from './parseArgs';
+import parseArguments from './parseArguments';
 import TestLogger from './testLogger';
 
 // Make sure we don't print any colors so we can match against plain strings
 chalk.level = 0;
 
-vi.mock('./getEnv', () => ({
+vi.mock('./getEnvironment', () => ({
   default: () => ({ CHROMATIC_PROJECT_TOKEN: 'env-code' }),
 }));
 
 const getContext = (argv: string[]): Context => {
-  const env = getEnv();
+  const environment = getEnvironment();
   const log = new TestLogger();
   const packageJson = {
     scripts: {
@@ -26,7 +26,7 @@ const getContext = (argv: string[]): Context => {
       otherBuildStorybook: 'build-storybook',
     },
   };
-  return { env, log, packageJson, ...parseArgs(argv) } as any;
+  return { env: environment, log, packageJson, ...parseArguments(argv) } as any;
 };
 
 describe('getOptions', () => {

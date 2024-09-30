@@ -17,9 +17,9 @@ const printFilePath = (filepath: string, basedir: string, expanded: boolean) => 
     .join('/');
 };
 
-export const rootDirNote = `The root directory of your project:`;
-export const baseDirNote = `The base directory (The relative path from the root to the storybook config root):`;
-export const storybookDirNote = `The storybook directory (The directory can either be at the root or in a sub-directory):`;
+export const rootDirectoryNote = `The root directory of your project:`;
+export const baseDirectoryNote = `The base directory (The relative path from the root to the storybook config root):`;
+export const storybookDirectoryNote = `The storybook directory (The directory can either be at the root or in a sub-directory):`;
 export const traceSuggestions = `If you are having trouble with tracing, please check the following:\n
   1. Make sure you have the correct root path, base path, and storybook path.\n
   2. Make sure you have the correct storybook config file.\n
@@ -44,7 +44,7 @@ export default (
 ) => {
   const flag = ctx.log === (console as any) ? '--mode (-m)' : '--trace-changed';
   const basedir = ctx.options.storybookBaseDir || '.';
-  const storybookConfigDir = ctx.options.storybookConfigDir || '.storybook';
+  const storybookConfigDirectory = ctx.options.storybookConfigDir || '.storybook';
   const expanded = ctx.options.traceChanged === 'expanded';
   const printPath = (filepath: string) => printFilePath(filepath, basedir, expanded);
 
@@ -55,9 +55,9 @@ export default (
 
   if (expanded) {
     const bailReason = ctx.turboSnap?.bailReason ? `${ctx.turboSnap.bailReason}\n\n` : '';
-    const rootPath = `${chalk.magenta(rootDirNote)} ${ctx.turboSnap.rootPath}\n\n`;
-    const basePath = `${chalk.magenta(baseDirNote)} ${basedir}\n\n`;
-    const storybookPath = `${chalk.magenta(storybookDirNote)} ${storybookConfigDir}\n\n`;
+    const rootPath = `${chalk.magenta(rootDirectoryNote)} ${ctx.turboSnap.rootPath}\n\n`;
+    const basePath = `${chalk.magenta(baseDirectoryNote)} ${basedir}\n\n`;
+    const storybookPath = `${chalk.magenta(storybookDirectoryNote)} ${storybookConfigDirectory}\n\n`;
     const untracedNotice =
       ctx.untracedFiles && ctx.untracedFiles.length > 0
         ? `${chalk.magenta(

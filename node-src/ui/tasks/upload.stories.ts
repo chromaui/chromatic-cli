@@ -17,7 +17,7 @@ import {
 
 export default {
   title: 'CLI/Tasks/Upload',
-  decorators: [(storyFn: any) => task(storyFn())],
+  decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
 export const Initial = () => initial;

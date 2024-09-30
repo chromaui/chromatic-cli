@@ -1,4 +1,4 @@
-export interface Env {
+export interface Environment {
   CHROMATIC_DNS_FAILOVER_SERVERS: string[];
   CHROMATIC_DNS_SERVERS: string[];
   CHROMATIC_HASH_CONCURRENCY: number;
@@ -51,7 +51,7 @@ const CHROMATIC_PROJECT_TOKEN =
   process.env.CHROMATIC_APP_CODE || // backwards compatibility
   process.env.CHROMA_APP_CODE; // backwards compatibility
 
-export default function getEnv(): Env {
+export default function getEnvironment(): Environment {
   return {
     CHROMATIC_DNS_FAILOVER_SERVERS: CHROMATIC_DNS_FAILOVER_SERVERS.split(',')
       .map((ip) => ip.trim())

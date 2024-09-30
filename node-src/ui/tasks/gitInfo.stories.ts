@@ -11,7 +11,7 @@ import {
 
 export default {
   title: 'CLI/Tasks/GitInfo',
-  decorators: [(storyFn) => task(storyFn())],
+  decorators: [(storyFunction) => task(storyFunction())],
 };
 
 const git = { commit: 'a32af7e265aa08e4a16d', branch: 'feat/new-ui', parentCommits: ['a', 'b'] };

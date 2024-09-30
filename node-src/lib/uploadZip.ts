@@ -33,14 +33,14 @@ export async function uploadZip(
       }
       formData.append('file', blob);
 
-      const res = await ctx.http.fetch(
+      const result = await ctx.http.fetch(
         formAction,
         { body: formData, method: 'POST', signal },
         { retries: 0 } // already retrying the whole operation
       );
 
-      if (!res.ok) {
-        ctx.log.debug(`Uploading ${localPath} failed: %O`, res);
+      if (!result.ok) {
+        ctx.log.debug(`Uploading ${localPath} failed: %O`, result);
         throw new Error(localPath);
       }
       ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);

@@ -94,7 +94,9 @@ export default function getOptions({
     uploadMetadata: undefined,
   };
 
-  const [patchHeadRef, patchBaseRef] = (flags.patchBuild || '').split('...').filter(Boolean);
+  const [patchHeadReference, patchBaseReference] = (flags.patchBuild || '')
+    .split('...')
+    .filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
@@ -149,8 +151,8 @@ export default function getOptions({
     ownerName: branchOwner || repositoryOwner,
     repositorySlug: flags.repositorySlug,
     branchName,
-    patchHeadRef,
-    patchBaseRef,
+    patchHeadRef: patchHeadReference,
+    patchBaseRef: patchBaseReference,
     uploadMetadata: flags.uploadMetadata,
   });
 
@@ -210,15 +212,17 @@ export default function getOptions({
   let { buildScriptName } = options;
 
   // We can only have one of these arguments
-  const singularOpts = {
+  const singularOptions = {
     storybookBuildDir: '--storybook-build-dir',
     playwright: '--playwright',
     cypress: '--cypress',
   };
-  const foundSingularOpts = Object.keys(singularOpts).filter((name) => !!options[name]);
+  const foundSingularOptions = Object.keys(singularOptions).filter((name) => !!options[name]);
 
-  if (foundSingularOpts.length > 1) {
-    throw new Error(invalidSingularOptions(foundSingularOpts.map((key) => singularOpts[key])));
+  if (foundSingularOptions.length > 1) {
+    throw new Error(
+      invalidSingularOptions(foundSingularOptions.map((key) => singularOptions[key]))
+    );
   }
 
   if (options.onlyChanged && options.onlyStoryFiles) {

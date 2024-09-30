@@ -4,19 +4,22 @@ export default {
   title: 'CLI/Components/Task',
 };
 
-const arr = ['Line one', 'Line two'];
-const str = `
+const outputArray = ['Line one', 'Line two'];
+const outputString = `
   Line one
   Line two
 `;
 
 export const Initial = () =>
-  task({ status: 'initial', title: 'Waiting for task to start', output: arr });
-export const Pending = () => task({ status: 'pending', title: 'Task in progress', output: arr });
-export const Skipped = () => task({ status: 'skipped', title: 'Task skipped', output: arr });
+  task({ status: 'initial', title: 'Waiting for task to start', output: outputArray });
+export const Pending = () =>
+  task({ status: 'pending', title: 'Task in progress', output: outputArray });
+export const Skipped = () =>
+  task({ status: 'skipped', title: 'Task skipped', output: outputArray });
 export const Success = () =>
-  task({ status: 'success', title: 'Successfully completed task', output: str });
+  task({ status: 'success', title: 'Successfully completed task', output: outputString });
 export const Warning = () =>
-  task({ status: 'warning', title: 'Be aware this is a warning', output: str });
-export const Info = () => task({ status: 'info', title: "Here's some info", output: str });
-export const Error = () => task({ status: 'error', title: 'Something went wrong', output: str });
+  task({ status: 'warning', title: 'Be aware this is a warning', output: outputString });
+export const Info = () => task({ status: 'info', title: "Here's some info", output: outputString });
+export const Error = () =>
+  task({ status: 'error', title: 'Something went wrong', output: outputString });

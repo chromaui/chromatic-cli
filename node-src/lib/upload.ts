@@ -239,6 +239,6 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   }
 
   if (uploadMetadata.userErrors.length > 0) {
-    uploadMetadata.userErrors.map((e) => ctx.log.warn(e.message));
+    uploadMetadata.userErrors.map((err) => ctx.log.warn(err.message));
   }
 }

@@ -4,7 +4,7 @@ import pluralize from 'pluralize';
 
 import { Context, Task, TaskName } from '../types';
 
-type ValueFn = string | ((ctx: Context, task: Task) => string);
+type ValueFunction = string | ((ctx: Context, task: Task) => string);
 
 type TaskInput = Omit<Listr.ListrTask<Context>, 'task'> & {
   name: TaskName;
@@ -35,20 +35,21 @@ export const createTask = ({
   ...config,
 });
 
-export const setTitle = (title: ValueFn, subtitle: ValueFn) => (ctx: Context, task: Task) => {
-  const ttl = typeof title === 'function' ? title(ctx, task) : title;
-  const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
-  task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
-};
+export const setTitle =
+  (title: ValueFunction, subtitle: ValueFunction) => (ctx: Context, task: Task) => {
+    const ttl = typeof title === 'function' ? title(ctx, task) : title;
+    const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
+    task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
+  };
 
-export const setOutput = (output: ValueFn) => (ctx: Context, task: Task) => {
+export const setOutput = (output: ValueFunction) => (ctx: Context, task: Task) => {
   task.output = typeof output === 'function' ? output(ctx, task) : output;
 };
 
 export const transitionTo =
-  (stateFn: (ctx: Context) => Task, last = false) =>
+  (stateFunction: (ctx: Context) => Task, last = false) =>
   (ctx: Context, task: Task) => {
-    const { title, output } = stateFn(ctx);
+    const { title, output } = stateFunction(ctx);
     setTitle(title, last ? output : undefined)(ctx, task);
     if (!last && output) setOutput(output)(ctx, task);
   };

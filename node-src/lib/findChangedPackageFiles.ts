@@ -20,8 +20,8 @@ const isEqual = (left: unknown = {}, right: unknown = {}) => {
   }
 
   // depends on always having consistent ordering of keys
-  for (const [i, [keyA, valueA]] of entriesA.entries()) {
-    const [keyB, valueB] = entriesB[i];
+  for (const [index, [keyA, valueA]] of entriesA.entries()) {
+    const [keyB, valueB] = entriesB[index];
 
     // values might be objects, so recursively compare
     if (keyA !== keyB || !isEqual(valueA, valueB)) {

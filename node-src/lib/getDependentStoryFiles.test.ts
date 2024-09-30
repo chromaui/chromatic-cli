@@ -51,8 +51,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -72,8 +72,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -93,8 +93,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ storybookBaseDir: 'path/to/project' });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['path/to/project/src/foo.stories.js'],
     });
   });
@@ -114,8 +114,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -135,8 +135,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -156,8 +156,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -185,8 +185,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -211,8 +211,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -243,8 +243,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.ts': ['src/foo.stories.ts'],
     });
   });
@@ -265,8 +265,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js', 'src/foo.js'],
     });
   });
@@ -292,14 +292,14 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(
+    const result = await getDependentStoryFiles(
       ctx,
       { modules },
       statsPath,
       changedFiles,
       changedDependencies
     );
-    expect(res).toEqual({
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -324,8 +324,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ storybookBaseDir: 'services/webapp' });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['services/webapp/src/foo.stories.js'],
     });
   });
@@ -353,8 +353,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       '/path/to/project/src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -383,8 +383,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ storybookBaseDir: 'packages/storybook' });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       '/path/to/project/packages/webapp/src/foo.stories.js': ['packages/webapp/src/foo.stories.js'],
     });
   });
@@ -419,8 +419,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
     expect(ctx.turboSnap.bailReason).toBeUndefined();
@@ -447,7 +447,7 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext();
-    const res = await getDependentStoryFiles(
+    const result = await getDependentStoryFiles(
       ctx,
       { modules },
       statsPath,
@@ -455,7 +455,7 @@ describe('getDependentStoryFiles', () => {
       changedDependencies
     );
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(res).toEqual({
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -480,9 +480,9 @@ describe('getDependentStoryFiles', () => {
       // signifying the package.json file had dependency changes
       git: { ...rawContext.git, changedPackageManifests: ['src/package.json'] },
     };
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(res).toEqual({
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -502,8 +502,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toBeUndefined();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -529,8 +529,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toBeUndefined();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -557,8 +557,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toBeUndefined();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
     });
@@ -584,8 +584,8 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({ staticDir: ['path/to/statics'] });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toBeUndefined();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStaticFiles: ['path/to/statics/image.png'],
     });
@@ -663,8 +663,8 @@ describe('getDependentStoryFiles', () => {
       staticDir: ['public'],
       untraced: ['**/stories/**'],
     });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({});
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({});
   });
 
   it('ignores untraced files', async () => {
@@ -695,8 +695,8 @@ describe('getDependentStoryFiles', () => {
       staticDir: ['path/to/statics'],
       untraced: ['**/foo.js'],
     });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(res).toEqual({});
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toEqual({});
   });
 
   it('does not bail on untraced global files', async () => {
@@ -731,9 +731,9 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext({
       untraced: ['**/(package**.json|yarn.lock)'],
     });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(res).toEqual({
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -780,9 +780,9 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext({
       untraced: ['**/decorator.jsx'],
     });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(res).toEqual({
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
@@ -837,9 +837,9 @@ describe('getDependentStoryFiles', () => {
       configDir: 'path/to/storybook-config',
       untraced: ['**/decorator.jsx'],
     });
-    const res = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(res).toEqual({
+    expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
 import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
-import { findChangedPackageFiles as findChangedPkg } from '../lib/findChangedPackageFiles';
+import { findChangedPackageFiles as findChangedPackage } from '../lib/findChangedPackageFiles';
 import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
 import { exitCodes } from '../lib/setExitCode';
 import {
@@ -51,7 +51,7 @@ vi.mock('../lib/getFileHashes', () => ({
 
 const makeZipFile = vi.mocked(compress);
 const findChangedDependencies = vi.mocked(findChangedDep);
-const findChangedPackageFiles = vi.mocked(findChangedPkg);
+const findChangedPackageFiles = vi.mocked(findChangedPackage);
 const getDependentStoryFiles = vi.mocked(getDepStoryFiles);
 const accessMock = vi.mocked(access);
 const createReadStreamMock = vi.mocked(createReadStream);
@@ -59,7 +59,7 @@ const readdirSyncMock = vi.mocked(readdirSync);
 const readFileSyncMock = vi.mocked(readFileSync);
 const statSyncMock = vi.mocked(statSync);
 
-const env = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
+const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
 const http = { fetch: vi.fn() };
 
@@ -72,7 +72,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['iframe.html', 'index.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env, log, http, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
     await validateFiles(ctx);
 
     expect(ctx.fileInfo).toEqual(
@@ -91,7 +91,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['iframe.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env, log, http, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -99,7 +99,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['index.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env, log, http, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -117,7 +117,7 @@ describe('validateFiles', () => {
       return { isDirectory: () => false, size: 42 } as any;
     });
 
-    const ctx = { env, log, http, sourceDir: '.' } as any;
+    const ctx = { env: environment, log, http, sourceDir: '.' } as any;
     await validateFiles(ctx);
 
     expect(ctx.fileInfo).toEqual(
@@ -140,7 +140,7 @@ describe('validateFiles', () => {
       readFileSyncMock.mockReturnValue('info => Output directory: /var/storybook-static');
 
       const ctx = {
-        env,
+        env: environment,
         log,
         http,
         sourceDir: '/static/',
@@ -181,7 +181,7 @@ describe('traceChangedFiles', () => {
     getDependentStoryFiles.mockResolvedValue(deps);
 
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       options: {},
@@ -210,7 +210,7 @@ describe('traceChangedFiles', () => {
     getDependentStoryFiles.mockResolvedValue(deps);
 
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       options: {},
@@ -235,7 +235,7 @@ describe('traceChangedFiles', () => {
     getDependentStoryFiles.mockResolvedValue(deps);
 
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       options: {},
@@ -257,7 +257,7 @@ describe('traceChangedFiles', () => {
 
     const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       options: {},
@@ -283,7 +283,7 @@ describe('traceChangedFiles', () => {
     );
 
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       options: { storybookBaseDir: '/wrong' },
@@ -304,7 +304,7 @@ describe('traceChangedFiles', () => {
 
     const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       options: {},
@@ -332,7 +332,7 @@ describe('calculateFileHashes', () => {
       total: 84,
     };
     const ctx = {
-      env,
+      env: environment,
       log,
       http,
       sourceDir: '/static/',
@@ -389,7 +389,7 @@ describe('uploadStorybook', () => {
     };
     const ctx = {
       client,
-      env,
+      env: environment,
       log,
       http,
       sourceDir: '/static/',
@@ -458,7 +458,7 @@ describe('uploadStorybook', () => {
     };
     const ctx = {
       client,
-      env,
+      env: environment,
       log,
       http,
       sourceDir: '/static/',
@@ -497,10 +497,10 @@ describe('uploadStorybook', () => {
       uploadBuild: {
         info: {
           sentinelUrls: [],
-          targets: Array.from({ length: 1000 }, (_, i) => ({
+          targets: Array.from({ length: 1000 }, (_, index) => ({
             contentType: 'application/javascript',
-            filePath: `${i}.js`,
-            formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+            filePath: `${index}.js`,
+            formAction: `https://s3.amazonaws.com/presigned?${index}.js`,
             formFields: {},
           })),
         },
@@ -528,13 +528,16 @@ describe('uploadStorybook', () => {
     http.fetch.mockReturnValue({ ok: true });
 
     const fileInfo = {
-      lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
-      paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
-      total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+      lengths: Array.from({ length: 1001 }, (_, index) => ({
+        knownAs: `${index}.js`,
+        contentLength: index,
+      })),
+      paths: Array.from({ length: 1001 }, (_, index) => `${index}.js`),
+      total: Array.from({ length: 1001 }, (_, index) => index).reduce((a, v) => a + v),
     };
     const ctx = {
       client,
-      env,
+      env: environment,
       log,
       http,
       sourceDir: '/static/',
@@ -547,10 +550,10 @@ describe('uploadStorybook', () => {
     expect(client.runQuery).toHaveBeenCalledTimes(2);
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
-      files: Array.from({ length: 1000 }, (_, i) => ({
+      files: Array.from({ length: 1000 }, (_, index) => ({
         contentHash: undefined,
-        contentLength: i,
-        filePath: `${i}.js`,
+        contentLength: index,
+        filePath: `${index}.js`,
       })),
     });
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
@@ -616,7 +619,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        env,
+        env: environment,
         log,
         http,
         sourceDir: '/static/',
@@ -695,7 +698,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        env,
+        env: environment,
         log,
         http,
         sourceDir: '/static/',
@@ -738,10 +741,10 @@ describe('uploadStorybook', () => {
         uploadBuild: {
           info: {
             sentinelUrls: [],
-            targets: Array.from({ length: 1000 }, (_, i) => ({
+            targets: Array.from({ length: 1000 }, (_, target) => ({
               contentType: 'application/javascript',
-              filePath: `${i}.js`,
-              formAction: `https://s3.amazonaws.com/presigned?${i}.js`,
+              filePath: `${target}.js`,
+              formAction: `https://s3.amazonaws.com/presigned?${target}.js`,
               formFields: {},
             })),
             zipTarget: {
@@ -777,13 +780,16 @@ describe('uploadStorybook', () => {
       http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
 
       const fileInfo = {
-        lengths: Array.from({ length: 1001 }, (_, i) => ({ knownAs: `${i}.js`, contentLength: i })),
-        paths: Array.from({ length: 1001 }, (_, i) => `${i}.js`),
-        total: Array.from({ length: 1001 }, (_, i) => i).reduce((a, v) => a + v),
+        lengths: Array.from({ length: 1001 }, (_, index) => ({
+          knownAs: `${index}.js`,
+          contentLength: index,
+        })),
+        paths: Array.from({ length: 1001 }, (_, index) => `${index}.js`),
+        total: Array.from({ length: 1001 }, (_, index) => index).reduce((a, v) => a + v),
       };
       const ctx = {
         client,
-        env,
+        env: environment,
         log,
         http,
         sourceDir: '/static/',
@@ -825,7 +831,7 @@ describe('waitForSentinels', () => {
     ];
     const ctx = {
       client,
-      env,
+      env: environment,
       log,
       http,
       options: {},

@@ -47,7 +47,7 @@ export default class GraphQLClient {
             },
             { retries }
           )
-          .then((res) => res.json() as any)
+          .then((result) => result.json() as any)
           .catch(bail);
 
         if (!errors) return data;

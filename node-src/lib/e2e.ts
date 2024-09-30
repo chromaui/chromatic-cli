@@ -7,8 +7,8 @@ import { exitCodes, setExitCode } from './setExitCode';
 
 export const buildBinName = 'build-archive-storybook';
 
-const quote = (arg: string) =>
-  !arg.startsWith('--') && arg.includes(' ') ? JSON.stringify(arg) : arg;
+const quote = (argument: string) =>
+  !argument.startsWith('--') && argument.includes(' ') ? JSON.stringify(argument) : argument;
 
 // ni doesn't currently have a "exec" command (equivalent to `npm exec`).
 // It has a "download & exec" command (equivalent to `npx`).

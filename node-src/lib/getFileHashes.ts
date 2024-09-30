@@ -10,17 +10,17 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
   return new Promise((resolve, reject) => {
     const done = (fd: number, getResult: () => bigint) => {
       let result: bigint = undefined;
-      close(fd, (closeErr) => {
-        if (closeErr) reject(closeErr);
+      close(fd, (closeError) => {
+        if (closeError) reject(closeError);
         else resolve(result.toString(16).padStart(16, '0'));
       });
       result = getResult();
     };
 
     const readIncremental = (fd: number, hash: XXHash<bigint>) => {
-      read(fd, buffer, undefined, BUFFER_SIZE, -1, (readErr, bytesRead) => {
-        if (readErr) {
-          return close(fd, () => reject(readErr));
+      read(fd, buffer, undefined, BUFFER_SIZE, -1, (readError, bytesRead) => {
+        if (readError) {
+          return close(fd, () => reject(readError));
         }
         if (bytesRead === BUFFER_SIZE) {
           hash.update(buffer);
@@ -32,13 +32,13 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
       });
     };
 
-    open(path, 'r', (openErr, fd) => {
-      if (openErr) {
-        return reject(openErr);
+    open(path, 'r', (openError, fd) => {
+      if (openError) {
+        return reject(openError);
       }
-      read(fd, buffer, undefined, BUFFER_SIZE, -1, (readErr, bytesRead) => {
-        if (readErr) {
-          return close(fd, () => reject(readErr));
+      read(fd, buffer, undefined, BUFFER_SIZE, -1, (readError, bytesRead) => {
+        if (readError) {
+          return close(fd, () => reject(readError));
         }
         if (bytesRead < BUFFER_SIZE) {
           // Do a single hash if the whole file fits into the buffer.
@@ -54,7 +54,7 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
   });
 };
 
-export const getFileHashes = async (files: string[], dir: string, concurrency: number) => {
+export const getFileHashes = async (files: string[], directory: string, concurrency: number) => {
   // Limit the number of concurrent file reads and hashing operations.
   const limit = pLimit(concurrency);
   const xxhash = await xxHashWasm();
@@ -64,7 +64,7 @@ export const getFileHashes = async (files: string[], dir: string, concurrency: n
 
   const hashes = await Promise.all(
     buffers.map(([buffer, file]) =>
-      limit(async () => [file, await hashFile(buffer, path.join(dir, file), xxhash)] as const)
+      limit(async () => [file, await hashFile(buffer, path.join(directory, file), xxhash)] as const)
     )
   );
 

@@ -2,7 +2,7 @@ import { outputFile } from 'fs-extra';
 
 import { readStatsFile } from '../node-src/tasks/read-stats-file';
 
-const dedupe = <T>(arr: T[]) => [...new Set(arr)];
+const dedupe = <T>(array: T[]) => [...new Set(array)];
 const isUserCode = ({ name, moduleName = name }: { name?: string; moduleName?: string }) =>
   moduleName &&
   !moduleName.startsWith('(webpack)') &&

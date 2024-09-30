@@ -4,7 +4,7 @@ import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { execaCommand } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildStorybook, setBuildCommand, setSourceDir } from './build';
+import { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
 vi.mock('execa');
 vi.mock('@antfu/ni');
@@ -19,25 +19,25 @@ beforeEach(() => {
 describe('setSourceDir', () => {
   it('sets a random temp directory path on the context', async () => {
     const ctx = { options: {}, storybook: { version: '5.0.0' } } as any;
-    await setSourceDir(ctx);
+    await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toMatch(/chromatic-/);
   });
 
   it('falls back to the default output dir for older Storybooks', async () => {
     const ctx = { options: {}, storybook: { version: '4.0.0' } } as any;
-    await setSourceDir(ctx);
+    await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toBe('storybook-static');
   });
 
   it('uses the outputDir option if provided', async () => {
     const ctx = { options: { outputDir: 'storybook-out' }, storybook: { version: '5.0.0' } } as any;
-    await setSourceDir(ctx);
+    await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toBe('storybook-out');
   });
 
   it('uses the outputDir option if provided, even for older Storybooks', async () => {
     const ctx = { options: { outputDir: 'storybook-out' }, storybook: { version: '4.0.0' } } as any;
-    await setSourceDir(ctx);
+    await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toBe('storybook-out');
   });
 });

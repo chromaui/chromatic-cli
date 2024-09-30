@@ -123,7 +123,10 @@ export default [
             str: true,
             args: true,
             docsUrl: true,
+            fn: true,
+            pkg: true,
           },
+          ignore: [/.*e2e.*/, /\w+[Dd]ocs\w*/],
         },
       ],
       'unicorn/catch-error-name': [

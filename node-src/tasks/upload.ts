@@ -3,7 +3,7 @@ import path from 'path';
 import semver from 'semver';
 import slash from 'slash';
 
-import { checkStorybookBaseDir } from '../lib/checkStorybookBaseDir';
+import { checkStorybookBaseDirectory } from '../lib/checkStorybookBaseDirectory';
 import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
@@ -15,7 +15,7 @@ import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import bailFile from '../ui/messages/warnings/bailFile';
-import deviatingOutputDir from '../ui/messages/warnings/deviatingOutputDir';
+import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
 import {
   bailed,
   dryRun,
@@ -44,43 +44,46 @@ const SPECIAL_CHARS_REGEXP = /([$()*+?[\]^])/g;
 // Get all paths in rootDir, starting at dirname.
 // We don't want the paths to include rootDir -- so if rootDir = storybook-static,
 // paths will be like iframe.html rather than storybook-static/iframe.html
-function getPathsInDir(ctx: Context, rootDir: string, dirname = '.'): PathSpec[] {
+function getPathsInDirectory(ctx: Context, rootDirectory: string, dirname = '.'): PathSpec[] {
   // .chromatic is a special directory reserved for internal use and should not be uploaded
   if (dirname === '.chromatic') {
     return [];
   }
 
   try {
-    return readdirSync(path.join(rootDir, dirname)).flatMap((p: string) => {
+    return readdirSync(path.join(rootDirectory, dirname)).flatMap((p: string) => {
       const pathname = path.join(dirname, p);
-      const stats = statSync(path.join(rootDir, pathname));
+      const stats = statSync(path.join(rootDirectory, pathname));
       return stats.isDirectory()
-        ? getPathsInDir(ctx, rootDir, pathname)
+        ? getPathsInDirectory(ctx, rootDirectory, pathname)
         : [{ pathname, contentLength: stats.size }];
     });
   } catch (err) {
     ctx.log.debug(err);
-    throw new Error(invalid({ sourceDir: rootDir } as any, err).output);
+    throw new Error(invalid({ sourceDir: rootDirectory } as any, err).output);
   }
 }
 
-function getOutputDir(buildLog: string) {
+function getOutputDirectory(buildLog: string) {
   const outputString = 'Output directory: ';
   const outputIndex = buildLog.lastIndexOf(outputString);
   if (outputIndex === -1) return undefined;
   const remainingLog = buildLog.slice(outputIndex + outputString.length);
   const newlineIndex = remainingLog.indexOf('\n');
-  const outputDir = newlineIndex === -1 ? remainingLog : remainingLog.slice(0, newlineIndex);
-  return outputDir.trim();
+  const outputDirectory = newlineIndex === -1 ? remainingLog : remainingLog.slice(0, newlineIndex);
+  return outputDirectory.trim();
 }
 
-function getFileInfo(ctx: Context, sourceDir: string) {
-  const lengths = getPathsInDir(ctx, sourceDir).map((o) => ({ ...o, knownAs: slash(o.pathname) }));
+function getFileInfo(ctx: Context, sourceDirectory: string) {
+  const lengths = getPathsInDirectory(ctx, sourceDirectory).map((o) => ({
+    ...o,
+    knownAs: slash(o.pathname),
+  }));
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   const paths: string[] = [];
   let statsPath: string;
   for (const { knownAs } of lengths) {
-    if (knownAs.endsWith('preview-stats.json')) statsPath = path.join(sourceDir, knownAs);
+    if (knownAs.endsWith('preview-stats.json')) statsPath = path.join(sourceDirectory, knownAs);
     else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
   }
   return { lengths, paths, statsPath, total };
@@ -95,10 +98,10 @@ export const validateFiles = async (ctx: Context) => {
   if (!isValidStorybook(ctx.fileInfo) && ctx.buildLogFile) {
     try {
       const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
-      const outputDir = getOutputDir(buildLog);
-      if (outputDir && outputDir !== ctx.sourceDir) {
-        ctx.log.warn(deviatingOutputDir(ctx, outputDir));
-        ctx.sourceDir = outputDir;
+      const outputDirectory = getOutputDirectory(buildLog);
+      if (outputDirectory && outputDirectory !== ctx.sourceDir) {
+        ctx.log.warn(deviatingOutputDirectory(ctx, outputDirectory));
+        ctx.sourceDir = outputDirectory;
         ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
       }
     } catch (err) {
@@ -161,7 +164,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
     const stats = await readStatsFile(statsPath);
 
-    await checkStorybookBaseDir(ctx, stats);
+    await checkStorybookBaseDirectory(ctx, stats);
 
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,

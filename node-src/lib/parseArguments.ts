@@ -3,7 +3,7 @@ import meow from 'meow';
 import pkg from '../../package.json';
 import { Flags } from '../types';
 
-export default function parseArgs(argv: string[]) {
+export default function parseArguments(argv: string[]) {
   const { input, flags, help } = meow(
     `
     Chromatic CLI
