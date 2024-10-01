@@ -55,6 +55,7 @@ Sentry.init({
     tags: {
       entrypoint: process.env.CI && process.env.GITHUB_RUN_ID ? 'action' : 'cli',
       version: process.env.npm_package_version,
+      index_url: process.env.CHROMATIC_INDEX_URL,
     },
   },
   beforeSend: filterErrorEvent,
