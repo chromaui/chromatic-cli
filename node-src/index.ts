@@ -1,5 +1,6 @@
 import 'any-observable/register/zen';
 
+import * as Sentry from '@sentry/node';
 import Listr from 'listr';
 import readPkgUp from 'read-pkg-up';
 import { v4 as uuid } from 'uuid';
@@ -161,6 +162,7 @@ export async function runAll(ctx: InitialContext) {
   ctx.log.info('');
 
   const onError = (err: Error | Error[]) => {
+    Sentry.captureException(err);
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [err].flat()));
     ctx.extraOptions?.experimental_onTaskError?.(ctx, {
@@ -232,6 +234,7 @@ async function runBuild(ctx: Context) {
       await new Listr(getTasks(ctx.options), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
+      Sentry.captureException(err);
       endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);

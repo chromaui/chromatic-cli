@@ -1,5 +1,8 @@
+import '../node-src/errorMonitoring';
+
 import { error, getInput, getMultilineInput, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
+import * as Sentry from '@sentry/node';
 import path from 'path';
 
 import { run as runNode } from '../node-src';
@@ -15,7 +18,7 @@ const maybe = (a: string | string[], b: any = undefined) => {
 
   try {
     return JSON.parse(a);
-  } catch (_err) {
+  } catch {
     return a;
   }
 };
@@ -188,23 +191,27 @@ async function run() {
       },
     });
 
-    Object.entries(output).forEach(([key, value]) => setOutput(key, String(value)));
+    for (const [key, value] of Object.entries(output)) setOutput(key, String(value));
 
     if (output.code !== 0) {
       setFailed('non-zero exit code');
     }
 
     process.exit(output.code);
-  } catch (e) {
-    if (e.message) error(e.message);
-    if (e.stack) error(e.stack);
-    if (e.description) error(e.description);
+  } catch (error_) {
+    if (error_.message) error(error_.message);
+    if (error_.stack) error(error_.stack);
+    if (error_.description) error(error_.description);
 
-    setFailed(e.message);
+    setFailed(error_.message);
     process.exit(1);
   }
 }
-run().catch((e) => {
-  error(e);
-  setFailed(e.message);
-});
+
+run()
+  .catch((runError) => {
+    error(runError);
+    setFailed(runError.message);
+    Sentry.captureException(runError);
+  })
+  .finally(() => Sentry.flush(2500).finally(() => process.exit()));
