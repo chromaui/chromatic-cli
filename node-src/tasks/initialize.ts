@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+
 import { emailHash } from '../lib/emailHash';
 import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -52,8 +54,11 @@ export const setRuntimeMetadata = async (ctx: Context) => {
   try {
     const packageManager = await getPackageManagerName();
     ctx.runtimeMetadata.packageManager = packageManager as any;
+    Sentry.setTag('packageManager', packageManager);
+
     const packageManagerVersion = await getPackageManagerVersion(packageManager);
     ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
+    Sentry.setTag('packageManagerVersion', packageManagerVersion);
   } catch (err) {
     ctx.log.debug(`Failed to set runtime metadata: ${err.message}`);
   }
@@ -100,6 +105,9 @@ export const announceBuild = async (ctx: Context) => {
     },
     { retries: 3 }
   );
+
+  Sentry.setTag('app_id', announcedBuild.app.id);
+  Sentry.setContext('build', { id: announcedBuild.id });
 
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =

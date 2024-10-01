@@ -110,7 +110,12 @@ describe('announceBuild', () => {
   };
 
   it('creates a build on the index and puts it on context', async () => {
-    const build = { number: 1, status: 'ANNOUNCED' };
+    const build = {
+      number: 1,
+      status: 'ANNOUNCED',
+      id: 'announced-build-id',
+      app: { id: 'announced-build-app-id' },
+    };
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
 
