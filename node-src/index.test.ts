@@ -275,7 +275,7 @@ const mockStats = {
 };
 const mockStatsFile = Readable.from([JSON.stringify(mockStats)]);
 
-vi.mock('./tasks/read-stats-file', () => ({
+vi.mock('./tasks/readStatsFile', () => ({
   readStatsFile: () => Promise.resolve(mockStats),
 }));
 

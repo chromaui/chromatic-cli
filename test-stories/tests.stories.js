@@ -2,8 +2,8 @@
 
 import React from 'react';
 
-import isChromatic from '..';
-import AComponent from './A';
+import isChromatic from '../isChromatic';
+import AComponent from './a';
 
 export default {
   title: 'Tests',

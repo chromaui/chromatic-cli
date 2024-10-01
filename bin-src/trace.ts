@@ -2,7 +2,7 @@ import meow from 'meow';
 
 import { getDependentStoryFiles } from '../node-src/lib/getDependentStoryFiles';
 import { isPackageManifestFile } from '../node-src/lib/utils';
-import { readStatsFile } from '../node-src/tasks/read-stats-file';
+import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Context } from '../node-src/types';
 
 /**

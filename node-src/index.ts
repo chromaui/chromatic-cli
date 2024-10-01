@@ -12,8 +12,8 @@ import {
   getUncommittedHash,
   getUserEmail,
 } from './git/git';
-import GraphQLClient from './io/GraphQLClient';
-import HTTPClient from './io/HTTPClient';
+import GraphQLClient from './io/graphqlClient';
+import HTTPClient from './io/httpClient';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2e';
@@ -22,8 +22,8 @@ import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
 import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
-import LoggingRenderer from './lib/LoggingRenderer';
-import NonTTYRenderer from './lib/NonTTYRenderer';
+import LoggingRenderer from './lib/loggingRenderer';
+import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';

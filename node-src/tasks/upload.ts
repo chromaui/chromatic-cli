@@ -31,7 +31,7 @@ import {
   uploading,
   validating,
 } from '../ui/tasks/upload';
-import { readStatsFile } from './read-stats-file';
+import { readStatsFile } from './readStatsFile';
 
 interface PathSpec {
   pathname: string;

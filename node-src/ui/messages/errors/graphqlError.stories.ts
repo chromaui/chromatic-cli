@@ -1,4 +1,4 @@
-import { GraphQLError } from '../../../io/GraphQLClient';
+import { GraphQLError } from '../../../io/graphqlClient';
 import graphqlError from './graphqlError';
 
 export default {

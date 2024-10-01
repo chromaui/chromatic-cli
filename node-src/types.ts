@@ -1,6 +1,6 @@
 import { InitialContext } from '.';
-import GraphQLClient from './io/GraphQLClient';
-import HTTPClient from './io/HTTPClient';
+import GraphQLClient from './io/graphqlClient';
+import HTTPClient from './io/httpClient';
 import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';

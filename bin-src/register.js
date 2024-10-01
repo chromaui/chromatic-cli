@@ -5,7 +5,7 @@ import { config } from 'dotenv';
 import { main as initMain } from './init';
 import { main } from './main';
 import { main as traceMain } from './trace';
-import { main as trimMain } from './trim-stats-file';
+import { main as trimMain } from './trimStatsFile';
 
 config();
 

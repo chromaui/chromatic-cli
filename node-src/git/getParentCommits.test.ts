@@ -8,13 +8,13 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import generateGitRepository from './generateGitRepository';
 import { getParentCommits } from './getParentCommits';
 import { getCommit } from './git';
-import doubleLoopDescription from './mocks/double-loop';
-import longLineDescription from './mocks/long-line';
-import longLoopDescription from './mocks/long-loop';
-import createMockIndex from './mocks/mock-index';
-import simpleLoopDescription from './mocks/simple-loop';
-import threeParentsDescription from './mocks/three-parents';
-import twoRootsDescription from './mocks/two-roots';
+import doubleLoopDescription from './mocks/doubleLoop';
+import longLineDescription from './mocks/longLine';
+import longLoopDescription from './mocks/longLoop';
+import createMockIndex from './mocks/mockIndex';
+import simpleLoopDescription from './mocks/simpleLoop';
+import threeParentsDescription from './mocks/threeParents';
+import twoRootsDescription from './mocks/twoRoots';
 
 const descriptions = {
   simpleLoop: simpleLoopDescription,

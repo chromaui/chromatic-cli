@@ -59,7 +59,7 @@
     "lint:package": "sort-package-json",
     "release": "node scripts/release.js",
     "trace": "node -r esm bin-src/trace.js",
-    "trim-stats": "node -r esm bin-src/trim-stats-file.js",
+    "trim-stats": "node -r esm bin-src/trimStatsFile.js",
     "storybook": "start-storybook -p 9009 -s static",
     "test": "jest",
     "prepare": "husky install && npm run build",
