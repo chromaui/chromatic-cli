@@ -162,7 +162,6 @@ export async function runAll(ctx: InitialContext) {
   ctx.log.info('');
 
   const onError = (err: Error | Error[]) => {
-    Sentry.captureException(err);
     ctx.log.info('');
     ctx.log.error(fatalError(ctx, [err].flat()));
     ctx.extraOptions?.experimental_onTaskError?.(ctx, {
@@ -198,7 +197,10 @@ export async function runAll(ctx: InitialContext) {
   }
 
   // Run these in parallel; neither should ever reject
-  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch(onError);
+  await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch((error) => {
+    Sentry.captureException(error);
+    onError(error);
+  });
 
   if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
