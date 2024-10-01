@@ -18,6 +18,9 @@ export default defineConfig((options) => [
     clean: true,
     platform: 'node',
     target: 'node16', // Storybook still supports Node 16
+    env: {
+      SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
+    },
   },
   {
     entry: ['action-src/register.js'],
@@ -30,5 +33,8 @@ export default defineConfig((options) => [
     clean: true,
     platform: 'node',
     target: 'node20', // Sync with `runs.using` in action.yml
+    env: {
+      SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
+    },
   },
 ]);

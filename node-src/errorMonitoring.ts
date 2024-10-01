@@ -47,12 +47,13 @@ export function filterBreadcrumb(breadcrumb: Sentry.Breadcrumb) {
 Sentry.init({
   dsn: 'https://4fa173db2ef3fb073b8ea153a5466d28@o4504181686599680.ingest.us.sentry.io/4507930289373184',
   sampleRate: 1,
-  environment: process.env.CI && process.env.GITHUB_RUN_ID ? 'action' : 'cli',
+  environment: process.env.SENTRY_ENVIRONMENT,
   enabled: process.env.DISABLE_ERROR_MONITORING !== 'true',
   enableTracing: false,
   integrations: [],
   initialScope: {
     tags: {
+      entrypoint: process.env.CI && process.env.GITHUB_RUN_ID ? 'action' : 'cli',
       version: process.env.npm_package_version,
     },
   },
