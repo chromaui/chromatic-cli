@@ -72,7 +72,8 @@ vi.mock('node-fetch', () => ({
     // TODO: refactor this function
     // eslint-disable-next-line complexity, max-statements
     json: async () => {
-      let query: string, variables: Record<string, any>;
+      let query = '';
+      let variables: Record<string, any> = {};
       try {
         const data = JSON.parse(body);
         query = data.query;
@@ -406,7 +407,7 @@ it('passes options error to experimental_onTaskError', async () => {
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runAll(ctx);
 
-  expect(ctx.extraOptions.experimental_onTaskError).toHaveBeenCalledWith(
+  expect(ctx.extraOptions?.experimental_onTaskError).toHaveBeenCalledWith(
     expect.anything(), // Context
     expect.objectContaining({
       formattedError: expect.stringContaining('Missing project token'), // Long formatted error fatalError https://github.com/chromaui/chromatic-cli/blob/217e77671179748eb4ddb8becde78444db93d067/node-src/ui/messages/errors/fatalError.ts#L11
@@ -764,7 +765,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
     '--only-changed',
   ]);
   await runAll(ctx);
-  expect(upload.mock.calls.at(-1)[1]).toEqual(
+  expect(upload.mock.calls.at(-1)?.[1]).toEqual(
     expect.arrayContaining([
       {
         contentLength: expect.any(Number),

@@ -148,17 +148,17 @@ export async function uploadBuild(
       return options.onError?.(new Error('Upload rejected due to user error'));
     }
 
-    ctx.sentinelUrls.push(...uploadBuild.info.sentinelUrls);
+    ctx.sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));
     targets.push(
-      ...uploadBuild.info.targets.map((target) => {
+      ...(uploadBuild.info?.targets.map((target) => {
         const file = batch.find((f) => f.targetPath === target.filePath);
-        return { ...file, ...target };
-      })
+        return { ...file, ...target } as FileDesc & TargetInfo;
+      }) || [])
     );
 
     // Use the last received zipTarget, as it will have the largest allowed size.
     // If all files in the batch are copied rather than uploaded, we won't receive a zipTarget.
-    if (uploadBuild.info.zipTarget) {
+    if (uploadBuild.info?.zipTarget) {
       zipTarget = uploadBuild.info.zipTarget;
     }
   }
@@ -194,7 +194,7 @@ export async function uploadBuild(
   } catch (err) {
     const target = targets.find((target) => target.localPath === err.message);
     if (target) ctx.log.error(uploadFailed({ target }, ctx.log.getLevel() === 'debug'));
-    return options.onError?.(err, target.localPath);
+    return options.onError?.(err, target?.localPath);
   }
 }
 
@@ -254,7 +254,7 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   if (uploadMetadata.info) {
     const targets = uploadMetadata.info.targets.map((target) => {
       const file = files.find((f) => f.targetPath === target.filePath);
-      return { ...file, ...target };
+      return { ...file, ...target } as FileDesc & TargetInfo;
     });
     await uploadFiles(ctx, targets);
   }

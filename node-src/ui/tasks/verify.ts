@@ -32,18 +32,18 @@ export const runOnlyFiles = (ctx: Context) => ({
     ? `Snapshots will be limited to story files matching ${ctx.options.onlyStoryFiles
         .map((v) => `'${v}'`)
         .join(', ')}`
-    : `Snapshots will be limited to ${ctx.onlyStoryFiles.length} story files affected by recent changes`,
+    : `Snapshots will be limited to ${ctx.onlyStoryFiles?.length} story files affected by recent changes`,
 });
 
 export const runOnlyNames = (ctx: Context) => ({
   status: 'pending',
   title: 'Starting partial build',
   output: `Snapshots will be limited to stories matching ${ctx.options.onlyStoryNames
-    .map((v) => `'${v}'`)
+    ?.map((v) => `'${v}'`)
     .join(', ')}`,
 });
 
-export const awaitingUpgrades = (_: Context, upgradeBuilds: { completedAt?: number }[]) => {
+export const awaitingUpgrades = (_: Context, upgradeBuilds: { completedAt?: number | null }[]) => {
   const pending = upgradeBuilds.filter((upgrade) => !upgrade.completedAt).length;
   const upgrades = pluralize('upgrade build', upgradeBuilds.length, true);
   return {

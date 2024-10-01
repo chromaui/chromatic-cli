@@ -12,18 +12,20 @@ const YARN_LOCK = 'yarn.lock';
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const findChangedDependencies = async (ctx: Context) => {
   const { packageMetadataChanges } = ctx.git;
   const { untraced = [] } = ctx.options;
 
-  if (packageMetadataChanges.length === 0) {
+  if (packageMetadataChanges?.length === 0) {
     ctx.log.debug('No package metadata changed found');
     return [];
   }
 
   ctx.log.debug(
     { packageMetadataChanges },
-    `Finding changed dependencies for ${packageMetadataChanges.length} baselines`
+    `Finding changed dependencies for ${packageMetadataChanges?.length} baselines`
   );
 
   const rootPath = await getRepositoryRoot();
@@ -69,7 +71,7 @@ export const findChangedDependencies = async (ctx: Context) => {
   const filteredPathPairs = metadataPathPairs
     .map(([manifestPath, lockfilePath]) => {
       const commits = packageMetadataChanges
-        .filter(({ changedFiles }) =>
+        ?.filter(({ changedFiles }) =>
           changedFiles.some((file) => file === lockfilePath || file === manifestPath)
         )
         .map(({ commit }) => commit);

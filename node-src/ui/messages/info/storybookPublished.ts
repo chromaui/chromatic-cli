@@ -15,12 +15,12 @@ export default ({ build, storybookUrl }: Pick<Context, 'build' | 'storybookUrl'>
     return dedent(chalk`
       ${success} {bold Storybook published}
       We found ${components} with ${stories}.
-      ${info} View your Storybook at ${link(storybookUrl)}
+      ${info} View your Storybook at ${link(storybookUrl || '')}
     `);
   }
 
   return dedent(chalk`
     ${success} {bold Storybook published}
-    ${info} View your Storybook at ${link(storybookUrl)}
+    ${info} View your Storybook at ${link(storybookUrl || '')}
   `);
 };

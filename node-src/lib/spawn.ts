@@ -16,10 +16,10 @@ export default function spawn(
     let stdout = '';
     let stderr = '';
     const child = packageCommand(args, options);
-    child.stdout.on('data', (chunk) => {
+    child.stdout?.on('data', (chunk) => {
       stdout += chunk;
     });
-    child.stderr.on('data', (chunk) => {
+    child.stderr?.on('data', (chunk) => {
       stderr += chunk;
     });
     child.on('error', reject);

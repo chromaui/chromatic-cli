@@ -53,7 +53,7 @@ export default class HTTPClient {
 
   constructor(
     { env, log }: Pick<Context, 'env' | 'log'>,
-    { headers, retries = 0 }: HTTPClientOptions = {}
+    { headers = {}, retries = 0 }: HTTPClientOptions = {}
   ) {
     if (!log) throw new Error(`Missing required option in HTTPClient: log`);
     this.env = env;

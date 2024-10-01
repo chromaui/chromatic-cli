@@ -55,7 +55,7 @@ const MergeCommitsQuery = gql`
     }
   }
 `;
-interface MergeCommitsQueryResult {
+export interface MergeCommitsQueryResult {
   app: {
     mergedPullRequests: [
       {

@@ -251,7 +251,7 @@ export async function getDependentStoryFiles(
     // trace changed dependencies, so we bail just in case.
     ctx.turboSnap.bailReason = {
       changedPackageFiles: [
-        ...ctx.git.changedFiles.filter((file) => isPackageManifestFile(file)),
+        ...(ctx.git.changedFiles?.filter((file) => isPackageManifestFile(file)) || []),
         ...changedPackageLockFiles,
       ],
     };
@@ -272,7 +272,7 @@ export async function getDependentStoryFiles(
   // TODO: refactor this function
   // eslint-disable-next-line complexity
   function traceName(name: string, tracePath: string[] = []) {
-    if (ctx.turboSnap.bailReason || isCsfGlob(name)) return;
+    if (ctx.turboSnap?.bailReason || isCsfGlob(name)) return;
     if (shouldBail(name)) return;
     const { id } = modulesByName.get(name) || {};
     const normalizedName = namesById.get(id);

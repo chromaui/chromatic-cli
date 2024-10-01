@@ -4,7 +4,7 @@ import { dedent } from 'ts-dedent';
 import { Context } from '../../../types';
 import { warning } from '../../components/icons';
 
-const getHint = (buildScriptName: string, buildScript: string) => {
+const getHint = (buildScriptName: string | undefined, buildScript: string) => {
   if (!buildScript) return '';
 
   if (buildScript.includes('npm run '))
@@ -29,7 +29,8 @@ export default (
   outputDirectory: string
 ) => {
   const { buildScriptName } = options;
-  const buildScript = packageJson.scripts && packageJson.scripts[buildScriptName];
+  const buildScript =
+    packageJson.scripts && buildScriptName && packageJson.scripts[buildScriptName];
 
   return dedent(chalk`
     ${warning} {bold Unexpected build directory}

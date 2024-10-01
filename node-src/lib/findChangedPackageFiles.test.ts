@@ -14,6 +14,8 @@ const execGitCommand = vi.mocked(git.execGitCommand);
 const mockFileContents = (packagesCommitsByFile) => {
   execGitCommand.mockImplementation(async (input) => {
     const regexResults = /show\s([^:]*):(.*)/g.exec(input);
+    if (!regexResults) return '';
+
     const commit = regexResults[1];
     const fileName = regexResults[2];
 

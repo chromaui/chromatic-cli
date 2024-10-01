@@ -10,7 +10,7 @@ const infoMessage = (
   const turboSnapStatus = turboSnap.bailReason ? '; TurboSnap disabled' : '';
   const branchName = ownerName ? `${ownerName}:${branch}` : branch;
   let message = `Commit '${commit.slice(0, 7)}' on branch '${branchName}'`;
-  if (parentCommits.length > 0) {
+  if (parentCommits?.length) {
     message += `; found ${pluralize('parent build', parentCommits.length, true)}`;
     if (changedFiles) {
       message += ` and ${pluralize('changed file', changedFiles.length, true)}`;

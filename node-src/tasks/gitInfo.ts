@@ -103,10 +103,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   const { branch, commit, slug } = ctx.git;
 
-  ctx.git.matchesBranch = (glob: true | string) =>
+  ctx.git.matchesBranch = (glob: string | boolean) =>
     typeof glob === 'string' && glob.length > 0 ? picomatch(glob, { bash: true })(branch) : !!glob;
 
-  if (ctx.git.matchesBranch(ctx.options.skip)) {
+  if (ctx.git.matchesBranch?.(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
     // The SkipBuildMutation ensures the commit is tagged properly.
     if (await ctx.client.runQuery(SkipBuildMutation, { commit, branch, slug })) {
@@ -119,7 +119,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   }
 
   const parentCommits = await getParentCommits(ctx, {
-    ignoreLastBuildOnBranch: ctx.git.matchesBranch(ctx.options.ignoreLastBuildOnBranch),
+    ignoreLastBuildOnBranch: ctx.git.matchesBranch?.(ctx.options.ignoreLastBuildOnBranch || false),
   });
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
@@ -219,7 +219,9 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         .map(({ build, replacementBuild }) => {
           ctx.log.info('');
           ctx.log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
-          return [build.id, replacementBuild.id];
+          // `replacementBuild` is filtered above
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          return [build.id, replacementBuild!.id];
         });
 
       if (!interactive) {

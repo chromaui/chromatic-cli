@@ -1,17 +1,15 @@
 import { SpawnOptions } from 'child_process';
-import yon from 'yarn-or-npm';
-
-const { spawn } = yon;
+import { spawn } from 'yarn-or-npm';
 
 const installDependencies = (options?: SpawnOptions) =>
   new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
     const child = spawn(['install'], options);
-    child.stdout.on('data', (chunk) => {
+    child.stdout?.on('data', (chunk) => {
       stdout += chunk;
     });
-    child.stderr.on('data', (chunk) => {
+    child.stderr?.on('data', (chunk) => {
       stderr += chunk;
     });
     child.on('error', reject);

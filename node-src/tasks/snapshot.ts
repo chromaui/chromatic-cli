@@ -62,7 +62,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   const testLabels =
     ctx.options.interactive &&
     testCount === actualTestCount &&
-    tests.map(({ spec, parameters, mode }) => {
+    tests?.map(({ spec, parameters, mode }) => {
       const testSuffixName = mode.name || `[${parameters.viewport}px]`;
       const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
       return `${spec.component.displayName} › ${spec.name} ${suffix}`;
@@ -113,7 +113,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     case 'ACCEPTED':
     case 'PENDING':
     case 'DENIED': {
-      if (build.autoAcceptChanges || ctx.git.matchesBranch(ctx.options.exitZeroOnChanges)) {
+      if (
+        build.autoAcceptChanges ||
+        ctx.git.matchesBranch?.(ctx.options?.exitZeroOnChanges || false)
+      ) {
         setExitCode(ctx, exitCodes.OK);
         ctx.log.info(buildPassedMessage(ctx));
       } else {

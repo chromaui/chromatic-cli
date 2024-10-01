@@ -81,7 +81,7 @@ function getFileInfo(ctx: Context, sourceDirectory: string) {
   }));
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   const paths: string[] = [];
-  let statsPath: string;
+  let statsPath = '';
   for (const { knownAs } of lengths) {
     if (knownAs.endsWith('preview-stats.json')) statsPath = path.join(sourceDirectory, knownAs);
     else if (!knownAs.endsWith('manager-stats.json')) paths.push(knownAs);
@@ -119,10 +119,10 @@ export const validateFiles = async (ctx: Context) => {
 export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
-  if (!ctx.fileInfo.statsPath) {
+  if (!ctx.fileInfo?.statsPath) {
     // If we don't know the SB version, we should assume we don't support `--stats-json`
     const nonLegacyStatsSupported =
-      ctx.storybook?.version && semver.gte(semver.coerce(ctx.storybook.version), '8.0.0');
+      ctx.storybook?.version && semver.gte(semver.coerce(ctx.storybook.version) || '', '8.0.0');
 
     ctx.turboSnap.bailReason = { missingStatsFile: true };
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
@@ -136,7 +136,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
     let changedDependencyNames: void | string[] = [];
-    if (packageMetadataChanges?.length > 0) {
+    if (packageMetadataChanges?.length) {
       changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
         const { name, message, stack, code } = err;
         ctx.log.debug({ name, message, stack, code });
@@ -229,9 +229,9 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
   if (ctx.skip) return;
   transitionTo(starting)(ctx, task);
 
-  const files = ctx.fileInfo.paths.map<FileDesc>((filePath) => ({
-    ...(ctx.fileInfo.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
-    contentLength: ctx.fileInfo.lengths.find(({ knownAs }) => knownAs === filePath).contentLength,
+  const files = ctx.fileInfo?.paths.map<FileDesc>((filePath) => ({
+    ...(ctx.fileInfo?.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
+    contentLength: ctx.fileInfo?.lengths.find(({ knownAs }) => knownAs === filePath)?.contentLength,
     localPath: path.join(ctx.sourceDir, filePath),
     targetPath: filePath,
   }));
@@ -260,7 +260,7 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
   const sentinels = Object.fromEntries(
     ctx.sentinelUrls.map((url) => {
       const { host, pathname } = new URL(url);
-      return [host + pathname, { name: pathname.split('/').at(-1), url }];
+      return [host + pathname, { name: pathname.split('/').at(-1) || '', url }];
     })
   );
 

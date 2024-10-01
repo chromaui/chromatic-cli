@@ -11,7 +11,7 @@ const printFilePath = (filepath: string, basedir: string, expanded: boolean) => 
     .split('/')
     .map((part, index, parts) => {
       if (index < parts.length - 1) return part;
-      const [, file, suffix = ''] = part.match(/^(.+?)( \+ \d+ modules)?$/);
+      const [, file, suffix = ''] = part.match(/^(.+?)( \+ \d+ modules)?$/) || [];
       return chalk.bold(file) + (expanded ? chalk.magenta(suffix) : chalk.dim(suffix));
     })
     .join('/');
@@ -55,7 +55,7 @@ export default (
 
   if (expanded) {
     const bailReason = ctx.turboSnap?.bailReason ? `${ctx.turboSnap.bailReason}\n\n` : '';
-    const rootPath = `${chalk.magenta(rootDirectoryNote)} ${ctx.turboSnap.rootPath}\n\n`;
+    const rootPath = `${chalk.magenta(rootDirectoryNote)} ${ctx.turboSnap?.rootPath}\n\n`;
     const basePath = `${chalk.magenta(baseDirectoryNote)} ${basedir}\n\n`;
     const storybookPath = `${chalk.magenta(storybookDirectoryNote)} ${storybookConfigDirectory}\n\n`;
     const untracedNotice =
@@ -100,7 +100,7 @@ export default (
   };
 
   const seen = new Set();
-  const traces = [...ctx.turboSnap.tracedPaths].map((p) => {
+  const traces = [...(ctx.turboSnap?.tracedPaths || [])].map((p) => {
     const parts = p.split('\n');
 
     let results = '';
