@@ -23,7 +23,7 @@ import getEnvironment from './lib/getEnvironment';
 import getOptions from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
-import NonTTYRenderer from './lib/nonTtyRenderer';
+import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';

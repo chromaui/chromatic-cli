@@ -1,4 +1,4 @@
-import speedUpCI from './speedUpCi';
+import speedUpCI from './speedUpCI';
 
 export default {
   title: 'CLI/Messages/Info',

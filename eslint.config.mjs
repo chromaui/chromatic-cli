@@ -108,7 +108,19 @@ export default [
   unicorn.configs['flat/recommended'],
   {
     rules: {
-      'unicorn/filename-case': ['error', { case: 'camelCase' }],
+      'unicorn/filename-case': [
+        'error',
+        {
+          case: 'camelCase',
+          ignore: [
+            // Allow capitalization in initialisms
+            String.raw`^.*DNS.*\.[jt]s$`,
+            String.raw`^.*CSF.*\.[jt]s$`,
+            String.raw`^.*TTY.*\.[jt]s$`,
+            String.raw`^.*CI.*\.[jt]s$`,
+          ],
+        },
+      ],
       // Chromatic uses err as our catch convention.
       // This is baked into pino transforms as well.
       'unicorn/prevent-abbreviations': [

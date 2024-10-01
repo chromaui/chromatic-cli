@@ -4,7 +4,7 @@ import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import fetch, { RequestInit, Response } from 'node-fetch';
 
 import { Context } from '../types';
-import getDNSResolveAgent from './getDnsResolveAgent';
+import getDNSResolveAgent from './getDNSResolveAgent';
 import getProxyAgent from './getProxyAgent';
 
 /**

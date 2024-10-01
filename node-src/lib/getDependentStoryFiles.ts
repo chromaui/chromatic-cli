@@ -2,7 +2,7 @@ import path from 'path';
 
 import { getRepositoryRoot } from '../git/git';
 import { Context, Module, Reason, Stats } from '../types';
-import noCSFGlobs from '../ui/messages/errors/noCsfGlobs';
+import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../ui/messages/warnings/bailFile';
 import { isPackageManifestFile, matchesFile } from './utils';

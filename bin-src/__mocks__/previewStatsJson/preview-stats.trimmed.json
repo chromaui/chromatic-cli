@@ -643,11 +643,11 @@
       ]
     },
     {
-      "id": "./node-src/ui/messages/errors/noCsfGlobs.stories.ts",
-      "name": "./node-src/ui/messages/errors/noCsfGlobs.stories.ts + 1 modules",
+      "id": "./node-src/ui/messages/errors/noCSFGlobs.stories.ts",
+      "name": "./node-src/ui/messages/errors/noCSFGlobs.stories.ts + 1 modules",
       "modules": [
-        { "name": "./node-src/ui/messages/errors/noCsfGlobs.stories.ts" },
-        { "name": "./node-src/ui/messages/errors/noCsfGlobs.ts" }
+        { "name": "./node-src/ui/messages/errors/noCSFGlobs.stories.ts" },
+        { "name": "./node-src/ui/messages/errors/noCSFGlobs.ts" }
       ],
       "reasons": [
         {
@@ -1371,7 +1371,7 @@
         { "moduleName": "./node-src/ui/messages/errors/missingStatsFile.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/errors/missingStories.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/errors/missingTravisInfo.stories.ts + 1 modules" },
-        { "moduleName": "./node-src/ui/messages/errors/noCsfGlobs.stories.ts + 1 modules" },
+        { "moduleName": "./node-src/ui/messages/errors/noCSFGlobs.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/errors/noPackageJson.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/errors/noViewLayerPackage.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/errors/runtimeError.stories.ts + 1 modules" },
@@ -1464,7 +1464,7 @@
         { "moduleName": "./node-src/ui/messages/errors/missingStatsFile.ts" },
         { "moduleName": "./node-src/ui/messages/errors/missingStories.ts" },
         { "moduleName": "./node-src/ui/messages/errors/missingTravisInfo.ts" },
-        { "moduleName": "./node-src/ui/messages/errors/noCsfGlobs.ts" },
+        { "moduleName": "./node-src/ui/messages/errors/noCSFGlobs.ts" },
         { "moduleName": "./node-src/ui/messages/errors/noPackageJson.ts" },
         { "moduleName": "./node-src/ui/messages/errors/noViewLayerPackage.ts" },
         { "moduleName": "./node-src/ui/messages/errors/runtimeError.ts" },
@@ -1532,7 +1532,7 @@
         },
         { "moduleName": "./node-src/ui/messages/errors/missingStories.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/errors/missingTravisInfo.stories.ts + 1 modules" },
-        { "moduleName": "./node-src/ui/messages/errors/noCsfGlobs.stories.ts + 1 modules" },
+        { "moduleName": "./node-src/ui/messages/errors/noCSFGlobs.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/info/buildPassed.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/info/customGitHubAction.stories.ts + 1 modules" },
         { "moduleName": "./node-src/ui/messages/info/speedUpCI.stories.ts + 1 modules" },
@@ -1575,7 +1575,7 @@
         { "moduleName": "./node-src/ui/messages/errors/missingProjectToken.ts" },
         { "moduleName": "./node-src/ui/messages/errors/missingStories.ts" },
         { "moduleName": "./node-src/ui/messages/errors/missingTravisInfo.ts" },
-        { "moduleName": "./node-src/ui/messages/errors/noCsfGlobs.ts" },
+        { "moduleName": "./node-src/ui/messages/errors/noCSFGlobs.ts" },
         { "moduleName": "./node-src/ui/messages/info/buildPassed.ts" },
         { "moduleName": "./node-src/ui/messages/info/customGitHubAction.ts" },
         { "moduleName": "./node-src/ui/messages/info/speedUpCI.ts" },
@@ -1846,8 +1846,8 @@
     },
     {
       "id": null,
-      "name": "./node-src/ui/messages/errors/noCsfGlobs.ts",
-      "reasons": [{ "moduleName": "./node-src/ui/messages/errors/noCsfGlobs.stories.ts" }]
+      "name": "./node-src/ui/messages/errors/noCSFGlobs.ts",
+      "reasons": [{ "moduleName": "./node-src/ui/messages/errors/noCSFGlobs.stories.ts" }]
     },
     {
       "id": null,

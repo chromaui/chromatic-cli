@@ -5,7 +5,7 @@ import { Context, Task } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import buildPassedMessage from '../ui/messages/info/buildPassed';
-import speedUpCI from '../ui/messages/info/speedUpCi';
+import speedUpCI from '../ui/messages/info/speedUpCI';
 import {
   buildBroken,
   buildCanceled,
