@@ -49,8 +49,8 @@ export async function waitForSentinel(ctx: Context, { name, url }: { name: strin
         if (response.status === 404) {
           throw new Error(`Sentinel file '${name}' not present.`);
         }
-        if (this.log.getLevel() === 'debug') {
-          this.log.debug(await response.text());
+        if (ctx.log.getLevel() === 'debug') {
+          ctx.log.debug(await response.text());
         }
         return bail(new Error(message));
       }

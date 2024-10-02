@@ -50,7 +50,7 @@ export const setAuthorizationToken = async (ctx: Context) => {
   } catch (errors) {
     const message = errors[0]?.message;
     if (message?.match('Must login') || message?.match('No Access')) {
-      throw new Error(invalidProjectId({ projectId: ctx.options.projectId }));
+      throw new Error(invalidProjectId({ projectId: ctx.options.projectId || '' }));
     }
     if (message?.match('No app with code')) {
       throw new Error(invalidProjectToken({ projectToken: ctx.options.projectToken }));

@@ -7,13 +7,6 @@ import { Context, InitialContext } from '../../..';
 import { redact } from '../../../lib/utils';
 import link from '../../components/link';
 
-const buildFields = ({ id, number, storybookUrl = undefined, webUrl = undefined }) => ({
-  id,
-  number,
-  ...(storybookUrl && { storybookUrl }),
-  ...(webUrl && { webUrl }),
-});
-
 /**
  * Generate an error message from a fatal error that occurred when executing the CLI.
  *
@@ -98,4 +91,18 @@ export default function fatalError(
     chalk`{bold ${JSON.stringify(debugInfo, undefined, 2)}}`,
     stacktraces.length > 0 ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : '',
   ].join('\n');
+}
+
+function buildFields({
+  id,
+  number,
+  storybookUrl = undefined,
+  webUrl = undefined,
+}: {
+  id: string;
+  number: number;
+  storybookUrl?: string;
+  webUrl?: string;
+}) {
+  return { id, number, ...(storybookUrl && { storybookUrl }), ...(webUrl && { webUrl }) };
 }

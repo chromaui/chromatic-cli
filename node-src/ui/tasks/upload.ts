@@ -34,7 +34,7 @@ export const invalid = (ctx: Context, error?: Error) => {
 };
 
 export const tracing = (ctx: Context) => {
-  const files = pluralize('file', ctx.git.changedFiles.length, true);
+  const files = pluralize('file', ctx.git.changedFiles?.length, true);
   return {
     status: 'pending',
     title: 'Retrieving story files affected by recent changes',
@@ -44,17 +44,17 @@ export const tracing = (ctx: Context) => {
 
 export const bailed = (ctx: Context) => {
   const { changedPackageFiles, changedStorybookFiles, changedStaticFiles } =
-    ctx.turboSnap.bailReason;
+    ctx.turboSnap?.bailReason || {};
   const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
 
   // if all changed files are package.json, message this as a dependency change.
-  const allChangedFilesArePackageJson = changedFiles.every((changedFile) =>
+  const allChangedFilesArePackageJson = changedFiles?.every((changedFile) =>
     isPackageManifestFile(changedFile)
   );
 
   const type = allChangedFilesArePackageJson ? 'dependency ' : '';
 
-  const [firstFile, ...otherFiles] = changedFiles;
+  const [firstFile, ...otherFiles] = changedFiles || [];
   const siblings = pluralize('sibling', otherFiles.length, true);
   let output = `Found a ${type}change in ${firstFile}`;
   if (otherFiles.length === 1) output += ' or its sibling';
@@ -67,7 +67,7 @@ export const bailed = (ctx: Context) => {
 };
 
 export const traced = (ctx: Context) => {
-  const files = pluralize('story file', ctx.onlyStoryFiles.length, true);
+  const files = pluralize('story file', ctx.onlyStoryFiles?.length, true);
   return {
     status: 'pending',
     title: 'Retrieved story files affected by recent changes',
@@ -103,7 +103,7 @@ export const success = (ctx: Context) => {
   const files = pluralize('file', ctx.uploadedFiles, true);
   const bytes = filesize(ctx.uploadedBytes || 0);
   const skipped =
-    ctx.fileInfo.paths.length > ctx.uploadedFiles
+    ctx.fileInfo?.paths.length && ctx.uploadedFiles && ctx.fileInfo.paths.length > ctx.uploadedFiles
       ? `, skipped ${pluralize('file', ctx.fileInfo.paths.length - ctx.uploadedFiles, true)}`
       : '';
 

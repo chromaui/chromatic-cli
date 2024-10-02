@@ -207,7 +207,7 @@ export interface Context {
   git: {
     version: string;
     /** The current user's email as pre git config */
-    gitUserEmail: string;
+    gitUserEmail?: string;
     branch: string;
     commit: string;
     committerEmail?: string;
@@ -361,7 +361,7 @@ export interface Context {
 }
 
 export interface Task {
-  status: string;
+  status?: string;
   title: string;
   output?: string;
 }

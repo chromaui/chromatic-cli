@@ -2,7 +2,7 @@ import { Context } from '../types';
 import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 import { getChangedFiles } from './git';
 
-interface BuildWithCommitInfo {
+export interface BuildWithCommitInfo {
   id: string;
   number: number;
   commit: string;

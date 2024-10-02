@@ -30,7 +30,7 @@ export const setSourceDirectory = async (ctx: Context) => {
 export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
-      ? semver.gte(semver.coerce(ctx.storybook.version), '6.2.0')
+      ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
       : true;
 
   if (ctx.git.changedFiles && !webpackStatsSupported) {
@@ -40,7 +40,7 @@ export const setBuildCommand = async (ctx: Context) => {
   const buildCommandOptions = [
     `--output-dir=${ctx.sourceDir}`,
     ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
-  ].filter(Boolean);
+  ].filter((c): c is string => !!c);
 
   ctx.buildCommand = await (isE2EBuild(ctx.options)
     ? getE2EBuildCommand(

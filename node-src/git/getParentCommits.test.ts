@@ -37,7 +37,7 @@ function createClient({
   builds,
   prs,
 }: {
-  repository: Repository;
+  repository: Pick<Repository, 'commitMap'>;
   builds: [string, string][];
   prs?: [string, string][];
 }) {
@@ -67,7 +67,7 @@ const options = {};
 // This is built in from TypeScript 4.5
 type Awaited<T> = T extends Promise<infer U> ? U : T;
 
-interface Repository {
+export interface Repository {
   dirname: string;
   runGit: ReturnType<typeof makeRunGit>;
   commitMap: Awaited<ReturnType<typeof generateGitRepository>>;
@@ -334,8 +334,6 @@ describe('getParentCommits', () => {
     await checkoutCommit('D', 'main', repository);
     const client = createClient({
       repository: {
-        dirname: undefined,
-        runGit: undefined,
         commitMap: {
           Z: { hash: 'b0ff6070903ff046f769f958830d2ebf989ff981', committedAt: 1234 },
         },

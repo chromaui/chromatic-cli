@@ -32,19 +32,18 @@ export async function uploadMetadataFiles(ctx: Context) {
     await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/).catch(() => undefined),
     await findStorybookConfigFile(ctx, /^preview\.[jt]sx?$/).catch(() => undefined),
     ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
-  ].filter(Boolean);
+  ].filter((m): m is string => !!m);
 
-  const files = await Promise.all<FileDesc>(
+  let files = await Promise.all(
     metadataFiles.map(async (localPath) => {
       const contentLength = await fileSize(localPath);
       const targetPath = `.chromatic/${path.basename(localPath)}`;
       return contentLength && { contentLength, localPath, targetPath };
     })
-  ).then((files) =>
-    files
-      .filter(Boolean)
-      .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }))
   );
+  files = files
+    .filter((f): f is FileDesc => !!f)
+    .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }));
 
   if (files.length === 0) {
     ctx.log.warn('No metadata files found, skipping metadata upload.');

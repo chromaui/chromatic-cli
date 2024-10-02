@@ -55,7 +55,7 @@ export const transitionTo =
   };
 
 export const getDuration = (ctx: Context) => {
-  const now = Number.isInteger(ctx.now) ? ctx.now : Date.now();
+  const now = (Number.isInteger(ctx.now) ? ctx.now : Date.now()) as number;
   const duration = Math.round((now - ctx.startedAt) / 1000);
   const seconds = pluralize('second', Math.floor(duration % 60), true);
   if (duration < 60) return seconds;

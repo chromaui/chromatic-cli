@@ -8,16 +8,19 @@ import link from '../../components/link';
 
 const docsUrl = 'https://www.chromatic.com/docs/turbosnap#how-it-works';
 
-export default ({ turboSnap }: { turboSnap: Pick<Context['turboSnap'], 'bailReason'> }) => {
-  const { changedPackageFiles, changedStaticFiles, changedStorybookFiles } = turboSnap.bailReason;
+// TODO: refactor this function
+// eslint-disable-next-line complexity
+export default ({ turboSnap }: { turboSnap: Context['turboSnap'] }) => {
+  const { changedPackageFiles, changedStaticFiles, changedStorybookFiles } =
+    turboSnap?.bailReason || {};
   const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
 
   // if all changed files are package.json, message this as a dependency change.
-  const allChangedFilesArePackageJson = changedFiles.every((changedFile) =>
+  const allChangedFilesArePackageJson = changedFiles?.every((changedFile) =>
     isPackageManifestFile(changedFile)
   );
 
-  const [firstFile, ...files] = changedFiles;
+  const [firstFile, ...files] = changedFiles || [];
 
   let type = changedPackageFiles ? 'package file' : 'static file';
   if (allChangedFilesArePackageJson) type = 'dependency';

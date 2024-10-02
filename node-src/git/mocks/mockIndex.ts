@@ -12,6 +12,9 @@
 
 // create a mock set of responses to the queries we run as part of our git algorithm
 
+import type { MergeCommitsQueryResult } from '../getParentCommits';
+import { Repository } from '../getParentCommits.test';
+
 interface Build {
   branch: string;
   commit: string;
@@ -55,15 +58,17 @@ const mocks = {
     prs: PR[],
     { mergeInfoList }: { mergeInfoList: MergeInfo[] }
   ) => {
-    const mergedPrs = [];
+    const mergedPrs: MergeCommitsQueryResult['app']['mergedPullRequests'][0][] = [];
     for (const mergeInfo of mergeInfoList) {
       const pr = prs.find((p) => p.mergeCommitHash === mergeInfo.commit);
       const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
-      mergedPrs.push({
-        lastHeadBuild: prLastBuild && {
-          commit: prLastBuild.commit,
-        },
-      });
+      if (prLastBuild) {
+        mergedPrs.push({
+          lastHeadBuild: {
+            commit: prLastBuild.commit,
+          },
+        });
+      }
     }
 
     return {
@@ -84,13 +89,19 @@ const mocks = {
  *
  * @returns A mock Index service for testing.
  */
-export default function createMockIndex({ commitMap }, buildDescriptions, prDescriptions = []) {
+export default function createMockIndex(
+  { commitMap }: Pick<Repository, 'commitMap'>,
+  buildDescriptions: [string, string][],
+  prDescriptions: [string, string][] = []
+) {
   const builds = buildDescriptions.map(([name, branch], index) => {
-    let hash, committedAt;
+    let hash: string;
+    let committedAt: number;
+
     if (commitMap[name]) {
       const commitInfo = commitMap[name];
       hash = commitInfo.hash;
-      committedAt = Number.parseInt(commitInfo.committedAt, 10) * 1000;
+      committedAt = Math.floor(commitInfo.committedAt) * 1000;
     } else {
       // Allow for test cases with a commit that is no longer in the history
       hash = name;

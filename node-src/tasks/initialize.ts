@@ -79,7 +79,7 @@ export const announceBuild = async (ctx: Context) => {
     ...commitInfo
   } = ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
-  const autoAcceptChanges = matchesBranch(ctx.options.autoAcceptChanges);
+  const autoAcceptChanges = matchesBranch?.(ctx.options.autoAcceptChanges);
 
   const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
     AnnounceBuildMutation,

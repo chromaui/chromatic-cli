@@ -20,7 +20,7 @@ export const lookupMergeBase = (ctx: Context) => ({
 export const checkoutMergeBase = (ctx: Context) => ({
   status: 'pending',
   title: 'Preparing your workspace',
-  output: `Checking out merge base commit '${ctx.mergeBase.slice(0, 7)}'`,
+  output: `Checking out merge base commit '${ctx.mergeBase?.slice(0, 7)}'`,
 });
 
 export const installingDependencies = () => ({
@@ -32,5 +32,5 @@ export const installingDependencies = () => ({
 export const success = (ctx: Context) => ({
   status: 'success',
   title: `Prepared your workspace`,
-  output: `Checked out commit '${ctx.mergeBase.slice(0, 7)}' on '${ctx.options.patchBaseRef}'`,
+  output: `Checked out commit '${ctx.mergeBase?.slice(0, 7)}' on '${ctx.options.patchBaseRef}'`,
 });

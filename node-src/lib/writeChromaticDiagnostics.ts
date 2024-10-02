@@ -12,6 +12,10 @@ const { writeFile } = jsonfile;
  * @param ctx The context set when executing the CLI.
  */
 export async function writeChromaticDiagnostics(ctx: Context) {
+  if (!ctx.options.diagnosticsFile) {
+    return;
+  }
+
   try {
     await writeFile(ctx.options.diagnosticsFile, getDiagnostics(ctx), { spaces: 2 });
     ctx.log.info(wroteReport(ctx.options.diagnosticsFile, 'Chromatic diagnostics'));

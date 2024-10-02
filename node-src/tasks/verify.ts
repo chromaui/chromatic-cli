@@ -235,9 +235,9 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     ),
   ]);
 
-  ctx.isPublishOnly = !ctx.build.features.uiReview && !ctx.build.features.uiTests;
+  ctx.isPublishOnly = !ctx.build.features?.uiReview && !ctx.build.features?.uiTests;
 
-  if (list) {
+  if (list && ctx.build.tests) {
     ctx.log.info(listingStories(ctx.build.tests));
   }
 
@@ -251,24 +251,31 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 
   if (ctx.build.wasLimited) {
     const { account } = ctx.build.app;
-    if (account.exceededThreshold) {
+    if (account?.exceededThreshold) {
       ctx.log.warn(snapshotQuotaReached(account));
       setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
-    } else if (account.paymentRequired) {
+    } else if (account?.paymentRequired) {
       ctx.log.warn(paymentRequired(account));
       setExitCode(ctx, exitCodes.ACCOUNT_PAYMENT_REQUIRED, true);
     } else {
       // Future proofing for reasons we aren't aware of
-      ctx.log.warn(buildLimited(account));
+      if (account) ctx.log.warn(buildLimited(account));
       setExitCode(ctx, exitCodes.BUILD_WAS_LIMITED, true);
     }
   }
 
-  ctx.log.info(storybookPublished(ctx));
+  if (ctx.build && ctx.storybookUrl) {
+    ctx.log.info(
+      storybookPublished({
+        build: ctx.build,
+        storybookUrl: ctx.storybookUrl,
+      })
+    );
+  }
 
   transitionTo(success, true)(ctx, task);
 
-  if (list || ctx.isPublishOnly || matchesBranch(ctx.options.exitOnceUploaded)) {
+  if (list || ctx.isPublishOnly || matchesBranch?.(ctx.options.exitOnceUploaded)) {
     setExitCode(ctx, exitCodes.OK);
     ctx.skipSnapshots = true;
   }

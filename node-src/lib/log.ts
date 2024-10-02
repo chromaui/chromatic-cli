@@ -6,6 +6,11 @@ import { format } from 'util';
 
 import { errorSerializer } from './logSerializers';
 
+interface QueueMessage {
+  type: LogType;
+  messages: string[];
+}
+
 const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
@@ -95,7 +100,7 @@ export const createLogger = () => {
   const args = new Set(process.argv.slice(2));
   let interactive = !args.has('--debug') && !args.has('--no-interactive');
   let enqueue = false;
-  const queue = [];
+  const queue: QueueMessage[] = [];
 
   const log =
     (type: LogType, logFileOnly?: boolean) =>
@@ -140,7 +145,7 @@ export const createLogger = () => {
     },
     flush: () => {
       while (queue.length > 0) {
-        const { type, messages } = queue.shift();
+        const { type, messages } = queue.shift() as QueueMessage;
         console.log('');
         console[type](...messages);
       }

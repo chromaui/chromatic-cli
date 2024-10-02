@@ -171,7 +171,7 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockReset();
     findChangedPackageFiles.mockReset();
     getDependentStoryFiles.mockReset();
-    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(undefined)));
+    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(null)));
   });
 
   it('sets onlyStoryFiles on context', async () => {

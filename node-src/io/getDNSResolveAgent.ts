@@ -10,8 +10,8 @@ export class DNSResolveAgent extends Agent {
       ...options,
       lookup(
         hostname: string,
-        _options: dns.LookupOneOptions,
-        callback: (err: NodeJS.ErrnoException, address: string, family: number) => void
+        _options: dns.LookupOptions,
+        callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void
       ) {
         dns.resolve(hostname, (err, addresses) => callback(err, addresses?.[0], 4));
       },
