@@ -15,7 +15,8 @@ import { Context, FileDesc } from '../types';
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
   const archive = archiver('zip', { zlib: { level: 9 } });
   const temporary = await temporaryFile({ postfix: '.zip' });
-  const sink = createWriteStream(undefined, { fd: temporary.fd });
+  // Passing a fd will cause `createWriteStream` to ignore the path (first) argument
+  const sink = createWriteStream('', { fd: temporary.fd });
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
     sink.on('close', () => {
