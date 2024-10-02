@@ -1,7 +1,7 @@
 ---
 name: Feature request 💡
 about: Suggest an idea for Chromatic.
-labels: needs triage, feature request
+labels: needs triage, feature request, CLI
 ---
 
 **Feature request**
