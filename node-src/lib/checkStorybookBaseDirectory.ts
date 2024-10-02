@@ -16,6 +16,10 @@ import { exitCodes, setExitCode } from './setExitCode';
 export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   const repositoryRoot = await getRepositoryRoot();
 
+  if (!repositoryRoot) {
+    throw new Error('Failed to determine repository root');
+  }
+
   // Assume CWD if no storybookBaseDir is provided
   const { storybookBaseDir: storybookBaseDirectory = path.relative(repositoryRoot, '') } =
     ctx.options;

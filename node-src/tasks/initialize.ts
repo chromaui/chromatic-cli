@@ -37,6 +37,8 @@ export const setEnvironment = async (ctx: Context) => {
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
   for (const [key, value] of Object.entries(process.env)) {
+    if (!value) continue;
+
     if (ctx.env.ENVIRONMENT_WHITELIST.some((regex) => key.match(regex))) {
       ctx.environment[key] = value;
     }
@@ -53,6 +55,10 @@ export const setRuntimeMetadata = async (ctx: Context) => {
 
   try {
     const packageManager = await getPackageManagerName();
+    if (!packageManager) {
+      throw new Error('Failed to determine package manager');
+    }
+
     ctx.runtimeMetadata.packageManager = packageManager as any;
     Sentry.setTag('packageManager', packageManager);
 

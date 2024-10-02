@@ -27,6 +27,8 @@ export const setSourceDirectory = async (ctx: Context) => {
   }
 };
 
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
@@ -42,13 +44,23 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
   ].filter((c): c is string => !!c);
 
-  ctx.buildCommand = await (isE2EBuild(ctx.options)
-    ? getE2EBuildCommand(
-        ctx,
-        ctx.options.playwright ? 'playwright' : 'cypress',
-        buildCommandOptions
-      )
-    : getPackageManagerRunCommand([ctx.options.buildScriptName, ...buildCommandOptions]));
+  if (isE2EBuild(ctx.options)) {
+    ctx.buildCommand = await getE2EBuildCommand(
+      ctx,
+      ctx.options.playwright ? 'playwright' : 'cypress',
+      buildCommandOptions
+    );
+    return;
+  }
+
+  if (!ctx.options.buildScriptName) {
+    throw new Error('Unable to determine build script');
+  }
+
+  ctx.buildCommand = await getPackageManagerRunCommand([
+    ctx.options.buildScriptName,
+    ...buildCommandOptions,
+  ]);
 };
 
 const timeoutAfter = (ms) =>
@@ -113,6 +125,10 @@ export const buildStorybook = async (ctx: Context) => {
   try {
     ctx.log.debug('Running build command:', ctx.buildCommand);
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, undefined, 2));
+
+    if (!ctx.buildCommand) {
+      throw new Error('No build command configured');
+    }
 
     const subprocess = execaCommand(ctx.buildCommand, {
       stdio: [undefined, logFile, undefined],
