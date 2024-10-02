@@ -6,6 +6,7 @@ export default {
 
 export const StorybookPublished = () =>
   storybookPublished({
+    build: {},
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   } as any);
 

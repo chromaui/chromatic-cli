@@ -264,7 +264,14 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     }
   }
 
-  ctx.log.info(storybookPublished(ctx));
+  if (ctx.build && ctx.storybookUrl) {
+    ctx.log.info(
+      storybookPublished({
+        build: ctx.build,
+        storybookUrl: ctx.storybookUrl,
+      })
+    );
+  }
 
   transitionTo(success, true)(ctx, task);
 
