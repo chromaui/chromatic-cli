@@ -5,6 +5,8 @@ import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
 
+type FilePath = string;
+
 export interface Flags {
   // Required options
   projectToken?: string[] | string;
@@ -205,7 +207,7 @@ export interface Context {
   client: GraphQLClient;
 
   git: {
-    version: string;
+    version?: string;
     /** The current user's email as pre git config */
     gitUserEmail?: string;
     branch: string;
@@ -318,7 +320,7 @@ export interface Context {
   buildLogFile?: string;
   fileInfo?: {
     paths: string[];
-    hashes?: Record<Context['fileInfo']['paths'][number], string>;
+    hashes?: Record<FilePath, string>;
     statsPath: string;
     lengths: {
       knownAs: string;
@@ -370,7 +372,7 @@ export interface Reason {
   moduleName: string;
 }
 export interface Module {
-  id: string | number;
+  id: string | number | null;
   name: string;
   modules?: Pick<Module, 'name'>[];
   reasons?: Reason[];

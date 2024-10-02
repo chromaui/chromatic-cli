@@ -258,6 +258,8 @@ export async function getDependentStoryFiles(
   }
 
   function shouldBail(moduleName: string) {
+    if (!ctx.turboSnap) ctx.turboSnap = {};
+
     if (isStorybookFile(moduleName)) {
       ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
       return true;

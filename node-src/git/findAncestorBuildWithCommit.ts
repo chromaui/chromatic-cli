@@ -56,7 +56,7 @@ export async function findAncestorBuildWithCommit(
   { client }: Pick<Context, 'client'>,
   buildNumber: number,
   { page = 10, limit = 80 } = {}
-): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | null> {
+): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | undefined> {
   let skip = 0;
   while (skip < limit) {
     const { app } = await client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {

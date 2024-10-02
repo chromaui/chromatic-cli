@@ -104,7 +104,7 @@ export async function run({
   argv?: string[];
   flags?: Flags;
   options?: Partial<Options>;
-}): Promise<Output> {
+}): Promise<Partial<Output>> {
   const {
     sessionId = uuid(),
     env: environment = getEnvironment(),
@@ -316,16 +316,16 @@ export async function getGitInfo(): Promise<GitInfo> {
   } catch {
     slug = '';
   }
-  const branch = await getBranch();
+  const branch = (await getBranch()) || '';
   const commitInfo = await getCommit();
-  const userEmail = await getUserEmail();
+  const userEmail = (await getUserEmail()) || '';
   const userEmailHash = emailHash(userEmail);
-  const repositoryRootDirectory = await getRepositoryRoot();
+  const repositoryRootDirectory = (await getRepositoryRoot()) || '';
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
-  const uncommittedHash = await getUncommittedHash();
+  const uncommittedHash = (await getUncommittedHash()) || '';
   return {
     slug: isValidSlug ? slug : '',
     branch,

@@ -28,9 +28,9 @@ export const findChangedDependencies = async (ctx: Context) => {
     `Finding changed dependencies for ${packageMetadataChanges?.length} baselines`
   );
 
-  const rootPath = await getRepositoryRoot();
-  const [rootManifestPath] = await findFilesFromRepositoryRoot(PACKAGE_JSON);
-  const [rootLockfilePath] = await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK);
+  const rootPath = (await getRepositoryRoot()) || '';
+  const [rootManifestPath] = (await findFilesFromRepositoryRoot(PACKAGE_JSON)) || [];
+  const [rootLockfilePath] = (await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK)) || [];
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -43,14 +43,15 @@ export const findChangedDependencies = async (ctx: Context) => {
   // Handle monorepos with (multiple) nested package.json files.
   // Note that this does not use `path.join` to concatenate the file paths because
   // git uses forward slashes, even on windows
-  const nestedManifestPaths = await findFilesFromRepositoryRoot(`**/${PACKAGE_JSON}`);
+  const nestedManifestPaths = (await findFilesFromRepositoryRoot(`**/${PACKAGE_JSON}`)) || [];
   const metadataPathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
-      const [lockfilePath] = await findFilesFromRepositoryRoot(
-        `${dirname}/${YARN_LOCK}`,
-        `${dirname}/${PACKAGE_LOCK}`
-      );
+      const [lockfilePath] =
+        (await findFilesFromRepositoryRoot(
+          `${dirname}/${YARN_LOCK}`,
+          `${dirname}/${PACKAGE_LOCK}`
+        )) || [];
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
     })

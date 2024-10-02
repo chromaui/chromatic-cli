@@ -9,7 +9,7 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
   // This uses callback-style fs functions because it runs faster than with their promise-based counterparts.
   return new Promise((resolve, reject) => {
     const done = (fd: number, getResult: () => bigint) => {
-      let result: bigint = undefined;
+      let result = BigInt(0);
       close(fd, (closeError) => {
         if (closeError) reject(closeError);
         else resolve(result.toString(16).padStart(16, '0'));

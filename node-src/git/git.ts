@@ -53,7 +53,7 @@ export async function execGitCommand(command: string) {
  */
 export async function getVersion() {
   const result = await execGitCommand(`git --version`);
-  return result.replace('git version ', '');
+  return result?.replace('git version ', '');
 }
 
 /**
@@ -74,7 +74,7 @@ export async function getUserEmail() {
  */
 export async function getSlug() {
   const result = await execGitCommand(`git config --get remote.origin.url`);
-  const downcasedResult = result.toLowerCase();
+  const downcasedResult = result?.toLowerCase() || '';
   const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
   return slug;
 }
@@ -98,9 +98,9 @@ export async function getCommit(revision = '') {
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const format = new RegExp('^[a-f0-9]+ ## ');
-  const data = result.split('\n').find((line: string) => format.test(line));
+  const data = result?.split('\n').find((line: string) => format.test(line));
 
-  const [commit, committedAtSeconds, committerEmail, committerName] = data.split(' ## ');
+  const [commit, committedAtSeconds, committerEmail, committerName] = data?.split(' ## ') || [];
   const committedAt = Number(committedAtSeconds) * 1000;
   return { commit, committedAt, committerEmail, committerName };
 }
@@ -121,12 +121,12 @@ export async function getBranch() {
       // Git v1.8 and above
       // Throws when in detached HEAD state
       const reference = await execGitCommand('git symbolic-ref HEAD');
-      return reference.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
+      return reference?.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
     } catch {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
       const reference = await execGitCommand('git rev-parse --abbrev-ref HEAD');
-      return reference.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
+      return reference?.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
 }
@@ -150,7 +150,7 @@ export async function getUncommittedHash() {
     // stdin to avoid the limit on command line arguments.
     `(${listUncommittedFiles}) | git hash-object --stdin-paths | git hash-object --stdin`
   );
-  const uncommittedHash = uncommittedHashWithPadding.trim();
+  const uncommittedHash = uncommittedHashWithPadding?.trim();
 
   // In case there are no uncommited changes (empty list), we always get this same hash.
   const noChangesHash = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391';
@@ -167,7 +167,7 @@ export async function hasPreviousCommit() {
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const allhex = new RegExp('^[a-f0-9]+$');
-  return result.split('\n').some((line: string) => allhex.test(line));
+  return result?.split('\n').some((line: string) => allhex.test(line));
 }
 
 /**
@@ -197,7 +197,7 @@ export async function commitExists(commit: string) {
 export async function getChangedFiles(baseCommit: string, headCommit = '') {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
   const files = await execGitCommand(`git --no-pager diff --name-only ${baseCommit} ${headCommit}`);
-  return files.split(newline).filter(Boolean);
+  return files?.split(newline).filter(Boolean);
 }
 
 /**
@@ -258,7 +258,7 @@ export async function isClean() {
 export async function getUpdateMessage() {
   const status = await execGitCommand('git status');
   return status
-    .split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
+    ?.split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
     .split(newline)
     .filter((line) => !line.startsWith('On branch')) // drop the 'On branch x' part
     .join(EOL)
@@ -299,7 +299,8 @@ export async function getUpdateMessage() {
  */
 export async function findMergeBase(headReference: string, baseReference: string) {
   const result = await execGitCommand(`git merge-base --all ${headReference} ${baseReference}`);
-  const mergeBases = result.split(newline).filter((line) => line && !line.startsWith('warning: '));
+  const mergeBases =
+    result?.split(newline).filter((line) => line && !line.startsWith('warning: ')) || [];
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
 
@@ -308,7 +309,7 @@ export async function findMergeBase(headReference: string, baseReference: string
   const branchNames = await Promise.all(
     mergeBases.map(async (sha) => {
       const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
-      return name.replace(/~\d+$/, ''); // Drop the potential suffix
+      return name?.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
   const baseReferenceIndex = branchNames.indexOf(baseReference);
@@ -405,7 +406,7 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
   // not the directory in which this is executed from
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
   const files = await execGitCommand(gitCommand);
-  return files.split(NULL_BYTE).filter(Boolean);
+  return files?.split(NULL_BYTE).filter(Boolean);
 }
 
 /**

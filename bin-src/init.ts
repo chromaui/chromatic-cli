@@ -1,7 +1,7 @@
 import { getCliCommand, parseNi } from '@antfu/ni';
 import boxen from 'boxen';
 import { execaCommand } from 'execa';
-import { writeFile } from 'jsonfile';
+import { Path, writeFile } from 'jsonfile';
 import meow from 'meow';
 import prompts from 'prompts';
 import type { PackageJson } from 'read-pkg-up';
@@ -35,7 +35,13 @@ export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath
   }
 };
 
-export const createChromaticConfigFile = async ({ configFile, buildScriptName = undefined }) => {
+export const createChromaticConfigFile = async ({
+  configFile,
+  buildScriptName = undefined,
+}: {
+  configFile: Path;
+  buildScriptName?: string;
+}) => {
   await writeFile(configFile, {
     ...(buildScriptName && {
       buildScriptName,
@@ -77,6 +83,10 @@ export const installArchiveDependencies = async (
   const sbPackages = getStorybookPackages(packageJson);
   const installArguments = [...defaultInstallArguments, ...sbPackages];
   const installCommand = await getPackageManagerInstallCommand(installArguments);
+  if (!installCommand) {
+    throw new Error('Could not determine package manager.');
+  }
+
   await execaCommand(installCommand);
 };
 

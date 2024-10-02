@@ -21,11 +21,11 @@ export interface SBProjectJson {
   storybookPackages?: Record<string, { version: string }>;
 }
 
-const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersion: string } => {
+const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersion?: string } => {
   const { builder, storybookPackages, storybookVersion } = sbProjectJson;
   const name = typeof builder === 'string' ? builder : builder?.name;
   return name
-    ? { name, packageVersion: storybookPackages[builders[name]]?.version }
+    ? { name, packageVersion: storybookPackages?.[builders[name]]?.version }
     : { name: 'webpack4', packageVersion: storybookVersion }; // the default builder for Storybook v6
 };
 
@@ -37,10 +37,14 @@ export const getStorybookMetadataFromProjectJson = async (
     (viewLayer) => viewLayers[viewLayer] === sbProjectJson.framework.name
   );
   const builder = getBuilder(sbProjectJson);
+  const version =
+    sbProjectJson.storybookPackages && viewLayerPackage
+      ? sbProjectJson.storybookPackages[viewLayerPackage].version
+      : '';
 
   return {
     viewLayer: sbProjectJson.framework.name,
-    version: sbProjectJson.storybookPackages[viewLayerPackage].version,
+    version,
     builder,
     addons: Object.entries(sbProjectJson.addons)
       .filter(([packageName]) => supportedAddons[packageName])

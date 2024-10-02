@@ -8,7 +8,7 @@
 // |
 // Z
 
-const ACode = 'A'.codePointAt(0);
+const ACode = 'A'.codePointAt(0) as number;
 
 // [commit, parent(s)]
 export default [

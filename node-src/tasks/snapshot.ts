@@ -90,7 +90,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     }
 
     if (actualTestCount > 0) {
-      const { inProgressCount } = ctx.build;
+      const { inProgressCount = 0 } = ctx.build;
       const cursor = actualTestCount - inProgressCount + 1;
       const label = (testLabels && testLabels[cursor - 1]) || '';
       updateProgress({ cursor, label });

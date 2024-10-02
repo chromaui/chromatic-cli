@@ -54,7 +54,7 @@ const readGitFile = async (fileName: string, commit = 'HEAD') => {
   const key = `${commit}:${fileName}`;
   if (fileCache.has(key)) return fileCache.get(key);
   const contents = await execGitCommand(`git show ${key}`);
-  fileCache.set(key, contents);
+  if (contents) fileCache.set(key, contents);
   return contents;
 };
 export const clearFileCache = () => fileCache.clear();
@@ -67,6 +67,11 @@ const getManifestFilesWithChangedDependencies = async (manifestFiles: string[], 
       try {
         const base = await readGitFile(fileName, commit);
         const head = await readGitFile(fileName);
+
+        if (!base || !head) {
+          throw new Error('Failed to read git file');
+        }
+
         return arePackageDependenciesEqual(JSON.parse(base), JSON.parse(head)) ? [] : [fileName];
       } catch {
         // Consider the dependencies changed if we failed to compare files.

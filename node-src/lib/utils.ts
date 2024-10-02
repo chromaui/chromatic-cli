@@ -66,7 +66,8 @@ export const redact = <T>(value: T, ...fields: string[]): T => {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
   const object = { ...value };
-  for (const key in object)
+  for (const key of Object.keys(object)) {
     object[key] = fields.includes(key) ? undefined : redact(object[key], ...fields);
+  }
   return object;
 };
