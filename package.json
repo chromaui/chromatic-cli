@@ -190,7 +190,7 @@
     "sort-package-json": "1.50.0",
     "storybook": "^8.1.5",
     "string-argv": "^0.3.1",
-    "strip-ansi": "6.0.0",
+    "strip-ansi": "^7.1.0",
     "tmp-promise": "3.0.2",
     "ts-dedent": "^1.0.0",
     "ts-loader": "^9.2.5",
