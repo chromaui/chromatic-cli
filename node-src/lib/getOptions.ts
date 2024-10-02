@@ -36,6 +36,17 @@ const undefinedIfEmpty = <T>(array: T[]) => {
 const stripUndefined = (object: Partial<Options>): Partial<Options> =>
   Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
 
+const defaultUnlessSetOrFalse = (input: string | boolean | undefined, fallback: string) => {
+  switch (typeof input) {
+    case 'boolean':
+      return input ? fallback : undefined;
+    case 'string':
+      return input || fallback;
+    default:
+      return;
+  }
+};
+
 /**
  * Parse options set when executing the CLI.
  *
@@ -163,9 +174,20 @@ export default function getOptions(ctx: InitialContext): Options {
     uploadMetadata: flags.uploadMetadata,
   });
 
+  // We need to parse boolean values and set their defaults
+  const { logFile, diagnosticsFile, junitReport, storybookLogFile, ...restOfConfiguration } =
+    configuration || {};
+  const configurationOptions: Partial<Options> = stripUndefined({
+    ...restOfConfiguration,
+    logFile: defaultUnlessSetOrFalse(logFile, DEFAULT_LOG_FILE),
+    diagnosticsFile: defaultUnlessSetOrFalse(diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE),
+    junitReport: defaultUnlessSetOrFalse(junitReport, DEFAULT_REPORT_FILE),
+    storybookLogFile: defaultUnlessSetOrFalse(storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
+  });
+
   const potentialOptions: Partial<Options> = {
     ...defaultOptions,
-    ...configuration,
+    ...configurationOptions,
     ...optionsFromFlags,
     ...extraOptions,
 
