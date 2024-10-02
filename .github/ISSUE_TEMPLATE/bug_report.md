@@ -1,7 +1,7 @@
 ---
 name: Bug report 🐞
 about: Found a bug in our CLI? Please open an issue. Is there a problem with the Chromatic platform? Please contact support.
-labels: needs triage, bug
+labels: needs triage, bug, Empathy, CLI
 ---
 
 **Bug report**
