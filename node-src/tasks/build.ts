@@ -30,7 +30,7 @@ export const setSourceDirectory = async (ctx: Context) => {
 export const setBuildCommand = async (ctx: Context) => {
   const webpackStatsSupported =
     ctx.storybook && ctx.storybook.version
-      ? semver.gte(semver.coerce(ctx.storybook.version) || '', '6.2.0')
+      ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
       : true;
 
   if (ctx.git.changedFiles && !webpackStatsSupported) {
