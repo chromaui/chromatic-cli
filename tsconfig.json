@@ -5,7 +5,7 @@
     // Override module/moduleResolution since we're using tsup/esbuild
     "module": "es2022",
     "moduleResolution": "Bundler",
-    "strict": false,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false, // Let this be a warning from ESLint until it becomes required
     "useUnknownInCatchVariables": false, // Treat caught errors as 'any' for now
