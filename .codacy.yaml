@@ -2,3 +2,9 @@
 exclude_paths:
   - 'CHANGELOG.md'
   - 'vitest.no-threads.config.ts'
+  - '**/__mocks__/**'
+engines:
+  duplication:
+    exclude_paths:
+      - '**/*.test.js'
+      - '**/*.test.ts'
