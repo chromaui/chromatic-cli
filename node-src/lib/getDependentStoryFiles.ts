@@ -9,7 +9,6 @@ import { isPackageManifestFile, matchesFile } from './utils';
 
 type FilePath = string;
 type NormalizedName = string;
-// type TraceToCheck = (string | number)[];
 type TraceToCheck = (string | number | string[])[];
 
 // Bail whenever one of these was changed
