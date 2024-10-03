@@ -34,14 +34,14 @@ export async function uploadMetadataFiles(ctx: Context) {
     ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
   ].filter((m): m is string => !!m);
 
-  let files = await Promise.all(
+  const unfilteredFiles = await Promise.all(
     metadataFiles.map(async (localPath) => {
       const contentLength = await fileSize(localPath);
       const targetPath = `.chromatic/${path.basename(localPath)}`;
       return contentLength && { contentLength, localPath, targetPath };
     })
   );
-  files = files
+  const files = unfilteredFiles
     .filter((f): f is FileDesc => !!f)
     .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }));
 

@@ -36,7 +36,7 @@ export const createTask = ({
 });
 
 export const setTitle =
-  (title: ValueFunction, subtitle: ValueFunction) => (ctx: Context, task: Task) => {
+  (title: ValueFunction, subtitle?: ValueFunction) => (ctx: Context, task: Task) => {
     const ttl = typeof title === 'function' ? title(ctx, task) : title;
     const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
     task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
@@ -56,7 +56,8 @@ export const transitionTo =
 
 export const getDuration = (ctx: Context) => {
   const now = (Number.isInteger(ctx.now) ? ctx.now : Date.now()) as number;
-  const duration = Math.round((now - ctx.startedAt) / 1000);
+  const startedAt = ctx.startedAt || 0;
+  const duration = Math.round((now - startedAt) / 1000);
   const seconds = pluralize('second', Math.floor(duration % 60), true);
   if (duration < 60) return seconds;
   const minutes = pluralize('minute', Math.floor(duration / 60), true);

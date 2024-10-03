@@ -80,6 +80,12 @@ export const generateReport = async (ctx: Context) => {
     typeof junitReport === 'boolean' && junitReport
       ? 'chromatic-build-{buildNumber}.xml'
       : junitReport;
+
+  if (!file) {
+    log.debug('junit report not configured, skipping');
+    return;
+  }
+
   ctx.reportPath = path.resolve(file.replaceAll('{buildNumber}', String(buildNumber)));
 
   const {

@@ -13,7 +13,11 @@ export const getPackageManagerRunCommand = async (args: string[]) => {
 
 // e.g. `8.19.2`
 export const getPackageManagerVersion = async (packageManager: string) => {
-  const { stdout } = await execa(packageManager || (await getPackageManagerName()), ['--version']);
+  if (!packageManager) {
+    throw new Error('No package manager provided');
+  }
+
+  const { stdout } = await execa(packageManager, ['--version']);
   const [output] = (stdout.toString() as string).trim().split('\n', 1);
   return output.trim().replace(/^v/, '');
 };

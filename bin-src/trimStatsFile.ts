@@ -30,7 +30,7 @@ export async function main([statsFile = './storybook-static/preview-stats.json']
       .filter((module) => isUserCode(module))
       .map(({ id, name, modules, reasons }) => {
         const trimmedReasons = dedupe(
-          reasons.filter((reason) => isUserCode(reason)).map((r) => r.moduleName)
+          reasons?.filter((reason) => isUserCode(reason)).map((r) => r.moduleName) || []
         )
           .filter((n) => n !== name)
           .map((moduleName) => ({ moduleName }));

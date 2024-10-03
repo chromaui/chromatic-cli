@@ -16,9 +16,13 @@ import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import { isE2EBuild } from './e2e';
 
-const takeLast = (input: string | string[]) => (Array.isArray(input) ? input.at(-1) : input);
+const takeLast = (input?: string | string[]) => (Array.isArray(input) ? input.at(-1) : input);
 
-const ensureArray = (input: string | string[]) => (Array.isArray(input) ? input : [input]);
+const ensureArray = (input?: string | string[]) => {
+  if (!input) return [];
+
+  return Array.isArray(input) ? input : [input];
+};
 
 const trueIfSet = <T>(value: T) => ((value as unknown) === '' ? true : value);
 const defaultIfSet = <T>(value: T, fallback: T) => ((value as unknown) === '' ? fallback : value);
@@ -31,6 +35,17 @@ const undefinedIfEmpty = <T>(array: T[]) => {
 
 const stripUndefined = (object: Partial<Options>): Partial<Options> =>
   Object.fromEntries(Object.entries(object).filter(([_, v]) => v !== undefined));
+
+const defaultUnlessSetOrFalse = (input: string | boolean | undefined, fallback: string) => {
+  switch (typeof input) {
+    case 'boolean':
+      return input ? fallback : undefined;
+    case 'string':
+      return input || fallback;
+    default:
+      return;
+  }
+};
 
 /**
  * Parse options set when executing the CLI.
@@ -125,7 +140,10 @@ export default function getOptions(ctx: InitialContext): Options {
     debug: flags.debug,
     diagnosticsFile:
       defaultIfSet(flags.diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE) ||
-      defaultIfSet(flags.diagnostics && '', DEFAULT_DIAGNOSTICS_FILE), // for backwards compatibility
+      // for backwards compatibility
+      flags.diagnostics
+        ? DEFAULT_DIAGNOSTICS_FILE
+        : undefined,
     junitReport: defaultIfSet(flags.junitReport, DEFAULT_REPORT_FILE),
     zip: flags.zip,
     skipUpdateCheck: flags.skipUpdateCheck,
@@ -156,9 +174,20 @@ export default function getOptions(ctx: InitialContext): Options {
     uploadMetadata: flags.uploadMetadata,
   });
 
-  const options: Options = {
+  // We need to parse boolean values and set their defaults
+  const { logFile, diagnosticsFile, junitReport, storybookLogFile, ...restOfConfiguration } =
+    configuration || {};
+  const configurationOptions: Partial<Options> = stripUndefined({
+    ...restOfConfiguration,
+    logFile: defaultUnlessSetOrFalse(logFile, DEFAULT_LOG_FILE),
+    diagnosticsFile: defaultUnlessSetOrFalse(diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE),
+    junitReport: defaultUnlessSetOrFalse(junitReport, DEFAULT_REPORT_FILE),
+    storybookLogFile: defaultUnlessSetOrFalse(storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
+  });
+
+  const potentialOptions: Partial<Options> = {
     ...defaultOptions,
-    ...configuration,
+    ...configurationOptions,
     ...optionsFromFlags,
     ...extraOptions,
 
@@ -172,18 +201,21 @@ export default function getOptions(ctx: InitialContext): Options {
       process.env.NODE_ENV !== 'test',
   };
 
-  if (options.debug) {
+  if (potentialOptions.debug) {
     log.setLevel('debug');
     log.setInteractive(false);
   }
 
-  if (options.debug || options.uploadMetadata) {
+  if (potentialOptions.debug || potentialOptions.uploadMetadata) {
     // Implicitly enable these options unless they're already enabled or explicitly disabled
-    options.logFile = options.logFile ?? DEFAULT_LOG_FILE;
-    options.diagnosticsFile = options.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
+    potentialOptions.logFile = potentialOptions.logFile ?? DEFAULT_LOG_FILE;
+    potentialOptions.diagnosticsFile = potentialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
 
-  if (!options.projectToken && !(options.projectId && options.userToken)) {
+  if (
+    !potentialOptions.projectToken &&
+    !(potentialOptions.projectId && potentialOptions.userToken)
+  ) {
     throw new Error(missingProjectToken());
   }
 
@@ -196,20 +228,20 @@ export default function getOptions(ctx: InitialContext): Options {
   }
 
   if (flags.patchBuild) {
-    if (!options.patchHeadRef || !options.patchBaseRef) {
+    if (!potentialOptions.patchHeadRef || !potentialOptions.patchBaseRef) {
       throw new Error(invalidPatchBuild());
     }
-    if (options.patchHeadRef === options.patchBaseRef) {
+    if (potentialOptions.patchHeadRef === potentialOptions.patchBaseRef) {
       throw new Error(duplicatePatchBuild());
     }
   }
 
-  if (options.onlyStoryNames?.some((glob) => !/[\w*]\/[\w*]/.test(glob))) {
+  if (potentialOptions.onlyStoryNames?.some((glob) => !/[\w*]\/[\w*]/.test(glob))) {
     throw new Error(invalidOnlyStoryNames());
   }
 
-  const { storybookBuildDir } = options;
-  let { buildScriptName } = options;
+  const { storybookBuildDir } = potentialOptions;
+  let { buildScriptName } = potentialOptions;
 
   // We can only have one of these arguments
   const singularOptions = {
@@ -217,7 +249,9 @@ export default function getOptions(ctx: InitialContext): Options {
     playwright: '--playwright',
     cypress: '--cypress',
   };
-  const foundSingularOptions = Object.keys(singularOptions).filter((name) => !!options[name]);
+  const foundSingularOptions = Object.keys(singularOptions).filter(
+    (name) => !!potentialOptions[name]
+  );
 
   if (foundSingularOptions.length > 1) {
     throw new Error(
@@ -225,35 +259,41 @@ export default function getOptions(ctx: InitialContext): Options {
     );
   }
 
-  if (options.onlyChanged && options.onlyStoryFiles) {
+  if (potentialOptions.onlyChanged && potentialOptions.onlyStoryFiles) {
     throw new Error(invalidSingularOptions(['--only-changed', '--only-story-files']));
   }
-  if (options.onlyChanged && options.onlyStoryNames) {
+  if (potentialOptions.onlyChanged && potentialOptions.onlyStoryNames) {
     throw new Error(invalidSingularOptions(['--only-changed', '--only-story-names']));
   }
-  if (options.onlyStoryNames && options.onlyStoryFiles) {
+  if (potentialOptions.onlyStoryNames && potentialOptions.onlyStoryFiles) {
     throw new Error(invalidSingularOptions(['--only-story-files', '--only-story-names']));
   }
 
-  if (options.untraced && !options.onlyChanged) {
+  if (potentialOptions.untraced && !potentialOptions.onlyChanged) {
     throw new Error(dependentOption('--untraced', '--only-changed'));
   }
 
-  if (options.externals && !options.onlyChanged) {
+  if (potentialOptions.externals && !potentialOptions.onlyChanged) {
     throw new Error(dependentOption('--externals', '--only-changed'));
   }
 
-  if (options.traceChanged && !options.onlyChanged) {
+  if (potentialOptions.traceChanged && !potentialOptions.onlyChanged) {
     throw new Error(dependentOption('--trace-changed', '--only-changed'));
   }
 
-  if (options.junitReport && options.exitOnceUploaded) {
+  if (potentialOptions.junitReport && potentialOptions.exitOnceUploaded) {
     throw new Error(incompatibleOptions(['--junit-report', '--exit-once-uploaded']));
   }
 
-  if (typeof options.junitReport === 'string' && path.extname(options.junitReport) !== '.xml') {
+  if (
+    typeof potentialOptions.junitReport === 'string' &&
+    path.extname(potentialOptions.junitReport) !== '.xml'
+  ) {
     throw new Error(invalidReportPath());
   }
+
+  // All options are validated and can now be used
+  const options = potentialOptions as Options;
 
   if (flags.only) {
     log.info('');

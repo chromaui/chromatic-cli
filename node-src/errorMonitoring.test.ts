@@ -17,8 +17,8 @@ describe('filterErrorEvent', () => {
     const actual = filterErrorEvent({
       exception: { values: [{ value: redError }, { value: redError }] },
     } as Sentry.ErrorEvent);
-    expect(actual.exception.values[0].value).toBe('error');
-    expect(actual.exception.values[1].value).toBe('error');
+    expect(actual.exception?.values?.[0].value).toBe('error');
+    expect(actual.exception?.values?.[1].value).toBe('error');
   });
 });
 
@@ -34,7 +34,7 @@ describe('filterBreadcrumb', () => {
       category: 'console',
       message: blueMessage,
     } as Sentry.Breadcrumb);
-    expect(actual.message).toBe('message');
+    expect(actual?.message).toBe('message');
   });
 
   it('returns null for empty console breadcrumbs', () => {

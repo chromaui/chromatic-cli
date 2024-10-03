@@ -213,6 +213,10 @@ export const calculateFileHashes = async (ctx: Context, task: Task) => {
   transitionTo(hashing)(ctx, task);
 
   try {
+    if (!ctx.fileInfo) {
+      throw new Error(invalid(ctx).output);
+    }
+
     const start = Date.now();
     ctx.fileInfo.hashes = await getFileHashes(
       ctx.fileInfo.paths,
@@ -232,10 +236,15 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
 
   const files = ctx.fileInfo?.paths.map<FileDesc>((filePath) => ({
     ...(ctx.fileInfo?.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
-    contentLength: ctx.fileInfo?.lengths.find(({ knownAs }) => knownAs === filePath)?.contentLength,
+    contentLength:
+      ctx.fileInfo?.lengths.find(({ knownAs }) => knownAs === filePath)?.contentLength ?? -1,
     localPath: path.join(ctx.sourceDir, filePath),
     targetPath: filePath,
   }));
+
+  if (!files) {
+    throw new Error(invalid(ctx).output);
+  }
 
   await uploadBuild(ctx, files, {
     onProgress: throttle(

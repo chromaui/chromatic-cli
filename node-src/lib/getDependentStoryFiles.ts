@@ -9,6 +9,7 @@ import { isPackageManifestFile, matchesFile } from './utils';
 
 type FilePath = string;
 type NormalizedName = string;
+type TraceToCheck = (string | number | string[])[];
 
 // Bail whenever one of these was changed
 const LOCKFILES = [
@@ -97,6 +98,10 @@ export async function getDependentStoryFiles(
   } = ctx.options;
 
   const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
+  if (!rootPath) {
+    throw new Error('Failed to determine repository root');
+  }
+
   const baseDirectory = storybookBaseDir
     ? posix(storybookBaseDir)
     : path.posix.relative(rootPath, '');
@@ -157,7 +162,7 @@ export async function getDependentStoryFiles(
         // all those files "changed" if a dependency (version) changes, while still being able to
         // "untrace" certain files (or globs) in those packages.
         if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
-        nodeModules.get(packageName).push(normalizedName);
+        nodeModules.get(packageName)?.push(normalizedName);
       }
 
       if (module_.modules) {
@@ -167,11 +172,13 @@ export async function getDependentStoryFiles(
       }
 
       const normalizedReasons = module_.reasons
-        .map((reason) => normalize(reason.moduleName))
+        ?.map((reason) => normalize(reason.moduleName))
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
-      reasonsById.set(module_.id, normalizedReasons);
+      if (normalizedReasons) {
+        reasonsById.set(module_.id, normalizedReasons);
+      }
 
-      if (reasonsById.get(module_.id).some((reason) => storiesEntryFiles.has(reason))) {
+      if (reasonsById.get(module_.id)?.some((reason) => storiesEntryFiles.has(reason))) {
         csfGlobsByName.add(normalizedName);
       }
     });
@@ -206,7 +213,7 @@ export async function getDependentStoryFiles(
   ctx.untracedFiles = [];
   function untrace(filepath: string) {
     if (untraced.some((glob) => matchesFile(glob, filepath))) {
-      ctx.untracedFiles.push(filepath);
+      ctx.untracedFiles?.push(filepath);
       return false;
     }
     return true;
@@ -229,7 +236,7 @@ export async function getDependentStoryFiles(
   const tracedPaths = new Set<string>();
   const affectedModuleIds = new Set<string | number>();
   const checkedIds = {};
-  const toCheck = [];
+  const toCheck: TraceToCheck[] = [];
 
   ctx.turboSnap = {
     rootPath,
@@ -258,6 +265,8 @@ export async function getDependentStoryFiles(
   }
 
   function shouldBail(moduleName: string) {
+    if (!ctx.turboSnap) ctx.turboSnap = {};
+
     if (isStorybookFile(moduleName)) {
       ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
       return true;
@@ -275,14 +284,16 @@ export async function getDependentStoryFiles(
     if (ctx.turboSnap?.bailReason || isCsfGlob(name)) return;
     if (shouldBail(name)) return;
     const { id } = modulesByName.get(name) || {};
-    const normalizedName = namesById.get(id);
+    // eslint-disable-next-line unicorn/no-null
+    const normalizedName = namesById.get(id || null);
+    if (!normalizedName) return;
     if (shouldBail(normalizedName)) return;
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
-    toCheck.push([id, [...tracePath, id]]);
+    toCheck.push([id, [...tracePath, id.toString()]]);
 
-    if (reasonsById.get(id).some((reason) => isCsfGlob(reason))) {
+    if (reasonsById.get(id)?.some((reason) => isCsfGlob(reason))) {
       affectedModuleIds.add(id);
       tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
@@ -297,16 +308,26 @@ export async function getDependentStoryFiles(
   tracedFiles.map((posixPath) => traceName(posixPath));
   // If more were found during that process, check them too.
   while (toCheck.length > 0) {
-    const [id, tracePath] = toCheck.pop();
+    const [id, tracePath] = toCheck.pop() as TraceToCheck;
+
+    if (Array.isArray(id)) {
+      ctx.log.debug('Trace ID is an unexpected value, skipping');
+      continue;
+    }
+    if (!Array.isArray(tracePath)) {
+      ctx.log.debug('Trace path is an unexpected value, skipping');
+      continue;
+    }
+
     checkedIds[id] = true;
     reasonsById
       .get(id)
-      .filter((file) => untrace(file))
+      ?.filter((file) => untrace(file))
       .map((reason) => traceName(reason, tracePath));
   }
   const affectedModules = Object.fromEntries(
     // The id will be compared against the result of the stories' `.parameters.filename` values (stories retrieved from getStoriesJsonData())
-    [...affectedModuleIds].map((id) => [String(id), files(namesById.get(id))])
+    [...affectedModuleIds].map((id) => [String(id), files(namesById.get(id) || '')])
   );
 
   if (ctx.options.traceChanged) {

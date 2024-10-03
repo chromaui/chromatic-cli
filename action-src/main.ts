@@ -30,7 +30,7 @@ const getBuildInfo = (event: typeof context) => {
     case 'pull_request':
     case 'pull_request_review':
     case 'pull_request_target': {
-      const { head } = event.payload.pull_request;
+      const { head } = (event.payload.pull_request as any) || {};
       return {
         sha: head.sha,
         branch: head.ref,
@@ -43,7 +43,7 @@ const getBuildInfo = (event: typeof context) => {
       return {
         sha: after,
         branch: ref.replace('refs/heads/', ''),
-        slug: repository.full_name,
+        slug: repository?.full_name,
       };
     }
     case 'workflow_run': {
@@ -53,7 +53,7 @@ const getBuildInfo = (event: typeof context) => {
       return {
         sha: head_sha,
         branch: head_branch.replace('refs/heads/', ''),
-        slug: repository.full_name,
+        slug: repository?.full_name,
       };
     }
     case 'workflow_dispatch':
@@ -61,20 +61,20 @@ const getBuildInfo = (event: typeof context) => {
       return {
         sha: event.sha,
         branch: event.ref.replace('refs/heads/', ''),
-        slug: event.payload.repository.full_name,
+        slug: event.payload.repository?.full_name,
       };
     }
     case 'schedule':
       return {
         sha: event.sha,
         branch: event.ref.replace('refs/heads/', ''),
-        slug: event.payload.repository.full_name,
+        slug: event.payload.repository?.full_name,
       };
     case 'release': {
       return {
         sha: event.sha,
         branch: event.payload.release.target_commitish,
-        slug: event.payload.repository.full_name,
+        slug: event.payload.repository?.full_name,
       };
     }
     case 'merge_group': {
@@ -82,12 +82,12 @@ const getBuildInfo = (event: typeof context) => {
       return {
         sha: head_sha,
         branch: head_ref,
-        slug: event.payload.repository.full_name,
+        slug: event.payload.repository?.full_name,
       };
     }
     default: {
       setFailed(`${event.eventName} event is not supported in this action`);
-      return null;
+      return;
     }
   }
 };

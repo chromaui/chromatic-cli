@@ -221,7 +221,12 @@ export const getStorybookMetadata = async (ctx: Context) => {
   } catch (err) {
     ctx.log.debug({ storybookV6error: err });
     try {
-      mainConfig = await readConfig(await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/));
+      const storybookConfig = await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/);
+      if (!storybookConfig) {
+        throw new Error('Failed to locate Storybook config file');
+      }
+
+      mainConfig = await readConfig(storybookConfig);
       ctx.log.debug({ configDirectory, mainConfig });
       v7 = true;
     } catch (err) {

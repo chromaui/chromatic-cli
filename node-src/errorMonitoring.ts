@@ -16,7 +16,9 @@ export function filterErrorEvent(event: Sentry.ErrorEvent) {
   // And from exception messages
   if (event.exception?.values) {
     for (const [index, exception] of event.exception.values.entries()) {
-      event.exception.values[index].value = stripAnsi(exception.value);
+      if (exception.value) {
+        event.exception.values[index].value = stripAnsi(exception.value);
+      }
     }
   }
   return event;

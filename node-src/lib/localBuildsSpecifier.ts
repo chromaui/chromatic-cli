@@ -9,7 +9,8 @@ import { emailHash } from './emailHash';
  * @returns Local build information used in GraphQL queries for build information.
  */
 export function localBuildsSpecifier(ctx: Pick<Context, 'options' | 'git'>) {
-  if (ctx.options.isLocalBuild) return { localBuildEmailHash: emailHash(ctx.git.gitUserEmail) };
+  if (ctx.options.isLocalBuild)
+    return { localBuildEmailHash: emailHash(ctx.git.gitUserEmail || '') };
 
   // For global builds, we only want local builds from the committer (besides global builds)
   if (ctx.git.committerEmail) return { localBuildEmailHash: emailHash(ctx.git.committerEmail) };

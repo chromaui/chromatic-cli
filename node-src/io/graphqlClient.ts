@@ -19,7 +19,7 @@ export interface GraphQLError {
  */
 export default class GraphQLClient {
   endpoint: string;
-  headers: HTTPClientOptions['headers'];
+  headers: Record<string, string>;
   client: HTTPClient;
 
   constructor(ctx: InitialContext, endpoint: string, httpClientOptions: HTTPClientOptions) {

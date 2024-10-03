@@ -108,18 +108,18 @@ async function nextCommits(
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
   log.debug(`running ${command}`);
   const commitsString = await execGitCommand(command);
-  const commits = commitsString.split('\n').filter(Boolean);
+  const commits = commitsString?.split('\n').filter(Boolean);
   log.debug(`command output: ${commits}`);
 
   // Later on we want to know which commits we visited on the way to finding the ancestor commits
   // The output of the above rev-list commit includes possibly commits with builds so filter them.
   // NOTE: this list can include irrelevant commits during earlier iterations of step() when we
   // don't yet have an accurate list of commitsWithBuilds, however we only use it in the final step.
-  const visitedCommitsWithoutBuilds = commits.filter((c) => !commitsWithBuilds.includes(c));
+  const visitedCommitsWithoutBuilds = commits?.filter((c) => !commitsWithBuilds.includes(c));
 
   // No sense in checking commits we already know about
   const candidateCommits = visitedCommitsWithoutBuilds
-    .filter((c) => !commitsWithoutBuilds.includes(c))
+    ?.filter((c) => !commitsWithoutBuilds.includes(c))
     .slice(0, limit);
 
   return { visitedCommitsWithoutBuilds, candidateCommits };
@@ -154,7 +154,7 @@ async function step(
   );
 
   // No more commits uncovered commitsWithBuilds!
-  if (candidateCommits.length === 0) {
+  if (!candidateCommits?.length) {
     log.debug('step: no candidateCommits; we are done');
     return { commitsWithBuilds, visitedCommitsWithoutBuilds };
   }
@@ -167,14 +167,14 @@ async function step(
   });
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
-  const newCommitsWithoutBuilds = candidateCommits.filter(
+  const newCommitsWithoutBuilds = candidateCommits?.filter(
     (commit) => !newCommitsWithBuilds.includes(commit)
   );
 
   return step({ options, client, log, git }, limit * 2, {
     firstCommittedAtSeconds,
     commitsWithBuilds: [...commitsWithBuilds, ...newCommitsWithBuilds],
-    commitsWithoutBuilds: [...commitsWithoutBuilds, ...newCommitsWithoutBuilds],
+    commitsWithoutBuilds: [...commitsWithoutBuilds, ...(newCommitsWithoutBuilds || [])],
   });
 }
 
@@ -192,7 +192,7 @@ async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
   log.debug(`running ${command}`);
   const maxCommitsString = await execGitCommand(command);
-  const maxCommits = maxCommitsString.split('\n').filter(Boolean);
+  const maxCommits = maxCommitsString?.split('\n').filter(Boolean);
   log.debug(`command output: ${maxCommits}`);
 
   return maxCommits;
@@ -270,14 +270,14 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
     }
   );
 
-  const mergeInfoList = visitedCommitsWithoutBuilds.map((commit) => {
+  const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
     return { commit, baseRefName: branch };
   });
   const {
     app: { mergedPullRequests },
   } = await client.runQuery<MergeCommitsQueryResult>(
     MergeCommitsQuery,
-    { mergeInfoList: mergeInfoList.slice(0, 100) }, // Limit amount sent in API call
+    { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
 
@@ -304,6 +304,6 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
   const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
 
-  const ancestorCommits = [...extraParentCommits, ...descendentCommits];
+  const ancestorCommits = [...extraParentCommits, ...(descendentCommits || [])];
   return ancestorCommits;
 }

@@ -9,7 +9,7 @@ const agents = {};
 const getProxyAgent = (
   { env, log }: Pick<Context, 'env' | 'log'>,
   url: string,
-  options: HttpsProxyAgentOptions<any>
+  options?: HttpsProxyAgentOptions<any>
 ) => {
   const proxy = env.HTTPS_PROXY || env.HTTP_PROXY;
   if (!proxy || noProxy(url)) return undefined;
