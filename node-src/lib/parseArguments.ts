@@ -73,6 +73,7 @@ export default function parseArguments(argv: string[]) {
       argv,
       booleanDefault: undefined,
       description: false,
+      version: pkg.version,
       flags: {
         // Required options
         projectToken: { type: 'string', alias: 't', isMultiple: true },
