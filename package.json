@@ -80,7 +80,7 @@
     "lint": "yarn lint:js bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "release": "yarn run build && auto shipit",
+    "release": "./scripts/versionAndBuild.mjs && auto shipit",
     "prepack": "clean-package",
     "postpack": "clean-package restore",
     "publish-action": "./scripts/publish-action.mjs",
