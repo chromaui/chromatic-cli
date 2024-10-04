@@ -22,6 +22,8 @@ jobs:
             - node_modules
           key: v4-dependencies-{{ checksum "yarn.lock" }}
 
+      - run: yarn typescript:check
+
       - run: yarn lint
 
       # test if dist is correctly generated from src
