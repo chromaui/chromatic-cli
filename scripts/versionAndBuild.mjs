@@ -15,7 +15,7 @@ async function main() {
   await $`npm --no-git-tag-version version ${nextVersion}`;
 
   console.info('📦 Building with new version');
-  await $`yarn build`;
+  await $({ stdio: 'inherit' })`yarn build`;
 
   console.info('🧹 Resetting changes to let `auto` do its thing');
   await $`git reset --hard`;
