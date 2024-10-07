@@ -6,7 +6,7 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, '**/getParentCommits.test.ts'],
     coverage: {
       provider: 'v8',
-      exclude: ['vitest.no-threads.config.ts', ...coverageConfigDefaults.exclude],
+      exclude: ['vitest.no-threads.config.ts', 'scripts/**', ...coverageConfigDefaults.exclude],
     },
   },
 });
