@@ -4,4 +4,5 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
-export const GitNotInitialized = () => gitNotInitialized({ command: 'git --version' });
+export const GitNotInitialized = () =>
+  gitNotInitialized({ command: 'git --version' }).replaceAll('<', '&lt').replaceAll('>', '&gt');
