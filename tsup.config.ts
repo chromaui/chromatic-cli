@@ -14,7 +14,7 @@ export default defineConfig((options) => [
       resolve: true,
     },
     treeshake: true,
-    sourcemap: false,
+    sourcemap: true,
     clean: true,
     platform: 'node',
     target: 'node16', // Storybook still supports Node 16
@@ -30,7 +30,7 @@ export default defineConfig((options) => [
     minify: !options.watch,
     format: ['cjs'],
     treeshake: true,
-    sourcemap: false,
+    sourcemap: true,
     clean: true,
     platform: 'node',
     target: 'node20', // Sync with `runs.using` in action.yml
