@@ -24,6 +24,10 @@ jobs:
         run: yarn install --immutable
       - name: build
         run: yarn build
+      - name: Remove Sourcemaps
+        run: |
+          rm -f dist/*.map
+          rm -f action/*.map
       - name: Get Package Size
         id: package_size
         run: |
