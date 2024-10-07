@@ -55,3 +55,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           NEXT_VERSION: ${{ steps.next_version.outputs.version }}
           SENTRY_RELEASE: ${{ steps.next_version.outputs.version }}
+          SENTRY_ORG: chromatic-lt
+          SENTRY_PROJECT: cli
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
