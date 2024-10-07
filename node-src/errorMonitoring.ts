@@ -50,7 +50,9 @@ Sentry.init({
   dsn: 'https://4fa173db2ef3fb073b8ea153a5466d28@o4504181686599680.ingest.us.sentry.io/4507930289373184',
   sampleRate: 1,
   environment: process.env.SENTRY_ENVIRONMENT,
-  enabled: process.env.DISABLE_ERROR_MONITORING !== 'true',
+  enabled:
+    process.env.DISABLE_ERROR_MONITORING !== 'true' &&
+    process.env.SENTRY_ENVIRONMENT !== 'development',
   enableTracing: false,
   integrations: [],
   initialScope: {
