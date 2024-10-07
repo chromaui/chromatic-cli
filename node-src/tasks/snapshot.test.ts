@@ -63,6 +63,31 @@ describe('takeSnapshots', () => {
     expect(ctx.exitCode).toBe(1);
   });
 
+  it('sets exitCode to 0 when build has changes but --exit-zero-on-changes is set with `true` string', async () => {
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
+    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const ctx = {
+      client,
+      env: environment,
+      git: { matchesBranch },
+      log,
+      options: {
+        exitZeroOnChanges: 'true',
+      },
+      build,
+      announcedBuild: build,
+    } as any;
+
+    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
+    });
+
+    await takeSnapshots(ctx, {} as any);
+    expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING', completedAt: 1 });
+    expect(ctx.exitCode).toBe(0);
+  });
+
   it('sets exitCode to 2 when build is broken (capture error)', async () => {
     const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };

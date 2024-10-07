@@ -115,6 +115,8 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     case 'DENIED': {
       if (
         build.autoAcceptChanges ||
+        // The boolean version of this check is handled by ctx.git.matchesBranch
+        ctx.options?.exitZeroOnChanges === 'true' ||
         ctx.git.matchesBranch?.(ctx.options?.exitZeroOnChanges || false)
       ) {
         setExitCode(ctx, exitCodes.OK);
