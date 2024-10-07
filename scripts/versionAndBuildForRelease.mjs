@@ -27,16 +27,21 @@ async function main() {
   await $`git reset --hard`;
 
   console.info('🌐 Sending sourcemaps to Sentry');
-  await $`sentry-cli sourcemaps inject dist`;
-  await $`sentry-cli sourcemaps upload dist`;
-  await $`sentry-cli sourcemaps inject action`;
-  await $`sentry-cli sourcemaps upload action`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli sourcemaps inject dist`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli sourcemaps inject action`;
+  await $({
+    stdout: 'inherit',
+    stderr: 'inherit',
+  })`sentry-cli sourcemaps upload --release ${nextVersion} dist action`;
 
   console.info('🚀 Creating new release in Sentry');
-  await $`sentry-cli releases new -p cli ${nextVersion}`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli releases new ${nextVersion}`;
 
   console.info('🔗 Associating commits with release');
-  await $`sentry-cli releases set-commits --auto ${nextVersion}`;
+  await $({
+    stdout: 'inherit',
+    stderr: 'inherit',
+  })`sentry-cli releases set-commits --auto ${nextVersion}`;
 
   console.info('🧹 Removing sourcemaps from build');
   await $`yarn clean:sourcemaps`;
