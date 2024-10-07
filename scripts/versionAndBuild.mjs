@@ -9,7 +9,11 @@ async function main() {
     return;
   }
 
-  const { stdout: nextVersion } = await $`auto shipit --dry-run --quiet`;
+  const nextVersion = process.env.NEXT_VERSION;
+  if (!nextVersion) {
+    console.error('❗️ NEXT_VERSION environment variable is required');
+    return;
+  }
 
   console.info(`📌 Temporarily bumping version to '${nextVersion}' for build step`);
   await $`npm --no-git-tag-version version ${nextVersion}`;
