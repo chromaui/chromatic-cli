@@ -77,6 +77,10 @@ const publishAction = async ({ major, version, repo }) => {
     console.info(`📌 Using package.json version: ${version}`);
   } else {
     const data = JSON.parse(process.env.ARG_0);
+    if (data.dryRun) {
+      console.info('Running as --dry-run, skipping publish action');
+      return;
+    }
     context = data.context;
     version = data.newVersion.replace(/^v/, '');
     console.info(`📌 Using auto shipIt context: ${context}`);
