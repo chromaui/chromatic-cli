@@ -27,12 +27,15 @@ async function main() {
   await $`git reset --hard`;
 
   console.info('🌐 Sending sourcemaps to Sentry');
-  await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli sourcemaps inject dist`;
-  await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli sourcemaps inject action`;
+  await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli sourcemaps inject dist action`;
   await $({
     stdout: 'inherit',
     stderr: 'inherit',
-  })`sentry-cli sourcemaps upload --release ${nextVersion} dist action`;
+  })`sentry-cli sourcemaps upload --release=${nextVersion} --dist=cli dist`;
+  await $({
+    stdout: 'inherit',
+    stderr: 'inherit',
+  })`sentry-cli sourcemaps upload --release=${nextVersion} --dist=action action`;
 
   console.info('🚀 Creating new release in Sentry');
   await $({ stdout: 'inherit', stderr: 'inherit' })`sentry-cli releases new ${nextVersion}`;

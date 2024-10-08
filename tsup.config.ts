@@ -21,6 +21,7 @@ export default defineConfig((options) => [
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
       SENTRY_RELEASE: process.env.SENTRY_RELEASE || 'development',
+      SENTRY_DIST: 'cli',
     },
   },
   {
@@ -37,6 +38,7 @@ export default defineConfig((options) => [
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
       SENTRY_RELEASE: process.env.SENTRY_RELEASE || 'development',
+      SENTRY_DIST: 'action',
     },
   },
 ]);
