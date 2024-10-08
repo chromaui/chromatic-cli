@@ -9,7 +9,9 @@ async function main() {
     return;
   }
 
-  const { stdout: nextVersion } = await $`auto shipit --dry-run --quiet`;
+  const c = `auto shipit --dry-run --quiet`;
+  console.info('Executing command: ', c);
+  const { stdout: nextVersion } = await $`${c}`;
 
   console.info(`📌 Temporarily bumping version to '${nextVersion}' for build step`);
   await $`npm --no-git-tag-version version ${nextVersion}`;

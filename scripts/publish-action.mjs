@@ -77,6 +77,7 @@ const publishAction = async ({ major, version, repo }) => {
     console.info(`📌 Using package.json version: ${version}`);
   } else {
     const data = JSON.parse(process.env.ARG_0);
+    console.info('DEBUG', data);
     if (data.dryRun) {
       console.info('Running as --dry-run, skipping publish action');
       return;
