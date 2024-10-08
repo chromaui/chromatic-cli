@@ -24,8 +24,7 @@ jobs:
         run: yarn build
       - name: Remove Sourcemaps
         run: |
-          rm -f dist/*.map
-          rm -f action/*.map
+          yarn clean:sourcemaps
       - name: Get Package Size
         id: package_size
         run: |
