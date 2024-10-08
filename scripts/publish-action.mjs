@@ -75,14 +75,6 @@ const publishAction = async ({ major, version, repo }) => {
     version = pkg.version;
     console.info(`📌 Using context arg: ${context}`);
     console.info(`📌 Using package.json version: ${version}`);
-  } else {
-    const data = JSON.parse(process.env.ARG_0);
-    context = data.context;
-    version = data.newVersion.replace(/^v/, '');
-    console.info(`📌 Using auto shipIt context: ${context}`);
-    console.info(`📌 Using auto shipIt version: ${version}`);
-    console.info(`Commits in release:`);
-    data.commitsInRelease.forEach((c) => console.info(`- ${c.hash.slice(0, 8)} ${c.subject}`));
   }
 
   const [, major, minor, patch] = version.match(/^(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
@@ -93,11 +85,6 @@ const publishAction = async ({ major, version, repo }) => {
 
   switch (context) {
     case 'canary':
-      if (process.argv[2] !== 'canary') {
-        console.info('Skipping automatic publish of action-canary.');
-        console.info('Run `yarn publish-action canary` to publish a canary action.');
-        return;
-      }
       await publishAction({ major, version, repo: 'chromaui/action-canary' });
       break;
     case 'next':

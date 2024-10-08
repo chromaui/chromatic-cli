@@ -80,7 +80,7 @@
     "lint": "yarn lint:js bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "release": "./scripts/versionAndBuildForRelease.mjs && auto shipit",
+    "release": "./scripts/release.mjs",
     "prepack": "clean-package",
     "postpack": "clean-package restore",
     "publish-action": "./scripts/publish-action.mjs",
@@ -100,7 +100,6 @@
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.0.0",
     "@antfu/ni": "^0.21.5",
-    "@auto-it/exec": "^11.0.4",
     "@auto-it/slack": "^11.1.6",
     "@discoveryjs/json-ext": "^0.5.7",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.3.0",
@@ -233,12 +232,6 @@
     "plugins": [
       "npm",
       "released",
-      [
-        "exec",
-        {
-          "afterShipIt": "yarn run publish-action"
-        }
-      ],
       [
         "slack",
         {
