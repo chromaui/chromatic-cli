@@ -80,7 +80,7 @@
     "lint": "yarn lint:js bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
-    "release": "./scripts/versionAndBuild.mjs && auto shipit",
+    "release": "./scripts/versionAndBuildForRelease.mjs && auto shipit",
     "prepack": "clean-package",
     "postpack": "clean-package restore",
     "publish-action": "./scripts/publish-action.mjs",
@@ -90,7 +90,8 @@
     "test": "vitest run --coverage && vitest run -c vitest.no-threads.config.ts",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
     "prepare": "yarn run build",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "clean:sourcemaps": "rm -f dist/*.map && rm -f action/*.map"
   },
   "resolutions": {
     "any-observable": "^0.5.1"
@@ -103,6 +104,7 @@
     "@auto-it/slack": "^11.1.6",
     "@discoveryjs/json-ext": "^0.5.7",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.3.0",
+    "@sentry/cli": "^2.37.0",
     "@sentry/node": "^8.30.0",
     "@storybook/addon-essentials": "^8.1.5",
     "@storybook/addon-webpack5-compiler-swc": "^1.0.3",

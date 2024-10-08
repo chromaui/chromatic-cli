@@ -24,6 +24,9 @@ jobs:
         run: yarn install --immutable
       - name: build
         run: yarn build
+      - name: Remove Sourcemaps
+        run: |
+          yarn clean:sourcemaps
       - name: Get Package Size
         id: package_size
         run: |

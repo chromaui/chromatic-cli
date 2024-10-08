@@ -39,10 +39,12 @@ jobs:
       - run: corepack enable
       - name: Install dependencies
         run: yarn install --immutable
-
       - name: Create Release
         run: yarn run release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SENTRY_ORG: chromatic-lt
+          SENTRY_PROJECT: cli
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
