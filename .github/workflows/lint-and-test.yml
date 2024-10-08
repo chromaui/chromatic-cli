@@ -1,0 +1,34 @@
+name: Lint and Test
+on: push
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+      - run: corepack enable
+      - name: install
+        run: yarn install --immutable
+
+      # check types and linting issues
+      - run: yarn typescript:check
+      - run: yarn lint
+
+      # test if dist is correctly generated from src
+      - run: yarn build && git status --porcelain
+
+      # unit test
+      - run: yarn test
+
+      # publish code coverage results
+      - run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
