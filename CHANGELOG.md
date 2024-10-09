@@ -1,3 +1,15 @@
+# v11.12.4 (Wed Oct 09 2024)
+
+#### 🐛 Bug Fix
+
+- Manually update `package.json` and `CHANGELOG.md` v3 [#1091](https://github.com/chromaui/chromatic-cli/pull/1091) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.12.3 (Wed Oct 09 2024)
 
 #### 🐛 Bug Fix
