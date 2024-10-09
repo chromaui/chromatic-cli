@@ -1,3 +1,55 @@
+# v11.12.1 (Wed Oct 09 2024)
+
+#### 🐛 Bug Fix
+
+- Move deployment to single script [#1088](https://github.com/chromaui/chromatic-cli/pull/1088) ([@codykaup](https://github.com/codykaup))
+- Migrate linting and tests to GitHub Actions [#1085](https://github.com/chromaui/chromatic-cli/pull/1085) ([@codykaup](https://github.com/codykaup))
+- Add Sentry Releases [#1084](https://github.com/chromaui/chromatic-cli/pull/1084) ([@jmhobbs](https://github.com/jmhobbs))
+- Fix CLI version output [#1079](https://github.com/chromaui/chromatic-cli/pull/1079) ([@codykaup](https://github.com/codykaup))
+- Account for `--exit-zero-on-changes=true` [#1083](https://github.com/chromaui/chromatic-cli/pull/1083) ([@codykaup](https://github.com/codykaup))
+- Do not run Sentry in dev [#1082](https://github.com/chromaui/chromatic-cli/pull/1082) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v11.12.0 (Tue Oct 08 2024)
+
+#### 🚀 Enhancement
+
+- Show steps for initializing a new Git repo [#1081](https://github.com/chromaui/chromatic-cli/pull/1081) ([@codykaup](https://github.com/codykaup))
+- Add basic sentry integration to cli [#1036](https://github.com/chromaui/chromatic-cli/pull/1036) ([@jmhobbs](https://github.com/jmhobbs))
+- Enable `unicorn/prevent-abbreviations` ESLint rule [#1064](https://github.com/chromaui/chromatic-cli/pull/1064) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Add TypeScript checking to CI pipeline [#1078](https://github.com/chromaui/chromatic-cli/pull/1078) ([@codykaup](https://github.com/codykaup))
+- Upgrade `subdir` deps [#1077](https://github.com/chromaui/chromatic-cli/pull/1077) ([@codykaup](https://github.com/codykaup))
+- Ignore duplication in test files and ignore all __mocks__ [#1073](https://github.com/chromaui/chromatic-cli/pull/1073) ([@codykaup](https://github.com/codykaup))
+- Bump the npm_and_yarn group across 2 directories with 5 updates [#1076](https://github.com/chromaui/chromatic-cli/pull/1076) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump terser from 5.31.0 to 5.34.1 in the npm_and_yarn group across 1 directory [#1075](https://github.com/chromaui/chromatic-cli/pull/1075) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the npm_and_yarn group across 2 directories with 7 updates [#1074](https://github.com/chromaui/chromatic-cli/pull/1074) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Fix remaining TypeScript errors and unable `strict: true` [#1072](https://github.com/chromaui/chromatic-cli/pull/1072) ([@codykaup](https://github.com/codykaup))
+- Add `Empathy` and `CLI` labels to issue templates [#1071](https://github.com/chromaui/chromatic-cli/pull/1071) ([@codykaup](https://github.com/codykaup))
+- Add TypeScript config from internal repo and fix some errors [#1070](https://github.com/chromaui/chromatic-cli/pull/1070) ([@codykaup](https://github.com/codykaup))
+- Annotate Sentry events [#1069](https://github.com/chromaui/chromatic-cli/pull/1069) ([@jmhobbs](https://github.com/jmhobbs))
+- Filter ANSI escape codes for Sentry [#1068](https://github.com/chromaui/chromatic-cli/pull/1068) ([@jmhobbs](https://github.com/jmhobbs))
+- Do not capture config/option exceptions [#1067](https://github.com/chromaui/chromatic-cli/pull/1067) ([@jmhobbs](https://github.com/jmhobbs))
+- Enable `unicorn/filename-case` ESLint rule [#1062](https://github.com/chromaui/chromatic-cli/pull/1062) ([@codykaup](https://github.com/codykaup))
+- Enable `eslint-plugin-jsdoc` ESLint rule [#1066](https://github.com/chromaui/chromatic-cli/pull/1066) ([@codykaup](https://github.com/codykaup))
+- Enable `unicorn/prefer-module` ESLint rule [#10[61](https://github.com/chromaui/chromatic-cli/actions/runs/11220330320/job/31188257361#step:6:62)](https://github.com/chromaui/chromatic-cli/pull/1061) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 3
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.11.0 (Mon Sep 30 2024)
 
 #### 🚀 Enhancement
