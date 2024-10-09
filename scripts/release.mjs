@@ -2,6 +2,8 @@
 
 import { $ } from 'execa';
 
+import { main as publishAction } from './publishAction.mjs';
+
 async function main() {
   const { stdout: status } = await $`git status --porcelain`;
   if (status) {
@@ -9,6 +11,19 @@ async function main() {
     return;
   }
 
+  await build();
+  await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
+
+  if (process.env.GITHUB_REF === 'main') {
+    await publishAction('latest');
+  } else {
+    console.info('Skipping automatic publish of action-canary.');
+    console.info('Run `yarn publish-action canary` to publish a canary action.');
+    return;
+  }
+}
+
+async function build() {
   const { stdout: nextVersion } = await $`auto shipit --dry-run --quiet`;
 
   console.info(`📌 Temporarily bumping version to '${nextVersion}' for build step`);

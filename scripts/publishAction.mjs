@@ -51,39 +51,11 @@ const publishAction = async ({ major, version, repo }) => {
   return cleanup();
 };
 
-/**
- * Generally, this script is invoked by auto's `afterShipIt` hook.
- *
- * For manual (local) use:
- *   yarn publish-action {context} [--dry-run]
- *   e.g. yarn publish-action canary
- *   or   yarn publish-action latest --dry-run
- *
- * Make sure to build the action before publishing manually.
- */
-(async () => {
-  const { stdout: status } = await $`git status --porcelain`;
-  if (status) {
-    console.error(`❗️ Working directory is not clean:\n${status}`);
-    return;
-  }
-
-  let context, version;
-  if (['canary', 'next', 'latest'].includes(process.argv[2])) {
-    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-    context = process.argv[2];
-    version = pkg.version;
-    console.info(`📌 Using context arg: ${context}`);
-    console.info(`📌 Using package.json version: ${version}`);
-  } else {
-    const data = JSON.parse(process.env.ARG_0);
-    context = data.context;
-    version = data.newVersion.replace(/^v/, '');
-    console.info(`📌 Using auto shipIt context: ${context}`);
-    console.info(`📌 Using auto shipIt version: ${version}`);
-    console.info(`Commits in release:`);
-    data.commitsInRelease.forEach((c) => console.info(`- ${c.hash.slice(0, 8)} ${c.subject}`));
-  }
+export async function main(context) {
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+  const version = pkg.version;
+  console.info(`📌 Using context arg: ${context}`);
+  console.info(`📌 Using package.json version: ${version}`);
 
   const [, major, minor, patch] = version.match(/^(\d+)\.(\d+)\.(\d+)-*(\w+)?/) || [];
   if (!major || !minor || !patch) {
@@ -93,11 +65,6 @@ const publishAction = async ({ major, version, repo }) => {
 
   switch (context) {
     case 'canary':
-      if (process.argv[2] !== 'canary') {
-        console.info('Skipping automatic publish of action-canary.');
-        console.info('Run `yarn publish-action canary` to publish a canary action.');
-        return;
-      }
       await publishAction({ major, version, repo: 'chromaui/action-canary' });
       break;
     case 'next':
@@ -109,4 +76,23 @@ const publishAction = async ({ major, version, repo }) => {
     default:
       console.error(`❗️ Unknown context: ${context}`);
   }
-})();
+}
+
+/**
+ * For manual (local) use:
+ *   yarn publish-action {context} [--dry-run]
+ *   e.g. yarn publish-action canary
+ *   or   yarn publish-action latest --dry-run
+ *
+ * Make sure to build the action before publishing manually.
+ */
+// eslint-disable-next-line unicorn/prefer-module
+if (process.argv[1] === import.meta.filename) {
+  const { stdout: status } = await $`git status --porcelain`;
+  if (status) {
+    console.error(`❗️ Working directory is not clean:\n${status}`);
+    process.exit(1);
+  }
+
+  main(process.argv[2]);
+}

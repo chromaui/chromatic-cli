@@ -138,20 +138,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@auto-it/exec@npm:^11.0.4":
-  version: 11.1.6
-  resolution: "@auto-it/exec@npm:11.1.6"
-  dependencies:
-    "@auto-it/core": "npm:11.1.6"
-    endent: "npm:^2.1.0"
-    fp-ts: "npm:^2.5.3"
-    fromentries: "npm:^1.2.0"
-    io-ts: "npm:^2.1.2"
-    tslib: "npm:2.1.0"
-  checksum: 10c0/190cc3f7f8e676bf7fe04ed0dfb9c3b39591ffb472a412f1890e1329cdbc93610c0780a8fe3a38ec86cb9f089b2a585ad819e649c1df77ba12225b6159224503
-  languageName: node
-  linkType: hard
-
 "@auto-it/npm@npm:11.1.6":
   version: 11.1.6
   resolution: "@auto-it/npm@npm:11.1.6"
@@ -7539,7 +7525,6 @@ __metadata:
     "@actions/core": "npm:^1.10.0"
     "@actions/github": "npm:^5.0.0"
     "@antfu/ni": "npm:^0.21.5"
-    "@auto-it/exec": "npm:^11.0.4"
     "@auto-it/slack": "npm:^11.1.6"
     "@discoveryjs/json-ext": "npm:^0.5.7"
     "@eslint-community/eslint-plugin-eslint-comments": "npm:^4.3.0"
