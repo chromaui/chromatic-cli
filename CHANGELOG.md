@@ -1,3 +1,21 @@
+# v11.12.1 (Wed Oct 09 2024)
+
+#### 🐛 Bug Fix
+
+- Move deployment to single script [#1088](https://github.com/chromaui/chromatic-cli/pull/1088) ([@codykaup](https://github.com/codykaup))
+- Migrate linting and tests to GitHub Actions [#1085](https://github.com/chromaui/chromatic-cli/pull/1085) ([@codykaup](https://github.com/codykaup))
+- Add Sentry Releases [#1084](https://github.com/chromaui/chromatic-cli/pull/1084) ([@jmhobbs](https://github.com/jmhobbs))
+- Fix CLI version output [#1079](https://github.com/chromaui/chromatic-cli/pull/1079) ([@codykaup](https://github.com/codykaup))
+- Account for `--exit-zero-on-changes=true` [#1083](https://github.com/chromaui/chromatic-cli/pull/1083) ([@codykaup](https://github.com/codykaup))
+- Do not run Sentry in dev [#1082](https://github.com/chromaui/chromatic-cli/pull/1082) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.11.0 (Mon Sep 30 2024)
 
 #### 🚀 Enhancement
