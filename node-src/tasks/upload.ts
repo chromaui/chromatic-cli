@@ -274,7 +274,15 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
     })
   );
 
-  await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
+  try {
+    await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
+  } catch (err) {
+    throw new Error(
+      `Failed to finalize upload. Please check https://status.chromatic.com/ or contact support.
+
+${err.message}`
+    );
+  }
 };
 
 export default createTask({
