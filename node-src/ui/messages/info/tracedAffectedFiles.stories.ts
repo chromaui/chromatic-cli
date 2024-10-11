@@ -85,6 +85,26 @@ export const TracedAffectedFilesExpanded = () =>
     }
   );
 
+export const TracedAffectedFilesExpandedBailed = () =>
+  tracedAffectedFiles(
+    {
+      options: { traceChanged: 'expanded' },
+      turboSnap: {
+        rootPath,
+        tracedPaths: new Set(tracedPaths),
+        bailReason: {
+          changedStorybookFiles: ['.storybook/preview.tsx', '.storybook/preview.less'],
+        },
+      },
+    } as any,
+    {
+      changedFiles: ['src/app/dashboard/index.ts'],
+      affectedModules,
+      modulesByName,
+      normalize: (f) => f,
+    }
+  );
+
 export const TracedAffectedFilesCompact = () =>
   tracedAffectedFiles(
     {
