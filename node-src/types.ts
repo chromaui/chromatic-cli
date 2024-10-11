@@ -332,30 +332,7 @@ export interface Context {
   sentinelUrls?: string[];
   uploadedBytes?: number;
   uploadedFiles?: number;
-  turboSnap?: Partial<{
-    unavailable?: boolean;
-    rootPath: string;
-    baseDir: string;
-    storybookDir: string;
-    staticDirs: string[];
-    globs: string[];
-    modules: string[];
-    tracedFiles: string[];
-    tracedPaths: Set<string>;
-    changedDependencyNames: Set<string>;
-    changedManifestFiles: Set<string>;
-    affectedModuleIds: Set<string | number>;
-    bailReason: {
-      changedPackageFiles?: string[];
-      changedStorybookFiles?: string[];
-      changedStaticFiles?: string[];
-      changedExternalFiles?: string[];
-      invalidChangedFiles?: true;
-      missingStatsFile?: true;
-      noAncestorBuild?: true;
-      rebuild?: true;
-    };
-  }>;
+  turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
   untracedFiles?: string[];
@@ -394,6 +371,31 @@ export interface TargetInfo {
   filePath: string;
   formAction: string;
   formFields: Record<string, string>;
+}
+
+export interface TurboSnap {
+  unavailable?: boolean;
+  rootPath?: string;
+  baseDir?: string;
+  storybookDir?: string;
+  staticDirs?: string[];
+  globs?: string[];
+  modules?: string[];
+  tracedFiles?: string[];
+  tracedPaths?: Set<string>;
+  changedDependencyNames?: Set<string>;
+  changedManifestFiles?: Set<string>;
+  affectedModuleIds?: Set<string | number>;
+  bailReason?: {
+    changedPackageFiles?: string[];
+    changedStorybookFiles?: string[];
+    changedStaticFiles?: string[];
+    changedExternalFiles?: string[];
+    invalidChangedFiles?: true;
+    missingStatsFile?: true;
+    noAncestorBuild?: true;
+    rebuild?: true;
+  };
 }
 
 export { type Configuration } from './lib/getConfiguration';
