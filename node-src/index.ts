@@ -233,7 +233,7 @@ async function runBuild(ctx: Context) {
         // Queue up any non-Listr log messages while Listr is running
         ctx.log.queue();
       }
-      await new Listr(getTasks(ctx.options), options).run(ctx);
+      await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
       Sentry.captureException(err);
