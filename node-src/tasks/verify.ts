@@ -281,13 +281,22 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
   }
 };
 
-export default createTask({
-  name: 'verify',
-  title: initial.title,
-  skip: (ctx: Context) => {
-    if (ctx.skip) return true;
-    if (ctx.options.dryRun) return dryRun().output;
-    return false;
-  },
-  steps: [transitionTo(pending), startActivity, publishBuild, verifyBuild, endActivity],
-});
+/**
+ * Sets up the Listr task for verifying the uploaded Storybook.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'verify',
+    title: initial.title,
+    skip: (ctx: Context) => {
+      if (ctx.skip) return true;
+      if (ctx.options.dryRun) return dryRun().output;
+      return false;
+    },
+    steps: [transitionTo(pending), startActivity, publishBuild, verifyBuild, endActivity],
+  });
+}

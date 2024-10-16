@@ -37,5 +37,9 @@ export default function index(ctx: Context): Listr.ListrTask<Context>[] {
   const tasks =
     ctx.options.patchHeadRef && ctx.options.patchBaseRef ? runUploadBuild : runUploadBuild;
 
-  return ctx.options.junitReport ? [...tasks, report] : tasks;
+  if (ctx.options.junitReport) {
+    tasks.push(report);
+  }
+
+  return tasks.map((task) => task(ctx));
 }

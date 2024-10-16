@@ -263,8 +263,17 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   transitionTo(success, true)(ctx, task);
 };
 
-export default createTask({
-  name: 'gitInfo',
-  title: initial.title,
-  steps: [transitionTo(pending), setGitInfo],
-});
+/**
+ * Sets up the Listr task for gathering information from Git.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'gitInfo',
+    title: initial.title,
+    steps: [transitionTo(pending), setGitInfo],
+  });
+}

@@ -140,9 +140,18 @@ export const generateReport = async (ctx: Context) => {
   log.info(wroteReport(ctx.reportPath, 'JUnit XML'));
 };
 
-export default createTask({
-  name: 'report',
-  title: initial.title,
-  skip: (ctx: Context) => ctx.skip,
-  steps: [transitionTo(pending), generateReport, transitionTo(success, true)],
-});
+/**
+ * Sets up the Listr task for generating a JUnit report.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'report',
+    title: initial.title,
+    skip: (ctx: Context) => ctx.skip,
+    steps: [transitionTo(pending), generateReport, transitionTo(success, true)],
+  });
+}
