@@ -165,14 +165,14 @@ export const buildStorybook = async (ctx: Context) => {
 /**
  * Sets up the Listr task for building the user's Storybook or E2E project.
  *
- * @param _ The context set when executing the CLI.
+ * @param ctx The context set when executing the CLI.
  *
  * @returns A Listr task.
  */
-export default function main(_: Context) {
+export default function main(ctx: Context) {
   return createTask({
     name: 'build',
-    title: initial.title,
+    title: initial(ctx).title,
     skip: async (ctx) => {
       if (ctx.skip) return true;
       if (ctx.options.storybookBuildDir) {
