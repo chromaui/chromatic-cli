@@ -74,7 +74,7 @@ export const publishBuild = async (ctx: Context) => {
   // Queueing the extract may have failed
   if (publishedBuild.status === 'FAILED') {
     setExitCode(ctx, exitCodes.BUILD_FAILED, false);
-    throw new Error(publishFailed().output);
+    throw new Error(publishFailed(ctx).output);
   }
 };
 
@@ -199,7 +199,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     if (build.failureReason) {
       ctx.log.warn(brokenStorybook({ failureReason: build.failureReason, storybookUrl }));
       setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
-      throw new Error(publishFailed().output);
+      throw new Error(publishFailed(ctx).output);
     }
 
     if (!build.startedAt) {
@@ -265,12 +265,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
   }
 
   if (ctx.build && ctx.storybookUrl) {
-    ctx.log.info(
-      storybookPublished({
-        build: ctx.build,
-        storybookUrl: ctx.storybookUrl,
-      })
-    );
+    ctx.log.info(storybookPublished(ctx));
   }
 
   transitionTo(success, true)(ctx, task);
@@ -294,7 +289,7 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: (ctx: Context) => {
       if (ctx.skip) return true;
-      if (ctx.options.dryRun) return dryRun().output;
+      if (ctx.options.dryRun) return dryRun(ctx).output;
       return false;
     },
     steps: [transitionTo(pending), startActivity, publishBuild, verifyBuild, endActivity],
