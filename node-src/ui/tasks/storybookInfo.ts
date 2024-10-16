@@ -1,3 +1,4 @@
+import { isE2EBuild } from '../../lib/e2eUtils';
 import { Context } from '../../types';
 
 const capitalize = (string: string) =>
@@ -6,7 +7,12 @@ const capitalize = (string: string) =>
     .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
     .join(' ');
 
-const infoMessage = ({ addons, version, viewLayer, builder }: Context['storybook']) => {
+const infoMessage = (ctx: Context) => {
+  if (isE2EBuild(ctx.options)) {
+    return ctx.options.playwright ? 'Playwright for E2E' : 'Cypress for E2E';
+  }
+
+  const { addons, version, viewLayer, builder } = ctx.storybook;
   const info = version && viewLayer ? `Storybook ${version} for ${capitalize(viewLayer)}` : '';
   const builderInfo = builder
     ? `${info}; using the ${builder.name} builder (${builder.packageVersion})`
@@ -19,18 +25,20 @@ const infoMessage = ({ addons, version, viewLayer, builder }: Context['storybook
     : `${builderInfo}; no supported addons found`;
 };
 
-export const initial = {
-  status: 'initial',
-  title: 'Collect Storybook metadata',
-};
+const buildType = (ctx: Context) => (isE2EBuild(ctx.options) ? 'test suite' : 'Storybook');
 
-export const pending = () => ({
+export const initial = (ctx: Context) => ({
+  status: 'initial',
+  title: `Collect ${buildType(ctx)} metadata`,
+});
+
+export const pending = (ctx: Context) => ({
   status: 'pending',
-  title: 'Collecting Storybook metadata',
+  title: `Collecting ${buildType(ctx)} metadata`,
 });
 
 export const success = (ctx: Context) => ({
   status: 'success',
-  title: 'Collected Storybook metadata',
-  output: infoMessage(ctx.storybook),
+  title: `Collected ${buildType(ctx)} metadata`,
+  output: infoMessage(ctx),
 });
