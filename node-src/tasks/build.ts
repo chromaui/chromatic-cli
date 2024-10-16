@@ -4,7 +4,8 @@ import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
-import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
+import { isE2EBuild } from '../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';

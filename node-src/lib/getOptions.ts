@@ -14,7 +14,7 @@ import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
-import { isE2EBuild } from './e2e';
+import { isE2EBuild } from './e2eUtils';
 
 const takeLast = (input?: string | string[]) => (Array.isArray(input) ? input.at(-1) : input);
 
