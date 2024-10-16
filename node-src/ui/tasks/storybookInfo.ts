@@ -1,5 +1,6 @@
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { Context } from '../../types';
+import { buildType } from './utils';
 
 const capitalize = (string: string) =>
   string
@@ -24,8 +25,6 @@ const infoMessage = (ctx: Context) => {
         .join(', ')}`
     : `${builderInfo}; no supported addons found`;
 };
-
-const buildType = (ctx: Context) => (isE2EBuild(ctx.options) ? 'test suite' : 'Storybook');
 
 export const initial = (ctx: Context) => ({
   status: 'initial',
