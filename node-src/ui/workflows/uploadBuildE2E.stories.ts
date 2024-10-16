@@ -10,7 +10,7 @@ import * as initialize from '../tasks/initialize.stories';
 import * as snapshot from '../tasks/snapshot.stories';
 import * as storybookInfo from '../tasks/storybookInfoE2E.stories';
 import * as upload from '../tasks/uploadE2E.stories';
-import * as verify from '../tasks/verify.stories';
+import * as verify from '../tasks/verifyE2E.stories';
 
 const ctx = { options: { playwright: true } } as any;
 const steps = (...steps) => steps.map((step) => task(step(ctx))).join('\n');
