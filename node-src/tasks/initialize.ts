@@ -128,15 +128,24 @@ export const announceBuild = async (ctx: Context) => {
   }
 };
 
-export default createTask({
-  name: 'initialize',
-  title: initial.title,
-  skip: (ctx: Context) => ctx.skip,
-  steps: [
-    transitionTo(pending),
-    setEnvironment,
-    setRuntimeMetadata,
-    announceBuild,
-    transitionTo(success, true),
-  ],
-});
+/**
+ * Sets up the Listr task for announcing a new build on Chromatic.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'initialize',
+    title: initial.title,
+    skip: (ctx: Context) => ctx.skip,
+    steps: [
+      transitionTo(pending),
+      setEnvironment,
+      setRuntimeMetadata,
+      announceBuild,
+      transitionTo(success, true),
+    ],
+  });
+}

@@ -161,24 +161,33 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
-export default createTask({
-  name: 'build',
-  title: initial.title,
-  skip: async (ctx) => {
-    if (ctx.skip) return true;
-    if (ctx.options.storybookBuildDir) {
-      ctx.sourceDir = ctx.options.storybookBuildDir;
-      return skipped(ctx).output;
-    }
-    return false;
-  },
-  steps: [
-    setSourceDirectory,
-    setBuildCommand,
-    transitionTo(pending),
-    startActivity,
-    buildStorybook,
-    endActivity,
-    transitionTo(success, true),
-  ],
-});
+/**
+ * Sets up the Listr task for building the user's Storybook or E2E project.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'build',
+    title: initial.title,
+    skip: async (ctx) => {
+      if (ctx.skip) return true;
+      if (ctx.options.storybookBuildDir) {
+        ctx.sourceDir = ctx.options.storybookBuildDir;
+        return skipped(ctx).output;
+      }
+      return false;
+    },
+    steps: [
+      setSourceDirectory,
+      setBuildCommand,
+      transitionTo(pending),
+      startActivity,
+      buildStorybook,
+      endActivity,
+      transitionTo(success, true),
+    ],
+  });
+}

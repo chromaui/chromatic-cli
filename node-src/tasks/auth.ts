@@ -59,8 +59,17 @@ export const setAuthorizationToken = async (ctx: Context) => {
   }
 };
 
-export default createTask({
-  name: 'auth',
-  title: initial.title,
-  steps: [transitionTo(authenticating), setAuthorizationToken, transitionTo(authenticated, true)],
-});
+/**
+ * Sets up the Listr task for authenticating with Chromatic.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'auth',
+    title: initial.title,
+    steps: [transitionTo(authenticating), setAuthorizationToken, transitionTo(authenticated, true)],
+  });
+}

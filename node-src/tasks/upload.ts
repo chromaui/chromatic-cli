@@ -283,21 +283,30 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
   }
 };
 
-export default createTask({
-  name: 'upload',
-  title: initial.title,
-  skip: (ctx: Context) => {
-    if (ctx.skip) return true;
-    if (ctx.options.dryRun) return dryRun().output;
-    return false;
-  },
-  steps: [
-    transitionTo(validating),
-    validateFiles,
-    traceChangedFiles,
-    calculateFileHashes,
-    uploadStorybook,
-    waitForSentinels,
-    transitionTo(success, true),
-  ],
-});
+/**
+ * Sets up the Listr task for uploading the build assets to Chromatic.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'upload',
+    title: initial.title,
+    skip: (ctx: Context) => {
+      if (ctx.skip) return true;
+      if (ctx.options.dryRun) return dryRun().output;
+      return false;
+    },
+    steps: [
+      transitionTo(validating),
+      validateFiles,
+      traceChangedFiles,
+      calculateFileHashes,
+      uploadStorybook,
+      waitForSentinels,
+      transitionTo(success, true),
+    ],
+  });
+}

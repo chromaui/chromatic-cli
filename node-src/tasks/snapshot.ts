@@ -150,14 +150,23 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   }
 };
 
-export default createTask({
-  name: 'snapshot',
-  title: initial.title,
-  skip: (ctx: Context) => {
-    if (ctx.skip) return true;
-    if (ctx.skipSnapshots) return skipped(ctx).output;
-    if (ctx.options.dryRun) return dryRun().output;
-    return false;
-  },
-  steps: [transitionTo(pending), takeSnapshots],
-});
+/**
+ * Sets up the Listr task for snapshotting the Storybook.
+ *
+ * @param _ The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(_: Context) {
+  return createTask({
+    name: 'snapshot',
+    title: initial.title,
+    skip: (ctx: Context) => {
+      if (ctx.skip) return true;
+      if (ctx.skipSnapshots) return skipped(ctx).output;
+      if (ctx.options.dryRun) return dryRun().output;
+      return false;
+    },
+    steps: [transitionTo(pending), takeSnapshots],
+  });
+}
