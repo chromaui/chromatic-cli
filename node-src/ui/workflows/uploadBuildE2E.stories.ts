@@ -2,7 +2,7 @@ import task from '../components/task';
 import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
 import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassed.stories';
 import { Intro } from '../messages/info/intro.stories';
-import { StorybookPublished } from '../messages/info/storybookPublished.stories';
+import { StorybookPublished } from '../messages/info/storybookPublishedE2E.stories';
 import * as auth from '../tasks/auth.stories';
 import * as build from '../tasks/buildE2E.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';

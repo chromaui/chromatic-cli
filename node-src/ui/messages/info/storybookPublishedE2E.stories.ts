@@ -1,10 +1,10 @@
 import storybookPublished from './storybookPublished';
 
 export default {
-  title: 'CLI/Messages/Info',
+  title: 'CLI/Messages/Info/E2E',
 };
 
-const ctx = { options: {} };
+const ctx = { options: { playwright: true } } as any;
 
 export const StorybookPublished = () =>
   storybookPublished({
