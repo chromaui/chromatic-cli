@@ -9,7 +9,7 @@ import * as gitInfo from '../tasks/gitInfo.stories';
 import * as initialize from '../tasks/initialize.stories';
 import * as snapshot from '../tasks/snapshot.stories';
 import * as storybookInfo from '../tasks/storybookInfoE2E.stories';
-import * as upload from '../tasks/upload.stories';
+import * as upload from '../tasks/uploadE2E.stories';
 import * as verify from '../tasks/verify.stories';
 
 const ctx = { options: { playwright: true } } as any;

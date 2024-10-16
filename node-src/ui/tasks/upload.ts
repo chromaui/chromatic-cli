@@ -1,43 +1,47 @@
 import { filesize } from 'filesize';
 import pluralize from 'pluralize';
 
+import { isE2EBuild } from '../../lib/e2eUtils';
 import { getDuration } from '../../lib/tasks';
 import { isPackageManifestFile, progressBar } from '../../lib/utils';
 import { Context } from '../../types';
+import { buildType } from './utils';
 
-export const initial = {
+export const initial = (ctx: Context) => ({
   status: 'initial',
-  title: 'Publish your built Storybook',
-};
+  title: `Publish your built ${buildType(ctx)}`,
+});
 
-export const dryRun = () => ({
+export const dryRun = (ctx: Context) => ({
   status: 'skipped',
-  title: 'Publish your built Storybook',
+  title: `Publish your built ${buildType(ctx)}`,
   output: 'Skipped due to --dry-run',
 });
 
-export const validating = () => ({
+export const validating = (ctx: Context) => ({
   status: 'pending',
-  title: 'Publish your built Storybook',
-  output: `Validating Storybook files`,
+  title: `Publish your built ${buildType(ctx)}`,
+  output: `Validating ${buildType(ctx)} files`,
 });
 
 export const invalid = (ctx: Context, error?: Error) => {
-  let output = `Invalid Storybook build at ${ctx.sourceDir}`;
+  let output = `Invalid ${buildType(ctx)} build at ${ctx.sourceDir}`;
   if (ctx.buildLogFile) output += ' (check the build log)';
   if (error) output += `: ${error.message}`;
   return {
     status: 'error',
-    title: 'Publishing your built Storybook',
+    title: `Publishing your built ${buildType(ctx)}`,
     output,
   };
 };
 
 export const tracing = (ctx: Context) => {
   const files = pluralize('file', ctx.git.changedFiles?.length, true);
+  const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
+
   return {
     status: 'pending',
-    title: 'Retrieving story files affected by recent changes',
+    title: `Retrieving ${testType} files affected by recent changes`,
     output: `Traversing dependencies for ${files} that changed since the last build`,
   };
 };
@@ -67,35 +71,37 @@ export const bailed = (ctx: Context) => {
 };
 
 export const traced = (ctx: Context) => {
-  const files = pluralize('story file', ctx.onlyStoryFiles?.length, true);
+  const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
+  const files = pluralize(`${testType} file`, ctx.onlyStoryFiles?.length, true);
+
   return {
     status: 'pending',
-    title: 'Retrieved story files affected by recent changes',
+    title: `Retrieved ${testType} files affected by recent changes`,
     output: `Found ${files} affected by recent changes`,
   };
 };
 
-export const hashing = () => ({
+export const hashing = (ctx: Context) => ({
   status: 'pending',
-  title: 'Publishing your built Storybook',
+  title: `Publishing your built ${buildType(ctx)}`,
   output: `Calculating file hashes`,
 });
 
-export const starting = () => ({
+export const starting = (ctx: Context) => ({
   status: 'pending',
-  title: 'Publishing your built Storybook',
+  title: `Publishing your built ${buildType(ctx)}`,
   output: `Starting publish`,
 });
 
-export const uploading = ({ percentage }: { percentage: number }) => ({
+export const uploading = (ctx: Context, { percentage }: { percentage: number }) => ({
   status: 'pending',
-  title: 'Publishing your built Storybook',
+  title: `Publishing your built ${buildType(ctx)}`,
   output: `${progressBar(percentage)} ${percentage}%`,
 });
 
-export const finalizing = () => ({
+export const finalizing = (ctx: Context) => ({
   status: 'pending',
-  title: 'Publishing your built Storybook',
+  title: `Publishing your built ${buildType(ctx)}`,
   output: `Finalizing upload`,
 });
 
@@ -114,8 +120,8 @@ export const success = (ctx: Context) => {
   };
 };
 
-export const failed = ({ path }: { path: string }) => ({
+export const failed = (ctx: Context, { path }: { path: string }) => ({
   status: 'error',
-  title: 'Publishing your built Storybook',
+  title: `Publishing your built ${buildType(ctx)}`,
   output: `Failed to upload ${path}`,
 });
