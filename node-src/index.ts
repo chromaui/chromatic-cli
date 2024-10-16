@@ -17,7 +17,7 @@ import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
-import { isE2EBuild } from './lib/e2e';
+import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
