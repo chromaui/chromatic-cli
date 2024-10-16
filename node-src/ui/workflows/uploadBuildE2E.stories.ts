@@ -7,7 +7,7 @@ import * as auth from '../tasks/auth.stories';
 import * as build from '../tasks/buildE2E.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
 import * as initialize from '../tasks/initialize.stories';
-import * as snapshot from '../tasks/snapshot.stories';
+import * as snapshot from '../tasks/snapshotE2E.stories';
 import * as storybookInfo from '../tasks/storybookInfoE2E.stories';
 import * as upload from '../tasks/uploadE2E.stories';
 import * as verify from '../tasks/verifyE2E.stories';
