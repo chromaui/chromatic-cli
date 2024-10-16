@@ -22,14 +22,14 @@ export const setStorybookInfo = async (ctx: Context) => {
 /**
  * Sets up the Listr task for gathering Storybook information.
  *
- * @param _ The context set when executing the CLI.
+ * @param ctx The context set when executing the CLI.
  *
  * @returns A Listr task.
  */
-export default function main(_: Context) {
+export default function main(ctx: Context) {
   return createTask({
     name: 'storybookInfo',
-    title: initial.title,
+    title: initial(ctx).title,
     skip: (ctx: Context) => ctx.skip,
     steps: [transitionTo(pending), setStorybookInfo, transitionTo(success, true)],
   });
