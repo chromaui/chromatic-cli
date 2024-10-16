@@ -8,3 +8,5 @@ engines:
     exclude_paths:
       - '**/*.test.js'
       - '**/*.test.ts'
+      - '**/*.stories.js'
+      - '**/*.stories.ts'
