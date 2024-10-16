@@ -5,22 +5,27 @@ import { Context } from '../../../types';
 import { info, success } from '../../components/icons';
 import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
+import { buildType, capitalize } from '../../tasks/utils';
 
-export default ({ build, storybookUrl }: Required<Pick<Context, 'build' | 'storybookUrl'>>) => {
+export default (ctx: Context) => {
+  if (!ctx.storybookUrl) {
+    throw new Error('No Storybook URL provided');
+  }
+
   // `ctx.build` is initialized and overwritten in many ways, which means that
   // this can be any kind of build without component and stories information,
   // like PASSED builds, for example
-  if (build.componentCount && build.specCount) {
-    const { components, stories } = stats({ build });
+  if (ctx.build.componentCount && ctx.build.specCount) {
+    const { components, stories } = stats({ build: ctx.build });
     return dedent(chalk`
-      ${success} {bold Storybook published}
+      ${success} {bold ${capitalize(buildType(ctx))} published}
       We found ${components} with ${stories}.
-      ${info} View your Storybook at ${link(storybookUrl)}
+      ${info} View your ${buildType(ctx)} at ${link(ctx.storybookUrl)}
     `);
   }
 
   return dedent(chalk`
-    ${success} {bold Storybook published}
-    ${info} View your Storybook at ${link(storybookUrl)}
+    ${success} {bold ${capitalize(buildType(ctx))} published}
+    ${info} View your ${buildType(ctx)} at ${link(ctx.storybookUrl)}
   `);
 };
