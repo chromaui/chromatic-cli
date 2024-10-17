@@ -1,3 +1,17 @@
+# v11.12.6 (Thu Oct 17 2024)
+
+#### 🐛 Bug Fix
+
+- Add nicer formatting to TS bail reasons. [#1095](https://github.com/chromaui/chromatic-cli/pull/1095) ([@jmhobbs](https://github.com/jmhobbs) [@codykaup](https://github.com/codykaup))
+- Fix GITHUB_REF check on release [#1093](https://github.com/chromaui/chromatic-cli/pull/1093) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.12.5 (Wed Oct 09 2024)
 
 #### 🐛 Bug Fix
