@@ -40,7 +40,7 @@ export const DryRun = () => dryRun(ctx);
 export const Pending = () =>
   pending({ ...ctx, build } as any, {
     cursor: 6,
-    label: 'ComponentName › StoryName',
+    label: 'Snapshot #1 w1280h720',
   });
 
 export const PendingOnlyChanged = () =>
