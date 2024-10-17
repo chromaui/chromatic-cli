@@ -34,6 +34,7 @@ export const stats = ({
   return {
     tests: pluralize('test', build.actualTestCount, true),
     errors: pluralize('component error', build.errorCount, true),
+    e2eErrors: pluralize('test error', build.errorCount, true),
     changes: pluralize('change', build.changeCount, true),
     stories: pluralize('story', build.specCount, true),
     e2eTests: pluralize('test', build.specCount, true),
@@ -55,7 +56,7 @@ export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
     };
   }
 
-  const { errors, tests, skips } = stats(ctx);
+  const { errors, e2eErrors, tests, skips } = stats(ctx);
   const matching = options.onlyStoryNames
     ? ` for stories matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
     : '';
@@ -63,7 +64,12 @@ export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
   const percentage = Math.round((cursor / build.actualTestCount) * 100);
   const counts = `${cursor}/${build.actualTestCount}`;
-  const errs = build.errorCount ? `(${errors}) ` : '';
+
+  let errs = '';
+  if (build.errorCount) {
+    errs = isE2EBuild(ctx.options) ? `(${e2eErrors}) ` : `(${errors}) `;
+  }
+
   return {
     status: 'pending',
     title: `Running ${tests}${matching}${affected}${skipping}`,
@@ -102,9 +108,9 @@ export const buildComplete = (ctx: Context) => {
 };
 
 export const buildBroken = (ctx: Context) => {
-  const { snapshots, components, stories, e2eTests, errors } = stats(ctx);
+  const { snapshots, components, stories, e2eTests, errors, e2eErrors } = stats(ctx);
   const output = isE2EBuild(ctx.options)
-    ? `Tested ${e2eTests}; captured ${snapshots} and found ${errors}`
+    ? `Tested ${e2eTests}; captured ${snapshots} and found ${e2eErrors}`
     : `Tested ${stories} across ${components}; captured ${snapshots} and found ${errors}`;
 
   return {
