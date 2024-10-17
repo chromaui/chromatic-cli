@@ -14,6 +14,7 @@ import { rewriteErrorMessage, throttle } from '../lib/utils';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import missingStatsFile from '../ui/messages/errors/missingStatsFile';
+import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
 import bailFile from '../ui/messages/warnings/bailFile';
 import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
 import {
@@ -277,11 +278,8 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
   try {
     await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
   } catch (err) {
-    throw new Error(
-      `Failed to finalize upload. Please check https://status.chromatic.com/ or contact support.
-
-${err.message}`
-    );
+    ctx.log.error(sentinelFileErrors());
+    throw err;
   }
 };
 
