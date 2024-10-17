@@ -81,6 +81,7 @@
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "./scripts/release.mjs",
+    "release-next": "./scripts/releaseNext.mjs",
     "prepack": "clean-package",
     "postpack": "clean-package restore",
     "publish-action": "./scripts/publishAction.mjs",
