@@ -1,10 +1,10 @@
 import buildPassed from './buildPassed';
 
 export default {
-  title: 'CLI/Messages/Info',
+  title: 'CLI/Messages/Info/E2E',
 };
 
-const ctx = { options: {} } as any;
+const ctx = { options: { playwright: true } } as any;
 
 export const BuildPassed = () =>
   buildPassed({
