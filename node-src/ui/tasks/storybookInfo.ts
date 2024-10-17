@@ -8,9 +8,21 @@ const capitalize = (string: string) =>
     .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
     .join(' ');
 
+const e2eMessage = (ctx: Context) => {
+  if (ctx.options.playwright) {
+    return 'Playwright for E2E';
+  }
+
+  if (ctx.options.cypress) {
+    return 'Cypress for E2E';
+  }
+
+  return 'E2E';
+};
+
 const infoMessage = (ctx: Context) => {
   if (isE2EBuild(ctx.options)) {
-    return ctx.options.playwright ? 'Playwright for E2E' : 'Cypress for E2E';
+    return e2eMessage(ctx);
   }
 
   const { addons, version, viewLayer, builder } = ctx.storybook;
