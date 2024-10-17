@@ -119,6 +119,7 @@ export default function getOptions(ctx: InitialContext): Options {
   const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
   const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
   const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';
+  const DEFAULT_E2E_LOG_FILE = 'build-archive.log';
 
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
@@ -164,7 +165,11 @@ export default function getOptions(ctx: InitialContext): Options {
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
-    storybookLogFile: defaultUnlessSet(flags.storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
+    // We should rename this flag so it makes more sense in E2E contexts
+    storybookLogFile:
+      flags.playwright || flags.cypress
+        ? defaultUnlessSet(flags.storybookLogFile, DEFAULT_E2E_LOG_FILE)
+        : defaultUnlessSet(flags.storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
 
     ownerName: branchOwner || repositoryOwner,
     repositorySlug: flags.repositorySlug,
