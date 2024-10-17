@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
 
-import { Context, Module } from '../../../types';
+import { Context, Module, TurboSnap } from '../../../types';
 import { info } from '../../components/icons';
 
 const printFilePath = (filepath: string, basedir: string, expanded: boolean) => {
@@ -54,7 +54,9 @@ export default (
   let directoryDebug;
 
   if (expanded) {
-    const bailReason = ctx.turboSnap?.bailReason ? `${ctx.turboSnap.bailReason}\n\n` : '';
+    const bailReason = ctx.turboSnap?.bailReason
+      ? `${formatBailReason(ctx.turboSnap.bailReason)}\n\n`
+      : '';
     const rootPath = `${chalk.magenta(rootDirectoryNote)} ${ctx.turboSnap?.rootPath}\n\n`;
     const basePath = `${chalk.magenta(baseDirectoryNote)} ${basedir}\n\n`;
     const storybookPath = `${chalk.magenta(storybookDirectoryNote)} ${storybookConfigDirectory}\n\n`;
@@ -128,3 +130,37 @@ export default (
   const note = chalk`\n\nSet {bold ${flag}} to {bold 'expanded'} to reveal underlying modules.`;
   return `${summary}:\n\n${traces.join('\n\n')}${expanded ? '' : note}`;
 };
+
+const formatBailReasonSection = (name: string, files: string[]) => {
+  return chalk`{bold ${name}}\n` + files.map((f) => `  - ${f}`).join('\n');
+};
+
+function formatBailReason(bailReason: TurboSnap['bailReason']) {
+  if (!bailReason) {
+    return '';
+  }
+
+  const sections: string[] = [];
+
+  if (bailReason.changedPackageFiles) {
+    sections.push(formatBailReasonSection('Changed Package Files', bailReason.changedPackageFiles));
+  }
+
+  if (bailReason.changedStorybookFiles) {
+    sections.push(
+      formatBailReasonSection('Changed Storybook Files', bailReason.changedStorybookFiles)
+    );
+  }
+
+  if (bailReason.changedExternalFiles) {
+    sections.push(
+      formatBailReasonSection('Changed External Files', bailReason.changedExternalFiles)
+    );
+  }
+
+  if (bailReason.changedStaticFiles) {
+    sections.push(formatBailReasonSection('Changed Static Files', bailReason.changedStaticFiles));
+  }
+
+  return sections.join('\n');
+}
