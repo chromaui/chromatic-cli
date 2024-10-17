@@ -4,7 +4,8 @@ import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
-import { buildBinName as e2eBuildBinName, getE2EBuildCommand, isE2EBuild } from '../lib/e2e';
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
+import { isE2EBuild } from '../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -161,24 +162,33 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
-export default createTask({
-  name: 'build',
-  title: initial.title,
-  skip: async (ctx) => {
-    if (ctx.skip) return true;
-    if (ctx.options.storybookBuildDir) {
-      ctx.sourceDir = ctx.options.storybookBuildDir;
-      return skipped(ctx).output;
-    }
-    return false;
-  },
-  steps: [
-    setSourceDirectory,
-    setBuildCommand,
-    transitionTo(pending),
-    startActivity,
-    buildStorybook,
-    endActivity,
-    transitionTo(success, true),
-  ],
-});
+/**
+ * Sets up the Listr task for building the user's Storybook or E2E project.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(ctx: Context) {
+  return createTask({
+    name: 'build',
+    title: initial(ctx).title,
+    skip: async (ctx) => {
+      if (ctx.skip) return true;
+      if (ctx.options.storybookBuildDir) {
+        ctx.sourceDir = ctx.options.storybookBuildDir;
+        return skipped(ctx).output;
+      }
+      return false;
+    },
+    steps: [
+      setSourceDirectory,
+      setBuildCommand,
+      transitionTo(pending),
+      startActivity,
+      buildStorybook,
+      endActivity,
+      transitionTo(success, true),
+    ],
+  });
+}

@@ -13,7 +13,7 @@ import {
 } from './snapshot';
 
 export default {
-  title: 'CLI/Tasks/Snapshot',
+  title: 'CLI/Tasks/Snapshot/E2E',
   decorators: [(storyFunction) => task(storyFunction())],
 };
 
@@ -28,7 +28,7 @@ const build = {
   specCount: 8,
   features: { uiTests: true },
 };
-const ctx = { options: {} } as any;
+const ctx = { options: { playwright: true } } as any;
 
 const now = 0;
 const startedAt = -123_456;
@@ -40,7 +40,7 @@ export const DryRun = () => dryRun(ctx);
 export const Pending = () =>
   pending({ ...ctx, build } as any, {
     cursor: 6,
-    label: 'ComponentName › StoryName',
+    label: 'Snapshot #1 w1280h720',
   });
 
 export const PendingOnlyChanged = () =>
@@ -81,4 +81,4 @@ export const SkippedList = () =>
   skipped({ ...ctx, options: { ...ctx.options, list: true } } as any);
 
 export const SkippedExitOnceUploaded = () =>
-  skipped({ ...ctx, options: { ...ctx.optionns, exitOnceUploaded: true } } as any);
+  skipped({ ...ctx, options: { ...ctx.options, exitOnceUploaded: true } } as any);

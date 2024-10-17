@@ -91,7 +91,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['iframe.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, options: {}, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -99,7 +99,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['index.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, options: {}, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
