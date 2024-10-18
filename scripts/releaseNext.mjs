@@ -30,10 +30,7 @@ async function build() {
     },
   })`yarn build`;
 
-  console.info('🧹 Resetting changes to let `auto` do its thing');
-  await $`git reset --hard`;
-
-  console.info('✅ Build with new version completed, ready for auto!');
+  console.info('✅ Build with new version completed, ready for push to action-next!');
 }
 
 main();
