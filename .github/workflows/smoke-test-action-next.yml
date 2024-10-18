@@ -1,0 +1,32 @@
+name: Smoke test via action next
+on: merge_group
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+      - run: corepack enable
+      - run: yarn
+      - name: Push to action-next
+        run: yarn run release-next
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Run build against action-next
+        uses: chromaui/action-next@latest
+        with:
+          buildScriptName: build-test-storybook
+          exitZeroOnChanges: true
+          forceRebuild: true
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
