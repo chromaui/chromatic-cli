@@ -154,4 +154,14 @@ describe('setGitInfo', () => {
     expect(ctx.rebuildForBuild).toEqual(lastBuild);
     expect(ctx.storybookUrl).toEqual(lastBuild.storybookUrl);
   });
+
+  it('removes undefined owner prefix from branch', async () => {
+    const ctx = { log, options: {}, client } as any;
+    getCommitAndBranch.mockResolvedValue({
+      ...commitInfo,
+      branch: 'undefined:repo',
+    });
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.git.branch).toBe('repo');
+  });
 });

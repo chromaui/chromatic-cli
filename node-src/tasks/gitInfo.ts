@@ -15,6 +15,7 @@ import replacedBuild from '../ui/messages/info/replacedBuild';
 import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
+import undefinedBranchOwner from '../ui/messages/warnings/undefinedBranchOwner';
 import {
   initial,
   pending,
@@ -24,6 +25,8 @@ import {
   skippingBuild,
   success,
 } from '../ui/tasks/gitInfo';
+
+const UNDEFINED_BRANCH_PREFIX_REGEXP = /^undefined:/;
 
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
@@ -99,6 +102,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   if (ownerName) {
     ctx.git.branch = ctx.git.branch.replace(/[^:]+:/, '');
     ctx.git.slug = repositorySlug || ctx.git.slug?.replace(/[^/]+/, ownerName);
+  } else if (UNDEFINED_BRANCH_PREFIX_REGEXP.test(ctx.git.branch)) {
+    // Strip off `undefined:` owner prefix that we have seen in some CI systems.
+    ctx.log.warn(undefinedBranchOwner());
+    ctx.git.branch = ctx.git.branch.replace(UNDEFINED_BRANCH_PREFIX_REGEXP, '');
   }
 
   const { branch, commit, slug } = ctx.git;

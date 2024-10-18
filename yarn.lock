@@ -7565,7 +7565,7 @@ __metadata:
     cross-spawn: "npm:^7.0.2"
     debug: "npm:^4.3.2"
     dotenv: "npm:^8.2.0"
-    env-ci: "npm:^5.0.2"
+    env-ci: "npm:^11.1.0"
     eslint: "npm:^9.10.0"
     eslint-config-prettier: "npm:^9.0.0"
     eslint-plugin-import: "npm:^2.28.1"
@@ -8987,7 +8987,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"env-ci@npm:^5.0.1, env-ci@npm:^5.0.2":
+"env-ci@npm:^11.1.0":
+  version: 11.1.0
+  resolution: "env-ci@npm:11.1.0"
+  dependencies:
+    execa: "npm:^8.0.0"
+    java-properties: "npm:^1.0.2"
+  checksum: 10c0/14f0a597c1fe9ab5585532c01759db62f4c553277b33137d33cb71cdd621833184f182dc67408750973c9f884f5a0d5103fad4f873aabd9e6c4baf65f88bc22a
+  languageName: node
+  linkType: hard
+
+"env-ci@npm:^5.0.1":
   version: 5.5.0
   resolution: "env-ci@npm:5.5.0"
   dependencies:
@@ -10008,7 +10018,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"execa@npm:^8.0.1":
+"execa@npm:^8.0.0, execa@npm:^8.0.1":
   version: 8.0.1
   resolution: "execa@npm:8.0.1"
   dependencies:
@@ -12282,7 +12292,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"java-properties@npm:^1.0.0":
+"java-properties@npm:^1.0.0, java-properties@npm:^1.0.2":
   version: 1.0.2
   resolution: "java-properties@npm:1.0.2"
   checksum: 10c0/be0f58c83b5a852f313de2ea57f7b8b7d46dc062b2ffe487d58838e7034d4660f4d22f2a96aae4daa622af6d734726c0d08b01396e59666ededbcfdc25a694d6
