@@ -50,6 +50,8 @@ const commitInfo = {
 
 describe('getCommitAndBranch', () => {
   it('returns commit and branch info', async () => {
+    process.env.GITHUB_EVENT_NAME = 'push';
+
     const info = await getCommitAndBranch(ctx);
     expect(info).toMatchObject({
       branch: 'main',
@@ -62,6 +64,8 @@ describe('getCommitAndBranch', () => {
   });
 
   it('retrieves CI context', async () => {
+    process.env.GITHUB_EVENT_NAME = 'push';
+
     envCi.mockReturnValue({
       isCi: true,
       service: 'ci-service',
@@ -84,6 +88,8 @@ describe('getCommitAndBranch', () => {
   });
 
   it('prefers prBranch over ciBranch', async () => {
+    process.env.GITHUB_EVENT_NAME = 'push';
+
     envCi.mockReturnValue({
       branch: 'ci-branch',
       prBranch: 'ci-pr-branch',
@@ -94,9 +100,11 @@ describe('getCommitAndBranch', () => {
   });
 
   it('removes origin/ prefix in branch name', async () => {
-    getBranch.mockResolvedValue('origin/master');
+    process.env.GITHUB_EVENT_NAME = 'push';
+
+    getBranch.mockResolvedValue('origin/main');
     const info = await getCommitAndBranch(ctx);
-    expect(info).toMatchObject({ branch: 'master' });
+    expect(info).toMatchObject({ branch: 'main' });
   });
 
   it('throws when there is only one commit, CI', async () => {
@@ -114,11 +122,15 @@ describe('getCommitAndBranch', () => {
 
   describe('with branchName', () => {
     it('uses provided branchName as branch', async () => {
+      process.env.GITHUB_EVENT_NAME = 'push';
+
       const info = await getCommitAndBranch(ctx, { branchName: 'foobar' });
       expect(info).toMatchObject({ branch: 'foobar' });
     });
 
     it('does not remove origin/ prefix in branch name', async () => {
+      process.env.GITHUB_EVENT_NAME = 'push';
+
       const info = await getCommitAndBranch(ctx, { branchName: 'origin/foobar' });
       expect(info).toMatchObject({ branch: 'origin/foobar' });
     });
@@ -126,11 +138,15 @@ describe('getCommitAndBranch', () => {
 
   describe('with patchBaseRef', () => {
     it('uses provided patchBaseRef as branch', async () => {
+      process.env.GITHUB_EVENT_NAME = 'push';
+
       const info = await getCommitAndBranch(ctx, { patchBaseRef: 'foobar' });
       expect(info).toMatchObject({ branch: 'foobar' });
     });
 
     it('prefers branchName over patchBaseRef', async () => {
+      process.env.GITHUB_EVENT_NAME = 'push';
+
       const info = await getCommitAndBranch(ctx, { branchName: 'foo', patchBaseRef: 'bar' });
       expect(info).toMatchObject({ branch: 'foo' });
     });
