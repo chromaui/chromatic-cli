@@ -1,11 +1,16 @@
 name: Smoke test via yarn canary
-on: push
+
+on:
+  workflow_call:
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
+        required: true
 
 permissions:
   contents: read
 
 jobs:
-  chromatic:
+  self-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

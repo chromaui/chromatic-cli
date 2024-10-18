@@ -1,5 +1,9 @@
 name: Smoke test via action
-on: push
+on:
+  workflow_call:
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
+        required: true
 
 permissions:
   contents: read

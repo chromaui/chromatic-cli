@@ -1,5 +1,10 @@
 name: Smoke test via Node 18
-on: push
+
+on:
+  workflow_call:
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
+        required: true
 
 permissions:
   contents: read

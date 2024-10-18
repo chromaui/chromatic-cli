@@ -1,8 +1,12 @@
 name: Chromatic Package Size
+
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize]
+  workflow_call:
+    secrets:
+      UPSTASH_REDIS_REST_URL:
+        required: true
+      UPSTASH_API_KEY:
+        required: true
 
 permissions:
   contents: read
