@@ -141,7 +141,7 @@
     "cross-spawn": "^7.0.2",
     "debug": "^4.3.2",
     "dotenv": "^8.2.0",
-    "env-ci": "^5.0.2",
+    "env-ci": "^11.1.0",
     "eslint": "^9.10.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-import": "^2.28.1",
