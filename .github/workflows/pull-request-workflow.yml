@@ -1,0 +1,89 @@
+name: Test PR
+
+on:
+  merge_group:
+    types:
+     - checks_requested
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  package-size:
+    uses: ./.github/workflows/package-size.yml
+    secrets:
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_API_KEY: ${{ secrets.UPSTASH_API_KEY }}
+
+  lint-and-test:
+    uses: ./.github/workflows/lint-and-test.yml
+    secrets:
+      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+  chromatic:
+    uses: ./.github/workflows/chromatic-prod.yml
+    needs: lint-and-test
+    secrets:
+      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-action:
+    uses: ./.github/workflows/smoke-test-action.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-api:
+    uses: ./.github/workflows/smoke-test-node-api.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-18:
+    uses: ./.github/workflows/smoke-test-node18.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-20:
+    uses: ./.github/workflows/smoke-test-node20.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-npx:
+    uses: ./.github/workflows/smoke-test-npx.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-windows:
+    uses: ./.github/workflows/smoke-test-windows.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn:
+    uses: ./.github/workflows/smoke-test-yarn.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn-berry:
+    uses: ./.github/workflows/smoke-test-yarn-berry.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn-canary:
+    uses: ./.github/workflows/smoke-test-yarn-canary.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn-classic:
+    uses: ./.github/workflows/smoke-test-yarn-classic.yml
+    needs: lint-and-test
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}

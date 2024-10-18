@@ -1,5 +1,10 @@
 name: Smoke test via yarn berry
-on: push
+
+on:
+  workflow_call:
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
+        required: true
 
 permissions:
   contents: read
