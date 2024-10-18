@@ -1,5 +1,5 @@
 name: Lint and Test
-on: [push, merge_group]
+on: push
 
 permissions:
   contents: read
