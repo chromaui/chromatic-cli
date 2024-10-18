@@ -251,14 +251,14 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     onProgress: throttle(
       (progress, total) => {
         const percentage = Math.round((progress / total) * 100);
-        task.output = uploading({ percentage }).output;
+        task.output = uploading(ctx, { percentage }).output;
         ctx.options.experimental_onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
       },
       // Avoid spamming the logs with progress updates in non-interactive mode
       ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
     ),
     onError: (error: Error, path?: string) => {
-      throw path === error.message ? new Error(failed({ path }).output) : error;
+      throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
     },
   });
 };
@@ -283,21 +283,30 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
   }
 };
 
-export default createTask({
-  name: 'upload',
-  title: initial.title,
-  skip: (ctx: Context) => {
-    if (ctx.skip) return true;
-    if (ctx.options.dryRun) return dryRun().output;
-    return false;
-  },
-  steps: [
-    transitionTo(validating),
-    validateFiles,
-    traceChangedFiles,
-    calculateFileHashes,
-    uploadStorybook,
-    waitForSentinels,
-    transitionTo(success, true),
-  ],
-});
+/**
+ * Sets up the Listr task for uploading the build assets to Chromatic.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(ctx: Context) {
+  return createTask({
+    name: 'upload',
+    title: initial(ctx).title,
+    skip: (ctx: Context) => {
+      if (ctx.skip) return true;
+      if (ctx.options.dryRun) return dryRun(ctx).output;
+      return false;
+    },
+    steps: [
+      transitionTo(validating),
+      validateFiles,
+      traceChangedFiles,
+      calculateFileHashes,
+      uploadStorybook,
+      waitForSentinels,
+      transitionTo(success, true),
+    ],
+  });
+}

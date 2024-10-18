@@ -29,12 +29,17 @@ export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorksp
 /**
  * Prepare the list of tasks to run for a new build.
  *
- * @param options The context options set when executing the CLI.
+ * @param ctx The context set when executing the CLI.
  *
  * @returns The list of tasks to be completed.
  */
-export default function index(options: Context['options']): Listr.ListrTask<Context>[] {
-  const tasks = options.patchHeadRef && options.patchBaseRef ? runUploadBuild : runUploadBuild;
+export default function index(ctx: Context): Listr.ListrTask<Context>[] {
+  const tasks =
+    ctx.options.patchHeadRef && ctx.options.patchBaseRef ? runUploadBuild : runUploadBuild;
 
-  return options.junitReport ? [...tasks, report] : tasks;
+  if (ctx.options.junitReport) {
+    tasks.push(report);
+  }
+
+  return tasks.map((task) => task(ctx));
 }

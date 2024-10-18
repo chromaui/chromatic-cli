@@ -1,4 +1,3 @@
-/* eslint-disable import/no-unresolved */
 import { configDefaults, coverageConfigDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -6,7 +5,12 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, '**/getParentCommits.test.ts'],
     coverage: {
       provider: 'v8',
-      exclude: ['vitest.no-threads.config.ts', 'scripts/**', ...coverageConfigDefaults.exclude],
+      exclude: [
+        'vitest.no-threads.config.ts',
+        'scripts/**',
+        '**/*.stories.{t,j}s',
+        ...coverageConfigDefaults.exclude,
+      ],
     },
   },
 });

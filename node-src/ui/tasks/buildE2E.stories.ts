@@ -2,13 +2,13 @@ import task from '../components/task';
 import { failed, initial, pending, skipped, success } from './build';
 
 export default {
-  title: 'CLI/Tasks/Build',
+  title: 'CLI/Tasks/Build/E2E',
   decorators: [(storyFunction) => task(storyFunction())],
 };
 
-const ctx = { options: {} } as any;
+const ctx = { options: { playwright: true } } as any;
 
-const buildCommand = 'yarn run build-storybook -o storybook-static';
+const buildCommand = 'yarn build-archive-storybook';
 
 export const Initial = () => initial(ctx);
 
@@ -19,13 +19,13 @@ export const Built = () =>
     ...ctx,
     now: 0,
     startedAt: -32_100,
-    buildLogFile: '/users/me/project/build-storybook.log',
+    buildLogFile: '/users/me/project/build-archive.log',
   } as any);
 
 export const Skipped = () =>
   skipped({
     ...ctx,
-    options: { ...ctx.options, storybookBuildDir: '/users/me/project/storybook-static' },
+    options: { ...ctx.options, storybookBuildDir: '/users/me/project/archive-static' },
   } as any);
 
 export const Failed = () => failed({ ...ctx, buildCommand } as any);

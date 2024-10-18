@@ -118,6 +118,7 @@ export default [
             String.raw`^.*CSF.*\.[jt]s$`,
             String.raw`^.*TTY.*\.[jt]s$`,
             String.raw`^.*CI.*\.[jt]s$`,
+            String.raw`^.*E2E.*\.[jt]s$`,
           ],
         },
       ],
