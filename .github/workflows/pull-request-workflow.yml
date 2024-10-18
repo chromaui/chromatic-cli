@@ -10,9 +10,16 @@ on:
       - synchronize
       - reopened
 
+permissions:
+  contents: read
+
 jobs:
   package-size:
     uses: ./.github/workflows/package-size.yml
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     secrets:
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_API_KEY: ${{ secrets.UPSTASH_API_KEY }}
