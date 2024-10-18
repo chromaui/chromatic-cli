@@ -4,8 +4,7 @@ import { dedent } from 'ts-dedent';
 import { info, warning } from '../../components/icons';
 import link from '../../components/link';
 
-const docsUrl =
-  'https://www.chromatic.com/docs/custom-ci-provider/#overriding-chromatics-branch-detection';
+const docsUrl = 'https://www.chromatic.com/docs/faq/override-branch-name/';
 
 export default () => {
   return dedent(chalk`
