@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   package-size:
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/package-size.yml
     permissions:
       contents: read
