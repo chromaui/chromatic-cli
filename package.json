@@ -185,7 +185,7 @@
     "prop-types": "^15.7.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "read-pkg-up": "^7.0.1",
+    "read-package-up": "^11.0.0",
     "semver": "^7.3.5",
     "slash": "^3.0.0",
     "snyk-nodejs-lockfile-parser": "^1.52.1",

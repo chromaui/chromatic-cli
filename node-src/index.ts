@@ -2,7 +2,7 @@ import 'any-observable/register/zen';
 
 import * as Sentry from '@sentry/node';
 import Listr from 'listr';
-import readPkgUp from 'read-pkg-up';
+import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
 
 import {
@@ -111,7 +111,7 @@ export async function run({
     log = createLogger(),
   } = extraOptions || {};
 
-  const packageInfo = await readPkgUp({ cwd: process.cwd() });
+  const packageInfo = await readPackageUp({ cwd: process.cwd() });
   if (!packageInfo) {
     log.error(noPackageJson());
     process.exit(253);

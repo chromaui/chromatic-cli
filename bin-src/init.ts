@@ -4,8 +4,8 @@ import { execaCommand } from 'execa';
 import { Path, writeFile } from 'jsonfile';
 import meow from 'meow';
 import prompts from 'prompts';
+import { readPackageUp } from 'read-package-up';
 import type { PackageJson } from 'read-pkg-up';
-import readPkgUp from 'read-pkg-up';
 
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
 
@@ -154,7 +154,7 @@ export async function main(argv: string[]) {
   );
 
   try {
-    const pkgInfo = await readPkgUp({ cwd: process.cwd() });
+    const pkgInfo = await readPackageUp({ cwd: process.cwd() });
     if (!pkgInfo) {
       console.error(noPackageJson());
       process.exit(253);
