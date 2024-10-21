@@ -71,6 +71,8 @@ export interface Options extends Configuration {
 
   configFile?: Flags['configFile'];
   logFile?: Flags['logFile'];
+  logLevel?: Flags['logLevel'];
+  logPrefix?: Flags['logPrefix'];
   onlyChanged: boolean | string;
   onlyStoryFiles: Flags['onlyStoryFiles'];
   onlyStoryNames: Flags['onlyStoryNames'];

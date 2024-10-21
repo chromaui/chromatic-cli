@@ -108,11 +108,12 @@ export async function run({
   const config = {
     ...parseArguments(argv),
     ...(flags && { flags }),
+    ...(extraOptions && { extraOptions }),
   };
   const {
     sessionId = uuid(),
     env: environment = getEnvironment(),
-    log = createLogger(config.flags),
+    log = createLogger(config.flags, config.extraOptions),
   } = extraOptions || {};
 
   const packageInfo = await readPkgUp({ cwd: process.cwd() });
@@ -124,7 +125,6 @@ export async function run({
   const { path: packagePath, packageJson } = packageInfo;
   const ctx: InitialContext = {
     ...config,
-    ...(extraOptions && { extraOptions }),
     packagePath,
     packageJson,
     env: environment,

@@ -102,14 +102,17 @@ const fileLogger = {
   },
 };
 
-export const createLogger = (flags: Flags) => {
-  let level = flags.logLevel || (LOG_LEVEL.toLowerCase() as Flags['logLevel']) || DEFAULT_LEVEL;
+export const createLogger = (flags: Flags, options?: Partial<Options>) => {
+  let level =
+    options?.logLevel ||
+    flags.logLevel ||
+    (LOG_LEVEL.toLowerCase() as Flags['logLevel']) ||
+    DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
 
-  let logPrefixer = createPrefixer(true, flags.logPrefix || LOG_PREFIX);
-  let filePrefixer = createPrefixer(false, flags.logPrefix || LOG_PREFIX);
-
-  let interactive = flags.interactive && !flags.debug;
+  let logPrefixer = createPrefixer(true, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
+  let filePrefixer = createPrefixer(false, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
+  let interactive = (options?.interactive || flags.interactive) && !(options?.debug || flags.debug);
   let enqueue = false;
   const queue: QueueMessage[] = [];
 
