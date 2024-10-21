@@ -17,7 +17,7 @@ import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
-import { isE2EBuild } from './lib/e2e';
+import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
@@ -233,7 +233,7 @@ async function runBuild(ctx: Context) {
         // Queue up any non-Listr log messages while Listr is running
         ctx.log.queue();
       }
-      await new Listr(getTasks(ctx.options), options).run(ctx);
+      await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
       Sentry.captureException(err);
