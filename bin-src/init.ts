@@ -4,8 +4,8 @@ import { execaCommand } from 'execa';
 import { Path, writeFile } from 'jsonfile';
 import meow from 'meow';
 import prompts from 'prompts';
+import type { NormalizedPackageJson } from 'read-package-up';
 import { readPackageUp } from 'read-package-up';
-import type { PackageJson } from 'read-pkg-up';
 
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
 
@@ -51,7 +51,7 @@ export const createChromaticConfigFile = async ({
 
 // TODO: refactor this function
 // eslint-disable-next-line complexity
-export const getStorybookPackages = (pkgJson: PackageJson) => {
+export const getStorybookPackages = (pkgJson: NormalizedPackageJson) => {
   const storybookVersion = pkgJson?.devDependencies?.storybook || pkgJson?.dependencies?.storybook;
   const essentialsVersion =
     pkgJson?.devDependencies?.['@storybook/addon-essentials'] ||
@@ -76,7 +76,7 @@ export const getStorybookPackages = (pkgJson: PackageJson) => {
 };
 
 export const installArchiveDependencies = async (
-  packageJson: PackageJson,
+  packageJson: NormalizedPackageJson,
   testFramework: TestFrameworkType
 ) => {
   const defaultInstallArguments = ['-D', 'chromatic', `@chromatic-com/${testFramework}`];
@@ -96,7 +96,7 @@ const intializeChromatic = async ({
   packagePath,
 }: {
   testFramework: TestFrameworkType;
-  packageJson: PackageJson;
+  packageJson: NormalizedPackageJson;
   packagePath: string;
 }) => {
   await addChromaticScriptToPackageJson({ packageJson, packagePath });
@@ -174,10 +174,13 @@ export async function main(argv: string[]) {
         initial: 0,
       },
     ]);
-    const { readme, _id, ...rest } = packageJson;
+
+    packageJson.readme = '';
+    packageJson._id = '';
+
     await intializeChromatic({
       testFramework: testFramework || flags.framework,
-      packageJson: rest,
+      packageJson,
       packagePath,
     });
   } catch (err) {
