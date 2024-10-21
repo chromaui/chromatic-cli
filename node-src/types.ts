@@ -51,6 +51,8 @@ export interface Flags {
   junitReport?: string;
   list?: boolean;
   logFile?: string;
+  logLevel?: 'silent' | 'error' | 'warn' | 'info' | 'debug';
+  logPrefix?: string;
   storybookLogFile?: string;
   traceChanged?: string;
   uploadMetadata?: boolean;

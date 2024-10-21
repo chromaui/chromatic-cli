@@ -5,13 +5,14 @@ import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
 import { errorSerializer } from './logSerializers';
+import { Flags, Options } from '../types';
 
 interface QueueMessage {
   type: LogType;
   messages: string[];
 }
 
-const { DISABLE_LOGGING, LOG_LEVEL = '' } = process.env;
+const { DISABLE_LOGGING, LOG_LEVEL = '', LOG_PREFIX } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
 
@@ -25,26 +26,34 @@ const logInteractive = (args: any[]): string[] =>
     .map((argument) => (argument && argument.message) || argument)
     .filter((argument) => typeof argument === 'string');
 
-// Strips ANSI codes from messages and stringifies metadata to JSON
+// Stringifies metadata to JSON
 const logVerbose = (type: string, args: any[]) => {
   const stringify =
     type === 'error' ? (err: any) => JSON.stringify(errorSerializer(err)) : JSON.stringify;
-  return args.map((argument) =>
-    typeof argument === 'string' ? stripAnsi(argument) : stringify(argument)
-  );
+  return args.map((argument) => (typeof argument === 'string' ? argument : stringify(argument)));
 };
 
-const withTime = (messages: string[], color = false) => {
-  if (messages.every((message) => /^\s*$/.test(message))) return messages;
-  let time = new Date().toISOString().slice(11, 23);
-  if (color) time = chalk.dim(time);
-  return [
-    time + ' ',
-    ...messages.map((message) =>
-      typeof message === 'string' ? message.replaceAll('\n', `\n              `) : message
-    ),
-  ];
-};
+const createPrefixer =
+  (color = false, prefix?: string) =>
+  (messages: string[]) => {
+    // Ignore empty log lines
+    if (messages.every((message) => /^\s*$/.test(message))) return messages;
+
+    // Use a timestamp as default prefix
+    const pre = prefix ?? chalk.dim(new Date().toISOString().slice(11, 23));
+    if (pre === '') return color ? messages : messages.map(stripAnsi);
+
+    // Pad lines with spaces to align with the prefix
+    const padding = ' '.repeat(stripAnsi(pre).length + 1);
+    return [
+      color ? pre : stripAnsi(pre),
+      ...messages.map((message) => {
+        if (typeof message !== 'string') return message;
+        const string = color ? message : stripAnsi(message);
+        return string.replaceAll('\n', `\n${padding}`);
+      }),
+    ];
+  };
 
 type LogType = 'error' | 'warn' | 'info' | 'debug';
 type LogFunction = (...args: any[]) => void;
@@ -93,12 +102,14 @@ const fileLogger = {
   },
 };
 
-export const createLogger = () => {
-  let level = (LOG_LEVEL.toLowerCase() as keyof typeof LOG_LEVELS) || DEFAULT_LEVEL;
+export const createLogger = (flags: Flags) => {
+  let level = flags.logLevel || (LOG_LEVEL.toLowerCase() as Flags['logLevel']) || DEFAULT_LEVEL;
   if (DISABLE_LOGGING === 'true') level = 'silent';
 
-  const args = new Set(process.argv.slice(2));
-  let interactive = !args.has('--debug') && !args.has('--no-interactive');
+  let logPrefixer = createPrefixer(true, flags.logPrefix || LOG_PREFIX);
+  let filePrefixer = createPrefixer(false, flags.logPrefix || LOG_PREFIX);
+
+  let interactive = flags.interactive && !flags.debug;
   let enqueue = false;
   const queue: QueueMessage[] = [];
 
@@ -108,10 +119,10 @@ export const createLogger = () => {
       if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
       const logs = logVerbose(type, args);
-      fileLogger.append(...withTime(logs));
+      fileLogger.append(...filePrefixer(logs));
       if (logFileOnly) return;
 
-      const messages = interactive ? logInteractive(args) : withTime(logs, true);
+      const messages = interactive ? logInteractive(args) : logPrefixer(logs);
       if (messages.length === 0) return;
 
       // Queue up the logs or print them right away

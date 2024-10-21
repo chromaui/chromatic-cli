@@ -105,10 +105,14 @@ export async function run({
   flags?: Flags;
   options?: Partial<Options>;
 }): Promise<Partial<Output>> {
+  const config = {
+    ...parseArguments(argv),
+    ...(flags && { flags }),
+  };
   const {
     sessionId = uuid(),
     env: environment = getEnvironment(),
-    log = createLogger(),
+    log = createLogger(config.flags),
   } = extraOptions || {};
 
   const packageInfo = await readPkgUp({ cwd: process.cwd() });
@@ -119,8 +123,7 @@ export async function run({
 
   const { path: packagePath, packageJson } = packageInfo;
   const ctx: InitialContext = {
-    ...parseArguments(argv),
-    ...(flags && { flags }),
+    ...config,
     ...(extraOptions && { extraOptions }),
     packagePath,
     packageJson,
