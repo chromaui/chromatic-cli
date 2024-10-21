@@ -1,5 +1,6 @@
 import { execaCommand } from 'execa';
 import { writeFile } from 'jsonfile';
+import type { NormalizedPackageJson } from 'read-package-up';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -78,21 +79,25 @@ describe('installArchiveDependencies', () => {
     vi.resetModules();
   });
   it('successfully installs list of dependencies for Playwright if SB package is not found and Essentials is not found', async () => {
-    await installArchiveDependencies({}, 'playwright');
+    await installArchiveDependencies({} as NormalizedPackageJson, 'playwright');
     expect(execaCommand).toHaveBeenCalledOnce();
     expect(execaCommand).toHaveBeenCalledWith(
       'yarn add -D chromatic @chromatic-com/playwright storybook@latest @storybook/addon-essentials@latest @storybook/server-webpack5@latest'
     );
   });
   it('successfully installs list of dependencies for Cypress if SB package is not found and Essentials is not found', async () => {
-    await installArchiveDependencies({}, 'cypress');
+    await installArchiveDependencies({} as NormalizedPackageJson, 'cypress');
     expect(execaCommand).toHaveBeenCalledOnce();
     expect(execaCommand).toHaveBeenCalledWith(
       'yarn add -D chromatic @chromatic-com/cypress storybook@latest @storybook/addon-essentials@latest @storybook/server-webpack5@latest'
     );
   });
   it('successfully installs list of dependencies if SB package is found and Essentials is not found', async () => {
-    await installArchiveDependencies({ devDependencies: { storybook: '7.6.5' } }, 'playwright');
+    await installArchiveDependencies(
+      // @ts-expect-error Ignore the intentionally missing properties
+      { devDependencies: { storybook: '7.6.5' } } as NormalizedPackageJson,
+      'playwright'
+    );
     expect(execaCommand).toHaveBeenCalledOnce();
     expect(execaCommand).toHaveBeenCalledWith(
       'yarn add -D chromatic @chromatic-com/playwright @storybook/addon-essentials@7.6.5 @storybook/server-webpack5@7.6.5'
@@ -100,7 +105,10 @@ describe('installArchiveDependencies', () => {
   });
   it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
     await installArchiveDependencies(
-      { devDependencies: { storybook: '7.6.5', '@storybook/addon-essentials': '7.6.5' } },
+      // @ts-expect-error Ignore the intentionally missing properties
+      {
+        devDependencies: { storybook: '7.6.5', '@storybook/addon-essentials': '7.6.5' },
+      } as NormalizedPackageJson,
       'playwright'
     );
     expect(execaCommand).toHaveBeenCalledOnce();
@@ -111,7 +119,10 @@ describe('installArchiveDependencies', () => {
   });
   it('successfully installs list of dependencies if SB package is found and Essentials is found in dependencies', async () => {
     await installArchiveDependencies(
-      { dependencies: { storybook: '7.6.5', '@storybook/addon-essentials': '7.6.5' } },
+      // @ts-expect-error Ignore the intentionally missing properties
+      {
+        dependencies: { storybook: '7.6.5', '@storybook/addon-essentials': '7.6.5' },
+      } as NormalizedPackageJson,
       'playwright'
     );
     expect(execaCommand).toHaveBeenCalledOnce();
@@ -122,7 +133,8 @@ describe('installArchiveDependencies', () => {
   });
   it('successfully installs list of dependencies if SB package is not found and Essentials is found in dependencies', async () => {
     await installArchiveDependencies(
-      { dependencies: { '@storybook/addon-essentials': '7.6.5' } },
+      // @ts-expect-error Ignore the intentionally missing properties
+      { dependencies: { '@storybook/addon-essentials': '7.6.5' } } as NormalizedPackageJson,
       'playwright'
     );
     expect(execaCommand).toHaveBeenCalledOnce();
