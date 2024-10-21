@@ -1,3 +1,24 @@
+# v11.13.0 (Mon Oct 21 2024)
+
+#### 🚀 Enhancement
+
+- Add new check to test the CLI action in merge queue [#1098](https://github.com/chromaui/chromatic-cli/pull/1098) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Fix `.env` parsing [#1104](https://github.com/chromaui/chromatic-cli/pull/1104) ([@codykaup](https://github.com/codykaup))
+- Better handling of undefined values in branches [#1101](https://github.com/chromaui/chromatic-cli/pull/1101) ([@jmhobbs](https://github.com/jmhobbs))
+- Setup workflow for PR checks [#1102](https://github.com/chromaui/chromatic-cli/pull/1102) ([@codykaup](https://github.com/codykaup))
+- Rename new action job name for merge queue UI [#1100](https://github.com/chromaui/chromatic-cli/pull/1100) ([@codykaup](https://github.com/codykaup))
+- Add context to sentinel upload failures. [#1094](https://github.com/chromaui/chromatic-cli/pull/1094) ([@jmhobbs](https://github.com/jmhobbs) [@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.12.6 (Thu Oct 17 2024)
 
 #### 🐛 Bug Fix
