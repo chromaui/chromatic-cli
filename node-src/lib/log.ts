@@ -4,8 +4,8 @@ import { createWriteStream, rm } from 'fs';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
-import { errorSerializer } from './logSerializers';
 import { Flags, Options } from '../types';
+import { errorSerializer } from './logSerializers';
 
 interface QueueMessage {
   type: LogType;
@@ -41,7 +41,7 @@ const createPrefixer =
 
     // Use a timestamp as default prefix
     const pre = prefix ?? chalk.dim(new Date().toISOString().slice(11, 23));
-    if (pre === '') return color ? messages : messages.map(stripAnsi);
+    if (pre === '') return color ? messages : messages.map((message) => stripAnsi(message));
 
     // Pad lines with spaces to align with the prefix
     const padding = ' '.repeat(stripAnsi(pre).length + 1);
@@ -102,20 +102,24 @@ const fileLogger = {
   },
 };
 
+/* eslint-disable-next-line complexity */
 export const createLogger = (flags: Flags, options?: Partial<Options>) => {
   let level =
     options?.logLevel ||
     flags.logLevel ||
     (LOG_LEVEL.toLowerCase() as Flags['logLevel']) ||
     DEFAULT_LEVEL;
-  if (DISABLE_LOGGING === 'true') level = 'silent';
 
-  let logPrefixer = createPrefixer(true, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
-  let filePrefixer = createPrefixer(false, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
+  if (DISABLE_LOGGING === 'true') {
+    level = 'silent';
+  }
+
   let interactive = (options?.interactive || flags.interactive) && !(options?.debug || flags.debug);
   let enqueue = false;
   const queue: QueueMessage[] = [];
 
+  const logPrefixer = createPrefixer(true, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
+  const filePrefixer = createPrefixer(false, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
   const log =
     (type: LogType, logFileOnly?: boolean) =>
     (...args: any[]) => {
