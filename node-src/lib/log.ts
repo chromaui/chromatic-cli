@@ -33,6 +33,16 @@ const logVerbose = (type: string, args: any[]) => {
   return args.map((argument) => (typeof argument === 'string' ? argument : stringify(argument)));
 };
 
+// Generate a timestamp like "14:30:00.123" in local time
+const getTimeString = () =>
+  new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    fractionalSecondDigits: 3,
+    hour12: false,
+  });
+
 const createPrefixer =
   (color = false, prefix?: string) =>
   (messages: string[]) => {
@@ -40,7 +50,7 @@ const createPrefixer =
     if (messages.every((message) => /^\s*$/.test(message))) return messages;
 
     // Use a timestamp as default prefix
-    const pre = prefix ?? chalk.dim(new Date().toISOString().slice(11, 23));
+    const pre = prefix ?? chalk.dim(getTimeString());
     if (pre === '') return color ? messages : messages.map((message) => stripAnsi(message));
 
     // Pad lines with spaces to align with the prefix
