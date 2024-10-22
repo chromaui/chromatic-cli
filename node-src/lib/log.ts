@@ -12,7 +12,6 @@ interface QueueMessage {
   messages: string[];
 }
 
-const { DISABLE_LOGGING, LOG_LEVEL = '', LOG_PREFIX } = process.env;
 const LOG_LEVELS = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
 const DEFAULT_LEVEL = 'info';
 
@@ -24,13 +23,18 @@ process.on('unhandledRejection', handleRejection);
 const logInteractive = (args: any[]): string[] =>
   args
     .map((argument) => (argument && argument.message) || argument)
+    // .map((argument) => (typeof argument === 'number' ? String(argument) : argument))
     .filter((argument) => typeof argument === 'string');
 
 // Stringifies metadata to JSON
 const logVerbose = (type: string, args: any[]) => {
   const stringify =
     type === 'error' ? (err: any) => JSON.stringify(errorSerializer(err)) : JSON.stringify;
-  return args.map((argument) => (typeof argument === 'string' ? argument : stringify(argument)));
+  return args.map((argument) =>
+    typeof argument === 'string' || typeof argument === 'number'
+      ? String(argument)
+      : stringify(argument)
+  );
 };
 
 // Generate a timestamp like "14:30:00.123" in local time
@@ -114,6 +118,8 @@ const fileLogger = {
 
 /* eslint-disable-next-line complexity */
 export const createLogger = (flags: Flags, options?: Partial<Options>) => {
+  const { DISABLE_LOGGING, LOG_LEVEL = '', LOG_PREFIX } = process.env;
+
   let level =
     options?.logLevel ||
     flags.logLevel ||
