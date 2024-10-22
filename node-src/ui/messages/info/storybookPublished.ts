@@ -1,26 +1,32 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
+import { isE2EBuild } from '../../../lib/e2eUtils';
 import { Context } from '../../../types';
 import { info, success } from '../../components/icons';
 import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
+import { buildType, capitalize } from '../../tasks/utils';
 
-export default ({ build, storybookUrl }: Required<Pick<Context, 'build' | 'storybookUrl'>>) => {
+export default (ctx: Context) => {
+  if (!ctx.storybookUrl) {
+    throw new Error('No Storybook URL provided');
+  }
+
+  const result = [chalk`${success} {bold ${capitalize(buildType(ctx))} published}`];
+
   // `ctx.build` is initialized and overwritten in many ways, which means that
   // this can be any kind of build without component and stories information,
   // like PASSED builds, for example
-  if (build.componentCount && build.specCount) {
-    const { components, stories } = stats({ build });
-    return dedent(chalk`
-      ${success} {bold Storybook published}
-      We found ${components} with ${stories}.
-      ${info} View your Storybook at ${link(storybookUrl)}
-    `);
+  if (ctx.build.componentCount && ctx.build.specCount) {
+    const { components, stories, e2eTests } = stats({ build: ctx.build });
+
+    result.push(
+      isE2EBuild(ctx.options) ? `We found ${e2eTests}.` : `We found ${components} with ${stories}.`
+    );
   }
 
-  return dedent(chalk`
-    ${success} {bold Storybook published}
-    ${info} View your Storybook at ${link(storybookUrl)}
-  `);
+  result.push(`${info} View your ${buildType(ctx)} at ${link(ctx.storybookUrl)}`);
+
+  return dedent(chalk`${result.join('\n')}`);
 };

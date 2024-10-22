@@ -16,11 +16,11 @@ import {
 } from './upload';
 
 export default {
-  title: 'CLI/Tasks/Upload',
+  title: 'CLI/Tasks/Upload/E2E',
   decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
-const ctx = { options: {} } as any;
+const ctx = { options: { playwright: true } } as any;
 
 export const Initial = () => initial(ctx);
 

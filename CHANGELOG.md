@@ -1,3 +1,21 @@
+# v11.14.0 (Mon Oct 21 2024)
+
+#### 🚀 Enhancement
+
+- Update task output to account for E2E [#1096](https://github.com/chromaui/chromatic-cli/pull/1096) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Switch to read-package-up from read-pkg-up [#1106](https://github.com/chromaui/chromatic-cli/pull/1106) ([@jmhobbs](https://github.com/jmhobbs))
+- Only run `package-size` on pull request [#1105](https://github.com/chromaui/chromatic-cli/pull/1105) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.13.0 (Mon Oct 21 2024)
 
 #### 🚀 Enhancement

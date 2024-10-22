@@ -13,7 +13,7 @@ import {
 } from './verify';
 
 export default {
-  title: 'CLI/Tasks/Verify',
+  title: 'CLI/Tasks/Verify/E2E',
   decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
@@ -23,7 +23,7 @@ const build = {
   app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
 };
 
-const ctx = { options: {} } as any;
+const ctx = { options: { playwright: true } } as any;
 
 export const Initial = () => initial(ctx);
 
@@ -61,7 +61,7 @@ export const Published = () => success({ ...ctx, isPublishOnly: true, build } as
 
 export const ContinueSetup = () => success({ ...ctx, isOnboarding: true, build } as any);
 
-export const NoStories = () => failed({ ...ctx, options: {} } as any);
+export const NoStories = () => failed(ctx);
 
 export const NoMatches = () =>
   failed({ ...ctx, options: { ...ctx.options, onlyStoryNames: ['MyComponent/MyStory'] } } as any);
