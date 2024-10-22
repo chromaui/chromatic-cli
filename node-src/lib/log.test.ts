@@ -151,3 +151,17 @@ describe('log levels', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 });
+
+it('stringifies non-primitive values', () => {
+  const logger = createLogger({});
+  logger.info('message', 1, true, null, undefined, { key: 'value' });
+  expect(consoleInfo).toHaveBeenCalledWith(
+    timestamp,
+    'message',
+    '1',
+    'true',
+    'null',
+    undefined,
+    JSON.stringify({ key: 'value' })
+  );
+});

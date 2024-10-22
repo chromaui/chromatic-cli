@@ -19,22 +19,21 @@ const DEFAULT_LEVEL = 'info';
 const handleRejection = (reason: string) => console.error('Unhandled promise rejection:', reason);
 process.on('unhandledRejection', handleRejection);
 
+const isPrintable = (value: any, type = typeof value) =>
+  type === 'string' || type === 'number' || type === 'boolean';
+
 // Omits any JSON metadata, returning only the message string
 const logInteractive = (args: any[]): string[] =>
   args
     .map((argument) => (argument && argument.message) || argument)
-    // .map((argument) => (typeof argument === 'number' ? String(argument) : argument))
-    .filter((argument) => typeof argument === 'string');
+    .filter((argument) => isPrintable(argument))
+    .map(String);
 
 // Stringifies metadata to JSON
 const logVerbose = (type: string, args: any[]) => {
   const stringify =
     type === 'error' ? (err: any) => JSON.stringify(errorSerializer(err)) : JSON.stringify;
-  return args.map((argument) =>
-    typeof argument === 'string' || typeof argument === 'number'
-      ? String(argument)
-      : stringify(argument)
-  );
+  return args.map((argument) => (isPrintable(argument) ? String(argument) : stringify(argument)));
 };
 
 // Generate a timestamp like "14:30:00.123" in local time
