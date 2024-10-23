@@ -1,3 +1,15 @@
+# v11.15.0 (Wed Oct 23 2024)
+
+#### 🚀 Enhancement
+
+- Add support for `logLevel` and `logPrefix` options, use local timestamp as default prefix [#1107](https://github.com/chromaui/chromatic-cli/pull/1107) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.14.0 (Mon Oct 21 2024)
 
 #### 🚀 Enhancement
