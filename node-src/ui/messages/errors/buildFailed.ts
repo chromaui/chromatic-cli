@@ -16,8 +16,8 @@ export default (
 
   const commandToBuild = buildScriptName || buildCommandOption;
   const suggestedRunCommands = buildScriptName
-    ? `{bold npm run ${commandToBuild}} or {bold yarn ${commandToBuild}}`
-    : `{bold ${commandToBuild}}`;
+    ? chalk`{bold npm run ${commandToBuild}} or {bold yarn ${commandToBuild}}`
+    : chalk`{bold ${commandToBuild}}`;
 
   return [
     dedent(chalk`
