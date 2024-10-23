@@ -19,8 +19,10 @@ const DEFAULT_LEVEL = 'info';
 const handleRejection = (reason: string) => console.error('Unhandled promise rejection:', reason);
 process.on('unhandledRejection', handleRejection);
 
-const isPrintable = (value: any, type = typeof value) =>
-  type === 'string' || type === 'number' || type === 'boolean';
+const isPrintable = (value: any) => {
+  const type = typeof value;
+  return type === 'string' || type === 'number' || type === 'boolean';
+};
 
 // Omits any JSON metadata, returning only the message string
 const logInteractive = (args: any[]): string[] =>
