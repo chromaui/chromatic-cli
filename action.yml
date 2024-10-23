@@ -59,6 +59,12 @@ inputs:
   logFile:
     description: 'Write CLI logs to a file'
     required: false
+  logLevel:
+    description: 'One of: silent, error, warn, info, debug (default: info)'
+    required: false
+  logPrefix:
+    description: 'Custom prefix for log messages (default: current timestamp)'
+    required: false
   only:
     description: 'Deprecated, replaced by onlyStoryNames'
     required: false

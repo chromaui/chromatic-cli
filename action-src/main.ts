@@ -116,6 +116,8 @@ async function run() {
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
     const logFile = getInput('logFile');
+    const logLevel = getInput('logLevel');
+    const logPrefix = getInput('logPrefix');
     const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getMultilineInput('onlyStoryFiles');
@@ -169,6 +171,8 @@ async function run() {
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
         interactive: false,
         logFile: maybe(logFile),
+        logLevel: maybe(logLevel),
+        logPrefix: maybe(logPrefix),
         only: maybe(only),
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),

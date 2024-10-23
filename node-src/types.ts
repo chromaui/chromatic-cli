@@ -51,6 +51,8 @@ export interface Flags {
   junitReport?: string;
   list?: boolean;
   logFile?: string;
+  logLevel?: 'silent' | 'error' | 'warn' | 'info' | 'debug';
+  logPrefix?: string;
   storybookLogFile?: string;
   traceChanged?: string;
   uploadMetadata?: boolean;
@@ -69,6 +71,8 @@ export interface Options extends Configuration {
 
   configFile?: Flags['configFile'];
   logFile?: Flags['logFile'];
+  logLevel?: Flags['logLevel'];
+  logPrefix?: Flags['logPrefix'];
   onlyChanged: boolean | string;
   onlyStoryFiles: Flags['onlyStoryFiles'];
   onlyStoryNames: Flags['onlyStoryNames'];
