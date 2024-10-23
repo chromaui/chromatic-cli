@@ -69,10 +69,10 @@
     "isChromatic.d.ts"
   ],
   "scripts": {
-    "build": "clean-package && tsup ; clean-package restore",
+    "build": "clean-package && tsup && clean-package restore",
     "build-storybook": "storybook build --stats-json",
     "build-test-storybook": "cross-env SMOKE_TEST=true storybook build -o test-storybook --stats-json",
-    "build-subdir": "cd subdir && yarn build ; cd ..",
+    "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./dist/bin.js",
     "chromatic-prebuilt": "./dist/bin.js --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.js",
