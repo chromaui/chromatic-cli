@@ -92,6 +92,7 @@ export default function getOptions(ctx: InitialContext): Options {
     preserveMissingSpecs: undefined,
 
     buildScriptName: undefined,
+    buildCommand: undefined,
     playwright: undefined,
     cypress: undefined,
     outputDir: undefined,
@@ -158,6 +159,7 @@ export default function getOptions(ctx: InitialContext): Options {
       flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
 
     buildScriptName: flags.buildScriptName,
+    buildCommand: flags.buildCommand,
     playwright: trueIfSet(flags.playwright),
     cypress: trueIfSet(flags.cypress),
     outputDir: takeLast(flags.outputDir),
@@ -290,6 +292,10 @@ export default function getOptions(ctx: InitialContext): Options {
     throw new Error(incompatibleOptions(['--junit-report', '--exit-once-uploaded']));
   }
 
+  if (potentialOptions.buildScriptName && potentialOptions.buildCommand) {
+    throw new Error(incompatibleOptions(['--build-script-name', '--build-command']));
+  }
+
   if (
     typeof potentialOptions.junitReport === 'string' &&
     path.extname(potentialOptions.junitReport) !== '.xml'
@@ -312,6 +318,10 @@ export default function getOptions(ctx: InitialContext): Options {
 
   // Build Storybook
   if (storybookBuildDir) {
+    return options;
+  }
+
+  if (potentialOptions.buildCommand) {
     return options;
   }
 

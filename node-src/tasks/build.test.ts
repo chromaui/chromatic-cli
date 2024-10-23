@@ -68,6 +68,7 @@ describe('setBuildCommand', () => {
     const ctx = {
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
+      flags: {},
       storybook: { version: '6.1.0' },
       git: {},
     } as any;

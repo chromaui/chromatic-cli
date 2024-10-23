@@ -21,6 +21,9 @@ inputs:
   buildScriptName:
     description: 'The npm script that builds your Storybook [build-storybook]'
     required: false
+  buildCommand:
+    description: 'The command that builds your Storybook (when your build command does not exist in "scripts" of your package.json)'
+    required: false
   configFile:
     description: 'Path from where to load the Chromatic config JSON file.'
   cypress:

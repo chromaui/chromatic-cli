@@ -45,6 +45,16 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
   ].filter((c): c is string => !!c);
 
+  const buildCommand = ctx.flags.buildCommand || ctx.options.buildCommand;
+  if (buildCommand) {
+    ctx.buildCommand = `${buildCommand} ${buildCommandOptions
+      // There is a bug in NX that outputs an invalid Storybook if the `--output-dir` flag is passed.
+      // Therefore, we need to skip that until it's fixed: https://github.com/nrwl/nx/issues/28594
+      .filter((c) => !c.includes('--output-dir'))
+      .join(' ')}`;
+    return;
+  }
+
   if (isE2EBuild(ctx.options)) {
     ctx.buildCommand = await getE2EBuildCommand(
       ctx,
