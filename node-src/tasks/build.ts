@@ -153,7 +153,12 @@ export const buildStorybook = async (ctx: Context) => {
 
     signal?.throwIfAborted();
 
-    const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
+    let buildLog;
+    try {
+      buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
+    } catch (err) {
+      ctx.log.error(`Failed to read Storybook build log "${ctx.buildLogFile}":`, err);
+    }
     ctx.log.error(buildFailed(ctx, err, buildLog));
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(failed(ctx).output);
