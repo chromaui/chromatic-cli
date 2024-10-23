@@ -66,7 +66,7 @@ export async function getConfiguration(
     return { configFile: usedConfigFile, ...configuration };
   } catch (err) {
     // Config file does not exist
-    if (/ENOENT/.test(err.message)) {
+    if (errIsNotExists(err)) {
       // The user passed no configFile option so it's OK for the file not to exist
       if (!configFile) {
         return {};
@@ -83,4 +83,11 @@ export async function getConfiguration(
     }
     throw err;
   }
+}
+
+function errIsNotExists(err: Error) {
+  // Node includes ENOENT in message
+  // bun includes it in the  name
+  // toString is the shortest check for both
+  return err.toString().includes('ENOENT');
 }
