@@ -59,3 +59,15 @@ export const BuildFailed = () =>
     { message: 'Command failed with exit code 1' },
     buildLog
   );
+
+export const BuildFailedWithCommand = () =>
+  buildFailed(
+    {
+      options: { buildCommand: 'nx run my-app:build-storybook' },
+      buildCommand,
+      buildLogFile: '/path/to/project/build-storybook.log',
+      runtimeMetadata,
+    } as any,
+    { message: 'Command failed with exit code 1' },
+    buildLog
+  );

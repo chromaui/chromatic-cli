@@ -104,6 +104,7 @@ async function run() {
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
+    const buildCommand = getInput('buildCommand');
     const configFile = getInput('configFile');
     const cypress = getInput('cypress');
     const debug = getInput('debug');
@@ -158,6 +159,7 @@ async function run() {
         autoAcceptChanges: maybe(autoAcceptChanges),
         branchName: maybe(branchName),
         buildScriptName: maybe(buildScriptName),
+        buildCommand: maybe(buildCommand),
         configFile: maybe(configFile),
         cypress: maybe(cypress),
         debug: maybe(debug),

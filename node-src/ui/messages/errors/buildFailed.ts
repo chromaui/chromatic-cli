@@ -11,15 +11,20 @@ export default (
   { message },
   buildLog?: string
 ) => {
-  const { buildScriptName } = options;
+  const { buildScriptName, buildCommand: buildCommandOption } = options;
   const lines = buildLog?.split(EOL).filter((line) => line && !line.startsWith('<s>')) || [];
+
+  const commandToBuild = buildScriptName || buildCommandOption;
+  const suggestedRunCommands = buildScriptName
+    ? chalk`{bold npm run ${commandToBuild}} or {bold yarn ${commandToBuild}}`
+    : chalk`{bold ${commandToBuild}}`;
 
   return [
     dedent(chalk`
-      The CLI tried to run your {bold ${buildScriptName}} script, but the command failed. This indicates a problem with your Storybook. Here's what to do:
+      The CLI tried to run your {bold ${commandToBuild}} script, but the command failed. This indicates a problem with your Storybook. Here's what to do:
 
       - Check the Storybook build log printed below.
-      - Run {bold npm run ${buildScriptName}} or {bold yarn ${buildScriptName}} yourself and make sure it outputs a valid Storybook by opening the generated {bold index.html} in your browser.
+      - Run ${suggestedRunCommands} yourself and make sure it outputs a valid Storybook by opening the generated {bold index.html} in your browser.
       - Review the build-storybook CLI options at ${link(
         'https://storybook.js.org/docs/configurations/cli-options/#for-build-storybook'
       )}

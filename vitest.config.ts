@@ -3,6 +3,7 @@ import { configDefaults, coverageConfigDefaults, defineConfig } from 'vitest/con
 export default defineConfig({
   test: {
     exclude: [...configDefaults.exclude, '**/getParentCommits.test.ts'],
+    clearMocks: true, // Clear all mocks between each test
     coverage: {
       provider: 'v8',
       exclude: [

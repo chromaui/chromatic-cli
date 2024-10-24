@@ -13,6 +13,7 @@ export interface Flags {
 
   // Storybook options
   buildScriptName?: string;
+  buildCommand?: string;
   outputDir?: string[];
   storybookBuildDir?: string[];
 
@@ -102,6 +103,7 @@ export interface Options extends Configuration {
   originalArgv: string[];
 
   buildScriptName: Flags['buildScriptName'];
+  buildCommand: Flags['buildCommand'];
   playwright: Flags['playwright'];
   cypress: Flags['cypress'];
   outputDir: string;

@@ -29,6 +29,7 @@ const configurationSchema = z
     ignoreLastBuildOnBranch: z.string(),
 
     buildScriptName: z.string(),
+    buildCommand: z.string(),
     playwright: z.boolean(),
     cypress: z.boolean(),
     outputDir: z.string(),

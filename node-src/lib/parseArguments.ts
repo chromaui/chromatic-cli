@@ -24,6 +24,7 @@ export default function parseArguments(argv: string[]) {
 
     Storybook options
       --build-script-name, -b [name]            The npm script that builds your Storybook we should take snapshots against. Use this if your Storybook build script is named differently. [build-storybook]
+      --build-command <command>                 The command that builds your Storybook we should take snapshots against. Use this if your Storybook build command does not exist in "scripts" of your package.json (like using NX). Requires --output-dir.
       --output-dir, -o <dirname>                Relative path to target directory for building your Storybook, in case you want to preserve it. Otherwise a temporary directory is used if possible.
       --storybook-build-dir, -d <dirname>       If you have already built your Storybook, provide the path to the static build directory.
 
@@ -82,6 +83,7 @@ export default function parseArguments(argv: string[]) {
 
         // Storybook options
         buildScriptName: { type: 'string', alias: 'b' },
+        buildCommand: { type: 'string' },
         outputDir: { type: 'string', alias: 'o', isMultiple: true },
         storybookBuildDir: { type: 'string', alias: 'd', isMultiple: true },
 

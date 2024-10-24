@@ -61,7 +61,7 @@ function getPathsInDirectory(ctx: Context, rootDirectory: string, dirname = '.')
     });
   } catch (err) {
     ctx.log.debug(err);
-    throw new Error(invalid({ sourceDir: rootDirectory } as any, err).output);
+    throw new Error(invalid({ ...ctx, sourceDir: rootDirectory }, err).output);
   }
 }
 
