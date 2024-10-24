@@ -43,9 +43,6 @@ export const setBuildCommand = async (ctx: Context) => {
   const buildCommand = ctx.flags.buildCommand || ctx.options.buildCommand;
 
   const buildCommandOptions = [
-    // NOTE: There is a bug in NX that outputs an invalid Storybook if the `--output-dir` flag is
-    // passed. Therefore, we need to skip that until it's fixed: https://github.com/nrwl/nx/issues/28594
-    // When that's fixed, we can remove the `!buildCommand &&` below.
     !buildCommand && `--output-dir=${ctx.sourceDir}`,
     ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
   ].filter((c): c is string => !!c);

@@ -296,6 +296,12 @@ export default function getOptions(ctx: InitialContext): Options {
     throw new Error(incompatibleOptions(['--build-script-name', '--build-command']));
   }
 
+  // --build-command can put the built Storybook anywhere. Rather than reading through the value,
+  // we require `--output-dir` to avoid the issue.
+  if (potentialOptions.buildCommand && !potentialOptions.outputDir) {
+    throw new Error(dependentOption('--build-command', '--output-dir'));
+  }
+
   if (
     typeof potentialOptions.junitReport === 'string' &&
     path.extname(potentialOptions.junitReport) !== '.xml'
