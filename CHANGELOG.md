@@ -1,3 +1,15 @@
+# v11.16.1 (Fri Oct 25 2024)
+
+#### 🐛 Bug Fix
+
+- Handle ENOENT for bun as well as Node [#1108](https://github.com/chromaui/chromatic-cli/pull/1108) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.16.0 (Fri Oct 25 2024)
 
 #### 🚀 Enhancement
