@@ -40,10 +40,17 @@ export const setBuildCommand = async (ctx: Context) => {
     ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
+  const buildCommand = ctx.flags.buildCommand || ctx.options.buildCommand;
+
   const buildCommandOptions = [
-    `--output-dir=${ctx.sourceDir}`,
+    !buildCommand && `--output-dir=${ctx.sourceDir}`,
     ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
   ].filter((c): c is string => !!c);
+
+  if (buildCommand) {
+    ctx.buildCommand = `${buildCommand} ${buildCommandOptions.join(' ')}`;
+    return;
+  }
 
   if (isE2EBuild(ctx.options)) {
     ctx.buildCommand = await getE2EBuildCommand(

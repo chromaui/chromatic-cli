@@ -12,31 +12,41 @@ vi.mock('@antfu/ni');
 const command = vi.mocked(execaCommand);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
+const baseContext = { options: {}, flags: {} } as any;
+
 beforeEach(() => {
   command.mockClear();
 });
 
 describe('setSourceDir', () => {
   it('sets a random temp directory path on the context', async () => {
-    const ctx = { options: {}, storybook: { version: '5.0.0' } } as any;
+    const ctx = { ...baseContext, storybook: { version: '5.0.0' } } as any;
     await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toMatch(/chromatic-/);
   });
 
   it('falls back to the default output dir for older Storybooks', async () => {
-    const ctx = { options: {}, storybook: { version: '4.0.0' } } as any;
+    const ctx = { ...baseContext, storybook: { version: '4.0.0' } } as any;
     await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toBe('storybook-static');
   });
 
   it('uses the outputDir option if provided', async () => {
-    const ctx = { options: { outputDir: 'storybook-out' }, storybook: { version: '5.0.0' } } as any;
+    const ctx = {
+      ...baseContext,
+      options: { outputDir: 'storybook-out' },
+      storybook: { version: '5.0.0' },
+    } as any;
     await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toBe('storybook-out');
   });
 
   it('uses the outputDir option if provided, even for older Storybooks', async () => {
-    const ctx = { options: { outputDir: 'storybook-out' }, storybook: { version: '4.0.0' } } as any;
+    const ctx = {
+      ...baseContext,
+      options: { outputDir: 'storybook-out' },
+      storybook: { version: '4.0.0' },
+    } as any;
     await setSourceDirectory(ctx);
     expect(ctx.sourceDir).toBe('storybook-out');
   });
@@ -47,6 +57,7 @@ describe('setBuildCommand', () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.2.0' },
@@ -66,10 +77,11 @@ describe('setBuildCommand', () => {
     getCliCommand.mockReturnValue(Promise.resolve('yarn run build:storybook'));
 
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: {},
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
     } as any;
     await setBuildCommand(ctx);
 
@@ -85,10 +97,11 @@ describe('setBuildCommand', () => {
     getCliCommand.mockReturnValue(Promise.resolve('pnpm run build:storybook'));
 
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: {},
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
     } as any;
     await setBuildCommand(ctx);
 
@@ -100,8 +113,27 @@ describe('setBuildCommand', () => {
     expect(ctx.buildCommand).toEqual('pnpm run build:storybook');
   });
 
+  it('uses --build-command, if set', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const ctx = {
+      ...baseContext,
+      sourceDir: './source-dir/',
+      options: { buildCommand: 'nx run my-app:build-storybook' },
+      storybook: { version: '6.2.0' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setBuildCommand(ctx);
+
+    expect(getCliCommand).not.toHaveBeenCalled();
+    expect(ctx.buildCommand).toEqual(
+      'nx run my-app:build-storybook --webpack-stats-json=./source-dir/'
+    );
+  });
+
   it('warns if --only-changes is not supported', async () => {
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.1.0' },
@@ -118,6 +150,7 @@ describe('setBuildCommand', () => {
 describe('buildStorybook', () => {
   it('runs the build command', async () => {
     const ctx = {
+      ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: { debug: vi.fn() },
@@ -134,6 +167,7 @@ describe('buildStorybook', () => {
 
   it('fails when build times out', async () => {
     const ctx = {
+      ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
@@ -146,6 +180,7 @@ describe('buildStorybook', () => {
 
   it('passes NODE_ENV=production', async () => {
     const ctx = {
+      ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: { debug: vi.fn() },
@@ -160,6 +195,7 @@ describe('buildStorybook', () => {
 
   it('allows overriding NODE_ENV with STORYBOOK_NODE_ENV', async () => {
     const ctx = {
+      ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000, STORYBOOK_NODE_ENV: 'test' },
       log: { debug: vi.fn() },
@@ -194,6 +230,7 @@ describe('buildStorybook E2E', () => {
     'fails with missing dependency error when error message is $name',
     async ({ error }) => {
       const ctx = {
+        ...baseContext,
         buildCommand: 'npm exec build-archive-storybook',
         options: { buildScriptName: '', playwright: true },
         env: { STORYBOOK_BUILD_TIMEOUT: 0 },
@@ -212,6 +249,7 @@ describe('buildStorybook E2E', () => {
 
   it('fails with generic error message when not missing dependency error', async () => {
     const ctx = {
+      ...baseContext,
       buildCommand: 'npm exec build-archive-storybook',
       options: { buildScriptName: '', playwright: true },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
