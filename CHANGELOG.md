@@ -1,3 +1,15 @@
+# v11.16.0 (Fri Oct 25 2024)
+
+#### 🚀 Enhancement
+
+- Add support for `--build-command` for arbitrary build commands [#1109](https://github.com/chromaui/chromatic-cli/pull/1109) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.15.0 (Wed Oct 23 2024)
 
 #### 🚀 Enhancement
