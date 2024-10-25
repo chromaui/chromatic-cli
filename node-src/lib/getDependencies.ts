@@ -10,7 +10,7 @@ export const getDependencies = async (
     lockfilePath,
     // eslint-disable-next-line unicorn/prevent-abbreviations
     includeDev = true,
-    strictOutOfSync = false,
+    strictOutOfSync = true,
   }: {
     rootPath: string;
     manifestPath: string;

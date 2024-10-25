@@ -249,14 +249,8 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(context)).resolves.toEqual(['react', 'lodash']);
 
     // Root manifest and lock files are checked
-    expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true, false);
-    expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.package.json',
-      'A.yarn.lock',
-      true,
-      false
-    );
+    expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true, true);
+    expect(buildDepTree).toHaveBeenCalledWith('/root', 'A.package.json', 'A.yarn.lock', true, true);
 
     // Subpackage manifest and lock files are checked
     expect(buildDepTree).toHaveBeenCalledWith(
@@ -264,14 +258,14 @@ describe('findChangedDependencies', () => {
       'subdir/package.json',
       'subdir/yarn.lock',
       true,
-      false
+      true
     );
     expect(buildDepTree).toHaveBeenCalledWith(
       '/root',
       'A.subdir/package.json',
       'A.subdir/yarn.lock',
       true,
-      false
+      true
     );
   });
 
@@ -297,7 +291,7 @@ describe('findChangedDependencies', () => {
       'A.subdir/package.json',
       'A.yarn.lock', // root lockfile
       true,
-      false
+      true
     );
   });
 
@@ -346,7 +340,7 @@ describe('findChangedDependencies', () => {
       'A.subdir/package.json',
       'A.subdir/package-lock.json',
       true,
-      false
+      true
     );
   });
 });

@@ -273,6 +273,30 @@ describe('traceChangedFiles', () => {
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
+  it('bails if package.json and lockfile are out of sync', async () => {
+    const outOfSyncError = new Error('package.json and lockfile out of sync');
+    outOfSyncError.name = 'OutOfSyncError';
+
+    findChangedDependencies.mockRejectedValue(outOfSyncError);
+
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx, {} as any);
+
+    expect(ctx.turboSnap.bailReason).toEqual({ packageAndLockOutOfSync: true });
+    expect(findChangedPackageFiles).not.toHaveBeenCalled();
+    expect(getDependentStoryFiles).not.toHaveBeenCalled();
+  });
+
   it('throws an error if storybookBaseDir is incorrect', async () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockResolvedValue([]);

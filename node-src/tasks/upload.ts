@@ -17,6 +17,7 @@ import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
 import bailFile from '../ui/messages/warnings/bailFile';
 import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
+import packageAndLockOutOfSync from '../ui/messages/warnings/packageAndLockOutOfSync';
 import {
   bailed,
   dryRun,
@@ -136,14 +137,17 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   const { changedFiles, packageMetadataChanges } = ctx.git;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    let changedDependencyNames: void | string[] = [];
+    let changedDependencyNames: string[] = [];
     if (packageMetadataChanges?.length) {
-      changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
-        const { name, message, stack, code } = err;
-        ctx.log.debug({ name, message, stack, code });
-      });
-      if (changedDependencyNames) {
+      try {
+        changedDependencyNames = await findChangedDependencies(ctx);
+      } catch (err) {
+        if (shouldBailFromError(ctx, err)) {
+          return;
+        }
+      }
+
+      if (changedDependencyNames.length > 0) {
         ctx.git.changedDependencyNames = changedDependencyNames;
         if (!ctx.options.interactive) {
           const list =
@@ -282,6 +286,22 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
     throw err;
   }
 };
+
+function shouldBailFromError(ctx: Context, err: any): boolean {
+  if (!ctx.turboSnap) return true;
+
+  if (err.name === 'OutOfSyncError') {
+    ctx.turboSnap.bailReason = { packageAndLockOutOfSync: true };
+    ctx.log.warn(packageAndLockOutOfSync(err.dependencyName));
+
+    return true;
+  }
+
+  const { name, message, stack, code } = err;
+  ctx.log.debug({ name, message, stack, code });
+
+  return false;
+}
 
 /**
  * Sets up the Listr task for uploading the build assets to Chromatic.

@@ -398,6 +398,7 @@ export interface TurboSnap {
     changedStaticFiles?: string[];
     changedExternalFiles?: string[];
     invalidChangedFiles?: true;
+    packageAndLockOutOfSync?: true;
     missingStatsFile?: true;
     noAncestorBuild?: true;
     rebuild?: true;
