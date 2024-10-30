@@ -31,6 +31,16 @@ SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic 
 
 ### Running another project against local CLI
 
+#### Call CLI directly
+
+```
+node /path/to/cli/repo/dist/bin.js -t <token>
+```
+
+_This should work in most cases. However, if you run into weird issues, try the symlink version below._
+
+#### Symlink CLI
+
 1. Navigate to the project you'd like to run builds against
 2. Add `chromatic` to your dependencies
 
