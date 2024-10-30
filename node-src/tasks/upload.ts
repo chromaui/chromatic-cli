@@ -17,7 +17,7 @@ import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
 import bailFile from '../ui/messages/warnings/bailFile';
 import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
-import packageAndLockOutOfSync from '../ui/messages/warnings/packageAndLockOutOfSync';
+import packageAndLockFilesOutOfSync from '../ui/messages/warnings/packageAndLockFilesOutOfSync';
 import {
   bailed,
   dryRun,
@@ -291,8 +291,8 @@ function shouldBailFromError(ctx: Context, err: any): boolean {
   if (!ctx.turboSnap) return true;
 
   if (err.name === 'OutOfSyncError') {
-    ctx.turboSnap.bailReason = { packageAndLockOutOfSync: true };
-    ctx.log.warn(packageAndLockOutOfSync(err.dependencyName));
+    ctx.turboSnap.bailReason = { packageAndLockFilesOutOfSync: true };
+    ctx.log.warn(packageAndLockFilesOutOfSync(err.dependencyName));
 
     return true;
   }

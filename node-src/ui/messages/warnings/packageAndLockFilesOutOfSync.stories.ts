@@ -1,4 +1,4 @@
-import packageAndLockOutOfSync from './packageAndLockOutOfSync';
+import packageAndLockOutOfSync from './packageAndLockFilesOutOfSync';
 
 export default {
   title: 'CLI/Messages/Warnings',
