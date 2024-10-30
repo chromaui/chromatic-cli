@@ -1,3 +1,15 @@
+# v11.16.3 (Wed Oct 30 2024)
+
+#### ⚠️ Pushed to `main`
+
+- Revert "Add `ctx.projectMetadata.hasRouter`" ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.16.2 (Wed Oct 30 2024)
 
 #### ⚠️ Pushed to `main`
