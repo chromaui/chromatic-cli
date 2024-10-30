@@ -29,6 +29,31 @@ To only test a small number of test stories as a smoke test, use:
 SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic -t <token>
 ```
 
+### Running another project against local CLI
+
+1. Navigate to the project you'd like to run builds against
+2. Add `chromatic` to your dependencies
+
+   ```
+   yarn add chromatic
+   ```
+
+3. Use [yarn link](https://yarnpkg.com/cli/link) to symlink your local CLI repo
+
+   ```
+   yarn link /path/to/cli/repo
+   ```
+
+4. Run your build
+
+   ```
+   yarn chromatic -t <token>
+   ```
+
+You can also combine this with the `CHROMATIC_INDEX_URL` environment variable to run the build against different versions of Chromatic.
+
+Also note: Since your `chromatic` dependency is symlinked, you can build your local CLI and your project will automatically get the updated code.
+
 ## Publishing a new version
 
 We use `auto` to automate the release process. Versions are bumped, tags are created and the changelog is updated automatically. A new release goes out whenever a PR is merged to `main`. A PR **must** have **exactly one** of the following labels before merging:
