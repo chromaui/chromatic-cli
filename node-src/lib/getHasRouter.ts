@@ -1,4 +1,4 @@
-import { Context } from '../../dist/node';
+import type { Context } from '../types';
 
 const routerPackages = [
   'react-router',
