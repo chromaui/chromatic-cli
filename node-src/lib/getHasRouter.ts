@@ -1,6 +1,6 @@
 import type { Context } from '../types';
 
-const routerPackages = [
+const routerPackages = new Set([
   'react-router',
   'react-router-dom',
   'remix',
@@ -23,11 +23,15 @@ const routerPackages = [
   'gatsby',
   'nuxt',
   '@sveltejs/kit',
-];
+]);
 
+/**
+ * @param packageJson The package JSON of the project (from context)
+ * @returns boolean Does this project use a routing package?
+ */
 export function getHasRouter(packageJson: Context['packageJson']) {
   // NOTE: we just check real dependencies; if it is in dev dependencies, it may just be an example
   return !!Object.keys(packageJson?.dependencies ?? {}).find((depName) =>
-    routerPackages.includes(depName)
+    routerPackages.has(depName)
   );
 }
