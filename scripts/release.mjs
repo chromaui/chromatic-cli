@@ -60,7 +60,7 @@ async function build() {
   await $({
     stdout: 'inherit',
     stderr: 'inherit',
-  })`sentry-cli releases set-commits --auto ${nextVersion}`;
+  })`sentry-cli releases set-commits --auto ${nextVersion} --ignore-missing`;
 
   console.info('🧹 Removing sourcemaps from build');
   await $`yarn clean:sourcemaps`;
