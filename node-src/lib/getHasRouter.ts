@@ -27,11 +27,12 @@ const routerPackages = new Set([
 
 /**
  * @param packageJson The package JSON of the project (from context)
+ *
  * @returns boolean Does this project use a routing package?
  */
 export function getHasRouter(packageJson: Context['packageJson']) {
   // NOTE: we just check real dependencies; if it is in dev dependencies, it may just be an example
-  return !!Object.keys(packageJson?.dependencies ?? {}).find((depName) =>
+  return Object.keys(packageJson?.dependencies ?? {}).some((depName) =>
     routerPackages.has(depName)
   );
 }
