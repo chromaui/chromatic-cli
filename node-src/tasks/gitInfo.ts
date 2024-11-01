@@ -4,7 +4,16 @@ import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import getCommitAndBranch from '../git/getCommitAndBranch';
 import { getParentCommits } from '../git/getParentCommits';
-import { getSlug, getUncommittedHash, getUserEmail, getVersion } from '../git/git';
+import {
+  getCommittedFileCount,
+  getNumberOfComitters,
+  getRepositoryCreationDate,
+  getSlug,
+  getUncommittedHash,
+  getUserEmail,
+  getVersion,
+} from '../git/git';
+import { getHasRouter } from '../lib/getHasRouter';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { isPackageMetadataFile, matchesFile } from '../lib/utils';
@@ -259,6 +268,13 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       }
     }
   }
+
+  ctx.projectMetadata = {
+    hasRouter: getHasRouter(ctx.packageJson),
+    creationDate: await getRepositoryCreationDate(),
+    numberOfCommitters: await getNumberOfComitters(),
+    numberOfAppFiles: await getCommittedFileCount(['page', 'screen'], ['js', 'jsx', 'ts', 'tsx']),
+  };
 
   transitionTo(success, true)(ctx, task);
 };

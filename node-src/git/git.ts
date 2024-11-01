@@ -422,3 +422,47 @@ export async function mergeQueueBranchMatch(branch: string) {
 
   return match ? Number(match[1]) : undefined;
 }
+
+/**
+ * Determine the date the repository was created
+ *
+ * @returns Date The date the repository was created
+ */
+export async function getRepositoryCreationDate() {
+  const dateString = await execGitCommand(`git log --reverse --format=%cd --date=iso | head -1`);
+  return dateString ? new Date(dateString) : undefined;
+}
+
+/**
+ * Determine the number of committers in the last 6 months
+ *
+ * @returns number The number of committers
+ */
+export async function getNumberOfComitters() {
+  const numberString = await execGitCommand(
+    `git shortlog -sn --all --since="6 months ago" | wc -l`
+  );
+  return numberString ? Number.parseInt(numberString, 10) : undefined;
+}
+
+/**
+ * Find the number of files in the git index that include a name with the given prefixes.
+ *
+ * @param nameMatches The names to match - will be matched with upper and lowercase first letter
+ * @param extensions The filetypes to match
+ *
+ * @returns The number of files matching the above
+ */
+export async function getCommittedFileCount(nameMatches: string[], extensions: string[]) {
+  const bothCasesNameMatches = nameMatches.flatMap((match) => [
+    match,
+    [match[0].toUpperCase(), ...match.slice(1)].join(''),
+  ]);
+
+  const globs = bothCasesNameMatches.flatMap((match) =>
+    extensions.map((extension) => `"*${match}*.${extension}"`)
+  );
+
+  const numberString = await execGitCommand(`git ls-files -- ${globs.join(' ')} | wc -l`);
+  return numberString ? Number.parseInt(numberString, 10) : undefined;
+}

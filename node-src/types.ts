@@ -251,7 +251,10 @@ export interface Context {
     mainConfigFilePath?: string;
   };
   projectMetadata: {
-    hasRouter: boolean;
+    hasRouter?: boolean;
+    creationDate?: Date;
+    numberOfCommitters?: number;
+    numberOfAppFiles?: number;
   };
   storybookUrl?: string;
   announcedBuild: {

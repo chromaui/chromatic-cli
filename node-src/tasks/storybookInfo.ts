@@ -1,6 +1,5 @@
 import * as Sentry from '@sentry/node';
 
-import { getHasRouter } from '../lib/getHasRouter';
 import getStorybookInfo from '../lib/getStorybookInfo';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
@@ -18,11 +17,6 @@ export const setStorybookInfo = async (ctx: Context) => {
     }
     Sentry.setContext('storybook', ctx.storybook);
   }
-
-  // Also get some project-level data for analytics
-  ctx.projectMetadata = {
-    hasRouter: getHasRouter(ctx.packageJson),
-  };
 };
 
 /**

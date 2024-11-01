@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   findFilesFromRepositoryRoot,
   getCommit,
+  getCommittedFileCount,
+  getNumberOfComitters,
+  getRepositoryCreationDate,
   getSlug,
   hasPreviousCommit,
   mergeQueueBranchMatch,
@@ -143,5 +146,33 @@ describe('findFilesFromRepositoryRoot', () => {
       expect.any(Object)
     );
     expect(results).toEqual(filesFound);
+  });
+});
+
+describe('getRepositoryCreationDate', () => {
+  it('parses the date successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `2017-05-17 10:00:35 -0700` }) as any);
+    expect(await getRepositoryCreationDate()).toEqual(new Date('2017-05-17T17:00:35.000Z'));
+  });
+});
+
+describe('getNumberOfComitters', () => {
+  it('parses the count successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `      17` }) as any);
+    expect(await getNumberOfComitters()).toEqual(17);
+  });
+});
+
+describe('getCommittedFileCount', () => {
+  it('constructs the correct command', async () => {
+    await getCommittedFileCount(['page', 'screen'], ['js', 'ts']);
+    expect(command).toHaveBeenCalledWith(
+      'git ls-files -- "*page*.js" "*page*.ts" "*Page*.js" "*Page*.ts" "*screen*.js" "*screen*.ts" "*Screen*.js" "*Screen*.ts" | wc -l',
+      expect.anything()
+    );
+  });
+  it('parses the count successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `      17` }) as any);
+    expect(await getCommittedFileCount(['page', 'screen'], ['js', 'ts'])).toEqual(17);
   });
 });

@@ -16,34 +16,4 @@ describe('storybookInfo', () => {
     await setStorybookInfo(ctx);
     expect(ctx.storybook).toEqual(storybook);
   });
-
-  it('sets hasRouter=true if there is a routing package in package.json', async () => {
-    const ctx = {
-      packageJson: {
-        dependencies: {
-          react: '^18',
-          'react-dom': '^18',
-          'react-router': '^6',
-        },
-      },
-    } as any;
-    await setStorybookInfo(ctx);
-    expect(ctx.projectMetadata.hasRouter).toEqual(true);
-  });
-
-  it('sets hasRouter=false if there is a routing package in package.json dependenices', async () => {
-    const ctx = {
-      packageJson: {
-        dependencies: {
-          react: '^18',
-          'react-dom': '^18',
-        },
-        devDependencies: {
-          'react-router': '^6',
-        },
-      },
-    } as any;
-    await setStorybookInfo(ctx);
-    expect(ctx.projectMetadata.hasRouter).toEqual(false);
-  });
 });
