@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import debug from 'debug';
-import { createWriteStream, rm } from 'fs';
+import { createWriteStream, mkdirSync, rm } from 'fs';
+import path from 'path';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
 
@@ -96,13 +97,16 @@ const fileLogger = {
     this.append = () => {};
     this.queue = [];
   },
-  initialize(path: string, onError: LogFunction) {
-    rm(path, { force: true }, (err) => {
+  initialize(filepath: string, onError: LogFunction) {
+    rm(filepath, { force: true }, (err) => {
       if (err) {
         this.disable();
         onError(err);
       } else {
-        const stream = createWriteStream(path, { flags: 'a' });
+        // Ensure the parent directory exists before we create the stream
+        mkdirSync(path.dirname(filepath), { recursive: true });
+
+        const stream = createWriteStream(filepath, { flags: 'a' });
         this.append = (...messages: string[]) => {
           stream?.write(
             messages

@@ -284,6 +284,7 @@ vi.mock('fs', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
   return {
     pathExists: async () => true,
+    mkdirSync: vi.fn(),
     readFileSync: originalModule.readFileSync,
     writeFileSync: vi.fn(),
     createReadStream: vi.fn(() => mockStatsFile),
