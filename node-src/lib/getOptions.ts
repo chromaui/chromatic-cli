@@ -141,11 +141,9 @@ export default function getOptions(ctx: InitialContext): Options {
     forceRebuild: trueIfSet(flags.forceRebuild),
     debug: flags.debug,
     diagnosticsFile:
-      defaultIfSet(flags.diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE) ||
+      defaultUnlessSetOrFalse(flags.diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE) ||
       // for backwards compatibility
-      flags.diagnostics
-        ? DEFAULT_DIAGNOSTICS_FILE
-        : undefined,
+      (flags.diagnostics ? DEFAULT_DIAGNOSTICS_FILE : undefined),
     junitReport: defaultIfSet(flags.junitReport, DEFAULT_REPORT_FILE),
     zip: flags.zip,
     skipUpdateCheck: flags.skipUpdateCheck,
