@@ -1,3 +1,15 @@
+# v11.16.5 (Mon Nov 04 2024)
+
+#### 🐛 Bug Fix
+
+- Account for `rsbuild` stats JSON output and multiple locations [#1110](https://github.com/chromaui/chromatic-cli/pull/1110) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.16.4 (Mon Nov 04 2024)
 
 #### 🐛 Bug Fix
