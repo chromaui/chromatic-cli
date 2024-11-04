@@ -1,3 +1,17 @@
+# v11.16.4 (Mon Nov 04 2024)
+
+#### 🐛 Bug Fix
+
+- Ensure parent directory exists before writing log/diagnostics file [#1117](https://github.com/chromaui/chromatic-cli/pull/1117) ([@codykaup](https://github.com/codykaup))
+- Fix `--diagnostics-file` parsing [#1116](https://github.com/chromaui/chromatic-cli/pull/1116) ([@codykaup](https://github.com/codykaup))
+- Add steps for how to run builds against local CLI [#1113](https://github.com/chromaui/chromatic-cli/pull/1113) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.16.3 (Wed Oct 30 2024)
 
 #### ⚠️ Pushed to `main`
