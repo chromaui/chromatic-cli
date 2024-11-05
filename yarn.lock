@@ -7587,6 +7587,7 @@ __metadata:
     globals: "npm:^15.3.0"
     https-proxy-agent: "npm:^7.0.2"
     husky: "npm:^7.0.0"
+    json5: "npm:^2.2.3"
     jsonfile: "npm:^6.0.1"
     junit-report-builder: "npm:2.1.0"
     listr: "npm:0.14.3"
