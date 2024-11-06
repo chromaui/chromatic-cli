@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync } from 'fs';
+import jsonfile from 'jsonfile';
+import path from 'path';
+import { describe, expect, it, vi } from 'vitest';
 
-import { getDiagnostics } from './writeChromaticDiagnostics';
+import { createLogger } from './log';
+import { getDiagnostics, writeChromaticDiagnostics } from './writeChromaticDiagnostics';
+
+vi.mock('jsonfile');
+vi.mock('fs');
 
 describe('getDiagnostics', () => {
   it('returns context object', () => {
@@ -24,5 +31,24 @@ describe('getDiagnostics', () => {
       flags: { projectToken: undefined },
       extraOptions: { userToken: undefined },
     });
+  });
+});
+
+describe('writeChromaticDiagnostics', () => {
+  it('should create the parent directory if it does not exist', async () => {
+    const ctx = {
+      log: createLogger({}),
+      options: { diagnosticsFile: '/tmp/doesnotexist/diagnostics.json' },
+    };
+    await writeChromaticDiagnostics(ctx as any);
+
+    expect(mkdirSync).toHaveBeenCalledWith(path.dirname(ctx.options.diagnosticsFile), {
+      recursive: true,
+    });
+    expect(jsonfile.writeFile).toHaveBeenCalledWith(
+      ctx.options.diagnosticsFile,
+      expect.any(Object),
+      expect.any(Object)
+    );
   });
 });

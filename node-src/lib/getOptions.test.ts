@@ -209,4 +209,10 @@ describe('getOptions', () => {
       uploadMetadata: true,
     });
   });
+
+  it('allows you to specify a diagnostics file name', async () => {
+    expect(getOptions(getContext(['--diagnostics-file', 'output.json']))).toMatchObject({
+      diagnosticsFile: 'output.json',
+    });
+  });
 });

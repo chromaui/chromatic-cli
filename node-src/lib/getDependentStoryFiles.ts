@@ -56,6 +56,7 @@ const getPackageName = (modulePath: string) => {
  */
 export function normalizePath(posixPath: string, rootPath: string, baseDirectory = '') {
   if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
+
   return path.posix.isAbsolute(posixPath)
     ? path.posix.relative(rootPath, posixPath)
     : path.posix.join(baseDirectory, posixPath);
@@ -140,6 +141,7 @@ export async function getDependentStoryFiles(
       `/virtual:/@storybook/builder-vite/vite-app.js`,
       // rspack builder
       `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
+      `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
     ].map((file) => normalize(file))
   );
 
@@ -172,7 +174,12 @@ export async function getDependentStoryFiles(
       }
 
       const normalizedReasons = module_.reasons
-        ?.map((reason) => normalize(reason.moduleName))
+        ?.map((reason) =>
+          normalize(
+            reason.resolvedModule || // rspack sets a resolvedModule that holds the module name
+              reason.moduleName // vite, webpack, and default
+          )
+        )
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
       if (normalizedReasons) {
         reasonsById.set(module_.id, normalizedReasons);

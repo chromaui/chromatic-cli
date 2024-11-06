@@ -179,7 +179,10 @@ describe('getDependentStoryFiles', () => {
         id: String.raw`./src lazy recursive ^\.\/.*$`,
         reasons: [
           {
-            moduleName: './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
+            resolvedModule:
+              './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
+            moduleName:
+              './node_modules/.cache/storybook/default/dev-server/storybook-stories.js + 2 modules',
           },
         ],
       },

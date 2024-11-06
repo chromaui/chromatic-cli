@@ -1,4 +1,6 @@
+import { mkdirSync } from 'fs';
 import jsonfile from 'jsonfile';
+import path from 'path';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
@@ -17,6 +19,9 @@ export async function writeChromaticDiagnostics(ctx: Context) {
   }
 
   try {
+    // Ensure the parent directory exists before writing file
+    mkdirSync(path.dirname(ctx.options.diagnosticsFile), { recursive: true });
+
     await writeFile(ctx.options.diagnosticsFile, getDiagnostics(ctx), { spaces: 2 });
     ctx.log.info(wroteReport(ctx.options.diagnosticsFile, 'Chromatic diagnostics'));
   } catch (error) {
