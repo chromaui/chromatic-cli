@@ -434,6 +434,27 @@ export async function getRepositoryCreationDate() {
 }
 
 /**
+ * Determine the date the storybook was added to the repository
+ *
+ * @param ctx Context The context set when executing the CLI.
+ * @param ctx.options Object standard context options
+ * @param ctx.options.storybookConfigDir Configured Storybook config dir, if set
+ *
+ * @returns Date The date the storybook was added
+ */
+export async function getStorybookCreationDate(ctx: {
+  options: {
+    storybookConfigDir?: Context['options']['storybookConfigDir'];
+  };
+}) {
+  const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
+  const dateString = await execGitCommand(
+    `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory} | head -1`
+  );
+  return dateString ? new Date(dateString) : undefined;
+}
+
+/**
  * Determine the number of committers in the last 6 months
  *
  * @returns number The number of committers

@@ -21,6 +21,7 @@ const getSlug = vi.mocked(git.getSlug);
 const getVersion = vi.mocked(git.getVersion);
 const getUserEmail = vi.mocked(git.getUserEmail);
 const getRepositoryCreationDate = vi.mocked(git.getRepositoryCreationDate);
+const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
 const getNumberOfComitters = vi.mocked(git.getNumberOfComitters);
 const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
 const getUncommittedHash = vi.mocked(git.getUncommittedHash);
@@ -54,6 +55,7 @@ beforeEach(() => {
   getUserEmail.mockResolvedValue('user@email.com');
   getSlug.mockResolvedValue('user/repo');
   getRepositoryCreationDate.mockResolvedValue(new Date('2024-11-01'));
+  getStorybookCreationDate.mockResolvedValue(new Date('2025-11-01'));
   getNumberOfComitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
@@ -182,6 +184,7 @@ describe('setGitInfo', () => {
     expect(ctx.projectMetadata).toMatchObject({
       hasRouter: true,
       creationDate: new Date('2024-11-01'),
+      storybookCreationDate: new Date('2025-11-01'),
       numberOfCommitters: 17,
       numberOfAppFiles: 100,
     });

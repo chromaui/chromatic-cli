@@ -8,6 +8,7 @@ import {
   getNumberOfComitters,
   getRepositoryCreationDate,
   getSlug,
+  getStorybookCreationDate,
   hasPreviousCommit,
   mergeQueueBranchMatch,
   NULL_BYTE,
@@ -153,6 +154,28 @@ describe('getRepositoryCreationDate', () => {
   it('parses the date successfully', async () => {
     command.mockImplementation(() => Promise.resolve({ all: `2017-05-17 10:00:35 -0700` }) as any);
     expect(await getRepositoryCreationDate()).toEqual(new Date('2017-05-17T17:00:35.000Z'));
+  });
+});
+
+describe('getStorybookCreationDate', () => {
+  it('passes the config dir to the git command', async () => {
+    await getStorybookCreationDate({ options: { storybookConfigDir: 'special-config-dir' } });
+    expect(command).toHaveBeenCalledWith(
+      expect.stringMatching(/special-config-dir/),
+      expect.anything()
+    );
+  });
+
+  it('defaults the config dir to the git command', async () => {
+    await getStorybookCreationDate({ options: {} });
+    expect(command).toHaveBeenCalledWith(expect.stringMatching(/.storybook/), expect.anything());
+  });
+
+  it('parses the date successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `2017-05-17 10:00:35 -0700` }) as any);
+    expect(
+      await getStorybookCreationDate({ options: { storybookConfigDir: '.storybook' } })
+    ).toEqual(new Date('2017-05-17T17:00:35.000Z'));
   });
 });
 

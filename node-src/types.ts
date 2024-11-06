@@ -253,6 +253,7 @@ export interface Context {
   projectMetadata: {
     hasRouter?: boolean;
     creationDate?: Date;
+    storybookCreationDate?: Date;
     numberOfCommitters?: number;
     numberOfAppFiles?: number;
   };

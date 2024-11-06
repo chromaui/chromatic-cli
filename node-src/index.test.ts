@@ -311,6 +311,7 @@ vi.mock('./git/git', () => ({
   getUserEmail: () => Promise.resolve('test@test.com'),
   mergeQueueBranchMatch: () => Promise.resolve(undefined),
   getRepositoryCreationDate: () => Promise.resolve(new Date('2024-11-01')),
+  getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),
   getNumberOfComitters: () => Promise.resolve(17),
   getCommittedFileCount: () => Promise.resolve(100),
 }));

@@ -9,6 +9,7 @@ import {
   getNumberOfComitters,
   getRepositoryCreationDate,
   getSlug,
+  getStorybookCreationDate,
   getUncommittedHash,
   getUserEmail,
   getVersion,
@@ -94,6 +95,14 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       return undefined;
     }),
     ...commitAndBranchInfo,
+  };
+
+  ctx.projectMetadata = {
+    hasRouter: getHasRouter(ctx.packageJson),
+    creationDate: await getRepositoryCreationDate(),
+    storybookCreationDate: await getStorybookCreationDate(ctx),
+    numberOfCommitters: await getNumberOfComitters(),
+    numberOfAppFiles: await getCommittedFileCount(['page', 'screen'], ['js', 'jsx', 'ts', 'tsx']),
   };
 
   if (isLocalBuild && !ctx.git.gitUserEmail) {
@@ -268,13 +277,6 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       }
     }
   }
-
-  ctx.projectMetadata = {
-    hasRouter: getHasRouter(ctx.packageJson),
-    creationDate: await getRepositoryCreationDate(),
-    numberOfCommitters: await getNumberOfComitters(),
-    numberOfAppFiles: await getCommittedFileCount(['page', 'screen'], ['js', 'jsx', 'ts', 'tsx']),
-  };
 
   transitionTo(success, true)(ctx, task);
 };
