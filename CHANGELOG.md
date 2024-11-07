@@ -1,3 +1,15 @@
+# v11.17.0 (Thu Nov 07 2024)
+
+#### 🚀 Enhancement
+
+- :sparkles: Add support for JSON5 as a configuration file. [#1118](https://github.com/chromaui/chromatic-cli/pull/1118) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 1
+
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v11.16.5 (Mon Nov 04 2024)
 
 #### 🐛 Bug Fix
