@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   findFilesFromRepositoryRoot,
   getCommit,
+  getCommittedFileCount,
+  getNumberOfComitters,
+  getRepositoryCreationDate,
   getSlug,
+  getStorybookCreationDate,
   hasPreviousCommit,
   mergeQueueBranchMatch,
   NULL_BYTE,
@@ -143,5 +147,55 @@ describe('findFilesFromRepositoryRoot', () => {
       expect.any(Object)
     );
     expect(results).toEqual(filesFound);
+  });
+});
+
+describe('getRepositoryCreationDate', () => {
+  it('parses the date successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `2017-05-17 10:00:35 -0700` }) as any);
+    expect(await getRepositoryCreationDate()).toEqual(new Date('2017-05-17T17:00:35.000Z'));
+  });
+});
+
+describe('getStorybookCreationDate', () => {
+  it('passes the config dir to the git command', async () => {
+    await getStorybookCreationDate({ options: { storybookConfigDir: 'special-config-dir' } });
+    expect(command).toHaveBeenCalledWith(
+      expect.stringMatching(/special-config-dir/),
+      expect.anything()
+    );
+  });
+
+  it('defaults the config dir to the git command', async () => {
+    await getStorybookCreationDate({ options: {} });
+    expect(command).toHaveBeenCalledWith(expect.stringMatching(/.storybook/), expect.anything());
+  });
+
+  it('parses the date successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `2017-05-17 10:00:35 -0700` }) as any);
+    expect(
+      await getStorybookCreationDate({ options: { storybookConfigDir: '.storybook' } })
+    ).toEqual(new Date('2017-05-17T17:00:35.000Z'));
+  });
+});
+
+describe('getNumberOfComitters', () => {
+  it('parses the count successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `      17` }) as any);
+    expect(await getNumberOfComitters()).toEqual(17);
+  });
+});
+
+describe('getCommittedFileCount', () => {
+  it('constructs the correct command', async () => {
+    await getCommittedFileCount(['page', 'screen'], ['js', 'ts']);
+    expect(command).toHaveBeenCalledWith(
+      'git ls-files -- "*page*.js" "*page*.ts" "*Page*.js" "*Page*.ts" "*screen*.js" "*screen*.ts" "*Screen*.js" "*Screen*.ts" | wc -l',
+      expect.anything()
+    );
+  });
+  it('parses the count successfully', async () => {
+    command.mockImplementation(() => Promise.resolve({ all: `      17` }) as any);
+    expect(await getCommittedFileCount(['page', 'screen'], ['js', 'ts'])).toEqual(17);
   });
 });

@@ -107,6 +107,7 @@ export const announceBuild = async (ctx: Context) => {
         storybookAddons: ctx.storybook.addons,
         storybookVersion: ctx.storybook.version,
         storybookViewLayer: ctx.storybook.viewLayer,
+        projectMetadata: ctx.projectMetadata,
       },
     },
     { retries: 3 }
