@@ -1,3 +1,20 @@
+# v11.18.0 (Thu Nov 07 2024)
+
+#### 🚀 Enhancement
+
+- Detect `context.projectMetadata.hasRouter` and send to the index [#1112](https://github.com/chromaui/chromatic-cli/pull/1112) ([@tmeasday](https://github.com/tmeasday))
+
+#### 🐛 Bug Fix
+
+- :book: Add new issue template that references Chromatic support. [#1119](https://github.com/chromaui/chromatic-cli/pull/1119) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 2
+
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.17.0 (Thu Nov 07 2024)
 
 #### 🚀 Enhancement
