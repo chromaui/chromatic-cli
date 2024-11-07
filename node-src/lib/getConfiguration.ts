@@ -1,4 +1,5 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import JSON5 from 'json5';
 import { z, ZodError } from 'zod';
 
 import { invalidConfigurationFile } from '../ui/messages/errors/invalidConfigurationFile';
@@ -48,8 +49,20 @@ const configurationSchema = z
 
 export type Configuration = z.infer<typeof configurationSchema>;
 
+function resolveConfigFileName(configFile?: string): string {
+  const usedConfigFile = [
+    configFile,
+    'chromatic.config.json',
+    'chromatic.config.jsonc',
+    'chromatic.config.json5',
+  ].find((f?: string) => f && existsSync(f));
+
+  return usedConfigFile || 'chromatic.config.json';
+}
 /**
- * Parse configuration details from a local config file (typically chromatic.config.json).
+ * Parse configuration details from a local config file (typically chromatic.config.json, but can
+ * also use the JSON5 .jsonc and .json5 extensions. If more than one file is present, then the .json
+ * one will take precedence.
  *
  * @param configFile The path to a custom config file (outside of the normal chromatic.config.json
  * file)
@@ -59,10 +72,10 @@ export type Configuration = z.infer<typeof configurationSchema>;
 export async function getConfiguration(
   configFile?: string
 ): Promise<Configuration & { configFile?: string }> {
-  const usedConfigFile = configFile || 'chromatic.config.json';
+  const usedConfigFile = resolveConfigFileName(configFile);
   try {
     const rawJson = readFileSync(usedConfigFile, 'utf8');
-    const configuration = configurationSchema.parse(JSON.parse(rawJson));
+    const configuration = configurationSchema.parse(JSON5.parse(rawJson));
     return { configFile: usedConfigFile, ...configuration };
   } catch (err) {
     // Config file does not exist

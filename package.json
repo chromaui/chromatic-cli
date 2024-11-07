@@ -163,6 +163,7 @@
     "globals": "^15.3.0",
     "https-proxy-agent": "^7.0.2",
     "husky": "^7.0.0",
+    "json5": "^2.2.3",
     "jsonfile": "^6.0.1",
     "junit-report-builder": "2.1.0",
     "listr": "0.14.3",

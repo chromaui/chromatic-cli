@@ -11,5 +11,11 @@ try {
   err = error;
 }
 
-export const UnparseableConfigurationFile = () =>
+export const UnparseableConfigurationFileJson = () =>
   unparseableConfigurationFile('./my.config.json', err);
+
+export const UnparseableConfigurationFileJson5 = () =>
+  unparseableConfigurationFile('./my.config.json5', err);
+
+export const UnparseableConfigurationFileJsonc = () =>
+  unparseableConfigurationFile('./my.config.jsonc', err);
