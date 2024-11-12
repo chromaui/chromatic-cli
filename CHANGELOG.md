@@ -1,3 +1,15 @@
+# v11.18.1 (Tue Nov 12 2024)
+
+#### 🐛 Bug Fix
+
+- Revert "Detect `context.projectMetadata.hasRouter` and send to the index" [#1121](https://github.com/chromaui/chromatic-cli/pull/1121) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.18.0 (Thu Nov 07 2024)
 
 #### 🚀 Enhancement
