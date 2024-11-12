@@ -12,7 +12,7 @@ describe('storybookInfo', () => {
     const storybook = { version: '1.0.0', viewLayer: 'react', addons: [] };
     getStorybookInfo.mockResolvedValue(storybook);
 
-    const ctx = { packageJson: {} } as any;
+    const ctx = {} as any;
     await setStorybookInfo(ctx);
     expect(ctx.storybook).toEqual(storybook);
   });

@@ -314,10 +314,6 @@ vi.mock('./git/git', () => ({
   getUncommittedHash: () => Promise.resolve('abc123'),
   getUserEmail: () => Promise.resolve('test@test.com'),
   mergeQueueBranchMatch: () => Promise.resolve(undefined),
-  getRepositoryCreationDate: () => Promise.resolve(new Date('2024-11-01')),
-  getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),
-  getNumberOfComitters: () => Promise.resolve(17),
-  getCommittedFileCount: () => Promise.resolve(100),
 }));
 
 vi.mock('./git/getParentCommits', () => ({
@@ -328,8 +324,6 @@ const getCommit = vi.mocked(git.getCommit);
 const getSlug = vi.mocked(git.getSlug);
 
 vi.mock('./lib/emailHash');
-
-vi.mock('./lib/getHasRouter');
 
 vi.mock('./lib/getFileHashes', () => ({
   getFileHashes: (files: string[]) =>
