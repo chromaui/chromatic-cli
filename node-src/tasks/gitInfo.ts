@@ -8,6 +8,7 @@ import {
   getCommittedFileCount,
   getNumberOfComitters,
   getRepositoryCreationDate,
+  getRepositoryRoot,
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
@@ -94,6 +95,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       ctx.log.warn('Failed to retrieve uncommitted files hash', err);
       return undefined;
     }),
+    rootPath: await getRepositoryRoot(),
     ...commitAndBranchInfo,
   };
 

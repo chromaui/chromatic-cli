@@ -21,6 +21,7 @@ const getSlug = vi.mocked(git.getSlug);
 const getVersion = vi.mocked(git.getVersion);
 const getUserEmail = vi.mocked(git.getUserEmail);
 const getRepositoryCreationDate = vi.mocked(git.getRepositoryCreationDate);
+const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
 const getNumberOfComitters = vi.mocked(git.getNumberOfComitters);
 const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
@@ -55,6 +56,7 @@ beforeEach(() => {
   getUserEmail.mockResolvedValue('user@email.com');
   getSlug.mockResolvedValue('user/repo');
   getRepositoryCreationDate.mockResolvedValue(new Date('2024-11-01'));
+  getRepositoryRoot.mockResolvedValue('/path/to/project');
   getStorybookCreationDate.mockResolvedValue(new Date('2025-11-01'));
   getNumberOfComitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
@@ -68,6 +70,7 @@ describe('setGitInfo', () => {
     const ctx = { log, options: {}, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({
+      rootPath: '/path/to/project',
       commit: '123asdf',
       branch: 'something',
       parentCommits: ['asd2344'],
