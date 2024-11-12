@@ -82,6 +82,7 @@ const announceBuildInput = (ctx: Context) => {
     baselineCommits,
     packageMetadataChanges,
     gitUserEmail,
+    rootPath,
     ...commitInfo
   } = ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
