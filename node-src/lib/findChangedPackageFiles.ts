@@ -1,4 +1,4 @@
-import { execGitCommand } from '../git/git';
+import { execGitCommand } from '../git/execGit';
 import { isPackageMetadataFile } from './utils';
 
 // TODO: refactor this function

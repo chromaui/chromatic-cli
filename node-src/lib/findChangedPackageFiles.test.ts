@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as git from '../git/git';
+import * as execGit from '../git/execGit';
 import {
   arePackageDependenciesEqual,
   clearFileCache,
   findChangedPackageFiles,
 } from './findChangedPackageFiles';
 
-vi.mock('../git/git');
+vi.mock('../git/execGit');
 
-const execGitCommand = vi.mocked(git.execGitCommand);
+const execGitCommand = vi.mocked(execGit.execGitCommand);
 
 const mockFileContents = (packagesCommitsByFile) => {
   execGitCommand.mockImplementation(async (input) => {
