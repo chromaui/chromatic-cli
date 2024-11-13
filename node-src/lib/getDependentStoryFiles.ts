@@ -1,6 +1,5 @@
 import path from 'path';
 
-import { getRepositoryRoot } from '../git/git';
 import { Context, Module, Reason, Stats } from '../types';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
@@ -85,27 +84,25 @@ export async function getDependentStoryFiles(
   changedFiles: string[],
   changedDependencies: string[] = []
 ) {
+  const { rootPath } = ctx.git || {};
+  if (!rootPath) {
+    throw new Error('Failed to determine repository root');
+  }
+
   const {
+    baseDir: storybookBaseDirectory = '',
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
     viewLayer,
   } = ctx.storybook || {};
   const {
     storybookBuildDir,
-    storybookBaseDir,
     // eslint-disable-next-line unicorn/prevent-abbreviations
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
 
-  const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
-  if (!rootPath) {
-    throw new Error('Failed to determine repository root');
-  }
-
-  const baseDirectory = storybookBaseDir
-    ? posix(storybookBaseDir)
-    : path.posix.relative(rootPath, '');
+  const baseDirectory = posix(storybookBaseDirectory);
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`

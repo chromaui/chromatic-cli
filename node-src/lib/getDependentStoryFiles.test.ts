@@ -2,26 +2,30 @@
 import chalk from 'chalk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import * as git from '../git/git';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
-
-vi.mock('../git/git');
+import { Context } from '../../dist/node';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
-const getContext: any = ({
-  configDir,
-  staticDir,
-  ...options
-}: { configDir?: string; staticDir?: string } = {}) => ({
+const getContext: any = (
+  {
+    configDir,
+    staticDir,
+    ...options
+  }: { configDir?: string; staticDir?: string } & Context['options'] = {} as any
+) => ({
   log,
-  options: { storybookBaseDir: '.', ...options },
+  options,
   turboSnap: {},
-  storybook: { configDir, staticDir },
-  git: {},
+  storybook: {
+    baseDir: options.storybookBaseDir ? options.storybookBaseDir.replace(/^\.[/\\]?/, '') : '',
+    configDir,
+    staticDir,
+  },
+  git: { rootPath: '/path/to/project' },
 });
 
 afterEach(() => {
@@ -30,10 +34,6 @@ afterEach(() => {
   log.error.mockReset();
   log.debug.mockReset();
 });
-
-const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
-
-getRepositoryRoot.mockResolvedValue('/path/to/project');
 
 describe('getDependentStoryFiles', () => {
   it('detects direct changes to CSF files', async () => {
@@ -334,7 +334,6 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('supports absolute module paths', async () => {
-    getRepositoryRoot.mockResolvedValueOnce('/path/to/project');
     const absoluteCsfGlob = `/path/to/project/${CSF_GLOB.slice(2)}`;
     const changedFiles = ['src/foo.js'];
     const modules = [
@@ -363,8 +362,6 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('supports absolute module paths with deviating working dir', async () => {
-    getRepositoryRoot.mockResolvedValueOnce('/path/to/project');
-
     const absoluteCsfGlob = `/path/to/project/packages/webapp/${CSF_GLOB.slice(2)}`;
     const changedFiles = ['packages/webapp/src/foo.js'];
     const modules = [
