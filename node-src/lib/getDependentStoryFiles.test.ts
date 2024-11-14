@@ -2,8 +2,8 @@
 import chalk from 'chalk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { Context } from '../types';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
-import { Context } from '../../dist/node';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
