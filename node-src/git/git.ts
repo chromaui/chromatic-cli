@@ -3,7 +3,7 @@ import pLimit from 'p-limit';
 import { file as temporaryFile } from 'tmp-promise';
 
 import { Context } from '../types';
-import { execGitCommand, execGitCommandOneLine } from './execGit';
+import { execGitCommand, execGitCommandCountLines, execGitCommandOneLine } from './execGit';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
@@ -435,10 +435,9 @@ export async function getStorybookCreationDate(ctx: {
  */
 export async function getNumberOfComitters() {
   try {
-    const committerLines = await execGitCommand(`git shortlog -sn --all --since="6 months ago"`, {
+    return execGitCommandCountLines(`git shortlog -sn --all --since="6 months ago"`, {
       timeout: 5000,
     });
-    return committerLines.split('\n').length;
   } catch {
     return undefined;
   }
@@ -463,8 +462,7 @@ export async function getCommittedFileCount(nameMatches: string[], extensions: s
       extensions.map((extension) => `"*${match}*.${extension}"`)
     );
 
-    const globLines = await execGitCommand(`git ls-files -- ${globs.join(' ')}`);
-    return globLines.split('\n').length;
+    return execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`);
   } catch {
     return undefined;
   }

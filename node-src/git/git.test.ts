@@ -18,6 +18,7 @@ vi.mock('./execGit');
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
+const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -153,20 +154,20 @@ describe('getStorybookCreationDate', () => {
 
 describe('getNumberOfComitters', () => {
   it('parses the count successfully', async () => {
-    execGitCommand.mockResolvedValue(`tom\nzol\ndom`);
-    expect(await getNumberOfComitters()).toEqual(3);
+    execGitCommandCountLines.mockResolvedValue(17);
+    expect(await getNumberOfComitters()).toEqual(17);
   });
 });
 
 describe('getCommittedFileCount', () => {
   it('constructs the correct command', async () => {
     await getCommittedFileCount(['page', 'screen'], ['js', 'ts']);
-    expect(execGitCommand).toHaveBeenCalledWith(
+    expect(execGitCommandCountLines).toHaveBeenCalledWith(
       'git ls-files -- "*page*.js" "*page*.ts" "*Page*.js" "*Page*.ts" "*screen*.js" "*screen*.ts" "*Screen*.js" "*Screen*.ts"'
     );
   });
   it('parses the count successfully', async () => {
-    execGitCommand.mockResolvedValue(`pages/Main.ts\npages/Pricing.ts\npagesLogin.ts`);
-    expect(await getCommittedFileCount(['page', 'screen'], ['js', 'ts'])).toEqual(3);
+    execGitCommandCountLines.mockResolvedValue(17);
+    expect(await getCommittedFileCount(['page', 'screen'], ['js', 'ts'])).toEqual(17);
   });
 });

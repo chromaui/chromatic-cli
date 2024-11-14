@@ -6,6 +6,13 @@ import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
+const defaultOptions: Parameters<typeof execaCommand>[1] = {
+  env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
+  timeout: 20_000, // 20 seconds
+  all: true, // interleave stdout and stderr
+  shell: true, // we'll deal with escaping ourselves (for now)
+};
+
 /**
  * Execute a Git command in the local terminal.
  *
@@ -19,13 +26,7 @@ export async function execGitCommand(
   options?: Parameters<typeof execaCommand>[1]
 ) {
   try {
-    const { all } = await execaCommand(command, {
-      env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-      timeout: 20_000, // 20 seconds
-      all: true, // interleave stdout and stderr
-      shell: true, // we'll deal with escaping ourselves (for now)
-      ...options,
-    });
+    const { all } = await execaCommand(command, { ...defaultOptions, ...options });
 
     if (all === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}`);
@@ -63,13 +64,7 @@ export async function execGitCommandOneLine(
   command: string,
   options?: Parameters<typeof execaCommand>[1]
 ) {
-  const process = execaCommand(command, {
-    env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-    timeout: 20_000, // 20 seconds
-    all: true, // interleave stdout and stderr
-    shell: true, // we'll deal with escaping ourselves (for now)
-    ...options,
-  });
+  const process = execaCommand(command, { ...defaultOptions, buffer: false, ...options });
 
   return Promise.race([
     // This promise will resolve only if there is an error or it times out
@@ -92,4 +87,33 @@ export async function execGitCommandOneLine(
       });
     }),
   ]);
+}
+
+/**
+ * Execute a Git command in the local terminal and count the lines in the result
+ *
+ * @param command The command to execute.
+ * @param options Execa options
+ *
+ * @returns The number of lines the command returned
+ */
+export async function execGitCommandCountLines(
+  command: string,
+  options?: Parameters<typeof execaCommand>[1]
+) {
+  const process = execaCommand(command, { ...defaultOptions, buffer: false, ...options });
+  if (!process.stdout) {
+    throw new Error('Unexpected missing stdout');
+  }
+
+  let lineCount = 0;
+  const rl = createInterface(process.stdout);
+  rl.on('line', () => {
+    lineCount += 1;
+  });
+
+  // If the process errors, this will throw
+  await process;
+
+  return lineCount;
 }
