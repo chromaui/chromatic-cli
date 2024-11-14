@@ -1,5 +1,6 @@
 import meow from 'meow';
 
+import { getRepositoryRoot } from '../node-src/git/git';
 import { getDependentStoryFiles } from '../node-src/lib/getDependentStoryFiles';
 import { isPackageManifestFile } from '../node-src/lib/utils';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
@@ -90,6 +91,9 @@ export async function main(argv: string[]) {
       storybookConfigDir: flags.storybookConfigDir,
       untraced: flags.untraced,
       traceChanged: flags.mode || true,
+    },
+    git: {
+      rootPath: await getRepositoryRoot(),
     },
   } as any;
   const stats = await readStatsFile(flags.statsFile);
