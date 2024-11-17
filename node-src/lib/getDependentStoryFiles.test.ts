@@ -21,7 +21,7 @@ const getContext: any = (
   options,
   turboSnap: {},
   storybook: {
-    baseDir: options.storybookBaseDir ? options.storybookBaseDir.replace(/^\.[/\\]?/, '') : '',
+    baseDir: options.storybookBaseDir ?? '',
     configDir,
     staticDir,
   },

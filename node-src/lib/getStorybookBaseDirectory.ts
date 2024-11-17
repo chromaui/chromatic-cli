@@ -13,13 +13,16 @@ import { Context } from '../types';
 export function getStorybookBaseDirectory(ctx: Context) {
   const { storybookBaseDir } = ctx.options || {};
   if (storybookBaseDir) {
-    return storybookBaseDir.replace(/^\.[/\\]?/, '');
+    return storybookBaseDir;
   }
 
   const { rootPath } = ctx.git || {};
   if (!rootPath) {
-    return '';
+    return '.';
   }
 
-  return path.relative(rootPath, '');
+  // NOTE:
+  //  - path.relative does not have a leading '.', unless it starts with '../'
+  //  - path.join('.', '') === '.' and path.join('.', '../x') = '../x'
+  return path.join('.', path.relative(rootPath, ''));
 }
