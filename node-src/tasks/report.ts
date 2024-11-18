@@ -1,10 +1,35 @@
-import reportBuilder from 'junit-report-builder';
+import reportBuilder, { TestSuite } from 'junit-report-builder';
 import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import wroteReport from '../ui/messages/info/wroteReport';
 import { initial, pending, success } from '../ui/tasks/report';
+
+interface TestMode {
+  name: string;
+}
+
+interface TestSpec {
+  name: string;
+  component: {
+    name: string;
+    displayName: string;
+  };
+}
+
+interface TestParameters {
+  viewport: number;
+  viewportIsDefault: boolean;
+}
+
+interface VisualTest {
+  status: string;
+  result: string;
+  spec: TestSpec;
+  parameters: TestParameters;
+  mode: TestMode;
+}
 
 const ReportQuery = `
   query ReportQuery($buildNumber: Int!) {
@@ -47,30 +72,16 @@ interface ReportQueryResult {
       webUrl: string;
       createdAt: number;
       completedAt: number;
-      tests: {
-        status: string;
-        result: string;
-        spec: {
-          name: string;
-          component: {
-            name: string;
-            displayName: string;
-          };
-        };
-        parameters: {
-          viewport: number;
-          viewportIsDefault: boolean;
-        };
-        mode: {
-          name: string;
-        };
-      }[];
+      tests: VisualTest[];
     };
   };
 }
 
-// TODO: refactor this function
-// eslint-disable-next-line complexity
+/**
+ * Generate a JUnit report XML file for a particular run.
+ *
+ * @param ctx The {@link Context} for which we're generating a report.
+ */
 export const generateReport = async (ctx: Context) => {
   const { client, log } = ctx;
   const { junitReport } = ctx.options;
@@ -97,7 +108,7 @@ export const generateReport = async (ctx: Context) => {
   );
   const buildTime = (build.completedAt || Date.now()) - build.createdAt;
 
-  const suite = reportBuilder
+  const suite: TestSuite = reportBuilder
     .testSuite()
     .name(`Chromatic build ${build.number}`)
     .time(Math.round(buildTime / 1000))
@@ -107,39 +118,47 @@ export const generateReport = async (ctx: Context) => {
     .property('buildUrl', build.webUrl)
     .property('storybookUrl', build.storybookUrl);
 
-  for (const { status, result, spec, parameters, mode } of build.tests) {
-    const testSuffixName = mode.name || `[${parameters.viewport}px]`;
-    const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
-    const testCase = suite
-      .testCase()
-      .className(spec.component.name.replaceAll(/[/|]/g, '.')) // transform story path to class path
-      .name(`${spec.name} ${suffix}`);
-
-    switch (status) {
-      case 'FAILED':
-        testCase.error('Server error while taking snapshot, please try again', status);
-        break;
-      case 'BROKEN':
-        testCase.error('Snapshot is broken due to an error in your Storybook', status);
-        break;
-      case 'DENIED':
-        testCase.failure('Snapshot was denied by a user', status);
-        break;
-      case 'PENDING':
-        testCase.failure('Snapshot contains visual changes and must be reviewed', status);
-        break;
-      default: {
-        if (['SKIPPED', 'PRESERVED'].includes(result)) {
-          testCase.skipped();
-        }
-      }
-    }
+  for (const test of build.tests) {
+    generateReportTestCase(suite, test);
   }
 
   reportBuilder.writeTo(ctx.reportPath);
   log.info(wroteReport(ctx.reportPath, 'JUnit XML'));
 };
 
+/**
+ * Generate a single `<testcase>` within a JUnit report and test run with Chromatic.
+ *
+ * @param suite The {@link TestSuite} we're currently processing.
+ * @param test The {@link VisualTest} we're currently processing, contained in `suite`.
+ */
+export const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
+  const { status, result, spec, parameters, mode } = test;
+  const testSuffixName = mode.name || `[${parameters.viewport}px]`;
+  const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
+  const testCase: any = suite.testCase().className(spec.component.name.replaceAll(/[/|]/g, '.')); // transform story path to class path
+  testCase.property('result', status).name(`${spec.name} ${suffix}`);
+
+  switch (status) {
+    case 'FAILED':
+      testCase.error('Server error while taking snapshot, please try again', status);
+      break;
+    case 'BROKEN':
+      testCase.error('Snapshot is broken due to an error in your Storybook', status);
+      break;
+    case 'DENIED':
+      testCase.failure('Snapshot was denied by a user', status);
+      break;
+    case 'PENDING':
+      testCase.failure('Snapshot contains visual changes and must be reviewed', status);
+      break;
+    default: {
+      if (['SKIPPED', 'PRESERVED'].includes(result)) {
+        testCase.skipped();
+      }
+    }
+  }
+};
 /**
  * Sets up the Listr task for generating a JUnit report.
  *
