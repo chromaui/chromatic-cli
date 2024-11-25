@@ -1,3 +1,15 @@
+# v11.19.0 (Mon Nov 25 2024)
+
+#### 🚀 Enhancement
+
+- :sparkles: Add properties to XML reporting based on status. [#1125](https://github.com/chromaui/chromatic-cli/pull/1125) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 1
+
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v11.18.1 (Tue Nov 12 2024)
 
 #### 🐛 Bug Fix
