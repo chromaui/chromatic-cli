@@ -29,7 +29,7 @@ export async function execGitCommand(
     const { all } = await execaCommand(command, { ...defaultOptions, ...options });
 
     if (all === undefined) {
-      throw new Error(`Unexpected missing git command output for command: '${command}`);
+      throw new Error(`Unexpected missing git command output for command: '${command}'`);
     }
 
     return all.toString();
@@ -70,7 +70,8 @@ export async function execGitCommandOneLine(
     // This promise will resolve only if there is an error or it times out
     (async () => {
       await process;
-      throw new Error(`Unexpected missing git command output for command: '${command}`);
+
+      throw new Error(`Unexpected missing git command output for command: '${command}'`);
     })(),
     // We expect this promise to resolve first
     new Promise<string>((resolve, reject) => {
