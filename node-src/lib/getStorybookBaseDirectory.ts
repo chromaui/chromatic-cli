@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { Context } from '../types';
+import { posix } from './posix';
 
 /**
  * Get the storybook base directory, relative to the git root.
@@ -24,5 +25,5 @@ export function getStorybookBaseDirectory(ctx: Context) {
   // NOTE:
   //  - path.relative does not have a leading '.', unless it starts with '../'
   //  - path.join('.', '') === '.' and path.join('.', '../x') = '../x'
-  return path.join('.', path.relative(rootPath, ''));
+  return posix(path.join('.', path.relative(rootPath, '')));
 }

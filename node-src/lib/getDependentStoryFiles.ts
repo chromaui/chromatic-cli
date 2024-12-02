@@ -4,6 +4,7 @@ import { Context, Module, Reason, Stats } from '../types';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../ui/messages/warnings/bailFile';
+import { posix } from './posix';
 import { isPackageManifestFile, matchesFile } from './utils';
 
 type FilePath = string;
@@ -26,11 +27,6 @@ const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&
   (module_ as Module).id !== null &&
   !INTERNALS.some((re) => re.test((module_ as Module).name || (module_ as Reason).moduleName));
-
-// Replaces Windows-style backslash path separators with POSIX-style forward slashes, because the
-// Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
-// already contains forward slashes, because that's what git yields even on Windows.
-const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
 
 // For any path in node_modules, return the package name, including scope prefix if any.
 const getPackageName = (modulePath: string) => {
@@ -90,7 +86,7 @@ export async function getDependentStoryFiles(
   }
 
   const {
-    baseDir: storybookBaseDirectory = '',
+    baseDir: baseDirectory = '',
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
     viewLayer,
@@ -101,8 +97,6 @@ export async function getDependentStoryFiles(
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
-
-  const baseDirectory = posix(storybookBaseDirectory);
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
