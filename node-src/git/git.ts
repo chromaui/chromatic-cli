@@ -1,50 +1,12 @@
-import { execaCommand } from 'execa';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import { file as temporaryFile } from 'tmp-promise';
 
 import { Context } from '../types';
-import gitNoCommits from '../ui/messages/errors/gitNoCommits';
-import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
-import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
+import { execGitCommand, execGitCommandCountLines, execGitCommandOneLine } from './execGit';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
-
-/**
- * Execute a Git command in the local terminal.
- *
- * @param command The command to execute.
- *
- * @returns The result of the command from the terminal.
- */
-export async function execGitCommand(command: string) {
-  try {
-    const { all } = await execaCommand(command, {
-      env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-      timeout: 20_000, // 20 seconds
-      all: true, // interleave stdout and stderr
-      shell: true, // we'll deal with escaping ourselves (for now)
-    });
-    return all;
-  } catch (error) {
-    const { message } = error;
-
-    if (message.includes('not a git repository')) {
-      throw new Error(gitNotInitialized({ command }));
-    }
-
-    if (message.includes('git not found')) {
-      throw new Error(gitNotInstalled({ command }));
-    }
-
-    if (message.includes('does not have any commits yet')) {
-      throw new Error(gitNoCommits({ command }));
-    }
-
-    throw error;
-  }
-}
 
 /**
  * Get the version of Git from the host.
@@ -421,4 +383,87 @@ export async function mergeQueueBranchMatch(branch: string) {
   const match = branch.match(mergeQueuePattern);
 
   return match ? Number(match[1]) : undefined;
+}
+
+/**
+ * Determine the date the repository was created
+ *
+ * @returns Date The date the repository was created
+ */
+export async function getRepositoryCreationDate() {
+  try {
+    const dateString = await execGitCommandOneLine(`git log --reverse --format=%cd --date=iso`, {
+      timeout: 5000,
+    });
+
+    return new Date(dateString);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Determine the date the storybook was added to the repository
+ *
+ * @param ctx Context The context set when executing the CLI.
+ * @param ctx.options Object standard context options
+ * @param ctx.options.storybookConfigDir Configured Storybook config dir, if set
+ *
+ * @returns Date The date the storybook was added
+ */
+export async function getStorybookCreationDate(ctx: {
+  options: {
+    storybookConfigDir?: Context['options']['storybookConfigDir'];
+  };
+}) {
+  try {
+    const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
+    const dateString = await execGitCommandOneLine(
+      `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory}`,
+      { timeout: 5000 }
+    );
+    return new Date(dateString);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Determine the number of committers in the last 6 months
+ *
+ * @returns number The number of committers
+ */
+export async function getNumberOfComitters() {
+  try {
+    return execGitCommandCountLines(`git shortlog -sn --all --since="6 months ago"`, {
+      timeout: 5000,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Find the number of files in the git index that include a name with the given prefixes.
+ *
+ * @param nameMatches The names to match - will be matched with upper and lowercase first letter
+ * @param extensions The filetypes to match
+ *
+ * @returns The number of files matching the above
+ */
+export async function getCommittedFileCount(nameMatches: string[], extensions: string[]) {
+  try {
+    const bothCasesNameMatches = nameMatches.flatMap((match) => [
+      match,
+      [match[0].toUpperCase(), ...match.slice(1)].join(''),
+    ]);
+
+    const globs = bothCasesNameMatches.flatMap((match) =>
+      extensions.map((extension) => `"*${match}*.${extension}"`)
+    );
+
+    return execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`);
+  } catch {
+    return undefined;
+  }
 }

@@ -214,6 +214,8 @@ export interface Context {
 
   git: {
     version?: string;
+    /** The absolute location on disk of the git project */
+    rootPath?: string;
     /** The current user's email as pre git config */
     gitUserEmail?: string;
     branch: string;
@@ -235,6 +237,7 @@ export interface Context {
   };
   storybook: {
     version: string;
+    baseDir?: string;
     configDir: string;
     staticDir: string[];
     viewLayer: string;
@@ -249,6 +252,13 @@ export interface Context {
       packageVersion?: string;
     };
     mainConfigFilePath?: string;
+  };
+  projectMetadata: {
+    hasRouter?: boolean;
+    creationDate?: Date;
+    storybookCreationDate?: Date;
+    numberOfCommitters?: number;
+    numberOfAppFiles?: number;
   };
   storybookUrl?: string;
   announcedBuild: {

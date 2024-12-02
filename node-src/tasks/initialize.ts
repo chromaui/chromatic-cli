@@ -70,7 +70,7 @@ export const setRuntimeMetadata = async (ctx: Context) => {
   }
 };
 
-export const announceBuild = async (ctx: Context) => {
+const announceBuildInput = (ctx: Context) => {
   const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
   const {
     version,
@@ -82,33 +82,41 @@ export const announceBuild = async (ctx: Context) => {
     baselineCommits,
     packageMetadataChanges,
     gitUserEmail,
+    rootPath,
     ...commitInfo
   } = ctx.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = ctx;
   const autoAcceptChanges = matchesBranch?.(ctx.options.autoAcceptChanges);
 
+  return {
+    autoAcceptChanges,
+    patchBaseRef,
+    patchHeadRef,
+    preserveMissingSpecs,
+    ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
+    ...commitInfo,
+    committedAt: new Date(committedAt),
+    ciVariables: ctx.environment,
+    isLocalBuild,
+    needsBaselines: !!turboSnap && !turboSnap.bailReason,
+    packageVersion: ctx.pkg.version,
+    ...ctx.runtimeMetadata,
+    rebuildForBuildId,
+    storybookAddons: ctx.storybook.addons,
+    storybookVersion: ctx.storybook.version,
+    storybookViewLayer: ctx.storybook.viewLayer,
+    projectMetadata: {
+      ...ctx.projectMetadata,
+      storybookBaseDir: ctx.storybook?.baseDir,
+    },
+  };
+};
+
+export const announceBuild = async (ctx: Context) => {
+  const input = announceBuildInput(ctx);
   const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
     AnnounceBuildMutation,
-    {
-      input: {
-        autoAcceptChanges,
-        patchBaseRef,
-        patchHeadRef,
-        preserveMissingSpecs,
-        ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
-        ...commitInfo,
-        committedAt: new Date(committedAt),
-        ciVariables: ctx.environment,
-        isLocalBuild,
-        needsBaselines: !!turboSnap && !turboSnap.bailReason,
-        packageVersion: ctx.pkg.version,
-        ...ctx.runtimeMetadata,
-        rebuildForBuildId,
-        storybookAddons: ctx.storybook.addons,
-        storybookVersion: ctx.storybook.version,
-        storybookViewLayer: ctx.storybook.viewLayer,
-      },
-    },
+    { input },
     { retries: 3 }
   );
 
@@ -117,7 +125,7 @@ export const announceBuild = async (ctx: Context) => {
 
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
-    announcedBuild.number === 1 || (announcedBuild.autoAcceptChanges && !autoAcceptChanges);
+    announcedBuild.number === 1 || (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
 
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;

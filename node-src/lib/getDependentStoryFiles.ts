@@ -1,10 +1,10 @@
 import path from 'path';
 
-import { getRepositoryRoot } from '../git/git';
 import { Context, Module, Reason, Stats } from '../types';
 import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../ui/messages/warnings/bailFile';
+import { posix } from './posix';
 import { isPackageManifestFile, matchesFile } from './utils';
 
 type FilePath = string;
@@ -27,11 +27,6 @@ const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&
   (module_ as Module).id !== null &&
   !INTERNALS.some((re) => re.test((module_ as Module).name || (module_ as Reason).moduleName));
-
-// Replaces Windows-style backslash path separators with POSIX-style forward slashes, because the
-// Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
-// already contains forward slashes, because that's what git yields even on Windows.
-const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
 
 // For any path in node_modules, return the package name, including scope prefix if any.
 const getPackageName = (modulePath: string) => {
@@ -85,27 +80,23 @@ export async function getDependentStoryFiles(
   changedFiles: string[],
   changedDependencies: string[] = []
 ) {
+  const { rootPath } = ctx.git || {};
+  if (!rootPath) {
+    throw new Error('Failed to determine repository root');
+  }
+
   const {
+    baseDir: baseDirectory = '',
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
     viewLayer,
   } = ctx.storybook || {};
   const {
     storybookBuildDir,
-    storybookBaseDir,
     // eslint-disable-next-line unicorn/prevent-abbreviations
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
-
-  const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
-  if (!rootPath) {
-    throw new Error('Failed to determine repository root');
-  }
-
-  const baseDirectory = storybookBaseDir
-    ? posix(storybookBaseDir)
-    : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
