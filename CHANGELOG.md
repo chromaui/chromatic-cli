@@ -1,3 +1,15 @@
+# v11.20.0 (Mon Dec 02 2024)
+
+#### 🚀 Enhancement
+
+- Send project metadata to the index [#1122](https://github.com/chromaui/chromatic-cli/pull/1122) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.19.0 (Mon Nov 25 2024)
 
 #### 🚀 Enhancement
