@@ -163,7 +163,10 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: (ctx: Context) => {
       if (ctx.skip) return true;
-      if (ctx.skipSnapshots) return skipped(ctx).output;
+      if (ctx.skipSnapshots) {
+        ctx.log.warn('skipping from snapshot task');
+        return skipped(ctx).output;
+      }
       if (ctx.options.dryRun) return dryRun(ctx).output;
       return false;
     },

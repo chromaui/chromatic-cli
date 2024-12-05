@@ -115,6 +115,7 @@ export async function run({
     env: environment = getEnvironment(),
     log = createLogger(config.flags, config.extraOptions),
   } = extraOptions || {};
+  log.warn(JSON.stringify(config));
 
   const packageInfo = await readPackageUp({ cwd: process.cwd() });
   if (!packageInfo) {
