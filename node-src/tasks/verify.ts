@@ -270,11 +270,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 
   transitionTo(success, true)(ctx, task);
 
-  if (
-    list ||
-    ctx.isPublishOnly ||
-    matchesBranch?.(ctx.flags.exitOnceUploaded ?? ctx.options.exitOnceUploaded)
-  ) {
+  if (list || ctx.isPublishOnly || matchesBranch?.(ctx.options.exitOnceUploaded)) {
     ctx.log.warn('Skipping snapshots!');
     setExitCode(ctx, exitCodes.OK);
     ctx.skipSnapshots = true;
