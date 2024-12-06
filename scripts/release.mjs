@@ -15,7 +15,7 @@ async function main() {
   await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
 
   // https://github.blog/changelog/2023-09-13-github-actions-updates-to-github_ref-and-github-ref/
-  if (process.env.GITHUB_REF === 'refs/heads/main') {
+  if (process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === 'refs/heads/main') {
     await publishAction('latest');
   } else {
     console.info('Skipping automatic publish of action-canary.');
