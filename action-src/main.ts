@@ -165,7 +165,7 @@ async function run() {
         debug: maybe(debug),
         diagnosticsFile: maybe(diagnosticsFile),
         dryRun: maybe(dryRun),
-        exitOnceUploaded: maybe(exitOnceUploaded, false),
+        exitOnceUploaded: maybe(exitOnceUploaded),
         exitZeroOnChanges: maybe(exitZeroOnChanges, true),
         externals: maybe(externals),
         fileHashing: maybe(fileHashing, true),
