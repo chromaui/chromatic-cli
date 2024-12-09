@@ -270,12 +270,15 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 
   transitionTo(success, true)(ctx, task);
 
-  ctx.log.info({
-    options: ctx.options.exitOnceUploaded,
-    config: ctx.configuration.exitOnceUploaded,
-    flags: ctx.flags.exitOnceUploaded,
-  });
-  if (list || ctx.isPublishOnly || matchesBranch?.(ctx.options.exitOnceUploaded)) {
+  if (
+    list ||
+    ctx.isPublishOnly ||
+    matchesBranch?.(
+      ctx.options.exitOnceUploaded ??
+        ctx.configuration.exitOnceUploaded ??
+        ctx.options.exitOnceUploaded
+    )
+  ) {
     ctx.log.info('Exit once uploaded triggered, skipping!!!');
     setExitCode(ctx, exitCodes.OK);
     ctx.skipSnapshots = true;
