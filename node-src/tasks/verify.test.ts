@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, test, vi } from 'vitest';
 
 import { exitCodes } from '../lib/setExitCode';
 import { publishBuild, verifyBuild } from './verify';
@@ -227,6 +227,89 @@ describe('verifyBuild', () => {
     const ctx = { client, ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
     expect(ctx.exitCode).toBe(12);
+  });
+
+  describe('sets exitCode to 0 and skips snapshotting', () => {
+    const publishOnlyClient = { runQuery: vi.fn() };
+    publishOnlyClient.runQuery.mockReturnValue({
+      app: {
+        build: {
+          number: 1,
+          status: 'IN_PROGRESS',
+          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+          features: { uiTests: false, uiReview: false },
+          app: { account: { paymentRequired: true } },
+          wasLimited: true,
+          startedAt: Date.now(),
+        },
+      },
+    });
+
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      app: {
+        build: {
+          number: 1,
+          status: 'IN_PROGRESS',
+          storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+          features: { uiTests: true, uiReview: false },
+          app: { account: { paymentRequired: false } },
+          startedAt: Date.now(),
+        },
+      },
+    });
+
+    test('publish-only builds', async () => {
+      const ctx = { client: publishOnlyClient, ...defaultContext } as any;
+      await verifyBuild(ctx, {} as any);
+      expect(ctx.exitCode).toBe(0);
+      expect(ctx.skipSnapshots).toBe(true);
+    });
+
+    test('exitOnceUploaded from flags', async () => {
+      const ctx = {
+        client,
+        ...defaultContext,
+        flags: { exitOnceUploaded: true },
+        git: {
+          matchesBranch: (glob: string | boolean) =>
+            typeof glob === 'string' ? glob === 'true' : !!glob,
+        },
+      } as any;
+      await verifyBuild(ctx, {} as any);
+      expect(ctx.exitCode).toBe(0);
+      expect(ctx.skipSnapshots).toBe(true);
+    });
+
+    test('exitOnceUploaded from configuration', async () => {
+      const ctx = {
+        client,
+        ...defaultContext,
+        configuration: { exitOnceUploaded: true },
+        git: {
+          matchesBranch: (glob: string | boolean) =>
+            typeof glob === 'string' ? glob === 'true' : !!glob,
+        },
+      } as any;
+      await verifyBuild(ctx, {} as any);
+      expect(ctx.exitCode).toBe(0);
+      expect(ctx.skipSnapshots).toBe(true);
+    });
+
+    test('exitOnceUploaded from options', async () => {
+      const ctx = {
+        client,
+        ...defaultContext,
+        options: { exitOnceUploaded: true },
+        git: {
+          matchesBranch: (glob: string | boolean) =>
+            typeof glob === 'string' ? glob === 'true' : !!glob,
+        },
+      } as any;
+      await verifyBuild(ctx, {} as any);
+      expect(ctx.exitCode).toBe(0);
+      expect(ctx.skipSnapshots).toBe(true);
+    });
   });
 
   it('sets exitCode to 0 and skips snapshotting for publish-only builds', async () => {

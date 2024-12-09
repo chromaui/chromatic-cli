@@ -274,9 +274,9 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     list ||
     ctx.isPublishOnly ||
     matchesBranch?.(
-      ctx.options.exitOnceUploaded ||
-        ctx.configuration.exitOnceUploaded ||
-        ctx.options.exitOnceUploaded
+      ctx.flags?.exitOnceUploaded ||
+        ctx.configuration?.exitOnceUploaded ||
+        ctx.options?.exitOnceUploaded
     )
   ) {
     ctx.log.info('Exit once uploaded triggered, skipping!!!');
