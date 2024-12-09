@@ -274,8 +274,8 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     list ||
     ctx.isPublishOnly ||
     matchesBranch?.(
-      ctx.options.exitOnceUploaded ??
-        ctx.configuration.exitOnceUploaded ??
+      ctx.options.exitOnceUploaded ||
+        ctx.configuration.exitOnceUploaded ||
         ctx.options.exitOnceUploaded
     )
   ) {
