@@ -4,6 +4,7 @@ on:
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
         required: true
+  push:
 
 permissions:
   contents: read
