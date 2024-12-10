@@ -1,3 +1,16 @@
+# v11.20.1 (Tue Dec 10 2024)
+
+#### 🐛 Bug Fix
+
+- Account for configs when checking `exitOnceUploaded` in action [#1130](https://github.com/chromaui/chromatic-cli/pull/1130) ([@codykaup](https://github.com/codykaup))
+- Only publish `latest` action on push to main [#1129](https://github.com/chromaui/chromatic-cli/pull/1129) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.20.0 (Mon Dec 02 2024)
 
 #### 🚀 Enhancement
