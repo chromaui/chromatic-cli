@@ -462,7 +462,9 @@ export async function getCommittedFileCount(nameMatches: string[], extensions: s
       extensions.map((extension) => `"*${match}*.${extension}"`)
     );
 
-    return execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`);
+    return execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`, {
+      timeout: 5000,
+    });
   } catch {
     return undefined;
   }
