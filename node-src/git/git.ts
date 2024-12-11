@@ -435,7 +435,7 @@ export async function getStorybookCreationDate(ctx: {
  */
 export async function getNumberOfComitters() {
   try {
-    return execGitCommandCountLines(`git shortlog -sn --all --since="6 months ago"`, {
+    return await execGitCommandCountLines(`git shortlog -sn --all --since="6 months ago"`, {
       timeout: 5000,
     });
   } catch {
@@ -462,7 +462,7 @@ export async function getCommittedFileCount(nameMatches: string[], extensions: s
       extensions.map((extension) => `"*${match}*.${extension}"`)
     );
 
-    return execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`, {
+    return await execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`, {
       timeout: 5000,
     });
   } catch {
