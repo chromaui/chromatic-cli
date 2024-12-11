@@ -99,13 +99,17 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     ...commitAndBranchInfo,
   };
 
-  ctx.projectMetadata = {
-    hasRouter: getHasRouter(ctx.packageJson),
-    creationDate: await getRepositoryCreationDate(),
-    storybookCreationDate: await getStorybookCreationDate(ctx),
-    numberOfCommitters: await getNumberOfComitters(),
-    numberOfAppFiles: await getCommittedFileCount(['page', 'screen'], ['js', 'jsx', 'ts', 'tsx']),
-  };
+  try {
+    ctx.projectMetadata = {
+      hasRouter: getHasRouter(ctx.packageJson),
+      creationDate: await getRepositoryCreationDate(),
+      storybookCreationDate: await getStorybookCreationDate(ctx),
+      numberOfCommitters: await getNumberOfComitters(),
+      numberOfAppFiles: await getCommittedFileCount(['page', 'screen'], ['js', 'jsx', 'ts', 'tsx']),
+    };
+  } catch (err) {
+    ctx.log.debug('Failed to gather project metadata', err);
+  }
 
   if (isLocalBuild && !ctx.git.gitUserEmail) {
     throw new Error(gitUserEmailNotFound());

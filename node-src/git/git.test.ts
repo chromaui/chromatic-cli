@@ -163,7 +163,8 @@ describe('getCommittedFileCount', () => {
   it('constructs the correct command', async () => {
     await getCommittedFileCount(['page', 'screen'], ['js', 'ts']);
     expect(execGitCommandCountLines).toHaveBeenCalledWith(
-      'git ls-files -- "*page*.js" "*page*.ts" "*Page*.js" "*Page*.ts" "*screen*.js" "*screen*.ts" "*Screen*.js" "*Screen*.ts"'
+      'git ls-files -- "*page*.js" "*page*.ts" "*Page*.js" "*Page*.ts" "*screen*.js" "*screen*.ts" "*Screen*.js" "*Screen*.ts"',
+      expect.anything()
     );
   });
   it('parses the count successfully', async () => {
