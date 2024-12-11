@@ -1,3 +1,15 @@
+# v11.20.2 (Wed Dec 11 2024)
+
+#### 🐛 Bug Fix
+
+- Errors in project metadata gathering causing build failures [#1131](https://github.com/chromaui/chromatic-cli/pull/1131) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.20.1 (Tue Dec 10 2024)
 
 #### 🐛 Bug Fix
