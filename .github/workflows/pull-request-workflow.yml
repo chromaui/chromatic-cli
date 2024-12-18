@@ -28,7 +28,7 @@ jobs:
   lint-and-test:
     uses: ./.github/workflows/lint-and-test.yml
     secrets:
-      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   chromatic:
     uses: ./.github/workflows/chromatic-prod.yml

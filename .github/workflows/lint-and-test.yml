@@ -1,9 +1,12 @@
 name: Lint and Test
 
 on:
+  push:
+    branches:
+      - main
   workflow_call:
     secrets:
-      CODACY_PROJECT_TOKEN:
+      CODECOV_TOKEN:
         required: true
 
 permissions:
@@ -33,7 +36,7 @@ jobs:
       # unit test
       - run: yarn test
 
-      # publish code coverage results
-      - run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
-        env:
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
