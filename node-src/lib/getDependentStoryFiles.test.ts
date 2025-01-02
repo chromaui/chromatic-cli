@@ -514,6 +514,33 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  it('bails on changed preview.js file', async () => {
+    const changedFiles = ['src/foo.stories.js', 'path/to/storybook-config/preview.js'];
+    const modules = [
+      {
+        id: './path/to/storybook-config/preview.js',
+        name: './path/to/storybook-config/preview.js',
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/preview.js}`
+      )
+    );
+  });
+
   it('bails on changed dependency of config file', async () => {
     const changedFiles = ['src/styles.js'];
     const modules = [
