@@ -179,8 +179,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         ctx.rebuildForBuild = result.app.lastBuild;
         ctx.storybookUrl = result.app.lastBuild.storybookUrl;
         transitionTo(skippedRebuild, true)(ctx, task);
+        setExitCode(ctx, exitCodes.OK);
         ctx.log.info(forceRebuildHint());
-        ctx.exitCode = 0;
         return;
       }
     }
