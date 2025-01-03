@@ -1,3 +1,17 @@
+# v11.21.0 (Fri Jan 03 2025)
+
+#### 🚀 Enhancement
+
+- Set `storybookUrl` action output on rebuild early exit [#1134](https://github.com/chromaui/chromatic-cli/pull/1134) ([@jmhobbs](https://github.com/jmhobbs))
+- Upload coverage reports to codecov [#1132](https://github.com/chromaui/chromatic-cli/pull/1132) ([@paulelliott](https://github.com/paulelliott))
+
+#### Authors: 2
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Paul Elliott ([@paulelliott](https://github.com/paulelliott))
+
+---
+
 # v11.20.2 (Wed Dec 11 2024)
 
 #### 🐛 Bug Fix
