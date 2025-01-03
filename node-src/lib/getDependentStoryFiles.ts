@@ -142,8 +142,13 @@ export async function getDependentStoryFiles(
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
 
+  const isStorybookFile = (name: string) =>
+    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
+
   stats.modules
     .filter((module_) => isUserModule(module_))
+    // TODO: refactor this function
+    // eslint-disable-next-line complexity
     .map((module_) => {
       const normalizedName = normalize(module_.name);
       modulesByName.set(normalizedName, module_);
@@ -176,7 +181,10 @@ export async function getDependentStoryFiles(
         reasonsById.set(module_.id, normalizedReasons);
       }
 
-      if (reasonsById.get(module_.id)?.some((reason) => storiesEntryFiles.has(reason))) {
+      if (
+        !isStorybookFile(normalizedName) &&
+        reasonsById.get(module_.id)?.some((reason) => storiesEntryFiles.has(reason))
+      ) {
         csfGlobsByName.add(normalizedName);
       }
     });
@@ -203,8 +211,6 @@ export async function getDependentStoryFiles(
   }
 
   const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);
-  const isStorybookFile = (name: string) =>
-    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
   const isStaticFile = (name: string) =>
     staticDirectories.some((directory) => name && name.startsWith(`${directory}/`));
 
