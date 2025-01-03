@@ -139,7 +139,7 @@ export async function run({
     code: ctx.exitCode,
     url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.storybookUrl,
+    storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
     specCount: ctx.build?.specCount,
     componentCount: ctx.build?.componentCount,
     testCount: ctx.build?.testCount,
