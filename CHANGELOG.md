@@ -1,3 +1,15 @@
+# v11.22.0 (Fri Jan 03 2025)
+
+#### 🚀 Enhancement
+
+- Bail on preview file changes [#1133](https://github.com/chromaui/chromatic-cli/pull/1133) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.21.0 (Fri Jan 03 2025)
 
 #### 🚀 Enhancement
