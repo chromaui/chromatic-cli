@@ -123,6 +123,7 @@ async function run() {
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getMultilineInput('onlyStoryFiles');
     const onlyStoryNames = getMultilineInput('onlyStoryNames');
+    const outputDir = getInput('outputDir');
     const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
@@ -179,6 +180,7 @@ async function run() {
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),
         onlyStoryNames: maybe(onlyStoryNames),
+        outputDir: maybe(outputDir),
         playwright: maybe(playwright),
         preserveMissing: maybe(preserveMissing),
         projectToken,
