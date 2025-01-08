@@ -1,3 +1,15 @@
+# v11.22.1 (Wed Jan 08 2025)
+
+#### 🐛 Bug Fix
+
+- Add `outputDir` to GitHub Action options [#1136](https://github.com/chromaui/chromatic-cli/pull/1136) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.22.0 (Fri Jan 03 2025)
 
 #### 🚀 Enhancement
