@@ -1,4 +1,4 @@
-import { readConfig } from '@storybook/csf-tools';
+import { printConfig, readConfig } from '@storybook/csf-tools';
 import { readdir } from 'fs/promises';
 import { readJson } from 'fs-extra';
 import meow from 'meow';
@@ -227,7 +227,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
       }
 
       mainConfig = await readConfig(storybookConfig);
-      ctx.log.debug({ configDirectory, mainConfig });
+      ctx.log.debug({ configDirectory, mainConfig: printConfig(mainConfig) });
       v7 = true;
     } catch (err) {
       ctx.log.debug({ storybookV7error: err });

@@ -162,7 +162,11 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('detects direct changes to CSF files, rspack', async () => {
+  it.each([
+    [`./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`],
+    [`./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`],
+    [`./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`],
+  ])('detects direct changes to CSF files, rspack (%s)', async (resolvedModule) => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
@@ -179,10 +183,8 @@ describe('getDependentStoryFiles', () => {
         id: String.raw`./src lazy recursive ^\.\/.*$`,
         reasons: [
           {
-            resolvedModule:
-              './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
-            moduleName:
-              './node_modules/.cache/storybook/default/dev-server/storybook-stories.js + 2 modules',
+            resolvedModule,
+            moduleName: `${resolvedModule} + 2 modules`,
           },
         ],
       },
