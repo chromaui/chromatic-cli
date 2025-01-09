@@ -1,3 +1,15 @@
+# v11.22.2 (Thu Jan 09 2025)
+
+#### 🐛 Bug Fix
+
+- Add rsbuild v0.1.7 support [#1138](https://github.com/chromaui/chromatic-cli/pull/1138) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.22.1 (Wed Jan 08 2025)
 
 #### 🐛 Bug Fix
