@@ -133,6 +133,7 @@ export async function getDependentStoryFiles(
       // rspack builder
       `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
       `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
+      `./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`,
     ].map((file) => normalize(file))
   );
 
