@@ -251,6 +251,32 @@ describe('traceChangedFiles', () => {
     expect(findChangedPackageFiles).not.toHaveBeenCalled();
   });
 
+  it('does not run package dependency analysis if the skipDependencyUpdateCheck is passed', async () => {
+    const deps = { 123: ['./example.stories.js'] };
+    getDependentStoryFiles.mockResolvedValue(deps);
+
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: { skipDependencyUpdateCheck: true },
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: {
+        changedFiles: ['./example.js', 'package.json'],
+        packageMetadataChanges: [
+          { changedFiles: ['package.json', 'subdir/package.json'], commit: 'A' },
+        ],
+      },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx, {} as any);
+
+    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+    expect(findChangedDependencies).not.toHaveBeenCalled();
+    expect(findChangedPackageFiles).not.toHaveBeenCalled();
+  });
+
   it('bails on package.json changes if it fails to retrieve lockfile changes (fallback scenario)', async () => {
     findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
     findChangedPackageFiles.mockResolvedValue(['./package.json']);

@@ -138,7 +138,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
     let changedDependencyNames: void | string[] = [];
-    if (packageMetadataChanges?.length) {
+    if (ctx.options.skipDependencyUpdateCheck) {
+      ctx.log.debug('Skipping dependency update check');
+    }
+    if (packageMetadataChanges?.length && !ctx.options.skipDependencyUpdateCheck) {
       changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
         const { name, message, stack, code } = err;
         ctx.log.debug({ name, message, stack, code });

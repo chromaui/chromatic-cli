@@ -97,9 +97,19 @@ export const findChangedDependencies = async (ctx: Context) => {
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
 
+  const timeout = 60_000;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Timeout while attempting to resolve dependencies dependencies'));
+    }, timeout);
+  });
+
   await Promise.all(
     filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
-      const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
+      const headDependencies = await Promise.race([
+        getDependencies(ctx, { rootPath, manifestPath, lockfilePath }),
+        timeoutPromise,
+      ]);
       ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
 
       // Retrieve the union of dependencies which changed compared to each baseline.

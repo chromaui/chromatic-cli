@@ -41,6 +41,7 @@ export interface Flags {
   untraced?: string[];
   zip?: boolean;
   skipUpdateCheck?: boolean;
+  skipDependencyUpdateCheck?: boolean;
 
   // Debug options
   debug?: boolean;
@@ -151,6 +152,8 @@ export interface Options extends Configuration {
   env?: Environment;
 
   skipUpdateCheck: Flags['skipUpdateCheck'];
+
+  skipDependencyUpdateCheck: Flags['skipDependencyUpdateCheck'];
 }
 
 export type TaskName =
