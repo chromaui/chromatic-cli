@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Context } from '..';
 import * as git from '../git/git';
 import { findChangedDependencies } from './findChangedDependencies';
+import { deps } from './output.js';
 import TestLogger from './testLogger';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -103,9 +104,7 @@ describe('findChangedDependencies', () => {
 
   it('returns updated dependencies', async () => {
     // HEAD
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
-    });
+    buildDepTree.mockResolvedValueOnce(deps.dependencies);
 
     // Baseline A
     checkoutFile.mockResolvedValueOnce('A.package.json');
