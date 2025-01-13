@@ -1,3 +1,15 @@
+# v11.23.0 (Mon Jan 13 2025)
+
+#### 🚀 Enhancement
+
+- Skip lock file parsing if it's larger than 10MB [#1140](https://github.com/chromaui/chromatic-cli/pull/1140) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.22.2 (Thu Jan 09 2025)
 
 #### 🐛 Bug Fix
