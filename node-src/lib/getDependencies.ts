@@ -25,11 +25,7 @@ export const getDependencies = async (
 ) => {
   // We can run into OOM errors if the lock file is too large. Therefore, we bail early and skip
   // lock file parsing because some TurboSnap is better than no TurboSnap.
-  const stats = statSync(path.resolve(rootPath, lockfilePath));
-  if (stats.size > MAX_LOCK_FILE_SIZE) {
-    ctx.log.warn({ lockfilePath }, 'Lock file too large to parse, skipping');
-    throw new Error('Lock file too large to parse');
-  }
+  ensureLockFileSize(ctx, path.resolve(rootPath, lockfilePath));
 
   try {
     const headTree = await buildDepTreeFromFiles(
@@ -53,4 +49,15 @@ function flattenDependencyTree(tree: PkgTree['dependencies'], results = new Set<
   }
 
   return results;
+}
+
+function ensureLockFileSize(ctx: Context, fullPath: string) {
+  const maxLockFileSize =
+    Number.parseInt(process.env.MAX_LOCK_FILE_SIZE ?? '') || MAX_LOCK_FILE_SIZE;
+
+  const stats = statSync(fullPath);
+  if (stats.size > maxLockFileSize) {
+    ctx.log.warn({ fullPath }, 'Lock file too large to parse, skipping');
+    throw new Error('Lock file too large to parse');
+  }
 }

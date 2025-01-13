@@ -117,4 +117,26 @@ describe('getDependencies', () => {
       })
     ).rejects.toThrowError();
   });
+
+  it('should use MAX_LOCK_FILE_SIZE environment variable, if set', async () => {
+    vi.stubEnv('MAX_LOCK_FILE_SIZE', (MAX_LOCK_FILE_SIZE + 2000).toString());
+    statSync.mockReturnValue({ size: MAX_LOCK_FILE_SIZE + 1000 });
+
+    const dependencies = await getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
+      manifestPath: 'plain-package.json',
+      lockfilePath: 'plain-yarn.lock',
+    });
+
+    const [dep] = dependencies;
+    expect(dep).toMatch(/^[\w/@-]+@@[\d.]+$/);
+
+    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
+    expect(dependencyNames).toEqual(
+      expect.arrayContaining([
+        ...Object.keys(packageJson.dependencies),
+        ...Object.keys(packageJson.devDependencies),
+      ])
+    );
+  });
 });
