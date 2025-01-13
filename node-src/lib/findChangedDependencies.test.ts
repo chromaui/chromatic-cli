@@ -1,5 +1,6 @@
+import { statSync as unMockedStatSync } from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { Context } from '..';
 import * as git from '../git/git';
@@ -9,6 +10,10 @@ import TestLogger from './testLogger';
 vi.mock('snyk-nodejs-lockfile-parser');
 vi.mock('yarn-or-npm');
 vi.mock('../git/git');
+vi.mock('fs');
+
+const statSync = unMockedStatSync as Mock;
+statSync.mockReturnValue({ size: 1 });
 
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);

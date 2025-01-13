@@ -1,6 +1,10 @@
+import { statSync } from 'fs';
+import path from 'path';
 import { buildDepTreeFromFiles, PkgTree } from 'snyk-nodejs-lockfile-parser';
 
 import { Context } from '../types';
+
+export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 
 export const getDependencies = async (
   ctx: Context,
@@ -19,6 +23,10 @@ export const getDependencies = async (
     strictOutOfSync?: boolean;
   }
 ) => {
+  // We can run into OOM errors if the lock file is too large. Therefore, we bail early and skip
+  // lock file parsing because some TurboSnap is better than no TurboSnap.
+  ensureLockFileSize(ctx, path.resolve(rootPath, lockfilePath));
+
   try {
     const headTree = await buildDepTreeFromFiles(
       rootPath,
@@ -41,4 +49,15 @@ function flattenDependencyTree(tree: PkgTree['dependencies'], results = new Set<
   }
 
   return results;
+}
+
+function ensureLockFileSize(ctx: Context, fullPath: string) {
+  const maxLockFileSize =
+    Number.parseInt(process.env.MAX_LOCK_FILE_SIZE ?? '') || MAX_LOCK_FILE_SIZE;
+
+  const stats = statSync(fullPath);
+  if (stats.size > maxLockFileSize) {
+    ctx.log.warn({ fullPath }, 'Lock file too large to parse, skipping');
+    throw new Error('Lock file too large to parse');
+  }
 }
