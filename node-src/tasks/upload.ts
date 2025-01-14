@@ -8,6 +8,7 @@ import { findChangedDependencies } from '../lib/findChangedDependencies';
 import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
 import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { getFileHashes } from '../lib/getFileHashes';
+import { writeLog } from '../lib/newRelic';
 import { createTask, transitionTo } from '../lib/tasks';
 import { uploadBuild } from '../lib/upload';
 import { rewriteErrorMessage, throttle } from '../lib/utils';
@@ -132,6 +133,13 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
   transitionTo(tracing)(ctx, task);
 
+  const turbosnapMetrics: {
+    dependencyChanges: boolean;
+    lockFileParseResult?: 'success' | 'error' | 'did not throw but no dependency changes found';
+    error?: string;
+  } = {
+    dependencyChanges: false,
+  };
   const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageMetadataChanges } = ctx.git;
 
@@ -139,11 +147,17 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
     let changedDependencyNames: void | string[] = [];
     if (packageMetadataChanges?.length) {
+      turbosnapMetrics.dependencyChanges = true;
+
       changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
         const { name, message, stack, code } = err;
         ctx.log.debug({ name, message, stack, code });
+        turbosnapMetrics.lockFileParseResult = 'error';
+        turbosnapMetrics.error = message;
       });
       if (changedDependencyNames) {
+        turbosnapMetrics.lockFileParseResult = 'success';
+
         ctx.git.changedDependencyNames = changedDependencyNames;
         if (!ctx.options.interactive) {
           const list =
@@ -153,6 +167,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
           ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
         }
       } else {
+        if (!turbosnapMetrics.lockFileParseResult) {
+          turbosnapMetrics.lockFileParseResult = 'did not throw but no dependency changes found';
+        }
+
         ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 
         const changedPackageFiles = await findChangedPackageFiles(packageMetadataChanges);
@@ -206,6 +224,8 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       ctx.log.info('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
     }
     throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n${err.message}`);
+  } finally {
+    await writeLog({ ...turbosnapMetrics, message: 'Turbosnap lock file parsing metrics' });
   }
 };
 
