@@ -116,7 +116,9 @@ export async function run({
     log = createLogger(config.flags, config.extraOptions),
   } = extraOptions || {};
 
-  const packageInfo = await readPackageUp({ cwd: process.cwd() });
+  // We don't normalize because if the `version` field isn't a proper semver string, the process
+  // silently exits.
+  const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
   if (!packageInfo) {
     log.error(noPackageJson());
     process.exit(253);
