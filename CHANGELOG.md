@@ -1,3 +1,19 @@
+# v11.25.0 (Thu Jan 16 2025)
+
+#### 🚀 Enhancement
+
+- Log Turbosnap metrics to New Relic [#1141](https://github.com/chromaui/chromatic-cli/pull/1141) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Remove Turbosnap metrics logs [#1142](https://github.com/chromaui/chromatic-cli/pull/1142) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.24.0 (Tue Jan 14 2025)
 
 #### 🚀 Enhancement
