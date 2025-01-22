@@ -158,7 +158,7 @@ export async function getDependentStoryFiles(
   ctx.log.debug('isStorybookFile - storybookDir', storybookDirectory);
   const isStorybookFile = (name: string) => {
     ctx.log.debug('isStorybookFile', name);
-    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
+    return name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
   };
 
   stats.modules
