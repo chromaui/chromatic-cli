@@ -106,5 +106,7 @@ export async function main(argv: string[]) {
     );
   }
 
-  await getDependentStoryFiles(ctx, stats, flags.statsFile, changedFiles);
+  await getDependentStoryFiles(ctx, stats, flags.statsFile, changedFiles, [], {
+    skipCwdCheck: true,
+  });
 }

@@ -10,6 +10,9 @@ const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+const rootPath = '/path/to/project';
+vi.spyOn(process, 'cwd').mockReturnValue(rootPath);
+
 const getContext: any = (
   {
     configDir,
@@ -25,7 +28,7 @@ const getContext: any = (
     configDir,
     staticDir,
   },
-  git: { rootPath: '/path/to/project' },
+  git: { rootPath },
 });
 
 afterEach(() => {
@@ -622,6 +625,7 @@ describe('getDependentStoryFiles', () => {
       expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)
     );
   });
+
   it('ignores untraced files and dependencies with a glob pattern match', async () => {
     const changedFiles = ['src/stories/Button.jsx', 'src/stories/Page.jsx'];
     const modules = [
@@ -815,6 +819,7 @@ describe('getDependentStoryFiles', () => {
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
+
   it('does not bail on changed dependency in dynamic import of untraced config file', async () => {
     const changedFiles = ['src/utils.js', 'src/packages/design-system/components/button.jsx'];
     const modules = [
@@ -868,6 +873,28 @@ describe('getDependentStoryFiles', () => {
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(result).toEqual({
+      './src/foo.stories.js': ['src/foo.stories.js'],
+    });
+  });
+
+  it.skip('handles cases where the cwd is not the repository root', async () => {
+    const changedFiles = ['src/foo.stories.js'];
+    const modules = [
+      {
+        id: './foo.stories.js',
+        name: './foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext();
+    vi.spyOn(process, 'cwd').mockReturnValue(`${ctx.git.rootPath}/src`);
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result).toEqual({
       './src/foo.stories.js': ['src/foo.stories.js'],
     });

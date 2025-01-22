@@ -19,6 +19,7 @@ describe('Test trace script from package.json', () => {
     // Verify that the output does not contain the expanded output
     expect(output).not.toContain(rootDirectoryNote);
   });
+
   it('outputs directory info when -m expanded is passed', () => {
     const scriptName =
       "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m 'expanded'";
@@ -37,6 +38,7 @@ describe('Test trace script from package.json', () => {
     expect(output).toContain(expandedStoryModule);
     expect(output).toContain(expandedFileModule);
   });
+
   it('outputs untraced info when --mode expanded is passed with -u and an untraced file', () => {
     const scriptName =
       "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m expanded -u './node-src/ui/messages/errors/invalidReportPath.ts'";

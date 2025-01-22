@@ -68,6 +68,8 @@ export function normalizePath(posixPath: string, rootPath: string, baseDirectory
  * example).
  * @param changedFiles A list of changed files.
  * @param changedDependencies A list of changed dependencies.
+ * @param options
+ * @param options.skipCwdCheck
  *
  * @returns Any story files that are impacted by the list of changed files and dependencies.
  */
@@ -78,7 +80,8 @@ export async function getDependentStoryFiles(
   stats: Stats,
   statsPath: string,
   changedFiles: string[],
-  changedDependencies: string[] = []
+  changedDependencies: string[] = [],
+  options: { skipCwdCheck?: boolean } = {}
 ) {
   const { rootPath } = ctx.git || {};
   if (!rootPath) {
@@ -97,6 +100,15 @@ export async function getDependentStoryFiles(
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
+
+  if (!options.skipCwdCheck && rootPath !== process.cwd()) {
+    ctx.log.debug(
+      'Root path is not the same as the current working directory, updating changed file path'
+    );
+    const relativePathToCwdFromGitRoot = process.cwd().replace(`${rootPath}/`, '');
+
+    changedFiles = changedFiles.map((f) => f.replace(relativePathToCwdFromGitRoot, '.'));
+  }
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
