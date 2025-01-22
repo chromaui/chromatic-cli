@@ -155,8 +155,11 @@ export async function getDependentStoryFiles(
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
 
-  const isStorybookFile = (name: string) =>
+  ctx.log.debug('isStorybookFile - storybookDir', storybookDirectory);
+  const isStorybookFile = (name: string) => {
+    ctx.log.debug('isStorybookFile', name);
     name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
+  };
 
   stats.modules
     .filter((module_) => isUserModule(module_))
