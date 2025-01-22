@@ -1,5 +1,5 @@
 name: Smoke test via action next
-on: merge_group
+on: push
 
 permissions:
   contents: read
