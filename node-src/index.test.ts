@@ -4,10 +4,11 @@ import { execaCommand as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
+import path from 'path';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getGitInfo, runAll } from '.';
+import { getGitInfo, run, runAll } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
@@ -851,5 +852,16 @@ describe('getGitInfo', () => {
       userEmail: 'test@test.com',
       userEmailHash: undefined,
     });
+  });
+});
+
+describe('parsing package.json', () => {
+  it('should handle invalid `version` strings', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(
+      path.resolve('./node-src/__mocks__/invalidPackageJson')
+    );
+
+    const result = await run({ flags: { dryRun: true } });
+    expect(result.code).toBeDefined();
   });
 });
