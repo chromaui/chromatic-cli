@@ -101,14 +101,14 @@ export async function getDependentStoryFiles(
     untraced = [],
   } = ctx.options;
 
-  if (!options.skipCwdCheck && rootPath !== process.cwd()) {
-    ctx.log.debug(
-      'Root path is not the same as the current working directory, updating changed file path'
-    );
-    const relativePathToCwdFromGitRoot = process.cwd().replace(`${rootPath}/`, '');
+  // if (!options.skipCwdCheck && rootPath !== process.cwd()) {
+  //   ctx.log.debug(
+  //     'Root path is not the same as the current working directory, updating changed file path'
+  //   );
+  //   const relativePathToCwdFromGitRoot = process.cwd().replace(`${rootPath}/`, '');
 
-    changedFiles = changedFiles.map((f) => f.replace(`${relativePathToCwdFromGitRoot}/`, ''));
-  }
+  //   changedFiles = changedFiles.map((f) => f.replace(`${relativePathToCwdFromGitRoot}/`, ''));
+  // }
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
