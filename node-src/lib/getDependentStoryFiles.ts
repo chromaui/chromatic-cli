@@ -302,6 +302,7 @@ export async function getDependentStoryFiles(
   // eslint-disable-next-line complexity
   function traceName(name: string, tracePath: string[] = []) {
     if (ctx.turboSnap?.bailReason || isCsfGlob(name)) return;
+    name = normalize(name);
     if (shouldBail(name)) return;
     const { id } = modulesByName.get(name) || {};
     // eslint-disable-next-line unicorn/no-null
