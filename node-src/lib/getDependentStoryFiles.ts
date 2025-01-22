@@ -81,7 +81,7 @@ export async function getDependentStoryFiles(
   statsPath: string,
   changedFiles: string[],
   changedDependencies: string[] = [],
-  options: { skipCwdCheck?: boolean } = {}
+  options: { skipCwdCheck?: boolean } = {} // TODO: turn these into one arg object
 ) {
   const { rootPath } = ctx.git || {};
   if (!rootPath) {
@@ -107,7 +107,7 @@ export async function getDependentStoryFiles(
     );
     const relativePathToCwdFromGitRoot = process.cwd().replace(`${rootPath}/`, '');
 
-    changedFiles = changedFiles.map((f) => f.replace(relativePathToCwdFromGitRoot, '.'));
+    changedFiles = changedFiles.map((f) => f.replace(`${relativePathToCwdFromGitRoot}/`, ''));
   }
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)

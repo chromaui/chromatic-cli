@@ -878,7 +878,19 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it.skip('handles cases where the cwd is not the repository root', async () => {
+  it('handles cases where the cwd is not the repository root', async () => {
+    /*
+    There are times when a monorepo setup has the Storybook in a subdirectory and they want to run
+    `yarn build-storybook` in that subdirectory (instead of the root of the repo). When that
+    happens, the path output of the stats file changes based on the new cwd (which would would be
+    the Storybook subdirectory).
+    
+    This uses the following directory structure:
+
+    .     <-- git root
+    ./src <-- Storybook root (all stats file paths are relative to this)
+    */
+
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
@@ -894,9 +906,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     vi.spyOn(process, 'cwd').mockReturnValue(`${ctx.git.rootPath}/src`);
+
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+
     expect(result).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+      './foo.stories.js': ['foo.stories.js'],
     });
   });
 });
