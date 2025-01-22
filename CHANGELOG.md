@@ -1,3 +1,15 @@
+# v11.25.1 (Wed Jan 22 2025)
+
+#### 🐛 Bug Fix
+
+- Don't normalize package.json fields [#1143](https://github.com/chromaui/chromatic-cli/pull/1143) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.25.0 (Thu Jan 16 2025)
 
 #### 🚀 Enhancement
