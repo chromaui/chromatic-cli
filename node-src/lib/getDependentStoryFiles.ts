@@ -37,27 +37,6 @@ const getPackageName = (modulePath: string) => {
 };
 
 /**
- * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
- * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
- * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary. The
- * result is a relative POSIX path compatible with `git diff --name-only`. Virtual paths (e.g. Vite)
- * are returned as-is.
- *
- * @param posixPath The POSIX path to the file.
- * @param rootPath The project root path.
- * @param baseDirectory The base directory to the file.
- *
- * @returns A normalized path to the file.
- */
-export function normalizePath(posixPath: string, rootPath: string, baseDirectory = '') {
-  if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
-
-  return path.posix.isAbsolute(posixPath)
-    ? path.posix.relative(rootPath, posixPath)
-    : path.posix.join(baseDirectory, posixPath);
-}
-
-/**
  * This traverses the webpack module stats to retrieve a set of CSF files that somehow trace back to
  * the changed git files. The result is a map of Module ID => file path. In the end we'll only send
  * the Module IDs to Chromatic, the file paths are only for logging purposes.
@@ -97,17 +76,6 @@ export async function getDependentStoryFiles(
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
-
-  ctx.log.debug('DEBUG TURBOSNAP', {
-    storybookBuildDir,
-    storybookConfigDir,
-    baseDirectory,
-    configDirectory,
-    stats,
-    statsPath,
-    changedFiles,
-    changedDependencies,
-  });
 
   // if (!options.skipCwdCheck && rootPath !== process.cwd()) {
   //   ctx.log.debug(
@@ -163,9 +131,7 @@ export async function getDependentStoryFiles(
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
 
-  ctx.log.debug('isStorybookFile - storybookDir', storybookDirectory);
   const isStorybookFile = (name: string) => {
-    ctx.log.debug('isStorybookFile', name);
     return name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
   };
 
@@ -193,14 +159,15 @@ export async function getDependentStoryFiles(
         }
       }
 
-      const normalizedReasons = module_.reasons
-        ?.map((reason) =>
-          normalize(
-            reason.resolvedModule || // rspack sets a resolvedModule that holds the module name
-              reason.moduleName // vite, webpack, and default
-          )
+      let normalizedReasons = module_.reasons?.map((reason) =>
+        normalize(
+          reason.resolvedModule || // rspack sets a resolvedModule that holds the module name
+            reason.moduleName // vite, webpack, and default
         )
-        .filter((reasonName) => reasonName && reasonName !== normalizedName);
+      );
+      normalizedReasons = normalizedReasons?.filter(
+        (reasonName) => reasonName && reasonName !== normalizedName
+      );
       if (normalizedReasons) {
         reasonsById.set(module_.id, normalizedReasons);
       }
@@ -306,23 +273,32 @@ export async function getDependentStoryFiles(
     return false;
   }
 
+  ctx.log.debug('=== CONTEXT OBJECTS ===');
+  ctx.log.debug('modulesByName', modulesByName);
+  ctx.log.debug('namesById', namesById);
+  ctx.log.debug('reasonsByIdd', reasonsById);
+  ctx.log.debug('=======================');
+
   // TODO: refactor this function
   // eslint-disable-next-line complexity
   function traceName(name: string, tracePath: string[] = []) {
+    ctx.log.debug('Tracing name', name);
     if (ctx.turboSnap?.bailReason || isCsfGlob(name)) return;
-    name = normalize(name);
     if (shouldBail(name)) return;
     const { id } = modulesByName.get(name) || {};
     // eslint-disable-next-line unicorn/no-null
     const normalizedName = namesById.get(id || null);
+    ctx.log.debug('Traced name', name, id, normalizedName);
     if (!normalizedName) return;
     if (shouldBail(normalizedName)) return;
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
+    ctx.log.debug(`Adding ${tracePath} to toCheck`);
     toCheck.push([id, [...tracePath, id.toString()]]);
 
     if (reasonsById.get(id)?.some((reason) => isCsfGlob(reason))) {
+      ctx.log.debug(`Found affected module ${id}`);
       affectedModuleIds.add(id);
       tracedPaths.add([...tracePath, id].map((pid) => namesById.get(pid)).join('\n'));
     }
@@ -382,4 +358,25 @@ export async function getDependentStoryFiles(
   }
 
   return affectedModules;
+}
+
+/**
+ * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
+ * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
+ * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary. The
+ * result is a relative POSIX path compatible with `git diff --name-only`. Virtual paths (e.g. Vite)
+ * are returned as-is.
+ *
+ * @param posixPath The POSIX path to the file.
+ * @param rootPath The project root path.
+ * @param baseDirectory The base directory to the file.
+ *
+ * @returns A normalized path to the file.
+ */
+export function normalizePath(posixPath: string, rootPath: string, baseDirectory = '') {
+  if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
+
+  return path.posix.isAbsolute(posixPath)
+    ? path.posix.relative(rootPath, posixPath)
+    : path.posix.join(baseDirectory, posixPath);
 }

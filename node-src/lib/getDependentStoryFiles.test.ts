@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Context } from '../types';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
+import { createLogger } from './log';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
@@ -20,7 +21,7 @@ const getContext: any = (
     ...options
   }: { configDir?: string; staticDir?: string } & Context['options'] = {} as any
 ) => ({
-  log,
+  log: createLogger({ logLevel: 'debug' }),
   options,
   turboSnap: {},
   storybook: {
@@ -891,26 +892,163 @@ describe('getDependentStoryFiles', () => {
     ./src <-- Storybook root (all stats file paths are relative to this)
     */
 
-    const changedFiles = ['src/foo.stories.js'];
+    // const changedFiles = ['src/foo.stories.js'];
+    // const modules = [
+    //   {
+    //     id: './foo.stories.js',
+    //     name: './foo.stories.js',
+    //     reasons: [{ moduleName: CSF_GLOB }],
+    //   },
+    //   {
+    //     id: CSF_GLOB,
+    //     name: CSF_GLOB,
+    //     reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+    //   },
+    // ];
+    // const ctx = getContext();
+    // vi.spyOn(process, 'cwd').mockReturnValue(`${ctx.git.rootPath}/src`);
+
+    // const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+
+    // expect(result).toEqual({
+    //   './foo.stories.js': ['foo.stories.js'],
+    // });
+
+    const changedFiles = ['connections/stories/Button.jsx'];
+
     const modules = [
       {
-        id: './foo.stories.js',
-        name: './foo.stories.js',
-        reasons: [{ moduleName: CSF_GLOB }],
+        id: './iframe.html',
+        name: './iframe.html',
+        reasons: [{ moduleName: './iframe.html' }],
       },
       {
-        id: CSF_GLOB,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        id: '/virtual:/@storybook/builder-vite/vite-app.js',
+        name: '/virtual:/@storybook/builder-vite/vite-app.js',
+        reasons: [{ moduleName: './iframe.html' }],
+      },
+      {
+        id: '/virtual:/@storybook/builder-vite/setup-addons.js',
+        name: '/virtual:/@storybook/builder-vite/setup-addons.js',
+        reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
+      },
+      {
+        id: '/virtual:/@storybook/builder-vite/storybook-stories.js',
+        name: '/virtual:/@storybook/builder-vite/storybook-stories.js',
+        reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
+      },
+      {
+        id: './.storybook/preview.js',
+        name: './.storybook/preview.js',
+        reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
+      },
+      {
+        id: './stories/Button.stories.js',
+        name: './stories/Button.stories.js',
+        reasons: [
+          {
+            moduleName: '/virtual:/@storybook/builder-vite/storybook-stories.js',
+          },
+          { moduleName: './.storybook/preview.js' },
+        ],
+      },
+      {
+        id: './stories/Configure.mdx',
+        name: './stories/Configure.mdx',
+        reasons: [
+          {
+            moduleName: '/virtual:/@storybook/builder-vite/storybook-stories.js',
+          },
+        ],
+      },
+      {
+        id: './stories/Button.jsx',
+        name: './stories/Button.jsx',
+        reasons: [{ moduleName: './stories/Button.stories.js' }],
+      },
+      {
+        id: './stories/assets/github.svg',
+        name: './stories/assets/github.svg',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/discord.svg',
+        name: './stories/assets/discord.svg',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/youtube.svg',
+        name: './stories/assets/youtube.svg',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/tutorials.svg',
+        name: './stories/assets/tutorials.svg',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/styling.png',
+        name: './stories/assets/styling.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/context.png',
+        name: './stories/assets/context.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/assets.png',
+        name: './stories/assets/assets.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/docs.png',
+        name: './stories/assets/docs.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/share.png',
+        name: './stories/assets/share.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/figma-plugin.png',
+        name: './stories/assets/figma-plugin.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/testing.png',
+        name: './stories/assets/testing.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/accessibility.png',
+        name: './stories/assets/accessibility.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/theming.png',
+        name: './stories/assets/theming.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/assets/addon-library.png',
+        name: './stories/assets/addon-library.png',
+        reasons: [{ moduleName: './stories/Configure.mdx' }],
+      },
+      {
+        id: './stories/button.css',
+        name: './stories/button.css',
+        reasons: [{ moduleName: './stories/Button.jsx' }],
       },
     ];
-    const ctx = getContext();
-    vi.spyOn(process, 'cwd').mockReturnValue(`${ctx.git.rootPath}/src`);
 
+    const ctx = getContext({ storybookBaseDir: 'connections', configDir: '.storybook' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
 
-    expect(result).toEqual({
-      './foo.stories.js': ['foo.stories.js'],
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['connections/.storybook/preview.js'],
     });
   });
 });
