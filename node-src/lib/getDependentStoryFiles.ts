@@ -68,8 +68,6 @@ export function normalizePath(posixPath: string, rootPath: string, baseDirectory
  * example).
  * @param changedFiles A list of changed files.
  * @param changedDependencies A list of changed dependencies.
- * @param options
- * @param options.skipCwdCheck
  *
  * @returns Any story files that are impacted by the list of changed files and dependencies.
  */
@@ -80,8 +78,7 @@ export async function getDependentStoryFiles(
   stats: Stats,
   statsPath: string,
   changedFiles: string[],
-  changedDependencies: string[] = [],
-  options: { skipCwdCheck?: boolean } = {} // TODO: turn these into one arg object
+  changedDependencies: string[] = []
 ) {
   const { rootPath } = ctx.git || {};
   if (!rootPath) {
@@ -100,6 +97,17 @@ export async function getDependentStoryFiles(
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
+
+  ctx.log.debug('DEBUG TURBOSNAP', {
+    storybookBuildDir,
+    storybookConfigDir,
+    baseDirectory,
+    configDirectory,
+    stats,
+    statsPath,
+    changedFiles,
+    changedDependencies,
+  });
 
   // if (!options.skipCwdCheck && rootPath !== process.cwd()) {
   //   ctx.log.debug(
