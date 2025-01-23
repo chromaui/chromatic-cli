@@ -274,9 +274,9 @@ export async function getDependentStoryFiles(
   }
 
   ctx.log.debug('=== CONTEXT OBJECTS ===');
-  ctx.log.debug('modulesByName', modulesByName);
-  ctx.log.debug('namesById', namesById);
-  ctx.log.debug('reasonsByIdd', reasonsById);
+  ctx.log.debug('modulesByName', Object.fromEntries(modulesByName));
+  ctx.log.debug('namesById', Object.fromEntries(namesById));
+  ctx.log.debug('reasonsById', Object.fromEntries(reasonsById));
   ctx.log.debug('=======================');
 
   // TODO: refactor this function
