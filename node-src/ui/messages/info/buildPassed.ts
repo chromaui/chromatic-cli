@@ -11,7 +11,7 @@ import { stats } from '../../tasks/snapshot';
 export default (ctx: Context) => {
   const { snapshots, components, stories, e2eTests } = stats({ build: ctx.build });
 
-  const totalChanges = ctx.build.changeCount + ctx.build.accessibilityChangeCount;
+  const totalChanges = (ctx.build.changeCount || 0) + (ctx.build.accessibilityChangeCount || 0);
 
   if (ctx.isOnboarding) {
     const foundString = isE2EBuild(ctx.options)
@@ -36,7 +36,7 @@ export default (ctx: Context) => {
   return ctx.build.autoAcceptChanges && totalChanges > 0
     ? dedent(chalk`
       ${success} {bold Build ${ctx.build.number} passed!}
-      Auto-accepted ${pluralize('changes', ctx.build.changeCount + ctx.build.accessibilityChangeCount, true)}.
+      Auto-accepted ${pluralize('changes', totalChanges, true)}.
       ${info} View build details at ${link(ctx.build.webUrl)}
     `)
     : dedent(chalk`

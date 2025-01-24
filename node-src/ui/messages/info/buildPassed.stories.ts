@@ -23,6 +23,27 @@ export const BuildPassedWithChanges = () =>
       number: 42,
       webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
       changeCount: 2,
+      accessibilityChangeCount: 1,
+    },
+  } as any);
+
+export const BuildPassedWithVisualChanges = () =>
+  buildPassed({
+    ...ctx,
+    build: {
+      number: 42,
+      webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+      changeCount: 2,
+    },
+  } as any);
+
+export const BuildPassedWithAccessibilityChanges = () =>
+  buildPassed({
+    ...ctx,
+    build: {
+      number: 42,
+      webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+      accessibilityChangeCount: 1,
     },
   } as any);
 
