@@ -41,7 +41,7 @@ export default (ctx: Context) => {
     `)
     : dedent(chalk`
       ${success} {bold Build ${ctx.build.number} passed!}
-      ${totalChanges > 0 ? changes.join(' and ') : 'No changes'} were found in this build.
+      ${totalChanges > 0 ? changes.join(' and ') : 'No changes'} ${pluralize('was', totalChanges, false)} found in this build.
       ${info} View build details at ${link(ctx.build.webUrl)}
     `);
 };
