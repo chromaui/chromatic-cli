@@ -9,8 +9,9 @@ import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 
 export default (ctx: Context) => {
-  const { changes, snapshots, components, stories, e2eTests } = stats({ build: ctx.build });
-  const visualChanges = pluralize('visual changes', ctx.build.changeCount, true);
+  const { snapshots, components, stories, e2eTests } = stats({ build: ctx.build });
+
+  const totalChanges = (ctx.build.changeCount || 0) + (ctx.build.accessibilityChangeCount || 0);
 
   if (ctx.isOnboarding) {
     const foundString = isE2EBuild(ctx.options)
@@ -23,15 +24,24 @@ export default (ctx: Context) => {
       ${info} Please continue setup at ${link(ctx.build.app.setupUrl)}
     `);
   }
-  return ctx.build.autoAcceptChanges && ctx.build.changeCount
+
+  const changes: any[] = [];
+  if (ctx.build.changeCount > 0) {
+    changes.push(pluralize('visual changes', ctx.build.changeCount, true));
+  }
+  if (ctx.build.accessibilityChangeCount > 0) {
+    changes.push(pluralize('accessibility changes', ctx.build.accessibilityChangeCount, true));
+  }
+
+  return ctx.build.autoAcceptChanges && totalChanges > 0
     ? dedent(chalk`
       ${success} {bold Build ${ctx.build.number} passed!}
-      Auto-accepted ${changes}.
+      Auto-accepted ${pluralize('changes', totalChanges, true)}.
       ${info} View build details at ${link(ctx.build.webUrl)}
     `)
     : dedent(chalk`
       ${success} {bold Build ${ctx.build.number} passed!}
-      ${ctx.build.changeCount > 0 ? visualChanges : 'No visual changes'} were found in this build.
+      ${totalChanges > 0 ? changes.join(' and ') : 'No changes'} ${pluralize('was', totalChanges, false)} found in this build.
       ${info} View build details at ${link(ctx.build.webUrl)}
     `);
 };

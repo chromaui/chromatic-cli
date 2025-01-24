@@ -287,6 +287,7 @@ export interface Context {
     testCount: number;
     changeCount: number;
     errorCount: number;
+    accessibilityChangeCount: number;
     interactionTestFailuresCount: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
