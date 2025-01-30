@@ -1,3 +1,16 @@
+# v11.25.2 (Thu Jan 30 2025)
+
+#### 🐛 Bug Fix
+
+- Add additional rspack builder entrypoint [#1147](https://github.com/chromaui/chromatic-cli/pull/1147) ([@jmhobbs](https://github.com/jmhobbs))
+- Account for accessibility change counts in UI [#1145](https://github.com/chromaui/chromatic-cli/pull/1145) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.25.1 (Wed Jan 22 2025)
 
 #### 🐛 Bug Fix
