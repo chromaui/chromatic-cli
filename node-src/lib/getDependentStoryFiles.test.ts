@@ -164,6 +164,7 @@ describe('getDependentStoryFiles', () => {
 
   it.each([
     [`./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`],
+    ['./node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js'],
     [`./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`],
     [`./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`],
   ])('detects direct changes to CSF files, rspack (%s)', async (resolvedModule) => {
