@@ -95,6 +95,10 @@ export async function main(argv: string[]) {
     git: {
       rootPath: await getRepositoryRoot(),
     },
+    storybook: {
+      baseDir: flags.storybookBaseDir,
+      configDir: flags.storybookConfigDir,
+    },
   } as any;
   const stats = await readStatsFile(flags.statsFile);
   const changedFiles = input.map((f) => f.replace(/^\.\//, ''));
