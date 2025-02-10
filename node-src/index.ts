@@ -182,6 +182,8 @@ export async function runAll(ctx: InitialContext) {
       headers: {
         'x-chromatic-session-id': ctx.sessionId,
         'x-chromatic-cli-version': ctx.pkg.version,
+        'apollographql-client-name': 'chromatic-cli',
+        'apollographql-client-version': ctx.pkg.version,
       },
       retries: 3,
     });
