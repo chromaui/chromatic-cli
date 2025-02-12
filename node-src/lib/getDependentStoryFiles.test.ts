@@ -6,7 +6,6 @@ import { Context } from '../types';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
-const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
@@ -141,17 +140,20 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('detects direct changes to CSF files, vite', async () => {
+  it.each([
+    '/virtual:/@storybook/builder-vite/storybook-stories.js',
+    'virtual:@storybook/builder-vite/storybook-stories.js',
+  ])('detects direct changes to CSF files, vite', async (viteEntry) => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
         id: './src/foo.stories.js',
         name: './src/foo.stories.js',
-        reasons: [{ moduleName: VITE_ENTRY }],
+        reasons: [{ moduleName: viteEntry }],
       },
       {
-        id: VITE_ENTRY,
-        name: VITE_ENTRY,
+        id: viteEntry,
+        name: viteEntry,
         reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
       },
     ];
