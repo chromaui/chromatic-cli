@@ -80,6 +80,9 @@ inputs:
   onlyStoryFiles:
     description: 'Only run a single story or a subset of stories by their filename(s)'
     required: false
+  outputDir:
+    description: 'Relative path to target directory containing your Storybook (a temporary directory is used if this is not set)'
+    required: false
   playwright:
     description: 'Run build against `@chromatic-com/playwright` test archives'
     required: false
