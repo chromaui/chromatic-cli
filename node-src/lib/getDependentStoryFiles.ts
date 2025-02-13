@@ -130,6 +130,7 @@ export async function getDependentStoryFiles(
       `./storybook-stories.js`,
       // vite builder
       `/virtual:/@storybook/builder-vite/vite-app.js`,
+      `virtual:@storybook/builder-vite/vite-app.js`,
       // rspack builder
       `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
       './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
