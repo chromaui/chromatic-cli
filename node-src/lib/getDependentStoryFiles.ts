@@ -126,8 +126,6 @@ export async function getDependentStoryFiles(
       `./generated-stories-entry.js`,
       // v6 store with .cjs extension (SB 6.5)
       `./generated-stories-entry.cjs`,
-      // vue2 store
-      ` ./storybook-config-entry.js`,
       // v7 store (SB >= 6.4)
       `./storybook-stories.js`,
       // vite builder
