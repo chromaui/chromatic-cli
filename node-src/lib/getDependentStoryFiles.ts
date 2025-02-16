@@ -147,12 +147,19 @@ export async function getDependentStoryFiles(
   const isStorybookFile = (name: string) =>
     name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
 
+  const uniqueModules = new Set<string>();
   stats.modules
     .filter((module_) => isUserModule(module_))
     // TODO: refactor this function
     // eslint-disable-next-line complexity
     .map((module_) => {
       const normalizedName = normalize(module_.name);
+      const cleanName = normalizedName.replace(/\s\+\s\d+\smodules$/, '');
+      if (uniqueModules.has(cleanName)) {
+        return;
+      } else {
+        uniqueModules.add(cleanName);
+      }
       modulesByName.set(normalizedName, module_);
       namesById.set(module_.id, normalizedName);
 
