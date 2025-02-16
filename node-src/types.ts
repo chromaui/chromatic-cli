@@ -41,6 +41,7 @@ export interface Flags {
   untraced?: string[];
   zip?: boolean;
   skipUpdateCheck?: boolean;
+  dangerouslyCompareOneBuild?: boolean;
 
   // Debug options
   debug?: boolean;
@@ -119,6 +120,7 @@ export interface Options extends Configuration {
   branchName: string;
   patchHeadRef: string;
   patchBaseRef: string;
+  dangerouslyCompareOneBuild: Flags['dangerouslyCompareOneBuild'];
 
   /** A callback that is called at the start of each task */
   experimental_onTaskStart?: (ctx: Context) => void;

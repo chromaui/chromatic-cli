@@ -108,6 +108,8 @@ export default function getOptions(ctx: InitialContext): Options {
     patchHeadRef: undefined,
     patchBaseRef: undefined,
     uploadMetadata: undefined,
+
+    dangerouslyCompareOneBuild: undefined,
   };
 
   const [patchHeadReference, patchBaseReference] = (flags.patchBuild || '')
@@ -177,6 +179,8 @@ export default function getOptions(ctx: InitialContext): Options {
     patchHeadRef: patchHeadReference,
     patchBaseRef: patchBaseReference,
     uploadMetadata: flags.uploadMetadata,
+
+    dangerouslyCompareOneBuild: flags.dangerouslyCompareOneBuild,
   });
 
   // We need to parse boolean values and set their defaults

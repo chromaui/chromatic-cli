@@ -255,6 +255,9 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
       extraParentCommits.push(lastBuild.commit);
     }
   }
+  if (ctx.options.dangerouslyCompareOneBuild) {
+    return initialCommitsWithBuilds ? [...initialCommitsWithBuilds] : [...extraParentCommits];
+  }
 
   // Get a "covering" set of commits that have builds. This is a set of commits
   // such that any ancestor of HEAD is either:

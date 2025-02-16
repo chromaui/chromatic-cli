@@ -508,6 +508,35 @@ describe('getParentCommits', () => {
     expectCommitsToEqualNames(parentCommits, ['C'], repository);
   });
 
+  it(`ignores everything but the previous build if dangerouslyCompareOneBuild option is passed`, async () => {
+    // Same as the original example, but we've been asked not to infer rebasing.
+    //
+    //             [D] [branch (rebased)]
+    //            /   \
+    //  A - B -[C]      F  [main]
+    //            \   /
+    //             (E)   [branch]
+    const repository = repositories.simpleLoop;
+    await checkoutCommit('E', 'branch', repository);
+    const client = createClient({
+      repository,
+      builds: [
+        ['C', 'main'],
+        ['D', 'branch'],
+      ],
+    });
+    const git = { branch: 'branch', ...(await getCommit()) };
+
+    const parentCommits = await getParentCommits({
+      client,
+      log,
+      git,
+      options: { dangerouslyCompareOneBuild: true },
+    } as any);
+    console.log(parentCommits);
+    expectCommitsToEqualNames(parentCommits, ['D'], repository);
+  });
+
   it(`also includes rebased commits that were on the same branch, even if they are no longer in the index`, async () => {
     // In this case we know nothing about Z in terms of history, which can often happen with rebasing
     //

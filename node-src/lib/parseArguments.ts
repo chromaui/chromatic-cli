@@ -127,6 +127,7 @@ export default function parseArguments(argv: string[]) {
         storybookLogFile: { type: 'string' },
         traceChanged: { type: 'string' },
         uploadMetadata: { type: 'boolean' },
+        dangerouslyCompareOneBuild: { type: 'boolean' },
 
         // Deprecated options (for JSDOM and tunneled builds, among others)
         allowConsoleErrors: { type: 'boolean' },
