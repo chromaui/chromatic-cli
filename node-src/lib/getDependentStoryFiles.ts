@@ -118,26 +118,24 @@ export async function getDependentStoryFiles(
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
-  const storiesEntryFiles = new Set(
-    [
-      // v6 store (SB <= 6.3)
-      `${storybookConfigDir}/generated-stories-entry.js`,
-      // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
-      `./generated-stories-entry.js`,
-      // v6 store with .cjs extension (SB 6.5)
-      `./generated-stories-entry.cjs`,
-      // v7 store (SB >= 6.4)
-      `./storybook-stories.js`,
-      // vite builder
-      `/virtual:/@storybook/builder-vite/vite-app.js`,
-      `virtual:@storybook/builder-vite/vite-app.js`,
-      // rspack builder
-      `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
-      './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
-      `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
-      `./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`,
-    ].map((file) => normalize(file))
-  );
+  const storiesEntryFiles = [
+    // v6 store (SB <= 6.3)
+    `${storybookConfigDir}/generated-stories-entry.js`,
+    // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
+    `./generated-stories-entry.js`,
+    // v6 store with .cjs extension (SB 6.5)
+    `./generated-stories-entry.cjs`,
+    // v7 store (SB >= 6.4)
+    `./storybook-stories.js`,
+    // vite builder
+    `/virtual:/@storybook/builder-vite/vite-app.js`,
+    `virtual:@storybook/builder-vite/vite-app.js`,
+    // rspack builder
+    `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
+    './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
+    `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
+    `./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`,
+  ].map((file) => normalize(file));
 
   const modulesByName = new Map<NormalizedName, Module>();
   const nodeModules = new Map<string, NormalizedName[]>();
@@ -146,7 +144,7 @@ export async function getDependentStoryFiles(
   const csfGlobsByName = new Set<NormalizedName>();
 
   const isStorybookFile = (name: string) =>
-    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
+    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.includes(name);
 
   stats.modules
     .filter((module_) => isUserModule(module_))
@@ -173,12 +171,7 @@ export async function getDependentStoryFiles(
       }
 
       const normalizedReasons = module_.reasons
-        ?.map((reason) =>
-          normalize(
-            reason.resolvedModule || // rspack sets a resolvedModule that holds the module name
-              reason.moduleName // vite, webpack, and default
-          )
-        )
+        ?.map((reason) => normalize(reason.moduleName))
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
       if (normalizedReasons) {
         reasonsById.set(module_.id, normalizedReasons);
@@ -186,7 +179,9 @@ export async function getDependentStoryFiles(
 
       if (
         !isStorybookFile(normalizedName) &&
-        reasonsById.get(module_.id)?.some((reason) => storiesEntryFiles.has(reason))
+        reasonsById
+          .get(module_.id)
+          ?.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
       ) {
         csfGlobsByName.add(normalizedName);
       }
@@ -198,7 +193,8 @@ export async function getDependentStoryFiles(
     const storiesEntryRegExp = /^(.+\/)?generated-stories-entry\.js$/;
     const foundEntry = stats.modules.find(
       (module_) =>
-        storiesEntryRegExp.test(module_.name) && !storiesEntryFiles.has(normalize(module_.name))
+        storiesEntryRegExp.test(module_.name) &&
+        !storiesEntryFiles.includes(normalize(module_.name))
     );
     const entryFile = foundEntry && normalize(foundEntry.name);
     ctx.log.error(
