@@ -1,3 +1,23 @@
+# v11.26.0 (Tue Feb 25 2025)
+
+#### 🚀 Enhancement
+
+- Upgrade to latest version of `snyk-nodejs-lockfile-parser` [#1158](https://github.com/chromaui/chromatic-cli/pull/1158) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Add new Vite builder entry for future SB versions [#1155](https://github.com/chromaui/chromatic-cli/pull/1155) ([@codykaup](https://github.com/codykaup))
+- Add `outputDir` to action metadata [#1154](https://github.com/chromaui/chromatic-cli/pull/1154) ([@codykaup](https://github.com/codykaup))
+- Set Apollo GraphQL client identification headers [#1151](https://github.com/chromaui/chromatic-cli/pull/1151) ([@jmhobbs](https://github.com/jmhobbs))
+- Fix directory flags for trace command. [#1148](https://github.com/chromaui/chromatic-cli/pull/1148) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.25.2 (Thu Jan 30 2025)
 
 #### 🐛 Bug Fix
