@@ -1,3 +1,15 @@
+# v11.26.1 (Wed Feb 26 2025)
+
+#### 🐛 Bug Fix
+
+- Fix moduleName resolution for Storybook files with import cycles. [#1157](https://github.com/chromaui/chromatic-cli/pull/1157) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v11.26.0 (Tue Feb 25 2025)
 
 #### 🚀 Enhancement
