@@ -186,7 +186,6 @@ describe('getDependentStoryFiles', () => {
         id: String.raw`./src lazy recursive ^\.\/.*$`,
         reasons: [
           {
-            resolvedModule,
             moduleName: `${resolvedModule} + 2 modules`,
           },
         ],

@@ -363,7 +363,6 @@ export interface Task {
 }
 
 export interface Reason {
-  resolvedModule?: string; // rspack sets a resolvedModule field that holds the module name
   moduleName: string;
 }
 export interface Module {
