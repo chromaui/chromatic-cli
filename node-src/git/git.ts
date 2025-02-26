@@ -1,5 +1,6 @@
 import { EOL } from 'os';
 import pLimit from 'p-limit';
+import path from 'path';
 import { file as temporaryFile } from 'tmp-promise';
 
 import { Context } from '../types';
@@ -298,19 +299,23 @@ const limitConcurrency = pLimit(10);
  * @param ctx.log The logger found on the context object.
  * @param reference The reference (usually a commit or branch) to the file version in Git.
  * @param fileName The name of the file to check out.
+ * @param tmpdir
  *
  * @returns The temporary file path of the checked out file.
  */
 export async function checkoutFile(
   { log }: Pick<Context, 'log'>,
   reference: string,
-  fileName: string
+  fileName: string,
+  tmpdir?: string
 ) {
   const pathspec = `${reference}:${fileName}`;
   if (!fileCache[pathspec]) {
     fileCache[pathspec] = limitConcurrency(async () => {
       const { path: targetFileName } = await temporaryFile({
-        postfix: `-${fileName.replaceAll('/', '--')}`,
+        name: path.basename(fileName),
+        tmpdir,
+        // postfix: `-${fileName.replaceAll('/', '--')}`,
       });
       log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
       await execGitCommand(`git show ${pathspec} > ${targetFileName}`);

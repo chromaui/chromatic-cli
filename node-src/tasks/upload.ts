@@ -150,7 +150,12 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
             changedDependencyNames.length > 0
               ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
               : '';
-          ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
+          ctx.log.info(
+            {
+              changedDependencyNames,
+            },
+            `Found ${changedDependencyNames.length} changed dependencies${list}`
+          );
         }
       } else {
         ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
@@ -166,8 +171,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
 
     const stats = await readStatsFile(statsPath);
 
+    // FAILING HERE
     await checkStorybookBaseDirectory(ctx, stats);
 
+    ctx.log.warn({ changedDependencyNames }, 'changed deps');
     const onlyStoryFiles = await getDependentStoryFiles(
       ctx,
       stats,
@@ -175,6 +182,7 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
       changedFiles,
       changedDependencyNames || []
     );
+    ctx.log.warn({ onlyStoryFiles }, 'DEBUG');
     if (onlyStoryFiles) {
       // Escape special characters in the filename so it does not conflict with picomatch
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
@@ -197,8 +205,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
           );
         }
       }
+      ctx.log.warn('DEBUG - made it this far');
       transitionTo(traced)(ctx, task);
     } else {
+      ctx.log.warn('BAILING');
       transitionTo(bailed)(ctx, task);
     }
   } catch (err) {

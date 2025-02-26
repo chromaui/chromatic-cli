@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../git/git';
@@ -100,19 +101,24 @@ export const findChangedDependencies = async (ctx: Context) => {
   await Promise.all(
     filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
       const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
-      ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
+      ctx.log.debug(
+        { manifestPath, lockfilePath, headDependencies: headDependencies?.getDepPkgs() },
+        `Found HEAD dependencies`
+      );
 
       // Retrieve the union of dependencies which changed compared to each baseline.
       // A change means either the version number is different or the dependency was added/removed.
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
       await Promise.all(
         commits.map(async (reference) => {
+          const tmpdir = fs.mkdtempSync('turbosnap');
           const baselineChanges = await compareBaseline(ctx, headDependencies, {
             ref: reference,
             rootPath,
-            manifestPath: await checkoutFile(ctx, reference, manifestPath),
-            lockfilePath: await checkoutFile(ctx, reference, lockfilePath),
+            manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
+            lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
           });
+          ctx.log.warn({ baselineChanges }, 'DEBUG - baseline changes');
           for (const change of baselineChanges) {
             changedDependencyNames.add(change);
           }

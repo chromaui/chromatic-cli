@@ -1,6 +1,7 @@
 import { statSync } from 'fs';
 import path from 'path';
-import { buildDepTreeFromFiles, PkgTree } from 'snyk-nodejs-lockfile-parser';
+import { PkgTree } from 'snyk-nodejs-lockfile-parser';
+import { inspect } from 'snyk-nodejs-plugin';
 
 import { Context } from '../types';
 
@@ -28,14 +29,23 @@ export const getDependencies = async (
   ensureLockFileSize(ctx, path.resolve(rootPath, lockfilePath));
 
   try {
-    const headTree = await buildDepTreeFromFiles(
-      rootPath,
-      manifestPath,
-      lockfilePath,
-      includeDev,
-      strictOutOfSync
-    );
-    return flattenDependencyTree(headTree.dependencies);
+    // rootPath/package.json
+    // manifestPath
+    const headGraph = await inspect(path.dirname(manifestPath), lockfilePath, {
+      dev: includeDev,
+      strictOutOfSync,
+    });
+    return headGraph.scannedProjects[0].depGraph;
+
+    // try {
+    // const headTree = await buildDepTreeFromFiles(
+    //   rootPath,
+    //   manifestPath, // package.json
+    //   lockfilePath,
+    //   includeDev,
+    //   strictOutOfSync
+    // );
+    // return flattenDependencyTree(headTree.dependencies);
   } catch (err) {
     ctx.log.debug({ rootPath, manifestPath, lockfilePath }, 'Failed to get dependencies');
     throw err;
