@@ -310,7 +310,7 @@ export async function checkoutFile(
   tmpdir?: string
 ) {
   const pathspec = `${reference}:${fileName}`;
-  if (!fileCache[pathspec]) {
+  if (!fileCache[pathspec] || fileName === 'package-lock.json') {
     fileCache[pathspec] = limitConcurrency(async () => {
       const { path: targetFileName } = await temporaryFile({
         name: path.basename(fileName),

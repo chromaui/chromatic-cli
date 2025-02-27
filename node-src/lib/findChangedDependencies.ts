@@ -10,6 +10,7 @@ import { matchesFile } from './utils';
 const PACKAGE_JSON = 'package.json';
 const PACKAGE_LOCK = 'package-lock.json';
 const YARN_LOCK = 'yarn.lock';
+const PNPM_LOCK = 'pnpm-lock.yaml';
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
@@ -31,7 +32,8 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   const rootPath = (await getRepositoryRoot()) || '';
   const [rootManifestPath] = (await findFilesFromRepositoryRoot(PACKAGE_JSON)) || [];
-  const [rootLockfilePath] = (await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK)) || [];
+  const [rootLockfilePath] =
+    (await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK, PNPM_LOCK)) || [];
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -51,7 +53,8 @@ export const findChangedDependencies = async (ctx: Context) => {
       const [lockfilePath] =
         (await findFilesFromRepositoryRoot(
           `${dirname}/${YARN_LOCK}`,
-          `${dirname}/${PACKAGE_LOCK}`
+          `${dirname}/${PACKAGE_LOCK}`,
+          `${dirname}/${PNPM_LOCK}`
         )) || [];
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
@@ -100,7 +103,15 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   await Promise.all(
     filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
-      const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
+      const tmpdir = path.resolve(fs.mkdtempSync('turbosnap'));
+      fs.copyFileSync(manifestPath, path.join(tmpdir, path.basename(manifestPath)));
+      fs.copyFileSync(lockfilePath, path.join(tmpdir, path.basename(lockfilePath)));
+
+      const headDependencies = await getDependencies(ctx, {
+        rootPath: tmpdir,
+        manifestPath: path.join(tmpdir, path.basename(manifestPath)),
+        lockfilePath: path.join(tmpdir, path.basename(lockfilePath)),
+      });
       ctx.log.debug(
         { manifestPath, lockfilePath, headDependencies: headDependencies?.getDepPkgs() },
         `Found HEAD dependencies`
@@ -111,14 +122,15 @@ export const findChangedDependencies = async (ctx: Context) => {
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
       await Promise.all(
         commits.map(async (reference) => {
-          const tmpdir = fs.mkdtempSync('turbosnap');
+          const tmpdir = path.resolve(fs.mkdtempSync('turbosnap'));
+
           const baselineChanges = await compareBaseline(ctx, headDependencies, {
             ref: reference,
-            rootPath,
+            rootPath: tmpdir,
             manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
             lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
           });
-          ctx.log.warn({ baselineChanges }, 'DEBUG - baseline changes');
+
           for (const change of baselineChanges) {
             changedDependencyNames.add(change);
           }

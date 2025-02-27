@@ -24,14 +24,16 @@ export const getDependencies = async (
     strictOutOfSync?: boolean;
   }
 ) => {
+  const absoluteLockfilePath = path.resolve(rootPath, lockfilePath);
+
   // We can run into OOM errors if the lock file is too large. Therefore, we bail early and skip
   // lock file parsing because some TurboSnap is better than no TurboSnap.
-  ensureLockFileSize(ctx, path.resolve(rootPath, lockfilePath));
+  ensureLockFileSize(ctx, absoluteLockfilePath);
 
   try {
     // rootPath/package.json
     // manifestPath
-    const headGraph = await inspect(path.dirname(manifestPath), lockfilePath, {
+    const headGraph = await inspect(path.dirname(manifestPath), absoluteLockfilePath, {
       dev: includeDev,
       strictOutOfSync,
     });
