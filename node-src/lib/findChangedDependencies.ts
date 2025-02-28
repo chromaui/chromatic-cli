@@ -9,8 +9,7 @@ import { getDependencies } from './getDependencies';
 import { matchesFile } from './utils';
 
 const PACKAGE_JSON = 'package.json';
-const PACKAGE_LOCK = 'package-lock.json';
-const YARN_LOCK = 'yarn.lock';
+const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
@@ -32,7 +31,7 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   const rootPath = (await getRepositoryRoot()) || '';
   const [rootManifestPath] = (await findFilesFromRepositoryRoot(PACKAGE_JSON)) || [];
-  const [rootLockfilePath] = (await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK)) || [];
+  const [rootLockfilePath] = (await findFilesFromRepositoryRoot(...SUPPORTED_LOCK_FILES)) || [];
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -51,8 +50,7 @@ export const findChangedDependencies = async (ctx: Context) => {
       const dirname = path.dirname(manifestPath);
       const [lockfilePath] =
         (await findFilesFromRepositoryRoot(
-          `${dirname}/${YARN_LOCK}`,
-          `${dirname}/${PACKAGE_LOCK}`
+          ...SUPPORTED_LOCK_FILES.map((lockfile) => `${dirname}/${lockfile}`)
         )) || [];
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
@@ -62,7 +60,9 @@ export const findChangedDependencies = async (ctx: Context) => {
   if (rootManifestPath && rootLockfilePath) {
     metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
   } else if (metadataPathPairs.length === 0) {
-    throw new Error(`Could not find any pairs of ${PACKAGE_JSON} + ${PACKAGE_LOCK} / ${YARN_LOCK}`);
+    throw new Error(
+      `Could not find any pairs of ${PACKAGE_JSON} + ${SUPPORTED_LOCK_FILES.join(' / ')}`
+    );
   }
 
   ctx.log.debug(
