@@ -1,3 +1,5 @@
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../git/git';
@@ -99,7 +101,18 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   await Promise.all(
     filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
-      const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
+      const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+      const temporaryManifestPath = path.join(tmpdir, path.basename(manifestPath));
+      const temporaryLockfilePath = path.join(tmpdir, path.basename(lockfilePath));
+
+      fs.copyFileSync(manifestPath, temporaryManifestPath);
+      fs.copyFileSync(lockfilePath, temporaryLockfilePath);
+
+      const headDependencies = await getDependencies(ctx, {
+        rootPath: tmpdir,
+        manifestPath: temporaryManifestPath,
+        lockfilePath: temporaryLockfilePath,
+      });
       ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
 
       // Retrieve the union of dependencies which changed compared to each baseline.
@@ -107,11 +120,13 @@ export const findChangedDependencies = async (ctx: Context) => {
       // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
       await Promise.all(
         commits.map(async (reference) => {
+          const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+
           const baselineChanges = await compareBaseline(ctx, headDependencies, {
             ref: reference,
-            rootPath,
-            manifestPath: await checkoutFile(ctx, reference, manifestPath),
-            lockfilePath: await checkoutFile(ctx, reference, lockfilePath),
+            rootPath: tmpdir,
+            manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
+            lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
           });
           for (const change of baselineChanges) {
             changedDependencyNames.add(change);

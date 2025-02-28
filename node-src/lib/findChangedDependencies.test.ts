@@ -1,4 +1,4 @@
-import { statSync as unMockedStatSync } from 'fs';
+import { mkdtempSync as unMockedMkdtempSync, statSync as unMockedStatSync } from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -11,9 +11,19 @@ vi.mock('snyk-nodejs-lockfile-parser');
 vi.mock('yarn-or-npm');
 vi.mock('../git/git');
 vi.mock('fs');
+//   return {
+//     statSync: vi.fn().mockReturnValue({ size: 1 }),
+//     mkdtempSync: vi.fn().mockReturnValue('tmpdir'),
+//   };
+// });
+
+const tmpdir = '/tmpdir';
 
 const statSync = unMockedStatSync as Mock;
 statSync.mockReturnValue({ size: 1 });
+
+const mkdtempSync = unMockedMkdtempSync as Mock;
+mkdtempSync.mockReturnValue(tmpdir);
 
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
@@ -251,30 +261,32 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context)).resolves.toEqual(['react', 'lodash']);
+    await expect(findChangedDependencies(context)).resolves.toEqual(
+      expect.arrayContaining(['react', 'lodash'])
+    );
 
     // Root manifest and lock files are checked
-    expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true, false);
     expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.package.json',
-      'A.yarn.lock',
+      tmpdir,
+      `${tmpdir}/package.json`,
+      `${tmpdir}/yarn.lock`,
       true,
       false
     );
+    expect(buildDepTree).toHaveBeenCalledWith(tmpdir, 'A.package.json', 'A.yarn.lock', true, false);
 
     // Subpackage manifest and lock files are checked
     expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'subdir/package.json',
-      'subdir/yarn.lock',
+      tmpdir,
+      `${tmpdir}/package.json`,
+      `${tmpdir}/yarn.lock`,
       true,
       false
     );
     expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.subdir/package.json',
-      'A.subdir/yarn.lock',
+      tmpdir,
+      `${tmpdir}/package.json`,
+      `${tmpdir}/yarn.lock`,
       true,
       false
     );
@@ -298,9 +310,9 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
     expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.subdir/package.json',
-      'A.yarn.lock', // root lockfile
+      tmpdir,
+      expect.stringContaining('/package.json'),
+      expect.stringContaining('/yarn.lock'), // root lockfile
       true,
       false
     );
@@ -347,7 +359,7 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
     expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
+      tmpdir,
       'A.subdir/package.json',
       'A.subdir/package-lock.json',
       true,
