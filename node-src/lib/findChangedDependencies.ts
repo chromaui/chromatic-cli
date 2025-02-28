@@ -98,51 +98,61 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
+  const tmpdirsCreated = new Set<string>();
 
-  await Promise.all(
-    filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
-      // Create a temporary directory for the HEAD dependencies. We do this to isolate the
-      // package.json and lock files from the rest of the repository because the `inspect` function
-      // from `snyk-nodejs-plugin` used inside getDependencies.ts hardcodes the file paths based on
-      // the root path it receives (first argument).
-      const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
-      const temporaryManifestPath = path.join(tmpdir, path.basename(manifestPath));
-      const temporaryLockfilePath = path.join(tmpdir, path.basename(lockfilePath));
+  try {
+    await Promise.all(
+      filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
+        // Create a temporary directory for the HEAD dependencies. We do this to isolate the
+        // package.json and lock files from the rest of the repository because the `inspect` function
+        // from `snyk-nodejs-plugin` used inside getDependencies.ts hardcodes the file paths based on
+        // the root path it receives (first argument).
+        const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+        tmpdirsCreated.add(tmpdir);
 
-      fs.copyFileSync(manifestPath, temporaryManifestPath);
-      fs.copyFileSync(lockfilePath, temporaryLockfilePath);
+        const temporaryManifestPath = path.join(tmpdir, path.basename(manifestPath));
+        const temporaryLockfilePath = path.join(tmpdir, path.basename(lockfilePath));
 
-      const headDependencies = await getDependencies(ctx, {
-        rootPath: tmpdir,
-        manifestPath: temporaryManifestPath,
-        lockfilePath: temporaryLockfilePath,
-      });
+        fs.copyFileSync(manifestPath, temporaryManifestPath);
+        fs.copyFileSync(lockfilePath, temporaryLockfilePath);
 
-      ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
+        const headDependencies = await getDependencies(ctx, {
+          rootPath: tmpdir,
+          manifestPath: temporaryManifestPath,
+          lockfilePath: temporaryLockfilePath,
+        });
 
-      // Retrieve the union of dependencies which changed compared to each baseline.
-      // A change means either the version number is different or the dependency was added/removed.
-      // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
-      await Promise.all(
-        commits.map(async (reference) => {
-          // Create a temporary directory for the baseline dependencies to also isolate the
-          // package.json and lock files for the `inspect` function from `snyk-nodejs-plugin` in
-          // getDependencies.ts.
-          const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+        ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
 
-          const baselineChanges = await compareBaseline(ctx, headDependencies, {
-            ref: reference,
-            rootPath: tmpdir,
-            manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
-            lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
-          });
-          for (const change of baselineChanges) {
-            changedDependencyNames.add(change);
-          }
-        })
-      );
-    })
-  );
+        // Retrieve the union of dependencies which changed compared to each baseline.
+        // A change means either the version number is different or the dependency was added/removed.
+        // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
+        await Promise.all(
+          commits.map(async (reference) => {
+            // Create a temporary directory for the baseline dependencies to also isolate the
+            // package.json and lock files for the `inspect` function from `snyk-nodejs-plugin` in
+            // getDependencies.ts.
+            const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+            tmpdirsCreated.add(tmpdir);
+
+            const baselineChanges = await compareBaseline(ctx, headDependencies, {
+              ref: reference,
+              rootPath: tmpdir,
+              manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
+              lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
+            });
+            for (const change of baselineChanges) {
+              changedDependencyNames.add(change);
+            }
+          })
+        );
+      })
+    );
+  } finally {
+    for (const tmpdir of tmpdirsCreated) {
+      fs.rmSync(tmpdir, { recursive: true, force: true });
+    }
+  }
 
   return [...changedDependencyNames];
 };
