@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import snykGraph from '@snyk/dep-graph';
 import { mkdtempSync as unMockedMkdtempSync, statSync as unMockedStatSync } from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
