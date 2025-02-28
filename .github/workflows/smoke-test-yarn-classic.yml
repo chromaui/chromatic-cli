@@ -22,7 +22,7 @@ jobs:
       - run: rm -rf subdir # remove conflicting subproject
       - run: corepack enable
       - run: yarn set version 1.22.22
-      - run: yarn install
+      - run: yarn install --ignore-engines
       - name: run chromatic
         run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
