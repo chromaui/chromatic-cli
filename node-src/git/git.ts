@@ -306,16 +306,15 @@ export async function checkoutFile(
   { log }: Pick<Context, 'log'>,
   reference: string,
   fileName: string,
-  tmpdir?: string
+  tmpdir: string
 ) {
   const pathspec = `${reference}:${fileName}`;
 
   return limitConcurrency(async () => {
-    const options = tmpdir
-      ? { name: path.basename(fileName), tmpdir }
-      : { postfix: `-${fileName.replaceAll('/', '--')}` };
-
-    const { path: targetFileName } = await temporaryFile(options);
+    const { path: targetFileName } = await temporaryFile({
+      name: path.basename(fileName),
+      tmpdir,
+    });
 
     log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
     await execGitCommand(`git show ${pathspec} > ${targetFileName}`);

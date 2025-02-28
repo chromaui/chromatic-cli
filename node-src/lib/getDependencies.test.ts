@@ -1,4 +1,5 @@
-import { statSync as unMockedStatSync } from 'fs';
+import fs, { statSync as unmockedStatSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, Mock, vi } from 'vitest';
@@ -11,11 +12,15 @@ import TestLogger from './testLogger';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const ctx = { log: new TestLogger() } as any;
+const statSync = unmockedStatSync as Mock;
 
-vi.mock('fs');
-
-const statSync = unMockedStatSync as Mock;
-statSync.mockReturnValue({ size: 1 });
+vi.mock('fs', async (original) => {
+  const actual = await original<typeof import('fs')>();
+  return {
+    ...actual,
+    statSync: vi.fn().mockReturnValue({ size: 1 }),
+  };
+});
 
 describe('getDependencies', () => {
   it('should return a set of dependencies', async () => {
@@ -35,10 +40,12 @@ describe('getDependencies', () => {
   });
 
   it.skip('should handle checked out manifest and lock files', async () => {
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+
     const dependencies = await getDependencies(ctx, {
-      rootPath: '/',
-      manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json'),
-      lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock'),
+      rootPath: tmpdir,
+      manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json', tmpdir),
+      lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock', tmpdir),
     });
 
     const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
@@ -54,10 +61,12 @@ describe('getDependencies', () => {
     // chromatic@6.12.0
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
 
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+
     const dependencies = await getDependencies(ctx, {
-      rootPath: '/',
-      manifestPath: await checkoutFile(ctx, commit, 'package.json'),
-      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock'),
+      rootPath: tmpdir,
+      manifestPath: await checkoutFile(ctx, commit, 'package.json', tmpdir),
+      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock', tmpdir),
     });
 
     const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
