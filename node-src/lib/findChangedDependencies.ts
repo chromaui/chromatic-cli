@@ -114,14 +114,7 @@ export const findChangedDependencies = async (ctx: Context) => {
         lockfilePath: temporaryLockfilePath,
       });
 
-      ctx.log.debug(
-        {
-          manifestPath,
-          lockfilePath,
-          headDependencies: headDependencies.getDepPkgs().map((pkg) => pkg.name),
-        },
-        `Found HEAD dependencies`
-      );
+      ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
 
       // Retrieve the union of dependencies which changed compared to each baseline.
       // A change means either the version number is different or the dependency was added/removed.

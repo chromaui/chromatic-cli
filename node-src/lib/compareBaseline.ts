@@ -19,13 +19,7 @@ export const compareBaseline = async (
   const changedDependencyNames = new Set<string>();
   const baselineDependencies = await getDependencies(ctx, baselineConfig);
 
-  ctx.log.debug(
-    {
-      ...baselineConfig,
-      baselineDependencies: baselineDependencies.getDepPkgs().map((pkg) => pkg.name),
-    },
-    'Found baseline dependencies'
-  );
+  ctx.log.debug({ ...baselineConfig }, 'Found baseline dependencies');
 
   // createChangedPackagesGraph creates a graph of the dependencies that have changed between the
   // two dependency graphs but only finds removed dependencies based on the first graph argument.
