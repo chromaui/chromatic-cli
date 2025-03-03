@@ -1,3 +1,15 @@
+# v11.27.0 (Mon Mar 03 2025)
+
+#### 🚀 Enhancement
+
+- Add PNPM Support for TurboSnap [#1160](https://github.com/chromaui/chromatic-cli/pull/1160) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.26.1 (Wed Feb 26 2025)
 
 #### 🐛 Bug Fix
