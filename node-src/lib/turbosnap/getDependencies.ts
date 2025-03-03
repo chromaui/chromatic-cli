@@ -2,7 +2,7 @@ import { statSync } from 'fs';
 import path from 'path';
 import { inspect } from 'snyk-nodejs-plugin';
 
-import { Context } from '../types';
+import { Context } from '../../types';
 
 export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 

@@ -5,16 +5,16 @@ import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
-import { Context } from '..';
-import * as git from '../git/git';
+import { Context } from '../..';
+import * as git from '../../git/git';
+import TestLogger from '../testLogger';
 import { findChangedDependencies } from './findChangedDependencies';
-import TestLogger from './testLogger';
 
 vi.mock('snyk-nodejs-lockfile-parser');
 vi.mock('snyk-nodejs-plugin');
 vi.mock('@snyk/dep-graph');
 vi.mock('yarn-or-npm');
-vi.mock('../git/git');
+vi.mock('../../git/git');
 vi.mock('fs');
 
 const tmpdir = '/tmpdir';

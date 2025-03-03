@@ -2,11 +2,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../git/git';
-import { Context } from '../types';
+import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../git/git';
+import { Context } from '../../types';
+import { matchesFile } from '../utils';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
-import { matchesFile } from './utils';
 
 const PACKAGE_JSON = 'package.json';
 const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];

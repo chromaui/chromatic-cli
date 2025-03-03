@@ -1,7 +1,7 @@
 import { DepGraph } from '@snyk/dep-graph';
 import { createChangedPackagesGraph } from '@snyk/dep-graph';
 
-import { Context } from '../types';
+import { Context } from '../../types';
 import { BaselineConfig, getDependencies } from './getDependencies';
 
 export const compareBaseline = async (

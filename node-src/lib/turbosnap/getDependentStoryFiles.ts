@@ -1,11 +1,11 @@
 import path from 'path';
 
-import { Context, Module, Reason, Stats } from '../types';
-import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
-import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
-import bailFile from '../ui/messages/warnings/bailFile';
-import { posix } from './posix';
-import { isPackageManifestFile, matchesFile } from './utils';
+import { Context, Module, Reason, Stats } from '../../types';
+import noCSFGlobs from '../../ui/messages/errors/noCSFGlobs';
+import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
+import bailFile from '../../ui/messages/warnings/bailFile';
+import { posix } from '../posix';
+import { isPackageManifestFile, matchesFile } from '../utils';
 
 type FilePath = string;
 type NormalizedName = string;

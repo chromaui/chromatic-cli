@@ -1,5 +1,5 @@
-import { execGitCommand } from '../git/execGit';
-import { isPackageMetadataFile } from './utils';
+import { execGitCommand } from '../../git/execGit';
+import { isPackageMetadataFile } from '../utils';
 
 // TODO: refactor this function
 // eslint-disable-next-line complexity

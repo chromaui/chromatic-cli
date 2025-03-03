@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as execGit from '../git/execGit';
+import * as execGit from '../../git/execGit';
 import {
   arePackageDependenciesEqual,
   clearFileCache,
   findChangedPackageFiles,
 } from './findChangedPackageFiles';
 
-vi.mock('../git/execGit');
+vi.mock('../../git/execGit');
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 

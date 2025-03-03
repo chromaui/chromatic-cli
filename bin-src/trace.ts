@@ -1,7 +1,7 @@
+import { getDependentStoryFiles } from '@cli/turbosnap';
 import meow from 'meow';
 
 import { getRepositoryRoot } from '../node-src/git/git';
-import { getDependentStoryFiles } from '../node-src/lib/getDependentStoryFiles';
 import { isPackageManifestFile } from '../node-src/lib/utils';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Context } from '../node-src/types';
