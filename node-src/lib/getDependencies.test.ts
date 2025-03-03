@@ -1,6 +1,7 @@
 import fs, { statSync as unmockedStatSync } from 'fs';
 import os from 'os';
 import path from 'path';
+import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, Mock, vi } from 'vitest';
 
@@ -19,6 +20,20 @@ vi.mock('fs', async (original) => {
   return {
     ...actual,
     statSync: vi.fn().mockReturnValue({ size: 1 }),
+  };
+});
+
+const inspect = unmockedInspect as Mock;
+
+vi.mock('snyk-nodejs-plugin', async (original) => {
+  const actual = await original<typeof import('snyk-nodejs-plugin')>();
+  return {
+    ...actual,
+    inspect: vi
+      .fn()
+      .mockImplementation(async (rootPath: string, lockfilePath: string, options: any) => {
+        return actual.inspect(rootPath, lockfilePath, options);
+      }),
   };
 });
 
@@ -141,5 +156,29 @@ describe('getDependencies', () => {
         ...Object.keys(packageJson.devDependencies),
       ])
     );
+  });
+
+  it('should error if a depTree is returned instead of a depGraph', async () => {
+    inspect.mockResolvedValueOnce({ scannedProjects: [{ depTree: {} }] });
+
+    await expect(() =>
+      getDependencies(ctx, {
+        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+        manifestPath: 'package.json',
+        lockfilePath: 'yarn.lock',
+      })
+    ).rejects.toThrowError();
+  });
+
+  it('should error unless only one scannedProject is returned from inspect', async () => {
+    inspect.mockResolvedValueOnce({ scannedProjects: [{ depGraph: {} }, { depGraph: {} }] });
+
+    await expect(() =>
+      getDependencies(ctx, {
+        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+        manifestPath: 'package.json',
+        lockfilePath: 'yarn.lock',
+      })
+    ).rejects.toThrowError();
   });
 });
