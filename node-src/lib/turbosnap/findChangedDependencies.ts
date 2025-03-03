@@ -9,7 +9,7 @@ import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 
 const PACKAGE_JSON = 'package.json';
-const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];
+export const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
