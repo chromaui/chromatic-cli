@@ -6,6 +6,12 @@ import { Context } from '../types';
 
 export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 
+export interface BaselineConfig {
+  rootPath: string;
+  manifestPath: string;
+  lockfilePath: string;
+}
+
 export const getDependencies = async (
   ctx: Context,
   {

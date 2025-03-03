@@ -136,7 +136,6 @@ export const findChangedDependencies = async (ctx: Context) => {
             tmpdirsCreated.add(tmpdir);
 
             const baselineChanges = await compareBaseline(ctx, headDependencies, {
-              ref: reference,
               rootPath: tmpdir,
               manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
               lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),

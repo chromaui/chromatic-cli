@@ -22,7 +22,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/react-async-9'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -39,7 +38,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -56,7 +54,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/react-async-9'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -73,7 +70,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -90,7 +86,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/berry'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -107,7 +102,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/berry-chalk'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
@@ -124,7 +118,6 @@ describe('compareBaseline', () => {
       lockfilePath: 'yarn.lock',
     });
     const baselineChanges = await compareBaseline(ctx, headDependencies, {
-      ref: 'A',
       rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/berry-chalk'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',

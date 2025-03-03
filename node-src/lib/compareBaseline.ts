@@ -2,14 +2,7 @@ import { DepGraph } from '@snyk/dep-graph';
 import { createChangedPackagesGraph } from '@snyk/dep-graph';
 
 import { Context } from '../types';
-import { getDependencies } from './getDependencies';
-
-interface BaselineConfig {
-  ref: string;
-  rootPath: string;
-  manifestPath: string;
-  lockfilePath: string;
-}
+import { BaselineConfig, getDependencies } from './getDependencies';
 
 export const compareBaseline = async (
   ctx: Context,
