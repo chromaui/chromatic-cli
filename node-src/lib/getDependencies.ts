@@ -37,11 +37,10 @@ export const getDependencies = async (
       strictOutOfSync: false, // Don't throw an error if the lock file is out of sync
     });
 
-    if (!headGraph.scannedProjects[0].depGraph) {
+    if (headGraph.scannedProjects.length !== 1 || !headGraph.scannedProjects[0].depGraph) {
       throw new Error('Failed to parse dependency graph');
     }
 
-    // TODO: Handle multiple scanned projects
     return headGraph.scannedProjects[0].depGraph;
   } catch (err) {
     ctx.log.debug({ rootPath, manifestPath, lockfilePath }, 'Failed to get dependencies');
