@@ -1,13 +1,10 @@
 /* eslint-disable max-lines */
+import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
 import { FormData } from 'formdata-node';
 import { access, createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
-import { findChangedDependencies as findChangedDep } from '../lib/findChangedDependencies';
-import { findChangedPackageFiles as findChangedPackage } from '../lib/findChangedPackageFiles';
-import { getDependentStoryFiles as getDepStoryFiles } from '../lib/getDependentStoryFiles';
-import { exitCodes } from '../lib/setExitCode';
 import {
   calculateFileHashes,
   traceChangedFiles,
@@ -19,9 +16,7 @@ import {
 vi.mock('form-data');
 vi.mock('fs');
 vi.mock('../lib/compress');
-vi.mock('../lib/getDependentStoryFiles');
-vi.mock('../lib/findChangedDependencies');
-vi.mock('../lib/findChangedPackageFiles');
+vi.mock('@cli/turbosnap');
 vi.mock('./readStatsFile', () => ({
   readStatsFile: () =>
     Promise.resolve({
@@ -50,9 +45,7 @@ vi.mock('../lib/getFileHashes', () => ({
 }));
 
 const makeZipFile = vi.mocked(compress);
-const findChangedDependencies = vi.mocked(findChangedDep);
-const findChangedPackageFiles = vi.mocked(findChangedPackage);
-const getDependentStoryFiles = vi.mocked(getDepStoryFiles);
+const traceChangedFilesTurbosnap = vi.mocked(traceChangedFilesDep);
 const accessMock = vi.mocked(access);
 const createReadStreamMock = vi.mocked(createReadStream);
 const readdirSyncMock = vi.mocked(readdirSync);
@@ -168,17 +161,12 @@ describe('validateFiles', () => {
 
 describe('traceChangedFiles', () => {
   beforeEach(() => {
-    findChangedDependencies.mockReset();
-    findChangedPackageFiles.mockReset();
-    getDependentStoryFiles.mockReset();
     accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(null)));
   });
 
   it('sets onlyStoryFiles on context', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockResolvedValue([]);
-    findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
+    traceChangedFilesTurbosnap.mockResolvedValue(deps);
 
     const ctx = {
       env: environment,
@@ -205,9 +193,7 @@ describe('traceChangedFiles', () => {
         '[./example/[account]/[id]/[unit]/language/example.stories.tsx]',
       ],
     };
-    findChangedDependencies.mockResolvedValue([]);
-    findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
+    traceChangedFilesTurbosnap.mockResolvedValue(deps);
 
     const ctx = {
       env: environment,
@@ -228,96 +214,6 @@ describe('traceChangedFiles', () => {
       String.raw`./example\[\[lang=language\]\].stories.js`,
       String.raw`\[./example/\[account\]/\[id\]/\[unit\]/language/example.stories.tsx\]`,
     ]);
-  });
-
-  it('does not run package dependency analysis if there are no metadata changes', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    getDependentStoryFiles.mockResolvedValue(deps);
-
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
-    expect(findChangedDependencies).not.toHaveBeenCalled();
-    expect(findChangedPackageFiles).not.toHaveBeenCalled();
-  });
-
-  it('bails on package.json changes if it fails to retrieve lockfile changes (fallback scenario)', async () => {
-    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
-    findChangedPackageFiles.mockResolvedValue(['./package.json']);
-
-    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
-    expect(getDependentStoryFiles).not.toHaveBeenCalled();
-  });
-
-  it('throws an error if storybookBaseDir is incorrect', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockResolvedValue([]);
-    findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
-    accessMock.mockImplementation((_path, callback) =>
-      Promise.resolve(callback(new Error('some error')))
-    );
-
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: { storybookBaseDir: '/wrong' },
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await expect(traceChangedFiles(ctx, {} as any)).rejects.toThrow();
-    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
-  });
-
-  it('continues story file tracing if no dependencies are changed in package.json (fallback scenario)', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
-    findChangedPackageFiles.mockResolvedValue([]); // no dependency changes
-    getDependentStoryFiles.mockResolvedValue(deps);
-
-    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
   });
 });
 

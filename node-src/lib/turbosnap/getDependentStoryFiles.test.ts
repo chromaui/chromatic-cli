@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Context } from '../types';
+import { Context } from '../../types';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;

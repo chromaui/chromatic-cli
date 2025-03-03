@@ -6,6 +6,9 @@
     "module": "es2022",
     "moduleResolution": "Bundler",
     "strict": true,
+    "paths": {
+      "@cli/*": ["./node-src/lib/*"]
+    },
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false, // Let this be a warning from ESLint until it becomes required
     "useUnknownInCatchVariables": false, // Treat caught errors as 'any' for now

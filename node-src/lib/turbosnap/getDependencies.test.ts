@@ -5,10 +5,10 @@ import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, Mock, vi } from 'vitest';
 
-import packageJson from '../__mocks__/dependencyChanges/plain/package.json';
-import { checkoutFile } from '../git/git';
+import packageJson from '../../__mocks__/dependencyChanges/plain/package.json';
+import { checkoutFile } from '../../git/git';
+import TestLogger from '../testLogger';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
-import TestLogger from './testLogger';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,7 +40,7 @@ vi.mock('snyk-nodejs-plugin', async (original) => {
 describe('getDependencies', () => {
   it('should return a set of dependencies', async () => {
     const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+      rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
     });
@@ -132,7 +132,7 @@ describe('getDependencies', () => {
 
     await expect(() =>
       getDependencies(ctx, {
-        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+        rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
         manifestPath: 'package.json',
         lockfilePath: 'yarn.lock',
       })
@@ -144,7 +144,7 @@ describe('getDependencies', () => {
     statSync.mockReturnValue({ size: MAX_LOCK_FILE_SIZE + 1000 });
 
     const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+      rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
     });

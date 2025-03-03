@@ -1,12 +1,9 @@
+import * as turbosnap from '@cli/turbosnap';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import slash from 'slash';
 
-import { checkStorybookBaseDirectory } from '../lib/checkStorybookBaseDirectory';
-import { findChangedDependencies } from '../lib/findChangedDependencies';
-import { findChangedPackageFiles } from '../lib/findChangedPackageFiles';
-import { getDependentStoryFiles } from '../lib/getDependentStoryFiles';
 import { getFileHashes } from '../lib/getFileHashes';
 import { createTask, transitionTo } from '../lib/tasks';
 import { uploadBuild } from '../lib/upload';
@@ -15,7 +12,6 @@ import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
-import bailFile from '../ui/messages/warnings/bailFile';
 import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
 import {
   bailed,
@@ -32,7 +28,6 @@ import {
   uploading,
   validating,
 } from '../ui/tasks/upload';
-import { readStatsFile } from './readStatsFile';
 
 interface PathSpec {
   pathname: string;
@@ -116,7 +111,7 @@ export const validateFiles = async (ctx: Context) => {
 };
 
 // TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
+// eslint-disable-next-line complexity
 export const traceChangedFiles = async (ctx: Context, task: Task) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
@@ -133,48 +128,10 @@ export const traceChangedFiles = async (ctx: Context, task: Task) => {
   transitionTo(tracing)(ctx, task);
 
   const { statsPath } = ctx.fileInfo;
-  const { changedFiles, packageMetadataChanges } = ctx.git;
+  const { changedFiles } = ctx.git;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    let changedDependencyNames: void | string[] = [];
-    if (packageMetadataChanges?.length) {
-      changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
-        const { name, message, stack, code } = err;
-        ctx.log.debug({ name, message, stack, code });
-      });
-      if (changedDependencyNames) {
-        ctx.git.changedDependencyNames = changedDependencyNames;
-        if (!ctx.options.interactive) {
-          const list =
-            changedDependencyNames.length > 0
-              ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
-              : '';
-          ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
-        }
-      } else {
-        ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
-
-        const changedPackageFiles = await findChangedPackageFiles(packageMetadataChanges);
-        if (changedPackageFiles.length > 0) {
-          ctx.turboSnap.bailReason = { changedPackageFiles };
-          ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-          return;
-        }
-      }
-    }
-
-    const stats = await readStatsFile(statsPath);
-
-    await checkStorybookBaseDirectory(ctx, stats);
-
-    const onlyStoryFiles = await getDependentStoryFiles(
-      ctx,
-      stats,
-      statsPath,
-      changedFiles,
-      changedDependencyNames || []
-    );
+    const onlyStoryFiles = await turbosnap.traceChangedFiles(ctx);
     if (onlyStoryFiles) {
       // Escape special characters in the filename so it does not conflict with picomatch
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
