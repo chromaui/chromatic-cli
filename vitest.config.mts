@@ -1,4 +1,5 @@
-import { configDefaults, coverageConfigDefaults, defineConfig } from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import { configDefaults, coverageConfigDefaults, defineConfig, Plugin } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -14,4 +15,5 @@ export default defineConfig({
       ],
     },
   },
+  plugins: [tsconfigPaths() as Plugin],
 });
