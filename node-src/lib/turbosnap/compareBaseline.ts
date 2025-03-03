@@ -1,18 +1,11 @@
 import { DepGraph } from '@snyk/dep-graph';
 import { createChangedPackagesGraph } from '@snyk/dep-graph';
 
-import { Context } from '../../types';
-import { BaselineConfig, getDependencies } from './getDependencies';
-
 export const compareBaseline = async (
-  ctx: Context,
   headDependencies: DepGraph,
-  baselineConfig: BaselineConfig
+  baselineDependencies: DepGraph
 ) => {
   const changedDependencyNames = new Set<string>();
-  const baselineDependencies = await getDependencies(ctx, baselineConfig);
-
-  ctx.log.debug({ ...baselineConfig }, 'Found baseline dependencies');
 
   // createChangedPackagesGraph creates a graph of the dependencies that have changed between the
   // two dependency graphs but only finds removed dependencies based on the first graph argument.

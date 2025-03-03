@@ -135,11 +135,15 @@ export const findChangedDependencies = async (ctx: Context) => {
             const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
             tmpdirsCreated.add(tmpdir);
 
-            const baselineChanges = await compareBaseline(ctx, headDependencies, {
+            const baselineDependencies = await getDependencies(ctx, {
               rootPath: tmpdir,
               manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
               lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
             });
+
+            ctx.log.debug({ reference }, `Found baseline dependencies`);
+
+            const baselineChanges = await compareBaseline(headDependencies, baselineDependencies);
             for (const change of baselineChanges) {
               changedDependencyNames.add(change);
             }
