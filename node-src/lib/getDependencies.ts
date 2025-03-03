@@ -12,15 +12,10 @@ export const getDependencies = async (
     rootPath,
     manifestPath,
     lockfilePath,
-    // eslint-disable-next-line unicorn/prevent-abbreviations
-    includeDev = true,
-    strictOutOfSync = false,
   }: {
     rootPath: string;
     manifestPath: string;
     lockfilePath: string;
-    includeDev?: boolean;
-    strictOutOfSync?: boolean;
   }
 ) => {
   const absoluteLockfilePath = path.resolve(rootPath, lockfilePath);
@@ -32,8 +27,8 @@ export const getDependencies = async (
 
   try {
     const headGraph = await inspect(path.dirname(absoluteManifestPath), absoluteLockfilePath, {
-      dev: includeDev,
-      strictOutOfSync,
+      dev: true, // Include dev dependencies
+      strictOutOfSync: false, // Don't throw an error if the lock file is out of sync
     });
 
     if (!headGraph.scannedProjects[0].depGraph) {
