@@ -1,9 +1,10 @@
-import { statSync as unMockedStatSync } from 'fs';
+import fs, { statSync as unmockedStatSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, Mock, vi } from 'vitest';
 
-import packageJson from '../__mocks__/dependencyChanges/plain-package.json';
+import packageJson from '../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../git/git';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 import TestLogger from './testLogger';
@@ -11,24 +12,25 @@ import TestLogger from './testLogger';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const ctx = { log: new TestLogger() } as any;
+const statSync = unmockedStatSync as Mock;
 
-vi.mock('fs');
-
-const statSync = unMockedStatSync as Mock;
-statSync.mockReturnValue({ size: 1 });
+vi.mock('fs', async (original) => {
+  const actual = await original<typeof import('fs')>();
+  return {
+    ...actual,
+    statSync: vi.fn().mockReturnValue({ size: 1 }),
+  };
+});
 
 describe('getDependencies', () => {
   it('should return a set of dependencies', async () => {
     const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
-      manifestPath: 'plain-package.json',
-      lockfilePath: 'plain-yarn.lock',
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+      manifestPath: 'package.json',
+      lockfilePath: 'yarn.lock',
     });
 
-    const [dep] = dependencies;
-    expect(dep).toMatch(/^[\w/@-]+@@[\d.]+$/);
-
-    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         ...Object.keys(packageJson.dependencies),
@@ -38,13 +40,15 @@ describe('getDependencies', () => {
   });
 
   it.skip('should handle checked out manifest and lock files', async () => {
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+
     const dependencies = await getDependencies(ctx, {
-      rootPath: '/',
-      manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json'),
-      lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock'),
+      rootPath: tmpdir,
+      manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json', tmpdir),
+      lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock', tmpdir),
     });
 
-    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         ...Object.keys(packageJson.dependencies),
@@ -57,13 +61,15 @@ describe('getDependencies', () => {
     // chromatic@6.12.0
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
 
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+
     const dependencies = await getDependencies(ctx, {
-      rootPath: '/',
-      manifestPath: await checkoutFile(ctx, commit, 'package.json'),
-      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock'),
+      rootPath: tmpdir,
+      manifestPath: await checkoutFile(ctx, commit, 'package.json', tmpdir),
+      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock', tmpdir),
     });
 
-    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         // @see https://github.com/chromaui/chromatic-cli/blob/e61c2688597a6fda61a7057c866ebfabde955784/package.json#L75-L170
@@ -111,9 +117,9 @@ describe('getDependencies', () => {
 
     await expect(() =>
       getDependencies(ctx, {
-        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
-        manifestPath: 'plain-package.json',
-        lockfilePath: 'plain-yarn.lock',
+        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+        manifestPath: 'package.json',
+        lockfilePath: 'yarn.lock',
       })
     ).rejects.toThrowError();
   });
@@ -123,15 +129,12 @@ describe('getDependencies', () => {
     statSync.mockReturnValue({ size: MAX_LOCK_FILE_SIZE + 1000 });
 
     const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges'),
-      manifestPath: 'plain-package.json',
-      lockfilePath: 'plain-yarn.lock',
+      rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+      manifestPath: 'package.json',
+      lockfilePath: 'yarn.lock',
     });
 
-    const [dep] = dependencies;
-    expect(dep).toMatch(/^[\w/@-]+@@[\d.]+$/);
-
-    const dependencyNames = [...dependencies].map((dependency) => dependency.split('@@')[0]);
+    const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
         ...Object.keys(packageJson.dependencies),

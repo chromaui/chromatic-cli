@@ -1,36 +1,39 @@
-import { Context } from '../types';
-import { getDependencies } from './getDependencies';
+import { DepGraph } from '@snyk/dep-graph';
+import { createChangedPackagesGraph } from '@snyk/dep-graph';
 
-interface BaselineConfig {
-  ref: string;
-  rootPath: string;
-  manifestPath: string;
-  lockfilePath: string;
-}
+import { Context } from '../types';
+import { BaselineConfig, getDependencies } from './getDependencies';
 
 export const compareBaseline = async (
   ctx: Context,
-  headDependencies: Set<string>,
+  headDependencies: DepGraph,
   baselineConfig: BaselineConfig
 ) => {
   const changedDependencyNames = new Set<string>();
   const baselineDependencies = await getDependencies(ctx, baselineConfig);
 
-  ctx.log.debug({ ...baselineConfig, baselineDependencies }, `Found baseline dependencies`);
-  for (const dependency of xor(baselineDependencies, headDependencies)) {
-    // Strip the version number so we get a set of package names.
-    changedDependencyNames.add(dependency.split('@@')[0]);
+  ctx.log.debug({ ...baselineConfig }, 'Found baseline dependencies');
+
+  // createChangedPackagesGraph creates a graph of the dependencies that have changed between the
+  // two dependency graphs but only finds removed dependencies based on the first graph argument.
+  // Therefore, we need to run this twice to capture everything that changed.
+  const changedPackagesFromBase = await createChangedPackagesGraph(
+    baselineDependencies,
+    headDependencies
+  );
+
+  const changedPackagesFromHead = await createChangedPackagesGraph(
+    headDependencies,
+    baselineDependencies
+  );
+
+  for (const pkg of changedPackagesFromBase.getDepPkgs()) {
+    changedDependencyNames.add(pkg.name);
   }
+
+  for (const pkg of changedPackagesFromHead.getDepPkgs()) {
+    changedDependencyNames.add(pkg.name);
+  }
+
   return changedDependencyNames;
 };
-
-// Retrieve a set of values which is in either set, but not both.
-function xor<T>(left: Set<T>, right: Set<T>) {
-  const result = new Set(left);
-
-  for (const value of right.values()) {
-    result.has(value) ? result.delete(value) : result.add(value);
-  }
-
-  return result;
-}

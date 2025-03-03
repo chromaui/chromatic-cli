@@ -1,3 +1,5 @@
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../git/git';
@@ -7,8 +9,7 @@ import { getDependencies } from './getDependencies';
 import { matchesFile } from './utils';
 
 const PACKAGE_JSON = 'package.json';
-const PACKAGE_LOCK = 'package-lock.json';
-const YARN_LOCK = 'yarn.lock';
+const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
@@ -30,7 +31,7 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   const rootPath = (await getRepositoryRoot()) || '';
   const [rootManifestPath] = (await findFilesFromRepositoryRoot(PACKAGE_JSON)) || [];
-  const [rootLockfilePath] = (await findFilesFromRepositoryRoot(YARN_LOCK, PACKAGE_LOCK)) || [];
+  const [rootLockfilePath] = (await findFilesFromRepositoryRoot(...SUPPORTED_LOCK_FILES)) || [];
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -49,8 +50,7 @@ export const findChangedDependencies = async (ctx: Context) => {
       const dirname = path.dirname(manifestPath);
       const [lockfilePath] =
         (await findFilesFromRepositoryRoot(
-          `${dirname}/${YARN_LOCK}`,
-          `${dirname}/${PACKAGE_LOCK}`
+          ...SUPPORTED_LOCK_FILES.map((lockfile) => `${dirname}/${lockfile}`)
         )) || [];
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
@@ -60,7 +60,9 @@ export const findChangedDependencies = async (ctx: Context) => {
   if (rootManifestPath && rootLockfilePath) {
     metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
   } else if (metadataPathPairs.length === 0) {
-    throw new Error(`Could not find any pairs of ${PACKAGE_JSON} + ${PACKAGE_LOCK} / ${YARN_LOCK}`);
+    throw new Error(
+      `Could not find any pairs of ${PACKAGE_JSON} + ${SUPPORTED_LOCK_FILES.join(' / ')}`
+    );
   }
 
   ctx.log.debug(
@@ -96,30 +98,60 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
+  const tmpdirsCreated = new Set<string>();
 
-  await Promise.all(
-    filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
-      const headDependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
-      ctx.log.debug({ manifestPath, lockfilePath, headDependencies }, `Found HEAD dependencies`);
+  try {
+    await Promise.all(
+      filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
+        // Create a temporary directory for the HEAD dependencies. We do this to isolate the
+        // package.json and lock files from the rest of the repository because the `inspect` function
+        // from `snyk-nodejs-plugin` used inside getDependencies.ts hardcodes the file paths based on
+        // the root path it receives (first argument).
+        const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+        tmpdirsCreated.add(tmpdir);
 
-      // Retrieve the union of dependencies which changed compared to each baseline.
-      // A change means either the version number is different or the dependency was added/removed.
-      // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
-      await Promise.all(
-        commits.map(async (reference) => {
-          const baselineChanges = await compareBaseline(ctx, headDependencies, {
-            ref: reference,
-            rootPath,
-            manifestPath: await checkoutFile(ctx, reference, manifestPath),
-            lockfilePath: await checkoutFile(ctx, reference, lockfilePath),
-          });
-          for (const change of baselineChanges) {
-            changedDependencyNames.add(change);
-          }
-        })
-      );
-    })
-  );
+        const temporaryManifestPath = path.join(tmpdir, path.basename(manifestPath));
+        const temporaryLockfilePath = path.join(tmpdir, path.basename(lockfilePath));
+
+        fs.copyFileSync(manifestPath, temporaryManifestPath);
+        fs.copyFileSync(lockfilePath, temporaryLockfilePath);
+
+        const headDependencies = await getDependencies(ctx, {
+          rootPath: tmpdir,
+          manifestPath: temporaryManifestPath,
+          lockfilePath: temporaryLockfilePath,
+        });
+
+        ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
+
+        // Retrieve the union of dependencies which changed compared to each baseline.
+        // A change means either the version number is different or the dependency was added/removed.
+        // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
+        await Promise.all(
+          commits.map(async (reference) => {
+            // Create a temporary directory for the baseline dependencies to also isolate the
+            // package.json and lock files for the `inspect` function from `snyk-nodejs-plugin` in
+            // getDependencies.ts.
+            const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+            tmpdirsCreated.add(tmpdir);
+
+            const baselineChanges = await compareBaseline(ctx, headDependencies, {
+              rootPath: tmpdir,
+              manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
+              lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
+            });
+            for (const change of baselineChanges) {
+              changedDependencyNames.add(change);
+            }
+          })
+        );
+      })
+    );
+  } finally {
+    for (const tmpdir of tmpdirsCreated) {
+      fs.rmSync(tmpdir, { recursive: true, force: true });
+    }
+  }
 
   return [...changedDependencyNames];
 };
