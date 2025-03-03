@@ -84,6 +84,26 @@ describe('traceChangedFiles', () => {
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
+  it('stores dependency changes', async () => {
+    findChangedDependencies.mockResolvedValue(['moment']);
+    findChangedPackageFiles.mockResolvedValue([]);
+
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx);
+
+    expect(ctx.git.changedDependencyNames).toEqual(['moment']);
+  });
+
   it('throws an error if storybookBaseDir is incorrect', async () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockResolvedValue([]);
@@ -129,5 +149,21 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(onlyStoryFiles).toStrictEqual(deps);
     expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
+  });
+
+  it('throws if stats file is not found', async () => {
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+
+    await expect(traceChangedFiles(ctx)).rejects.toThrow();
+    expect(ctx.turboSnap.bailReason).toEqual({ missingStatsFile: true });
   });
 });
