@@ -8,6 +8,7 @@ import { describe, expect, it, Mock, vi } from 'vitest';
 import packageJson from '../../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../../git/git';
 import TestLogger from '../testLogger';
+import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,20 +39,22 @@ vi.mock('snyk-nodejs-plugin', async (original) => {
 });
 
 describe('getDependencies', () => {
-  it('should return a set of dependencies', async () => {
-    const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
-      manifestPath: 'package.json',
-      lockfilePath: 'yarn.lock',
-    });
+  it('should find top-level dependencies for each lock file type', async () => {
+    for (const lockfile of SUPPORTED_LOCK_FILES) {
+      const dependencies = await getDependencies(ctx, {
+        rootPath: path.join(__dirname, '../../__mocks__/dependencyParsing'),
+        manifestPath: 'package.json',
+        lockfilePath: lockfile,
+      });
 
-    const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
-    expect(dependencyNames).toEqual(
-      expect.arrayContaining([
-        ...Object.keys(packageJson.dependencies),
-        ...Object.keys(packageJson.devDependencies),
-      ])
-    );
+      const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
+      expect(dependencyNames).toEqual(
+        expect.arrayContaining([
+          ...Object.keys(packageJson.dependencies),
+          ...Object.keys(packageJson.devDependencies),
+        ])
+      );
+    }
   });
 
   it.skip('should handle checked out manifest and lock files', async () => {
