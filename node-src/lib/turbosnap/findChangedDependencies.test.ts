@@ -129,7 +129,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns nothing when dependency tree is unchanged', async () => {
-    mockInspect(['react@18.2.0'], ['react@18.2.0']);
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.2.0']);
     mockChangedPackagesGraph([]);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
@@ -139,7 +139,7 @@ describe('findChangedDependencies', () => {
 
   it('returns nothing when dependency tree is empty', async () => {
     buildDepTree.mockResolvedValue({ dependencies: {} });
-    mockInspect([], []);
+    mockInspect(/* HEAD */ [], /* Baseline A */ []);
     mockChangedPackagesGraph([]);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
@@ -148,7 +148,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns nothing when dependency tree is unchanged', async () => {
-    mockInspect(['react@18.2.0'], ['react@18.2.0']);
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.2.0']);
     mockChangedPackagesGraph([]);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
@@ -157,7 +157,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns updated dependencies', async () => {
-    mockInspect(['react@18.2.0'], ['react@18.3.0']);
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.3.0']);
     mockChangedPackagesGraph(['react@18.3.0']);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
@@ -166,7 +166,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns added/removed dependencies', async () => {
-    mockInspect(['react@18.2.0'], ['vue@3.2.0']);
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['vue@3.2.0']);
     mockChangedPackagesGraph(['vue@3.2.0', 'react@18.2.0']);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
@@ -176,12 +176,12 @@ describe('findChangedDependencies', () => {
 
   it('finds updated transient dependencies', async () => {
     mockInspect(
+      // HEAD
       [{ name: 'react@18.2.0', dependencies: ['loose-envify@1.3.1'] }],
+      // Baseline A
       [{ name: 'react@18.2.0', dependencies: ['loose-envify@1.4.0'] }]
     );
     mockChangedPackagesGraph(['loose-envify']);
-
-    // Baseline A
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -221,13 +221,13 @@ describe('findChangedDependencies', () => {
     );
 
     mockInspect(
-      // HEAD root
+      // HEAD /
       ['react@18.2.0'],
-      // HEAD subdir
+      // HEAD /subdir/
       ['lodash@4.17.21'],
-      // Baseline A root
+      // Baseline A /
       ['react@18.3.0'],
-      // BAseline A subdir
+      // BAseline A /subdir/
       ['lodash@4.18.0']
     );
 
@@ -273,13 +273,13 @@ describe('findChangedDependencies', () => {
     });
 
     mockInspect(
-      // HEAD root
+      // HEAD /
       [],
-      // HEAD subdir
+      // HEAD /subdir/
       [],
-      // A root
+      // A /
       [],
-      // A subdir
+      // A /subdir/
       []
     );
     mockChangedPackagesGraph([]);
@@ -328,7 +328,7 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    mockInspect([], []);
+    mockInspect(/* HEAD */ [], /* Baseline A */ []);
     mockChangedPackagesGraph([]);
 
     const context = getContext({
