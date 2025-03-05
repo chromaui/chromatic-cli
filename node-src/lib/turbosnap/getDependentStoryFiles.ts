@@ -6,23 +6,17 @@ import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { posix } from '../posix';
 import { isPackageManifestFile, matchesFile } from '../utils';
+import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 type FilePath = string;
 type NormalizedName = string;
 type TraceToCheck = (string | number | string[])[];
 
-// Bail whenever one of these was changed
-const LOCKFILES = [
-  /^package-lock\.json$/,
-  /^yarn\.lock$/,
-  /\/package-lock\.json$/,
-  /\/yarn\.lock$/,
-];
-
 // Ignore these while tracing dependencies
 const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isPackageLockFile = (name: string) => LOCKFILES.some((re) => re.test(name));
+const isPackageLockFile = (name: string) =>
+  SUPPORTED_LOCK_FILES.some((lockfile) => name.endsWith(lockfile));
 const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&
   (module_ as Module).id !== null &&
