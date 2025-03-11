@@ -5,6 +5,7 @@ import { getChangedFilesWithReplacement as getChangedFilesWithReplacementUnmocke
 import * as getCommitInfo from '../git/getCommitAndBranch';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
 import * as git from '../git/git';
+import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
 import { setGitInfo } from './gitInfo';
 
 vi.mock('../git/getCommitAndBranch');
@@ -12,15 +13,22 @@ vi.mock('../git/git');
 vi.mock('../git/getParentCommits');
 vi.mock('../git/getBaselineBuilds');
 vi.mock('../git/getChangedFilesWithReplacement');
+vi.mock('../lib/getHasRouter');
 
 const getCommitAndBranch = vi.mocked(getCommitInfo.default);
 const getChangedFilesWithReplacement = vi.mocked(getChangedFilesWithReplacementUnmocked);
 const getSlug = vi.mocked(git.getSlug);
 const getVersion = vi.mocked(git.getVersion);
 const getUserEmail = vi.mocked(git.getUserEmail);
+const getRepositoryCreationDate = vi.mocked(git.getRepositoryCreationDate);
+const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
+const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
+const getNumberOfComitters = vi.mocked(git.getNumberOfComitters);
+const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
 const getUncommittedHash = vi.mocked(git.getUncommittedHash);
 const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
 const getParentCommits = vi.mocked(getParentCommitsUnmocked);
+const getHasRouter = vi.mocked(getHasRouterUnmocked);
 
 const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
@@ -47,6 +55,13 @@ beforeEach(() => {
   getVersion.mockResolvedValue('Git v1.0.0');
   getUserEmail.mockResolvedValue('user@email.com');
   getSlug.mockResolvedValue('user/repo');
+  getRepositoryCreationDate.mockResolvedValue(new Date('2024-11-01'));
+  getRepositoryRoot.mockResolvedValue('/path/to/project');
+  getStorybookCreationDate.mockResolvedValue(new Date('2025-11-01'));
+  getNumberOfComitters.mockResolvedValue(17);
+  getCommittedFileCount.mockResolvedValue(100);
+  getHasRouter.mockReturnValue(true);
+
   client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
 
@@ -55,6 +70,7 @@ describe('setGitInfo', () => {
     const ctx = { log, options: {}, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({
+      rootPath: '/path/to/project',
       commit: '123asdf',
       branch: 'something',
       parentCommits: ['asd2344'],
@@ -163,5 +179,17 @@ describe('setGitInfo', () => {
     });
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.branch).toBe('repo');
+  });
+
+  it('sets projectMetadata on context', async () => {
+    const ctx = { log, options: { isLocalBuild: true }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.projectMetadata).toMatchObject({
+      hasRouter: true,
+      creationDate: new Date('2024-11-01'),
+      storybookCreationDate: new Date('2025-11-01'),
+      numberOfCommitters: 17,
+      numberOfAppFiles: 100,
+    });
   });
 });

@@ -4,10 +4,11 @@ import { execaCommand as execaDefault } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
+import path from 'path';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getGitInfo, runAll } from '.';
+import { getGitInfo, run, runAll } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
@@ -314,6 +315,10 @@ vi.mock('./git/git', () => ({
   getUncommittedHash: () => Promise.resolve('abc123'),
   getUserEmail: () => Promise.resolve('test@test.com'),
   mergeQueueBranchMatch: () => Promise.resolve(undefined),
+  getRepositoryCreationDate: () => Promise.resolve(new Date('2024-11-01')),
+  getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),
+  getNumberOfComitters: () => Promise.resolve(17),
+  getCommittedFileCount: () => Promise.resolve(100),
 }));
 
 vi.mock('./git/getParentCommits', () => ({
@@ -324,6 +329,8 @@ const getCommit = vi.mocked(git.getCommit);
 const getSlug = vi.mocked(git.getSlug);
 
 vi.mock('./lib/emailHash');
+
+vi.mock('./lib/getHasRouter');
 
 vi.mock('./lib/getFileHashes', () => ({
   getFileHashes: (files: string[]) =>
@@ -845,5 +852,16 @@ describe('getGitInfo', () => {
       userEmail: 'test@test.com',
       userEmailHash: undefined,
     });
+  });
+});
+
+describe('parsing package.json', () => {
+  it('should handle invalid `version` strings', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(
+      path.resolve('./node-src/__mocks__/invalidPackageJson')
+    );
+
+    const result = await run({ flags: { dryRun: true } });
+    expect(result.code).toBeDefined();
   });
 });

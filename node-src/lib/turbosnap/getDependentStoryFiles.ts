@@ -1,37 +1,26 @@
 import path from 'path';
 
-import { getRepositoryRoot } from '../git/git';
-import { Context, Module, Reason, Stats } from '../types';
-import noCSFGlobs from '../ui/messages/errors/noCSFGlobs';
-import tracedAffectedFiles from '../ui/messages/info/tracedAffectedFiles';
-import bailFile from '../ui/messages/warnings/bailFile';
-import { isPackageManifestFile, matchesFile } from './utils';
+import { Context, Module, Reason, Stats } from '../../types';
+import noCSFGlobs from '../../ui/messages/errors/noCSFGlobs';
+import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
+import bailFile from '../../ui/messages/warnings/bailFile';
+import { posix } from '../posix';
+import { isPackageManifestFile, matchesFile } from '../utils';
+import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 type FilePath = string;
 type NormalizedName = string;
 type TraceToCheck = (string | number | string[])[];
 
-// Bail whenever one of these was changed
-const LOCKFILES = [
-  /^package-lock\.json$/,
-  /^yarn\.lock$/,
-  /\/package-lock\.json$/,
-  /\/yarn\.lock$/,
-];
-
 // Ignore these while tracing dependencies
 const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
-const isPackageLockFile = (name: string) => LOCKFILES.some((re) => re.test(name));
+const isPackageLockFile = (name: string) =>
+  SUPPORTED_LOCK_FILES.some((lockfile) => name.endsWith(lockfile));
 const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&
   (module_ as Module).id !== null &&
   !INTERNALS.some((re) => re.test((module_ as Module).name || (module_ as Reason).moduleName));
-
-// Replaces Windows-style backslash path separators with POSIX-style forward slashes, because the
-// Webpack stats use forward slashes in the `name` and `moduleName` fields. Note `changedFiles`
-// already contains forward slashes, because that's what git yields even on Windows.
-const posix = (localPath: string) => localPath.split(path.sep).filter(Boolean).join(path.posix.sep);
 
 // For any path in node_modules, return the package name, including scope prefix if any.
 const getPackageName = (modulePath: string) => {
@@ -85,27 +74,23 @@ export async function getDependentStoryFiles(
   changedFiles: string[],
   changedDependencies: string[] = []
 ) {
+  const { rootPath } = ctx.git || {};
+  if (!rootPath) {
+    throw new Error('Failed to determine repository root');
+  }
+
   const {
+    baseDir: baseDirectory = '',
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
     viewLayer,
   } = ctx.storybook || {};
   const {
     storybookBuildDir,
-    storybookBaseDir,
     // eslint-disable-next-line unicorn/prevent-abbreviations
     storybookConfigDir = configDirectory,
     untraced = [],
   } = ctx.options;
-
-  const rootPath = await getRepositoryRoot(); // e.g. `/path/to/project` (always absolute posix)
-  if (!rootPath) {
-    throw new Error('Failed to determine repository root');
-  }
-
-  const baseDirectory = storybookBaseDir
-    ? posix(storybookBaseDir)
-    : path.posix.relative(rootPath, '');
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
@@ -127,23 +112,24 @@ export async function getDependentStoryFiles(
 
   // NOTE: this only works with `main:stories` -- if stories are imported from files in `.storybook/preview.js`
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
-  const storiesEntryFiles = new Set(
-    [
-      // v6 store (SB <= 6.3)
-      `${storybookConfigDir}/generated-stories-entry.js`,
-      // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
-      `./generated-stories-entry.js`,
-      // v6 store with .cjs extension (SB 6.5)
-      `./generated-stories-entry.cjs`,
-      // v7 store (SB >= 6.4)
-      `./storybook-stories.js`,
-      // vite builder
-      `/virtual:/@storybook/builder-vite/vite-app.js`,
-      // rspack builder
-      `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
-      `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
-    ].map((file) => normalize(file))
-  );
+  const storiesEntryFiles = [
+    // v6 store (SB <= 6.3)
+    `${storybookConfigDir}/generated-stories-entry.js`,
+    // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
+    `./generated-stories-entry.js`,
+    // v6 store with .cjs extension (SB 6.5)
+    `./generated-stories-entry.cjs`,
+    // v7 store (SB >= 6.4)
+    `./storybook-stories.js`,
+    // vite builder
+    `/virtual:/@storybook/builder-vite/vite-app.js`,
+    `virtual:@storybook/builder-vite/vite-app.js`,
+    // rspack builder
+    `./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`,
+    './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
+    `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
+    `./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`,
+  ].map((file) => normalize(file));
 
   const modulesByName = new Map<NormalizedName, Module>();
   const nodeModules = new Map<string, NormalizedName[]>();
@@ -151,8 +137,13 @@ export async function getDependentStoryFiles(
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
 
+  const isStorybookFile = (name: string) =>
+    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.includes(name);
+
   stats.modules
     .filter((module_) => isUserModule(module_))
+    // TODO: refactor this function
+    // eslint-disable-next-line complexity
     .map((module_) => {
       const normalizedName = normalize(module_.name);
       modulesByName.set(normalizedName, module_);
@@ -174,18 +165,18 @@ export async function getDependentStoryFiles(
       }
 
       const normalizedReasons = module_.reasons
-        ?.map((reason) =>
-          normalize(
-            reason.resolvedModule || // rspack sets a resolvedModule that holds the module name
-              reason.moduleName // vite, webpack, and default
-          )
-        )
+        ?.map((reason) => normalize(reason.moduleName))
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
       if (normalizedReasons) {
         reasonsById.set(module_.id, normalizedReasons);
       }
 
-      if (reasonsById.get(module_.id)?.some((reason) => storiesEntryFiles.has(reason))) {
+      if (
+        !isStorybookFile(normalizedName) &&
+        reasonsById
+          .get(module_.id)
+          ?.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
+      ) {
         csfGlobsByName.add(normalizedName);
       }
     });
@@ -196,7 +187,8 @@ export async function getDependentStoryFiles(
     const storiesEntryRegExp = /^(.+\/)?generated-stories-entry\.js$/;
     const foundEntry = stats.modules.find(
       (module_) =>
-        storiesEntryRegExp.test(module_.name) && !storiesEntryFiles.has(normalize(module_.name))
+        storiesEntryRegExp.test(module_.name) &&
+        !storiesEntryFiles.includes(normalize(module_.name))
     );
     const entryFile = foundEntry && normalize(foundEntry.name);
     ctx.log.error(
@@ -212,8 +204,6 @@ export async function getDependentStoryFiles(
   }
 
   const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);
-  const isStorybookFile = (name: string) =>
-    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.has(name);
   const isStaticFile = (name: string) =>
     staticDirectories.some((directory) => name && name.startsWith(`${directory}/`));
 

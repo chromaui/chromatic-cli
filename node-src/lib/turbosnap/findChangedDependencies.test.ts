@@ -1,31 +1,52 @@
+import snykGraph from '@snyk/dep-graph';
+import { mkdtempSync as unMockedMkdtempSync, statSync as unMockedStatSync } from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import snyk from 'snyk-nodejs-plugin';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
-import { Context } from '..';
-import * as git from '../git/git';
+import { Context } from '../..';
+import * as git from '../../git/git';
+import TestLogger from '../testLogger';
 import { findChangedDependencies } from './findChangedDependencies';
-import TestLogger from './testLogger';
 
 vi.mock('snyk-nodejs-lockfile-parser');
+vi.mock('snyk-nodejs-plugin');
+vi.mock('@snyk/dep-graph');
 vi.mock('yarn-or-npm');
-vi.mock('../git/git');
+vi.mock('../../git/git');
+vi.mock('fs');
+
+const tmpdir = '/tmpdir';
+
+const statSync = unMockedStatSync as Mock;
+statSync.mockReturnValue({ size: 1 });
+
+const mkdtempSync = unMockedMkdtempSync as Mock;
+mkdtempSync.mockReturnValue(tmpdir);
 
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
 const buildDepTree = vi.mocked(buildDepTreeFromFiles);
+const inspect = vi.mocked(snyk.inspect);
+const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGraph);
 
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
+  // always resolve files in the root, but not subdirs
   findFilesFromRepositoryRoot.mockImplementation((file) =>
     Promise.resolve(file.startsWith('**') ? [] : [file])
   );
+  // always checkout files with the result path of "<commit>.<file>"
+  checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
   checkoutFile.mockReset();
   findFilesFromRepositoryRoot.mockReset();
   buildDepTree.mockReset();
+  inspect.mockReset();
+  createChangedPackagesGraph.mockReset();
 });
 
 const getContext = (
@@ -42,13 +63,57 @@ const getContext = (
 
 const AMetadataChanges = [{ changedFiles: ['package.json'], commit: 'A' }];
 
+// Recursive input type for buildDepGraph
+type builDepGraphInput = string | { name: string; dependencies: builDepGraphInput[] };
+
+// Test helper to build a dep graph structure from arrays of strings/objects
+function buildDepGraph(depSpec: builDepGraphInput[]) {
+  return depSpec.map((dep) => {
+    if (typeof dep === 'string') {
+      const [name, version] = dep.split('@');
+      return { name, version, dependencies: {} };
+    } else {
+      const [name, version] = dep.name.split('@');
+      return {
+        name,
+        version,
+        dependencies: Object.fromEntries(buildDepGraph(dep.dependencies).map((d) => [d.name, d])),
+      };
+    }
+  });
+}
+
+function mockInspect(...inspectCalls: builDepGraphInput[][]) {
+  for (const dependencies of inspectCalls) {
+    inspect.mockResolvedValueOnce({
+      scannedProjects: [
+        {
+          depGraph: {
+            getDepPkgs: () => buildDepGraph(dependencies),
+          },
+        },
+      ],
+    } as any);
+  }
+}
+
+function mockChangedPackagesGraph(dependencies: string[]) {
+  createChangedPackagesGraph.mockResolvedValue({
+    getDepPkgs: () =>
+      dependencies.map((dep: string) => {
+        const [name, version] = dep.split('@');
+        return { name, version };
+      }),
+  } as any);
+}
+
 describe('findChangedDependencies', () => {
   it('returns nothing given no changes', async () => {
     const context = getContext({ git: { packageMetadataChanges: [] } });
 
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
     expect(checkoutFile).not.toHaveBeenCalled();
-    expect(buildDepTreeFromFiles).not.toHaveBeenCalled();
+    expect(inspect).not.toHaveBeenCalled();
   });
 
   it('returns nothing given no changes to found package metadata', async () => {
@@ -60,17 +125,12 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
     expect(checkoutFile).not.toHaveBeenCalled();
-    expect(buildDepTreeFromFiles).not.toHaveBeenCalled();
+    expect(inspect).not.toHaveBeenCalled();
   });
 
   it('returns nothing when dependency tree is unchanged', async () => {
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
-    buildDepTree.mockResolvedValue({
-      dependencies: {
-        react: { name: 'react', version: '18.2.0', dependencies: {} },
-      },
-    });
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.2.0']);
+    mockChangedPackagesGraph([]);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -78,9 +138,9 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns nothing when dependency tree is empty', async () => {
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
     buildDepTree.mockResolvedValue({ dependencies: {} });
+    mockInspect(/* HEAD */ [], /* Baseline A */ []);
+    mockChangedPackagesGraph([]);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -88,13 +148,8 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns nothing when dependency tree is unchanged', async () => {
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
-    buildDepTree.mockResolvedValue({
-      dependencies: {
-        react: { name: 'react', version: '18.2.0', dependencies: {} },
-      },
-    });
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.2.0']);
+    mockChangedPackagesGraph([]);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -102,17 +157,8 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns updated dependencies', async () => {
-    // HEAD
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
-    });
-
-    // Baseline A
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
-    });
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.3.0']);
+    mockChangedPackagesGraph(['react@18.3.0']);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -120,17 +166,8 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns added/removed dependencies', async () => {
-    // HEAD
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
-    });
-
-    // Baseline A
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { vue: { name: 'vue', version: '3.2.0', dependencies: {} } },
-    });
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['vue@3.2.0']);
+    mockChangedPackagesGraph(['vue@3.2.0', 'react@18.2.0']);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -138,33 +175,13 @@ describe('findChangedDependencies', () => {
   });
 
   it('finds updated transient dependencies', async () => {
-    // HEAD
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: {
-        react: {
-          name: 'react',
-          version: '18.2.0',
-          dependencies: {
-            'loose-envify': { name: 'loose-envify', version: '1.3.1', dependencies: {} },
-          },
-        },
-      },
-    });
-
-    // Baseline A
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: {
-        react: {
-          name: 'react',
-          version: '18.2.0',
-          dependencies: {
-            'loose-envify': { name: 'loose-envify', version: '1.4.0', dependencies: {} },
-          },
-        },
-      },
-    });
+    mockInspect(
+      // HEAD
+      [{ name: 'react@18.2.0', dependencies: ['loose-envify@1.3.1'] }],
+      // Baseline A
+      [{ name: 'react@18.2.0', dependencies: ['loose-envify@1.4.0'] }]
+    );
+    mockChangedPackagesGraph(['loose-envify']);
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
@@ -172,33 +189,16 @@ describe('findChangedDependencies', () => {
   });
 
   it('combines and dedupes changes for multiple baselines', async () => {
-    // HEAD
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: {
-        react: { name: 'react', version: '18.2.0', dependencies: {} },
-        lodash: { name: 'lodash', version: '4.17.21', dependencies: {} },
-      },
-    });
+    mockInspect(
+      // HEAD
+      ['react@18.2.0', 'lodash@4.17.21'],
+      // Baseline A
+      ['react@18.3.0', 'lodash@4.17.3'],
+      // Baseline B
+      ['react@18.3.0', 'lodash@4.18.0']
+    );
 
-    // Baseline A
-    checkoutFile.mockResolvedValueOnce('A.package.json');
-    checkoutFile.mockResolvedValueOnce('A.yarn.lock');
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: {
-        react: { name: 'react', version: '18.3.0', dependencies: {} },
-        lodash: { name: 'lodash', version: '4.17.21', dependencies: {} },
-      },
-    });
-
-    // Baseline B
-    checkoutFile.mockResolvedValueOnce('B.package.json');
-    checkoutFile.mockResolvedValueOnce('B.yarn.lock');
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: {
-        react: { name: 'react', version: '18.3.0', dependencies: {} },
-        lodash: { name: 'lodash', version: '4.18.0', dependencies: {} },
-      },
-    });
+    mockChangedPackagesGraph(['react@18.3.0', 'lodash@4.18.0']);
 
     const context = getContext({
       git: {
@@ -220,23 +220,18 @@ describe('findChangedDependencies', () => {
       Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file])
     );
 
-    // HEAD root
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { react: { name: 'react', version: '18.2.0', dependencies: {} } },
-    });
-    // HEAD subdir
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { lodash: { name: 'lodash', version: '4.17.21', dependencies: {} } },
-    });
+    mockInspect(
+      // HEAD /
+      ['react@18.2.0'],
+      // HEAD /subdir/
+      ['lodash@4.17.21'],
+      // Baseline A /
+      ['react@18.3.0'],
+      // BAseline A /subdir/
+      ['lodash@4.18.0']
+    );
 
-    // Baseline A
-    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { react: { name: 'react', version: '18.3.0', dependencies: {} } },
-    });
-    buildDepTree.mockResolvedValueOnce({
-      dependencies: { lodash: { name: 'lodash', version: '4.18.0', dependencies: {} } },
-    });
+    mockChangedPackagesGraph(['react@18.3.0', 'lodash@4.18.0']);
 
     const context = getContext({
       git: {
@@ -246,33 +241,29 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context)).resolves.toEqual(['react', 'lodash']);
+    await expect(findChangedDependencies(context)).resolves.toEqual(
+      expect.arrayContaining(['react', 'lodash'])
+    );
 
     // Root manifest and lock files are checked
-    expect(buildDepTree).toHaveBeenCalledWith('/root', 'package.json', 'yarn.lock', true, false);
-    expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.package.json',
-      'A.yarn.lock',
-      true,
-      false
-    );
+    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/yarn.lock`, {
+      dev: true,
+      strictOutOfSync: false,
+    });
+    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/A.yarn.lock`, {
+      dev: true,
+      strictOutOfSync: false,
+    });
 
     // Subpackage manifest and lock files are checked
-    expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'subdir/package.json',
-      'subdir/yarn.lock',
-      true,
-      false
-    );
-    expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.subdir/package.json',
-      'A.subdir/yarn.lock',
-      true,
-      false
-    );
+    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/yarn.lock`, {
+      dev: true,
+      strictOutOfSync: false,
+    });
+    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/A.yarn.lock`, {
+      dev: true,
+      strictOutOfSync: false,
+    });
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
@@ -281,8 +272,17 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
-    buildDepTree.mockResolvedValue({ dependencies: {} });
+    mockInspect(
+      // HEAD /
+      [],
+      // HEAD /subdir/
+      [],
+      // A /
+      [],
+      // A /subdir/
+      []
+    );
+    mockChangedPackagesGraph([]);
 
     const context = getContext({
       git: {
@@ -292,12 +292,10 @@ describe('findChangedDependencies', () => {
 
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
-    expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.subdir/package.json',
-      'A.yarn.lock', // root lockfile
-      true,
-      false
+    expect(inspect).toHaveBeenCalledWith(
+      tmpdir,
+      expect.stringContaining('/yarn.lock'), // root lockfile
+      { dev: true, strictOutOfSync: false }
     );
   });
 
@@ -319,8 +317,8 @@ describe('findChangedDependencies', () => {
 
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
-    expect(checkoutFile).not.to.toHaveBeenCalled();
-    expect(buildDepTree).not.toHaveBeenCalled();
+    expect(checkoutFile).not.toHaveBeenCalled();
+    expect(inspect).not.toHaveBeenCalled();
   });
 
   it('uses package-lock.json if yarn.lock is missing', async () => {
@@ -330,8 +328,8 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
 
-    checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
-    buildDepTree.mockResolvedValue({ dependencies: {} });
+    mockInspect(/* HEAD */ [], /* Baseline A */ []);
+    mockChangedPackagesGraph([]);
 
     const context = getContext({
       git: {
@@ -341,12 +339,13 @@ describe('findChangedDependencies', () => {
 
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
-    expect(buildDepTree).toHaveBeenCalledWith(
-      '/root',
-      'A.subdir/package.json',
-      'A.subdir/package-lock.json',
-      true,
-      false
+    expect(inspect).toHaveBeenCalledWith(
+      `${tmpdir}/A.subdir`,
+      `${tmpdir}/A.subdir/package-lock.json`,
+      {
+        dev: true,
+        strictOutOfSync: false,
+      }
     );
   });
 });

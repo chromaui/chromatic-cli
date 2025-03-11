@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: 22
       - run: rm -rf subdir # remove conflicting subproject
       - run: corepack enable
       - run: yarn set version canary

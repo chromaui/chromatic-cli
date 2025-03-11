@@ -116,7 +116,9 @@ export async function run({
     log = createLogger(config.flags, config.extraOptions),
   } = extraOptions || {};
 
-  const packageInfo = await readPackageUp({ cwd: process.cwd() });
+  // We don't normalize because if the `version` field isn't a proper semver string, the process
+  // silently exits.
+  const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
   if (!packageInfo) {
     log.error(noPackageJson());
     process.exit(253);
@@ -139,7 +141,7 @@ export async function run({
     code: ctx.exitCode,
     url: ctx.build?.webUrl,
     buildUrl: ctx.build?.webUrl,
-    storybookUrl: ctx.build?.storybookUrl,
+    storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
     specCount: ctx.build?.specCount,
     componentCount: ctx.build?.componentCount,
     testCount: ctx.build?.testCount,
@@ -180,6 +182,8 @@ export async function runAll(ctx: InitialContext) {
       headers: {
         'x-chromatic-session-id': ctx.sessionId,
         'x-chromatic-cli-version': ctx.pkg.version,
+        'apollographql-client-name': 'chromatic-cli',
+        'apollographql-client-version': ctx.pkg.version,
       },
       retries: 3,
     });

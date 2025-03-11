@@ -76,6 +76,11 @@ export default function parseArguments(argv: string[]) {
       argv,
       booleanDefault: undefined,
       description: false,
+
+      // Prevent meow from parsing the project's package.json file because if the `version` field
+      // isn't a proper semver string, the process silently exits.
+      pkg: {},
+
       version: pkg.version,
       flags: {
         // Required options

@@ -1,3 +1,199 @@
+# v11.27.0 (Mon Mar 03 2025)
+
+#### 🚀 Enhancement
+
+- Add PNPM Support for TurboSnap [#1160](https://github.com/chromaui/chromatic-cli/pull/1160) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.26.1 (Wed Feb 26 2025)
+
+#### 🐛 Bug Fix
+
+- Fix moduleName resolution for Storybook files with import cycles. [#1157](https://github.com/chromaui/chromatic-cli/pull/1157) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v11.26.0 (Tue Feb 25 2025)
+
+#### 🚀 Enhancement
+
+- Upgrade to latest version of `snyk-nodejs-lockfile-parser` [#1158](https://github.com/chromaui/chromatic-cli/pull/1158) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Add new Vite builder entry for future SB versions [#1155](https://github.com/chromaui/chromatic-cli/pull/1155) ([@codykaup](https://github.com/codykaup))
+- Add `outputDir` to action metadata [#1154](https://github.com/chromaui/chromatic-cli/pull/1154) ([@codykaup](https://github.com/codykaup))
+- Set Apollo GraphQL client identification headers [#1151](https://github.com/chromaui/chromatic-cli/pull/1151) ([@jmhobbs](https://github.com/jmhobbs))
+- Fix directory flags for trace command. [#1148](https://github.com/chromaui/chromatic-cli/pull/1148) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v11.25.2 (Thu Jan 30 2025)
+
+#### 🐛 Bug Fix
+
+- Add additional rspack builder entrypoint [#1147](https://github.com/chromaui/chromatic-cli/pull/1147) ([@jmhobbs](https://github.com/jmhobbs))
+- Account for accessibility change counts in UI [#1145](https://github.com/chromaui/chromatic-cli/pull/1145) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v11.25.1 (Wed Jan 22 2025)
+
+#### 🐛 Bug Fix
+
+- Don't normalize package.json fields [#1143](https://github.com/chromaui/chromatic-cli/pull/1143) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.25.0 (Thu Jan 16 2025)
+
+#### 🚀 Enhancement
+
+- Log Turbosnap metrics to New Relic [#1141](https://github.com/chromaui/chromatic-cli/pull/1141) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Remove Turbosnap metrics logs [#1142](https://github.com/chromaui/chromatic-cli/pull/1142) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.24.0 (Tue Jan 14 2025)
+
+#### 🚀 Enhancement
+
+- Log Turbosnap metrics to New Relic [#1141](https://github.com/chromaui/chromatic-cli/pull/1141) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.23.0 (Mon Jan 13 2025)
+
+#### 🚀 Enhancement
+
+- Skip lock file parsing if it's larger than 10MB [#1140](https://github.com/chromaui/chromatic-cli/pull/1140) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.22.2 (Thu Jan 09 2025)
+
+#### 🐛 Bug Fix
+
+- Add rsbuild v0.1.7 support [#1138](https://github.com/chromaui/chromatic-cli/pull/1138) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.22.1 (Wed Jan 08 2025)
+
+#### 🐛 Bug Fix
+
+- Add `outputDir` to GitHub Action options [#1136](https://github.com/chromaui/chromatic-cli/pull/1136) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.22.0 (Fri Jan 03 2025)
+
+#### 🚀 Enhancement
+
+- Bail on preview file changes [#1133](https://github.com/chromaui/chromatic-cli/pull/1133) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.21.0 (Fri Jan 03 2025)
+
+#### 🚀 Enhancement
+
+- Set `storybookUrl` action output on rebuild early exit [#1134](https://github.com/chromaui/chromatic-cli/pull/1134) ([@jmhobbs](https://github.com/jmhobbs))
+- Upload coverage reports to codecov [#1132](https://github.com/chromaui/chromatic-cli/pull/1132) ([@paulelliott](https://github.com/paulelliott))
+
+#### Authors: 2
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Paul Elliott ([@paulelliott](https://github.com/paulelliott))
+
+---
+
+# v11.20.2 (Wed Dec 11 2024)
+
+#### 🐛 Bug Fix
+
+- Errors in project metadata gathering causing build failures [#1131](https://github.com/chromaui/chromatic-cli/pull/1131) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v11.20.1 (Tue Dec 10 2024)
+
+#### 🐛 Bug Fix
+
+- Account for configs when checking `exitOnceUploaded` in action [#1130](https://github.com/chromaui/chromatic-cli/pull/1130) ([@codykaup](https://github.com/codykaup))
+- Only publish `latest` action on push to main [#1129](https://github.com/chromaui/chromatic-cli/pull/1129) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.20.0 (Mon Dec 02 2024)
+
+#### 🚀 Enhancement
+
+- Send project metadata to the index [#1122](https://github.com/chromaui/chromatic-cli/pull/1122) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v11.19.0 (Mon Nov 25 2024)
 
 #### 🚀 Enhancement

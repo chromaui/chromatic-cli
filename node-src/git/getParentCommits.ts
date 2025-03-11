@@ -2,7 +2,8 @@ import gql from 'fake-tag';
 
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Context } from '../types';
-import { commitExists, execGitCommand } from './git';
+import { execGitCommand } from './execGit';
+import { commitExists } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 

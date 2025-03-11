@@ -2,26 +2,29 @@
 import chalk from 'chalk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import * as git from '../git/git';
+import { Context } from '../../types';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
-vi.mock('../git/git');
-
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
-const VITE_ENTRY = '/virtual:/@storybook/builder-vite/storybook-stories.js';
 const statsPath = 'preview-stats.json';
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
-const getContext: any = ({
-  configDir,
-  staticDir,
-  ...options
-}: { configDir?: string; staticDir?: string } = {}) => ({
+const getContext: any = (
+  {
+    configDir,
+    staticDir,
+    ...options
+  }: { configDir?: string; staticDir?: string } & Context['options'] = {} as any
+) => ({
   log,
-  options: { storybookBaseDir: '.', ...options },
+  options,
   turboSnap: {},
-  storybook: { configDir, staticDir },
-  git: {},
+  storybook: {
+    baseDir: options.storybookBaseDir ?? '',
+    configDir,
+    staticDir,
+  },
+  git: { rootPath: '/path/to/project' },
 });
 
 afterEach(() => {
@@ -30,10 +33,6 @@ afterEach(() => {
   log.error.mockReset();
   log.debug.mockReset();
 });
-
-const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
-
-getRepositoryRoot.mockResolvedValue('/path/to/project');
 
 describe('getDependentStoryFiles', () => {
   it('detects direct changes to CSF files', async () => {
@@ -141,17 +140,20 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('detects direct changes to CSF files, vite', async () => {
+  it.each([
+    '/virtual:/@storybook/builder-vite/storybook-stories.js',
+    'virtual:@storybook/builder-vite/storybook-stories.js',
+  ])('detects direct changes to CSF files, vite', async (viteEntry) => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
         id: './src/foo.stories.js',
         name: './src/foo.stories.js',
-        reasons: [{ moduleName: VITE_ENTRY }],
+        reasons: [{ moduleName: viteEntry }],
       },
       {
-        id: VITE_ENTRY,
-        name: VITE_ENTRY,
+        id: viteEntry,
+        name: viteEntry,
         reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
       },
     ];
@@ -162,7 +164,12 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('detects direct changes to CSF files, rspack', async () => {
+  it.each([
+    [`./node_modules/.cache/storybook/default/dev-server/storybook-stories.js`],
+    ['./node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js'],
+    [`./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`],
+    [`./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`],
+  ])('detects direct changes to CSF files, rspack (%s)', async (resolvedModule) => {
     const changedFiles = ['src/foo.stories.js'];
     const modules = [
       {
@@ -179,10 +186,7 @@ describe('getDependentStoryFiles', () => {
         id: String.raw`./src lazy recursive ^\.\/.*$`,
         reasons: [
           {
-            resolvedModule:
-              './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
-            moduleName:
-              './node_modules/.cache/storybook/default/dev-server/storybook-stories.js + 2 modules',
+            moduleName: `${resolvedModule} + 2 modules`,
           },
         ],
       },
@@ -334,7 +338,6 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('supports absolute module paths', async () => {
-    getRepositoryRoot.mockResolvedValueOnce('/path/to/project');
     const absoluteCsfGlob = `/path/to/project/${CSF_GLOB.slice(2)}`;
     const changedFiles = ['src/foo.js'];
     const modules = [
@@ -363,8 +366,6 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('supports absolute module paths with deviating working dir', async () => {
-    getRepositoryRoot.mockResolvedValueOnce('/path/to/project');
-
     const absoluteCsfGlob = `/path/to/project/packages/webapp/${CSF_GLOB.slice(2)}`;
     const changedFiles = ['packages/webapp/src/foo.js'];
     const modules = [
@@ -408,7 +409,13 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('does not bail on changed global file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'package.json', 'package-lock.json', 'yarn.lock'];
+    const changedFiles = [
+      'src/foo.stories.js',
+      'package.json',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+    ];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -477,7 +484,9 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const rawContext = getContext({ untraced: ['**/(package.json|package-lock.json|yarn.lock)'] });
+    const rawContext = getContext({
+      untraced: ['**/(package.json|package-lock.json|yarn.lock|pnpm-lock.yaml)'],
+    });
     const ctx = {
       ...rawContext,
       // signifying the package.json file had dependency changes
@@ -513,6 +522,33 @@ describe('getDependentStoryFiles', () => {
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
         chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
+      )
+    );
+  });
+
+  it('bails on changed preview.js file', async () => {
+    const changedFiles = ['src/foo.stories.js', 'path/to/storybook-config/preview.js'];
+    const modules = [
+      {
+        id: './path/to/storybook-config/preview.js',
+        name: './path/to/storybook-config/preview.js',
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        chalk`Found a Storybook config change in {bold path/to/storybook-config/preview.js}`
       )
     );
   });
@@ -708,6 +744,7 @@ describe('getDependentStoryFiles', () => {
       'src/package.json',
       'src/package-lock.json',
       'src/yarn.lock',
+      'src/pnpm-lock.yaml',
     ];
     const modules = [
       {
@@ -732,7 +769,7 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({
-      untraced: ['**/(package**.json|yarn.lock)'],
+      untraced: ['**/(package**.json|yarn.lock|pnpm-lock.yaml)'],
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
