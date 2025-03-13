@@ -62,18 +62,6 @@ describe('getStorybookInfo', () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual(
       expect.objectContaining({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: expect.any(String),
-          },
-          {
-            name: 'compiler-swc',
-            packageName: '@storybook/addon-webpack5-compiler-swc',
-            packageVersion: expect.any(String),
-          },
-        ],
         builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
     );
@@ -87,18 +75,6 @@ describe('getStorybookInfo', () => {
         // either one based on when those promises resolve.
         viewLayer: expect.stringMatching(/(react|@storybook\/react-webpack5)/),
         version: expect.any(String),
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: expect.any(String),
-          },
-          {
-            name: 'compiler-swc',
-            packageName: '@storybook/addon-webpack5-compiler-swc',
-            packageVersion: expect.any(String),
-          },
-        ],
         builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
     );
@@ -132,22 +108,10 @@ describe('getStorybookInfo', () => {
       );
     });
 
-    it('still returns addons and builder for invalid version value', async () => {
+    it('still returns builder for invalid version value', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          addons: [
-            {
-              name: 'essentials',
-              packageName: '@storybook/addon-essentials',
-              packageVersion: expect.any(String),
-            },
-            {
-              name: 'compiler-swc',
-              packageName: '@storybook/addon-webpack5-compiler-swc',
-              packageVersion: expect.any(String),
-            },
-          ],
           builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
       );
@@ -157,18 +121,6 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          addons: [
-            {
-              name: 'essentials',
-              packageName: '@storybook/addon-essentials',
-              packageVersion: expect.any(String),
-            },
-            {
-              name: 'compiler-swc',
-              packageName: '@storybook/addon-webpack5-compiler-swc',
-              packageVersion: expect.any(String),
-            },
-          ],
           builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
       );
@@ -182,18 +134,6 @@ describe('getStorybookInfo', () => {
         packageJson: { dependencies: REACT },
       });
       expect(await getStorybookInfo(ctx)).toEqual({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: expect.any(String),
-          },
-          {
-            name: 'compiler-swc',
-            packageName: '@storybook/addon-webpack5-compiler-swc',
-            packageVersion: expect.any(String),
-          },
-        ],
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
         version: expect.any(String),
         viewLayer: '@storybook/react-webpack5',
@@ -208,53 +148,12 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual({});
     });
 
-    it('does not return unsupported addons in metadata', async () => {
-      const ctx = getContext({
-        options: { storybookBuildDir: 'bin-src/__mocks__/unsupportedAddons' },
-        packageJson: { dependencies: REACT },
-      });
-      expect(await getStorybookInfo(ctx)).toEqual({
-        addons: [
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: expect.any(String),
-          },
-          {
-            name: 'compiler-swc',
-            packageName: '@storybook/addon-webpack5-compiler-swc',
-            packageVersion: expect.any(String),
-          },
-        ],
-        builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
-        version: expect.any(String),
-        viewLayer: '@storybook/react-webpack5',
-      });
-    });
-
     it('returns the correct metadata for Storybook 6', async () => {
       const ctx = getContext({
         options: { storybookBuildDir: 'bin-src/__mocks__/sb6ProjectJson' },
         packageJson: { dependencies: REACT },
       });
       expect(await getStorybookInfo(ctx)).toEqual({
-        addons: [
-          {
-            name: 'links',
-            packageName: '@storybook/addon-links',
-            packageVersion: '6.5.16',
-          },
-          {
-            name: 'essentials',
-            packageName: '@storybook/addon-essentials',
-            packageVersion: '6.5.16',
-          },
-          {
-            name: 'interactions',
-            packageName: '@storybook/addon-interactions',
-            packageVersion: '6.5.16',
-          },
-        ],
         builder: { name: 'webpack4', packageVersion: '6.5.16' },
         version: '6.5.16',
         viewLayer: 'react',
