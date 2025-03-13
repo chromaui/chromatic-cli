@@ -110,40 +110,6 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-const findAddons = async (ctx, mainConfig, v7) => {
-  if (!mainConfig) {
-    return { addons: [{ name: 'unknown', packageName: 'unknown', packageVersion: '0' }] };
-  }
-
-  const addons = v7
-    ? await Promise.all(
-        mainConfig.getSafeFieldValue(['addons']).map((addon) => resolvePackageJson(addon))
-      )
-    : mainConfig?.addons;
-
-  if (addons) {
-    const allDependencies = {
-      ...ctx.packageJson?.dependencies,
-      ...ctx.packageJson?.devDependencies,
-      ...ctx.packageJson?.peerDependencies,
-    };
-    return {
-      addons: addons.map((addon) => {
-        const name = typeof addon === 'string' ? addon.replace('/register', '') : addon.name;
-
-        return {
-          name: supportedAddons[name],
-          packageName: name,
-          packageVersion: allDependencies[name] || addon.version,
-        };
-      }),
-    };
-  }
-  return {
-    addons: [],
-  };
-};
-
 const findConfigFlags = async ({ options, packageJson }) => {
   const { scripts = {} } = packageJson;
   if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
@@ -235,7 +201,6 @@ export const getStorybookMetadata = async (ctx: Context) => {
   }
 
   const info = await Promise.allSettled([
-    findAddons(ctx, mainConfig, v7),
     findConfigFlags(ctx),
     findViewlayer(ctx),
     findBuilder(mainConfig, v7),
