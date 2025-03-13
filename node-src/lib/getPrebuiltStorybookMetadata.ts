@@ -2,7 +2,6 @@ import { readFile } from 'jsonfile';
 
 import { Context } from '../types';
 import { builders } from './builders';
-import { supportedAddons } from './supportedAddons';
 import { viewLayers } from './viewLayers';
 
 /*
@@ -43,7 +42,6 @@ export const getStorybookMetadataFromProjectJson = async (
       : '';
 
   return {
-    viewLayer: sbProjectJson.framework.name,
     version,
     builder,
   };

@@ -25,7 +25,7 @@ describe('getStorybookInfo', () => {
     vi.clearAllTimers();
   });
 
-  it('returns viewLayer and version', async () => {
+  it('returns version', async () => {
     const ctx = getContext({ packageJson: { dependencies: REACT } });
     const sbInfo = await getStorybookInfo(ctx);
     expect(sbInfo).toEqual(
@@ -33,7 +33,6 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         // We're currently using `react` and `@storybook/react-webpack5` so the we can end up with
         // either one based on when those promises resolve.
-        viewLayer: expect.stringMatching(/(react|@storybook\/react-webpack5)/),
         version: expect.any(String),
         builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
@@ -73,7 +72,6 @@ describe('getStorybookInfo', () => {
       expect.objectContaining({
         // We're currently using `react` and `@storybook/react-webpack5` so the we can end up with
         // either one based on when those promises resolve.
-        viewLayer: expect.stringMatching(/(react|@storybook\/react-webpack5)/),
         version: expect.any(String),
         builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
       })
@@ -84,13 +82,12 @@ describe('getStorybookInfo', () => {
   });
 
   describe('with CHROMATIC_STORYBOOK_VERSION', () => {
-    it('returns viewLayer and version from env', async () => {
+    it('returns version from env', async () => {
       const ctx = getContext({
         env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@3.2.1' },
       });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          viewLayer: 'react',
           version: '3.2.1',
           builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
@@ -101,7 +98,6 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: 'react@3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          viewLayer: 'react',
           version: '3.2.1',
           builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
         })
@@ -128,7 +124,7 @@ describe('getStorybookInfo', () => {
   });
 
   describe('with --storybook-build-dir', () => {
-    it('returns viewLayer and version from packageJson', async () => {
+    it('returns version from packageJson', async () => {
       const ctx = getContext({
         options: { storybookBuildDir: 'bin-src/__mocks__/normalProjectJson' },
         packageJson: { dependencies: REACT },
@@ -136,7 +132,6 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
         version: expect.any(String),
-        viewLayer: '@storybook/react-webpack5',
       });
     });
 
@@ -156,7 +151,6 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual({
         builder: { name: 'webpack4', packageVersion: '6.5.16' },
         version: '6.5.16',
-        viewLayer: 'react',
       });
     });
   });
