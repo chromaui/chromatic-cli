@@ -10,7 +10,6 @@ import { Context } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
 import { raceFulfilled, timeout } from './promises';
-import { supportedAddons } from './supportedAddons';
 import { viewLayers } from './viewLayers';
 
 export const resolvePackageJson = (pkg: string) => {
@@ -64,7 +63,7 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     if (!viewLayer) {
       throw new Error(`Unsupported viewlayer specified in CHROMATIC_STORYBOOK_VERSION: ${p}`);
     }
-    return { version, viewLayer };
+    return { version };
   }
 
   const {
@@ -77,12 +76,12 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
     if (options.storybookBuildDir) {
       // If we aren't going to invoke the Storybook CLI later, we can exit early.
       // Note that `version` can be a semver range in this case.
-      return { viewLayer, version };
+      return { version };
     }
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
       resolvePackageJson(pkg)
-        .then((json) => ({ viewLayer, version: json.version }))
+        .then((json) => ({ version: json.version }))
         .catch(() => {
           throw new Error(packageDoesNotExist(pkg));
         }),
@@ -99,9 +98,9 @@ const findViewlayer = async ({ env, log, options, packageJson }) => {
   // and return the first one we find.
   return Promise.race([
     raceFulfilled(
-      Object.entries(viewLayers).map(async ([key, value]) => {
+      Object.entries(viewLayers).map(async ([key]) => {
         const json = await resolvePackageJson(key);
-        return { viewLayer: value, version: json.version };
+        return { version: json.version };
       })
     ).catch(() => {
       throw new Error(packageDoesNotExist(pkg));

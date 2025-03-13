@@ -8,7 +8,6 @@ describe('getStorybookMetadataFromProjectJson', () => {
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: '@storybook/react-webpack5',
       version: '8.1.5',
       builder: {
         name: '@storybook/builder-webpack5',
@@ -22,7 +21,6 @@ describe('getStorybookMetadataFromProjectJson', () => {
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: 'react',
       version: '6.5.16',
       builder: {
         name: 'webpack4',
@@ -36,7 +34,6 @@ describe('getStorybookMetadataFromProjectJson', () => {
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: 'react',
       version: '6.5.16',
       builder: {
         name: 'webpack4',
