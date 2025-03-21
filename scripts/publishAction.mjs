@@ -17,11 +17,16 @@ const publishAction = async ({ major, version, repo }) => {
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
 
+  await $`git clone https://${process.env.GH_TOKEN}@github.com/${repo}.git ${path}`;
+
   await $`yarn clean-package`;
   await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json'], path, {
     parents: true, // keep directory structure (i.e. action dir)
+    overwrite: true,
   });
-  await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path);
+  await copy(['action-src/CHANGELOG.md', 'action-src/LICENSE', 'action-src/README.md'], path, {
+    overwrite: true,
+  });
   await $`yarn clean-package restore`;
 
   const $$ = (strings, ...args) => {
@@ -29,21 +34,18 @@ const publishAction = async ({ major, version, repo }) => {
     return $({ cwd: path })(strings, ...args);
   };
 
-  await $$`git init -b main`;
   await $$`git config user.name Chromatic`;
   await $$`git config user.email support@chromatic.com`;
-  await $$`git remote add origin https://${process.env.GH_TOKEN}@github.com/${repo}.git`;
   await $$`git add .`;
   await $$`git commit -m v${version}`;
-  await $$`git tag -a v${version} -m ${`v${version} without automatic upgrades (pinned)`}`;
-  await $$`git tag -a v${major} -m ${`v${version} with automatic upgrades to v${major}.x.x`}`;
-  await $$`git tag -a v1 -m ${`Deprecated, use 'latest' tag instead`}`;
-  await $$`git tag -a latest -m ${`v${version} with automatic upgrades to all versions`}`;
 
   if (dryRun) {
     console.info('✅ Skipping git push due to --dry-run');
   } else {
-    await $$`git push origin HEAD:main --force`;
+    await $$`git tag -a v${version} -m ${`v${version} without automatic upgrades (pinned)`}`;
+    await $$`git tag -f -a v${major} -m ${`v${version} with automatic upgrades to v${major}.x.x`}`;
+    await $$`git tag -f -a latest -m ${`v${version} with automatic upgrades to all versions`}`;
+    await $$`git push origin HEAD:main`;
     await $$`git push --tags --force`;
     console.info('✅ Done');
   }
