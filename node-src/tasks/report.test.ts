@@ -100,4 +100,16 @@ describe('generateRport', () => {
       path.join(__dirname, '../../chromatic-build-1.xml')
     );
   });
+
+  it('skips report generation when junitReport is false', async () => {
+    const ctx = {
+      client,
+      log: { ...log, debug: vi.fn() },
+      options: { junitReport: false },
+      build,
+    } as any;
+    await generateReport(ctx);
+    expect(ctx.log.debug).toHaveBeenCalledWith('junit report not configured, skipping');
+    expect(reportBuilder.writeTo).not.toHaveBeenCalled();
+  });
 });
