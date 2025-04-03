@@ -1,3 +1,25 @@
+# v11.28.0 (Thu Apr 03 2025)
+
+#### 🚀 Enhancement
+
+- Remove unused `viewLayer` and `addons` from CLI metadata [#1167](https://github.com/chromaui/chromatic-cli/pull/1167) ([@justin-thurman](https://github.com/justin-thurman))
+- Add `pnpm-lock.yaml` to list of lockfiles [#1164](https://github.com/chromaui/chromatic-cli/pull/1164) ([@codykaup](https://github.com/codykaup))
+- Move TurboSnap to a local lib [#1162](https://github.com/chromaui/chromatic-cli/pull/1162) ([@codykaup](https://github.com/codykaup))
+- Throw on multiple scanned projects from snyk [#1161](https://github.com/chromaui/chromatic-cli/pull/1161) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🐛 Bug Fix
+
+- Preserve git history when publishing new GH action version [#1166](https://github.com/chromaui/chromatic-cli/pull/1166) ([@justin-thurman](https://github.com/justin-thurman))
+- Improve TurboSnap tests [#1163](https://github.com/chromaui/chromatic-cli/pull/1163) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v11.27.0 (Mon Mar 03 2025)
 
 #### 🚀 Enhancement
