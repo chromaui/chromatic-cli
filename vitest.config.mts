@@ -10,6 +10,7 @@ export default defineConfig({
       exclude: [
         'vitest.no-threads.config.ts',
         'scripts/**',
+        'test-stories/**',
         '**/*.stories.{t,j}s',
         ...coverageConfigDefaults.exclude,
       ],
