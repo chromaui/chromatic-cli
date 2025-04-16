@@ -160,6 +160,15 @@ describe('setGitInfo', () => {
       status: 'ACCEPTED',
       webUrl: 'some-web-url',
       storybookUrl: 'some-storybook-url',
+      specCount: 1,
+      testCount: 2,
+      changeCount: 3,
+      errorCount: 4,
+      interactionTestFailuresCount: 5,
+      componentCount: 6,
+      actualTestCount: 7,
+      actualCaptureCount: 8,
+      inheritedCaptureCount: 9,
     };
 
     getParentCommits.mockResolvedValue([commitInfo.commit]);

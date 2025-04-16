@@ -54,6 +54,15 @@ const LastBuildQuery = `
         status(legacy: false)
         storybookUrl
         webUrl
+        specCount
+        componentCount
+        testCount
+        changeCount
+        errorCount: testCount(statuses: [BROKEN])
+        actualTestCount: testCount(statuses: [IN_PROGRESS])
+        actualCaptureCount
+        inheritedCaptureCount
+        interactionTestFailuresCount
       }
     }
   }
@@ -66,6 +75,15 @@ interface LastBuildQueryResult {
       status: string;
       storybookUrl: string;
       webUrl: string;
+      specCount: number;
+      componentCount: number;
+      testCount: number;
+      changeCount: number;
+      errorCount: number;
+      actualTestCount: number;
+      actualCaptureCount: number;
+      inheritedCaptureCount: number;
+      interactionTestFailuresCount: number;
     };
   };
 }

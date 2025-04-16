@@ -331,6 +331,15 @@ export interface Context {
     status: string;
     webUrl: string;
     storybookUrl: string;
+    specCount: number;
+    componentCount: number;
+    testCount: number;
+    changeCount: number;
+    errorCount: number;
+    actualTestCount: number;
+    actualCaptureCount: number;
+    inheritedCaptureCount: number;
+    interactionTestFailuresCount: number;
   };
   sourceDir: string;
   buildCommand?: string;
