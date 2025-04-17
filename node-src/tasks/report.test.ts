@@ -48,7 +48,7 @@ const mockTests = [
 
 vi.spyOn(reportBuilder, 'writeTo').mockImplementation(vi.fn());
 
-describe('generateRport', () => {
+describe('generateReport', () => {
   const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
   const build = {
     app: { repository: { provider: 'github' } },
