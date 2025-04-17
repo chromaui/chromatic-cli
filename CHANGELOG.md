@@ -1,3 +1,15 @@
+# v11.28.2 (Thu Apr 17 2025)
+
+#### 🐛 Bug Fix
+
+- Use pagination to get all tests in the build [#1175](https://github.com/chromaui/chromatic-cli/pull/1175) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v11.28.1 (Thu Apr 17 2025)
 
 #### 🐛 Bug Fix
