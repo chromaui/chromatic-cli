@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "11.28.1",
+  "version": "11.28.2",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
