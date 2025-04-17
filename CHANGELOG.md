@@ -1,3 +1,17 @@
+# v11.28.1 (Thu Apr 17 2025)
+
+#### 🐛 Bug Fix
+
+- Return additional build info on action rerun [#1174](https://github.com/chromaui/chromatic-cli/pull/1174) ([@justin-thurman](https://github.com/justin-thurman))
+- :pencil2: Update help text to reflect actual state of exitOnceUploaded. [#1169](https://github.com/chromaui/chromatic-cli/pull/1169) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 2
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v11.28.0 (Thu Apr 03 2025)
 
 #### 🚀 Enhancement
