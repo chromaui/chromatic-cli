@@ -139,18 +139,20 @@ export async function run({
   return {
     // Keep this in sync with the configured outputs in action.yml
     code: ctx.exitCode,
-    url: ctx.build?.webUrl,
-    buildUrl: ctx.build?.webUrl,
+    url: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
+    buildUrl: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
     storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
-    specCount: ctx.build?.specCount,
-    componentCount: ctx.build?.componentCount,
-    testCount: ctx.build?.testCount,
-    changeCount: ctx.build?.changeCount,
-    errorCount: ctx.build?.errorCount,
-    interactionTestFailuresCount: ctx.build?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount,
-    inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
+    specCount: ctx.build?.specCount ?? ctx.rebuildForBuild?.specCount,
+    componentCount: ctx.build?.componentCount ?? ctx.rebuildForBuild?.componentCount,
+    testCount: ctx.build?.testCount ?? ctx.rebuildForBuild?.testCount,
+    changeCount: ctx.build?.changeCount ?? ctx.rebuildForBuild?.changeCount,
+    errorCount: ctx.build?.errorCount ?? ctx.rebuildForBuild?.errorCount,
+    interactionTestFailuresCount:
+      ctx.build?.interactionTestFailuresCount ?? ctx.rebuildForBuild?.interactionTestFailuresCount,
+    actualTestCount: ctx.build?.actualTestCount ?? ctx.rebuildForBuild?.actualTestCount,
+    actualCaptureCount: ctx.build?.actualCaptureCount ?? ctx.rebuildForBuild?.actualCaptureCount,
+    inheritedCaptureCount:
+      ctx.build?.inheritedCaptureCount ?? ctx.rebuildForBuild?.inheritedCaptureCount,
   };
 }
 
