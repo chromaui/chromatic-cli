@@ -12,7 +12,7 @@ const PACKAGE_JSON = 'package.json';
 export const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];
 
 // Yields a list of dependency names which have changed since the baseline.
-// E.g. ['react', 'react-dom', '@storybook/react']
+// E.g. ['react', 'react-dom', '@storybook/react', '@storybook/react-webpack5']
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export const findChangedDependencies = async (ctx: Context) => {

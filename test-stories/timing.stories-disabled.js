@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import { storiesOf } from '@storybook/react';
+import { storiesOf } from '@storybook/react-webpack5';
 import React, { useState } from 'react';
 
 // Some stories to test out timing code. Disabled by default

@@ -4,7 +4,7 @@ const config: StorybookConfig = {
   stories: process.env.SMOKE_TEST
     ? ['../test-stories/*.stories.*']
     : ['../node-src/**/*.@(mdx|stories.*)'],
-  addons: ['@storybook/addon-essentials', '@storybook/addon-webpack5-compiler-swc'],
+  addons: ['@storybook/addon-webpack5-compiler-swc', '@storybook/addon-docs'],
   framework: {
     name: '@storybook/react-webpack5',
     options: {},

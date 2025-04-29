@@ -9,7 +9,7 @@ const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
 const getContext = (ctx: any): Context => ({ ...context, ...ctx });
 
-const REACT = { '@storybook/react': '1.2.3' };
+const REACT = { '@storybook/react-webpack5': '1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
 
 afterEach(() => {
