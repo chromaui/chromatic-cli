@@ -39,20 +39,42 @@ export async function getChangedFilesWithReplacement(
       `Got error fetching commit for #${build.number}(${build.commit}): ${err.message}`
     );
 
-    if (/(bad object|uncommitted changes)/.test(err.message)) {
-      const replacementBuild = await findAncestorBuildWithCommit(ctx, build.number);
+    console.log(err.message);
+    if (!/(bad object|uncommitted changes)/.test(err.message)) {
+      throw err;
+    }
 
-      if (replacementBuild) {
+    // Try to find a replacement build by checking multiple ancestor builds
+    let skip = 0;
+    const page = 10;
+    const limit = 80;
+
+    while (skip < limit) {
+      const replacementBuild = await findAncestorBuildWithCommit(ctx, build.number, {
+        page,
+        limit: Math.min(page, limit - skip),
+      });
+
+      if (!replacementBuild) {
+        break;
+      }
+
+      try {
         ctx.log.debug(
           `Found replacement build for #${build.number}(${build.commit}): #${replacementBuild.number}(${replacementBuild.commit})`
         );
         const changedFiles = (await getChangedFiles(replacementBuild.commit)) || [];
         return { changedFiles, replacementBuild };
+      } catch (error) {
+        ctx.log.debug(
+          `Error with replacement build #${replacementBuild.number}(${replacementBuild.commit}): ${error.message}`
+        );
+        // Continue to next potential replacement build
+        skip += page;
       }
-      ctx.log.debug(`Couldn't find replacement for #${build.number}(${build.commit})`);
     }
 
-    // If we can't find a replacement or the error doesn't match, just throw
+    ctx.log.debug(`Couldn't find a working replacement for #${build.number}(${build.commit})`);
     throw err;
   }
 }
