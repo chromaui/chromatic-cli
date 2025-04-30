@@ -126,37 +126,39 @@ describe('getChangedFilesWithReplacements', () => {
     ).rejects.toThrow(/fatal: bad object missing/);
   });
 
-  it('tries multiple replacement builds until finding a working one', async () => {
-    const failingBuild = {
-      id: 'failing',
+  it('tries a replacement builds until it finds a working one', async () => {
+    const firstWorkingBuild = {
+      id: 'working',
       number: 2,
-      commit: 'failing',
+      commit: 'exists',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
-    const workingBuild = {
+    const secondWorkingBuild = {
       id: 'working',
       number: 1,
       commit: 'exists',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
     client.runQuery
-      .mockReturnValueOnce({ app: { build: { ancestorBuilds: [failingBuild] } } })
-      .mockReturnValueOnce({ app: { build: { ancestorBuilds: [workingBuild] } } });
+      .mockReturnValueOnce({ app: { build: { ancestorBuilds: [firstWorkingBuild] } } })
+      .mockReturnValueOnce({ app: { build: { ancestorBuilds: [secondWorkingBuild] } } });
 
-    expect(
-      await getChangedFilesWithReplacement(context, {
-        id: 'id',
-        number: 3,
-        commit: 'missing',
-        uncommittedHash: '',
-        isLocalBuild: false,
-      })
-    ).toEqual({
-      changedFiles: ['changed', 'files'],
-      replacementBuild: workingBuild,
+    const result = await getChangedFilesWithReplacement(context, {
+      id: 'id',
+      number: 3,
+      commit: 'missing',
+      uncommittedHash: '',
+      isLocalBuild: false,
     });
 
-    expect(client.runQuery).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      changedFiles: ['changed', 'files'],
+      replacementBuild: firstWorkingBuild,
+    });
+
+    expect(client.runQuery).toHaveBeenCalledTimes(1);
   });
 
   it('tries multiple replacement builds in the same batch', async () => {
@@ -165,32 +167,35 @@ describe('getChangedFilesWithReplacements', () => {
       number: 2,
       commit: 'failing1',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
     const failingBuild2 = {
       id: 'failing2',
       number: 1,
       commit: 'failing2',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
     const workingBuild = {
       id: 'working',
       number: 0,
       commit: 'exists',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
     client.runQuery.mockReturnValue({
       app: { build: { ancestorBuilds: [failingBuild1, failingBuild2, workingBuild] } },
     });
 
-    expect(
-      await getChangedFilesWithReplacement(context, {
-        id: 'id',
-        number: 3,
-        commit: 'missing',
-        uncommittedHash: '',
-        isLocalBuild: false,
-      })
-    ).toEqual({
+    const result = await getChangedFilesWithReplacement(context, {
+      id: 'id',
+      number: 3,
+      commit: 'missing',
+      uncommittedHash: '',
+      isLocalBuild: false,
+    });
+
+    expect(result).toEqual({
       changedFiles: ['changed', 'files'],
       replacementBuild: workingBuild,
     });
@@ -204,12 +209,14 @@ describe('getChangedFilesWithReplacements', () => {
       number: 2,
       commit: 'failing1',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
     const failingBuild2 = {
       id: 'failing2',
       number: 1,
       commit: 'failing2',
       uncommittedHash: '',
+      isLocalBuild: false,
     };
     client.runQuery.mockReturnValue({
       app: { build: { ancestorBuilds: [failingBuild1, failingBuild2] } },
