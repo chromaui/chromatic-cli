@@ -35,7 +35,6 @@ export async function getChangedFilesWithReplacement(
     const changedFiles = (await getChangedFiles(build.commit)) || [];
     return { changedFiles };
   } catch (err) {
-    console.log(err);
     ctx.log.debug(
       `Got error fetching commit for #${build.number}(${build.commit}): ${err.message}`
     );
