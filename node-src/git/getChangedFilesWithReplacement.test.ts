@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
+import { getChangedFiles } from './git';
 
 vi.mock('./git', () => ({
   getChangedFiles: (hash) => {
@@ -231,6 +232,46 @@ describe('getChangedFilesWithReplacements', () => {
         isLocalBuild: false,
       })
     ).rejects.toThrow(/fatal: bad object missing/);
+
+    expect(client.runQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries next build when getChangedFiles times out', async () => {
+    const timeoutBuild = {
+      id: 'timeout',
+      number: 2,
+      commit: 'timeout',
+      uncommittedHash: '',
+      isLocalBuild: false,
+    };
+    const workingBuild = {
+      id: 'working',
+      number: 1,
+      commit: 'exists',
+      uncommittedHash: '',
+      isLocalBuild: false,
+    };
+    client.runQuery.mockReturnValue({
+      app: { build: { ancestorBuilds: [timeoutBuild, workingBuild] } },
+    });
+
+    // Simulate a timeout by making the first build's commit not exist
+    vi.fn(getChangedFiles).mockImplementation(() => {
+      throw new Error('timeout');
+    });
+
+    const result = await getChangedFilesWithReplacement(context, {
+      id: 'id',
+      number: 3,
+      commit: 'missing',
+      uncommittedHash: '',
+      isLocalBuild: false,
+    });
+
+    expect(result).toEqual({
+      changedFiles: ['changed', 'files'],
+      replacementBuild: workingBuild,
+    });
 
     expect(client.runQuery).toHaveBeenCalledTimes(1);
   });
