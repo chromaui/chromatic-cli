@@ -46,7 +46,7 @@ vi.mock('execa');
 const mockedBuildCommand = 'mocked build command';
 vi.mock(import('./lib/e2e'), async (importOriginal) => ({
   ...(await importOriginal()),
-  getE2EBuildCommand: () => mockedBuildCommand,
+  getE2EBuildCommand: async () => mockedBuildCommand,
 }));
 
 const execaCommand = vi.mocked(execaDefault);
