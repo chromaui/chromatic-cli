@@ -15,16 +15,17 @@
 import type { MergeCommitsQueryResult } from '../getParentCommits';
 import { Repository } from '../getParentCommits.test';
 
-interface Build {
+export interface Build {
+  number: number;
   branch: string;
   commit: string;
   committedAt: number;
 }
-interface PR {
+export interface PR {
   mergeCommitHash: string;
   headBranch: string;
 }
-interface MergeInfo {
+export interface MergeInfo {
   commit: string;
   branch: string;
 }

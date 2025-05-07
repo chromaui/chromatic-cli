@@ -8,7 +8,7 @@ import { info, success } from '../../components/icons';
 import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 
-export default (ctx: Context) => {
+export default (ctx: Pick<Context, 'build' | 'options' | 'isOnboarding' | 'storybookUrl'>) => {
   const { snapshots, components, stories, e2eTests } = stats({ build: ctx.build });
 
   const totalChanges = (ctx.build.changeCount || 0) + (ctx.build.accessibilityChangeCount || 0);
