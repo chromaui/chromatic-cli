@@ -1,10 +1,9 @@
 import chalk from 'chalk';
 import tsDedent from 'ts-dedent';
 
-import { Build } from '../../../git/mocks/mockIndex';
 import { info } from '../../components/icons';
 
-const commit = (build: Build) => chalk.cyan(build.commit);
+const commit = (build) => chalk.cyan(build.commit);
 
 /**
  * Formats a message indicating that a build was replaced by another build.
@@ -15,13 +14,7 @@ const commit = (build: Build) => chalk.cyan(build.commit);
  *
  * @returns The formatted message.
  */
-export default function replacedBuild({
-  replacedBuild,
-  replacementBuild,
-}: {
-  replacedBuild: Build;
-  replacementBuild: Build;
-}) {
+export default function replacedBuild({ replacedBuild, replacementBuild }) {
   return tsDedent`
     ${info} {bold Missing commit detected}
     When detecting git changes for TurboSnap, we couldn't find the commit (${commit(replacedBuild)}) for the most recent build (#${replacedBuild.number}).
