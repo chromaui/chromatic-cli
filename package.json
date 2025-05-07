@@ -108,9 +108,8 @@
     "@sentry/node": "^8.30.0",
     "@snyk/dep-graph": "^2.9.0",
     "@storybook/addon-docs": "^9.0.0-beta.6",
-    "@storybook/addon-webpack5-compiler-swc": "^3.0.0",
+    "@storybook/html-vite": "^9.0.0-beta.6",
     "@storybook/linter-config": "^4.0.0",
-    "@storybook/react-webpack5": "^9.0.0-beta.6",
     "@tsconfig/node16": "^16.1.1",
     "@types/archiver": "^5.3.1",
     "@types/async-retry": "^1.4.3",
@@ -123,7 +122,6 @@
     "@types/progress-stream": "^2.0.2",
     "@types/prompts": "^2.4.9",
     "@types/semver": "^7.3.9",
-    "@types/webpack-env": "^1.18.5",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
     "@vitest/coverage-v8": "^3.1.2",
@@ -260,5 +258,8 @@
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
     "displayName": "Chromatic"
+  },
+  "dependencies": {
+    "process": "^0.11.10"
   }
 }
