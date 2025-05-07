@@ -2561,6 +2561,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/webpack-env@npm:^1.18.8":
+  version: 1.18.8
+  resolution: "@types/webpack-env@npm:1.18.8"
+  checksum: 10c0/527a5d1eb75c5243e4f3665d956c7c340f899955dd25d16c9fd9750406f32e95a3a17d207640295038e8235c0c2a2daf084f420e088e58b965d82fc74f6012d7
+  languageName: node
+  linkType: hard
+
 "@typescript-eslint/eslint-plugin@npm:7.18.0":
   version: 7.18.0
   resolution: "@typescript-eslint/eslint-plugin@npm:7.18.0"
@@ -4250,6 +4257,7 @@ __metadata:
     "@types/progress-stream": "npm:^2.0.2"
     "@types/prompts": "npm:^2.4.9"
     "@types/semver": "npm:^7.3.9"
+    "@types/webpack-env": "npm:^1.18.8"
     "@typescript-eslint/eslint-plugin": "npm:^6.8.0"
     "@typescript-eslint/parser": "npm:^6.8.0"
     "@vitest/coverage-v8": "npm:^3.1.2"

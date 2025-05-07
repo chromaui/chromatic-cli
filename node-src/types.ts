@@ -167,7 +167,7 @@ export type TaskName =
   | 'restoreWorkspace';
 
 export interface Context {
-  env: Partial<Environment>;
+  env: Environment;
   log: Logger;
   pkg: {
     name: string;

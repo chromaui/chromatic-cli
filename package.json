@@ -123,6 +123,7 @@
     "@types/progress-stream": "^2.0.2",
     "@types/prompts": "^2.4.9",
     "@types/semver": "^7.3.9",
+    "@types/webpack-env": "^1.18.8",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
     "@vitest/coverage-v8": "^3.1.2",
