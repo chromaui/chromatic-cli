@@ -56,9 +56,9 @@ export default {
 
 type Story = StoryObj<Properties>;
 
-export const BuildPassed: Story = {
+export const BuildPassed = {
   args: baseContext,
-};
+} satisfies Story;
 
 export const BuildPassedWithChanges: Story = {
   args: {

@@ -38,7 +38,7 @@ const htmlStyle = {
 };
 
 export const parameters = {
-  layout: 'fullscreen',
+  layout: 'padded',
   backgrounds: {
     options: [
       { name: 'dark', value: '#16242c' },
@@ -57,11 +57,11 @@ export const initialGlobals = {
 export const decorators = [
   (storyFn, { kind }) => {
     if (kind.startsWith('CLI/')) {
-      return `<code style=${codeStyle}>${ansiHTML(storyFn())}</code>`;
+      return `<code style=${codeStyle}>${ansiHTML(storyFn().replaceAll('\n', '<br>'))}</code>`;
     }
     if (kind.startsWith('HTML/')) {
       return `<div style=${htmlStyle}>${storyFn()}</div>`;
     }
-    return storyFn();
+    return storyFn().replaceAll('\n', '<br>');
   },
 ];

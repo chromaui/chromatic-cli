@@ -35,13 +35,13 @@ type Story = StoryObj<Properties>;
 
 const ctx = { options: { playwright: true } };
 
-export const StorybookPublished: Story = {
+export const StorybookPublished = {
   args: {
     ...ctx,
     build: {},
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   },
-};
+} satisfies Story;
 
 export const StorybookPrepared: Story = {
   args: {
