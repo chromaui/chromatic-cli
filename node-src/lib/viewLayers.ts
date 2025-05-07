@@ -13,6 +13,6 @@ export const viewLayers = {
   '@storybook/svelte': 'svelte',
   '@storybook/preact': 'preact',
   '@storybook/rax': 'rax',
-  '@storybook/html-vite': '@storybook/html-vite',
-  '@storybook/html-vite': 'react',
+  '@storybook/html-vite': 'html',
+  '@storybook/react-vite': 'react',
 } as Record<string, string>;

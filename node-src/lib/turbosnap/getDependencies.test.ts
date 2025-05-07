@@ -92,7 +92,6 @@ describe('getDependencies', () => {
       expect.arrayContaining([
         // @see https://github.com/chromaui/chromatic-cli/blob/e61c2688597a6fda61a7057c866ebfabde955784/package.json#L75-L170
         '@discoveryjs/json-ext',
-        '@types/webpack-env',
         '@actions/core',
         '@actions/github',
         '@babel/cli',
