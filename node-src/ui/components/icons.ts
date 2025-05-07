@@ -1,5 +1,6 @@
+import process from 'node:process';
+
 import chalk from 'chalk';
-import process from 'process';
 
 const isSupported =
   process.platform !== 'win32' || process.env.CI || process.env.TERM === 'xterm-256color';
