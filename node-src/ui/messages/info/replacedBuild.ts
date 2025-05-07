@@ -9,11 +9,11 @@ const commit = (build: Build) => chalk.cyan(build.commit);
 /**
  * Formats a message indicating that a build was replaced by another build.
  *
- * @param root0
- * @param root0.replacedBuild
- * @param root0.replacementBuild
+ * @param root0 - The root object.
+ * @param root0.replacedBuild - The build that was replaced.
+ * @param root0.replacementBuild - The build that replaced the original build.
  *
- * @returns
+ * @returns The formatted message.
  */
 export default function replacedBuild({
   replacedBuild,
