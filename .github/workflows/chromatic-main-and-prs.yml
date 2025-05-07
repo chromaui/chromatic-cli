@@ -31,6 +31,12 @@ jobs:
           traceChanged: true
           diagnostics: true
           skip: ${{ github.event.pull_request.draft == true }}
+          debug: true
+        env:
+          NODE_OPTIONS: --max_old_space_size=8192
+          CHROMATIC_SHA: ${{ github.event.pull_request.head.sha }}
+          CHROMATIC_BRANCH: ${{ github.head_ref }}
+          CHROMATIC_SLUG: ${{ github.repository }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
