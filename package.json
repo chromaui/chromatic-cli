@@ -89,6 +89,7 @@
     "trim-stats": "./dist/bin.js trim-stats-file",
     "storybook": "storybook dev -p 9009",
     "test": "vitest run --coverage && vitest run -c vitest.no-threads.config.ts",
+    "test:watch": "vitest watch --coverage && vitest run -c vitest.no-threads.config.ts",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
     "prepare": "yarn run build",
     "dev": "tsup --watch",
