@@ -37,8 +37,8 @@ const baseContext = createBaseContext({
     ...createBaseBuild(),
     id: 'test-id',
     status: 'PASSED',
-    storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   },
+  storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
 });
 
 export default {

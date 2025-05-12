@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
+import process from 'process';
 import stripAnsi from 'strip-ansi';
 import { dedent } from 'ts-dedent';
 
