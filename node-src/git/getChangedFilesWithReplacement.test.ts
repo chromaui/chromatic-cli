@@ -4,7 +4,7 @@ import TestLogger from '../lib/testLogger';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 
 vi.mock('./git', () => ({
-  getChangedFiles: async (hash) => {
+  getChangedFiles: (hash) => {
     if (/exists/.test(hash)) return ['changed', 'files'];
     throw new Error(`fatal: bad object ${hash}`);
   },
