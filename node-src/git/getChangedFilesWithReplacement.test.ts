@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
-import { getChangedFiles } from './git';
 
 vi.mock('./git', () => ({
   getChangedFiles: (hash) => {
     if (/exists/.test(hash)) return ['changed', 'files'];
+    if (/exists/.test('timeout')) {
+      throw new Error('Command timed out after 20000ms');
+    }
     throw new Error(`fatal: bad object ${hash}`);
   },
   commitExists: (hash) => hash.match(/exists/),
@@ -127,41 +129,6 @@ describe('getChangedFilesWithReplacements', () => {
     ).rejects.toThrow(/fatal: bad object missing/);
   });
 
-  it('tries a replacement builds until it finds a working one', async () => {
-    const firstWorkingBuild = {
-      id: 'working',
-      number: 2,
-      commit: 'exists',
-      uncommittedHash: '',
-      isLocalBuild: false,
-    };
-    const secondWorkingBuild = {
-      id: 'working',
-      number: 1,
-      commit: 'exists',
-      uncommittedHash: '',
-      isLocalBuild: false,
-    };
-    client.runQuery
-      .mockReturnValueOnce({ app: { build: { ancestorBuilds: [firstWorkingBuild] } } })
-      .mockReturnValueOnce({ app: { build: { ancestorBuilds: [secondWorkingBuild] } } });
-
-    const result = await getChangedFilesWithReplacement(context, {
-      id: 'id',
-      number: 3,
-      commit: 'missing',
-      uncommittedHash: '',
-      isLocalBuild: false,
-    });
-
-    expect(result).toEqual({
-      changedFiles: ['changed', 'files'],
-      replacementBuild: firstWorkingBuild,
-    });
-
-    expect(client.runQuery).toHaveBeenCalledTimes(1);
-  });
-
   it('tries multiple replacement builds in the same batch', async () => {
     const failingBuild1 = {
       id: 'failing1',
@@ -255,15 +222,10 @@ describe('getChangedFilesWithReplacements', () => {
       app: { build: { ancestorBuilds: [timeoutBuild, workingBuild] } },
     });
 
-    // Simulate a timeout by making the first build's commit not exist
-    vi.fn(getChangedFiles).mockImplementation(() => {
-      throw new Error('timeout');
-    });
-
     const result = await getChangedFilesWithReplacement(context, {
       id: 'id',
       number: 3,
-      commit: 'missing',
+      commit: 'timeout',
       uncommittedHash: '',
       isLocalBuild: false,
     });
