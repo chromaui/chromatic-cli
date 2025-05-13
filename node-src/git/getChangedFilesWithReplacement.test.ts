@@ -4,11 +4,8 @@ import TestLogger from '../lib/testLogger';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 
 vi.mock('./git', () => ({
-  getChangedFiles: (hash) => {
+  getChangedFiles: async (hash) => {
     if (/exists/.test(hash)) return ['changed', 'files'];
-    if (/exists/.test('timeout')) {
-      throw new Error('Command timed out after 20000ms');
-    }
     throw new Error(`fatal: bad object ${hash}`);
   },
   commitExists: (hash) => hash.match(/exists/),
