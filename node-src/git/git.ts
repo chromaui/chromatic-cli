@@ -115,8 +115,8 @@ export async function getBranch(ctx: Pick<Context, 'log'>) {
  * @returns The uncommited hash, if available.
  */
 export async function getUncommittedHash(ctx: Pick<Context, 'log'>) {
-  const listStagedFiles = 'git diff --name-only --diff-filter=d --cached';
-  const listUnstagedFiles = 'git diff --name-only --diff-filter=d';
+  const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
+  const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
   const listUntrackedFiles = 'git ls-files --others --exclude-standard';
   const listUncommittedFiles = [listStagedFiles, listUnstagedFiles, listUntrackedFiles].join(';');
 
@@ -181,7 +181,10 @@ export async function getChangedFiles(
   headCommit = ''
 ) {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
-  const files = await execGitCommand(`git --no-pager diff --name-only ${baseCommit} ${headCommit}`);
+  const files = await execGitCommand(
+    ctx,
+    `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`
+  );
   return files?.split(newline).filter(Boolean);
 }
 
@@ -305,7 +308,10 @@ export async function findMergeBase(
   // If we don't find a merge base on the base branch, just return the first one.
   const branchNames = await Promise.all(
     mergeBases.map(async (sha) => {
-      const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
+      const name = await execGitCommand(
+        ctx,
+        `git name-rev --name-only --no-relative --exclude="tags/*" ${sha}`
+      );
       return name?.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
