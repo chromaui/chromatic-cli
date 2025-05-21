@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as execGit from '../../git/execGit';
+import TestLogger from '../testLogger';
 import {
   arePackageDependenciesEqual,
   clearFileCache,
@@ -9,10 +10,11 @@ import {
 
 vi.mock('../../git/execGit');
 
+const ctx = { log: new TestLogger() };
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 
 const mockFileContents = (packagesCommitsByFile) => {
-  execGitCommand.mockImplementation(async (input) => {
+  execGitCommand.mockImplementation(async (_, input) => {
     const regexResults = /show\s([^:]*):(.*)/g.exec(input);
     if (!regexResults) return '';
 
@@ -32,7 +34,7 @@ beforeEach(() => {
 
 describe('findChangedPackageFiles', () => {
   it('returns empty array when there are no changed package files', async () => {
-    expect(await findChangedPackageFiles([])).toStrictEqual([]);
+    expect(await findChangedPackageFiles(ctx, [])).toStrictEqual([]);
   });
 
   it('returns empty array when there are package files with no changed dependencies', async () => {
@@ -41,7 +43,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
+      await findChangedPackageFiles(ctx, [{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual([]);
   });
 
@@ -51,7 +53,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
+      await findChangedPackageFiles(ctx, [{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual(['package.json']);
   });
 
@@ -65,7 +67,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([
+      await findChangedPackageFiles(ctx, [
         { commit: 'A', changedFiles: ['package.json', 'src/another/package.json'] },
       ])
     ).toStrictEqual(['package.json', 'src/another/package.json']);
@@ -83,7 +85,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([
+      await findChangedPackageFiles(ctx, [
         { commit: 'A', changedFiles: ['package.json', 'src/another/package.json'] },
       ])
     ).toStrictEqual(['src/another/package.json']);
@@ -99,7 +101,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([
+      await findChangedPackageFiles(ctx, [
         { commit: 'A', changedFiles: [] },
         { commit: 'B', changedFiles: ['package.json'] },
       ])
@@ -116,7 +118,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([
+      await findChangedPackageFiles(ctx, [
         { commit: 'A', changedFiles: ['package.json'] },
         { commit: 'B', changedFiles: [] },
       ])
@@ -133,7 +135,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([
+      await findChangedPackageFiles(ctx, [
         { commit: 'A', changedFiles: ['package.json'] },
         { commit: 'B', changedFiles: ['package.json'] },
       ])
@@ -149,7 +151,7 @@ describe('findChangedPackageFiles', () => {
     });
 
     expect(
-      await findChangedPackageFiles([{ commit: 'A', changedFiles: ['package.json'] }])
+      await findChangedPackageFiles(ctx, [{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual(['package.json']);
   });
 });

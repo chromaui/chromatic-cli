@@ -93,7 +93,7 @@ export async function main(argv: string[]) {
       traceChanged: flags.mode || true,
     },
     git: {
-      rootPath: await getRepositoryRoot(),
+      rootPath: await getRepositoryRoot({ log: console as any }),
     },
     storybook: {
       baseDir: flags.storybookBaseDir,

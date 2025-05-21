@@ -55,4 +55,12 @@ export default class TestLogger {
   setLogFile() {
     // do nothing
   }
+
+  file() {
+    // do nothing
+  }
+
+  getLevel(): any {
+    // do nothing
+  }
 }
