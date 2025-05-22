@@ -86,7 +86,7 @@ export async function main(argv: string[]) {
   );
 
   const ctx: Context = {
-    log: createLogger({}),
+    log: createLogger({}, { logPrefix: '', logLevel: 'info' }),
     options: {
       storybookBaseDir: flags.storybookBaseDir,
       storybookConfigDir: flags.storybookConfigDir,
