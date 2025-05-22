@@ -85,8 +85,9 @@ export async function main(argv: string[]) {
     }
   );
 
+  const log = createLogger({}, { logPrefix: '', logLevel: 'info' });
   const ctx: Context = {
-    log: createLogger({}, { logPrefix: '', logLevel: 'info' }),
+    log,
     options: {
       storybookBaseDir: flags.storybookBaseDir,
       storybookConfigDir: flags.storybookConfigDir,
@@ -94,7 +95,7 @@ export async function main(argv: string[]) {
       traceChanged: flags.mode || true,
     },
     git: {
-      rootPath: await getRepositoryRoot({ log: console as any }),
+      rootPath: await getRepositoryRoot({ log }),
     },
     storybook: {
       baseDir: flags.storybookBaseDir,
