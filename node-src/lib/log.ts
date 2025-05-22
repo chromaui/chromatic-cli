@@ -139,8 +139,9 @@ export const createLogger = (flags: Flags, options?: Partial<Options>) => {
   let enqueue = false;
   const queue: QueueMessage[] = [];
 
-  const logPrefixer = createPrefixer(true, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
-  const filePrefixer = createPrefixer(false, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
+  const logPrefixer = createPrefixer(true, options?.logPrefix ?? flags.logPrefix ?? LOG_PREFIX);
+  const filePrefixer = createPrefixer(false, options?.logPrefix ?? flags.logPrefix ?? LOG_PREFIX);
+
   const log =
     (type: LogType, logFileOnly?: boolean) =>
     (...args: any[]) => {

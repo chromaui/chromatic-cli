@@ -25,7 +25,7 @@ describe('runPrepareWorkspace', () => {
 
     await runPrepareWorkspace(ctx, {} as any);
     expect(ctx.mergeBase).toBe('1234asd');
-    expect(checkout).toHaveBeenCalledWith('1234asd');
+    expect(checkout).toHaveBeenCalledWith(ctx, '1234asd');
     expect(installDependencies).toHaveBeenCalled();
   });
 
