@@ -45,7 +45,6 @@ export interface AncestorBuildsQueryResult {
  *
  * @param ctx The context set when executing the CLI.
  * @param ctx.client The GraphQL client within the context.
- * @param ctx.log The logger within the context.
  * @param buildNumber The build number to start searching from
  * @param options Page size and limit options
  * @param options.page How many builds to fetch each time
@@ -54,13 +53,13 @@ export interface AncestorBuildsQueryResult {
  * @returns A build to be substituted
  */
 export async function findAncestorBuildWithCommit(
-  ctx: Pick<Context, 'client' | 'log'>,
+  { client }: Pick<Context, 'client'>,
   buildNumber: number,
   { page = 10, limit = 80 } = {}
 ): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | undefined> {
   let skip = 0;
   while (skip < limit) {
-    const { app } = await ctx.client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
+    const { app } = await client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
       buildNumber,
       skip,
       limit: Math.min(page, limit - skip),
@@ -68,7 +67,7 @@ export async function findAncestorBuildWithCommit(
 
     const results = await Promise.all(
       app.build.ancestorBuilds.map(async (build) => {
-        const exists = await commitExists(ctx, build.commit);
+        const exists = await commitExists(build.commit);
         return [build, exists] as const;
       })
     );
