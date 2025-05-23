@@ -74,7 +74,7 @@ describe('getCommitAndBranch', () => {
       slug: 'chromaui/env-ci',
     });
     getBranch.mockResolvedValue('HEAD');
-    getCommit.mockImplementation((_, commit) =>
+    getCommit.mockImplementation((commit) =>
       Promise.resolve({ commit: commit as string, ...commitInfo })
     );
     const info = await getCommitAndBranch(ctx);
@@ -157,7 +157,7 @@ describe('getCommitAndBranch', () => {
       process.env.CHROMATIC_SHA = 'f78db92d';
       process.env.CHROMATIC_BRANCH = 'feature';
       process.env.CHROMATIC_SLUG = 'chromaui/chromatic';
-      getCommit.mockImplementation((_, commit) =>
+      getCommit.mockImplementation((commit) =>
         Promise.resolve({ commit: commit as string, ...commitInfo })
       );
       const info = await getCommitAndBranch(ctx);
@@ -201,7 +201,7 @@ describe('getCommitAndBranch', () => {
       process.env.GITHUB_SHA = '3276c796';
       getCommit.mockResolvedValue({ commit: 'c11da9a9', ...commitInfo });
       const info = await getCommitAndBranch(ctx);
-      expect(getCommit).toHaveBeenCalledWith(ctx, 'github');
+      expect(getCommit).toHaveBeenCalledWith('github');
       expect(info).toMatchObject({
         branch: 'github',
         commit: 'c11da9a9',
@@ -235,7 +235,7 @@ describe('getCommitAndBranch', () => {
       process.env.TRAVIS_PULL_REQUEST_SHA = 'ef765ac7';
       process.env.TRAVIS_PULL_REQUEST_BRANCH = 'travis';
       process.env.TRAVIS_PULL_REQUEST_SLUG = 'chromaui/travis';
-      getCommit.mockImplementation((_, commit) =>
+      getCommit.mockImplementation((commit) =>
         Promise.resolve({ commit: commit as string, ...commitInfo })
       );
       const info = await getCommitAndBranch(ctx);

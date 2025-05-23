@@ -20,7 +20,7 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
   const { patchHeadRef, patchBaseRef } = ctx.options;
 
   // Make sure the git repo is in a clean state (no changes / untracked files).
-  if (!(await isClean(ctx))) {
+  if (!(await isClean())) {
     setExitCode(ctx, exitCodes.GIT_NOT_CLEAN, true);
     ctx.log.error(workspaceNotClean());
     throw new Error('Working directory is not clean');
@@ -29,14 +29,14 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
   // Make sure both the head and base branches are up-to-date with the remote.
   if (!(await isUpToDate(ctx))) {
     setExitCode(ctx, exitCodes.GIT_OUT_OF_DATE, true);
-    ctx.log.error(workspaceNotUpToDate(await getUpdateMessage(ctx)));
+    ctx.log.error(workspaceNotUpToDate(await getUpdateMessage()));
     throw new Error('Workspace not up-to-date with remote');
   }
 
   transitionTo(lookupMergeBase)(ctx, task);
 
   // Get the merge base commit hash.
-  ctx.mergeBase = await findMergeBase(ctx, patchHeadRef, patchBaseRef);
+  ctx.mergeBase = await findMergeBase(patchHeadRef, patchBaseRef);
   if (!ctx.mergeBase) {
     setExitCode(ctx, exitCodes.GIT_NO_MERGE_BASE, true);
     ctx.log.error(mergeBaseNotFound(ctx.options));
@@ -44,7 +44,7 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
   }
 
   transitionTo(checkoutMergeBase)(ctx, task);
-  await checkout(ctx, ctx.mergeBase);
+  await checkout(ctx.mergeBase);
 
   try {
     transitionTo(installingDependencies)(ctx, task);
@@ -53,7 +53,7 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
     ctx.mergeBase = undefined;
     setExitCode(ctx, exitCodes.NPM_INSTALL_FAILED);
     ctx.log.error(err);
-    await runRestoreWorkspace(ctx); // make sure we clean up even when something breaks
+    await runRestoreWorkspace(); // make sure we clean up even when something breaks
     throw new Error('Failed to install dependencies');
   }
 };

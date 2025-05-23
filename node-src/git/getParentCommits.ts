@@ -89,7 +89,7 @@ function commitsForCLI(commits: string[]) {
 // `commitsWithBuilds`.
 //
 async function nextCommits(
-  ctx: Pick<Context, 'log'>,
+  { log }: Pick<Context, 'log'>,
   limit: number,
   {
     firstCommittedAtSeconds,
@@ -107,8 +107,10 @@ async function nextCommits(
   const command = `git rev-list HEAD \
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
-  const commitsString = await execGitCommand(ctx, command);
+  log.debug(`running ${command}`);
+  const commitsString = await execGitCommand(command);
   const commits = commitsString?.split('\n').filter(Boolean);
+  log.debug(`command output: ${commits}`);
 
   // Later on we want to know which commits we visited on the way to finding the ancestor commits
   // The output of the above rev-list commit includes possibly commits with builds so filter them.
@@ -179,7 +181,7 @@ async function step(
 
 // Which of the listed commits are "maximally descendent":
 // ie c in commits such that there are no descendents of c in commits.
-async function maximallyDescendentCommits(ctx: Pick<Context, 'log'>, commits: string[]) {
+async function maximallyDescendentCommits({ log }: Pick<Context, 'log'>, commits: string[]) {
   if (commits.length === 0) {
     return commits;
   }
@@ -189,8 +191,10 @@ async function maximallyDescendentCommits(ctx: Pick<Context, 'log'>, commits: st
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
-  const maxCommitsString = await execGitCommand(ctx, command);
+  log.debug(`running ${command}`);
+  const maxCommitsString = await execGitCommand(command);
   const maxCommits = maxCommitsString?.split('\n').filter(Boolean);
+  log.debug(`command output: ${maxCommits}`);
 
   return maxCommits;
 }
@@ -241,7 +245,7 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
     lastBuild &&
     lastBuild.committedAt <= committedAt
   ) {
-    if (await commitExists(ctx, lastBuild.commit)) {
+    if (await commitExists(lastBuild.commit)) {
       log.debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
       initialCommitsWithBuilds.push(lastBuild.commit);
     } else {
@@ -284,7 +288,7 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
     const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
     if (lastHeadBuildCommit) {
-      if (await commitExists(ctx, lastHeadBuildCommit)) {
+      if (await commitExists(lastHeadBuildCommit)) {
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
       } else {

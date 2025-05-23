@@ -4,11 +4,11 @@ import TestLogger from '../lib/testLogger';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 
 vi.mock('./git', () => ({
-  getChangedFiles: (_, hash) => {
+  getChangedFiles: (hash) => {
     if (/exists/.test(hash)) return ['changed', 'files'];
     throw new Error(`fatal: bad object ${hash}`);
   },
-  commitExists: (_, hash) => hash.match(/exists/),
+  commitExists: (hash) => hash.match(/exists/),
 }));
 
 describe('getChangedFilesWithReplacements', () => {
