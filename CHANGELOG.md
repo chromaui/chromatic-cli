@@ -1,3 +1,15 @@
+# v11.29.0 (Fri May 23 2025)
+
+#### 🚀 Enhancement
+
+- Export `createLogger` and make all arguments optional [#1182](https://github.com/chromaui/chromatic-cli/pull/1182) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.28.4 (Fri May 23 2025)
 
 #### 🐛 Bug Fix
