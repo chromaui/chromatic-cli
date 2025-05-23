@@ -2,7 +2,6 @@ import { createInterface } from 'node:readline';
 
 import { execaCommand } from 'execa';
 
-import { Context } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
@@ -17,33 +16,25 @@ const defaultOptions: Parameters<typeof execaCommand>[1] = {
 /**
  * Execute a Git command in the local terminal.
  *
- * @param context Standard context object.
- * @param context.log Standard context logger.
  * @param command The command to execute.
  * @param options Execa options
  *
  * @returns The result of the command from the terminal.
  */
 export async function execGitCommand(
-  { log }: Pick<Context, 'log'>,
   command: string,
   options?: Parameters<typeof execaCommand>[1]
 ) {
   try {
-    log.debug(`execGitCommand: ${command}`);
     const { all } = await execaCommand(command, { ...defaultOptions, ...options });
 
     if (all === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}'`);
     }
 
-    const result = all.toString();
-    log.debug(`execGitCommand result: ${result}`);
-    return result;
+    return all.toString();
   } catch (error) {
     const { message } = error;
-
-    log.debug(`execGitCommand error: ${message}`);
 
     if (message.includes('not a git repository')) {
       throw new Error(gitNotInitialized({ command }));
@@ -64,19 +55,15 @@ export async function execGitCommand(
 /**
  * Execute a Git command in the local terminal and just get the first line.
  *
- * @param context Standard context object.
- * @param context.log Standard context logger.
  * @param command The command to execute.
  * @param options Execa options
  *
  * @returns The first line of the command from the terminal.
  */
 export async function execGitCommandOneLine(
-  { log }: Pick<Context, 'log'>,
   command: string,
   options?: Parameters<typeof execaCommand>[1]
 ) {
-  log.debug(`execGitCommandOneLine: ${command}`);
   const process = execaCommand(command, { ...defaultOptions, buffer: false, ...options });
 
   return Promise.race([
@@ -106,19 +93,15 @@ export async function execGitCommandOneLine(
 /**
  * Execute a Git command in the local terminal and count the lines in the result
  *
- * @param context Standard context object.
- * @param context.log Standard context logger.
  * @param command The command to execute.
  * @param options Execa options
  *
  * @returns The number of lines the command returned
  */
 export async function execGitCommandCountLines(
-  { log }: Pick<Context, 'log'>,
   command: string,
   options?: Parameters<typeof execaCommand>[1]
 ) {
-  log.debug(`execGitCommandCountLines: ${command}`);
   const process = execaCommand(command, { ...defaultOptions, buffer: false, ...options });
   if (!process.stdout) {
     throw new Error('Unexpected missing stdout');
