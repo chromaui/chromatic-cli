@@ -349,4 +349,4 @@ export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
 }
 
 export { getConfiguration } from './lib/getConfiguration';
-export { Logger } from './lib/log';
+export { createLogger, Logger } from './lib/log';
