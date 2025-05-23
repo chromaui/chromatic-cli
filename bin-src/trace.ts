@@ -2,6 +2,7 @@ import { getDependentStoryFiles } from '@cli/turbosnap';
 import meow from 'meow';
 
 import { getRepositoryRoot } from '../node-src/git/git';
+import { createLogger } from '../node-src/lib/log';
 import { isPackageManifestFile } from '../node-src/lib/utils';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Context } from '../node-src/types';
@@ -84,8 +85,9 @@ export async function main(argv: string[]) {
     }
   );
 
+  const log = createLogger({}, { logPrefix: '', logLevel: 'info' });
   const ctx: Context = {
-    log: console,
+    log,
     options: {
       storybookBaseDir: flags.storybookBaseDir,
       storybookConfigDir: flags.storybookConfigDir,
@@ -93,7 +95,7 @@ export async function main(argv: string[]) {
       traceChanged: flags.mode || true,
     },
     git: {
-      rootPath: await getRepositoryRoot(),
+      rootPath: await getRepositoryRoot({ log }),
     },
     storybook: {
       baseDir: flags.storybookBaseDir,

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
@@ -12,20 +13,24 @@ export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` wit
 /**
  * Get the version of Git from the host.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The Git version.
  */
-export async function getVersion() {
-  const result = await execGitCommand(`git --version`);
+export async function getVersion(ctx: Pick<Context, 'log'>) {
+  const result = await execGitCommand(ctx, `git --version`);
   return result?.replace('git version ', '');
 }
 
 /**
  * Get the user's email from Git.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The user's email.
  */
-export async function getUserEmail() {
-  return execGitCommand(`git config user.email`);
+export async function getUserEmail(ctx: Pick<Context, 'log'>) {
+  return execGitCommand(ctx, `git config user.email`);
 }
 
 /**
@@ -33,10 +38,12 @@ export async function getUserEmail() {
  * and is typically followed by `.git`. The regex matches the last two parts between slashes, and
  * ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The slug of the remote URL.
  */
-export async function getSlug() {
-  const result = await execGitCommand(`git config --get remote.origin.url`);
+export async function getSlug(ctx: Pick<Context, 'log'>) {
+  const result = await execGitCommand(ctx, `git config --get remote.origin.url`);
   const downcasedResult = result?.toLowerCase() || '';
   const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
   return slug;
@@ -49,12 +56,14 @@ export async function getSlug() {
 /**
  * Get commit details from Git.
  *
+ * @param ctx Standard context object.
  * @param revision The argument to `git log` (usually a commit SHA).
  *
  * @returns Commit details from Git.
  */
-export async function getCommit(revision = '') {
+export async function getCommit(ctx: Pick<Context, 'log'>, revision = '') {
   const result = await execGitCommand(
+    ctx,
     // Technically this yields the author info, not committer info
     `git --no-pager log -n 1 --format="%H ## %ct ## %ae ## %an" ${revision}`
   );
@@ -71,24 +80,26 @@ export async function getCommit(revision = '') {
 /**
  * Get the current branch from Git.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The branch name from Git.
  */
-export async function getBranch() {
+export async function getBranch(ctx: Pick<Context, 'log'>) {
   try {
     // Git v2.22 and above
     // Yields an empty string when in detached HEAD state
-    const branch = await execGitCommand('git branch --show-current');
+    const branch = await execGitCommand(ctx, 'git branch --show-current');
     return branch || 'HEAD';
   } catch {
     try {
       // Git v1.8 and above
       // Throws when in detached HEAD state
-      const reference = await execGitCommand('git symbolic-ref HEAD');
+      const reference = await execGitCommand(ctx, 'git symbolic-ref HEAD');
       return reference?.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
     } catch {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
-      const reference = await execGitCommand('git rev-parse --abbrev-ref HEAD');
+      const reference = await execGitCommand(ctx, 'git rev-parse --abbrev-ref HEAD');
       return reference?.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
@@ -99,15 +110,18 @@ export async function getBranch() {
  * excluding deleted files (which can't be hashed) and ignored files. There is no one single Git
  * command to reliably get this information, so we use a combination of commands grouped together.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The uncommited hash, if available.
  */
-export async function getUncommittedHash() {
-  const listStagedFiles = 'git diff --name-only --diff-filter=d --cached';
-  const listUnstagedFiles = 'git diff --name-only --diff-filter=d';
+export async function getUncommittedHash(ctx: Pick<Context, 'log'>) {
+  const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
+  const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
   const listUntrackedFiles = 'git ls-files --others --exclude-standard';
   const listUncommittedFiles = [listStagedFiles, listUnstagedFiles, listUntrackedFiles].join(';');
 
   const uncommittedHashWithPadding = await execGitCommand(
+    ctx,
     // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
     // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
     // stdin to avoid the limit on command line arguments.
@@ -123,10 +137,12 @@ export async function getUncommittedHash() {
 /**
  * Determine if the current commit has at least one parent commit.
  *
+ * @param ctx Standard context object.
+ *
  * @returns True if the current commit has at least one parent.
  */
-export async function hasPreviousCommit() {
-  const result = await execGitCommand(`git --no-pager log -n 1 --skip=1 --format="%H"`);
+export async function hasPreviousCommit(ctx: Pick<Context, 'log'>) {
+  const result = await execGitCommand(ctx, `git --no-pager log -n 1 --skip=1 --format="%H"`);
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const allhex = new RegExp('^[a-f0-9]+$');
@@ -136,13 +152,14 @@ export async function hasPreviousCommit() {
 /**
  * Check if a commit exists in the repository
  *
+ * @param ctx Standard context object.
  * @param commit The commit to check.
  *
  * @returns True if the commit exists.
  */
-export async function commitExists(commit: string) {
+export async function commitExists(ctx: Pick<Context, 'log'>, commit: string) {
   try {
-    await execGitCommand(`git cat-file -e "${commit}^{commit}"`);
+    await execGitCommand(ctx, `git cat-file -e "${commit}^{commit}"`);
     return true;
   } catch {
     return false;
@@ -152,14 +169,22 @@ export async function commitExists(commit: string) {
 /**
  * Get the changed files of a single commit or between two.
  *
+ * @param ctx Standard context object.
  * @param baseCommit The base commit to check.
  * @param headCommit The head commit to check.
  *
  * @returns The list of changed files of a single commit or between two commits.
  */
-export async function getChangedFiles(baseCommit: string, headCommit = '') {
+export async function getChangedFiles(
+  ctx: Pick<Context, 'log'>,
+  baseCommit: string,
+  headCommit = ''
+) {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
-  const files = await execGitCommand(`git --no-pager diff --name-only ${baseCommit} ${headCommit}`);
+  const files = await execGitCommand(
+    ctx,
+    `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`
+  );
   return files?.split(newline).filter(Boolean);
 }
 
@@ -175,7 +200,7 @@ export async function isUpToDate(ctx: Pick<Context, 'log'>) {
   const { log } = ctx;
 
   try {
-    await execGitCommand(`git remote update`);
+    await execGitCommand(ctx, `git remote update`);
   } catch (err) {
     log.warn(err);
     return true;
@@ -183,7 +208,7 @@ export async function isUpToDate(ctx: Pick<Context, 'log'>) {
 
   let localCommit;
   try {
-    localCommit = await execGitCommand('git rev-parse HEAD');
+    localCommit = await execGitCommand(ctx, 'git rev-parse HEAD');
     if (!localCommit) throw new Error('Failed to retrieve last local commit hash');
   } catch (err) {
     log.warn(err);
@@ -192,7 +217,7 @@ export async function isUpToDate(ctx: Pick<Context, 'log'>) {
 
   let remoteCommit;
   try {
-    remoteCommit = await execGitCommand('git rev-parse "@{upstream}"');
+    remoteCommit = await execGitCommand(ctx, 'git rev-parse "@{upstream}"');
     if (!remoteCommit) throw new Error('Failed to retrieve last remote commit hash');
   } catch (err) {
     log.warn(err);
@@ -205,10 +230,12 @@ export async function isUpToDate(ctx: Pick<Context, 'log'>) {
 /**
  * Returns a boolean indicating whether the workspace is clean (no changes, no untracked files).
  *
+ * @param ctx Standard context object.
+ *
  * @returns True if the workspace has no changes.
  */
-export async function isClean() {
-  const status = await execGitCommand('git status --porcelain');
+export async function isClean(ctx: Pick<Context, 'log'>) {
+  const status = await execGitCommand(ctx, 'git status --porcelain');
   return status === '';
 }
 
@@ -216,10 +243,12 @@ export async function isClean() {
  * Returns the "Your branch is behind by n commits (pull to update)" part of the git status message,
  * omitting any of the other stuff that may be in there. Note we expect the workspace to be clean.
  *
+ * @param ctx Standard context object.
+ *
  * @returns A message indicating how far behind the branch is from the remote.
  */
-export async function getUpdateMessage() {
-  const status = await execGitCommand('git status');
+export async function getUpdateMessage(ctx: Pick<Context, 'log'>) {
+  const status = await execGitCommand(ctx, 'git status');
   return status
     ?.split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
     .split(newline)
@@ -255,13 +284,21 @@ export async function getUpdateMessage() {
  * one on the base branch, but if that fails we just pick the first one and hope it works out.
  * Luckily this is an uncommon scenario.
  *
+ * @param ctx Standard context object.
  * @param headReference Name of the head branch
  * @param baseReference Name of the base branch
  *
  * @returns The best common ancestor commit between the two provided.
  */
-export async function findMergeBase(headReference: string, baseReference: string) {
-  const result = await execGitCommand(`git merge-base --all ${headReference} ${baseReference}`);
+export async function findMergeBase(
+  ctx: Pick<Context, 'log'>,
+  headReference: string,
+  baseReference: string
+) {
+  const result = await execGitCommand(
+    ctx,
+    `git merge-base --all ${headReference} ${baseReference}`
+  );
   const mergeBases =
     result?.split(newline).filter((line) => line && !line.startsWith('warning: ')) || [];
   if (mergeBases.length === 0) return undefined;
@@ -271,7 +308,10 @@ export async function findMergeBase(headReference: string, baseReference: string
   // If we don't find a merge base on the base branch, just return the first one.
   const branchNames = await Promise.all(
     mergeBases.map(async (sha) => {
-      const name = await execGitCommand(`git name-rev --name-only --exclude="tags/*" ${sha}`);
+      const name = await execGitCommand(
+        ctx,
+        `git name-rev --name-only --no-relative --exclude="tags/*" ${sha}`
+      );
       return name?.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
@@ -281,12 +321,13 @@ export async function findMergeBase(headReference: string, baseReference: string
 
 /**
  *
+ * @param ctx Standard context object.
  * @param reference The reference to checkout (usually a commit).
  *
  * @returns The result of the Git checkout call in the terminal.
  */
-export async function checkout(reference: string) {
-  return execGitCommand(`git checkout ${reference}`);
+export async function checkout(ctx: Pick<Context, 'log'>, reference: string) {
+  return execGitCommand(ctx, `git checkout ${reference}`);
 }
 
 const limitConcurrency = pLimit(10);
@@ -303,7 +344,7 @@ const limitConcurrency = pLimit(10);
  * @returns The temporary file path of the checked out file.
  */
 export async function checkoutFile(
-  { log }: Pick<Context, 'log'>,
+  ctx: Pick<Context, 'log'>,
   reference: string,
   fileName: string,
   tmpdir: string
@@ -316,8 +357,8 @@ export async function checkoutFile(
       tmpdir,
     });
 
-    log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
-    await execGitCommand(`git show ${pathspec} > ${targetFileName}`);
+    ctx.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
+    await execGitCommand(ctx, `git show ${pathspec} > ${targetFileName}`);
 
     return targetFileName;
   });
@@ -326,39 +367,49 @@ export async function checkoutFile(
 /**
  * Check out the previous branch in the Git repository.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The result of the `git checkout` command in the terminal.
  */
-export async function checkoutPrevious() {
-  return execGitCommand(`git checkout -`);
+export async function checkoutPrevious(ctx: Pick<Context, 'log'>) {
+  return execGitCommand(ctx, `git checkout -`);
 }
 
 /**
  * Reset any pending changes in the Git repository.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The result of the `git reset` command in the terminal.
  */
-export async function discardChanges() {
-  return execGitCommand(`git reset --hard`);
+export async function discardChanges(ctx: Pick<Context, 'log'>) {
+  return execGitCommand(ctx, `git reset --hard`);
 }
 
 /**
  * Gather the root directory of the Git repository.
  *
+ * @param ctx Standard context object.
+ *
  * @returns The root directory of the Git repository.
  */
-export async function getRepositoryRoot() {
-  return execGitCommand(`git rev-parse --show-toplevel`);
+export async function getRepositoryRoot(ctx: Pick<Context, 'log'>) {
+  return execGitCommand(ctx, `git rev-parse --show-toplevel`);
 }
 
 /**
  * Find all files that match the given patterns within the repository.
  *
+ * @param ctx Standard context object.
  * @param patterns A list of patterns to filter file results.
  *
  * @returns A list of files matching the pattern.
  */
-export async function findFilesFromRepositoryRoot(...patterns: string[]) {
-  const repoRoot = await getRepositoryRoot();
+export async function findFilesFromRepositoryRoot(
+  ctx: Pick<Context, 'log'>,
+  ...patterns: string[]
+) {
+  const repoRoot = await getRepositoryRoot(ctx);
 
   // Ensure patterns are referenced from the repository root so that running
   // from within a subdirectory does not skip the directories above
@@ -370,18 +421,19 @@ export async function findFilesFromRepositoryRoot(...patterns: string[]) {
   // Uses `--full-name` to ensure that all files found are relative to the repository root,
   // not the directory in which this is executed from
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
-  const files = await execGitCommand(gitCommand);
+  const files = await execGitCommand(ctx, gitCommand);
   return files?.split(NULL_BYTE).filter(Boolean);
 }
 
 /**
  * Determine if the branch is from a GitHub merge queue.
  *
+ * @param _ctx Standard context object.
  * @param branch The branch name in question.
  *
  * @returns The pull request number associated for the branch.
  */
-export async function mergeQueueBranchMatch(branch: string) {
+export async function mergeQueueBranchMatch(_ctx: Pick<Context, 'log'>, branch: string) {
   const mergeQueuePattern = new RegExp(/gh-readonly-queue\/.*\/pr-(\d+)-[\da-f]{30}/);
   const match = branch.match(mergeQueuePattern);
 
@@ -391,13 +443,19 @@ export async function mergeQueueBranchMatch(branch: string) {
 /**
  * Determine the date the repository was created
  *
+ * @param ctx Standard context object.
+ *
  * @returns Date The date the repository was created
  */
-export async function getRepositoryCreationDate() {
+export async function getRepositoryCreationDate(ctx: Pick<Context, 'log'>) {
   try {
-    const dateString = await execGitCommandOneLine(`git log --reverse --format=%cd --date=iso`, {
-      timeout: 5000,
-    });
+    const dateString = await execGitCommandOneLine(
+      ctx,
+      `git log --reverse --format=%cd --date=iso`,
+      {
+        timeout: 5000,
+      }
+    );
 
     return new Date(dateString);
   } catch {
@@ -414,14 +472,17 @@ export async function getRepositoryCreationDate() {
  *
  * @returns Date The date the storybook was added
  */
-export async function getStorybookCreationDate(ctx: {
-  options: {
-    storybookConfigDir?: Context['options']['storybookConfigDir'];
-  };
-}) {
+export async function getStorybookCreationDate(
+  ctx: Pick<Context, 'log'> & {
+    options: {
+      storybookConfigDir?: Context['options']['storybookConfigDir'];
+    };
+  }
+) {
   try {
     const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
     const dateString = await execGitCommandOneLine(
+      ctx,
       `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory}`,
       { timeout: 5000 }
     );
@@ -434,11 +495,13 @@ export async function getStorybookCreationDate(ctx: {
 /**
  * Determine the number of committers in the last 6 months
  *
+ * @param ctx Standard context object.
+ *
  * @returns number The number of committers
  */
-export async function getNumberOfComitters() {
+export async function getNumberOfComitters(ctx: Pick<Context, 'log'>) {
   try {
-    return await execGitCommandCountLines(`git shortlog -sn --all --since="6 months ago"`, {
+    return await execGitCommandCountLines(ctx, `git shortlog -sn --all --since="6 months ago"`, {
       timeout: 5000,
     });
   } catch {
@@ -449,12 +512,17 @@ export async function getNumberOfComitters() {
 /**
  * Find the number of files in the git index that include a name with the given prefixes.
  *
+ * @param ctx Standard context object.
  * @param nameMatches The names to match - will be matched with upper and lowercase first letter
  * @param extensions The filetypes to match
  *
  * @returns The number of files matching the above
  */
-export async function getCommittedFileCount(nameMatches: string[], extensions: string[]) {
+export async function getCommittedFileCount(
+  ctx: Pick<Context, 'log'>,
+  nameMatches: string[],
+  extensions: string[]
+) {
   try {
     const bothCasesNameMatches = nameMatches.flatMap((match) => [
       match,
@@ -465,7 +533,7 @@ export async function getCommittedFileCount(nameMatches: string[], extensions: s
       extensions.map((extension) => `"*${match}*.${extension}"`)
     );
 
-    return await execGitCommandCountLines(`git ls-files -- ${globs.join(' ')}`, {
+    return await execGitCommandCountLines(ctx, `git ls-files -- ${globs.join(' ')}`, {
       timeout: 5000,
     });
   } catch {

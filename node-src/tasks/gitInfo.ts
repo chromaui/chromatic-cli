@@ -104,26 +104,30 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
 
   ctx.git = {
-    version: await getVersion(),
-    gitUserEmail: await getUserEmail().catch((err) => {
+    version: await getVersion(ctx),
+    gitUserEmail: await getUserEmail(ctx).catch((err) => {
       ctx.log.debug('Failed to retrieve Git user email', err);
       return undefined;
     }),
-    uncommittedHash: await getUncommittedHash().catch((err) => {
+    uncommittedHash: await getUncommittedHash(ctx).catch((err) => {
       ctx.log.warn('Failed to retrieve uncommitted files hash', err);
       return undefined;
     }),
-    rootPath: await getRepositoryRoot(),
+    rootPath: await getRepositoryRoot(ctx),
     ...commitAndBranchInfo,
   };
 
   try {
     ctx.projectMetadata = {
       hasRouter: getHasRouter(ctx.packageJson),
-      creationDate: await getRepositoryCreationDate(),
+      creationDate: await getRepositoryCreationDate(ctx),
       storybookCreationDate: await getStorybookCreationDate(ctx),
-      numberOfCommitters: await getNumberOfComitters(),
-      numberOfAppFiles: await getCommittedFileCount(['page', 'screen'], ['js', 'jsx', 'ts', 'tsx']),
+      numberOfCommitters: await getNumberOfComitters(ctx),
+      numberOfAppFiles: await getCommittedFileCount(
+        ctx,
+        ['page', 'screen'],
+        ['js', 'jsx', 'ts', 'tsx']
+      ),
     };
   } catch (err) {
     ctx.log.debug('Failed to gather project metadata', err);
@@ -135,7 +139,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   if (!ctx.git.slug) {
     try {
-      ctx.git.slug = await getSlug();
+      ctx.git.slug = await getSlug(ctx);
     } catch (err) {
       ctx.log.debug('Failed to retrieve Git repository slug', err);
     }

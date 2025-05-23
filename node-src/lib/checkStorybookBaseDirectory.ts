@@ -14,7 +14,7 @@ import { exitCodes, setExitCode } from './setExitCode';
  * @param stats The stats file information from the project's builder (Webpack, for example).
  */
 export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
-  const repositoryRoot = await getRepositoryRoot();
+  const repositoryRoot = await getRepositoryRoot(ctx);
 
   if (!repositoryRoot) {
     throw new Error('Failed to determine repository root');
