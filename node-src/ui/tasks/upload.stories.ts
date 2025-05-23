@@ -18,6 +18,9 @@ import {
 export default {
   title: 'CLI/Tasks/Upload',
   decorators: [(storyFunction: any) => task(storyFunction())],
+  parameters: {
+    chromatic: { ignoreSelectors: ['span'] },
+  },
 };
 
 const ctx = { options: {} } as any;
