@@ -1,3 +1,15 @@
+# v11.28.4 (Fri May 23 2025)
+
+#### 🐛 Bug Fix
+
+- Revert "Add git command logging and pass `--no-relative` to `git diff`." [#1183](https://github.com/chromaui/chromatic-cli/pull/1183) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v11.28.3 (Thu May 22 2025)
 
 #### 🐛 Bug Fix
