@@ -122,12 +122,12 @@ const fileLogger = {
 };
 
 /* eslint-disable-next-line complexity */
-export const createLogger = (flags: Flags, options?: Partial<Options>) => {
+export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
   const { DISABLE_LOGGING, LOG_LEVEL = '', LOG_PREFIX } = process.env;
 
   let level =
     options?.logLevel ||
-    flags.logLevel ||
+    flags?.logLevel ||
     (LOG_LEVEL.toLowerCase() as Flags['logLevel']) ||
     DEFAULT_LEVEL;
 
@@ -135,12 +135,14 @@ export const createLogger = (flags: Flags, options?: Partial<Options>) => {
     level = 'silent';
   }
 
-  let interactive = (options?.interactive || flags.interactive) && !(options?.debug || flags.debug);
+  let interactive =
+    (options?.interactive || flags?.interactive) && !(options?.debug || flags?.debug);
   let enqueue = false;
   const queue: QueueMessage[] = [];
 
-  const logPrefixer = createPrefixer(true, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
-  const filePrefixer = createPrefixer(false, options?.logPrefix || flags.logPrefix || LOG_PREFIX);
+  const logPrefixer = createPrefixer(true, options?.logPrefix ?? flags?.logPrefix ?? LOG_PREFIX);
+  const filePrefixer = createPrefixer(false, options?.logPrefix ?? flags?.logPrefix ?? LOG_PREFIX);
+
   const log =
     (type: LogType, logFileOnly?: boolean) =>
     (...args: any[]) => {
