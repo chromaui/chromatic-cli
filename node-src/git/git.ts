@@ -19,7 +19,7 @@ export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` wit
  */
 export async function getVersion(ctx: Pick<Context, 'log'>) {
   const result = await execGitCommand(ctx, `git --version`);
-  return result?.replace('git version ', '');
+  return result?.replace('git version ', '').replace(/\s*\(.*\)/, '');
 }
 
 /**

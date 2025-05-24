@@ -3,13 +3,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import TestLogger from '../lib/testLogger';
 import * as execGit from './execGit';
 import {
+  commitExists,
   findFilesFromRepositoryRoot,
+  getBranch,
   getCommit,
   getCommittedFileCount,
   getNumberOfComitters,
   getRepositoryCreationDate,
   getSlug,
   getStorybookCreationDate,
+  getUncommittedHash,
+  getUserEmail,
+  getVersion,
   hasPreviousCommit,
   mergeQueueBranchMatch,
   NULL_BYTE,
@@ -25,6 +30,20 @@ const ctx = { log: new TestLogger() };
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+describe('getVersion', () => {
+  it('returns the Git version', async () => {
+    execGitCommand.mockResolvedValue('git version 2.39.5 (Apple Git-154)');
+    expect(await getVersion(ctx)).toEqual('2.39.5');
+  });
+});
+
+describe('getUserEmail', () => {
+  it('returns the user email', async () => {
+    execGitCommand.mockResolvedValue('support@chromatic.com');
+    expect(await getUserEmail(ctx)).toEqual('support@chromatic.com');
+  });
 });
 
 describe('getCommit', () => {
@@ -53,6 +72,38 @@ gpg: Can't check signature: No public key
       committerEmail: 'info@ghengeveld.nl',
       committerName: 'Gert Hengeveld',
     });
+  });
+});
+
+describe('getBranch', () => {
+  it('returns the branch name', async () => {
+    execGitCommand.mockResolvedValue('main');
+    expect(await getBranch(ctx)).toEqual('main');
+  });
+
+  it('returns HEAD if the branch is not found', async () => {
+    execGitCommand.mockResolvedValue('');
+    expect(await getBranch(ctx)).toEqual('HEAD');
+  });
+
+  it('supports Git before v2.22', async () => {
+    execGitCommand.mockRejectedValueOnce(new Error(`git: 'branch' is not a git command`));
+    execGitCommand.mockResolvedValue('refs/heads/main');
+    expect(await getBranch(ctx)).toEqual('main');
+  });
+
+  it('supports Git v1.7', async () => {
+    execGitCommand.mockRejectedValueOnce(new Error(`git: 'branch' is not a git command`));
+    execGitCommand.mockRejectedValueOnce(new Error(`git: 'symbolic-ref' is not a git command`));
+    execGitCommand.mockResolvedValue('heads/main');
+    expect(await getBranch(ctx)).toEqual('main');
+  });
+});
+
+describe('getUncommittedHash', () => {
+  it('returns the uncommitted hash', async () => {
+    execGitCommand.mockResolvedValue('1234567890');
+    expect(await getUncommittedHash(ctx)).toEqual('1234567890');
   });
 });
 
@@ -89,6 +140,20 @@ gpg: Can't check signature: No public key
 19b6c9c5b3d34d9fc55627fcaf8a85bd5d5e5b2a`.trim()
     );
     expect(await hasPreviousCommit(ctx)).toEqual(true);
+  });
+});
+
+describe('commitExists', () => {
+  it('returns true if the commit exists', async () => {
+    execGitCommand.mockResolvedValue('');
+    expect(await commitExists(ctx, '1234567890')).toEqual(true);
+  });
+
+  it('returns false if the commit does not exist', async () => {
+    execGitCommand.mockRejectedValueOnce(
+      new Error(`fatal: Not a valid object name 1234567890^{commit}`)
+    );
+    expect(await commitExists(ctx, '1234567890')).toEqual(false);
   });
 });
 

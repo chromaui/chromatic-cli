@@ -11,6 +11,7 @@ export default defineConfig({
         'vitest.no-threads.config.ts',
         'scripts/**',
         '**/*.stories.{t,j}s',
+        'node-src/lib/testLogger.ts',
         ...coverageConfigDefaults.exclude,
       ],
     },
