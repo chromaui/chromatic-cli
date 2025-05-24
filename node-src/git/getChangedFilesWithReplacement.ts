@@ -32,7 +32,7 @@ export async function getChangedFilesWithReplacement(
       throw new Error('Local build had uncommitted changes');
     }
 
-    const changedFiles = (await getChangedFiles(build.commit)) || [];
+    const changedFiles = (await getChangedFiles(ctx, build.commit)) || [];
     return { changedFiles };
   } catch (err) {
     ctx.log.debug(
@@ -46,7 +46,7 @@ export async function getChangedFilesWithReplacement(
         ctx.log.debug(
           `Found replacement build for #${build.number}(${build.commit}): #${replacementBuild.number}(${replacementBuild.commit})`
         );
-        const changedFiles = (await getChangedFiles(replacementBuild.commit)) || [];
+        const changedFiles = (await getChangedFiles(ctx, replacementBuild.commit)) || [];
         return { changedFiles, replacementBuild };
       }
       ctx.log.debug(`Couldn't find replacement for #${build.number}(${build.commit})`);

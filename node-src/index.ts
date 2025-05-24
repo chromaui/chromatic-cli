@@ -316,25 +316,27 @@ export interface GitInfo {
  * Although this function may not be used directly in this project, it can be used externally (such
  * as https://github.com/chromaui/addon-visual-tests).
  *
+ * @param ctx The context set when executing the CLI.
+ *
  * @returns Any git information we were able to gather.
  */
-export async function getGitInfo(): Promise<GitInfo> {
+export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
   let slug: string;
   try {
-    slug = await getSlug();
+    slug = await getSlug(ctx);
   } catch {
     slug = '';
   }
-  const branch = (await getBranch()) || '';
-  const commitInfo = await getCommit();
-  const userEmail = (await getUserEmail()) || '';
+  const branch = (await getBranch(ctx)) || '';
+  const commitInfo = await getCommit(ctx);
+  const userEmail = (await getUserEmail(ctx)) || '';
   const userEmailHash = emailHash(userEmail);
-  const repositoryRootDirectory = (await getRepositoryRoot()) || '';
+  const repositoryRootDirectory = (await getRepositoryRoot(ctx)) || '';
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
-  const uncommittedHash = (await getUncommittedHash()) || '';
+  const uncommittedHash = (await getUncommittedHash(ctx)) || '';
   return {
     slug: isValidSlug ? slug : '',
     branch,

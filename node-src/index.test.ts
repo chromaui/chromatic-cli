@@ -824,7 +824,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
 
 describe('getGitInfo', () => {
   it('should retreive git info', async () => {
-    const result = await getGitInfo();
+    const result = await getGitInfo(getContext([]));
     expect(result).toMatchObject({
       branch: 'branch',
       commit: 'commit',
@@ -840,7 +840,7 @@ describe('getGitInfo', () => {
 
   it('should still return getInfo if no origin url', async () => {
     getSlug.mockRejectedValue(new Error('no origin set'));
-    const result = await getGitInfo();
+    const result = await getGitInfo(getContext([]));
     expect(result).toMatchObject({
       branch: 'branch',
       commit: 'commit',
