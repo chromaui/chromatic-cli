@@ -1,16 +1,15 @@
-import buildFailed from './buildFailed';
+import type { Meta, StoryObj } from '@storybook/html-vite';
 
-export default {
-  title: 'CLI/Messages/Errors',
-};
+import { createBaseContext, createBaseOptions } from '../../utils/storybook';
+import buildFailed from './buildFailed';
 
 const buildCommand =
   'npm run build-storybook -- --output-dir /var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp';
 
 const runtimeMetadata = {
-  nodePlatform: 'darwin',
+  nodePlatform: 'darwin' as NodeJS.Platform,
   nodeVersion: '18.12.1',
-  packageManager: 'npm',
+  packageManager: 'npm' as const,
   packageManagerVersion: '8.19.2',
 };
 
@@ -48,26 +47,34 @@ WARN For more info visit https://webpack.js.org/guides/code-splitting/
 info => Output directory: /var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp
 `;
 
-export const BuildFailed = () =>
-  buildFailed(
-    {
-      options: { buildScriptName: 'build:storybook' },
-      buildCommand,
-      buildLogFile: '/path/to/project/build-storybook.log',
-      runtimeMetadata,
-    } as any,
-    { message: 'Command failed with exit code 1' },
-    buildLog
-  );
+const baseContext = createBaseContext({
+  options: {
+    ...createBaseOptions(),
+    buildScriptName: 'build:storybook',
+  },
+  buildCommand,
+  buildLogFile: '/path/to/project/build-storybook.log',
+  runtimeMetadata,
+});
 
-export const BuildFailedWithCommand = () =>
-  buildFailed(
-    {
-      options: { buildCommand: 'nx run my-app:build-storybook' },
-      buildCommand,
-      buildLogFile: '/path/to/project/build-storybook.log',
-      runtimeMetadata,
-    } as any,
-    { message: 'Command failed with exit code 1' },
-    buildLog
-  );
+export default {
+  title: 'CLI/Messages/Errors',
+  render: (args) => buildFailed(args, { message: 'Command failed with exit code 1' }, buildLog),
+  args: baseContext,
+} satisfies Meta<Parameters<typeof buildFailed>[0]>;
+
+type Story = StoryObj<Parameters<typeof buildFailed>[0]>;
+
+export const BuildFailed: Story = {
+  args: baseContext,
+};
+
+export const BuildFailedWithCommand: Story = {
+  args: {
+    ...baseContext,
+    options: {
+      ...baseContext.options,
+      buildCommand: 'nx run my-app:build-storybook',
+    },
+  },
+};

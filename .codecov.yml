@@ -1,0 +1,5 @@
+ignore:
+  - "test-stories/*"
+  - "subdir/*"
+  - "**/__mocks__/*"
+

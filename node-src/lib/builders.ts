@@ -4,4 +4,5 @@ export const builders = {
   '@storybook/vite-builder': '@storybook/builder-vite',
   '@storybook/builder-webpack5': '@storybook/react-webpack5',
   '@storybook/react-vite': '@storybook/builder-vite',
+  '@storybook/html-vite': '@storybook/builder-vite',
 } as Record<string, string>;
