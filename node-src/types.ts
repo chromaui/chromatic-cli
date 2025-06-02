@@ -159,6 +159,7 @@ export type TaskName =
   | 'storybookInfo'
   | 'initialize'
   | 'build'
+  | 'prepare'
   | 'upload'
   | 'verify'
   | 'snapshot'
