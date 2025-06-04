@@ -1,3 +1,15 @@
+# v12.1.0 (Wed Jun 04 2025)
+
+#### 🚀 Enhancement
+
+- Split upload task to allow tracing changed files with dry run [#1185](https://github.com/chromaui/chromatic-cli/pull/1185) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v12.0.0 (Sat May 24 2025)
 
 #### 💥 Breaking Change
