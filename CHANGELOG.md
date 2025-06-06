@@ -1,3 +1,15 @@
+# v12.1.1 (Fri Jun 06 2025)
+
+#### 🐛 Bug Fix
+
+- Remove requirement for an accepted build [#1187](https://github.com/chromaui/chromatic-cli/pull/1187) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v12.1.0 (Wed Jun 04 2025)
 
 #### 🚀 Enhancement
