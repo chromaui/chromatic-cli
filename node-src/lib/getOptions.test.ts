@@ -61,7 +61,6 @@ describe('getOptions', () => {
 
       buildScriptName: 'build-storybook',
       outputDir: undefined,
-      allowConsoleErrors: undefined,
       storybookBuildDir: undefined,
       storybookBaseDir: undefined,
       storybookConfigDir: undefined,

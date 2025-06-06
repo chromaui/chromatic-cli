@@ -25,7 +25,6 @@ export default ({ build, exitCode }) => {
 
   return dedent(chalk`
     ${errorIcon} {bold ${errorMessage}}: failing with exit code ${exitCode}
-    Pass {bold --allow-console-errors} to succeed this command regardless of runtime build errors.
     ${infoIcon} Review the errors at ${link(webUrl)}
   `);
 };
