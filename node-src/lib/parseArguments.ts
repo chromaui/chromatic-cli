@@ -66,10 +66,6 @@ export default function parseArguments(argv: string[]) {
       --upload-metadata                Upload Chromatic metadata files as part of the published Storybook. Includes diagnostics and log files, among others. This option enables --diagnostics-file, --log-file and --storybook-log-file, unless explicitly disabled via the 'no-' prefix.
 
     Deprecated options
-      --app-code <token>            Renamed to --project-token.
-      --allow-console-errors        Continue running Chromatic even if there are errors logged to console in your Storybook.
-      --diagnostics                 Renamed to --diagnostics-file.
-      --only                        Superceded by --only-story-names.
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
     `,
     {
@@ -128,11 +124,7 @@ export default function parseArguments(argv: string[]) {
         traceChanged: { type: 'string' },
         uploadMetadata: { type: 'boolean' },
 
-        // Deprecated options (for JSDOM and tunneled builds, among others)
-        allowConsoleErrors: { type: 'boolean' },
-        appCode: { type: 'string', alias: 'a', isMultiple: true }, // kept for backwards compatibility
-        diagnostics: { type: 'boolean' },
-        only: { type: 'string' },
+        // Deprecated options
         preserveMissing: { type: 'boolean' },
       },
     }
