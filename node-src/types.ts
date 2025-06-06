@@ -58,11 +58,7 @@ export interface Flags {
   traceChanged?: string;
   uploadMetadata?: boolean;
 
-  // Deprecated options (for JSDOM and tunneled builds, among others)
-  allowConsoleErrors?: boolean;
-  appCode?: string[];
-  diagnostics?: boolean;
-  only?: string;
+  // Deprecated options
   preserveMissing?: boolean;
 }
 
@@ -107,7 +103,6 @@ export interface Options extends Configuration {
   playwright: Flags['playwright'];
   cypress: Flags['cypress'];
   outputDir: string;
-  allowConsoleErrors: Flags['allowConsoleErrors'];
   url?: string;
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];

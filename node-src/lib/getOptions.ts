@@ -96,7 +96,6 @@ export default function getOptions(ctx: InitialContext): Options {
     playwright: undefined,
     cypress: undefined,
     outputDir: undefined,
-    allowConsoleErrors: undefined,
     storybookBuildDir: undefined,
     storybookBaseDir: undefined,
     storybookConfigDir: undefined,
@@ -124,11 +123,11 @@ export default function getOptions(ctx: InitialContext): Options {
 
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
-    projectToken: takeLast(flags.projectToken || flags.appCode),
+    projectToken: takeLast(flags.projectToken),
 
     onlyChanged: trueIfSet(flags.onlyChanged),
     onlyStoryFiles: undefinedIfEmpty(ensureArray(flags.onlyStoryFiles)),
-    onlyStoryNames: undefinedIfEmpty(ensureArray(flags.onlyStoryNames || flags.only)),
+    onlyStoryNames: undefinedIfEmpty(ensureArray(flags.onlyStoryNames)),
     untraced: undefinedIfEmpty(ensureArray(flags.untraced)),
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
     traceChanged: trueIfSet(flags.traceChanged),
@@ -140,10 +139,7 @@ export default function getOptions(ctx: InitialContext): Options {
     fileHashing: flags.fileHashing,
     forceRebuild: trueIfSet(flags.forceRebuild),
     debug: flags.debug,
-    diagnosticsFile:
-      defaultUnlessSetOrFalse(flags.diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE) ||
-      // for backwards compatibility
-      (flags.diagnostics ? DEFAULT_DIAGNOSTICS_FILE : undefined),
+    diagnosticsFile: defaultUnlessSetOrFalse(flags.diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE),
     junitReport: defaultIfSet(flags.junitReport, DEFAULT_REPORT_FILE),
     zip: flags.zip,
     skipUpdateCheck: flags.skipUpdateCheck,
@@ -153,15 +149,13 @@ export default function getOptions(ctx: InitialContext): Options {
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     // deprecated
-    preserveMissingSpecs:
-      flags.preserveMissing || typeof flags.only === 'string' ? true : undefined,
+    preserveMissingSpecs: flags.preserveMissing,
 
     buildScriptName: flags.buildScriptName,
     buildCommand: flags.buildCommand,
     playwright: trueIfSet(flags.playwright),
     cypress: trueIfSet(flags.cypress),
     outputDir: takeLast(flags.outputDir),
-    allowConsoleErrors: flags.allowConsoleErrors,
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
@@ -309,11 +303,6 @@ export default function getOptions(ctx: InitialContext): Options {
 
   // All options are validated and can now be used
   const options = potentialOptions as Options;
-
-  if (flags.only) {
-    log.info('');
-    log.info(deprecatedOption({ flag: 'only', replacement: 'onlyStoryNames' }));
-  }
 
   if (flags.preserveMissing) {
     log.info('');
