@@ -30,9 +30,3 @@ export const RuntimeErrorSimple = () =>
 
 export const RuntimeWarning = () =>
   runtimeError({ options: {} as any, runtimeWarnings: [error('Oops!', stacktrace)] });
-
-export const AllowRuntimeError = () =>
-  runtimeError({
-    runtimeErrors: [error('Oh no!', stacktrace)],
-    options: { allowConsoleErrors: true } as any,
-  });
