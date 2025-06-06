@@ -1,30 +1,29 @@
-import { StorybookConfig } from '@storybook/react-webpack5';
+import { StorybookConfig } from '@storybook/html-vite';
 
 const config: StorybookConfig = {
   stories: process.env.SMOKE_TEST
     ? ['../test-stories/*.stories.*']
     : ['../node-src/**/*.@(mdx|stories.*)'],
-  addons: ['@storybook/addon-essentials', '@storybook/addon-webpack5-compiler-swc'],
   framework: {
-    name: '@storybook/react-webpack5',
+    name: '@storybook/html-vite',
     options: {},
   },
-  webpackFinal: async (config) => {
+  viteFinal: async (config) => {
+    config.define = {
+      ...config.define,
+      'process.platform': "'cool'",
+    };
     config.resolve = {
       ...config.resolve,
-      fallback: {
-        ...config?.resolve?.fallback,
+      alias: {
+        ...config.resolve?.alias,
         os: require.resolve('os-browserify/browser'),
+        // fix for "error: process is not defined"
+        process: require.resolve('process/browser'),
       },
     };
-
     return config;
   },
-  docs: {},
-  typescript: {
-    reactDocgen: 'react-docgen-typescript',
-  },
-  staticDirs: ['../static'],
 };
 
 export default config;
