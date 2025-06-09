@@ -1,3 +1,15 @@
+# v12.2.0 (Mon Jun 09 2025)
+
+#### 🚀 Enhancement
+
+- Set `STORYBOOK_INVOKED_BY` env var for SB telemetry [#1180](https://github.com/chromaui/chromatic-cli/pull/1180) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v12.1.1 (Fri Jun 06 2025)
 
 #### 🐛 Bug Fix
