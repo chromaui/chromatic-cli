@@ -26,6 +26,7 @@ const {
   CHROMATIC_INDEX_URL = 'https://index.chromatic.com',
   CHROMATIC_OUTPUT_INTERVAL = String(10 * 1000),
   CHROMATIC_POLL_INTERVAL = String(1000),
+  CHROMATIC_PROJECT_TOKEN,
   CHROMATIC_RETRIES = '5',
   CHROMATIC_STORYBOOK_VERSION,
   CHROMATIC_TIMEOUT = String(5 * 60 * 1000),
@@ -43,11 +44,6 @@ const STORYBOOK_CLI_FLAGS_BY_VERSION = {
   '--ci': '4.0.0',
   '--loglevel': '5.1.0',
 };
-
-const CHROMATIC_PROJECT_TOKEN =
-  process.env.CHROMATIC_PROJECT_TOKEN ||
-  process.env.CHROMATIC_APP_CODE || // backwards compatibility
-  process.env.CHROMA_APP_CODE; // backwards compatibility
 
 /**
  * Parse variables from the process environment.

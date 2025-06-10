@@ -359,7 +359,6 @@ beforeEach(() => {
   processEnvironment = process.env;
   process.env = {
     DISABLE_LOGGING: 'true',
-    CHROMATIC_APP_CODE: undefined,
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
   execaCommand.mockReset();
