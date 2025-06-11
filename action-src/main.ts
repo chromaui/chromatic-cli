@@ -179,7 +179,7 @@ async function run() {
         outputDir: maybe(outputDir),
         playwright: maybe(playwright),
         preserveMissing: maybe(preserveMissing),
-        projectToken,
+        projectToken: maybe(projectToken),
         repositorySlug: maybe(repositorySlug),
         skip: maybe(skip),
         skipUpdateCheck: maybe(skipUpdateCheck, false),
