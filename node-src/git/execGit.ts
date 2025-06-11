@@ -38,7 +38,7 @@ export async function execGitCommand(
     }
 
     const result = all.toString();
-    log.debug(`execGitCommand result: ${result}`);
+    log.debug(`execGitCommand result: '${result}'`);
     return result;
   } catch (error) {
     const { message } = error;
