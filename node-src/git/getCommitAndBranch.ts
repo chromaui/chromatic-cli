@@ -66,7 +66,22 @@ export default async function getCommitAndBranch(
     CHROMATIC_PULL_REQUEST_SHA,
     CHROMATIC_SLUG,
   } = process.env;
-  const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
+
+  const {
+    isCi,
+    service,
+    prBranch,
+    branch: ciBranch,
+    commit: ciCommit,
+    slug: ciSlug,
+  } = (() => {
+    try {
+      return envCi();
+    } catch (err) {
+      log.debug('Failure while parsing CI environment variables', err);
+      throw err;
+    }
+  })();
 
   const isFromEnvironmentVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
