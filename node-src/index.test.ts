@@ -359,7 +359,6 @@ beforeEach(() => {
   processEnvironment = process.env;
   process.env = {
     DISABLE_LOGGING: 'true',
-    CHROMATIC_APP_CODE: undefined,
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
   execaCommand.mockReset();
@@ -745,14 +744,14 @@ it('ctx should be JSON serializable', async () => {
   expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
 });
 
-it('should write context to chromatic-diagnostics.json if --diagnostics is passed', async () => {
-  const ctx = getContext(['--project-token=asdf1234', '--diagnostics']);
+it('should write context to chromatic-diagnostics.json if --diagnostics-file is passed', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--diagnostics-file']);
   await runAll(ctx);
   expect(jsonfile.writeFile).toHaveBeenCalledWith(
     'chromatic-diagnostics.json',
     expect.objectContaining({
       flags: expect.objectContaining({
-        diagnostics: true,
+        diagnosticsFile: '',
       }),
       options: expect.objectContaining({
         projectToken: undefined, // redacted
@@ -762,7 +761,7 @@ it('should write context to chromatic-diagnostics.json if --diagnostics is passe
   );
 });
 
-it('should not write context to chromatic-diagnostics.json if --diagnostics is not passed', async () => {
+it('should not write context to chromatic-diagnostics.json if --diagnostics-file is not passed', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   await runAll(ctx);
   expect(jsonfile.writeFile).not.toHaveBeenCalled();
