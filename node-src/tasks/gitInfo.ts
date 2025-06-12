@@ -101,10 +101,12 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     isLocalBuild,
   } = ctx.options;
 
+  const version = await getVersion(ctx);
+
   const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
 
   ctx.git = {
-    version: await getVersion(ctx),
+    version,
     gitUserEmail: await getUserEmail(ctx).catch((err) => {
       ctx.log.debug('Failed to retrieve Git user email', err);
       return undefined;
