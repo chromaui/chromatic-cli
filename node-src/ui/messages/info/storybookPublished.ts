@@ -8,7 +8,7 @@ import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 import { buildType, capitalize } from '../../tasks/utils';
 
-export default (ctx: Context) => {
+export default (ctx: Pick<Context, 'build' | 'options' | 'storybookUrl'>) => {
   if (!ctx.storybookUrl) {
     throw new Error('No Storybook URL provided');
   }

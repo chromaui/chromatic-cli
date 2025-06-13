@@ -1,8 +1,8 @@
 import task from '../components/task';
-import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
-import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassed.stories';
-import { Intro } from '../messages/info/intro.stories';
-import { StorybookPublished } from '../messages/info/storybookPublished.stories';
+import * as buildHasChanges from '../messages/errors/buildHasChanges.stories';
+import * as buildPassed from '../messages/info/buildPassed.stories';
+import * as intro from '../messages/info/intro.stories';
+import * as storybookPublished from '../messages/info/storybookPublished.stories';
 import * as auth from '../tasks/auth.stories';
 import * as build from '../tasks/build.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
@@ -20,7 +20,7 @@ export default {
 };
 
 export const Initial = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Initial,
     gitInfo.Initial,
@@ -34,7 +34,7 @@ export const Initial = () => [
 ];
 
 export const Authenticating = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticating,
     gitInfo.Initial,
@@ -48,7 +48,7 @@ export const Authenticating = () => [
 ];
 
 export const RetrievingGitInfo = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Pending,
@@ -62,7 +62,7 @@ export const RetrievingGitInfo = () => [
 ];
 
 export const RetrievingStorybookInfo = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -76,7 +76,7 @@ export const RetrievingStorybookInfo = () => [
 ];
 
 export const Initializing = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -90,7 +90,7 @@ export const Initializing = () => [
 ];
 
 export const Building = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -104,7 +104,7 @@ export const Building = () => [
 ];
 
 export const Uploading = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -118,7 +118,7 @@ export const Uploading = () => [
 ];
 
 export const Verifying = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -132,7 +132,7 @@ export const Verifying = () => [
 ];
 
 export const Snapshotting = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -146,7 +146,7 @@ export const Snapshotting = () => [
 ];
 
 export const Passed = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -157,11 +157,11 @@ export const Passed = () => [
     verify.Published,
     snapshot.BuildPassed
   ),
-  BuildPassed(),
+  buildPassed.default.render(buildPassed.BuildPassed.args as any),
 ];
 
 export const ChangesFound = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -172,11 +172,11 @@ export const ChangesFound = () => [
     verify.Published,
     snapshot.BuildComplete
   ),
-  BuildHasChangesNotOnboarding(),
+  buildHasChanges.BuildHasChangesNotOnboarding(),
 ];
 
 export const FirstBuild = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -187,11 +187,11 @@ export const FirstBuild = () => [
     verify.Published,
     snapshot.BuildAutoAccepted
   ),
-  FirstBuildPassed(),
+  buildPassed.default.render(buildPassed.BuildPassed.args as any),
 ];
 
 export const Published = () => [
-  Intro(),
+  intro.default.render(intro.default.args),
   steps(
     auth.Authenticated,
     gitInfo.Success,
@@ -202,5 +202,5 @@ export const Published = () => [
     verify.Published,
     snapshot.SkippedPublishOnly
   ),
-  StorybookPublished(),
+  storybookPublished.default.render(storybookPublished.StorybookPublished.args as any),
 ];

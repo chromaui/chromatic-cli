@@ -7,7 +7,6 @@
     "postbuild": "node -r esm ../bin-src/trimStatsFile.js ../subdir-static/preview-stats.json"
   },
   "dependencies": {
-    "@storybook/react": "^8.3.4",
     "@storybook/react-webpack5": "^8.3.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
