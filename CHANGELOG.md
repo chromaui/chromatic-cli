@@ -1,3 +1,19 @@
+# v13.0.0 (Mon Jun 16 2025)
+
+#### 💥 Breaking Change
+
+- Remove some deprecated flags [#1188](https://github.com/chromaui/chromatic-cli/pull/1188) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🚀 Enhancement
+
+- Log errors in env-ci call [#1189](https://github.com/chromaui/chromatic-cli/pull/1189) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v12.2.0 (Mon Jun 09 2025)
 
 #### 🚀 Enhancement
