@@ -63,6 +63,22 @@ describe('getCommitAndBranch', () => {
     });
   });
 
+  it('recovers from errors inside env-ci', async () => {
+    envCi.mockImplementation(() => {
+      throw new Error('oh no');
+    });
+
+    getBranch.mockResolvedValue('HEAD');
+    getCommit.mockImplementation((_, commit) =>
+      Promise.resolve({ commit: commit as string, ...commitInfo })
+    );
+    const info = await getCommitAndBranch(ctx);
+    expect(info).toMatchObject({
+      branch: 'HEAD',
+      fromCI: false,
+    });
+  });
+
   it('retrieves CI context', async () => {
     process.env.GITHUB_EVENT_NAME = 'push';
 

@@ -22,6 +22,15 @@ interface CommitInfo {
   mergeCommit?: string;
 }
 
+function getBranchDetailsFromEnvironmentCI(log) {
+  try {
+    return envCi();
+  } catch (err) {
+    log.debug('Error while parsing CI environment variables', err);
+    return {};
+  }
+}
+
 /**
  *  Gather commit and branch information from Git and the local environment.
  *
@@ -74,14 +83,7 @@ export default async function getCommitAndBranch(
     branch: ciBranch,
     commit: ciCommit,
     slug: ciSlug,
-  } = (() => {
-    try {
-      return envCi();
-    } catch (err) {
-      log.debug('Failure while parsing CI environment variables', err);
-      throw err;
-    }
-  })();
+  } = getBranchDetailsFromEnvironmentCI(log);
 
   const isFromEnvironmentVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
