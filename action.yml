@@ -6,12 +6,6 @@ branding:
   color: 'orange'
 
 inputs:
-  allowConsoleErrors:
-    description: 'Do not exit when runtime errors occur in storybook'
-    required: false
-  appCode:
-    description: 'Deprecated, please use projectToken instead'
-    required: false
   autoAcceptChanges:
     description: 'Automatically accept all changes in chromatic: boolean or branchname'
     required: false
@@ -31,9 +25,6 @@ inputs:
     required: false
   debug:
     description: 'Output verbose debugging information'
-    required: false
-  diagnostics:
-    description: 'Deprecated, use diagnosticsFile instead'
     required: false
   diagnosticsFile:
     description: 'Write process context information to a JSON file'
@@ -67,9 +58,6 @@ inputs:
     required: false
   logPrefix:
     description: 'Custom prefix for log messages (default: current timestamp)'
-    required: false
-  only:
-    description: 'Deprecated, replaced by onlyStoryNames'
     required: false
   onlyChanged:
     description: 'Enables TurboSnap: Only run stories affected by files changed since the baseline build'

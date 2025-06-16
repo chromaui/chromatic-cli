@@ -9,7 +9,6 @@ import { error, warning } from '../../components/icons';
  * Generate a failure message for a runtime error during execution.
  *
  * @param details Information relating to a runtime error while running the CLI.
- * @param details.options Options specified when running the CLI.
  * @param details.runtimeErrors Any runtime errors encountered during execution.
  * @param details.runtimeWarnings Any runtime warnings encountered during execution.
  *
@@ -18,7 +17,6 @@ import { error, warning } from '../../components/icons';
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export default function runtimeError({
-  options,
   runtimeErrors = [],
   runtimeWarnings = [],
 }: Pick<Context, 'options' | 'runtimeErrors' | 'runtimeWarnings'>) {
@@ -43,11 +41,7 @@ export default function runtimeError({
     .filter(Boolean)
     .join(' ');
 
-  const errorHint = options.allowConsoleErrors
-    ? dedent(chalk`
-      We'll ignore these errors because you passed the {bold --allow-console-errors} flag,
-      but this is not recommended.`)
-    : dedent(chalk`
+  const errorHint = dedent(chalk`
       If you want to continue despite runtime errors, you can pass the
       {bold --allow-console-errors} flag, but this is not recommended.`);
 
