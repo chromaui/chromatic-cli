@@ -1,3 +1,15 @@
+# v13.0.1 (Wed Jun 18 2025)
+
+#### 🐛 Bug Fix
+
+- Wrap env-ci usage and recover from errors. [#1190](https://github.com/chromaui/chromatic-cli/pull/1190) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v13.0.0 (Mon Jun 16 2025)
 
 #### 💥 Breaking Change
