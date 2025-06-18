@@ -1,6 +1,7 @@
-import fs, { statSync as unmockedStatSync } from 'fs';
-import os from 'os';
-import path from 'path';
+import fs, { statSync as unmockedStatSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, Mock, vi } from 'vitest';

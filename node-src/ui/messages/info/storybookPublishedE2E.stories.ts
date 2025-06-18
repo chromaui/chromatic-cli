@@ -1,20 +1,50 @@
+import type { Meta, StoryObj } from '@storybook/html-vite';
+
+import { Context } from '../../../types';
 import storybookPublished from './storybookPublished';
 
+type Build = Partial<
+  Pick<
+    Context['build'],
+    | 'actualCaptureCount'
+    | 'actualTestCount'
+    | 'testCount'
+    | 'changeCount'
+    | 'errorCount'
+    | 'componentCount'
+    | 'specCount'
+    | 'storybookUrl'
+  >
+>;
+
+interface Properties {
+  build: Build;
+  options: {
+    playwright: boolean;
+  };
+  storybookUrl: string;
+}
+
 export default {
-  title: 'CLI/Messages/Info/E2E',
-};
+  title: 'CLI/Messages/E2E',
+  render: (args: Properties) =>
+    storybookPublished(args as Pick<Context, 'build' | 'options' | 'storybookUrl'>),
+} satisfies Meta<Properties>;
 
-const ctx = { options: { playwright: true } } as any;
+type Story = StoryObj<Properties>;
 
-export const StorybookPublished = () =>
-  storybookPublished({
+const ctx = { options: { playwright: true } };
+
+export const StorybookPublished = {
+  args: {
     ...ctx,
     build: {},
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
-  } as any);
+  },
+} satisfies Story;
 
-export const StorybookPrepared = () =>
-  storybookPublished({
+export const StorybookPrepared: Story = {
+  args: {
     ...ctx,
     build: {
       actualCaptureCount: undefined,
@@ -27,10 +57,11 @@ export const StorybookPrepared = () =>
       storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
     },
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
-  } as any);
+  },
+};
 
-export const StorybookPreparedWithIncompleteBuild = () =>
-  storybookPublished({
+export const StorybookPreparedWithIncompleteBuild: Story = {
+  args: {
     ...ctx,
     build: {
       actualCaptureCount: undefined,
@@ -43,4 +74,5 @@ export const StorybookPreparedWithIncompleteBuild = () =>
       storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
     },
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
-  } as any);
+  },
+};

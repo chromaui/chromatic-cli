@@ -1,7 +1,12 @@
+import type { Meta, StoryObj } from '@storybook/html-vite';
+
 import forceRebuildHint from './forceRebuildHint';
 
 export default {
   title: 'CLI/Messages/Info',
-};
+  render: () => forceRebuildHint(),
+} satisfies Meta<void>;
 
-export const ForceRebuildHint = () => forceRebuildHint();
+type Story = StoryObj;
+
+export const ForceRebuildHint: Story = {};

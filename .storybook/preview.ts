@@ -1,9 +1,7 @@
 /* eslint-env browser */
-import type { Preview } from '@storybook/react';
 
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';
-import React from 'react';
 
 ansiHTML.setColors({
   reset: ['c0c4cd', '16242c'],
@@ -18,7 +16,6 @@ ansiHTML.setColors({
 
 // @ts-expect-error chalk is not fully typed
 chalk.enabled = true;
-
 chalk.level = 3;
 
 const codeStyle = {
@@ -40,28 +37,31 @@ const htmlStyle = {
   padding: 20,
 };
 
-const preview: Preview = {
-  parameters: {
-    layout: 'fullscreen',
+export const parameters = {
+  layout: 'padded',
+  backgrounds: {
+    options: [
+      { name: 'dark', value: '#16242c' },
+      { name: 'light', value: '#F6F9FC' },
+      { name: 'paleturquoise', value: '#AFEEEE' },
+    ],
   },
 };
 
-export default preview;
+export const initialGlobals = {
+  backgrounds: {
+    value: 'dark',
+  },
+};
 
 export const decorators = [
   (storyFn, { kind }) => {
     if (kind.startsWith('CLI/')) {
-      document.body.style.backgroundColor = '#16242c';
-      return <code style={codeStyle} dangerouslySetInnerHTML={{ __html: ansiHTML(storyFn()) }} />;
+      return `<code style=${codeStyle}>${ansiHTML(storyFn().replaceAll('\n', '<br>'))}</code>`;
     }
     if (kind.startsWith('HTML/')) {
-      document.body.style.backgroundColor = '#F6F9FC';
-      return <div style={htmlStyle} dangerouslySetInnerHTML={{ __html: storyFn() }} />;
+      return `<div style=${htmlStyle}>${storyFn()}</div>`;
     }
-    document.body.style.backgroundColor = 'paleturquoise';
-    return storyFn();
+    return storyFn().replaceAll('\n', '<br>');
   },
 ];
-
-export const render = (args, { component }) => component(args);
-export const tags = ['autodocs', 'autodocs'];

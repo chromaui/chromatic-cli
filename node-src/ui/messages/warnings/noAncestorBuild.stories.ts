@@ -7,6 +7,10 @@ export default {
   },
 };
 
-export const NoAncestorBuild = (args: any) => noAncestorBuild(args);
+export const NoAncestorBuild = {
+  render: (args: any) => noAncestorBuild(args),
+};
 
-export const NoAncestorBuildTurboSnap = (args: any) => noAncestorBuild({ ...args, turboSnap: {} });
+export const NoAncestorBuildTurboSnap = {
+  render: (args: any) => noAncestorBuild({ ...args, turboSnap: {} }),
+};

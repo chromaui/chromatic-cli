@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import process from 'process';
+import process from 'node:process';
+
 import { run } from '../dist/node.js';
 
 run({

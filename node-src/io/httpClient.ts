@@ -66,9 +66,9 @@ export default class HTTPClient {
     let agent =
       options.agent || getProxyAgent({ env: this.env, log: this.log }, url, options_.proxy);
 
-    if (this.env.CHROMATIC_DNS_SERVERS.length > 0) {
-      this.log.debug(`Using custom DNS servers: ${this.env.CHROMATIC_DNS_SERVERS.join(', ')}`);
-      dns.setServers(this.env.CHROMATIC_DNS_SERVERS);
+    if (this.env.CHROMATIC_DNS_SERVERS && this.env.CHROMATIC_DNS_SERVERS.length > 0) {
+      this.log.debug(`Using custom DNS servers: ${this.env.CHROMATIC_DNS_SERVERS?.join(', ')}`);
+      dns.setServers(this.env.CHROMATIC_DNS_SERVERS ?? []);
       agent = getDNSResolveAgent();
     }
 
@@ -81,9 +81,12 @@ export default class HTTPClient {
         if (!agent) {
           this.log.warn('Fetch failed due to DNS lookup; switching to custom DNS resolver');
           agent = getDNSResolveAgent();
-        } else if (this.env.CHROMATIC_DNS_FAILOVER_SERVERS.length > 0) {
+        } else if (
+          this.env.CHROMATIC_DNS_FAILOVER_SERVERS &&
+          this.env.CHROMATIC_DNS_FAILOVER_SERVERS.length > 0
+        ) {
           this.log.warn('Fetch failed due to DNS lookup; switching to failover DNS servers');
-          dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_SERVERS);
+          dns.setServers(this.env.CHROMATIC_DNS_FAILOVER_SERVERS ?? []);
         }
       }
     };

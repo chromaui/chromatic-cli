@@ -46,7 +46,7 @@ vi.mock('execa');
 const mockedBuildCommand = 'mocked build command';
 vi.mock(import('./lib/e2e'), async (importOriginal) => ({
   ...(await importOriginal()),
-  getE2EBuildCommand: () => mockedBuildCommand,
+  getE2EBuildCommand: async () => mockedBuildCommand,
 }));
 
 const execaCommand = vi.mocked(execaDefault);
@@ -801,11 +801,11 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         contentLength: expect.any(Number),
         contentType: 'text/typescript',
         fileKey: '',
-        filePath: '.chromatic/preview.tsx',
+        filePath: '.chromatic/preview.ts',
         formAction: 'https://s3.amazonaws.com',
         formFields: {},
-        localPath: '.storybook/preview.tsx',
-        targetPath: '.chromatic/preview.tsx',
+        localPath: '.storybook/preview.ts',
+        targetPath: '.chromatic/preview.ts',
       },
       {
         contentLength: expect.any(Number),
