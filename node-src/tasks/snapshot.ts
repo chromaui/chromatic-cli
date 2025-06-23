@@ -1,3 +1,9 @@
+import waitForBuildToComplete, {
+  BuildProgressMessage,
+  NotifyConnectionError,
+  NotifyServiceError,
+} from '@cli/waitForBuildToComplete';
+
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { delay, throttle } from '../lib/utils';
@@ -34,6 +40,7 @@ const SnapshotBuildQuery = `
     }
   }
 `;
+
 interface BuildQueryResult {
   app: {
     build: {
@@ -80,7 +87,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
   );
 
-  const waitForBuildToComplete = async (): Promise<Context['build']> => {
+  const getCompletedBuild = async (): Promise<Context['build']> => {
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
     ctx.build = { ...ctx.build, ...data.app.build };
@@ -97,10 +104,37 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     }
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
-    return waitForBuildToComplete();
+    return getCompletedBuild();
   };
 
-  const build = await waitForBuildToComplete();
+  const uiStateUpdater = (message: BuildProgressMessage): void => {
+    if (actualTestCount > 0) {
+      const { inProgressCount = 0 } = message;
+      const cursor = actualTestCount - inProgressCount + 1;
+      const label = (testLabels && testLabels[cursor - 1]) || '';
+      updateProgress({ cursor, label });
+    }
+  };
+  try {
+    await waitForBuildToComplete({
+      notifyServiceUrl: ctx.env.CHROMATIC_NOTIFY_SERVICE_URL,
+      buildId: ctx.build.id,
+      progressMessageCallback: uiStateUpdater,
+      log: ctx.log,
+    });
+  } catch (error) {
+    if (error instanceof NotifyConnectionError) {
+      ctx.log.error('Failed to connect to notify service, falling back to polling');
+    } else if (error instanceof NotifyServiceError) {
+      ctx.log.error(
+        `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`
+      );
+    } else {
+      ctx.log.error(`Unexpected error from notify service: ${error.message}`);
+    }
+  }
+
+  const build = await getCompletedBuild();
 
   switch (build.status) {
     case 'PASSED':
