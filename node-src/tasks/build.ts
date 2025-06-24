@@ -6,6 +6,7 @@ import tmp from 'tmp-promise';
 
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
 import { isE2EBuild } from '../lib/e2eUtils';
+import { redactEnvironment } from '../lib/environment';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -134,6 +135,17 @@ export const buildStorybook = async (ctx: Context) => {
     ctx.log.debug('Running build command:', ctx.buildCommand);
     ctx.log.debug('Runtime metadata:', JSON.stringify(ctx.runtimeMetadata, undefined, 2));
 
+    const environment = {
+      CI: '1',
+      NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',
+      STORYBOOK_INVOKED_BY: 'chromatic',
+    };
+
+    ctx.log.debug(
+      'Build environment:',
+      JSON.stringify({ ...redactEnvironment(process.env), ...environment }, undefined, 2)
+    );
+
     if (!ctx.buildCommand) {
       throw new Error('No build command configured');
     }
@@ -144,11 +156,7 @@ export const buildStorybook = async (ctx: Context) => {
       // action (node20), not the version set in the workflow
       preferLocal: false,
       signal,
-      env: {
-        CI: '1',
-        NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',
-        STORYBOOK_INVOKED_BY: 'chromatic',
-      },
+      env: environment,
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (err) {
