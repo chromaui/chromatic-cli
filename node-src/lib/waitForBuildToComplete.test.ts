@@ -5,6 +5,7 @@ import TestLogger from './testLogger';
 import waitForBuildToComplete, {
   NotifyConnectionError,
   NotifyServiceError,
+  NotifyServiceMessageTimeoutError,
 } from './waitForBuildToComplete';
 
 describe('waitForBuildToComplete', () => {
@@ -240,5 +241,20 @@ describe('waitForBuildToComplete', () => {
     });
 
     expect(log.entries).toContain(`notify service message: ${JSON.stringify(testMessage)}`);
+  });
+
+  it('throws NotifyServiceMessageTimeoutError on 408 request timeout', async () => {
+    server.on('connection', (ws) => {
+      // Close with normal status code but 408 Request Timeout message, like the notify service
+      ws.close(1000, '408 Request Timeout');
+    });
+
+    await expect(
+      waitForBuildToComplete({
+        notifyServiceUrl: testUrl,
+        buildId: 'test-build',
+        log,
+      })
+    ).rejects.toThrow(NotifyServiceMessageTimeoutError);
   });
 });

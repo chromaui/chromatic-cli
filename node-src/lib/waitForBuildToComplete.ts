@@ -50,6 +50,16 @@ export class NotifyConnectionError extends NotifyServiceError {
 }
 
 /**
+ * Error thrown when the notify service fails to send a build progress message within the configured timeout interval.
+ */
+export class NotifyServiceMessageTimeoutError extends NotifyServiceError {
+  constructor(message: string, statusCode?: number, reason?: string, originalError?: Error) {
+    super(message, statusCode, reason, originalError);
+    this.name = 'NotifyServiceMessageTimeoutError';
+  }
+}
+
+/**
  * Waits for a build to complete by establishing a WebSocket connection to the notify service
  * and listening for progress messages until the build is finished.
  *
@@ -89,6 +99,18 @@ export default async function waitForBuildToComplete({
         // the promise should be resolved in the message handler in this scenario, but just to be safe,
         // we'll resolve again so callers aren't left hanging
         resolve();
+      }
+
+      // The notify service sends a 408 Request Timeout response, but it has a normal closure status code (1000),
+      // so we need to inspect the message
+      if (reason.toString().includes('408 Request Timeout')) {
+        reject(
+          new NotifyServiceMessageTimeoutError(
+            'Timed out waiting for message from notify service',
+            408,
+            reason.toString()
+          )
+        );
       }
 
       // the websocket might have been suddenly terminated, in which case, the error handler doesn't run,

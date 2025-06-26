@@ -2,7 +2,9 @@ import waitForBuildToComplete, {
   BuildProgressMessage,
   NotifyConnectionError,
   NotifyServiceError,
+  NotifyServiceMessageTimeoutError,
 } from '@cli/waitForBuildToComplete';
+import * as Sentry from '@sentry/node';
 
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -125,6 +127,9 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   } catch (error) {
     if (error instanceof NotifyConnectionError) {
       ctx.log.error('Failed to connect to notify service, falling back to polling');
+    } else if (error instanceof NotifyServiceMessageTimeoutError) {
+      ctx.log.error('Timed out waiting for message from notify service, falling back to polling');
+      Sentry.captureException(error);
     } else if (error instanceof NotifyServiceError) {
       ctx.log.error(
         `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`
