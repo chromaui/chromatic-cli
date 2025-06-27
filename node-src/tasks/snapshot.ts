@@ -123,6 +123,9 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       buildId: ctx.build.id,
       progressMessageCallback: uiStateUpdater,
       log: ctx.log,
+      headers: {
+        Authorization: `Bearer ${reportToken}`,
+      },
     });
   } catch (error) {
     if (error instanceof NotifyConnectionError) {

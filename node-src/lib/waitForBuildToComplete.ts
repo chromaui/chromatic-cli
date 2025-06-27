@@ -11,6 +11,7 @@ interface Arguments {
   buildId: string;
   progressMessageCallback?: (message: BuildProgressMessage) => void;
   log: Logger;
+  headers?: Record<string, string>;
 }
 
 const BuildProgressMessageSchema = z.object({
@@ -68,6 +69,7 @@ export class NotifyServiceMessageTimeoutError extends NotifyServiceError {
  * @param arguments.buildId - The unique identifier of the build to monitor
  * @param arguments.progressMessageCallback - Optional callback function to handle progress messages
  * @param arguments.log - Logger instance for debug output
+ * @param arguments.headers - Headers to add to the notify service handshake request
  *
  * @returns Promise that resolves when the build completes
  *
@@ -80,10 +82,12 @@ export default async function waitForBuildToComplete({
   buildId,
   progressMessageCallback,
   log,
+  headers,
 }: Arguments): Promise<void> {
   const url = `${notifyServiceUrl}/build/${buildId}`;
   const subscriber = new WebSocket(url, {
     handshakeTimeout: 4000,
+    headers,
   });
   return await new Promise((resolve, reject) => {
     subscriber.on('open', () => {
