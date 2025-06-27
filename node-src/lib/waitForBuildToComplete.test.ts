@@ -257,4 +257,34 @@ describe('waitForBuildToComplete', () => {
       })
     ).rejects.toThrow(NotifyServiceMessageTimeoutError);
   });
+
+  it('sends headers in WebSocket handshake', async () => {
+    const customHeaders = {
+      Authorization: 'Bearer test-token',
+      'X-Custom-Header': 'custom-value',
+    };
+
+    let receivedHeaders: any;
+    server.on('connection', (ws, request) => {
+      receivedHeaders = request.headers;
+      // Send completion message so the test resolves
+      ws.send(
+        JSON.stringify({
+          completedAt: Date.now(),
+          inProgressCount: 0,
+          status: 'PASSED',
+        })
+      );
+    });
+
+    await waitForBuildToComplete({
+      notifyServiceUrl: testUrl,
+      buildId: 'test-build',
+      headers: customHeaders,
+      log,
+    });
+
+    expect(receivedHeaders.authorization).toBe('Bearer test-token');
+    expect(receivedHeaders['x-custom-header']).toBe('custom-value');
+  });
 });

@@ -233,6 +233,9 @@ describe('takeSnapshots', () => {
       buildId: 'build-123',
       progressMessageCallback: expect.any(Function),
       log: ctx.log,
+      headers: {
+        Authorization: 'Bearer report-token',
+      },
     });
   });
 
