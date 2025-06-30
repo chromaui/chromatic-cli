@@ -1,5 +1,6 @@
 import waitForBuildToComplete, {
   NotifyConnectionError,
+  NotifyServiceAuthenticationError,
   NotifyServiceError,
   NotifyServiceMessageTimeoutError,
 } from '@cli/waitForBuildToComplete';
@@ -376,6 +377,39 @@ describe('takeSnapshots', () => {
 
     expect(log.error).toHaveBeenCalledWith(
       'Unexpected error from notify service: Generic connection error'
+    );
+    expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
+    expect(ctx.exitCode).toBe(0);
+  });
+
+  it('handles authentication errors gracefully and continues execution', async () => {
+    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
+    const build = {
+      app: { repository: { provider: 'github' } },
+      number: 1,
+      features: {},
+      reportToken: 'report-token',
+      id: 'build-123',
+    };
+    const ctx = {
+      client,
+      env: environment,
+      git: { matchesBranch },
+      log,
+      options: {},
+      build,
+    } as any;
+
+    const authenticationError = new NotifyServiceAuthenticationError('Unauthorized request', 401);
+    mockWaitForBuildToComplete.mockRejectedValue(authenticationError);
+    client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
+    });
+
+    await takeSnapshots(ctx, {} as any);
+
+    expect(log.error).toHaveBeenCalledWith(
+      'Error authenticating with notify service: 401 Unauthorized request'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);

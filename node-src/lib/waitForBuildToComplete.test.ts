@@ -1,9 +1,11 @@
+import { createServer } from 'http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WebSocketServer } from 'ws';
 
 import TestLogger from './testLogger';
 import waitForBuildToComplete, {
   NotifyConnectionError,
+  NotifyServiceAuthenticationError,
   NotifyServiceError,
   NotifyServiceMessageTimeoutError,
 } from './waitForBuildToComplete';
@@ -286,5 +288,155 @@ describe('waitForBuildToComplete', () => {
 
     expect(receivedHeaders.authorization).toBe('Bearer test-token');
     expect(receivedHeaders['x-custom-header']).toBe('custom-value');
+  });
+
+  it('throws NotifyServiceAuthenticationError for 400 status code', async () => {
+    const httpServer = createServer();
+
+    httpServer.on('upgrade', (_request, socket, _head) => {
+      socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
+      socket.destroy();
+    });
+
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => resolve());
+    });
+
+    const port = (httpServer.address() as any).port;
+    const errorUrl = `ws://localhost:${port}`;
+
+    try {
+      const error = await waitForBuildToComplete({
+        notifyServiceUrl: errorUrl,
+        buildId: 'test-build',
+        log,
+      }).catch((error_) => error_);
+
+      expect(error).toBeInstanceOf(NotifyServiceAuthenticationError);
+      expect(error.message).toBe('Invalid build ID');
+      expect(error.statusCode).toBe(400);
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it('throws NotifyServiceAuthenticationError for 401 status code', async () => {
+    const httpServer = createServer();
+
+    httpServer.on('upgrade', (_request, socket, _head) => {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+    });
+
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => resolve());
+    });
+
+    const port = (httpServer.address() as any).port;
+    const errorUrl = `ws://localhost:${port}`;
+
+    try {
+      const error = await waitForBuildToComplete({
+        notifyServiceUrl: errorUrl,
+        buildId: 'test-build',
+        log,
+      }).catch((error_) => error_);
+
+      expect(error).toBeInstanceOf(NotifyServiceAuthenticationError);
+      expect(error.message).toBe('Unauthorized request');
+      expect(error.statusCode).toBe(401);
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it('throws NotifyServiceAuthenticationError for 403 status code', async () => {
+    const httpServer = createServer();
+
+    httpServer.on('upgrade', (_request, socket, _head) => {
+      socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      socket.destroy();
+    });
+
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => resolve());
+    });
+
+    const port = (httpServer.address() as any).port;
+    const errorUrl = `ws://localhost:${port}`;
+
+    try {
+      const error = await waitForBuildToComplete({
+        notifyServiceUrl: errorUrl,
+        buildId: 'test-build',
+        log,
+      }).catch((error_) => error_);
+
+      expect(error).toBeInstanceOf(NotifyServiceAuthenticationError);
+      expect(error.message).toBe('Access denied to build');
+      expect(error.statusCode).toBe(403);
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it('throws NotifyServiceAuthenticationError for 404 status code', async () => {
+    const httpServer = createServer();
+
+    httpServer.on('upgrade', (_request, socket, _head) => {
+      socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+      socket.destroy();
+    });
+
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => resolve());
+    });
+
+    const port = (httpServer.address() as any).port;
+    const errorUrl = `ws://localhost:${port}`;
+
+    try {
+      const error = await waitForBuildToComplete({
+        notifyServiceUrl: errorUrl,
+        buildId: 'test-build',
+        log,
+      }).catch((error_) => error_);
+
+      expect(error).toBeInstanceOf(NotifyServiceAuthenticationError);
+      expect(error.message).toBe('Build not found');
+      expect(error.statusCode).toBe(404);
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it('throws NotifyServiceError for other status codes in unexpected-response', async () => {
+    const httpServer = createServer();
+
+    httpServer.on('upgrade', (_request, socket, _head) => {
+      socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+      socket.destroy();
+    });
+
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => resolve());
+    });
+
+    const port = (httpServer.address() as any).port;
+    const errorUrl = `ws://localhost:${port}`;
+
+    try {
+      const error = await waitForBuildToComplete({
+        notifyServiceUrl: errorUrl,
+        buildId: 'test-build',
+        log,
+      }).catch((error_) => error_);
+
+      expect(error).toBeInstanceOf(NotifyServiceError);
+      expect(error.message).toBe('Unexpected response from notify service');
+      expect(error.statusCode).toBe(500);
+    } finally {
+      httpServer.close();
+    }
   });
 });

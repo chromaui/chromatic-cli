@@ -1,6 +1,7 @@
 import waitForBuildToComplete, {
   BuildProgressMessage,
   NotifyConnectionError,
+  NotifyServiceAuthenticationError,
   NotifyServiceError,
   NotifyServiceMessageTimeoutError,
 } from '@cli/waitForBuildToComplete';
@@ -133,6 +134,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     } else if (error instanceof NotifyServiceMessageTimeoutError) {
       ctx.log.error('Timed out waiting for message from notify service, falling back to polling');
       Sentry.captureException(error);
+    } else if (error instanceof NotifyServiceAuthenticationError) {
+      ctx.log.error(
+        `Error authenticating with notify service: ${error.statusCode} ${error.message}`
+      );
     } else if (error instanceof NotifyServiceError) {
       ctx.log.error(
         `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`

@@ -61,6 +61,16 @@ export class NotifyServiceMessageTimeoutError extends NotifyServiceError {
 }
 
 /**
+ * Error thrown when there's an authentication or authorization problem with the notify service.
+ */
+export class NotifyServiceAuthenticationError extends NotifyServiceError {
+  constructor(message: string, statusCode: number, reason?: string, originalError?: Error) {
+    super(message, statusCode, reason, originalError);
+    this.name = 'NotifyServiceAuthenticationError';
+  }
+}
+
+/**
  * Waits for a build to complete by establishing a WebSocket connection to the notify service
  * and listening for progress messages until the build is finished.
  *
@@ -76,6 +86,9 @@ export class NotifyServiceMessageTimeoutError extends NotifyServiceError {
  * @throws {NotifyConnectionError} When a connection to the notify service cannot be established
  * @throws {NotifyServiceError} When the notify service connection closes unexpectedly, when the message from
  * the notify server fails to parse, or when the progressMessageCallback throws an error
+ * @throws {NotifyServiceMessageTimeoutError} When the notify service closes the websocket connection due to no
+ * messages being sent for an extended period of time.
+ * @throws {NotifyServiceAuthenticationError} When there is an error authenticating with the notify service.
  */
 export default async function waitForBuildToComplete({
   notifyServiceUrl,
@@ -92,6 +105,28 @@ export default async function waitForBuildToComplete({
   return await new Promise((resolve, reject) => {
     subscriber.on('open', () => {
       log.debug(`notify service handshake successful at ${url}`);
+    });
+
+    subscriber.on('unexpected-response', (_request, response) => {
+      const statusCode = response.statusCode;
+      log.debug(`notify service unexpected response: ${statusCode}`);
+
+      switch (statusCode) {
+        case 400:
+          reject(new NotifyServiceAuthenticationError('Invalid build ID', statusCode));
+          break;
+        case 401:
+          reject(new NotifyServiceAuthenticationError('Unauthorized request', statusCode));
+          break;
+        case 403:
+          reject(new NotifyServiceAuthenticationError('Access denied to build', statusCode));
+          break;
+        case 404:
+          reject(new NotifyServiceAuthenticationError('Build not found', statusCode));
+          break;
+        default:
+          reject(new NotifyServiceError('Unexpected response from notify service', statusCode));
+      }
     });
 
     subscriber.on('close', (code: number, reason: Buffer) => {
