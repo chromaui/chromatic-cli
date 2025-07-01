@@ -266,7 +266,7 @@ describe('takeSnapshots', () => {
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.error).toHaveBeenCalledWith(
+    expect(log.debug).toHaveBeenCalledWith(
       'Failed to connect to notify service, falling back to polling'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
@@ -304,7 +304,7 @@ describe('takeSnapshots', () => {
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.error).toHaveBeenCalledWith(
+    expect(log.debug).toHaveBeenCalledWith(
       'Error getting updates from notify service: Connection failed code: 1001, reason: Going away, original error: Original error'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
@@ -341,7 +341,7 @@ describe('takeSnapshots', () => {
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.error).toHaveBeenCalledWith(
+    expect(log.debug).toHaveBeenCalledWith(
       'Timed out waiting for message from notify service, falling back to polling'
     );
     expect(Sentry.captureException).toHaveBeenCalledWith(timeoutError);
@@ -408,7 +408,7 @@ describe('takeSnapshots', () => {
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.error).toHaveBeenCalledWith(
+    expect(log.debug).toHaveBeenCalledWith(
       'Error authenticating with notify service: 401 Unauthorized request'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
