@@ -1,4 +1,5 @@
 import { Logger } from '@cli/log';
+import type { IncomingMessage } from 'http';
 import WebSocket from 'ws';
 import { z } from 'zod';
 
@@ -107,7 +108,7 @@ export default async function waitForBuildToComplete({
       log.debug(`notify service handshake successful at ${url}`);
     });
 
-    subscriber.on('unexpected-response', (_request, response) => {
+    subscriber.on('unexpected-response', (_request, response: IncomingMessage) => {
       const statusCode = response.statusCode;
       log.debug(`notify service unexpected response: ${statusCode}`);
 
@@ -187,7 +188,7 @@ export default async function waitForBuildToComplete({
       reject(new NotifyServiceError('Notify service error occurred', errorCode, undefined, error));
     });
 
-    subscriber.on('message', (message) => {
+    subscriber.on('message', (message: WebSocket.Data) => {
       try {
         log.debug(`notify service message: ${message}`);
         const parsedMessage = BuildProgressMessageSchema.parse(JSON.parse(message.toString()));
