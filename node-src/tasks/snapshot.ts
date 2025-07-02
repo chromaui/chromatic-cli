@@ -90,6 +90,15 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
   );
 
+  const uiStateUpdater = (buildProgressData: BuildProgressMessage | Context['build']): void => {
+    if (actualTestCount > 0) {
+      const { inProgressCount = 0 } = buildProgressData;
+      const cursor = actualTestCount - inProgressCount + 1;
+      const label = (testLabels && testLabels[cursor - 1]) || '';
+      updateProgress({ cursor, label });
+    }
+  };
+
   const getCompletedBuild = async (): Promise<Context['build']> => {
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
@@ -99,25 +108,12 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       return ctx.build;
     }
 
-    if (actualTestCount > 0) {
-      const { inProgressCount = 0 } = ctx.build;
-      const cursor = actualTestCount - inProgressCount + 1;
-      const label = (testLabels && testLabels[cursor - 1]) || '';
-      updateProgress({ cursor, label });
-    }
+    uiStateUpdater(ctx.build);
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
     return getCompletedBuild();
   };
 
-  const uiStateUpdater = (message: BuildProgressMessage): void => {
-    if (actualTestCount > 0) {
-      const { inProgressCount = 0 } = message;
-      const cursor = actualTestCount - inProgressCount + 1;
-      const label = (testLabels && testLabels[cursor - 1]) || '';
-      updateProgress({ cursor, label });
-    }
-  };
   try {
     await waitForBuildToComplete({
       notifyServiceUrl: ctx.env.CHROMATIC_NOTIFY_SERVICE_URL,
