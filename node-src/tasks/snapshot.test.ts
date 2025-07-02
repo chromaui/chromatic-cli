@@ -30,11 +30,18 @@ const environment = {
 const log = { error: vi.fn(), info: vi.fn(), debug: vi.fn() };
 const matchesBranch = () => false;
 
+const createBaseTestContext = () => ({
+  client: { runQuery: vi.fn(), setAuthorization: vi.fn() },
+  env: environment,
+  git: { matchesBranch },
+  log,
+  options: {},
+});
+
 const mockWaitForBuildToComplete = vi.mocked(waitForBuildToComplete);
 
 describe('takeSnapshots', () => {
   it('waits for the build to complete and sets it on context', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -42,45 +49,36 @@ describe('takeSnapshots', () => {
       reportToken: 'report-token',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
-    expect(client.runQuery).toHaveBeenCalledWith(
+    expect(ctx.client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/SnapshotBuildQuery/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
-    expect(client.runQuery).toHaveBeenCalledTimes(2);
+    expect(ctx.client.runQuery).toHaveBeenCalledTimes(2);
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);
   });
 
   it('sets exitCode to 1 when build has changes', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
       announcedBuild: build,
     } as any;
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
     });
 
@@ -90,13 +88,9 @@ describe('takeSnapshots', () => {
   });
 
   it('sets exitCode to 0 when build has changes but --exit-zero-on-changes is set with `true` string', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
+      ...createBaseTestContext(),
       options: {
         exitZeroOnChanges: 'true',
       },
@@ -104,8 +98,8 @@ describe('takeSnapshots', () => {
       announcedBuild: build,
     } as any;
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
     });
 
@@ -115,20 +109,15 @@ describe('takeSnapshots', () => {
   });
 
   it('sets exitCode to 2 when build is broken (capture error)', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
       announcedBuild: build,
     } as any;
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'BROKEN', completedAt: 1 } },
     });
 
@@ -138,20 +127,15 @@ describe('takeSnapshots', () => {
   });
 
   it('sets exitCode to 3 when build fails (system error)', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
       announcedBuild: build,
     } as any;
 
-    client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'FAILED', completedAt: 1 } },
     });
 
@@ -161,7 +145,6 @@ describe('takeSnapshots', () => {
   });
 
   it('calls experimental_onTaskProgress with progress', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -171,21 +154,18 @@ describe('takeSnapshots', () => {
       inProgressCount: 5,
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
+      ...createBaseTestContext(),
       options: { experimental_onTaskProgress: vi.fn() },
       build,
     } as any;
 
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { status: 'IN_PROGRESS', inProgressCount: 5 } },
     });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { status: 'IN_PROGRESS', inProgressCount: 3 } },
     });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1, inProgressCount: 0 } },
     });
 
@@ -205,7 +185,6 @@ describe('takeSnapshots', () => {
   });
 
   it('calls waitForBuildToComplete with correct arguments', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -214,16 +193,12 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
     mockWaitForBuildToComplete.mockResolvedValue();
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
@@ -241,7 +216,6 @@ describe('takeSnapshots', () => {
   });
 
   it('handles NotifyConnectionError gracefully and continues execution', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -250,23 +224,19 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
     const connectionError = new NotifyConnectionError('Failed to connect to notify service', 1006);
     mockWaitForBuildToComplete.mockRejectedValue(connectionError);
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.debug).toHaveBeenCalledWith(
+    expect(ctx.log.debug).toHaveBeenCalledWith(
       'Failed to connect to notify service, falling back to polling: code: 1006, original error: undefined'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
@@ -274,7 +244,6 @@ describe('takeSnapshots', () => {
   });
 
   it('handles NotifyServiceError gracefully and continues execution', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -283,11 +252,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
@@ -298,13 +263,13 @@ describe('takeSnapshots', () => {
       new Error('Original error')
     );
     mockWaitForBuildToComplete.mockRejectedValue(notifyError);
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.debug).toHaveBeenCalledWith(
+    expect(ctx.log.debug).toHaveBeenCalledWith(
       'Error getting updates from notify service: Connection failed code: 1001, reason: Going away, original error: Original error'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
@@ -312,7 +277,6 @@ describe('takeSnapshots', () => {
   });
 
   it('handles NotifyServiceMessageTimeoutError gracefully and continues execution', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -321,11 +285,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
@@ -335,13 +295,13 @@ describe('takeSnapshots', () => {
       '408 Request Timeout'
     );
     mockWaitForBuildToComplete.mockRejectedValue(timeoutError);
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.debug).toHaveBeenCalledWith(
+    expect(ctx.log.debug).toHaveBeenCalledWith(
       'Timed out waiting for message from notify service, falling back to polling'
     );
     expect(Sentry.captureException).toHaveBeenCalledWith(timeoutError);
@@ -350,7 +310,6 @@ describe('takeSnapshots', () => {
   });
 
   it('handles generic errors gracefully and continues execution', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -359,23 +318,19 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
     const genericError = new Error('Generic connection error');
     mockWaitForBuildToComplete.mockRejectedValue(genericError);
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.error).toHaveBeenCalledWith(
+    expect(ctx.log.error).toHaveBeenCalledWith(
       'Unexpected error from notify service: Generic connection error'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
@@ -383,7 +338,6 @@ describe('takeSnapshots', () => {
   });
 
   it('handles authentication errors gracefully and continues execution', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -392,23 +346,19 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
-      options: {},
+      ...createBaseTestContext(),
       build,
     } as any;
 
     const authenticationError = new NotifyServiceAuthenticationError('Unauthorized request', 401);
     mockWaitForBuildToComplete.mockRejectedValue(authenticationError);
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
     await takeSnapshots(ctx, {} as any);
 
-    expect(log.debug).toHaveBeenCalledWith(
+    expect(ctx.log.debug).toHaveBeenCalledWith(
       'Error authenticating with notify service: 401 Unauthorized request'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
@@ -416,7 +366,6 @@ describe('takeSnapshots', () => {
   });
 
   it('calls experimental_onTaskProgress via waitForBuildToComplete progress callback', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -426,10 +375,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
     };
     const ctx = {
-      client,
-      env: environment,
-      git: { matchesBranch },
-      log,
+      ...createBaseTestContext(),
       options: { experimental_onTaskProgress: vi.fn() },
       build,
     } as any;
@@ -439,7 +385,7 @@ describe('takeSnapshots', () => {
       progressCallback = progressMessageCallback;
       return Promise.resolve();
     });
-    client.runQuery.mockReturnValueOnce({
+    ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
