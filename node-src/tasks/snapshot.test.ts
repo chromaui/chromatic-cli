@@ -191,6 +191,31 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
+      actualTestCount: 0,
+    };
+    const ctx = {
+      ...createBaseTestContext(),
+      build,
+    } as any;
+
+    mockWaitForBuildToComplete.mockResolvedValue();
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
+    });
+
+    await takeSnapshots(ctx, {} as any);
+
+    expect(mockWaitForBuildToComplete).not.toHaveBeenCalled();
+  });
+
+  it('does not call waitForBuildToComplete if there are no tests', async () => {
+    const build = {
+      app: { repository: { provider: 'github' } },
+      number: 1,
+      features: {},
+      reportToken: 'report-token',
+      id: 'build-123',
+      actualTestCount: 1,
     };
     const ctx = {
       ...createBaseTestContext(),
@@ -222,6 +247,7 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
+      actualTestCount: 1,
     };
     const ctx = {
       ...createBaseTestContext(),
@@ -250,6 +276,7 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
+      actualTestCount: 1,
     };
     const ctx = {
       ...createBaseTestContext(),
@@ -283,6 +310,7 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
+      actualTestCount: 1,
     };
     const ctx = {
       ...createBaseTestContext(),
@@ -316,6 +344,7 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
+      actualTestCount: 1,
     };
     const ctx = {
       ...createBaseTestContext(),
@@ -344,6 +373,7 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
+      actualTestCount: 1,
     };
     const ctx = {
       ...createBaseTestContext(),
