@@ -1,5 +1,9 @@
 import snykGraph from '@snyk/dep-graph';
-import { mkdtempSync as unMockedMkdtempSync, statSync as unMockedStatSync } from 'fs';
+import {
+  copyFileSync as unMockedCopyFileSync,
+  mkdtempSync as unMockedMkdtempSync,
+  statSync as unMockedStatSync,
+} from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
@@ -23,6 +27,9 @@ statSync.mockReturnValue({ size: 1 });
 
 const mkdtempSync = unMockedMkdtempSync as Mock;
 mkdtempSync.mockReturnValue(tmpdir);
+
+const copyFileSync = unMockedCopyFileSync as Mock;
+copyFileSync.mockImplementation(() => {});
 
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
@@ -346,6 +353,68 @@ describe('findChangedDependencies', () => {
         dev: true,
         strictOutOfSync: false,
       }
+    );
+  });
+
+  it('handles relative paths correctly when copying files to temp directory', async () => {
+    // This test reproduces the issue where copyFileSync fails because it's trying to copy
+    // relative paths without constructing absolute paths first
+
+    // Mock the repository root to be different from current working directory
+    getRepositoryRoot.mockResolvedValue(
+      '/codebuild/output/src3335512774/src/actions-runner/_work/web/web'
+    );
+
+    // Mock findFilesFromRepositoryRoot to return relative paths (as it does in real scenarios)
+    findFilesFromRepositoryRoot.mockImplementation((_, ...patterns) => {
+      const results: string[] = [];
+      for (const pattern of patterns) {
+        if (pattern === 'package.json') {
+          results.push('package.json');
+        } else if (
+          pattern === 'yarn.lock' ||
+          pattern === 'pnpm-lock.yaml' ||
+          pattern === 'package-lock.json'
+        ) {
+          results.push('package-lock.json');
+        } else if (pattern.startsWith('**/')) {
+          // No nested package.json files in this test
+          // results.push(...[]);
+        }
+      }
+      return Promise.resolve(results);
+    });
+
+    // Mock copyFileSync to throw an error when trying to copy relative paths
+    copyFileSync.mockImplementation((source, destination) => {
+      // Simulate the ENOENT error that occurs when trying to copy relative paths
+      if (source === 'package.json' || source === 'package-lock.json') {
+        throw new Error(
+          `ENOENT: no such file or directory, copyfile '${source}' -> '${destination}'`
+        );
+      }
+    });
+
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.3.0']);
+    mockChangedPackagesGraph(['react@18.3.0']);
+
+    const context = getContext({
+      git: {
+        packageMetadataChanges: [{ changedFiles: ['package.json'], commit: 'A' }],
+      },
+    });
+
+    // This should now work because we fixed the path resolution
+    await expect(findChangedDependencies(context)).resolves.toEqual(['react']);
+
+    // Verify that copyFileSync was called with absolute paths
+    expect(copyFileSync).toHaveBeenCalledWith(
+      '/codebuild/output/src3335512774/src/actions-runner/_work/web/web/package.json',
+      expect.stringContaining('/package.json')
+    );
+    expect(copyFileSync).toHaveBeenCalledWith(
+      '/codebuild/output/src3335512774/src/actions-runner/_work/web/web/package-lock.json',
+      expect.stringContaining('/package-lock.json')
     );
   });
 });

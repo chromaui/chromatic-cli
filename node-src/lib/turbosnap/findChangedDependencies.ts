@@ -115,8 +115,12 @@ export const findChangedDependencies = async (ctx: Context) => {
         const temporaryManifestPath = path.join(tmpdir, path.basename(manifestPath));
         const temporaryLockfilePath = path.join(tmpdir, path.basename(lockfilePath));
 
-        fs.copyFileSync(manifestPath, temporaryManifestPath);
-        fs.copyFileSync(lockfilePath, temporaryLockfilePath);
+        // Construct absolute paths by joining with repository root
+        const absoluteManifestPath = path.join(rootPath, manifestPath);
+        const absoluteLockfilePath = path.join(rootPath, lockfilePath);
+
+        fs.copyFileSync(absoluteManifestPath, temporaryManifestPath);
+        fs.copyFileSync(absoluteLockfilePath, temporaryLockfilePath);
 
         const headDependencies = await getDependencies(ctx, {
           rootPath: tmpdir,
