@@ -113,37 +113,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
     return getCompletedBuild();
   };
-
-  try {
-    await waitForBuildToComplete({
-      notifyServiceUrl: ctx.env.CHROMATIC_NOTIFY_SERVICE_URL,
-      buildId: ctx.build.id,
-      progressMessageCallback: uiStateUpdater,
-      log: ctx.log,
-      headers: {
-        Authorization: `Bearer ${reportToken}`,
-      },
-    });
-  } catch (error) {
-    Sentry.captureException(error);
-    if (error instanceof NotifyConnectionError) {
-      ctx.log.debug(
-        `Failed to connect to notify service, falling back to polling: code: ${error.statusCode}, original error: ${error.originalError?.message}`
-      );
-    } else if (error instanceof NotifyServiceMessageTimeoutError) {
-      ctx.log.debug('Timed out waiting for message from notify service, falling back to polling');
-    } else if (error instanceof NotifyServiceAuthenticationError) {
-      ctx.log.debug(
-        `Error authenticating with notify service: ${error.statusCode} ${error.message}`
-      );
-    } else if (error instanceof NotifyServiceError) {
-      ctx.log.debug(
-        `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`
-      );
-    } else {
-      ctx.log.error(`Unexpected error from notify service: ${error.message}`);
-    }
-  }
+  await waitForBuildToCompleteAndHandleErrors(ctx, uiStateUpdater, reportToken);
 
   const build = await getCompletedBuild();
 
@@ -194,6 +164,43 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       throw new Error(`Unexpected build status: ${build.status}`);
   }
 };
+
+async function waitForBuildToCompleteAndHandleErrors(
+  ctx: Context,
+  uiStateUpdater: (buildProgressData: BuildProgressMessage | Context['build']) => void,
+  reportToken: string | undefined
+) {
+  try {
+    await waitForBuildToComplete({
+      notifyServiceUrl: ctx.env.CHROMATIC_NOTIFY_SERVICE_URL,
+      buildId: ctx.build.id,
+      progressMessageCallback: uiStateUpdater,
+      log: ctx.log,
+      headers: {
+        Authorization: `Bearer ${reportToken}`,
+      },
+    });
+  } catch (error) {
+    Sentry.captureException(error);
+    if (error instanceof NotifyConnectionError) {
+      ctx.log.debug(
+        `Failed to connect to notify service, falling back to polling: code: ${error.statusCode}, original error: ${error.originalError?.message}`
+      );
+    } else if (error instanceof NotifyServiceMessageTimeoutError) {
+      ctx.log.debug('Timed out waiting for message from notify service, falling back to polling');
+    } else if (error instanceof NotifyServiceAuthenticationError) {
+      ctx.log.debug(
+        `Error authenticating with notify service: ${error.statusCode} ${error.message}`
+      );
+    } else if (error instanceof NotifyServiceError) {
+      ctx.log.debug(
+        `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`
+      );
+    } else {
+      ctx.log.error(`Unexpected error from notify service: ${error.message}`);
+    }
+  }
+}
 
 /**
  * Sets up the Listr task for snapshotting the Storybook.
