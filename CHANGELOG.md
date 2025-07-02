@@ -1,3 +1,20 @@
+# v13.1.0 (Wed Jul 02 2025)
+
+#### 🚀 Enhancement
+
+- Get build progress updates through Chromatic notify service [#1191](https://github.com/chromaui/chromatic-cli/pull/1191) ([@justin-thurman](https://github.com/justin-thurman) [@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Dynamically generate `CHROMATIC_NOTIFY_SERVICE_URL` [#1194](https://github.com/chromaui/chromatic-cli/pull/1194) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v13.0.1 (Wed Jun 18 2025)
 
 #### 🐛 Bug Fix
