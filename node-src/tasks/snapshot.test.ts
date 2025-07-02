@@ -267,7 +267,7 @@ describe('takeSnapshots', () => {
     await takeSnapshots(ctx, {} as any);
 
     expect(log.debug).toHaveBeenCalledWith(
-      'Failed to connect to notify service, falling back to polling'
+      'Failed to connect to notify service, falling back to polling: code: 1006, original error: undefined'
     );
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);

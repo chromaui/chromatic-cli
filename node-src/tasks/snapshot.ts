@@ -130,7 +130,9 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     });
   } catch (error) {
     if (error instanceof NotifyConnectionError) {
-      ctx.log.debug('Failed to connect to notify service, falling back to polling');
+      ctx.log.debug(
+        `Failed to connect to notify service, falling back to polling: code: ${error.statusCode}, original error: ${error.originalError?.message}`
+      );
     } else if (error instanceof NotifyServiceMessageTimeoutError) {
       ctx.log.debug('Timed out waiting for message from notify service, falling back to polling');
       Sentry.captureException(error);

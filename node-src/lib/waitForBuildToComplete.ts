@@ -172,12 +172,13 @@ export default async function waitForBuildToComplete({
         errorCode === 'ECONNREFUSED' ||
         errorCode === 'ENOTFOUND' ||
         errorCode === 'ETIMEDOUT' ||
+        errorCode === 'HPE_INVALID_CONSTANT' ||
         (error.message && error.message.includes('Opening handshake has timed out'))
       ) {
         reject(
           new NotifyConnectionError(
             'Failed to connect to notify service',
-            undefined,
+            errorCode,
             undefined,
             error
           )
