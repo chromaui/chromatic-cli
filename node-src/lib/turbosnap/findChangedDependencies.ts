@@ -112,11 +112,13 @@ export const findChangedDependencies = async (ctx: Context) => {
         const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
         tmpdirsCreated.add(tmpdir);
 
+        const absoluteManifestPath = path.join(rootPath, manifestPath);
+        const absoluteLockfilePath = path.join(rootPath, lockfilePath);
         const temporaryManifestPath = path.join(tmpdir, path.basename(manifestPath));
         const temporaryLockfilePath = path.join(tmpdir, path.basename(lockfilePath));
 
-        fs.copyFileSync(manifestPath, temporaryManifestPath);
-        fs.copyFileSync(lockfilePath, temporaryLockfilePath);
+        fs.copyFileSync(absoluteManifestPath, temporaryManifestPath);
+        fs.copyFileSync(absoluteLockfilePath, temporaryLockfilePath);
 
         const headDependencies = await getDependencies(ctx, {
           rootPath: tmpdir,

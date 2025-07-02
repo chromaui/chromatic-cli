@@ -1,5 +1,9 @@
 import snykGraph from '@snyk/dep-graph';
-import { mkdtempSync as unMockedMkdtempSync, statSync as unMockedStatSync } from 'fs';
+import {
+  copyFileSync as unMockedCopyFileSync,
+  mkdtempSync as unMockedMkdtempSync,
+  statSync as unMockedStatSync,
+} from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
@@ -20,6 +24,9 @@ const tmpdir = '/tmpdir';
 
 const statSync = unMockedStatSync as Mock;
 statSync.mockReturnValue({ size: 1 });
+
+const copyFileSync = unMockedCopyFileSync as Mock;
+copyFileSync.mockReturnValue(undefined);
 
 const mkdtempSync = unMockedMkdtempSync as Mock;
 mkdtempSync.mockReturnValue(tmpdir);
@@ -346,6 +353,48 @@ describe('findChangedDependencies', () => {
         dev: true,
         strictOutOfSync: false,
       }
+    );
+  });
+
+  it('handles relative paths correctly when copying files to temp directory', async () => {
+    // Mock the repository root to be different from current working directory
+    getRepositoryRoot.mockResolvedValue('/root/subdir');
+
+    // Mock findFilesFromRepositoryRoot to return relative paths
+    findFilesFromRepositoryRoot.mockImplementation((_, ...patterns) => {
+      const results: string[] = [];
+      for (const pattern of patterns) {
+        if (pattern === 'package.json') {
+          results.push('package.json');
+        } else if (
+          pattern === 'yarn.lock' ||
+          pattern === 'pnpm-lock.yaml' ||
+          pattern === 'package-lock.json'
+        ) {
+          results.push('package-lock.json');
+        }
+      }
+      return Promise.resolve(results);
+    });
+
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.3.0']);
+    mockChangedPackagesGraph(['react@18.3.0']);
+
+    const context = getContext({
+      git: {
+        packageMetadataChanges: [{ changedFiles: ['package.json'], commit: 'A' }],
+      },
+    });
+
+    await expect(findChangedDependencies(context)).resolves.toEqual(['react']);
+
+    expect(copyFileSync).toHaveBeenCalledWith(
+      '/root/subdir/package.json',
+      `${tmpdir}/package.json`
+    );
+    expect(copyFileSync).toHaveBeenCalledWith(
+      '/root/subdir/package-lock.json',
+      `${tmpdir}/package-lock.json`
     );
   });
 });
