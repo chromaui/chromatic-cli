@@ -1,3 +1,15 @@
+# v13.1.1 (Thu Jul 03 2025)
+
+#### 🐛 Bug Fix
+
+- Skip notify service if there are no tests [#1196](https://github.com/chromaui/chromatic-cli/pull/1196) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v13.1.0 (Wed Jul 02 2025)
 
 #### 🚀 Enhancement
