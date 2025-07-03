@@ -6,6 +6,7 @@ import * as getCommitInfo from '../git/getCommitAndBranch';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
 import * as git from '../git/git';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
+import TestLogger from '../lib/testLogger';
 import { setGitInfo } from './gitInfo';
 
 vi.mock('../git/getCommitAndBranch');
@@ -30,7 +31,7 @@ const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
 const getParentCommits = vi.mocked(getParentCommitsUnmocked);
 const getHasRouter = vi.mocked(getHasRouterUnmocked);
 
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 
 const commitInfo = {
   commit: '123asdf',

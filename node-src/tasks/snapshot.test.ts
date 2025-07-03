@@ -7,6 +7,7 @@ import waitForBuildToComplete, {
 import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
+import TestLogger from '../lib/testLogger';
 import { takeSnapshots } from './snapshot';
 
 vi.mock('@sentry/node', () => ({
@@ -27,7 +28,7 @@ const environment = {
   CHROMATIC_OUTPUT_INTERVAL: 0,
   CHROMATIC_NOTIFY_SERVICE_URL: 'wss://test.com',
 };
-const log = { error: vi.fn(), info: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 const matchesBranch = () => false;
 
 const createBaseTestContext = () => ({

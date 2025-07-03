@@ -4,6 +4,7 @@ import { createReadStream } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { default as compress } from '../lib/compress';
+import TestLogger from '../lib/testLogger';
 import { uploadStorybook, waitForSentinels } from './upload';
 
 vi.mock('form-data');
@@ -24,7 +25,7 @@ const makeZipFile = vi.mocked(compress);
 const createReadStreamMock = vi.mocked(createReadStream);
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
+const log = new TestLogger();
 const http = { fetch: vi.fn() };
 
 afterEach(() => {

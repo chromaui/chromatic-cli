@@ -1,4 +1,5 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import TestLogger from '@cli/testLogger';
 import { execa as execaDefault, execaCommand } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,7 +16,7 @@ process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
 
 const environment = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
