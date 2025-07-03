@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { exitCodes } from '../lib/setExitCode';
+import TestLogger from '../lib/testLogger';
 import { publishBuild, verifyBuild } from './verify';
 
 const environment = {
@@ -8,7 +9,7 @@ const environment = {
   CHROMATIC_UPGRADE_TIMEOUT: 100,
   STORYBOOK_VERIFY_TIMEOUT: 20,
 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 const http = { fetch: vi.fn() };
 
 describe('publishBuild', () => {

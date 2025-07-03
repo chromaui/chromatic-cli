@@ -1,14 +1,15 @@
 /* eslint-disable max-lines */
 import chalk from 'chalk';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context } from '../../types';
+import TestLogger from '../testLogger';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const statsPath = 'preview-stats.json';
 
-const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 const getContext: any = (
   {
     configDir,

@@ -2,6 +2,7 @@ import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
 import { access, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import TestLogger from '../lib/testLogger';
 import { calculateFileHashes, traceChangedFiles, validateFiles } from './prepare';
 
 vi.mock('fs');
@@ -30,7 +31,7 @@ const readFileSyncMock = vi.mocked(readFileSync);
 const statSyncMock = vi.mocked(statSync);
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
+const log = new TestLogger();
 const http = { fetch: vi.fn() };
 
 afterEach(() => {

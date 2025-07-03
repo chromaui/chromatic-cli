@@ -1,3 +1,4 @@
+import TestLogger from '@cli/testLogger';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Context } from '../types';
@@ -5,7 +6,7 @@ import getStorybookInfo from './getStorybookInfo';
 
 vi.useFakeTimers();
 
-const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
 const getContext = (ctx: any): Context => ({ ...context, ...ctx });
 

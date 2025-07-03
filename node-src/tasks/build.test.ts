@@ -4,6 +4,7 @@ import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { execaCommand } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
+import TestLogger from '../lib/testLogger';
 import { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
 vi.mock('execa');
@@ -138,7 +139,7 @@ describe('setBuildCommand', () => {
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.1.0' },
       git: { changedFiles: ['./index.js'] },
-      log: { warn: vi.fn() },
+      log: new TestLogger(),
     } as any;
     await setBuildCommand(ctx);
     expect(ctx.log.warn).toHaveBeenCalledWith(
@@ -153,7 +154,7 @@ describe('buildStorybook', () => {
       ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: { debug: vi.fn() },
+      log: new TestLogger(),
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
@@ -171,7 +172,7 @@ describe('buildStorybook', () => {
       buildCommand: 'npm run build:storybook --script-args',
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: { debug: vi.fn(), error: vi.fn() },
+      log: new TestLogger(),
     } as any;
     command.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
@@ -183,7 +184,7 @@ describe('buildStorybook', () => {
       ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: { debug: vi.fn() },
+      log: new TestLogger(),
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);

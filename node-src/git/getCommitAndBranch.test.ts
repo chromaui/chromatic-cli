@@ -1,7 +1,7 @@
 import envCi from 'env-ci';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Logger } from '../lib/log';
+import TestLogger from '../lib/testLogger';
 import type { Context } from '../types';
 import * as mergeQueue from './getBranchFromMergeQueuePullRequestNumber';
 import getCommitAndBranch from './getCommitAndBranch';
@@ -17,7 +17,7 @@ const hasPreviousCommit = vi.mocked(git.hasPreviousCommit);
 const getBranchFromMergeQueue = vi.mocked(mergeQueue.getBranchFromMergeQueuePullRequestNumber);
 const mergeQueueBranchMatch = vi.mocked(git.mergeQueueBranchMatch);
 
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() } as unknown as Logger;
+const log = new TestLogger();
 const ctx = { log } as unknown as Context;
 
 beforeEach(() => {
