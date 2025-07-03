@@ -113,7 +113,10 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
     return getCompletedBuild();
   };
-  await waitForBuildToCompleteAndHandleErrors(ctx, uiStateUpdater, reportToken);
+
+  if (actualTestCount > 0) {
+    await waitForBuildToCompleteAndHandleErrors(ctx, uiStateUpdater, reportToken);
+  }
 
   const build = await getCompletedBuild();
 
