@@ -1,3 +1,15 @@
+# v13.1.2 (Thu Jul 03 2025)
+
+#### 🐛 Bug Fix
+
+- Copy package files with absolute paths [#1195](https://github.com/chromaui/chromatic-cli/pull/1195) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v13.1.1 (Thu Jul 03 2025)
 
 #### 🐛 Bug Fix
