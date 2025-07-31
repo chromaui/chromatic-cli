@@ -225,26 +225,6 @@ describe('waitForBuildToComplete', () => {
     ).rejects.toThrow(NotifyServiceError);
   });
 
-  it('logs progress messages', async () => {
-    const testMessage = {
-      completedAt: Date.now(),
-      inProgressCount: 0,
-      status: 'PASSED',
-    };
-
-    server.on('connection', (ws) => {
-      ws.send(JSON.stringify(testMessage));
-    });
-
-    await waitForBuildToComplete({
-      notifyServiceUrl: testUrl,
-      buildId: 'test-build',
-      log,
-    });
-
-    expect(log.entries).toContain(`notify service message: ${JSON.stringify(testMessage)}`);
-  });
-
   it('throws NotifyServiceMessageTimeoutError on 408 request timeout', async () => {
     server.on('connection', (ws) => {
       // Close with normal status code but 408 Request Timeout message, like the notify service

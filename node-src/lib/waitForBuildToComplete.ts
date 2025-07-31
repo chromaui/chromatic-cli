@@ -190,7 +190,6 @@ export default async function waitForBuildToComplete({
 
     subscriber.on('message', (message: WebSocket.Data) => {
       try {
-        log.debug(`notify service message: ${message}`);
         const parsedMessage = BuildProgressMessageSchema.parse(JSON.parse(message.toString()));
         if (progressMessageCallback) {
           progressMessageCallback(parsedMessage);
