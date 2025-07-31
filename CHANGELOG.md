@@ -1,3 +1,17 @@
+# v13.1.3 (Thu Jul 31 2025)
+
+#### 🐛 Bug Fix
+
+- Remove notify service message logs [#1199](https://github.com/chromaui/chromatic-cli/pull/1199) ([@codykaup](https://github.com/codykaup))
+- Replace ad hoc test loggers with `TestLogger` [#1197](https://github.com/chromaui/chromatic-cli/pull/1197) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v13.1.2 (Thu Jul 03 2025)
 
 #### 🐛 Bug Fix
