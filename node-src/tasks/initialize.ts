@@ -125,7 +125,10 @@ export const announceBuild = async (ctx: Context) => {
 
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
-    announcedBuild.number === 1 || (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
+    // possibly set from LastBuildQuery in setGitInfo
+    ctx.isOnboarding ||
+    announcedBuild.number === 1 ||
+    (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
 
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;
