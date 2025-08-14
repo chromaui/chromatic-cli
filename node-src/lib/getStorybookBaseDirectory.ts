@@ -22,8 +22,14 @@ export function getStorybookBaseDirectory(ctx: Context) {
     return '.';
   }
 
-  // NOTE:
-  //  - path.relative does not have a leading '.', unless it starts with '../'
-  //  - path.join('.', '') === '.' and path.join('.', '../x') = '../x'
-  return posix(path.join('.', path.relative(rootPath, '')));
+  // When workingDir is used in GitHub Actions, process.cwd() changes but we need
+  // the base directory relative to the original git root. Calculate the relative path
+  // from git root to the current working directory.
+  const currentDir = process.cwd();
+  const baseDir = path.relative(rootPath, currentDir);
+  
+  // Normalize to posix path and ensure it doesn't start with './' for consistency
+  const normalizedBaseDir = posix(baseDir === '' ? '.' : baseDir);
+  
+  return normalizedBaseDir;
 }
