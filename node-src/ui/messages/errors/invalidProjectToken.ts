@@ -9,5 +9,5 @@ export default ({ projectToken }: { projectToken: string }) =>
     ${error} Invalid {bold --project-token} '${projectToken}'
     You can find your project token on the Manage screen in your Chromatic project.
     Sign in to Chromatic at ${link('https://www.chromatic.com/start')}
-    ${info} Read more at ${link('https://www.chromatic.com/docs/setup')}
+    ${info} Read more at ${link('https://www.chromatic.com/docs/quickstart/')}
   `);

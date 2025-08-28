@@ -5,7 +5,7 @@ import { error } from '../../components/icons';
 import link from '../../components/link';
 
 const localBuildsDocsLink =
-  'https://www.chromatic.com/docs/branching-and-baselines#what-are-local-builds';
+  'https://www.chromatic.com/docs/visual-tests-addon/#what-are-local-builds-and-how-are-they-different-from-builds';
 
 export default () =>
   `${dedent(chalk`

@@ -15,7 +15,7 @@ export default ({ options, buildLogFile }: Pick<Context, 'options' | 'buildLogFi
     - Check the build log at {bold ${buildLogFile}}
     - Run {bold npm run ${buildScriptName}} or {bold yarn ${buildScriptName}} yourself and make sure it outputs a valid Storybook by opening the generated {bold index.html} in your browser.
     - Make sure you haven't accidently ignored all stories. See ${link(
-      'https://www.chromatic.com/docs/ignoring-elements#ignore-stories'
+      'https://www.chromatic.com/docs/disable-snapshots/'
     )} for details.
   `);
 };

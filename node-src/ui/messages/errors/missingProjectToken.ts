@@ -13,5 +13,5 @@ export default () =>
     Set your project token as the {bold CHROMATIC_PROJECT_TOKEN} environment variable
     or pass the {bold --project-token} command line option.
 
-    ${info} Read more at ${link('https://www.chromatic.com/docs/setup')}
+    ${info} Read more at ${link('https://www.chromatic.com/docs/quickstart/')}
   `);

@@ -19,6 +19,6 @@ export default ({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLay
   return dedent(chalk`
     ${error} Did not find any CSF globs in {bold ${statsPath}}
     Check your stories configuration in {bold ${storybookDir}/main.js}
-    ${info} Read more at ${link(`https://storybook.js.org/docs/${viewLayer}/configure/overview`)}
+    ${info} Read more at ${link(`https://storybook.js.org/docs/configure?renderer=${viewLayer}`)}
   `);
 };

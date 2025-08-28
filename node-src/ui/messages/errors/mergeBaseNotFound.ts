@@ -5,7 +5,7 @@ import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
 const docsUrl =
-  'https://www.chromatic.com/docs/branching-and-baselines#how-the-merge-base-is-calculated';
+  'https://www.chromatic.com/docs/branching-and-baselines#how-is-merge-base-calculated';
 
 export default ({ patchHeadRef, patchBaseRef }: any) =>
   dedent(chalk`

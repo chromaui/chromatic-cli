@@ -4,7 +4,7 @@ import { dedent } from 'ts-dedent';
 import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
-const docsUrl = 'https://www.chromatic.com/docs/branching-and-baselines#patch-builds';
+const docsUrl = 'https://www.chromatic.com/docs/branching-and-baselines/#what-happens-when-the-merge-base-build-isnt-found-patch-builds';
 
 export default () =>
   dedent(chalk`
