@@ -4,7 +4,7 @@ import { dedent } from 'ts-dedent';
 import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLayer = 'react' }) => {
+export default ({ statsPath, storybookDir, storybookBuildDir, entryFile }) => {
   if (entryFile) {
     const hint = storybookBuildDir
       ? chalk`Configure {bold --storybook-config-dir} with the value for {bold --config-dir} or {bold -c} from your build-storybook script.`
@@ -19,6 +19,6 @@ export default ({ statsPath, storybookDir, storybookBuildDir, entryFile, viewLay
   return dedent(chalk`
     ${error} Did not find any CSF globs in {bold ${statsPath}}
     Check your stories configuration in {bold ${storybookDir}/main.js}
-    ${info} Read more at ${link(`https://storybook.js.org/docs/configure?renderer=${viewLayer}`)}
+    ${info} Read more at ${link(`https://storybook.js.org/docs/configure`)}
   `);
 };
