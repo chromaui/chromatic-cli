@@ -83,7 +83,6 @@ export async function getDependentStoryFiles(
     baseDir: baseDirectory = '',
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
-    viewLayer,
   } = ctx.storybook || {};
   const {
     storybookBuildDir,
@@ -197,7 +196,6 @@ export async function getDependentStoryFiles(
         storybookDir: storybookDirectory,
         storybookBuildDir,
         entryFile,
-        viewLayer,
       })
     );
     throw new Error('Did not find any CSF globs in preview-stats.json');
