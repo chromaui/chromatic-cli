@@ -26,7 +26,7 @@ export default (
       - Check the Storybook build log printed below.
       - Run ${suggestedRunCommands} yourself and make sure it outputs a valid Storybook by opening the generated {bold index.html} in your browser.
       - Review the build-storybook CLI options at ${link(
-        'https://storybook.js.org/docs/configurations/cli-options/#for-build-storybook'
+        'https://storybook.js.org/docs/api/cli-options#build'
       )}
     `),
     message,

@@ -15,5 +15,5 @@ export default (provider: string) =>
     ${info} {bold Speed up Continuous Integration}
     Your project is linked to ${providers[provider]} so Chromatic will report results there.
     This means you can add the option \`with: exitOnceUploaded: true\` to your workflow to skip waiting for build results.
-    Read more here: ${link('https://www.chromatic.com/docs/github-actions#available-options')}
+    Read more here: ${link('https://www.chromatic.com/docs/configure/')}
   `);
