@@ -1,3 +1,17 @@
+# v13.1.4 (Fri Aug 29 2025)
+
+#### 🐛 Bug Fix
+
+- Feat:Fix outdated and incorrect links in the CLI [#1202](https://github.com/chromaui/chromatic-cli/pull/1202) ([@jonniebigodes](https://github.com/jonniebigodes))
+- Show setup URL on build errors when onboarding. [#1201](https://github.com/chromaui/chromatic-cli/pull/1201) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- [@jonniebigodes](https://github.com/jonniebigodes)
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v13.1.3 (Thu Jul 31 2025)
 
 #### 🐛 Bug Fix
