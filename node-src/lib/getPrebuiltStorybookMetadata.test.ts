@@ -16,6 +16,19 @@ describe('getStorybookMetadataFromProjectJson', () => {
     });
   });
 
+  it('should return the metadata from a project with @storybook framework name', async () => {
+    const projectJsonPath = 'bin-src/__mocks__/atFrameworkNameProjectJson/project.json';
+    const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
+
+    expect(metadata).toEqual({
+      version: '10.0.0-beta.2',
+      builder: {
+        name: '@storybook/builder-vite',
+        packageVersion: undefined,
+      },
+    });
+  });
+
   it('should return the metadata from a Storybook 6 project.json file', async () => {
     const projectJsonPath = 'bin-src/__mocks__/sb6ProjectJson/project.json';
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
