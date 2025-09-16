@@ -1,3 +1,15 @@
+# v13.1.5 (Tue Sep 16 2025)
+
+#### 🐛 Bug Fix
+
+- Handle framework names that specify full viewlayer packages [#1204](https://github.com/chromaui/chromatic-cli/pull/1204) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v13.1.4 (Fri Aug 29 2025)
 
 #### 🐛 Bug Fix
