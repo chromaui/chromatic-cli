@@ -1,3 +1,15 @@
+# v13.2.0 (Fri Sep 19 2025)
+
+#### 🚀 Enhancement
+
+- Updated the mapping for the storybook entry with a recent change in storybook-rsbuild [#1206](https://github.com/chromaui/chromatic-cli/pull/1206) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v13.1.5 (Tue Sep 16 2025)
 
 #### 🐛 Bug Fix
