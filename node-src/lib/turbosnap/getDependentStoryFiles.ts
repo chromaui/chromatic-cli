@@ -128,6 +128,7 @@ export async function getDependentStoryFiles(
     './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
     `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
     `./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`,
+    `./storybook-config-entry.js`,
   ].map((file) => normalize(file));
 
   const modulesByName = new Map<NormalizedName, Module>();
