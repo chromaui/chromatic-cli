@@ -49,7 +49,7 @@ const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, s
   return { dependency, version, dependencyPackage: pkg };
 };
 
-const findViewlayer = async ({ env, log, options, packageJson }) => {
+const findStorybookVersion = async ({ env, log, options, packageJson }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
@@ -201,7 +201,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
 
   const info = await Promise.allSettled([
     findConfigFlags(ctx),
-    findViewlayer(ctx),
+    findStorybookVersion(ctx),
     findBuilder(mainConfig, v7),
   ]);
 
