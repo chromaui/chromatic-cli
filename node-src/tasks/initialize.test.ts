@@ -101,7 +101,7 @@ describe('announceBuild', () => {
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false, committedAt: 0 },
     pkg: { version: '1.0.0' },
-    storybook: { baseDir: '', version: '2.0.0', viewLayer: 'react', addons: [] },
+    storybook: { baseDir: '', version: '2.0.0', addons: [] },
     runtimeMetadata: {
       nodePlatform: 'darwin',
       nodeVersion: '18.12.1',
@@ -138,7 +138,6 @@ describe('announceBuild', () => {
           rebuildForBuildId: undefined,
           storybookAddons: ctx.storybook.addons,
           storybookVersion: ctx.storybook.version,
-          storybookViewLayer: ctx.storybook.viewLayer,
           projectMetadata: {
             storybookBaseDir: '',
           },

@@ -50,7 +50,7 @@ describe('verifyBuild', () => {
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false },
     pkg: { version: '1.0.0' },
-    storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
+    storybook: { version: '2.0.0', addons: [] },
     announcedBuild: { number: 1, reportToken: 'report-token' },
   };
 

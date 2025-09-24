@@ -25,8 +25,8 @@ const infoMessage = (ctx: Context) => {
     return e2eMessage(ctx);
   }
 
-  const { addons, version, viewLayer, builder } = ctx.storybook;
-  const info = version && viewLayer ? `Storybook ${version} for ${capitalize(viewLayer)}` : '';
+  const { addons, version, builder } = ctx.storybook;
+  const info = version ? `Storybook ${version}` : '';
   const builderInfo = builder
     ? `${info}; using the ${builder.name} builder (${builder.packageVersion})`
     : info;

@@ -236,7 +236,6 @@ export interface Context {
     baseDir?: string;
     configDir: string;
     staticDir: string[];
-    viewLayer: string;
     addons: {
       name: string;
       packageName?: string;

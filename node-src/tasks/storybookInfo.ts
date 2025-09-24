@@ -16,9 +16,6 @@ export const setStorybookInfo = async (ctx: Context) => {
     if (ctx.storybook.version) {
       Sentry.setTag('storybookVersion', ctx.storybook.version);
     }
-    if (ctx.storybook.viewLayer) {
-      Sentry.setTag('storybookViewLayer', ctx.storybook.viewLayer);
-    }
     Sentry.setContext('storybook', ctx.storybook);
   }
 };

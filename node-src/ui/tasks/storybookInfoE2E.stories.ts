@@ -8,7 +8,6 @@ export default {
 
 const storybook = {
   version: '5.3.0',
-  viewLayer: 'web-components',
   builder: { name: 'webpack4', packageVersion: '5.3.0' },
   addons: [],
 };
