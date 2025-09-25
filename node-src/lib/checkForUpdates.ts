@@ -46,8 +46,7 @@ export default async function checkForUpdates(ctx: Context) {
     }
     latestVersion = distributionTags.latest;
   } catch (err) {
-    const isInvalidUrlError = err instanceof TypeError && err.message.includes('Invalid URL');
-    if (!isInvalidUrlError) {
+    if (shouldReportVersionCheckFailure(err)) {
       Sentry.captureException(err);
     }
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
@@ -58,4 +57,23 @@ export default async function checkForUpdates(ctx: Context) {
   if (semver.major(ctx.pkg.version) < semver.major(latestVersion)) {
     ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn()));
   }
+}
+
+/**
+ * Determine if we should report an error thrown during Chromatic version checking with
+ * an NPM registry to Sentry. We want to avoid reporting errors that are likely configuration
+ * or network connectivity.
+ *
+ * @param err The error thrown during version checking.
+ *
+ * @returns True if we should report the error, false otherwise.
+ */
+function shouldReportVersionCheckFailure(err: Error) {
+  // npm registry was set to an invalid URL
+  const isInvalidUrlError = err instanceof TypeError && err.message.includes('Invalid URL');
+
+  // http failure reaching the npm registry (usually auth for custom registries)
+  const isFetchError = err.message.includes('HTTPClient failed to fetch');
+
+  return !(isInvalidUrlError || isFetchError);
 }
