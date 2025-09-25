@@ -46,7 +46,10 @@ export default async function checkForUpdates(ctx: Context) {
     }
     latestVersion = distributionTags.latest;
   } catch (err) {
-    Sentry.captureException(err);
+    const isInvalidUrlError = err instanceof TypeError && err.message.includes('Invalid URL');
+    if (!isInvalidUrlError) {
+      Sentry.captureException(err);
+    }
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
     ctx.log.warn(err);
     return;
