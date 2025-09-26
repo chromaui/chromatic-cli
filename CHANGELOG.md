@@ -1,3 +1,15 @@
+# v13.2.1 (Fri Sep 26 2025)
+
+#### 🐛 Bug Fix
+
+- Remove unused references to view layer [#1207](https://github.com/chromaui/chromatic-cli/pull/1207) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v13.2.0 (Fri Sep 19 2025)
 
 #### 🚀 Enhancement
