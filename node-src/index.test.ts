@@ -345,7 +345,6 @@ vi.mock('./lib/getPackageManager', () => ({
 vi.mock('./lib/getStorybookInfo', () => ({
   default: () => ({
     version: '5.1.0',
-    viewLayer: 'viewLayer',
     addons: [],
   }),
 }));
@@ -439,7 +438,6 @@ it('runs in simple situations', async () => {
     fromCI: false,
     packageVersion: expect.any(String),
     storybookVersion: '5.1.0',
-    storybookViewLayer: 'viewLayer',
     committerEmail: 'test@test.com',
     committerName: 'tester',
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
