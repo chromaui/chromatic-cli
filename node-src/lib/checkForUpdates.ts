@@ -46,7 +46,9 @@ export default async function checkForUpdates(ctx: Context) {
     }
     latestVersion = distributionTags.latest;
   } catch (err) {
-    Sentry.captureException(err);
+    if (shouldReportVersionCheckFailure(err)) {
+      Sentry.captureException(err);
+    }
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
     ctx.log.warn(err);
     return;
@@ -55,4 +57,13 @@ export default async function checkForUpdates(ctx: Context) {
   if (semver.major(ctx.pkg.version) < semver.major(latestVersion)) {
     ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn()));
   }
+}
+
+function shouldReportVersionCheckFailure(err: Error) {
+  // npm registry was set to an invalid URL
+  const isInvalidUrlError = err instanceof TypeError && err.message.includes('Invalid URL');
+  // http failure reaching the npm registry (usually auth for custom registries)
+  const isFetchError = err.message.includes('HTTPClient failed to fetch');
+
+  return !isInvalidUrlError && !isFetchError;
 }
