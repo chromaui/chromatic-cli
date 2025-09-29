@@ -1,3 +1,19 @@
+# v13.3.0 (Mon Sep 29 2025)
+
+#### 🚀 Enhancement
+
+- Use `--stats-json` with storybook version guard. [#1210](https://github.com/chromaui/chromatic-cli/pull/1210) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🐛 Bug Fix
+
+- Trim down some Sentry error reporting [#1209](https://github.com/chromaui/chromatic-cli/pull/1209) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v13.2.1 (Fri Sep 26 2025)
 
 #### 🐛 Bug Fix
