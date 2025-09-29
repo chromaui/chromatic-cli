@@ -104,7 +104,6 @@ const announceBuildInput = (ctx: Context) => {
     rebuildForBuildId,
     storybookAddons: ctx.storybook.addons,
     storybookVersion: ctx.storybook.version,
-    storybookViewLayer: ctx.storybook.viewLayer,
     projectMetadata: {
       ...ctx.projectMetadata,
       storybookBaseDir: ctx.storybook?.baseDir,
