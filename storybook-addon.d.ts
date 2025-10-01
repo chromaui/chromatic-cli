@@ -17,6 +17,11 @@ export interface ChromaticParameters {
   disable?: boolean;
 
   /**
+   * You can disable snapshots in Chromatic testing using the disableSnapshot story parameter.
+   */
+  disableSnapshot: boolean;
+
+  /**
    * Chromatic will pause CSS animations and reset them to their beginning state.
    *
    * Some animations are used to "animate in" visible elements. To specify that Chromatic should pause the
