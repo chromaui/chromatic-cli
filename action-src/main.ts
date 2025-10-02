@@ -1,11 +1,12 @@
 import '../node-src/errorMonitoring';
 
-import { error, getInput, getMultilineInput, setFailed, setOutput } from '@actions/core';
+import { error, setFailed, setOutput } from '@actions/core';
 import { context } from '@actions/github';
 import * as Sentry from '@sentry/node';
 import path from 'path';
 
 import { run as runNode } from '../node-src';
+import { getInputs } from './getInputs';
 
 const maybe = (a: string | string[], b: any = undefined) => {
   if (!a) {
@@ -93,105 +94,68 @@ const getBuildInfo = (event: typeof context) => {
 };
 
 // TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
+// eslint-disable-next-line complexity
 async function run() {
   const { sha, branch, slug, mergeCommit } = getBuildInfo(context) || {};
   if (!sha || !branch || !slug) return;
 
   try {
-    // Remember to keep this list in sync with ../action.yml
-    const autoAcceptChanges = getInput('autoAcceptChanges');
-    const branchName = getInput('branchName');
-    const buildScriptName = getInput('buildScriptName');
-    const buildCommand = getInput('buildCommand');
-    const configFile = getInput('configFile');
-    const cypress = getInput('cypress');
-    const debug = getInput('debug');
-    const diagnosticsFile = getInput('diagnosticsFile');
-    const dryRun = getInput('dryRun');
-    const exitOnceUploaded = getInput('exitOnceUploaded');
-    const exitZeroOnChanges = getInput('exitZeroOnChanges');
-    const externals = getMultilineInput('externals');
-    const fileHashing = getInput('fileHashing');
-    const forceRebuild = getInput('forceRebuild');
-    const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
-    const logFile = getInput('logFile');
-    const logLevel = getInput('logLevel');
-    const logPrefix = getInput('logPrefix');
-    const onlyChanged = getInput('onlyChanged');
-    const onlyStoryFiles = getMultilineInput('onlyStoryFiles');
-    const onlyStoryNames = getMultilineInput('onlyStoryNames');
-    const outputDir = getInput('outputDir');
-    const playwright = getInput('playwright');
-    const preserveMissing = getInput('preserveMissing');
-    const projectToken = getInput('projectToken');
-    const repositorySlug = getInput('repositorySlug');
-    const skip = getInput('skip');
-    const skipUpdateCheck = getInput('skipUpdateCheck');
-    const storybookBaseDir = getInput('storybookBaseDir');
-    const storybookBuildDir = getInput('storybookBuildDir');
-    const storybookConfigDir = getInput('storybookConfigDir');
-    const storybookLogFile = getInput('storybookLogFile');
-    const traceChanged = getInput('traceChanged');
-    const untraced = getMultilineInput('untraced');
-    const uploadMetadata = getInput('uploadMetadata');
-    const workingDir = getInput('workingDir') || getInput('workingDirectory');
-    const zip = getInput('zip');
-    const junitReport = getInput('junitReport');
+    const inputs = getInputs();
 
     process.env.CHROMATIC_ACTION = 'true';
     process.env.CHROMATIC_SHA = sha;
-    process.env.CHROMATIC_BRANCH = branchName || branch;
-    process.env.CHROMATIC_SLUG = repositorySlug || slug;
+    process.env.CHROMATIC_BRANCH = inputs.branchName || branch;
+    process.env.CHROMATIC_SLUG = inputs.repositorySlug || slug;
     if (mergeCommit) {
       process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
     }
 
-    process.chdir(path.join(process.cwd(), workingDir || ''));
+    process.chdir(path.join(process.cwd(), inputs.workingDir || ''));
 
     const output = await runNode({
       options: {
         inAction: true,
       },
       flags: {
-        autoAcceptChanges: maybe(autoAcceptChanges),
-        branchName: maybe(branchName),
-        buildScriptName: maybe(buildScriptName),
-        buildCommand: maybe(buildCommand),
-        configFile: maybe(configFile),
-        cypress: maybe(cypress),
-        debug: maybe(debug),
-        diagnosticsFile: maybe(diagnosticsFile),
-        dryRun: maybe(dryRun),
-        exitOnceUploaded: maybe(exitOnceUploaded),
-        exitZeroOnChanges: maybe(exitZeroOnChanges, true),
-        externals: maybe(externals),
-        fileHashing: maybe(fileHashing, true),
-        forceRebuild: maybe(forceRebuild),
-        ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+        // NOTE: These must match the inputs in getInputs.ts, which must also match ../action.yml
+        autoAcceptChanges: maybe(inputs.autoAcceptChanges),
+        branchName: maybe(inputs.branchName),
+        buildScriptName: maybe(inputs.buildScriptName),
+        buildCommand: maybe(inputs.buildCommand),
+        configFile: maybe(inputs.configFile),
+        cypress: maybe(inputs.cypress),
+        debug: maybe(inputs.debug),
+        diagnosticsFile: maybe(inputs.diagnosticsFile),
+        dryRun: maybe(inputs.dryRun),
+        exitOnceUploaded: maybe(inputs.exitOnceUploaded),
+        exitZeroOnChanges: maybe(inputs.exitZeroOnChanges, true),
+        externals: maybe(inputs.externals),
+        fileHashing: maybe(inputs.fileHashing, true),
+        forceRebuild: maybe(inputs.forceRebuild),
+        ignoreLastBuildOnBranch: maybe(inputs.ignoreLastBuildOnBranch),
         interactive: false,
-        logFile: maybe(logFile),
-        logLevel: maybe(logLevel),
-        logPrefix: maybe(logPrefix),
-        onlyChanged: maybe(onlyChanged),
-        onlyStoryFiles: maybe(onlyStoryFiles),
-        onlyStoryNames: maybe(onlyStoryNames),
-        outputDir: maybe(outputDir),
-        playwright: maybe(playwright),
-        preserveMissing: maybe(preserveMissing),
-        projectToken: maybe(projectToken),
-        repositorySlug: maybe(repositorySlug),
-        skip: maybe(skip),
-        skipUpdateCheck: maybe(skipUpdateCheck, false),
-        storybookBaseDir: maybe(storybookBaseDir),
-        storybookBuildDir: maybe(storybookBuildDir),
-        storybookConfigDir: maybe(storybookConfigDir),
-        storybookLogFile: maybe(storybookLogFile),
-        traceChanged: maybe(traceChanged),
-        untraced: maybe(untraced),
-        uploadMetadata: maybe(uploadMetadata, false),
-        zip: maybe(zip, false),
-        junitReport: maybe(junitReport),
+        junitReport: maybe(inputs.junitReport),
+        logFile: maybe(inputs.logFile),
+        logLevel: maybe(inputs.logLevel),
+        logPrefix: maybe(inputs.logPrefix),
+        onlyChanged: maybe(inputs.onlyChanged),
+        onlyStoryFiles: maybe(inputs.onlyStoryFiles),
+        onlyStoryNames: maybe(inputs.onlyStoryNames),
+        outputDir: maybe(inputs.outputDir),
+        playwright: maybe(inputs.playwright),
+        preserveMissing: maybe(inputs.preserveMissing),
+        projectToken: maybe(inputs.projectToken),
+        repositorySlug: maybe(inputs.repositorySlug),
+        skip: maybe(inputs.skip),
+        skipUpdateCheck: maybe(inputs.skipUpdateCheck, false),
+        storybookBaseDir: maybe(inputs.storybookBaseDir),
+        storybookBuildDir: maybe(inputs.storybookBuildDir),
+        storybookConfigDir: maybe(inputs.storybookConfigDir),
+        storybookLogFile: maybe(inputs.storybookLogFile),
+        traceChanged: maybe(inputs.traceChanged),
+        untraced: maybe(inputs.untraced),
+        uploadMetadata: maybe(inputs.uploadMetadata, false),
+        zip: maybe(inputs.zip, false),
       },
     });
 
@@ -218,4 +182,5 @@ run()
     setFailed(runError.message);
     Sentry.captureException(runError);
   })
+  // eslint-disable-next-line unicorn/prefer-top-level-await
   .finally(() => Sentry.flush(2500).finally(() => process.exit()));
