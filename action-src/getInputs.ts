@@ -9,10 +9,14 @@ import { getInput, getMultilineInput } from '@actions/core';
  *
  * @returns The simplified multiline input.
  */
-function getSimplifiedMultilineInput(name: string) {
+function getSimplifiedMultilineInput(name: string, isGlob: boolean = false) {
   const input = getMultilineInput(name);
   if (input.length === 0) {
     return '';
+  }
+
+  if (input.length > 1 && isGlob) {
+    return `@(${input.join('|')})`;
   }
 
   return input.length === 1 ? input[0] : input;
@@ -52,7 +56,9 @@ export function getInputs() {
   const preserveMissing = getInput('preserveMissing');
   const projectToken = getInput('projectToken');
   const repositorySlug = getInput('repositorySlug');
-  const skip = getSimplifiedMultilineInput('skip');
+
+  // Skip should be treated as a glob
+  const skip = getSimplifiedMultilineInput('skip', true);
   const skipUpdateCheck = getInput('skipUpdateCheck');
   const storybookBaseDir = getInput('storybookBaseDir');
   const storybookBuildDir = getInput('storybookBuildDir');

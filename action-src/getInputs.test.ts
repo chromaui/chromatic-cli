@@ -310,7 +310,7 @@ describe('getInputs', () => {
       expect(result.workingDir).toBe('./packages/ui');
       expect(result.uploadMetadata).toBe('true');
       expect(result.junitReport).toBe('./test-results.xml');
-      expect(result.skip).toEqual(['some/branch/**', '**/another/**', 'github/blah/blah/test/**']);
+      expect(result.skip).toEqual('@(some/branch/**|**/another/**|github/blah/blah/test/**)');
     });
 
     it('should simulate a production action.yml configuration', () => {
@@ -376,6 +376,42 @@ describe('getInputs', () => {
       expect(result.onlyChanged).toBe('true');
       expect(result.uploadMetadata).toBe('true');
       expect(result.junitReport).toBe('./test-results.xml');
+      expect(result.workingDir).toBe('./packages/ui');
+    });
+
+    it('should simulate a CI/CD action.yml configuration with skip as a glob', () => {
+      // This simulates a CI/CD pipeline configuration
+      setupInputs({
+        projectToken: 'ci-token-123',
+        branchName: 'feature/ci-test',
+        buildScriptName: 'build-storybook',
+        debug: 'true',
+        dryRun: 'false',
+        logLevel: 'debug',
+        exitOnceUploaded: 'true',
+        exitZeroOnChanges: 'true',
+        fileHashing: 'true',
+        onlyChanged: 'true',
+        externals: ['package.json', 'yarn.lock', 'tsconfig.json'],
+        onlyStoryFiles: ['Button.stories.js', 'Input.stories.js'],
+        untraced: ['node_modules/**', 'dist/**', 'coverage/**'],
+        skip: ['some/branch/**', '**/another/**', 'github/blah/blah/test/**'],
+        workingDir: './packages/ui',
+        uploadMetadata: 'true',
+        junitReport: './test-results.xml',
+      });
+
+      const result = getInputs();
+
+      expect(result.projectToken).toBe('ci-token-123');
+      expect(result.branchName).toBe('feature/ci-test');
+      expect(result.debug).toBe('true');
+      expect(result.exitOnceUploaded).toBe('true');
+      expect(result.exitZeroOnChanges).toBe('true');
+      expect(result.onlyChanged).toBe('true');
+      expect(result.uploadMetadata).toBe('true');
+      expect(result.junitReport).toBe('./test-results.xml');
+      expect(result.skip).toEqual('@(some/branch/**|**/another/**|github/blah/blah/test/**)');
       expect(result.workingDir).toBe('./packages/ui');
     });
   });
