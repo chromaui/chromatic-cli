@@ -87,5 +87,8 @@ We have two types of releases:
 A script is provided to manually publish the GitHub Action, though it's typically only necessary for `action-canary` releases:
 
 ```sh
-yarn publish-action <canary|latest>
+GH_TOKEN=<your_github_token>yarn publish-action <canary|latest>
 ```
+
+To generate a new Github token, visit [https://github.com/settings/tokens](https://github.com/settings/tokens) and
+create a new token with the `repo` scope.
