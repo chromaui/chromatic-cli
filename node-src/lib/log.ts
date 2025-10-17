@@ -82,6 +82,8 @@ export interface Logger {
   debug: LogFunction;
   queue: () => void;
   flush: () => void;
+  pause: () => void;
+  resume: () => void;
   getLevel: () => keyof typeof LOG_LEVELS;
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
@@ -90,12 +92,26 @@ export interface Logger {
 
 const fileLogger = {
   queue: [] as string[],
+  stream: undefined as ReturnType<typeof createWriteStream> | undefined,
+  paused: false,
   append(...messages: string[]) {
     this.queue.push(...messages, '\n');
   },
   disable() {
     this.append = () => {};
     this.queue = [];
+  },
+  pause() {
+    if (this.stream && !this.paused) {
+      this.stream.cork();
+      this.paused = true;
+    }
+  },
+  resume() {
+    if (this.stream && this.paused) {
+      this.stream.uncork();
+      this.paused = false;
+    }
   },
   initialize(filepath: string, onError: LogFunction) {
     rm(filepath, { force: true }, (err) => {
@@ -106,9 +122,9 @@ const fileLogger = {
         // Ensure the parent directory exists before we create the stream
         mkdirSync(path.dirname(filepath), { recursive: true });
 
-        const stream = createWriteStream(filepath, { flags: 'a' });
+        this.stream = createWriteStream(filepath, { flags: 'a' });
         this.append = (...messages: string[]) => {
-          stream?.write(
+          this.stream?.write(
             messages
               .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
               .trim() + '\n'
@@ -174,6 +190,12 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     setLogFile(path: string | undefined) {
       if (path) fileLogger.initialize(path, log('error'));
       else fileLogger.disable();
+    },
+    pause: () => {
+      fileLogger.pause();
+    },
+    resume: () => {
+      fileLogger.resume();
     },
     error: log('error'),
     warn: log('warn'),
