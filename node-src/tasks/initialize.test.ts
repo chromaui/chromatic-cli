@@ -1,15 +1,20 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import TestLogger from '@cli/testLogger';
-import { execa as execaDefault, execaCommand } from 'execa';
+import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
 
-vi.mock('execa');
 vi.mock('@antfu/ni');
+vi.mock('execa', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('execa')>();
+  return {
+    ...actual,
+    execa: vi.fn(() => Promise.resolve()),
+  };
+});
 
 const execa = vi.mocked(execaDefault);
-const command = vi.mocked(execaCommand);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
 process.env.GERRIT_BRANCH = 'foo/bar';
@@ -32,7 +37,6 @@ describe('setEnvironment', () => {
 describe('setRuntimeMetadata', () => {
   beforeEach(() => {
     execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
-    command.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
   });
 
   it('sets the build command on the context', async () => {

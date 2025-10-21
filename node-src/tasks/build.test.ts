@@ -1,22 +1,28 @@
 import { beforeEach } from 'node:test';
 
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
-import { execaCommand } from 'execa';
+import { execa as execaDefault, parseCommandString } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
-vi.mock('execa');
 vi.mock('@antfu/ni');
+vi.mock('execa', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('execa')>();
+  return {
+    ...actual,
+    execa: vi.fn(() => Promise.resolve()),
+  };
+});
 
-const command = vi.mocked(execaCommand);
+const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
-  command.mockClear();
+  execa.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -215,8 +221,10 @@ describe('buildStorybook', () => {
     } as any;
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
-    expect(command).toHaveBeenCalledWith(
-      'npm run build:storybook --script-args',
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
       expect.objectContaining({ stdio: expect.any(Array) })
     );
     expect(ctx.log.debug).toHaveBeenCalledWith('Running build command:', ctx.buildCommand);
@@ -230,7 +238,7 @@ describe('buildStorybook', () => {
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
       log: new TestLogger(),
     } as any;
-    command.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
+    execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
   });
@@ -244,8 +252,10 @@ describe('buildStorybook', () => {
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
-    expect(command).toHaveBeenCalledWith(
-      ctx.buildCommand,
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
       expect.objectContaining({
         env: { CI: '1', NODE_ENV: 'production', STORYBOOK_INVOKED_BY: 'chromatic' },
       })
@@ -261,8 +271,10 @@ describe('buildStorybook', () => {
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
-    expect(command).toHaveBeenCalledWith(
-      ctx.buildCommand,
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
       expect.objectContaining({
         env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
       })
@@ -298,7 +310,7 @@ describe('buildStorybook E2E', () => {
         log: { debug: vi.fn(), error: vi.fn() },
       } as any;
 
-      command.mockRejectedValueOnce(new Error(error));
+      execa.mockRejectedValueOnce(new Error(error));
       await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
       expect(ctx.log.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to import `@chromatic-com/playwright`')
@@ -319,7 +331,7 @@ describe('buildStorybook E2E', () => {
 
     const errorMessage =
       'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe\n\nMore error message lines\n\nAnd more';
-    command.mockRejectedValueOnce(new Error(errorMessage));
+    execa.mockRejectedValueOnce(new Error(errorMessage));
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).not.toHaveBeenCalledWith(
       expect.stringContaining('Failed to import `@chromatic-com/playwright`')
