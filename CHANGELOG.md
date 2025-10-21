@@ -1,3 +1,15 @@
+# v13.3.1 (Tue Oct 21 2025)
+
+#### 🐛 Bug Fix
+
+- Prevent log file from writes during metadata upload [#1214](https://github.com/chromaui/chromatic-cli/pull/1214) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v13.3.0 (Mon Sep 29 2025)
 
 #### 🚀 Enhancement
