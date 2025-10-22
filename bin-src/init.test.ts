@@ -1,7 +1,7 @@
 import { execa, parseCommandString } from 'execa';
 import { writeFile } from 'jsonfile';
 import type { NormalizedPackageJson } from 'read-package-up';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   addChromaticScriptToPackageJson,
@@ -26,9 +26,6 @@ vi.mock('execa', async (importOriginal) => {
 });
 
 describe('addChromaticScriptToPackageJson', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
   it('outputs updated package.json with only chromatic script if Framework is Storybook', async () => {
     await addChromaticScriptToPackageJson({
       packageJson: {},
@@ -80,10 +77,7 @@ describe('installArchiveDependencies', () => {
       };
     });
   });
-  afterEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+
   it('successfully installs list of dependencies for Playwright if SB package is not found and Essentials is not found', async () => {
     await installArchiveDependencies({} as NormalizedPackageJson, 'playwright');
 
@@ -94,6 +88,7 @@ describe('installArchiveDependencies', () => {
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
   });
+
   it('successfully installs list of dependencies for Cypress if SB package is not found and Essentials is not found', async () => {
     await installArchiveDependencies({} as NormalizedPackageJson, 'cypress');
 
@@ -104,6 +99,7 @@ describe('installArchiveDependencies', () => {
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
   });
+
   it('successfully installs list of dependencies if SB package is found and Essentials is not found', async () => {
     await installArchiveDependencies(
       // @ts-expect-error Ignore the intentionally missing properties
@@ -118,6 +114,7 @@ describe('installArchiveDependencies', () => {
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
   });
+
   it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
     await installArchiveDependencies(
       // @ts-expect-error Ignore the intentionally missing properties
@@ -133,8 +130,8 @@ describe('installArchiveDependencies', () => {
 
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
-    vi.clearAllMocks();
   });
+
   it('successfully installs list of dependencies if SB package is found and Essentials is found in dependencies', async () => {
     await installArchiveDependencies(
       // @ts-expect-error Ignore the intentionally missing properties
@@ -150,8 +147,8 @@ describe('installArchiveDependencies', () => {
 
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
-    vi.clearAllMocks();
   });
+
   it('successfully installs list of dependencies if SB package is not found and Essentials is found in dependencies', async () => {
     await installArchiveDependencies(
       // @ts-expect-error Ignore the intentionally missing properties
@@ -165,6 +162,5 @@ describe('installArchiveDependencies', () => {
 
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
-    vi.clearAllMocks();
   });
 });
