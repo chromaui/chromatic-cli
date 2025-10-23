@@ -1,0 +1,8 @@
+- name: Run Chromatic
+  uses: chromaui/action@latest
+  with:
+    projectToken: ${{ secrets.TOKEN }}
+    externals: |
+      {first argument}
+      {second argument}
+    skip: true

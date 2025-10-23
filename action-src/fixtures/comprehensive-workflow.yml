@@ -1,0 +1,67 @@
+name: 'Chromatic'
+
+# Event for the workflow
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# List of jobs
+jobs:
+  chromatic-deployment:
+    # Operating System
+    runs-on: ubuntu-latest
+    # Job steps
+    steps:
+      - uses: actions/checkout@v4
+        with:
+	  # 👇 Makes sure Chromatic can review the full git history
+          fetch-depth: 0
+          # 👇 Tells the checkout which commit hash to reference
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23.3.0
+      # 👇 Install dependencies with the same package manager used in the project (replace it as needed), e.g. yarn, npm, pnpm
+      - name: Install dependencies
+        run: npm ci
+
+      # If you're building your SB in a separate step, you can include it below;
+      # make sure to include --webpack-stats in build-storybook script:
+      - name: Build Storybook
+        run: npm run build-storybook
+
+      # 👇 Adds Chromatic as a step in the workflow
+      - name: Publish to Chromatic
+        uses: chromaui/action@latest
+        with:
+          branchName: ${{ github.head_ref }}
+          buildScriptName: build-storybook
+          # 👇 Chromatic projectToken, refer to the manage page to obtain it.
+          projectToken: 123abc6712as
+          # 👇 Enable TurboSnap:
+          onlyChanged: true
+          # 👇 Add debug: true and print dependency trace for changed files to help with debugging:
+          traceChanged: 'expanded'
+          debug: true
+          dryRun: false
+          externals: |
+            package.json
+            yarn.lock
+            tsconfig.json
+          onlyStoryFiles: ['Button.stories.js', 'Input.stories.js']
+          onlyStoryNames: ['Button--Primary', 'Input--Default']
+          workingDir: ./packages/ui
+          uploadMetadata: true
+          junitReport: ./test-results.xml
+          logLevel: debug
+          exitZeroOnChanges: true # Alternatively, can use exitOnceUploaded
+          autoAcceptChanges: 'main'
+	  # If you're letting Chromatic build your SB, you can skip storybookBuildDir.
+          # 👇 Since we're building in a separate step, this tells us where the build is:
+          storybookBuildDir: ./storybook-static
+          skip:
+            - "some/branch/**"
+            - "**/another/**"
+            - "github/blah/blah/test/**"
