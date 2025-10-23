@@ -22,6 +22,7 @@ on:
       - storybook-addon.*
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
 
