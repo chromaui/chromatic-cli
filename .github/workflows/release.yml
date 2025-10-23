@@ -43,7 +43,6 @@ jobs:
         # Update NPM since we're using trusted publishing and need a newer version
       - name: Update NPM
         run: npm install -g npm@latest
-      - run: corepack enable
       - name: Install dependencies
         run: yarn install --immutable
       - name: Create Release
