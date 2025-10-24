@@ -20,7 +20,6 @@ jobs:
         with:
           node-version: 22
       - run: rm -rf subdir # remove conflicting subproject
-      - run: corepack enable
       - name: install
         run: yarn install
         env:

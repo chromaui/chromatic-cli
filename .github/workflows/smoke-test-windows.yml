@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 22
-      - run: corepack enable
       - name: install
         run: yarn && git status --porcelain
       - name: prep package
