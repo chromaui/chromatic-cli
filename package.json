@@ -156,7 +156,7 @@
     "eslint-plugin-sort-class-members": "^1.20.0",
     "eslint-plugin-unicorn": "^53.0.0",
     "esm": "^3.2.25",
-    "execa": "^7.2.0",
+    "execa": "^9.6.0",
     "fake-tag": "^2.0.0",
     "filesize": "^10.1.0",
     "find-up": "^7.0.0",
