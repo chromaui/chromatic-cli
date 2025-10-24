@@ -207,7 +207,9 @@ export async function getDependentStoryFiles(
     staticDirectories.some((directory) => name && name.startsWith(`${directory}/`));
 
   ctx.untracedFiles = [];
+
   function untrace(filepath: string) {
+    filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
     if (untraced.some((glob) => matchesFile(glob, filepath))) {
       ctx.untracedFiles?.push(filepath);
       return false;

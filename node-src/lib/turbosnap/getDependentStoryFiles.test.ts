@@ -708,37 +708,41 @@ describe('getDependentStoryFiles', () => {
     expect(result).toEqual({});
   });
 
-  it('ignores untraced files', async () => {
-    const changedFiles = ['src/utils.js'];
-    const modules = [
-      {
-        id: 1,
-        name: './src/utils.js', // changed
-        reasons: [{ moduleName: './src/foo.js' }],
-      },
-      {
-        id: 2,
-        name: './src/foo.js', // untraced
-        reasons: [{ moduleName: './src/foo.stories.js' }],
-      },
-      {
-        id: 3,
-        name: './src/foo.stories.js',
-        reasons: [{ moduleName: CSF_GLOB }],
-      },
-      {
-        id: 999,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
-      },
-    ];
-    const ctx = getContext({
-      staticDir: ['path/to/statics'],
-      untraced: ['**/foo.js'],
-    });
-    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result).toEqual({});
-  });
+  it.each(['./src/foo.js', './src/foo.js + 1 module', './src/foo.js + 2 modules'])(
+    `ignores untraced files for module name %s`,
+    async (moduleName) => {
+      const changedFiles = ['src/utils.js'];
+      const modules = [
+        {
+          id: 1,
+          name: './src/utils.js', // changed
+          reasons: [{ moduleName: moduleName }],
+        },
+        {
+          id: 2,
+          name: moduleName, // untraced
+          reasons: [{ moduleName: './src/foo.stories.js' }],
+        },
+        {
+          id: 3,
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: 999,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({
+        staticDir: ['path/to/statics'],
+        untraced: ['**/foo.js'],
+      });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(ctx.turboSnap.bailReason).toBeUndefined();
+      expect(result).toEqual({});
+    }
+  );
 
   it('does not bail on untraced global files', async () => {
     const changedFiles = [
