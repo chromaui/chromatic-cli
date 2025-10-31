@@ -1,3 +1,15 @@
+# v13.3.3 (Fri Oct 31 2025)
+
+#### 🐛 Bug Fix
+
+- Strip ' + N modules' when matching against untraced files [#1217](https://github.com/chromaui/chromatic-cli/pull/1217) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v13.3.2 (Fri Oct 24 2025)
 
 #### 🐛 Bug Fix
