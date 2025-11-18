@@ -1,3 +1,15 @@
+# v13.3.4 (Tue Nov 18 2025)
+
+#### 🐛 Bug Fix
+
+- Fix passing signal to Execa [#1220](https://github.com/chromaui/chromatic-cli/pull/1220) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
 # v13.3.3 (Fri Oct 31 2025)
 
 #### 🐛 Bug Fix
