@@ -156,7 +156,7 @@ export const buildStorybook = async (ctx: Context) => {
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow
       preferLocal: false,
-      signal,
+      cancelSignal: signal,
       env: {
         CI: '1',
         NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',
