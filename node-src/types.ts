@@ -203,6 +203,7 @@ export interface Context {
   reportPath?: string;
   isPublishOnly?: boolean;
   isOnboarding: boolean;
+  isReactNativeApp?: boolean;
   turboSnapAvailability?: string;
 
   http: HTTPClient;
@@ -262,6 +263,11 @@ export interface Context {
     status: string;
     autoAcceptChanges: boolean;
     reportToken: string;
+    features?: {
+      uiTests: boolean;
+      uiReview: boolean;
+      isReactNativeApp: boolean;
+    };
     app: {
       id: string;
       turboSnapAvailability: string;
@@ -305,6 +311,7 @@ export interface Context {
     features?: {
       uiTests: boolean;
       uiReview: boolean;
+      isReactNativeApp: boolean;
     };
     tests?: {
       spec: {
@@ -369,12 +376,14 @@ export interface Task {
 export interface Reason {
   moduleName: string;
 }
+
 export interface Module {
   id: string | number | null;
   name: string;
   modules?: Pick<Module, 'name'>[];
   reasons?: Reason[];
 }
+
 export interface Stats {
   modules: Module[];
 }
