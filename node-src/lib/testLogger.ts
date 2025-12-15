@@ -21,6 +21,8 @@ export default class TestLogger implements Logger {
   setInteractive: ReturnType<typeof vi.fn>;
   setLogFile: ReturnType<typeof vi.fn>;
   getLevel: ReturnType<typeof vi.fn>;
+  pause: ReturnType<typeof vi.fn>;
+  resume: ReturnType<typeof vi.fn>;
 
   constructor() {
     this.entries = [];
@@ -56,5 +58,7 @@ export default class TestLogger implements Logger {
     this.setInteractive = vi.fn();
     this.setLogFile = vi.fn();
     this.getLevel = vi.fn();
+    this.pause = vi.fn();
+    this.resume = vi.fn();
   }
 }

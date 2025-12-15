@@ -1,13 +1,13 @@
 import { createInterface } from 'node:readline';
 
-import { execaCommand } from 'execa';
+import { execa, type Options, parseCommandString } from 'execa';
 
 import { Context } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
-const defaultOptions: Parameters<typeof execaCommand>[1] = {
+const defaultOptions: Options = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
   timeout: 20_000, // 20 seconds
   all: true, // interleave stdout and stderr
@@ -27,11 +27,12 @@ const defaultOptions: Parameters<typeof execaCommand>[1] = {
 export async function execGitCommand(
   { log }: Pick<Context, 'log'>,
   command: string,
-  options?: Parameters<typeof execaCommand>[1]
+  options?: Options
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
-    const { all } = await execaCommand(command, { ...defaultOptions, ...options });
+    const [cmd, ...args] = parseCommandString(command);
+    const { all } = await execa(cmd, args, { ...defaultOptions, ...options });
 
     if (all === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}'`);
@@ -74,10 +75,11 @@ export async function execGitCommand(
 export async function execGitCommandOneLine(
   { log }: Pick<Context, 'log'>,
   command: string,
-  options?: Parameters<typeof execaCommand>[1]
+  options?: Options
 ) {
   log.debug(`execGitCommandOneLine: ${command}`);
-  const process = execaCommand(command, { ...defaultOptions, buffer: false, ...options });
+  const [cmd, ...args] = parseCommandString(command);
+  const process = execa(cmd, args, { ...defaultOptions, buffer: false, ...options });
 
   return Promise.race([
     // This promise will resolve only if there is an error or it times out
@@ -116,10 +118,11 @@ export async function execGitCommandOneLine(
 export async function execGitCommandCountLines(
   { log }: Pick<Context, 'log'>,
   command: string,
-  options?: Parameters<typeof execaCommand>[1]
+  options?: Options
 ) {
   log.debug(`execGitCommandCountLines: ${command}`);
-  const process = execaCommand(command, { ...defaultOptions, buffer: false, ...options });
+  const [cmd, ...args] = parseCommandString(command);
+  const process = execa(cmd, args, { ...defaultOptions, buffer: false, ...options });
   if (!process.stdout) {
     throw new Error('Unexpected missing stdout');
   }

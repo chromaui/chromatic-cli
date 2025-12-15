@@ -1,4 +1,4 @@
-import { execaCommand } from 'execa';
+import { execa, parseCommandString } from 'execa';
 import { createWriteStream, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
@@ -150,12 +150,13 @@ export const buildStorybook = async (ctx: Context) => {
       throw new Error('No build command configured');
     }
 
-    const subprocess = execaCommand(ctx.buildCommand, {
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    const subprocess = execa(cmd, args, {
       stdio: [undefined, logFile, undefined],
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow
       preferLocal: false,
-      signal,
+      cancelSignal: signal,
       env: {
         CI: '1',
         NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',

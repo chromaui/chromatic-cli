@@ -1,3 +1,54 @@
+# v13.3.4 (Tue Nov 18 2025)
+
+#### 🐛 Bug Fix
+
+- Fix passing signal to Execa [#1220](https://github.com/chromaui/chromatic-cli/pull/1220) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v13.3.3 (Fri Oct 31 2025)
+
+#### 🐛 Bug Fix
+
+- Strip ' + N modules' when matching against untraced files [#1217](https://github.com/chromaui/chromatic-cli/pull/1217) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.3.2 (Fri Oct 24 2025)
+
+#### 🐛 Bug Fix
+
+- Fix Node 24 security warning [#1215](https://github.com/chromaui/chromatic-cli/pull/1215) ([@codykaup](https://github.com/codykaup))
+- Remove `corepack enable` from GitHub Actions [#1218](https://github.com/chromaui/chromatic-cli/pull/1218) ([@justin-thurman](https://github.com/justin-thurman))
+- Setup permissions for NPM trusted publishing [#1216](https://github.com/chromaui/chromatic-cli/pull/1216) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.3.1 (Tue Oct 21 2025)
+
+#### 🐛 Bug Fix
+
+- Prevent log file from writes during metadata upload [#1214](https://github.com/chromaui/chromatic-cli/pull/1214) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v13.3.0 (Mon Sep 29 2025)
 
 #### 🚀 Enhancement
