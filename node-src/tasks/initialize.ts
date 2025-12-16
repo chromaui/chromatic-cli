@@ -16,6 +16,11 @@ const AnnounceBuildMutation = `
       status
       autoAcceptChanges
       reportToken
+      features {
+        uiTests
+        uiReview
+        isReactNativeApp
+      }
       app {
         id
         turboSnapAvailability
@@ -128,6 +133,8 @@ export const announceBuild = async (ctx: Context) => {
     ctx.isOnboarding ||
     announcedBuild.number === 1 ||
     (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
+
+  ctx.isReactNativeApp = announcedBuild.features?.isReactNativeApp ?? false;
 
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;
