@@ -1,5 +1,5 @@
 import task from '../components/task';
-import { failed, initial, pending, skipped, success } from './build';
+import { failed, initial, pending, skipped, skippedForReactNative, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
@@ -26,6 +26,12 @@ export const Skipped = () =>
   skipped({
     ...ctx,
     options: { ...ctx.options, storybookBuildDir: '/users/me/project/storybook-static' },
+  } as any);
+
+export const SkippedForReactNative = () =>
+  skippedForReactNative({
+    ...ctx,
+    isReactNativeApp: true,
   } as any);
 
 export const Failed = () => failed({ ...ctx, buildCommand } as any);

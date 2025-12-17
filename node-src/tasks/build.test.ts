@@ -5,7 +5,7 @@ import { execa as execaDefault, parseCommandString } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
+import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -279,6 +279,17 @@ describe('buildStorybook', () => {
         env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
       })
     );
+  });
+
+  it('skips the build for React Native apps', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+    } as any;
+    const task = buildTask(ctx);
+    expect(task.skip).toBeDefined();
+    const skipResult = await task.skip?.(ctx);
+    expect(skipResult).toBe('Using prebuilt React Native assets');
   });
 });
 

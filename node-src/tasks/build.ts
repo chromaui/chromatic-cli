@@ -14,7 +14,14 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
-import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
+import {
+  failed,
+  initial,
+  pending,
+  skipped,
+  skippedForReactNative,
+  success,
+} from '../ui/tasks/build';
 
 export const setSourceDirectory = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -202,6 +209,9 @@ export default function main(ctx: Context) {
       if (ctx.options.storybookBuildDir) {
         ctx.sourceDir = ctx.options.storybookBuildDir;
         return skipped(ctx).output;
+      }
+      if (ctx.isReactNativeApp) {
+        return skippedForReactNative(ctx).output;
       }
       return false;
     },
