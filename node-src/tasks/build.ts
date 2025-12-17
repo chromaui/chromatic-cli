@@ -14,9 +14,11 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
+import missingStorybookBuildDirectory from '../ui/messages/errors/missingStorybookBuildDirectory';
 import {
   failed,
   initial,
+  missingBuildDirectoryForReactNative,
   pending,
   skipped,
   skippedForReactNative,
@@ -206,12 +208,18 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: async (ctx) => {
       if (ctx.skip) return true;
+      if (ctx.isReactNativeApp) {
+        if (!ctx.options.storybookBuildDir) {
+          ctx.log.error(missingStorybookBuildDirectory());
+          setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+          throw new Error(missingBuildDirectoryForReactNative(ctx).output);
+        }
+        ctx.sourceDir = ctx.options.storybookBuildDir;
+        return skippedForReactNative(ctx).output;
+      }
       if (ctx.options.storybookBuildDir) {
         ctx.sourceDir = ctx.options.storybookBuildDir;
         return skipped(ctx).output;
-      }
-      if (ctx.isReactNativeApp) {
-        return skippedForReactNative(ctx).output;
       }
       return false;
     },
