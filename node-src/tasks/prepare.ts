@@ -122,6 +122,23 @@ const isValidStorybook = ({ paths, total }) =>
   total > 0 && paths.includes('iframe.html') && paths.includes('index.html');
 
 /**
+ * Determines if a directory contains a valid React Native Storybook build.
+ * A valid React Native Storybook must have non-zero total size, contain an APK file,
+ * and include a manifest.json file.
+ *
+ * @param fileInfo - Object containing paths array and total size
+ * @param fileInfo.paths - Array of file paths in the directory
+ * @param fileInfo.total - Total size of all files in bytes
+ *
+ * @returns True if the directory contains a valid React Native Storybook build
+ */
+const isValidReactNativeStorybook = ({ paths, total }) => {
+  const hasApk = paths.some((p: string) => p.endsWith('.apk'));
+  const hasManifest = paths.includes('manifest.json');
+  return total > 0 && hasApk && hasManifest;
+};
+
+/**
  * Validates that the source directory contains a valid Storybook build.
  * If validation fails and a build log is available, attempts to find the
  * correct output directory from the log and retries validation.
@@ -131,9 +148,11 @@ const isValidStorybook = ({ paths, total }) =>
  * @throws Error if no valid Storybook build is found
  */
 export async function validateFiles(ctx: Context) {
+  const validator = ctx.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
+
   ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
 
-  if (!isValidStorybook(ctx.fileInfo) && ctx.buildLogFile) {
+  if (!validator(ctx.fileInfo) && ctx.buildLogFile) {
     try {
       const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
@@ -147,7 +166,7 @@ export async function validateFiles(ctx: Context) {
     }
   }
 
-  if (!isValidStorybook(ctx.fileInfo)) {
+  if (!validator(ctx.fileInfo)) {
     throw new Error(invalid(ctx).output);
   }
 }
