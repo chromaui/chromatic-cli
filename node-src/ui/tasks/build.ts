@@ -25,6 +25,18 @@ export const skipped = (ctx: Context) => ({
   output: `Using prebuilt ${buildType(ctx)} at ${ctx.options.storybookBuildDir}`,
 });
 
+export const skippedForReactNative = (ctx: Context) => ({
+  status: 'skipped',
+  title: `Build ${buildType(ctx)} [skipped]`,
+  output: 'Using prebuilt React Native assets',
+});
+
+export const missingBuildDirectoryForReactNative = (ctx: Context) => ({
+  status: 'error',
+  title: `Build ${buildType(ctx)}`,
+  output: 'Build directory required for React Native',
+});
+
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: `Building your ${buildType(ctx)}`,

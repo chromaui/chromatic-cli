@@ -1,11 +1,12 @@
 import { beforeEach } from 'node:test';
 
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { exitCodes } from '@cli/setExitCode';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
+import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -279,6 +280,30 @@ describe('buildStorybook', () => {
         env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
       })
     );
+  });
+
+  it('skips the build for React Native apps when storybookBuildDir is provided', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      options: { storybookBuildDir: '/path/to/rn-build' },
+    } as any;
+    const task = buildTask(ctx);
+    expect(task.skip).toBeDefined();
+    const skipResult = await task.skip?.(ctx);
+    expect(skipResult).toBe('Using prebuilt React Native assets');
+    expect(ctx.sourceDir).toBe('/path/to/rn-build');
+  });
+
+  it('throws error for React Native apps without storybookBuildDir', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      log: new TestLogger(),
+    } as any;
+    const task = buildTask(ctx);
+    await expect(task.skip?.(ctx)).rejects.toThrow('Build directory required for React Native');
+    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 });
 

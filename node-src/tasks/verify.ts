@@ -31,6 +31,7 @@ const PublishBuildMutation = `
     }
   }
 `;
+
 interface PublishBuildMutationResult {
   publishBuild: {
     status: string;
@@ -91,6 +92,7 @@ const StartedBuildQuery = `
     }
   }
 `;
+
 interface StartedBuildQueryResult {
   app: {
     build: {
@@ -127,6 +129,7 @@ const VerifyBuildQuery = `
         features {
           uiTests
           uiReview
+          isReactNativeApp
         }
         autoAcceptChanges
         turboSnapEnabled
@@ -163,6 +166,7 @@ const VerifyBuildQuery = `
     }
   }
 `;
+
 interface VerifyBuildQueryResult {
   app: {
     build: Context['build'];

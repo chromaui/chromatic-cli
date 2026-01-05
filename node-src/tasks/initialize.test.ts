@@ -183,4 +183,23 @@ describe('announceBuild', () => {
       { retries: 3 }
     );
   });
+
+  it.each([
+    { gqlValue: null, expected: false },
+    { gqlValue: false, expected: false },
+    { gqlValue: true, expected: true },
+  ])(
+    'sets ctx.isReactNativeApp to $expected when features.isReactNativeApp is $gqlValue',
+    async ({ gqlValue, expected }) => {
+      const features = { isReactNativeApp: gqlValue };
+      const build = { number: 1, status: 'ANNOUNCED', app: {}, features };
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({ announceBuild: build });
+
+      const ctx = { client, ...defaultContext } as any;
+      await announceBuild(ctx);
+
+      expect(ctx.isReactNativeApp).toBe(expected);
+    }
+  );
 });
