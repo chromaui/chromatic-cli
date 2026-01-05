@@ -1,3 +1,18 @@
+# v13.3.5 (Mon Jan 05 2026)
+
+#### 🐛 Bug Fix
+
+- Adds support for React Native builds [#1224](https://github.com/chromaui/chromatic-cli/pull/1224) ([@justin-thurman](https://github.com/justin-thurman))
+- Skip storybook build step for react native [#1225](https://github.com/chromaui/chromatic-cli/pull/1225) ([@justin-thurman](https://github.com/justin-thurman))
+- Add React Native asset validation [#1223](https://github.com/chromaui/chromatic-cli/pull/1223) ([@justin-thurman](https://github.com/justin-thurman))
+- Add react native app feature flag to CLI context [#1222](https://github.com/chromaui/chromatic-cli/pull/1222) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v13.3.4 (Tue Nov 18 2025)
 
 #### 🐛 Bug Fix
