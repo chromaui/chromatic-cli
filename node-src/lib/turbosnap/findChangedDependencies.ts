@@ -2,6 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import pLimit from 'p-limit';
+
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../git/git';
 import { Context } from '../../types';
 import { matchesFile } from '../utils';
@@ -10,6 +12,11 @@ import { getDependencies } from './getDependencies';
 
 const PACKAGE_JSON = 'package.json';
 export const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'];
+
+// Get concurrency values from environment (defaults to Infinity for unlimited)
+const getPackageConcurrency = (ctx: Context) => ctx.env.CHROMATIC_DEPENDENCY_PACKAGE_CONCURRENCY;
+
+const getBaselineConcurrency = (ctx: Context) => ctx.env.CHROMATIC_DEPENDENCY_BASELINE_CONCURRENCY;
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
@@ -98,19 +105,38 @@ export const findChangedDependencies = async (ctx: Context) => {
     return [];
   }
 
+  const packageConcurrency = getPackageConcurrency(ctx);
+  const baselineConcurrency = getBaselineConcurrency(ctx);
+
+  ctx.log.debug(
+    {
+      packageConcurrency: packageConcurrency === Infinity ? 'unlimited' : packageConcurrency,
+      baselineConcurrency: baselineConcurrency === Infinity ? 'unlimited' : baselineConcurrency,
+      maxConcurrentOperations:
+        packageConcurrency === Infinity || baselineConcurrency === Infinity
+          ? 'unlimited'
+          : packageConcurrency * baselineConcurrency,
+    },
+    'Applying concurrency limits to dependency checking'
+  );
+
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
   const tmpdirsCreated = new Set<string>();
 
+  // Create limiter for package processing
+  const packageLimit = pLimit(packageConcurrency);
+
   try {
     await Promise.all(
-      filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
-        // Create a temporary directory for the HEAD dependencies. We do this to isolate the
-        // package.json and lock files from the rest of the repository because the `inspect` function
-        // from `snyk-nodejs-plugin` used inside getDependencies.ts hardcodes the file paths based on
-        // the root path it receives (first argument).
-        const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
-        tmpdirsCreated.add(tmpdir);
+      filteredPathPairs.map(([manifestPath, lockfilePath, commits]) =>
+        packageLimit(async () => {
+          // Create a temporary directory for the HEAD dependencies. We do this to isolate the
+          // package.json and lock files from the rest of the repository because the `inspect` function
+          // from `snyk-nodejs-plugin` used inside getDependencies.ts hardcodes the file paths based on
+          // the root path it receives (first argument).
+          const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+          tmpdirsCreated.add(tmpdir);
 
         const absoluteManifestPath = path.join(rootPath, manifestPath);
         const absoluteLockfilePath = path.join(rootPath, lockfilePath);
@@ -131,29 +157,36 @@ export const findChangedDependencies = async (ctx: Context) => {
         // Retrieve the union of dependencies which changed compared to each baseline.
         // A change means either the version number is different or the dependency was added/removed.
         // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
+
+        // Create limiter for baseline comparisons (per package)
+        const baselineLimit = pLimit(baselineConcurrency);
+
         await Promise.all(
-          commits.map(async (reference) => {
-            // Create a temporary directory for the baseline dependencies to also isolate the
-            // package.json and lock files for the `inspect` function from `snyk-nodejs-plugin` in
-            // getDependencies.ts.
-            const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
-            tmpdirsCreated.add(tmpdir);
+          commits.map((reference) =>
+            baselineLimit(async () => {
+              // Create a temporary directory for the baseline dependencies to also isolate the
+              // package.json and lock files for the `inspect` function from `snyk-nodejs-plugin` in
+              // getDependencies.ts.
+              const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+              tmpdirsCreated.add(tmpdir);
 
-            const baselineDependencies = await getDependencies(ctx, {
-              rootPath: tmpdir,
-              manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
-              lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
-            });
+              const baselineDependencies = await getDependencies(ctx, {
+                rootPath: tmpdir,
+                manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
+                lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
+              });
 
-            ctx.log.debug({ reference }, `Found baseline dependencies`);
+              ctx.log.debug({ reference }, `Found baseline dependencies`);
 
-            const baselineChanges = await compareBaseline(headDependencies, baselineDependencies);
-            for (const change of baselineChanges) {
-              changedDependencyNames.add(change);
-            }
-          })
+              const baselineChanges = await compareBaseline(headDependencies, baselineDependencies);
+              for (const change of baselineChanges) {
+                changedDependencyNames.add(change);
+              }
+            })
+          )
         );
-      })
+        })
+      )
     );
   } finally {
     for (const tmpdir of tmpdirsCreated) {
