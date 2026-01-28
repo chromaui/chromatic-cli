@@ -2,14 +2,12 @@ import { StorybookConfig } from '@storybook/html-vite';
 import { fileURLToPath } from 'node:url';
 
 const config: StorybookConfig = {
-  stories: process.env.SMOKE_TEST
-    ? ['../test-stories/*.stories.*']
-    : ['../node-src/**/*.@(mdx|stories.*)'],
+  stories: ['../node-src/**/*.@(mdx|stories.*)'],
   addons: [
     '@storybook/addon-docs'
   ],
   framework: { 
-    name: process.env.SMOKE_TEST ? '@storybook/react-vite' : '@storybook/html-vite', 
+    name: '@storybook/html-vite', 
     options: {}
   },
   viteFinal: async (config) => {
@@ -67,7 +65,6 @@ const config: StorybookConfig = {
     `;
   },
   typescript: {
-    // reactDocgen: 'react-docgen-typescript',
   },
   staticDirs: ['../static'],
 };
