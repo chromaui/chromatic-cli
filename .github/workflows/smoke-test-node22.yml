@@ -1,4 +1,4 @@
-name: Smoke test via Node 18
+name: Smoke test via Node 22
 
 on:
   workflow_call:
