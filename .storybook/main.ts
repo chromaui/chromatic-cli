@@ -9,7 +9,7 @@ const config: StorybookConfig = {
     '@storybook/addon-docs'
   ],
   framework: { 
-    name: '@storybook/html-vite', 
+    name: process.env.SMOKE_TEST ? '@storybook/react-vite' : '@storybook/html-vite', 
     options: {}
   },
   viteFinal: async (config) => {
