@@ -123,7 +123,7 @@ const isValidStorybook = ({ paths, total }) =>
 
 /**
  * Determines if a directory contains a valid React Native Storybook build.
- * A valid React Native Storybook must have non-zero total size, contain an APK file,
+ * A valid React Native Storybook must have non-zero total size, contain an APK file _or_ APP directory,
  * and include a manifest.json file.
  *
  * @param fileInfo - Object containing paths array and total size
@@ -133,9 +133,16 @@ const isValidStorybook = ({ paths, total }) =>
  * @returns True if the directory contains a valid React Native Storybook build
  */
 const isValidReactNativeStorybook = ({ paths, total }) => {
-  const hasApk = paths.some((p: string) => p.endsWith('.apk'));
+  let hasApp: boolean;
+
+  // Android has an .apk file
+  hasApp = paths.some((p: string) => p.endsWith('.apk'));
+  // iOS has a directory ending in .app
+  if (!hasApp) hasApp = paths.some((p: string) => /^.*\.app\//.test(p));
+
   const hasManifest = paths.includes('manifest.json');
-  return total > 0 && hasApk && hasManifest;
+
+  return total > 0 && hasApp && hasManifest;
 };
 
 /**
