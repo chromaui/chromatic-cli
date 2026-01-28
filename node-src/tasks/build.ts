@@ -102,7 +102,7 @@ function isE2EBuildCommandNotFoundError(errorMessage: string) {
     // `Command not found: build-archive-storybook`
     'command not found',
     // `Command "build-archive-storybook" not found`
-    `[\\W]?${e2eBuildBinName}[\\W]? not found`,
+    String.raw`[\W]?${e2eBuildBinName}[\W]? not found`,
     // npm not found error can include this code
     'code E404',
     // Exit code 127 is a generic not found exit code
