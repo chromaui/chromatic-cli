@@ -26,12 +26,11 @@ const decorators = [
     console.log({value, kind});
     if (kind.startsWith('CLI/')) {
       document.body.style.backgroundColor = '#16242c';
-      return `<pre><code class="code-style">${ansiHTML(value)}</code></pre>`;
+      return `<pre class="code-style"><code>${ansiHTML(value)}</code></pre>`;
     }
     if (kind.startsWith('HTML/')) {
       document.body.style.backgroundColor = '#F6F9FC';
-
-      return `<pre><div class="html-style">${value}</div></pre>`;
+      return `<pre class="html-style"><div>${value}</div></pre>`;
     }
     document.body.style.backgroundColor = 'paleturquoise';
     return value;
