@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import pkgUp from 'pkg-up';
 import { readFile, writeFile } from 'jsonfile';
+import pkgUp from 'pkg-up';
 
 const packageJson = {
   async read() {
@@ -15,8 +15,8 @@ const packageJson = {
 const rename = async (name) => {
   const initial = await packageJson.read();
 
-  const temp = { ...initial, name };
-  await packageJson.write(temp);
+  const temporary = { ...initial, name };
+  await packageJson.write(temporary);
 };
 
 rename(...process.argv.slice(2, 3));

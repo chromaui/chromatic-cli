@@ -4,7 +4,7 @@ import { FormData } from 'formdata-node';
 import { access, createReadStream, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { default as compress } from '../lib/compress';
+import compress from '../lib/compress';
 import {
   calculateFileHashes,
   traceChangedFiles,

@@ -34,7 +34,7 @@ import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
-import { default as fatalError } from './ui/messages/errors/fatalError';
+import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
 import missingStories from './ui/messages/errors/missingStories';
