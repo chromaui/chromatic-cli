@@ -5,7 +5,7 @@ import { dedent } from 'ts-dedent';
 import { error as errorIcon, info as infoIcon } from '../../components/icons';
 import link from '../../components/link';
 
-export default ({ build, exitCode }) => {
+export default ({ build, exitCode, isOnboarding }) => {
   const { errorCount, interactionTestFailuresCount, webUrl } = build;
   const hasInteractionTestFailures = interactionTestFailuresCount > 0;
   const hasOtherErrors = errorCount - interactionTestFailuresCount > 0;
@@ -25,7 +25,6 @@ export default ({ build, exitCode }) => {
 
   return dedent(chalk`
     ${errorIcon} {bold ${errorMessage}}: failing with exit code ${exitCode}
-    Pass {bold --allow-console-errors} to succeed this command regardless of runtime build errors.
-    ${infoIcon} Review the errors at ${link(webUrl)}
+    ${infoIcon} Review the errors at ${link(isOnboarding ? build.app.setupUrl : webUrl)}
   `);
 };

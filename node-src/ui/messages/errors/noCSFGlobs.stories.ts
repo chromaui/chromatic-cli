@@ -10,7 +10,6 @@ export const NoCSFGlobs = () =>
     storybookDir: '.storybook',
     storybookBuildDir: undefined,
     entryFile: undefined,
-    viewLayer: 'angular',
   });
 
 export const NoCSFGlobsFoundEntry = () =>

@@ -58,11 +58,7 @@ export interface Flags {
   traceChanged?: string;
   uploadMetadata?: boolean;
 
-  // Deprecated options (for JSDOM and tunneled builds, among others)
-  allowConsoleErrors?: boolean;
-  appCode?: string[];
-  diagnostics?: boolean;
-  only?: string;
+  // Deprecated options
   preserveMissing?: boolean;
 }
 
@@ -107,7 +103,6 @@ export interface Options extends Configuration {
   playwright: Flags['playwright'];
   cypress: Flags['cypress'];
   outputDir: string;
-  allowConsoleErrors: Flags['allowConsoleErrors'];
   url?: string;
   storybookBuildDir: string;
   storybookBaseDir: Flags['storybookBaseDir'];
@@ -159,6 +154,7 @@ export type TaskName =
   | 'storybookInfo'
   | 'initialize'
   | 'build'
+  | 'prepare'
   | 'upload'
   | 'verify'
   | 'snapshot'
@@ -207,6 +203,7 @@ export interface Context {
   reportPath?: string;
   isPublishOnly?: boolean;
   isOnboarding: boolean;
+  isReactNativeApp?: boolean;
   turboSnapAvailability?: string;
 
   http: HTTPClient;
@@ -240,7 +237,6 @@ export interface Context {
     baseDir?: string;
     configDir: string;
     staticDir: string[];
-    viewLayer: string;
     addons: {
       name: string;
       packageName?: string;
@@ -267,6 +263,11 @@ export interface Context {
     status: string;
     autoAcceptChanges: boolean;
     reportToken: string;
+    features?: {
+      uiTests: boolean;
+      uiReview: boolean;
+      isReactNativeApp: boolean;
+    };
     app: {
       id: string;
       turboSnapAvailability: string;
@@ -310,6 +311,7 @@ export interface Context {
     features?: {
       uiTests: boolean;
       uiReview: boolean;
+      isReactNativeApp: boolean;
     };
     tests?: {
       spec: {
@@ -331,6 +333,15 @@ export interface Context {
     status: string;
     webUrl: string;
     storybookUrl: string;
+    specCount: number;
+    componentCount: number;
+    testCount: number;
+    changeCount: number;
+    errorCount: number;
+    actualTestCount: number;
+    actualCaptureCount: number;
+    inheritedCaptureCount: number;
+    interactionTestFailuresCount: number;
   };
   sourceDir: string;
   buildCommand?: string;
@@ -365,12 +376,14 @@ export interface Task {
 export interface Reason {
   moduleName: string;
 }
+
 export interface Module {
   id: string | number | null;
   name: string;
   modules?: Pick<Module, 'name'>[];
   reasons?: Reason[];
 }
+
 export interface Stats {
   modules: Module[];
 }

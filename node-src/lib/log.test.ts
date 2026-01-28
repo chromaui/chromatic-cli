@@ -35,7 +35,7 @@ const timestamp = expect.stringMatching(/\d\d:\d\d:\d\d.\d\d\d/);
 describe('log prefix', () => {
   it('should use the log prefix from environment variables', () => {
     process.env.LOG_PREFIX = 'env-prefix';
-    const logger = createLogger({});
+    const logger = createLogger();
     logger.info('message');
     expect(consoleInfo).toHaveBeenCalledWith('env-prefix', 'message');
   });
@@ -55,14 +55,14 @@ describe('log prefix', () => {
   });
 
   it('should use a timestamp as prefix by default', () => {
-    const logger = createLogger({});
+    const logger = createLogger();
     logger.info('message');
     expect(consoleInfo).toHaveBeenCalledWith(timestamp, 'message');
   });
 
   it('should not use a prefix if set to an empty string', () => {
     process.env.LOG_PREFIX = '';
-    const logger = createLogger({});
+    const logger = createLogger();
     logger.info('message');
     expect(consoleInfo).toHaveBeenCalledWith('message');
   });
@@ -77,7 +77,7 @@ describe('log prefix', () => {
 
 describe('log levels', () => {
   it('should ignore debug messages by default', () => {
-    const logger = createLogger({});
+    const logger = createLogger();
 
     logger.error('error', 1, 2);
     expect(consoleError).toHaveBeenCalledWith(timestamp, 'error', '1', '2');
@@ -94,7 +94,7 @@ describe('log levels', () => {
 
   it('should use the log level from environment variables', () => {
     process.env.LOG_LEVEL = 'debug';
-    const logger = createLogger({});
+    const logger = createLogger();
 
     logger.error('error');
     expect(consoleError).toHaveBeenCalledWith(timestamp, 'error');
@@ -153,7 +153,7 @@ describe('log levels', () => {
 });
 
 it('stringifies non-primitive values', () => {
-  const logger = createLogger({});
+  const logger = createLogger();
   logger.info('message', 1, true, null, undefined, { key: 'value' });
   expect(consoleInfo).toHaveBeenCalledWith(
     timestamp,

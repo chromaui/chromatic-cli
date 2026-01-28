@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import dns from 'dns';
-import { execaCommand as execaDefault } from 'execa';
+import { execa as execaDefault, parseCommandString } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
@@ -39,7 +39,13 @@ beforeEach(() => {
 });
 
 vi.mock('dns');
-vi.mock('execa');
+vi.mock('execa', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('execa')>();
+  return {
+    ...actual,
+    execa: vi.fn(() => Promise.resolve()),
+  };
+});
 
 // NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
 // vitest doesn't allow you to do that.
@@ -49,7 +55,7 @@ vi.mock(import('./lib/e2e'), async (importOriginal) => ({
   getE2EBuildCommand: () => mockedBuildCommand,
 }));
 
-const execaCommand = vi.mocked(execaDefault);
+const execa = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
 const upload = vi.mocked(uploadFiles);
 
@@ -345,7 +351,6 @@ vi.mock('./lib/getPackageManager', () => ({
 vi.mock('./lib/getStorybookInfo', () => ({
   default: () => ({
     version: '5.1.0',
-    viewLayer: 'viewLayer',
     addons: [],
   }),
 }));
@@ -359,11 +364,10 @@ beforeEach(() => {
   processEnvironment = process.env;
   process.env = {
     DISABLE_LOGGING: 'true',
-    CHROMATIC_APP_CODE: undefined,
     CHROMATIC_PROJECT_TOKEN: undefined,
   };
-  execaCommand.mockReset();
-  execaCommand.mockResolvedValue({ stdout: '1.2.3' } as any);
+  execa.mockReset();
+  execa.mockResolvedValue({ all: '1.2.3' } as any);
   getCommit.mockResolvedValue({
     commit: 'commit',
     committedAt: 1234,
@@ -440,7 +444,6 @@ it('runs in simple situations', async () => {
     fromCI: false,
     packageVersion: expect.any(String),
     storybookVersion: '5.1.0',
-    storybookViewLayer: 'viewLayer',
     committerEmail: 'test@test.com',
     committerName: 'tester',
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
@@ -496,8 +499,9 @@ it('calls out to npm build script passed and uploads files', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--build-script-name=build-storybook']);
   await runAll(ctx);
 
-  expect(execaCommand).toHaveBeenCalledWith(
-    expect.stringMatching(/build-storybook/),
+  expect(execa).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.arrayContaining(['build-storybook']),
     expect.objectContaining({})
   );
 
@@ -536,7 +540,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--storybook-build-dir=dirname']);
   await runAll(ctx);
   expect(ctx.exitCode).toBe(1);
-  expect(execaCommand).not.toHaveBeenCalled();
+  expect(execa).not.toHaveBeenCalled();
   expect(uploadFiles).toHaveBeenCalledWith(
     expect.any(Object),
     [
@@ -570,14 +574,16 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
 it('builds with playwright with --playwright', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--playwright']);
   await runAll(ctx);
-  expect(execaCommand).toHaveBeenCalledWith(mockedBuildCommand, expect.objectContaining({}));
+  const [cmd, ...args] = parseCommandString(mockedBuildCommand);
+  expect(execa).toHaveBeenCalledWith(cmd, args, expect.objectContaining({}));
   expect(ctx.exitCode).toBe(1);
 });
 
 it('builds with cypress with --cypress', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--cypress']);
   await runAll(ctx);
-  expect(execaCommand).toHaveBeenCalledWith(mockedBuildCommand, expect.objectContaining({}));
+  const [cmd, ...args] = parseCommandString(mockedBuildCommand);
+  expect(execa).toHaveBeenCalledWith(cmd, args, expect.objectContaining({}));
   expect(ctx.exitCode).toBe(1);
 });
 
@@ -745,14 +751,14 @@ it('ctx should be JSON serializable', async () => {
   expect(() => writeChromaticDiagnostics(ctx)).not.toThrow();
 });
 
-it('should write context to chromatic-diagnostics.json if --diagnostics is passed', async () => {
-  const ctx = getContext(['--project-token=asdf1234', '--diagnostics']);
+it('should write context to chromatic-diagnostics.json if --diagnostics-file is passed', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--diagnostics-file']);
   await runAll(ctx);
   expect(jsonfile.writeFile).toHaveBeenCalledWith(
     'chromatic-diagnostics.json',
     expect.objectContaining({
       flags: expect.objectContaining({
-        diagnostics: true,
+        diagnosticsFile: '',
       }),
       options: expect.objectContaining({
         projectToken: undefined, // redacted
@@ -762,7 +768,7 @@ it('should write context to chromatic-diagnostics.json if --diagnostics is passe
   );
 });
 
-it('should not write context to chromatic-diagnostics.json if --diagnostics is not passed', async () => {
+it('should not write context to chromatic-diagnostics.json if --diagnostics-file is not passed', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   await runAll(ctx);
   expect(jsonfile.writeFile).not.toHaveBeenCalled();
@@ -824,7 +830,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
 
 describe('getGitInfo', () => {
   it('should retreive git info', async () => {
-    const result = await getGitInfo();
+    const result = await getGitInfo(getContext([]));
     expect(result).toMatchObject({
       branch: 'branch',
       commit: 'commit',
@@ -840,7 +846,7 @@ describe('getGitInfo', () => {
 
   it('should still return getInfo if no origin url', async () => {
     getSlug.mockRejectedValue(new Error('no origin set'));
-    const result = await getGitInfo();
+    const result = await getGitInfo(getContext([]));
     expect(result).toMatchObject({
       branch: 'branch',
       commit: 'commit',

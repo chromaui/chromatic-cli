@@ -2,6 +2,7 @@ import { access } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { exitCodes } from '../setExitCode';
+import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
 import { findChangedDependencies as findChangedDependenciesDep } from './findChangedDependencies';
 import { findChangedPackageFiles as findChangedPackageFilesDep } from './findChangedPackageFiles';
@@ -29,7 +30,7 @@ const findChangedDependencies = vi.mocked(findChangedDependenciesDep);
 const accessMock = vi.mocked(access);
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
+const log = new TestLogger();
 const http = { fetch: vi.fn() };
 
 afterEach(() => {
@@ -80,7 +81,7 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx);
 
     expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
+    expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
     expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
@@ -148,7 +149,7 @@ describe('traceChangedFiles', () => {
 
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(onlyStoryFiles).toStrictEqual(deps);
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(packageMetadataChanges);
+    expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
   });
 
   it('throws if stats file is not found', async () => {

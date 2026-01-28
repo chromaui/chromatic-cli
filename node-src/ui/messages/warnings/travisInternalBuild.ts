@@ -9,5 +9,5 @@ export default () =>
     ${warning} {bold Running on a Travis PR build from an internal branch}
     It is recommended to run Chromatic on the push builds from Travis where possible.
     We advise turning on push builds and disabling Chromatic for internal PR builds.
-    ${info} Read more at ${link('https://www.chromatic.com/docs/ci#travis-ci')}
+    ${info} Read more at ${link('https://www.chromatic.com/docs/travisci/')}
   `);

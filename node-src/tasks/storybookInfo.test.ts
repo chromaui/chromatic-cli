@@ -12,7 +12,7 @@ const mockedGetStorybookBaseDirectory = vi.mocked(getStorybookBaseDirectory);
 
 describe('storybookInfo', () => {
   it('retrieves Storybook metadata and sets it on context', async () => {
-    const storybook = { version: '1.0.0', viewLayer: 'react', addons: [] };
+    const storybook = { version: '1.0.0', addons: [] };
     getStorybookInfo.mockResolvedValue(storybook);
     mockedGetStorybookBaseDirectory.mockReturnValue('');
 

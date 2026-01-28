@@ -1,65 +1,73 @@
 import { PassThrough, Transform } from 'node:stream';
-import { beforeEach } from 'node:test';
 
-import { execaCommand as rawExecaCommand } from 'execa';
-import { describe, expect, it, vitest } from 'vitest';
+import { execa as execaDefault } from 'execa';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import TestLogger from '../lib/testLogger';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 import { execGitCommand, execGitCommandCountLines, execGitCommandOneLine } from './execGit';
 
-vitest.mock('execa');
+const ctx = { log: new TestLogger() };
+const execa = vi.mocked(execaDefault);
 
-const execaCommand = vitest.mocked(rawExecaCommand);
+vi.mock('execa', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('execa')>();
+  return {
+    ...actual,
+    execa: vi.fn(() => Promise.resolve()),
+  };
+});
+
 beforeEach(() => {
-  execaCommand.mockReset();
+  vi.clearAllMocks();
 });
 
 describe('execGitCommand', () => {
   it('returns execa output if it works', async () => {
-    execaCommand.mockResolvedValue({
+    execa.mockResolvedValue({
       all: Buffer.from('some output'),
     } as any);
 
-    expect(await execGitCommand('some command')).toEqual('some output');
+    expect(await execGitCommand(ctx, 'some command')).toEqual('some output');
   });
 
   it('errors if there is no output', async () => {
-    execaCommand.mockResolvedValue({
+    execa.mockResolvedValue({
       all: undefined,
     } as any);
 
-    await expect(execGitCommand('some command')).rejects.toThrow(/Unexpected missing git/);
+    await expect(execGitCommand(ctx, 'some command')).rejects.toThrow(/Unexpected missing git/);
   });
 
   it('handles missing git error', async () => {
-    execaCommand.mockRejectedValue(new Error('not a git repository'));
+    execa.mockRejectedValue(new Error('not a git repository'));
 
-    await expect(execGitCommand('some command')).rejects.toThrow(
+    await expect(execGitCommand(ctx, 'some command')).rejects.toThrow(
       gitNotInitialized({ command: 'some command' })
     );
   });
 
   it('handles git not found error', async () => {
-    execaCommand.mockRejectedValue(new Error('git not found'));
+    execa.mockRejectedValue(new Error('git not found'));
 
-    await expect(execGitCommand('some command')).rejects.toThrow(
+    await expect(execGitCommand(ctx, 'some command')).rejects.toThrow(
       gitNotInstalled({ command: 'some command' })
     );
   });
 
   it('handles no commits yet', async () => {
-    execaCommand.mockRejectedValue(new Error('does not have any commits yet'));
+    execa.mockRejectedValue(new Error('does not have any commits yet'));
 
-    await expect(execGitCommand('some command')).rejects.toThrow(
+    await expect(execGitCommand(ctx, 'some command')).rejects.toThrow(
       gitNoCommits({ command: 'some command' })
     );
   });
 
   it('rethrows arbitrary errors', async () => {
-    execaCommand.mockRejectedValue(new Error('something random'));
-    await expect(execGitCommand('some command')).rejects.toThrow('something random');
+    execa.mockRejectedValue(new Error('something random'));
+    await expect(execGitCommand(ctx, 'some command')).rejects.toThrow('something random');
   });
 });
 
@@ -83,9 +91,9 @@ function createExecaStreamer() {
 describe('execGitCommandOneLine', () => {
   it('returns the first line if the command works', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandOneLine('some command');
+    const promise = execGitCommandOneLine(ctx, 'some command');
 
     streamer.stdout.write('First line\n');
     streamer.stdout.write('Second line\n');
@@ -95,9 +103,9 @@ describe('execGitCommandOneLine', () => {
 
   it('returns the output if the command only has one line', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandOneLine('some command');
+    const promise = execGitCommandOneLine(ctx, 'some command');
 
     streamer.stdout.write('First line\n');
     streamer.stdout.end();
@@ -107,9 +115,9 @@ describe('execGitCommandOneLine', () => {
 
   it('Return an error if the command has no ouput', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandOneLine('some command');
+    const promise = execGitCommandOneLine(ctx, 'some command');
 
     streamer.kill();
 
@@ -118,9 +126,9 @@ describe('execGitCommandOneLine', () => {
 
   it('rethrows arbitrary errors', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandOneLine('some command');
+    const promise = execGitCommandOneLine(ctx, 'some command');
 
     streamer._rejecter(new Error('some error'));
 
@@ -131,9 +139,9 @@ describe('execGitCommandOneLine', () => {
 describe('execGitCommandCountLines', () => {
   it('counts lines, many', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandCountLines('some command');
+    const promise = execGitCommandCountLines(ctx, 'some command');
 
     streamer.stdout.write('First line\n');
     streamer.stdout.write('Second line\n');
@@ -144,9 +152,9 @@ describe('execGitCommandCountLines', () => {
 
   it('counts lines, one', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandCountLines('some command');
+    const promise = execGitCommandCountLines(ctx, 'some command');
 
     streamer.stdout.write('First line\n');
     streamer.kill();
@@ -156,9 +164,9 @@ describe('execGitCommandCountLines', () => {
 
   it('counts lines, none', async () => {
     const streamer = createExecaStreamer();
-    execaCommand.mockReturnValue(streamer as any);
+    execa.mockReturnValue(streamer as any);
 
-    const promise = execGitCommandCountLines('some command');
+    const promise = execGitCommandCountLines(ctx, 'some command');
 
     streamer.kill();
 

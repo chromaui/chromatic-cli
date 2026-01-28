@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "11.27.0",
+  "version": "13.3.5",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -124,6 +124,7 @@
     "@types/prompts": "^2.4.9",
     "@types/semver": "^7.3.9",
     "@types/webpack-env": "^1.18.5",
+    "@types/ws": "^8",
     "@vitest/coverage-v8": "^2.0.5",
     "ansi-html": "0.0.9",
     "any-observable": "^0.5.1",
@@ -153,7 +154,7 @@
     "eslint-plugin-storybook": "^10.2.1",
     "eslint-plugin-unicorn": "^62.0.0",
     "esm": "^3.2.25",
-    "execa": "^7.2.0",
+    "execa": "^9.6.0",
     "fake-tag": "^2.0.0",
     "filesize": "^10.1.0",
     "find-up": "^7.0.0",
@@ -207,6 +208,7 @@
     "vite-tsconfig-paths": "^6.0.5",
     "vitest": "^4.0.18",
     "why-is-node-running": "^2.1.2",
+    "ws": "^8.18.2",
     "xxhash-wasm": "^1.0.2",
     "yarn-or-npm": "^3.0.1",
     "zen-observable": "^0.8.15",

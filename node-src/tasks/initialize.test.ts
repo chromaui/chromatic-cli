@@ -1,21 +1,27 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
-import { execa as execaDefault, execaCommand } from 'execa';
+import TestLogger from '@cli/testLogger';
+import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
 
-vi.mock('execa');
 vi.mock('@antfu/ni');
+vi.mock('execa', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('execa')>();
+  return {
+    ...actual,
+    execa: vi.fn(() => Promise.resolve()),
+  };
+});
 
 const execa = vi.mocked(execaDefault);
-const command = vi.mocked(execaCommand);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
 process.env.GERRIT_BRANCH = 'foo/bar';
 process.env.TRAVIS_EVENT_TYPE = 'pull_request';
 
 const environment = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
@@ -31,7 +37,6 @@ describe('setEnvironment', () => {
 describe('setRuntimeMetadata', () => {
   beforeEach(() => {
     execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
-    command.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
   });
 
   it('sets the build command on the context', async () => {
@@ -100,7 +105,7 @@ describe('announceBuild', () => {
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false, committedAt: 0 },
     pkg: { version: '1.0.0' },
-    storybook: { baseDir: '', version: '2.0.0', viewLayer: 'react', addons: [] },
+    storybook: { baseDir: '', version: '2.0.0', addons: [] },
     runtimeMetadata: {
       nodePlatform: 'darwin',
       nodeVersion: '18.12.1',
@@ -137,7 +142,6 @@ describe('announceBuild', () => {
           rebuildForBuildId: undefined,
           storybookAddons: ctx.storybook.addons,
           storybookVersion: ctx.storybook.version,
-          storybookViewLayer: ctx.storybook.viewLayer,
           projectMetadata: {
             storybookBaseDir: '',
           },
@@ -179,4 +183,23 @@ describe('announceBuild', () => {
       { retries: 3 }
     );
   });
+
+  it.each([
+    { gqlValue: null, expected: false },
+    { gqlValue: false, expected: false },
+    { gqlValue: true, expected: true },
+  ])(
+    'sets ctx.isReactNativeApp to $expected when features.isReactNativeApp is $gqlValue',
+    async ({ gqlValue, expected }) => {
+      const features = { isReactNativeApp: gqlValue };
+      const build = { number: 1, status: 'ANNOUNCED', app: {}, features };
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({ announceBuild: build });
+
+      const ctx = { client, ...defaultContext } as any;
+      await announceBuild(ctx);
+
+      expect(ctx.isReactNativeApp).toBe(expected);
+    }
+  );
 });

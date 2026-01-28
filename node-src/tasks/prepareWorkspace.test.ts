@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
 import installDeps from '../lib/installDependencies';
+import TestLogger from '../lib/testLogger';
 import { runPrepareWorkspace } from './prepareWorkspace';
 
 vi.mock('../git/git');
@@ -14,7 +15,7 @@ const isUpToDate = vi.mocked(git.isUpToDate);
 const findMergeBase = vi.mocked(git.findMergeBase);
 const installDependencies = vi.mocked(installDeps);
 
-const log = { error: vi.fn() };
+const log = new TestLogger();
 
 describe('runPrepareWorkspace', () => {
   it('retrieves the merge base, does a git checkout and installs dependencies', async () => {
@@ -25,7 +26,7 @@ describe('runPrepareWorkspace', () => {
 
     await runPrepareWorkspace(ctx, {} as any);
     expect(ctx.mergeBase).toBe('1234asd');
-    expect(checkout).toHaveBeenCalledWith('1234asd');
+    expect(checkout).toHaveBeenCalledWith(ctx, '1234asd');
     expect(installDependencies).toHaveBeenCalled();
   });
 

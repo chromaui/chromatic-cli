@@ -5,6 +5,7 @@ import auth from './auth';
 import build from './build';
 import gitInfo from './gitInfo';
 import initialize from './initialize';
+import prepare from './prepare';
 import prepareWorkspace from './prepareWorkspace';
 import report from './report';
 import restoreWorkspace from './restoreWorkspace';
@@ -19,6 +20,7 @@ export const runUploadBuild = [
   storybookInfo,
   initialize,
   build,
+  prepare,
   upload,
   verify,
   snapshot,

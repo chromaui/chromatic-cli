@@ -12,6 +12,7 @@ export default defineConfig({
         'scripts/**',
         'test-stories/**',
         '**/*.stories.{t,j}s',
+        'node-src/lib/testLogger.ts',
         ...coverageConfigDefaults.exclude,
       ],
     },

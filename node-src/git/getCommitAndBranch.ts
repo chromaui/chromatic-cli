@@ -22,6 +22,15 @@ interface CommitInfo {
   mergeCommit?: string;
 }
 
+function getBranchDetailsFromEnvironmentCI(log) {
+  try {
+    return envCi();
+  } catch (err) {
+    log.debug('Error while parsing CI environment variables', err);
+    return {};
+  }
+}
+
 /**
  *  Gather commit and branch information from Git and the local environment.
  *
@@ -44,8 +53,8 @@ export default async function getCommitAndBranch(
   }: { branchName?: string; patchBaseRef?: string; ci?: boolean } = {}
 ) {
   const { log } = ctx;
-  let commit: CommitInfo = await getCommit();
-  let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch());
+  let commit: CommitInfo = await getCommit(ctx);
+  let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch(ctx));
   let slug;
 
   const {
@@ -66,14 +75,22 @@ export default async function getCommitAndBranch(
     CHROMATIC_PULL_REQUEST_SHA,
     CHROMATIC_SLUG,
   } = process.env;
-  const { isCi, service, prBranch, branch: ciBranch, commit: ciCommit, slug: ciSlug } = envCi();
+
+  const {
+    isCi,
+    service,
+    prBranch,
+    branch: ciBranch,
+    commit: ciCommit,
+    slug: ciSlug,
+  } = getBranchDetailsFromEnvironmentCI(log);
 
   const isFromEnvironmentVariable = CHROMATIC_SHA && CHROMATIC_BRANCH; // Our GitHub Action also sets these
   const isTravisPrBuild = TRAVIS_EVENT_TYPE === 'pull_request';
   const isGitHubAction = GITHUB_ACTIONS === 'true';
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
 
-  if (!(await hasPreviousCommit())) {
+  if (!(await hasPreviousCommit(ctx))) {
     const message = gitOneCommit(isGitHubAction);
     if (isCi) {
       throw new Error(message);
@@ -83,7 +100,7 @@ export default async function getCommitAndBranch(
   }
 
   if (isFromEnvironmentVariable) {
-    commit = await getCommit(CHROMATIC_SHA).catch((err) => {
+    commit = await getCommit(ctx, CHROMATIC_SHA).catch((err) => {
       log.warn(noCommitDetails({ sha: CHROMATIC_SHA, env: 'CHROMATIC_SHA' }));
       log.debug(err);
       return { commit: CHROMATIC_SHA, committedAt: Date.now() };
@@ -104,7 +121,7 @@ export default async function getCommitAndBranch(
     // Travis PR builds are weird, we want to ensure we mark build against the commit that was
     // merged from, rather than the resulting "ephemeral" merge commit that doesn't stick around in the
     // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
-    commit = await getCommit(TRAVIS_PULL_REQUEST_SHA).catch((err) => {
+    commit = await getCommit(ctx, TRAVIS_PULL_REQUEST_SHA).catch((err) => {
       log.warn(noCommitDetails({ sha: TRAVIS_PULL_REQUEST_SHA, env: 'TRAVIS_PULL_REQUEST_SHA' }));
       log.debug(err);
       return { commit: TRAVIS_PULL_REQUEST_SHA, committedAt: Date.now() };
@@ -129,7 +146,7 @@ export default async function getCommitAndBranch(
     // This does not apply to our GitHub Action, because it'll set CHROMATIC_SHA, -BRANCH and -SLUG.
     // We intentionally use the GITHUB_HEAD_REF (branch name) here, to retrieve the last commit on
     // the head branch rather than the merge commit (GITHUB_SHA).
-    commit = await getCommit(GITHUB_HEAD_REF).catch((err) => {
+    commit = await getCommit(ctx, GITHUB_HEAD_REF).catch((err) => {
       log.warn(noCommitDetails({ ref: GITHUB_HEAD_REF, sha: GITHUB_SHA, env: 'GITHUB_HEAD_REF' }));
       log.debug(err);
       return { commit: GITHUB_SHA, committedAt: Date.now() };
@@ -145,7 +162,7 @@ export default async function getCommitAndBranch(
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
-    commit = await getCommit(ciCommit).catch((err) => {
+    commit = await getCommit(ctx, ciCommit).catch((err) => {
       log.warn(noCommitDetails({ sha: ciCommit }));
       log.debug(err);
       return { commit: ciCommit, committedAt: Date.now() };
@@ -177,7 +194,7 @@ export default async function getCommitAndBranch(
   // To do this, GitHub creates a new commit and does a CI run with the branch changed to e.g. gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36
   // If you configure merge queues to rebase in this circumstance,
   // we lose track of baselines as the branch name has changed so our usual rebase detection (based on branch name) doesn't work.
-  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(branch);
+  const mergeQueueBranchPrNumber = await mergeQueueBranchMatch(ctx, branch);
   if (mergeQueueBranchPrNumber) {
     // This is why we extract the PR number from the branch name and use it to find the branch name of the PR that was merged.
     const branchFromMergeQueuePullRequestNumber = await getBranchFromMergeQueuePullRequestNumber(

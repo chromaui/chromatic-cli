@@ -1,21 +1,29 @@
 import { beforeEach } from 'node:test';
 
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
-import { execaCommand } from 'execa';
+import { exitCodes } from '@cli/setExitCode';
+import { execa as execaDefault, parseCommandString } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
+import TestLogger from '../lib/testLogger';
+import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
-vi.mock('execa');
 vi.mock('@antfu/ni');
+vi.mock('execa', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('execa')>();
+  return {
+    ...actual,
+    execa: vi.fn(() => Promise.resolve()),
+  };
+});
 
-const command = vi.mocked(execaCommand);
+const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
-  command.mockClear();
+  execa.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -138,12 +146,68 @@ describe('setBuildCommand', () => {
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.1.0' },
       git: { changedFiles: ['./index.js'] },
-      log: { warn: vi.fn() },
+      log: new TestLogger(),
     } as any;
     await setBuildCommand(ctx);
     expect(ctx.log.warn).toHaveBeenCalledWith(
       'Storybook version 6.2.0 or later is required to use the --only-changed flag'
     );
+  });
+
+  it('uses the correct flag for webpack stats for < 8.5.0', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '8.4.0' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setBuildCommand(ctx);
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('npm run build:storybook');
+  });
+
+  it('uses the correct flag for webpack stats for >= 8.5.0', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      storybook: { version: '8.5.0' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setBuildCommand(ctx);
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('npm run build:storybook');
+  });
+
+  it('uses the old flag when it storybook version is undetected', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const ctx = {
+      sourceDir: './source-dir/',
+      options: { buildScriptName: 'build:storybook' },
+      git: { changedFiles: ['./index.js'] },
+    } as any;
+    await setBuildCommand(ctx);
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(ctx.buildCommand).toEqual('npm run build:storybook');
   });
 });
 
@@ -153,13 +217,15 @@ describe('buildStorybook', () => {
       ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: { debug: vi.fn() },
+      log: new TestLogger(),
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
     expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
-    expect(command).toHaveBeenCalledWith(
-      'npm run build:storybook --script-args',
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
       expect.objectContaining({ stdio: expect.any(Array) })
     );
     expect(ctx.log.debug).toHaveBeenCalledWith('Running build command:', ctx.buildCommand);
@@ -171,9 +237,9 @@ describe('buildStorybook', () => {
       buildCommand: 'npm run build:storybook --script-args',
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: { debug: vi.fn(), error: vi.fn() },
+      log: new TestLogger(),
     } as any;
-    command.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
+    execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
   });
@@ -183,13 +249,17 @@ describe('buildStorybook', () => {
       ...baseContext,
       buildCommand: 'npm run build:storybook --script-args',
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: { debug: vi.fn() },
+      log: new TestLogger(),
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
-    expect(command).toHaveBeenCalledWith(
-      ctx.buildCommand,
-      expect.objectContaining({ env: { CI: '1', NODE_ENV: 'production' } })
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
+      expect.objectContaining({
+        env: { CI: '1', NODE_ENV: 'production', STORYBOOK_INVOKED_BY: 'chromatic' },
+      })
     );
   });
 
@@ -202,10 +272,38 @@ describe('buildStorybook', () => {
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
     await buildStorybook(ctx);
-    expect(command).toHaveBeenCalledWith(
-      ctx.buildCommand,
-      expect.objectContaining({ env: { CI: '1', NODE_ENV: 'test' } })
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
+      expect.objectContaining({
+        env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
+      })
     );
+  });
+
+  it('skips the build for React Native apps when storybookBuildDir is provided', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      options: { storybookBuildDir: '/path/to/rn-build' },
+    } as any;
+    const task = buildTask(ctx);
+    expect(task.skip).toBeDefined();
+    const skipResult = await task.skip?.(ctx);
+    expect(skipResult).toBe('Using prebuilt React Native assets');
+    expect(ctx.sourceDir).toBe('/path/to/rn-build');
+  });
+
+  it('throws error for React Native apps without storybookBuildDir', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      log: new TestLogger(),
+    } as any;
+    const task = buildTask(ctx);
+    await expect(task.skip?.(ctx)).rejects.toThrow('Build directory required for React Native');
+    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 });
 
@@ -237,7 +335,7 @@ describe('buildStorybook E2E', () => {
         log: { debug: vi.fn(), error: vi.fn() },
       } as any;
 
-      command.mockRejectedValueOnce(new Error(error));
+      execa.mockRejectedValueOnce(new Error(error));
       await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
       expect(ctx.log.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to import `@chromatic-com/playwright`')
@@ -258,7 +356,7 @@ describe('buildStorybook E2E', () => {
 
     const errorMessage =
       'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe\n\nMore error message lines\n\nAnd more';
-    command.mockRejectedValueOnce(new Error(errorMessage));
+    execa.mockRejectedValueOnce(new Error(errorMessage));
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
     expect(ctx.log.error).not.toHaveBeenCalledWith(
       expect.stringContaining('Failed to import `@chromatic-com/playwright`')

@@ -100,7 +100,6 @@ async function run() {
 
   try {
     // Remember to keep this list in sync with ../action.yml
-    const allowConsoleErrors = getInput('allowConsoleErrors');
     const autoAcceptChanges = getInput('autoAcceptChanges');
     const branchName = getInput('branchName');
     const buildScriptName = getInput('buildScriptName');
@@ -108,7 +107,7 @@ async function run() {
     const configFile = getInput('configFile');
     const cypress = getInput('cypress');
     const debug = getInput('debug');
-    const diagnosticsFile = getInput('diagnosticsFile') || getInput('diagnostics');
+    const diagnosticsFile = getInput('diagnosticsFile');
     const dryRun = getInput('dryRun');
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
@@ -119,14 +118,13 @@ async function run() {
     const logFile = getInput('logFile');
     const logLevel = getInput('logLevel');
     const logPrefix = getInput('logPrefix');
-    const only = getInput('only');
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getMultilineInput('onlyStoryFiles');
     const onlyStoryNames = getMultilineInput('onlyStoryNames');
     const outputDir = getInput('outputDir');
     const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
-    const projectToken = getInput('projectToken') || getInput('appCode'); // backwards compatibility
+    const projectToken = getInput('projectToken');
     const repositorySlug = getInput('repositorySlug');
     const skip = getInput('skip');
     const skipUpdateCheck = getInput('skipUpdateCheck');
@@ -156,7 +154,6 @@ async function run() {
         inAction: true,
       },
       flags: {
-        allowConsoleErrors: maybe(allowConsoleErrors, false),
         autoAcceptChanges: maybe(autoAcceptChanges),
         branchName: maybe(branchName),
         buildScriptName: maybe(buildScriptName),
@@ -176,14 +173,13 @@ async function run() {
         logFile: maybe(logFile),
         logLevel: maybe(logLevel),
         logPrefix: maybe(logPrefix),
-        only: maybe(only),
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),
         onlyStoryNames: maybe(onlyStoryNames),
         outputDir: maybe(outputDir),
         playwright: maybe(playwright),
         preserveMissing: maybe(preserveMissing),
-        projectToken,
+        projectToken: maybe(projectToken),
         repositorySlug: maybe(repositorySlug),
         skip: maybe(skip),
         skipUpdateCheck: maybe(skipUpdateCheck, false),

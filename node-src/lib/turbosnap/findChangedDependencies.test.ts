@@ -1,5 +1,9 @@
 import snykGraph from '@snyk/dep-graph';
-import { mkdtempSync as unMockedMkdtempSync, statSync as unMockedStatSync } from 'fs';
+import {
+  copyFileSync as unMockedCopyFileSync,
+  mkdtempSync as unMockedMkdtempSync,
+  statSync as unMockedStatSync,
+} from 'fs';
 import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
@@ -21,6 +25,9 @@ const tmpdir = '/tmpdir';
 const statSync = unMockedStatSync as Mock;
 statSync.mockReturnValue({ size: 1 });
 
+const copyFileSync = unMockedCopyFileSync as Mock;
+copyFileSync.mockReturnValue(undefined);
+
 const mkdtempSync = unMockedMkdtempSync as Mock;
 mkdtempSync.mockReturnValue(tmpdir);
 
@@ -34,7 +41,7 @@ const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGrap
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
   // always resolve files in the root, but not subdirs
-  findFilesFromRepositoryRoot.mockImplementation((file) =>
+  findFilesFromRepositoryRoot.mockImplementation((_, file) =>
     Promise.resolve(file.startsWith('**') ? [] : [file])
   );
   // always checkout files with the result path of "<commit>.<file>"
@@ -216,7 +223,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('looks for manifest and lock files in subpackages', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((file) =>
+    findFilesFromRepositoryRoot.mockImplementation((_, file) =>
       Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file])
     );
 
@@ -267,7 +274,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((file) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, file) => {
       if (file === 'subdir/yarn.lock') return Promise.resolve([]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
@@ -300,7 +307,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('ignores lockfile changes if metadata file is untraced', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((file) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, file) => {
       if (file === 'subdir/yarn.lock') return Promise.resolve([]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
@@ -322,7 +329,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses package-lock.json if yarn.lock is missing', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((file) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, file) => {
       if (file.endsWith('yarn.lock'))
         return Promise.resolve([file.replace('yarn.lock', 'package-lock.json')]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
@@ -346,6 +353,48 @@ describe('findChangedDependencies', () => {
         dev: true,
         strictOutOfSync: false,
       }
+    );
+  });
+
+  it('handles relative paths correctly when copying files to temp directory', async () => {
+    // Mock the repository root to be different from current working directory
+    getRepositoryRoot.mockResolvedValue('/root/subdir');
+
+    // Mock findFilesFromRepositoryRoot to return relative paths
+    findFilesFromRepositoryRoot.mockImplementation((_, ...patterns) => {
+      const results: string[] = [];
+      for (const pattern of patterns) {
+        if (pattern === 'package.json') {
+          results.push('package.json');
+        } else if (
+          pattern === 'yarn.lock' ||
+          pattern === 'pnpm-lock.yaml' ||
+          pattern === 'package-lock.json'
+        ) {
+          results.push('package-lock.json');
+        }
+      }
+      return Promise.resolve(results);
+    });
+
+    mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.3.0']);
+    mockChangedPackagesGraph(['react@18.3.0']);
+
+    const context = getContext({
+      git: {
+        packageMetadataChanges: [{ changedFiles: ['package.json'], commit: 'A' }],
+      },
+    });
+
+    await expect(findChangedDependencies(context)).resolves.toEqual(['react']);
+
+    expect(copyFileSync).toHaveBeenCalledWith(
+      '/root/subdir/package.json',
+      `${tmpdir}/package.json`
+    );
+    expect(copyFileSync).toHaveBeenCalledWith(
+      '/root/subdir/package-lock.json',
+      `${tmpdir}/package-lock.json`
     );
   });
 });

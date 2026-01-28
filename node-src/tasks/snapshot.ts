@@ -1,3 +1,12 @@
+import waitForBuildToComplete, {
+  BuildProgressMessage,
+  NotifyConnectionError,
+  NotifyServiceAuthenticationError,
+  NotifyServiceError,
+  NotifyServiceMessageTimeoutError,
+} from '@cli/waitForBuildToComplete';
+import * as Sentry from '@sentry/node';
+
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { delay, throttle } from '../lib/utils';
@@ -34,6 +43,7 @@ const SnapshotBuildQuery = `
     }
   }
 `;
+
 interface BuildQueryResult {
   app: {
     build: {
@@ -80,7 +90,16 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
     ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
   );
 
-  const waitForBuildToComplete = async (): Promise<Context['build']> => {
+  const uiStateUpdater = (buildProgressData: BuildProgressMessage | Context['build']): void => {
+    if (actualTestCount > 0) {
+      const { inProgressCount = 0 } = buildProgressData;
+      const cursor = actualTestCount - inProgressCount + 1;
+      const label = (testLabels && testLabels[cursor - 1]) || '';
+      updateProgress({ cursor, label });
+    }
+  };
+
+  const getCompletedBuild = async (): Promise<Context['build']> => {
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
     ctx.build = { ...ctx.build, ...data.app.build };
@@ -89,18 +108,17 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       return ctx.build;
     }
 
-    if (actualTestCount > 0) {
-      const { inProgressCount = 0 } = ctx.build;
-      const cursor = actualTestCount - inProgressCount + 1;
-      const label = (testLabels && testLabels[cursor - 1]) || '';
-      updateProgress({ cursor, label });
-    }
+    uiStateUpdater(ctx.build);
 
     await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
-    return waitForBuildToComplete();
+    return getCompletedBuild();
   };
 
-  const build = await waitForBuildToComplete();
+  if (actualTestCount > 0) {
+    await waitForBuildToCompleteAndHandleErrors(ctx, uiStateUpdater, reportToken);
+  }
+
+  const build = await getCompletedBuild();
 
   switch (build.status) {
     case 'PASSED':
@@ -149,6 +167,43 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
       throw new Error(`Unexpected build status: ${build.status}`);
   }
 };
+
+async function waitForBuildToCompleteAndHandleErrors(
+  ctx: Context,
+  uiStateUpdater: (buildProgressData: BuildProgressMessage | Context['build']) => void,
+  reportToken: string | undefined
+) {
+  try {
+    await waitForBuildToComplete({
+      notifyServiceUrl: ctx.env.CHROMATIC_NOTIFY_SERVICE_URL,
+      buildId: ctx.build.id,
+      progressMessageCallback: uiStateUpdater,
+      log: ctx.log,
+      headers: {
+        Authorization: `Bearer ${reportToken}`,
+      },
+    });
+  } catch (error) {
+    Sentry.captureException(error);
+    if (error instanceof NotifyConnectionError) {
+      ctx.log.debug(
+        `Failed to connect to notify service, falling back to polling: code: ${error.statusCode}, original error: ${error.originalError?.message}`
+      );
+    } else if (error instanceof NotifyServiceMessageTimeoutError) {
+      ctx.log.debug('Timed out waiting for message from notify service, falling back to polling');
+    } else if (error instanceof NotifyServiceAuthenticationError) {
+      ctx.log.debug(
+        `Error authenticating with notify service: ${error.statusCode} ${error.message}`
+      );
+    } else if (error instanceof NotifyServiceError) {
+      ctx.log.debug(
+        `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`
+      );
+    } else {
+      ctx.log.error(`Unexpected error from notify service: ${error.message}`);
+    }
+  }
+}
 
 /**
  * Sets up the Listr task for snapshotting the Storybook.

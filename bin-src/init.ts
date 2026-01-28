@@ -1,6 +1,6 @@
 import { getCliCommand, parseNi } from '@antfu/ni';
 import boxen from 'boxen';
-import { execaCommand } from 'execa';
+import { execa, parseCommandString } from 'execa';
 import { Path, writeFile } from 'jsonfile';
 import meow from 'meow';
 import prompts from 'prompts';
@@ -87,7 +87,8 @@ export const installArchiveDependencies = async (
     throw new Error('Could not determine package manager.');
   }
 
-  await execaCommand(installCommand);
+  const [cmd, ...args] = parseCommandString(installCommand);
+  await execa(cmd, args, { shell: true });
 };
 
 const intializeChromatic = async ({

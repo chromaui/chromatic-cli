@@ -16,6 +16,11 @@ const AnnounceBuildMutation = `
       status
       autoAcceptChanges
       reportToken
+      features {
+        uiTests
+        uiReview
+        isReactNativeApp
+      }
       app {
         id
         turboSnapAvailability
@@ -104,7 +109,6 @@ const announceBuildInput = (ctx: Context) => {
     rebuildForBuildId,
     storybookAddons: ctx.storybook.addons,
     storybookVersion: ctx.storybook.version,
-    storybookViewLayer: ctx.storybook.viewLayer,
     projectMetadata: {
       ...ctx.projectMetadata,
       storybookBaseDir: ctx.storybook?.baseDir,
@@ -125,7 +129,12 @@ export const announceBuild = async (ctx: Context) => {
 
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
-    announcedBuild.number === 1 || (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
+    // possibly set from LastBuildQuery in setGitInfo
+    ctx.isOnboarding ||
+    announcedBuild.number === 1 ||
+    (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
+
+  ctx.isReactNativeApp = announcedBuild.features?.isReactNativeApp ?? false;
 
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;

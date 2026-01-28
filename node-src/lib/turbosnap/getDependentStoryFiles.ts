@@ -83,7 +83,6 @@ export async function getDependentStoryFiles(
     baseDir: baseDirectory = '',
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
-    viewLayer,
   } = ctx.storybook || {};
   const {
     storybookBuildDir,
@@ -129,6 +128,7 @@ export async function getDependentStoryFiles(
     './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
     `./node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js`,
     `./node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js`,
+    `./storybook-config-entry.js`,
   ].map((file) => normalize(file));
 
   const modulesByName = new Map<NormalizedName, Module>();
@@ -197,7 +197,6 @@ export async function getDependentStoryFiles(
         storybookDir: storybookDirectory,
         storybookBuildDir,
         entryFile,
-        viewLayer,
       })
     );
     throw new Error('Did not find any CSF globs in preview-stats.json');
@@ -208,7 +207,9 @@ export async function getDependentStoryFiles(
     staticDirectories.some((directory) => name && name.startsWith(`${directory}/`));
 
   ctx.untracedFiles = [];
+
   function untrace(filepath: string) {
+    filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
     if (untraced.some((glob) => matchesFile(glob, filepath))) {
       ctx.untracedFiles?.push(filepath);
       return false;

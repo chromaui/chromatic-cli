@@ -139,18 +139,20 @@ export async function run({
   return {
     // Keep this in sync with the configured outputs in action.yml
     code: ctx.exitCode,
-    url: ctx.build?.webUrl,
-    buildUrl: ctx.build?.webUrl,
+    url: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
+    buildUrl: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
     storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
-    specCount: ctx.build?.specCount,
-    componentCount: ctx.build?.componentCount,
-    testCount: ctx.build?.testCount,
-    changeCount: ctx.build?.changeCount,
-    errorCount: ctx.build?.errorCount,
-    interactionTestFailuresCount: ctx.build?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount,
-    inheritedCaptureCount: ctx.build?.inheritedCaptureCount,
+    specCount: ctx.build?.specCount ?? ctx.rebuildForBuild?.specCount,
+    componentCount: ctx.build?.componentCount ?? ctx.rebuildForBuild?.componentCount,
+    testCount: ctx.build?.testCount ?? ctx.rebuildForBuild?.testCount,
+    changeCount: ctx.build?.changeCount ?? ctx.rebuildForBuild?.changeCount,
+    errorCount: ctx.build?.errorCount ?? ctx.rebuildForBuild?.errorCount,
+    interactionTestFailuresCount:
+      ctx.build?.interactionTestFailuresCount ?? ctx.rebuildForBuild?.interactionTestFailuresCount,
+    actualTestCount: ctx.build?.actualTestCount ?? ctx.rebuildForBuild?.actualTestCount,
+    actualCaptureCount: ctx.build?.actualCaptureCount ?? ctx.rebuildForBuild?.actualCaptureCount,
+    inheritedCaptureCount:
+      ctx.build?.inheritedCaptureCount ?? ctx.rebuildForBuild?.inheritedCaptureCount,
   };
 }
 
@@ -314,25 +316,27 @@ export interface GitInfo {
  * Although this function may not be used directly in this project, it can be used externally (such
  * as https://github.com/chromaui/addon-visual-tests).
  *
+ * @param ctx The context set when executing the CLI.
+ *
  * @returns Any git information we were able to gather.
  */
-export async function getGitInfo(): Promise<GitInfo> {
+export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
   let slug: string;
   try {
-    slug = await getSlug();
+    slug = await getSlug(ctx);
   } catch {
     slug = '';
   }
-  const branch = (await getBranch()) || '';
-  const commitInfo = await getCommit();
-  const userEmail = (await getUserEmail()) || '';
+  const branch = (await getBranch(ctx)) || '';
+  const commitInfo = await getCommit(ctx);
+  const userEmail = (await getUserEmail(ctx)) || '';
   const userEmailHash = emailHash(userEmail);
-  const repositoryRootDirectory = (await getRepositoryRoot()) || '';
+  const repositoryRootDirectory = (await getRepositoryRoot(ctx)) || '';
 
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
-  const uncommittedHash = (await getUncommittedHash()) || '';
+  const uncommittedHash = (await getUncommittedHash(ctx)) || '';
   return {
     slug: isValidSlug ? slug : '',
     branch,
@@ -345,4 +349,4 @@ export async function getGitInfo(): Promise<GitInfo> {
 }
 
 export { getConfiguration } from './lib/getConfiguration';
-export { Logger } from './lib/log';
+export { createLogger, Logger } from './lib/log';

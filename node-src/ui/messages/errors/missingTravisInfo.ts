@@ -9,5 +9,5 @@ export default ({ TRAVIS_EVENT_TYPE }: { TRAVIS_EVENT_TYPE: string }) =>
     ${error} {bold Missing Travis environment variable}
     \`TRAVIS_EVENT_TYPE\` environment variable set to '${TRAVIS_EVENT_TYPE}', but
     \`TRAVIS_PULL_REQUEST_SHA\` and \`TRAVIS_PULL_REQUEST_BRANCH\` are not both set.
-    ${info} Read more at ${link('https://www.chromatic.com/docs/ci#travis-ci')}
+    ${info} Read more at ${link('https://www.chromatic.com/docs/travisci/')}
   `);

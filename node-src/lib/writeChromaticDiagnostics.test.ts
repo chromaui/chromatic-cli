@@ -37,7 +37,7 @@ describe('getDiagnostics', () => {
 describe('writeChromaticDiagnostics', () => {
   it('should create the parent directory if it does not exist', async () => {
     const ctx = {
-      log: createLogger({}),
+      log: createLogger(),
       options: { diagnosticsFile: '/tmp/doesnotexist/diagnostics.json' },
     };
     await writeChromaticDiagnostics(ctx as any);

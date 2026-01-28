@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { exitCodes } from '../lib/setExitCode';
+import TestLogger from '../lib/testLogger';
 import { publishBuild, verifyBuild } from './verify';
 
 const environment = {
@@ -8,7 +9,7 @@ const environment = {
   CHROMATIC_UPGRADE_TIMEOUT: 100,
   STORYBOOK_VERIFY_TIMEOUT: 20,
 };
-const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+const log = new TestLogger();
 const http = { fetch: vi.fn() };
 
 describe('publishBuild', () => {
@@ -49,7 +50,7 @@ describe('verifyBuild', () => {
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false },
     pkg: { version: '1.0.0' },
-    storybook: { version: '2.0.0', viewLayer: 'react', addons: [] },
+    storybook: { version: '2.0.0', addons: [] },
     announcedBuild: { number: 1, reportToken: 'report-token' },
   };
 

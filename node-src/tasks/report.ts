@@ -32,7 +32,7 @@ interface VisualTest {
 }
 
 const ReportQuery = `
-  query ReportQuery($buildNumber: Int!) {
+  query ReportQuery($buildNumber: Int!, $skip: Int, $limit: Int) {
     app {
       build(number: $buildNumber) {
         number
@@ -41,7 +41,7 @@ const ReportQuery = `
         webUrl
         createdAt
         completedAt
-        tests {
+        tests(skip: $skip, limit: $limit) {
           status
           result
           spec {
@@ -83,9 +83,9 @@ interface ReportQueryResult {
  * @param ctx The {@link Context} for which we're generating a report.
  */
 export const generateReport = async (ctx: Context) => {
-  const { client, log } = ctx;
+  const { log } = ctx;
   const { junitReport } = ctx.options;
-  const { number: buildNumber, reportToken } = ctx.build;
+  const { number: buildNumber } = ctx.build;
 
   const file =
     typeof junitReport === 'boolean' && junitReport
@@ -99,13 +99,7 @@ export const generateReport = async (ctx: Context) => {
 
   ctx.reportPath = path.resolve(file.replaceAll('{buildNumber}', String(buildNumber)));
 
-  const {
-    app: { build },
-  } = await client.runQuery<ReportQueryResult>(
-    ReportQuery,
-    { buildNumber },
-    { headers: { Authorization: `Bearer ${reportToken}` } }
-  );
+  const build = await queryBuildForReport(ctx);
   const buildTime = (build.completedAt || Date.now()) - build.createdAt;
 
   const suite: TestSuite = reportBuilder
@@ -124,6 +118,38 @@ export const generateReport = async (ctx: Context) => {
 
   reportBuilder.writeTo(ctx.reportPath);
   log.info(wroteReport(ctx.reportPath, 'JUnit XML'));
+};
+
+/**
+ * Query the build for the report and return the build with all the paginated tests.
+ *
+ * @param ctx The {@link Context} for which we're generating a report.
+ *
+ * @returns The build with all the tests.
+ */
+const queryBuildForReport = async (ctx: Context) => {
+  const limit = 1000;
+  let skip = 0;
+  const allTests: VisualTest[] = [];
+
+  while (true) {
+    const {
+      app: { build },
+    } = await ctx.client.runQuery<ReportQueryResult>(
+      ReportQuery,
+      { buildNumber: ctx.build.number, skip, limit },
+      { headers: { Authorization: `Bearer ${ctx.build.reportToken}` } }
+    );
+
+    allTests.push(...build.tests);
+
+    // We've reached the end of the tests, return the build with all the tests.
+    if (build.tests.length < limit) {
+      return { ...build, tests: allTests };
+    }
+
+    skip += limit;
+  }
 };
 
 /**
@@ -159,6 +185,7 @@ export const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
     }
   }
 };
+
 /**
  * Sets up the Listr task for generating a JUnit report.
  *

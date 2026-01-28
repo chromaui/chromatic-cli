@@ -20,7 +20,6 @@ jobs:
         with:
           node-version: 22
       - run: rm -rf subdir # remove conflicting subproject
-      - run: corepack enable
       - run: yarn set version 1.22.22
       - run: yarn install --ignore-engines
       - name: run chromatic

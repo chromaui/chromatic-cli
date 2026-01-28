@@ -6,7 +6,7 @@ import { info, warning } from '../../components/icons';
 import link from '../../components/link';
 
 const docsUrl =
-  'https://www.chromatic.com/docs/test#why-do-i-see-build-x-is-based-on-a-commit-without-ancestor-build';
+  'https://www.chromatic.com/docs/quickstart/#why-do-i-see-build-x-is-based-on-a-commit-without-ancestor-builds';
 
 export default ({ announcedBuild, turboSnap }: Pick<Context, 'announcedBuild' | 'turboSnap'>) =>
   turboSnap

@@ -1,3 +1,350 @@
+# v13.3.5 (Mon Jan 05 2026)
+
+#### 🐛 Bug Fix
+
+- Adds support for React Native builds [#1224](https://github.com/chromaui/chromatic-cli/pull/1224) ([@justin-thurman](https://github.com/justin-thurman))
+- Skip storybook build step for react native [#1225](https://github.com/chromaui/chromatic-cli/pull/1225) ([@justin-thurman](https://github.com/justin-thurman))
+- Add React Native asset validation [#1223](https://github.com/chromaui/chromatic-cli/pull/1223) ([@justin-thurman](https://github.com/justin-thurman))
+- Add react native app feature flag to CLI context [#1222](https://github.com/chromaui/chromatic-cli/pull/1222) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.3.4 (Tue Nov 18 2025)
+
+#### 🐛 Bug Fix
+
+- Fix passing signal to Execa [#1220](https://github.com/chromaui/chromatic-cli/pull/1220) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v13.3.3 (Fri Oct 31 2025)
+
+#### 🐛 Bug Fix
+
+- Strip ' + N modules' when matching against untraced files [#1217](https://github.com/chromaui/chromatic-cli/pull/1217) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.3.2 (Fri Oct 24 2025)
+
+#### 🐛 Bug Fix
+
+- Fix Node 24 security warning [#1215](https://github.com/chromaui/chromatic-cli/pull/1215) ([@codykaup](https://github.com/codykaup))
+- Remove `corepack enable` from GitHub Actions [#1218](https://github.com/chromaui/chromatic-cli/pull/1218) ([@justin-thurman](https://github.com/justin-thurman))
+- Setup permissions for NPM trusted publishing [#1216](https://github.com/chromaui/chromatic-cli/pull/1216) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.3.1 (Tue Oct 21 2025)
+
+#### 🐛 Bug Fix
+
+- Prevent log file from writes during metadata upload [#1214](https://github.com/chromaui/chromatic-cli/pull/1214) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v13.3.0 (Mon Sep 29 2025)
+
+#### 🚀 Enhancement
+
+- Use `--stats-json` with storybook version guard. [#1210](https://github.com/chromaui/chromatic-cli/pull/1210) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🐛 Bug Fix
+
+- Trim down some Sentry error reporting [#1209](https://github.com/chromaui/chromatic-cli/pull/1209) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v13.2.1 (Fri Sep 26 2025)
+
+#### 🐛 Bug Fix
+
+- Remove unused references to view layer [#1207](https://github.com/chromaui/chromatic-cli/pull/1207) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.2.0 (Fri Sep 19 2025)
+
+#### 🚀 Enhancement
+
+- Updated the mapping for the storybook entry with a recent change in storybook-rsbuild [#1206](https://github.com/chromaui/chromatic-cli/pull/1206) ([@ethriel3695](https://github.com/ethriel3695))
+
+#### Authors: 1
+
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
+# v13.1.5 (Tue Sep 16 2025)
+
+#### 🐛 Bug Fix
+
+- Handle framework names that specify full viewlayer packages [#1204](https://github.com/chromaui/chromatic-cli/pull/1204) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.1.4 (Fri Aug 29 2025)
+
+#### 🐛 Bug Fix
+
+- Feat:Fix outdated and incorrect links in the CLI [#1202](https://github.com/chromaui/chromatic-cli/pull/1202) ([@jonniebigodes](https://github.com/jonniebigodes))
+- Show setup URL on build errors when onboarding. [#1201](https://github.com/chromaui/chromatic-cli/pull/1201) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- [@jonniebigodes](https://github.com/jonniebigodes)
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v13.1.3 (Thu Jul 31 2025)
+
+#### 🐛 Bug Fix
+
+- Remove notify service message logs [#1199](https://github.com/chromaui/chromatic-cli/pull/1199) ([@codykaup](https://github.com/codykaup))
+- Replace ad hoc test loggers with `TestLogger` [#1197](https://github.com/chromaui/chromatic-cli/pull/1197) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.1.2 (Thu Jul 03 2025)
+
+#### 🐛 Bug Fix
+
+- Copy package files with absolute paths [#1195](https://github.com/chromaui/chromatic-cli/pull/1195) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v13.1.1 (Thu Jul 03 2025)
+
+#### 🐛 Bug Fix
+
+- Skip notify service if there are no tests [#1196](https://github.com/chromaui/chromatic-cli/pull/1196) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v13.1.0 (Wed Jul 02 2025)
+
+#### 🚀 Enhancement
+
+- Get build progress updates through Chromatic notify service [#1191](https://github.com/chromaui/chromatic-cli/pull/1191) ([@justin-thurman](https://github.com/justin-thurman) [@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Dynamically generate `CHROMATIC_NOTIFY_SERVICE_URL` [#1194](https://github.com/chromaui/chromatic-cli/pull/1194) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v13.0.1 (Wed Jun 18 2025)
+
+#### 🐛 Bug Fix
+
+- Wrap env-ci usage and recover from errors. [#1190](https://github.com/chromaui/chromatic-cli/pull/1190) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v13.0.0 (Mon Jun 16 2025)
+
+#### 💥 Breaking Change
+
+- Remove some deprecated flags [#1188](https://github.com/chromaui/chromatic-cli/pull/1188) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🚀 Enhancement
+
+- Log errors in env-ci call [#1189](https://github.com/chromaui/chromatic-cli/pull/1189) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v12.2.0 (Mon Jun 09 2025)
+
+#### 🚀 Enhancement
+
+- Set `STORYBOOK_INVOKED_BY` env var for SB telemetry [#1180](https://github.com/chromaui/chromatic-cli/pull/1180) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v12.1.1 (Fri Jun 06 2025)
+
+#### 🐛 Bug Fix
+
+- Remove requirement for an accepted build [#1187](https://github.com/chromaui/chromatic-cli/pull/1187) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v12.1.0 (Wed Jun 04 2025)
+
+#### 🚀 Enhancement
+
+- Split upload task to allow tracing changed files with dry run [#1185](https://github.com/chromaui/chromatic-cli/pull/1185) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v12.0.0 (Sat May 24 2025)
+
+#### 💥 Breaking Change
+
+- Revert "Revert "Add git command logging and pass `--no-relative` to `git diff`."" [#1184](https://github.com/chromaui/chromatic-cli/pull/1184) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v11.29.0 (Fri May 23 2025)
+
+#### 🚀 Enhancement
+
+- Export `createLogger` and make all arguments optional [#1182](https://github.com/chromaui/chromatic-cli/pull/1182) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v11.28.4 (Fri May 23 2025)
+
+#### 🐛 Bug Fix
+
+- Revert "Add git command logging and pass `--no-relative` to `git diff`." [#1183](https://github.com/chromaui/chromatic-cli/pull/1183) ([@ghengeveld](https://github.com/ghengeveld))
+
+#### Authors: 1
+
+- Gert Hengeveld ([@ghengeveld](https://github.com/ghengeveld))
+
+---
+
+# v11.28.3 (Thu May 22 2025)
+
+#### 🐛 Bug Fix
+
+- Add git command logging and pass `--no-relative` to `git diff`. [#1181](https://github.com/chromaui/chromatic-cli/pull/1181) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v11.28.2 (Thu Apr 17 2025)
+
+#### 🐛 Bug Fix
+
+- Use pagination to get all tests in the build [#1175](https://github.com/chromaui/chromatic-cli/pull/1175) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v11.28.1 (Thu Apr 17 2025)
+
+#### 🐛 Bug Fix
+
+- Return additional build info on action rerun [#1174](https://github.com/chromaui/chromatic-cli/pull/1174) ([@justin-thurman](https://github.com/justin-thurman))
+- :pencil2: Update help text to reflect actual state of exitOnceUploaded. [#1169](https://github.com/chromaui/chromatic-cli/pull/1169) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 2
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
+# v11.28.0 (Thu Apr 03 2025)
+
+#### 🚀 Enhancement
+
+- Remove unused `viewLayer` and `addons` from CLI metadata [#1167](https://github.com/chromaui/chromatic-cli/pull/1167) ([@justin-thurman](https://github.com/justin-thurman))
+- Add `pnpm-lock.yaml` to list of lockfiles [#1164](https://github.com/chromaui/chromatic-cli/pull/1164) ([@codykaup](https://github.com/codykaup))
+- Move TurboSnap to a local lib [#1162](https://github.com/chromaui/chromatic-cli/pull/1162) ([@codykaup](https://github.com/codykaup))
+- Throw on multiple scanned projects from snyk [#1161](https://github.com/chromaui/chromatic-cli/pull/1161) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🐛 Bug Fix
+
+- Preserve git history when publishing new GH action version [#1166](https://github.com/chromaui/chromatic-cli/pull/1166) ([@justin-thurman](https://github.com/justin-thurman))
+- Improve TurboSnap tests [#1163](https://github.com/chromaui/chromatic-cli/pull/1163) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v11.27.0 (Mon Mar 03 2025)
 
 #### 🚀 Enhancement

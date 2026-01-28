@@ -1,4 +1,4 @@
-import { execaCommand } from 'execa';
+import { execa, parseCommandString } from 'execa';
 import { createWriteStream, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
@@ -14,7 +14,16 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
-import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
+import missingStorybookBuildDirectory from '../ui/messages/errors/missingStorybookBuildDirectory';
+import {
+  failed,
+  initial,
+  missingBuildDirectoryForReactNative,
+  pending,
+  skipped,
+  skippedForReactNative,
+  success,
+} from '../ui/tasks/build';
 
 export const setSourceDirectory = async (ctx: Context) => {
   if (ctx.options.outputDir) {
@@ -28,24 +37,36 @@ export const setSourceDirectory = async (ctx: Context) => {
   }
 };
 
-// TODO: refactor this function
-// eslint-disable-next-line complexity
-export const setBuildCommand = async (ctx: Context) => {
-  const webpackStatsSupported =
-    ctx.storybook && ctx.storybook.version
-      ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
-      : true;
+const isStatsFlagSupported = (ctx: Context) => {
+  return ctx.storybook && ctx.storybook.version
+    ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
+    : true;
+};
 
-  if (ctx.git.changedFiles && !webpackStatsSupported) {
-    ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
+// Storybook 8.0.0 deprecated --webpack-stats-json in favor of --stats-json.
+// However, the angular builder did not support it until 8.5.0
+const getStatsFlag = (ctx: Context) => {
+  return ctx?.storybook?.version &&
+    semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.5.0')
+    ? '--stats-json'
+    : '--webpack-stats-json';
+};
+
+export const setBuildCommand = async (ctx: Context) => {
+  const buildCommand = ctx.flags?.buildCommand || ctx.options.buildCommand;
+  const buildCommandOptions: string[] = [];
+
+  if (!buildCommand) {
+    buildCommandOptions.push(`--output-dir=${ctx.sourceDir}`);
   }
 
-  const buildCommand = ctx.flags.buildCommand || ctx.options.buildCommand;
-
-  const buildCommandOptions = [
-    !buildCommand && `--output-dir=${ctx.sourceDir}`,
-    ctx.git.changedFiles && webpackStatsSupported && `--webpack-stats-json=${ctx.sourceDir}`,
-  ].filter((c): c is string => !!c);
+  if (ctx.git.changedFiles) {
+    if (isStatsFlagSupported(ctx)) {
+      buildCommandOptions.push(`${getStatsFlag(ctx)}=${ctx.sourceDir}`);
+    } else {
+      ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
+    }
+  }
 
   if (buildCommand) {
     ctx.buildCommand = `${buildCommand} ${buildCommandOptions.join(' ')}`;
@@ -138,13 +159,18 @@ export const buildStorybook = async (ctx: Context) => {
       throw new Error('No build command configured');
     }
 
-    const subprocess = execaCommand(ctx.buildCommand, {
+    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    const subprocess = execa(cmd, args, {
       stdio: [undefined, logFile, undefined],
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow
       preferLocal: false,
-      signal,
-      env: { CI: '1', NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production' },
+      cancelSignal: signal,
+      env: {
+        CI: '1',
+        NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',
+        STORYBOOK_INVOKED_BY: 'chromatic',
+      },
     });
     await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (err) {
@@ -182,6 +208,15 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: async (ctx) => {
       if (ctx.skip) return true;
+      if (ctx.isReactNativeApp) {
+        if (!ctx.options.storybookBuildDir) {
+          ctx.log.error(missingStorybookBuildDirectory());
+          setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+          throw new Error(missingBuildDirectoryForReactNative(ctx).output);
+        }
+        ctx.sourceDir = ctx.options.storybookBuildDir;
+        return skippedForReactNative(ctx).output;
+      }
       if (ctx.options.storybookBuildDir) {
         ctx.sourceDir = ctx.options.storybookBuildDir;
         return skipped(ctx).output;

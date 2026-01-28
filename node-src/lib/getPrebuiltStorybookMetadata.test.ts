@@ -8,24 +8,24 @@ describe('getStorybookMetadataFromProjectJson', () => {
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: '@storybook/react-webpack5',
       version: '8.1.5',
       builder: {
         name: '@storybook/builder-webpack5',
         packageVersion: '8.1.5',
       },
-      addons: [
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '8.1.5',
-        },
-        {
-          name: 'compiler-swc',
-          packageName: '@storybook/addon-webpack5-compiler-swc',
-          packageVersion: '1.0.2',
-        },
-      ],
+    });
+  });
+
+  it('should return the metadata from a project with @storybook framework name', async () => {
+    const projectJsonPath = 'bin-src/__mocks__/atFrameworkNameProjectJson/project.json';
+    const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
+
+    expect(metadata).toEqual({
+      version: '10.0.0-beta.2',
+      builder: {
+        name: '@storybook/builder-vite',
+        packageVersion: undefined,
+      },
     });
   });
 
@@ -34,29 +34,11 @@ describe('getStorybookMetadataFromProjectJson', () => {
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: 'react',
       version: '6.5.16',
       builder: {
         name: 'webpack4',
         packageVersion: '6.5.16',
       },
-      addons: [
-        {
-          name: 'links',
-          packageName: '@storybook/addon-links',
-          packageVersion: '6.5.16',
-        },
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '6.5.16',
-        },
-        {
-          name: 'interactions',
-          packageName: '@storybook/addon-interactions',
-          packageVersion: '6.5.16',
-        },
-      ],
     });
   });
 
@@ -65,29 +47,11 @@ describe('getStorybookMetadataFromProjectJson', () => {
     const metadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
 
     expect(metadata).toEqual({
-      viewLayer: 'react',
       version: '6.5.16',
       builder: {
         name: 'webpack4',
         packageVersion: '6.5.16',
       },
-      addons: [
-        {
-          name: 'links',
-          packageName: '@storybook/addon-links',
-          packageVersion: '6.5.16',
-        },
-        {
-          name: 'essentials',
-          packageName: '@storybook/addon-essentials',
-          packageVersion: '6.5.16',
-        },
-        {
-          name: 'interactions',
-          packageName: '@storybook/addon-interactions',
-          packageVersion: '6.5.16',
-        },
-      ],
     });
   });
 });
