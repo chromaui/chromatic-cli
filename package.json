@@ -112,6 +112,7 @@
     "@storybook/builder-webpack5": "^10.2.1",
     "@storybook/html-vite": "^10.2.1",
     "@storybook/linter-config": "^4.0.0",
+    "@storybook/react-vite": "^10.2.1",
     "@storybook/react-webpack5": "^10.2.1",
     "@tsconfig/node22": "^22.0.0",
     "@types/archiver": "^5.3.1",
