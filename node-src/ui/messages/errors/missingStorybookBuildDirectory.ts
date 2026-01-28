@@ -6,6 +6,6 @@ import { error } from '../../components/icons';
 export default () =>
   dedent(chalk`
     ${error} {bold Build directory required for React Native}
-    React Native Storybook requires a pre-built directory containing your .apk and manifest.json files.
+    React Native Storybook requires a pre-built directory containing your .apk (Android) or .app (iOS) and manifest.json files.
     Set the {bold --storybook-build-dir} option to the path of your React Native build output.
   `);
