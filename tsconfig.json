@@ -3,6 +3,7 @@
   "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
     "module": "ESNext",
+    "skipLibCheck": true,
     "target": "es2022",
     "noEmit": true,
     "allowJs": true,

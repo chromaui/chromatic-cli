@@ -14,7 +14,6 @@ function responseSerializer({ status, statusText, headers, url, _raw }: Response
 // all of our environment variables! See https://github.com/chromaui/chromatic/issues/1993
 // Note it is added to both err.envPairs *and* err.options.envPairs :facepalm:
 function stripEnvironmentPairs(err: any) {
-  // @ts-expect-error Ignore the _ property
   const { envPairs, options: { envPairs: _, ...options } = {}, ...sanitizedError } = err;
   return { sanitizedErr: sanitizedError, ...(err.options && { options }) };
 }
