@@ -29,6 +29,7 @@ export default [
       'bin/**',
       '**/build/**',
       '.storybook/**',
+      '.storybook-test/**',
       'storybook-static/**',
       'storybook-out/**',
       'coverage/**',
