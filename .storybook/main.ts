@@ -6,7 +6,10 @@ const config: StorybookConfig = {
     ? ['../test-stories/*.stories.*']
     : ['../node-src/**/*.@(mdx|stories.*)'],
   addons: ['@storybook/addon-webpack5-compiler-swc', '@storybook/addon-docs'],
-  framework: '@storybook/react-webpack5',
+  framework: { 
+    name: '@storybook/react-webpack5', 
+    options: {}
+  },
   webpackFinal: async (config) => {
     config.resolve = {
       ...config.resolve,
