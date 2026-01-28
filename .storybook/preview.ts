@@ -30,7 +30,7 @@ const decorators = [
     }
     if (kind.startsWith('HTML/')) {
       document.body.style.backgroundColor = '#F6F9FC';
-      return `<pre class="html-style"><div>${value}</div></pre>`;
+      return `<div class="html-style">${value}</div>`;
     }
     document.body.style.backgroundColor = 'paleturquoise';
     return value;
