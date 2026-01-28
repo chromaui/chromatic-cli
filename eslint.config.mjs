@@ -124,7 +124,6 @@ export default [
   {
     rules: {
       'unicorn/no-null': 'off',
-      // 'unicorn/prefer-module': 'off',
       'unicorn/prefer-top-level-await': 'off',
       'unicorn/no-array-reduce': 'off',
       'unicorn/no-array-sort': 'off',
