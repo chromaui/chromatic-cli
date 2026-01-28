@@ -93,7 +93,7 @@ export const TracedAffectedFilesExpandedBailed = () =>
         rootPath,
         tracedPaths: new Set(tracedPaths),
         bailReason: {
-          changedStorybookFiles: ['.storybook/preview.tsx', '.storybook/preview.less'],
+          changedStorybookFiles: ['.storybook/preview.ts', '.storybook/preview.less'],
         },
       },
     } as any,
