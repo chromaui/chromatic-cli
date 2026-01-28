@@ -1,26 +1,23 @@
 import { StorybookConfig } from '@storybook/react-webpack5';
+import { fileURLToPath } from 'node:url';
 
 const config: StorybookConfig = {
   stories: process.env.SMOKE_TEST
     ? ['../test-stories/*.stories.*']
     : ['../node-src/**/*.@(mdx|stories.*)'],
-  addons: ['@storybook/addon-essentials', '@storybook/addon-webpack5-compiler-swc'],
-  framework: {
-    name: '@storybook/react-webpack5',
-    options: {},
-  },
+  addons: ['@storybook/addon-webpack5-compiler-swc', '@storybook/addon-docs'],
+  framework: '@storybook/react-webpack5',
   webpackFinal: async (config) => {
     config.resolve = {
       ...config.resolve,
       fallback: {
         ...config?.resolve?.fallback,
-        os: require.resolve('os-browserify/browser'),
+        os:  fileURLToPath(import.meta.resolve('os-browserify/browser')),
+        path:  fileURLToPath(import.meta.resolve('path-browserify')),
       },
     };
-
     return config;
   },
-  docs: {},
   typescript: {
     reactDocgen: 'react-docgen-typescript',
   },
