@@ -52,6 +52,7 @@ const config: StorybookConfig = {
         white-space: pre-wrap;
         line-height: 1rem;
         color: #c0c4cd;
+        background-color: #16242c;
       }
 
       .html-style {
@@ -60,6 +61,7 @@ const config: StorybookConfig = {
         line-height: 1;
         color: #5C6870;
         padding: 20px;
+        background-color: #F6F9FC;
       }
     </style>
     `;
