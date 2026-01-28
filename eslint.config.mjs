@@ -69,7 +69,6 @@ export default [
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': [
@@ -88,15 +87,15 @@ export default [
     },
   },
   {
-    files: [
-      '**/*.test.ts', 
-      '**/*.test.tsx',
-    ],
+    files: ['**/*.test.ts', '**/*.test.tsx'],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.json'],
         tsConfigRootDir: import.meta.dirname,
       },
+    },
+    plugins: {
+      'no-secrets': noSecrets,
     },
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',
@@ -110,6 +109,9 @@ export default [
   },
   {
     files: ['**/*.test.js', '**/*.stories.js', '**/*.test.jsx', '**/*.stories.jsx'],
+    plugins: {
+      'no-secrets': noSecrets,
+    },
     rules: {
       'no-secrets/no-secrets': 'warn',
       '@typescript-eslint/no-empty-function': 'off',
@@ -145,7 +147,6 @@ export default [
         {
           checkFilenames: false,
           allowList: {
-            
             err: true,
             props: true,
             ctx: true,
