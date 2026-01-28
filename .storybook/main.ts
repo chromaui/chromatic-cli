@@ -22,6 +22,8 @@ const config: StorybookConfig = {
   },
   previewHead: (head) => {
     return head + `
+    <link href="./css/global.css" rel="stylesheet" />
+
     <script>
       window.process = {
         env: {
@@ -33,35 +35,6 @@ const config: StorybookConfig = {
         platform: '${process.platform}',
       };
     </script>
-
-    <link href="/css/global.css" rel="stylesheet" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <style>
-      .code-style {
-        display: inline-block;
-        margin: 0;
-        padding: 1rem;
-        font-size: 12px;
-        font-family: "Source Code Pro", monospace;
-        white-space: pre-wrap;
-        line-height: 1rem;
-        color: #c0c4cd;
-        background-color: #16242c;
-      }
-
-      .html-style {
-        font-family: "Nunito Sans", sans-serif;
-        font-size: 14px;
-        line-height: 1;
-        color: #5C6870;
-        padding: 20px;
-        background-color: #F6F9FC;
-      }
-    </style>
     `;
   },
   typescript: {
