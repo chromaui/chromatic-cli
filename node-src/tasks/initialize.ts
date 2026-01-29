@@ -12,6 +12,7 @@ const AnnounceBuildMutation = `
     announceBuild(input: $input) {
       id
       number
+      browsers
       # no need for legacy:false on AnnouncedBuild.status
       status
       autoAcceptChanges

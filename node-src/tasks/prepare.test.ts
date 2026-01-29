@@ -148,6 +148,7 @@ describe('validateFiles', () => {
           http,
           sourceDir: '/static/',
           isReactNativeApp: true,
+          announcedBuild: { browsers: ['android'] },
         } as any;
         await validateFiles(ctx);
 
@@ -209,6 +210,7 @@ describe('validateFiles', () => {
           http,
           sourceDir: '/static/',
           isReactNativeApp: true,
+          announcedBuild: { browsers: ['ios'] },
         } as any;
         await validateFiles(ctx);
 
