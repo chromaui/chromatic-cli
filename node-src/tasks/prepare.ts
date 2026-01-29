@@ -129,20 +129,31 @@ const isValidStorybook = ({ paths, total }) =>
  * @param fileInfo - Object containing paths array and total size
  * @param fileInfo.paths - Array of file paths in the directory
  * @param fileInfo.total - Total size of all files in bytes
+ * @param browsers - The list of browsers to capture for the build
  *
  * @returns True if the directory contains a valid React Native Storybook build
  */
-const isValidReactNativeStorybook = ({ paths, total }) => {
-  let hasApp: boolean;
+const isValidReactNativeStorybook = ({ paths, total }, browsers: string[] = []) => {
+  const hasAndroid = browsers.includes('android');
+  const hasIOS = browsers.includes('ios');
 
-  // Android has an .apk file
-  hasApp = paths.some((p: string) => p.endsWith('.apk'));
-  // iOS has a directory ending in .app
-  if (!hasApp) hasApp = paths.some((p: string) => /^.*\.app\//.test(p));
+  if (!hasAndroid && !hasIOS) {
+    return false;
+  }
+
+  // Ensure we have a .apk file on Android builds
+  if (hasAndroid && !paths.some((path: string) => path.endsWith('.apk'))) {
+    return false;
+  }
+
+  // Ensure we have a .app directory on iOS builds
+  if (hasIOS && !paths.some((path: string) => /^[^/]+\.app\//.test(path))) {
+    return false;
+  }
 
   const hasManifest = paths.includes('manifest.json');
 
-  return total > 0 && hasApp && hasManifest;
+  return total > 0 && hasManifest;
 };
 
 /**
@@ -156,10 +167,11 @@ const isValidReactNativeStorybook = ({ paths, total }) => {
  */
 export async function validateFiles(ctx: Context) {
   const validator = ctx.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
+  const browsers = ctx.announcedBuild?.browsers;
 
   ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
 
-  if (!validator(ctx.fileInfo) && ctx.buildLogFile) {
+  if (!validator(ctx.fileInfo, browsers) && ctx.buildLogFile) {
     try {
       const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
@@ -173,7 +185,7 @@ export async function validateFiles(ctx: Context) {
     }
   }
 
-  if (!validator(ctx.fileInfo)) {
+  if (!validator(ctx.fileInfo, browsers)) {
     throw new Error(invalid(ctx).output);
   }
 }
