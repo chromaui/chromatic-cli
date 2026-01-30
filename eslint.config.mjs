@@ -39,13 +39,28 @@ export default [
   eslint.configs.recommended,
   {
     rules: {
+      // Check cyclomatic complexity and issue an error if complexity is over 10
       complexity: ['error', 10],
+
+      // Use strict equality checks when reasonable
       eqeqeq: ['error', 'smart'],
+
+      // Require switch cases to have a default
       'default-case': ['error'],
+
+      // Allow a max nesting depth of 4
       'max-depth': ['error', 4],
+
+      // Allow 500 lines per file at maximum
       'max-lines': ['error', 500],
+
+      // Allow 30 statements per function at maximum
       'max-statements': ['error', 30],
+
+      // Do not allow dialog-creating methods (e.g. alert, confirm, prompt)
       'no-alert': 'error',
+
+      // Prefer function declarations over variable expressions assigning a function to a variable.
       'func-style': ['error', 'declaration', { allowArrowFunctions: true }],
     },
   },
@@ -132,6 +147,8 @@ export default [
         'error',
         {
           case: 'camelCase',
+
+          // Allow capitalization in initialisms
           ignore: [
             String.raw`^.*DNS.*\.[jt]s$`,
             String.raw`^.*CSF.*\.[jt]s$`,
@@ -144,6 +161,8 @@ export default [
       'unicorn/prevent-abbreviations': [
         'error',
         {
+          // Chromatic uses err as our catch convention.
+          // This is baked into pino transforms as well.
           checkFilenames: false,
           allowList: {
             err: true,
@@ -166,10 +185,12 @@ export default [
       ],
       'unicorn/switch-case-braces': 'off',
       'unicorn/no-process-exit': 'off',
+      // This will error our webpack build if it is turned on.
       'unicorn/prefer-node-protocol': 'off',
     },
   },
   {
+    // Prefer TS to complain when we miss an argument vs. silently sending an intentional undefined.
     files: ['**/*.ts'],
     rules: {
       'unicorn/no-useless-undefined': 'off',
@@ -203,6 +224,9 @@ export default [
     },
   },
   {
+    // Run prettier and expose problems as linting errors.
+    // NOTE: This does slow down eslint (about 25% slower)
+    // If this becomes problematic, we can discuss removing it
     plugins: {
       prettier: prettier,
     },
