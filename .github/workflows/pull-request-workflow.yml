@@ -47,13 +47,15 @@ jobs:
     needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-  smoke-test-node-20:
-    uses: ./.github/workflows/smoke-test-node20.yml
+
+  smoke-test-node-18:
+    uses: ./.github/workflows/smoke-test-node18.yml
     needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-  smoke-test-node-22:
-    uses: ./.github/workflows/smoke-test-node22.yml
+
+  smoke-test-node-20:
+    uses: ./.github/workflows/smoke-test-node20.yml
     needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}

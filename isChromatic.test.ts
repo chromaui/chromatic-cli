@@ -11,7 +11,7 @@ describe('with window arg', () => {
           userAgent: 'Chrome',
         },
         location: new URL('https://example.com'),
-      } as any as typeof globalThis)
+      } as any as Window)
     ).toBe(false);
   });
 
@@ -22,7 +22,7 @@ describe('with window arg', () => {
           userAgent: 'Chrome',
         },
         location: new URL('https://example.com?chromatic=true'),
-      } as any as typeof globalThis)
+      } as any as Window)
     ).toBe(true);
   });
 
@@ -33,7 +33,7 @@ describe('with window arg', () => {
           userAgent: 'Chromium(Chromatic)',
         },
         location: new URL('https://example.com'),
-      } as any as typeof globalThis)
+      } as any as Window)
     ).toBe(true);
   });
 });

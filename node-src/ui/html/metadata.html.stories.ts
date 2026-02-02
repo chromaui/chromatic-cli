@@ -28,8 +28,8 @@ export const files = [
   },
   {
     contentLength: 5635,
-    localPath: 'preview.ts',
-    targetPath: '.chromatic/preview.ts',
+    localPath: 'preview.tsx',
+    targetPath: '.chromatic/preview.tsx',
   },
   {
     contentLength: 5635,
