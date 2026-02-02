@@ -2,7 +2,7 @@
 
 #### 💥 Breaking Change
 
-- Update storybook to `10.x` & upgrade dependencies [#1228](https://github.com/chromaui/chromatic-cli/pull/1228) ([@kasperpeulen](https://github.com/kasperpeulen) [@ndelangen](https://github.com/ndelangen) [@jwir3](https://github.com/jwir3))
+- Revert "Update storybook to `10.x` & upgrade dependencies" [#1228](https://github.com/chromaui/chromatic-cli/pull/1228) ([@kasperpeulen](https://github.com/kasperpeulen) [@ndelangen](https://github.com/ndelangen) [@jwir3](https://github.com/jwir3))
 
 #### 🐛 Bug Fix
 
@@ -848,7 +848,7 @@
 
 - Add TypeScript checking to CI pipeline [#1078](https://github.com/chromaui/chromatic-cli/pull/1078) ([@codykaup](https://github.com/codykaup))
 - Upgrade `subdir` deps [#1077](https://github.com/chromaui/chromatic-cli/pull/1077) ([@codykaup](https://github.com/codykaup))
-- Ignore duplication in test files and ignore all __mocks__ [#1073](https://github.com/chromaui/chromatic-cli/pull/1073) ([@codykaup](https://github.com/codykaup))
+- Ignore duplication in test files and ignore all **mocks** [#1073](https://github.com/chromaui/chromatic-cli/pull/1073) ([@codykaup](https://github.com/codykaup))
 - Bump the npm_and_yarn group across 2 directories with 5 updates [#1076](https://github.com/chromaui/chromatic-cli/pull/1076) ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Bump terser from 5.31.0 to 5.34.1 in the npm_and_yarn group across 1 directory [#1075](https://github.com/chromaui/chromatic-cli/pull/1075) ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Bump the npm_and_yarn group across 2 directories with 7 updates [#1074](https://github.com/chromaui/chromatic-cli/pull/1074) ([@dependabot[bot]](https://github.com/dependabot[bot]))
@@ -1006,7 +1006,7 @@
 
 #### 🐛 Bug Fix
 
-- Add  key to configuration to fix #1022 [#1023](https://github.com/chromaui/chromatic-cli/pull/1023) ([@winkerVSbecks](https://github.com/winkerVSbecks))
+- Add key to configuration to fix #1022 [#1023](https://github.com/chromaui/chromatic-cli/pull/1023) ([@winkerVSbecks](https://github.com/winkerVSbecks))
 
 #### Authors: 1
 
@@ -1105,7 +1105,7 @@
 #### 🐛 Bug Fix
 
 - Add fallback type for Storybook 6 builder syntax [#1001](https://github.com/chromaui/chromatic-cli/pull/1001) ([@ethriel3695](https://github.com/ethriel3695) [@ghengeveld](https://github.com/ghengeveld))
-- Only replace *local* builds with uncommitted changes [#994](https://github.com/chromaui/chromatic-cli/pull/994) ([@ghengeveld](https://github.com/ghengeveld))
+- Only replace _local_ builds with uncommitted changes [#994](https://github.com/chromaui/chromatic-cli/pull/994) ([@ghengeveld](https://github.com/ghengeveld))
 - Clean package.json before publishing [#999](https://github.com/chromaui/chromatic-cli/pull/999) ([@ghengeveld](https://github.com/ghengeveld))
 
 #### Authors: 2
@@ -2640,7 +2640,6 @@ import isChromatic from 'chromatic';
 # 1.2.0 - 2018-10-29
 
 - Pass `chromatic` parameters from Storybook@4, supporting:
-
   - Viewports: http://chromatic.com/docs/viewports
   - Delay: http://chromatic.com/docs/delay
 
@@ -2673,7 +2672,6 @@ import isChromatic from 'chromatic';
 - Tweaked to focus soley on Storybook -- simply `import 'storybook-chromatic';` (no `/storybook-addon` required). Run tests with `chromatic test --app-code` (no `--storybook-addon` required).
 
 - Changed some URL parameters for the test command:
-
   - `--port` renamed `--storybook-port`
   - `--url` renamed `--storybook-url`
   - `--app-path` removed (it's always `/iframe.html`, as per Storybook).
