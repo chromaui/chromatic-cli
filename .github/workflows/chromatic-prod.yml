@@ -21,7 +21,7 @@ jobs:
           node-version: 22
       - name: install
         run: yarn install --immutable
-      - uses: chromaui/action@latest
+      - uses: chromaui/action-canary@latest
         with:
           exitOnceUploaded: true
           onlyChanged: true
