@@ -1,3 +1,21 @@
+# v15.0.0 (Mon Feb 02 2026)
+
+#### 💥 Breaking Change
+
+- Update storybook to `10.x` & upgrade dependencies [#1228](https://github.com/chromaui/chromatic-cli/pull/1228) ([@kasperpeulen](https://github.com/kasperpeulen) [@ndelangen](https://github.com/ndelangen) [@jwir3](https://github.com/jwir3))
+
+#### 🐛 Bug Fix
+
+- Revert "Merge pull request #1228 from chromaui/norbert/further-upgrades" [#1235](https://github.com/chromaui/chromatic-cli/pull/1235) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 3
+
+- Kasper Peulen ([@kasperpeulen](https://github.com/kasperpeulen))
+- Norbert de Langen ([@ndelangen](https://github.com/ndelangen))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v14.0.0 (Mon Feb 02 2026)
 
 #### 💥 Breaking Change
