@@ -11,6 +11,7 @@ import {
 
 vi.mock('jsonfile', async (importOriginal) => {
   return {
+    // @ts-expect-error TS does not think actual is an object, but it's fine.
     ...(await importOriginal()),
     writeFile: vi.fn(() => Promise.resolve()),
   };

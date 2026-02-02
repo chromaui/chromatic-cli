@@ -1,13 +1,9 @@
 {
   "exclude": ["node_modules"],
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "target": "es2022",
-    "noEmit": true,
-    "allowJs": true,
-    "allowImportingTsExtensions": true,
+    // Override module/moduleResolution since we're using tsup/esbuild
+    "module": "es2022",
     "moduleResolution": "Bundler",
     "strict": true,
     "paths": {
@@ -17,6 +13,7 @@
     "noImplicitAny": false, // Let this be a warning from ESLint until it becomes required
     "useUnknownInCatchVariables": false, // Treat caught errors as 'any' for now
     "resolveJsonModule": true,
-    "types": ["webpack-env"]
+    "types": ["webpack-env"],
+    "lib": ["es5", "es6", "dom"]
   }
 }

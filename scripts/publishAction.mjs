@@ -30,9 +30,7 @@ const publishAction = async ({ major, version, repo }) => {
   await $`yarn clean-package restore`;
 
   const $$ = (strings, ...args) => {
-    console.info(
-      strings.reduce((accumulator, s, index) => `${accumulator}${s}${args[index] || ''}`, '🏃 ')
-    );
+    console.info(strings.reduce((acc, s, i) => `${acc}${s}${args[i] || ''}`, '🏃 '));
     return $({ cwd: path })(strings, ...args);
   };
 
@@ -90,7 +88,7 @@ export async function main(context) {
  *
  * Make sure to build the action before publishing manually.
  */
-
+// eslint-disable-next-line unicorn/prefer-module
 if (process.argv[1] === import.meta.filename) {
   const { stdout: status } = await $`git status --porcelain`;
   if (status) {

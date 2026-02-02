@@ -44,7 +44,7 @@ export async function uploadZip(
 
       const result = await ctx.http.fetch(
         formAction,
-        { body: formData as any, method: 'POST', signal },
+        { body: formData, method: 'POST', signal },
         { retries: 0 } // already retrying the whole operation
       );
 

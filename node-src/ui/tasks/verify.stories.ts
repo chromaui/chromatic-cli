@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-null -- GraphQL returns `null` if a value doesn't exist */
 import task from '../components/task';
 import {
   awaitingUpgrades,

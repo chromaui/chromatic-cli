@@ -1,6 +1,6 @@
 import React from 'react';
 
-import A from './a';
+import A from './A';
 
 const HOC = (Component) => {
   const Wrapped = (props) => {

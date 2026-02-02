@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import process from 'process';
-
 import { run } from '../dist/node.js';
 
 run({
@@ -14,6 +13,7 @@ run({
     process.exit(code);
   },
   (err) => {
+    // eslint-disable-next-line no-console
     console.log(err);
     process.exit(1);
   }
