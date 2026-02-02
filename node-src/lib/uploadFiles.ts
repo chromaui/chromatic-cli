@@ -52,7 +52,7 @@ export async function uploadFiles(
             try {
               await ctx.http.fetch(
                 formAction,
-                { body: formData, method: 'POST', signal },
+                { body: formData as any, method: 'POST', signal },
                 { retries: 0 } // already retrying the whole operation
               );
               ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);

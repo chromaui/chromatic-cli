@@ -7,14 +7,14 @@
     "postbuild": "node -r esm ../bin-src/trimStatsFile.js ../subdir-static/preview-stats.json"
   },
   "dependencies": {
-    "@storybook/react": "^8.3.4",
-    "@storybook/react-webpack5": "^8.3.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "storybook": "^8.3.4"
+    "@storybook/html-vite": "^10.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "storybook": "^10.2.1"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "devDependencies": {
-    "@storybook/addon-webpack5-compiler-swc": "^1.0.5"
+    "@storybook/addon-webpack5-compiler-swc": "^4.0.2",
+    "eslint-plugin-storybook": "^10.2.1"
   }
 }
