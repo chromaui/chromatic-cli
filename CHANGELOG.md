@@ -1,3 +1,22 @@
+# v14.0.0 (Mon Feb 02 2026)
+
+#### 💥 Breaking Change
+
+- Update storybook to `10.x` & upgrade dependencies [#1228](https://github.com/chromaui/chromatic-cli/pull/1228) ([@kasperpeulen](https://github.com/kasperpeulen) [@ndelangen](https://github.com/ndelangen) [@jwir3](https://github.com/jwir3))
+
+#### 🐛 Bug Fix
+
+- Fix dependabot changelog output [#1227](https://github.com/chromaui/chromatic-cli/pull/1227) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 4
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Kasper Peulen ([@kasperpeulen](https://github.com/kasperpeulen))
+- Norbert de Langen ([@ndelangen](https://github.com/ndelangen))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v13.3.5 (Mon Jan 05 2026)
 
 #### 🐛 Bug Fix
