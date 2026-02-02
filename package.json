@@ -191,7 +191,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "read-package-up": "^11.0.0",
-    "semver": "^7.3.5",
+    "semver": "^7.7.3",
     "slash": "^3.0.0",
     "snyk-nodejs-lockfile-parser": "^1.58.18",
     "snyk-nodejs-plugin": "^1.4.3",
