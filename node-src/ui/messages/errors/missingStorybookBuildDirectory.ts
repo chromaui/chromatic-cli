@@ -4,19 +4,20 @@ import { dedent } from 'ts-dedent';
 import { error } from '../../components/icons';
 
 export default (browsers: string[] = []) => {
-  const hasIos = browsers.includes('ios');
+  const hasIOS = browsers.includes('ios');
   const hasAndroid = browsers.includes('android');
 
   let filesRequired: string;
-  if (hasIos && hasAndroid) {
+  if (hasIOS && hasAndroid) {
     filesRequired = 'your storybook.apk (Android), storybook.app (iOS), and manifest.json files';
-  } else if (hasIos) {
+  } else if (hasIOS) {
     filesRequired = 'your storybook.app and manifest.json files';
   } else if (hasAndroid) {
     filesRequired = 'your storybook.apk and manifest.json files';
   } else {
     // Fallback to generic message if browsers info is not available
-    filesRequired = 'your manifest.json and either your storybook.apk (Android) or storybook.app (iOS) files';
+    filesRequired =
+      'your manifest.json and either your storybook.apk (Android) or storybook.app (iOS) files';
   }
 
   return dedent(chalk`
