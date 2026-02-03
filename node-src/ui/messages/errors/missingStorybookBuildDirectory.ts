@@ -9,14 +9,14 @@ export default (browsers: string[] = []) => {
 
   let filesRequired: string;
   if (hasIos && hasAndroid) {
-    filesRequired = 'your .apk (Android), .app (iOS), and manifest.json files';
+    filesRequired = 'your storybook.apk (Android), storybook.app (iOS), and manifest.json files';
   } else if (hasIos) {
-    filesRequired = 'your .app and manifest.json files';
+    filesRequired = 'your storybook.app and manifest.json files';
   } else if (hasAndroid) {
-    filesRequired = 'your .apk and manifest.json files';
+    filesRequired = 'your storybook.apk and manifest.json files';
   } else {
     // Fallback to generic message if browsers info is not available
-    filesRequired = 'your manifest.json and either your .apk (Android) or .app (iOS) files';
+    filesRequired = 'your manifest.json and either your storybook.apk (Android) or storybook.app (iOS) files';
   }
 
   return dedent(chalk`

@@ -141,13 +141,13 @@ const isValidReactNativeStorybook = ({ paths, total }, browsers: string[] = []) 
     return false;
   }
 
-  // Ensure we have a .apk file on Android builds
-  if (hasAndroid && !paths.some((path: string) => path.endsWith('.apk'))) {
+  // Ensure we have a storybook.apk file on Android builds
+  if (hasAndroid && !paths.includes('storybook.apk')) {
     return false;
   }
 
-  // Ensure we have a .app directory on iOS builds
-  if (hasIOS && !paths.some((path: string) => /^[^/]+\.app\//.test(path))) {
+  // Ensure we have a storybook.app directory on iOS builds
+  if (hasIOS && !paths.some((path: string) => path.startsWith('storybook.app/'))) {
     return false;
   }
 
