@@ -139,7 +139,7 @@ describe('validateFiles', () => {
   describe('with isReactNativeApp', () => {
     describe('Android devices', () => {
       it('sets fileInfo on context with valid React Native build', async () => {
-        readdirSyncMock.mockReturnValue(['app.apk', 'manifest.json'] as any);
+        readdirSyncMock.mockReturnValue(['storybook.apk', 'manifest.json'] as any);
         statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
         const ctx = {
@@ -155,17 +155,17 @@ describe('validateFiles', () => {
         expect(ctx.fileInfo).toEqual(
           expect.objectContaining({
             lengths: [
-              { contentLength: 42, knownAs: 'app.apk', pathname: 'app.apk' },
+              { contentLength: 42, knownAs: 'storybook.apk', pathname: 'storybook.apk' },
               { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
             ],
-            paths: ['app.apk', 'manifest.json'],
+            paths: ['storybook.apk', 'manifest.json'],
             total: 84,
           })
         );
       });
 
       it("throws when manifest.json doesn't exist", async () => {
-        readdirSyncMock.mockReturnValue(['app.apk'] as any);
+        readdirSyncMock.mockReturnValue(['storybook.apk'] as any);
         statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
         const ctx = {
@@ -201,7 +201,7 @@ describe('validateFiles', () => {
 
     describe('iOS devices', () => {
       it('sets fileInfo on context with valid React Native build', async () => {
-        readdirSyncMock.mockReturnValue(['sample.app/modules.json', 'manifest.json'] as any);
+        readdirSyncMock.mockReturnValue(['storybook.app/modules.json', 'manifest.json'] as any);
         statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
         const ctx = {
@@ -219,19 +219,19 @@ describe('validateFiles', () => {
             lengths: [
               {
                 contentLength: 42,
-                knownAs: 'sample.app/modules.json',
-                pathname: 'sample.app/modules.json',
+                knownAs: 'storybook.app/modules.json',
+                pathname: 'storybook.app/modules.json',
               },
               { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
             ],
-            paths: ['sample.app/modules.json', 'manifest.json'],
+            paths: ['storybook.app/modules.json', 'manifest.json'],
             total: 84,
           })
         );
       });
 
       it("throws when manifest.json doesn't exist", async () => {
-        readdirSyncMock.mockReturnValue(['sample.app/modules.json'] as any);
+        readdirSyncMock.mockReturnValue(['storybook.app/modules.json'] as any);
         statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
         const ctx = {
