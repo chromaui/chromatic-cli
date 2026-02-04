@@ -137,63 +137,132 @@ describe('validateFiles', () => {
   });
 
   describe('with isReactNativeApp', () => {
-    it('sets fileInfo on context with valid React Native build', async () => {
-      readdirSyncMock.mockReturnValue(['app.apk', 'manifest.json'] as any);
-      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+    describe('Android devices', () => {
+      it('sets fileInfo on context with valid React Native build', async () => {
+        readdirSyncMock.mockReturnValue(['storybook.apk', 'manifest.json'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-      const ctx = {
-        env: environment,
-        log,
-        http,
-        sourceDir: '/static/',
-        isReactNativeApp: true,
-      } as any;
-      await validateFiles(ctx);
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+          announcedBuild: { browsers: ['android'] },
+        } as any;
+        await validateFiles(ctx);
 
-      expect(ctx.fileInfo).toEqual(
-        expect.objectContaining({
-          lengths: [
-            { contentLength: 42, knownAs: 'app.apk', pathname: 'app.apk' },
-            { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
-          ],
-          paths: ['app.apk', 'manifest.json'],
-          total: 84,
-        })
-      );
+        expect(ctx.fileInfo).toEqual(
+          expect.objectContaining({
+            lengths: [
+              { contentLength: 42, knownAs: 'storybook.apk', pathname: 'storybook.apk' },
+              { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
+            ],
+            paths: ['storybook.apk', 'manifest.json'],
+            total: 84,
+          })
+        );
+      });
+
+      it("throws when manifest.json doesn't exist", async () => {
+        readdirSyncMock.mockReturnValue(['storybook.apk'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          options: {},
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+        } as any;
+        await expect(validateFiles(ctx)).rejects.toThrow(
+          'Invalid React Native Storybook build at /static/'
+        );
+      });
+
+      it("throws when APK doesn't exist", async () => {
+        readdirSyncMock.mockReturnValue(['manifest.json'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          options: {},
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+        } as any;
+        await expect(validateFiles(ctx)).rejects.toThrow(
+          'Invalid React Native Storybook build at /static/'
+        );
+      });
     });
 
-    it("throws when manifest.json doesn't exist", async () => {
-      readdirSyncMock.mockReturnValue(['app.apk'] as any);
-      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+    describe('iOS devices', () => {
+      it('sets fileInfo on context with valid React Native build', async () => {
+        readdirSyncMock.mockReturnValue(['storybook.app/modules.json', 'manifest.json'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-      const ctx = {
-        env: environment,
-        log,
-        http,
-        options: {},
-        sourceDir: '/static/',
-        isReactNativeApp: true,
-      } as any;
-      await expect(validateFiles(ctx)).rejects.toThrow(
-        'Invalid React Native Storybook build at /static/'
-      );
-    });
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+          announcedBuild: { browsers: ['ios'] },
+        } as any;
+        await validateFiles(ctx);
 
-    it("throws when APK doesn't exist", async () => {
-      readdirSyncMock.mockReturnValue(['manifest.json'] as any);
-      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+        expect(ctx.fileInfo).toEqual(
+          expect.objectContaining({
+            lengths: [
+              {
+                contentLength: 42,
+                knownAs: 'storybook.app/modules.json',
+                pathname: 'storybook.app/modules.json',
+              },
+              { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
+            ],
+            paths: ['storybook.app/modules.json', 'manifest.json'],
+            total: 84,
+          })
+        );
+      });
 
-      const ctx = {
-        env: environment,
-        log,
-        http,
-        options: {},
-        sourceDir: '/static/',
-        isReactNativeApp: true,
-      } as any;
-      await expect(validateFiles(ctx)).rejects.toThrow(
-        'Invalid React Native Storybook build at /static/'
-      );
+      it("throws when manifest.json doesn't exist", async () => {
+        readdirSyncMock.mockReturnValue(['storybook.app/modules.json'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          options: {},
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+        } as any;
+        await expect(validateFiles(ctx)).rejects.toThrow(
+          'Invalid React Native Storybook build at /static/'
+        );
+      });
+
+      it("throws when the APP directory doesn't exist", async () => {
+        readdirSyncMock.mockReturnValue(['manifest.json'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          options: {},
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+        } as any;
+        await expect(validateFiles(ctx)).rejects.toThrow(
+          'Invalid React Native Storybook build at /static/'
+        );
+      });
     });
   });
 });

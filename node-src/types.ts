@@ -260,6 +260,7 @@ export interface Context {
   announcedBuild: {
     id: string;
     number: number;
+    browsers: string[];
     status: string;
     autoAcceptChanges: boolean;
     reportToken: string;

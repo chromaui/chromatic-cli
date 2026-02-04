@@ -210,7 +210,7 @@ export default function main(ctx: Context) {
       if (ctx.skip) return true;
       if (ctx.isReactNativeApp) {
         if (!ctx.options.storybookBuildDir) {
-          ctx.log.error(missingStorybookBuildDirectory());
+          ctx.log.error(missingStorybookBuildDirectory(ctx.announcedBuild?.browsers));
           setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
           throw new Error(missingBuildDirectoryForReactNative(ctx).output);
         }
