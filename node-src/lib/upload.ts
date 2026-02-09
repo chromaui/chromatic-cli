@@ -96,16 +96,27 @@ function filterBundleFilesByBrowser(
   const filteredBundles = new Set<string>();
 
   const filteredFiles = files.filter((file) => {
-    // Filter out storybook.apk if android is not in browser list
-    if (!hasAndroid && file.targetPath === 'storybook.apk') {
+    // Handle filtering for .apk files
+    if (file.targetPath.endsWith('.apk')) {
+      // Only include storybook.apk if android is in the browser list
+      if (hasAndroid && file.targetPath === 'storybook.apk') {
+        return true;
+      }
+
       filteredBundles.add(file.targetPath);
       return false;
     }
 
-    // Filter out storybook.app if ios is not in browser list
-    // storybook.app is a directory, so paths will be like "storybook.app/modules.json"
-    if (!hasIOS && file.targetPath.startsWith('storybook.app/')) {
-      filteredBundles.add('storybook.app');
+    // Handle filtering for .app directories
+    if (/^\w+\.app\//.test(file.targetPath)) {
+      const iosBundleRoot = file.targetPath.split('/')[0];
+
+      // Only include storybook.app if ios is in the browser list
+      if (hasIOS && iosBundleRoot === 'storybook.app') {
+        return true;
+      }
+
+      filteredBundles.add(iosBundleRoot);
       return false;
     }
 
