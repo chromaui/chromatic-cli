@@ -201,7 +201,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
 
     if (build.failureReason) {
-      ctx.log.warn(brokenStorybook({ failureReason: build.failureReason, storybookUrl }));
+      ctx.log.warn(brokenStorybook(ctx, { failureReason: build.failureReason, storybookUrl }));
       setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
       throw new Error(publishFailed(ctx).output);
     }

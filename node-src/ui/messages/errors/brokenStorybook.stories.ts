@@ -4,6 +4,8 @@ export default {
   title: 'CLI/Messages/Errors',
 };
 
+const ctx = {} as any;
+
 const failureReason = `
 ReferenceError: foo is not defined
     at Module../.storybook/preview.js-generated-config-entry.js (https://61b0a4b8ebf0e344c2aa231c-nsoaxcirhi.capture.dev-chromatic.com/main.72ad6d7a.iframe.bundle.js:1:2049)
@@ -17,4 +19,7 @@ ReferenceError: foo is not defined
 
 const storybookUrl = 'https://61b0a4b8ebf0e344c2aa231c-wdooytetbw.dev-chromatic.com/';
 
-export const BrokenStorybook = () => brokenStorybook({ failureReason, storybookUrl });
+export const BrokenStorybook = () => brokenStorybook(ctx, { failureReason, storybookUrl });
+
+export const BrokenStorybookReactNative = () =>
+  brokenStorybook({ ...ctx, isReactNativeApp: true }, { failureReason, storybookUrl });

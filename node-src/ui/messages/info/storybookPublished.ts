@@ -26,7 +26,9 @@ export default (ctx: Context) => {
     );
   }
 
-  result.push(`${info} View your ${buildType(ctx)} at ${link(ctx.storybookUrl)}`);
+  if (!ctx.isReactNativeApp) {
+    result.push(`${info} View your ${buildType(ctx)} at ${link(ctx.storybookUrl)}`);
+  }
 
   return dedent(chalk`${result.join('\n')}`);
 };
