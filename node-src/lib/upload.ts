@@ -77,49 +77,35 @@ interface UploadBuildMutationResult {
 
 /**
  * Filter bundle files based on browser requirements for React Native builds.
+ * Always upload manifest.json.
  * Only includes storybook.apk if 'android' is in the browser list.
  * Only includes storybook.app if 'ios' is in the browser list.
  *
- * @param ctx The context for logging.
  * @param files The list of files to filter.
  * @param browsers The list of target browsers.
  *
  * @returns Filtered list of files to upload.
  */
-function filterBundleFilesByBrowser(
-  ctx: Context,
-  files: FileDesc[],
-  browsers: string[] = []
-): FileDesc[] {
+function filterBundleFilesByBrowser(files: FileDesc[], browsers: string[] = []): FileDesc[] {
   const hasAndroid = browsers.includes('android');
   const hasIOS = browsers.includes('ios');
-  const filteredBundles = new Set<string>();
 
-  const filteredFiles = files.filter((file) => {
-    // Filter out storybook.apk if android is not in browser list
-    if (!hasAndroid && file.targetPath === 'storybook.apk') {
-      filteredBundles.add(file.targetPath);
-      return false;
+  return files.filter((file) => {
+    if (file.targetPath === 'manifest.json') {
+      return true;
     }
 
-    // Filter out storybook.app if ios is not in browser list
-    // storybook.app is a directory, so paths will be like "storybook.app/modules.json"
-    if (!hasIOS && file.targetPath.startsWith('storybook.app/')) {
-      filteredBundles.add('storybook.app');
-      return false;
+    if (hasAndroid && file.targetPath === 'storybook.apk') {
+      return true;
     }
 
-    // Keep all other files (manifest.json, etc.)
-    return true;
+    if (hasIOS && file.targetPath.startsWith('storybook.app')) {
+      return true;
+    }
+
+    // Skip anything that isn't what we need
+    return false;
   });
-
-  if (filteredBundles.size > 0) {
-    ctx.log.debug(
-      `Filtered bundle files based on browser requirements: ${[...filteredBundles].join(', ')}`
-    );
-  }
-
-  return filteredFiles;
 }
 
 /**
@@ -156,9 +142,7 @@ export async function uploadBuild(
 
   // Filter files based on browser requirements
   const browsers = ctx.announcedBuild?.browsers || [];
-  const filteredFiles = ctx.isReactNativeApp
-    ? filterBundleFilesByBrowser(ctx, files, browsers)
-    : files;
+  const filteredFiles = ctx.isReactNativeApp ? filterBundleFilesByBrowser(files, browsers) : files;
 
   const batches: FileDesc[][] = [];
   for (const [fileIndex, file] of filteredFiles.entries()) {
