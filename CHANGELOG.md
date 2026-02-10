@@ -1,3 +1,16 @@
+# v15.1.0 (Tue Feb 10 2026)
+
+#### 🚀 Enhancement
+
+- Add support for iOS React Native projects [#1229](https://github.com/chromaui/chromatic-cli/pull/1229) ([@codykaup](https://github.com/codykaup))
+- Only upload `manifest.json`/`storybook.apk`/`storybook.app` [#1240](https://github.com/chromaui/chromatic-cli/pull/1240) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v15.0.0 (Mon Feb 02 2026)
 
 #### 💥 Breaking Change
