@@ -498,6 +498,388 @@ describe('uploadStorybook', () => {
       );
     });
   });
+
+  describe('React Native bundle filtering', () => {
+    it('filters out storybook.app files when only android browser is specified', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/vnd.android.package-archive',
+                filePath: 'storybook.apk',
+                formAction: 'https://s3.amazonaws.com/presigned?storybook.apk',
+                formFields: {},
+              },
+              {
+                contentType: 'application/json',
+                filePath: 'manifest.json',
+                formAction: 'https://s3.amazonaws.com/presigned?manifest.json',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'storybook.apk', contentLength: 1000 },
+          { knownAs: 'storybook.app/modules.json', contentLength: 500 },
+          { knownAs: 'manifest.json', contentLength: 100 },
+        ],
+        paths: ['storybook.apk', 'storybook.app/modules.json', 'manifest.json'],
+        total: 1600,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1', browsers: ['android'] },
+        isReactNativeApp: true,
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/UploadBuildMutation/),
+        expect.objectContaining({
+          files: [
+            { contentHash: undefined, contentLength: 1000, filePath: 'storybook.apk' },
+            { contentHash: undefined, contentLength: 100, filePath: 'manifest.json' },
+          ],
+        })
+      );
+    });
+
+    it('filters out storybook.apk when only ios browser is specified', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/octet-stream',
+                filePath: 'storybook.app/modules.json',
+                formAction: 'https://s3.amazonaws.com/presigned?storybook.app/modules.json',
+                formFields: {},
+              },
+              {
+                contentType: 'application/json',
+                filePath: 'manifest.json',
+                formAction: 'https://s3.amazonaws.com/presigned?manifest.json',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'storybook.apk', contentLength: 1000 },
+          { knownAs: 'storybook.app/modules.json', contentLength: 500 },
+          { knownAs: 'manifest.json', contentLength: 100 },
+        ],
+        paths: ['storybook.apk', 'storybook.app/modules.json', 'manifest.json'],
+        total: 1600,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1', browsers: ['ios'] },
+        isReactNativeApp: true,
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/UploadBuildMutation/),
+        expect.objectContaining({
+          files: [
+            { contentHash: undefined, contentLength: 500, filePath: 'storybook.app/modules.json' },
+            { contentHash: undefined, contentLength: 100, filePath: 'manifest.json' },
+          ],
+        })
+      );
+    });
+
+    it('uploads all bundle files when both android and ios browsers are specified', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/vnd.android.package-archive',
+                filePath: 'storybook.apk',
+                formAction: 'https://s3.amazonaws.com/presigned?storybook.apk',
+                formFields: {},
+              },
+              {
+                contentType: 'application/octet-stream',
+                filePath: 'storybook.app/modules.json',
+                formAction: 'https://s3.amazonaws.com/presigned?storybook.app/modules.json',
+                formFields: {},
+              },
+              {
+                contentType: 'application/json',
+                filePath: 'manifest.json',
+                formAction: 'https://s3.amazonaws.com/presigned?manifest.json',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'storybook.apk', contentLength: 1000 },
+          { knownAs: 'storybook.app/modules.json', contentLength: 500 },
+          { knownAs: 'manifest.json', contentLength: 100 },
+        ],
+        paths: ['storybook.apk', 'storybook.app/modules.json', 'manifest.json'],
+        total: 1600,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1', browsers: ['android', 'ios'] },
+        isReactNativeApp: true,
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/UploadBuildMutation/),
+        expect.objectContaining({
+          files: [
+            { contentHash: undefined, contentLength: 1000, filePath: 'storybook.apk' },
+            { contentHash: undefined, contentLength: 500, filePath: 'storybook.app/modules.json' },
+            { contentHash: undefined, contentLength: 100, filePath: 'manifest.json' },
+          ],
+        })
+      );
+    });
+
+    it('does not filter bundle files for non-React Native apps', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'iframe.html',
+                formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+                formFields: {},
+              },
+              {
+                contentType: 'text/html',
+                filePath: 'index.html',
+                formAction: 'https://s3.amazonaws.com/presigned?index.html',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        paths: ['iframe.html', 'index.html'],
+        total: 84,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+        isReactNativeApp: false,
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/UploadBuildMutation/),
+        expect.objectContaining({
+          files: [
+            { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
+            { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
+          ],
+        })
+      );
+    });
+
+    it('filters out all bundle files when browser list is empty', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/json',
+                filePath: 'manifest.json',
+                formAction: 'https://s3.amazonaws.com/presigned?manifest.json',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'storybook.apk', contentLength: 1000 },
+          { knownAs: 'storybook.app/modules.json', contentLength: 500 },
+          { knownAs: 'manifest.json', contentLength: 100 },
+        ],
+        paths: ['storybook.apk', 'storybook.app/modules.json', 'manifest.json'],
+        total: 1600,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1', browsers: [] },
+        isReactNativeApp: true,
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/UploadBuildMutation/),
+        expect.objectContaining({
+          files: [{ contentHash: undefined, contentLength: 100, filePath: 'manifest.json' }],
+        })
+      );
+    });
+
+    it('filters out files that are not storybook.apk/storybook.app/manifest.json', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: [],
+            targets: [
+              {
+                contentType: 'application/vnd.android.package-archive',
+                filePath: 'storybook.apk',
+                formAction: 'https://s3.amazonaws.com/presigned?storybook.apk',
+                formFields: {},
+              },
+              {
+                contentType: 'application/octet-stream',
+                filePath: 'storybook.app/modules.json',
+                formAction: 'https://s3.amazonaws.com/presigned?storybook.app/modules.json',
+                formFields: {},
+              },
+              {
+                contentType: 'application/json',
+                filePath: 'manifest.json',
+                formAction: 'https://s3.amazonaws.com/presigned?manifest.json',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'storybook.apk', contentLength: 1000 },
+          { knownAs: 'sample.apk', contentLength: 1000 },
+          { knownAs: 'storybook.app/modules.json', contentLength: 500 },
+          { knownAs: 'sample.app/modules.json', contentLength: 500 },
+          { knownAs: 'manifest.json', contentLength: 100 },
+          { knownAs: 'iframe.html', contentLength: 100 },
+        ],
+        paths: [
+          'storybook.apk',
+          'sample.apk',
+          'storybook.app/modules.json',
+          'sample.app/modules.json',
+          'manifest.json',
+          'iframe.html',
+        ],
+        total: 3200,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1', browsers: ['android', 'ios'] },
+        isReactNativeApp: true,
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/UploadBuildMutation/),
+        expect.objectContaining({
+          files: [
+            { contentHash: undefined, contentLength: 1000, filePath: 'storybook.apk' },
+            { contentHash: undefined, contentLength: 500, filePath: 'storybook.app/modules.json' },
+            { contentHash: undefined, contentLength: 100, filePath: 'manifest.json' },
+          ],
+        })
+      );
+    });
+  });
 });
 
 describe('waitForSentinels', () => {

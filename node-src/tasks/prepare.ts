@@ -123,19 +123,38 @@ const isValidStorybook = ({ paths, total }) =>
 
 /**
  * Determines if a directory contains a valid React Native Storybook build.
- * A valid React Native Storybook must have non-zero total size, contain an APK file,
- * and include a manifest.json file.
+ * A valid React Native Storybook must have non-zero total size, contain a
+ * manifest.json file, and storybook.apk _and/or_ storybook.app depending on
+ * the builds enabled browsers.
  *
  * @param fileInfo - Object containing paths array and total size
  * @param fileInfo.paths - Array of file paths in the directory
  * @param fileInfo.total - Total size of all files in bytes
+ * @param browsers - The list of browsers to capture for the build
  *
  * @returns True if the directory contains a valid React Native Storybook build
  */
-const isValidReactNativeStorybook = ({ paths, total }) => {
-  const hasApk = paths.some((p: string) => p.endsWith('.apk'));
+const isValidReactNativeStorybook = ({ paths, total }, browsers: string[] = []) => {
+  const hasAndroid = browsers.includes('android');
+  const hasIOS = browsers.includes('ios');
+
+  if (!hasAndroid && !hasIOS) {
+    return false;
+  }
+
+  // Ensure we have a storybook.apk file on Android builds
+  if (hasAndroid && !paths.includes('storybook.apk')) {
+    return false;
+  }
+
+  // Ensure we have a storybook.app directory on iOS builds
+  if (hasIOS && !paths.some((path: string) => path.startsWith('storybook.app/'))) {
+    return false;
+  }
+
   const hasManifest = paths.includes('manifest.json');
-  return total > 0 && hasApk && hasManifest;
+
+  return total > 0 && hasManifest;
 };
 
 /**
@@ -149,10 +168,11 @@ const isValidReactNativeStorybook = ({ paths, total }) => {
  */
 export async function validateFiles(ctx: Context) {
   const validator = ctx.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
+  const browsers = ctx.announcedBuild?.browsers;
 
   ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
 
-  if (!validator(ctx.fileInfo) && ctx.buildLogFile) {
+  if (!validator(ctx.fileInfo, browsers) && ctx.buildLogFile) {
     try {
       const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
@@ -166,7 +186,7 @@ export async function validateFiles(ctx: Context) {
     }
   }
 
-  if (!validator(ctx.fileInfo)) {
+  if (!validator(ctx.fileInfo, browsers)) {
     throw new Error(invalid(ctx).output);
   }
 }

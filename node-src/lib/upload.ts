@@ -76,6 +76,39 @@ interface UploadBuildMutationResult {
 }
 
 /**
+ * Filter bundle files based on browser requirements for React Native builds.
+ * Always upload manifest.json.
+ * Only includes storybook.apk if 'android' is in the browser list.
+ * Only includes storybook.app if 'ios' is in the browser list.
+ *
+ * @param files The list of files to filter.
+ * @param browsers The list of target browsers.
+ *
+ * @returns Filtered list of files to upload.
+ */
+function filterBundleFilesByBrowser(files: FileDesc[], browsers: string[] = []): FileDesc[] {
+  const hasAndroid = browsers.includes('android');
+  const hasIOS = browsers.includes('ios');
+
+  return files.filter((file) => {
+    if (file.targetPath === 'manifest.json') {
+      return true;
+    }
+
+    if (hasAndroid && file.targetPath === 'storybook.apk') {
+      return true;
+    }
+
+    if (hasIOS && file.targetPath.startsWith('storybook.app')) {
+      return true;
+    }
+
+    // Skip anything that isn't what we need
+    return false;
+  });
+}
+
+/**
  * Upload build files to Chromatic.
  *
  * @param ctx The context set when executing the CLI.
@@ -107,8 +140,12 @@ export async function uploadBuild(
   const targets: (TargetInfo & FileDesc)[] = [];
   let zipTarget: TargetInfo | undefined;
 
+  // Filter files based on browser requirements
+  const browsers = ctx.announcedBuild?.browsers || [];
+  const filteredFiles = ctx.isReactNativeApp ? filterBundleFilesByBrowser(files, browsers) : files;
+
   const batches: FileDesc[][] = [];
-  for (const [fileIndex, file] of files.entries()) {
+  for (const [fileIndex, file] of filteredFiles.entries()) {
     const batchIndex = Math.floor(fileIndex / MAX_FILES_PER_REQUEST);
     if (!batches[batchIndex]) {
       batches[batchIndex] = [];
