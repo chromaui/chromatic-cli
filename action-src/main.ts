@@ -1,6 +1,6 @@
 import '../node-src/errorMonitoring';
 
-import { error, getInput, getMultilineInput, setFailed, setOutput } from '@actions/core';
+import { error, getInput, getMultilineInput, setFailed, setOutput, warning } from '@actions/core';
 import { context } from '@actions/github';
 import * as Sentry from '@sentry/node';
 import path from 'path';
@@ -126,6 +126,7 @@ async function run() {
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken');
     const repositorySlug = getInput('repositorySlug');
+    const shaInput = getInput('chromaticSha');
     const skip = getInput('skip');
     const skipUpdateCheck = getInput('skipUpdateCheck');
     const storybookBaseDir = getInput('storybookBaseDir');
@@ -139,8 +140,12 @@ async function run() {
     const zip = getInput('zip');
     const junitReport = getInput('junitReport');
 
+    if (shaInput) {
+      warning(`Chromatic sha was overridden by user to: ${shaInput}`);
+    }
+
+    process.env.CHROMATIC_SHA = shaInput || process.env.CHROMATIC_SHA || sha;
     process.env.CHROMATIC_ACTION = 'true';
-    process.env.CHROMATIC_SHA = sha;
     process.env.CHROMATIC_BRANCH = branchName || branch;
     process.env.CHROMATIC_SLUG = repositorySlug || slug;
     if (mergeCommit) {

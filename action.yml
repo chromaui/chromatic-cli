@@ -18,6 +18,9 @@ inputs:
   buildCommand:
     description: 'The command that builds your Storybook (when your build command does not exist in "scripts" of your package.json)'
     required: false
+  chromaticSha:
+    description: 'The git SHA of the commit that should be tested in Chromatic. Defaults to the SHA of the current branch tip on which the action is running. Use with caution, as it may yield unexpected results.'
+    required: false
   configFile:
     description: 'Path from where to load the Chromatic config JSON file.'
   cypress:
