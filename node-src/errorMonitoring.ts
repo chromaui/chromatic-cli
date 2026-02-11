@@ -35,7 +35,6 @@ export function filterBreadcrumb(breadcrumb: Sentry.Breadcrumb) {
   if (breadcrumb.category === 'console') {
     // Do not send breadcrumbs for console newlines
     if (breadcrumb.message === '') {
-      // eslint-disable-next-line unicorn/no-null
       return null;
     }
     // Otherwise remove ANSI escape codes

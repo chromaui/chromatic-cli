@@ -1,3 +1,4 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import eslint from '@eslint/js';
 import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import jsdoc from 'eslint-plugin-jsdoc';
@@ -6,49 +7,63 @@ import prettier from 'eslint-plugin-prettier';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import sortClassMembers from 'eslint-plugin-sort-class-members';
+import storybook from 'eslint-plugin-storybook';
 import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default [
-  { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+  {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+  },
   {
     ignores: [
-      '**/node_modules/*',
+      '**/node_modules/**',
       'dist/**',
       'action/**',
       'bin/**',
-      '**/build/*',
+      '**/build/**',
       '.storybook/**',
+      '.storybook-test/**',
       'storybook-static/**',
       'storybook-out/**',
       'coverage/**',
       'subdir/**',
     ],
   },
-  // eslint core + overrides
   eslint.configs.recommended,
   {
     rules: {
-      // check cyclomatic complexity
+      // Check cyclomatic complexity and issue an error if complexity is over 10
       complexity: ['error', 10],
-      // use strict equality checks when reasonable
+
+      // Use strict equality checks when reasonable
       eqeqeq: ['error', 'smart'],
-      // require switch cases to have a default
+
+      // Require switch cases to have a default
       'default-case': ['error'],
-      // max nesting depth
+
+      // Allow a max nesting depth of 4
       'max-depth': ['error', 4],
-      // max lines per file
+
+      // Allow 500 lines per file at maximum
       'max-lines': ['error', 500],
-      // max statements per function
+
+      // Allow 30 statements per function at maximum
       'max-statements': ['error', 30],
-      // no dialog creating methods (alert, confirm, prompt)
+
+      // Do not allow dialog-creating methods (e.g. alert, confirm, prompt)
       'no-alert': 'error',
-      // prefer function declarations over variable expressions
+
+      // Prefer function declarations over variable expressions assigning a function to a variable.
       'func-style': ['error', 'declaration', { allowArrowFunctions: true }],
     },
   },
-  // lint comments
   comments.recommended,
   {
     files: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
@@ -56,39 +71,21 @@ export default [
       '@eslint-community/eslint-comments/disable-enable-pair': ['error', { allowWholeFile: true }],
     },
   },
-  // lint typescript
+  ...tseslint.configs.recommended,
   ...tseslint.configs.strict,
   ...tseslint.configs.stylistic,
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parserOptions: {
-        project: true,
+        project: ['./tsconfig.json'],
         tsConfigRootDir: import.meta.dirname,
       },
     },
     rules: {
-      // TODO: make this an error when we have time to deal with it
       '@typescript-eslint/no-explicit-any': 'off',
-      //   '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'error',
-    },
-  },
-  {
-    files: ['**/*.test.ts'],
-    languageOptions: {
-      parserOptions: {
-        project: true,
-        tsConfigRootDir: import.meta.dirname,
-      },
-    },
-    rules: {
-      '@typescript-eslint/no-floating-promises': 'off',
-    },
-  },
-  // allow underscore variables to be unused
-  {
-    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -104,16 +101,55 @@ export default [
       '@typescript-eslint/no-empty-function': ['error', { allow: ['arrowFunctions'] }],
     },
   },
-  // additional lints from unicorn
-  unicorn.configs['flat/recommended'],
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.json'],
+        tsConfigRootDir: import.meta.dirname,
+      },
+    },
+    plugins: {
+      'no-secrets': noSecrets,
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      'no-secrets/no-secrets': 'warn',
+      'max-lines': 'warn',
+      'jsdoc/require-jsdoc': 'off',
+      'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value
+    },
+  },
+  {
+    files: ['**/*.test.js', '**/*.stories.js', '**/*.test.jsx', '**/*.stories.jsx'],
+    plugins: {
+      'no-secrets': noSecrets,
+    },
+    rules: {
+      'no-secrets/no-secrets': 'warn',
+      '@typescript-eslint/no-empty-function': 'off',
+      'max-lines': 'warn',
+      'jsdoc/require-jsdoc': 'off',
+      'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value
+    },
+  },
+  unicorn.configs.recommended,
   {
     rules: {
+      'unicorn/no-null': 'off',
+      'unicorn/prefer-top-level-await': 'off',
+      'unicorn/no-array-reduce': 'off',
+      'unicorn/no-array-sort': 'off',
+      'unicorn/no-array-reverse': 'off',
       'unicorn/filename-case': [
         'error',
         {
           case: 'camelCase',
+
+          // Allow capitalization in initialisms
           ignore: [
-            // Allow capitalization in initialisms
             String.raw`^.*DNS.*\.[jt]s$`,
             String.raw`^.*CSF.*\.[jt]s$`,
             String.raw`^.*TTY.*\.[jt]s$`,
@@ -122,11 +158,12 @@ export default [
           ],
         },
       ],
-      // Chromatic uses err as our catch convention.
-      // This is baked into pino transforms as well.
       'unicorn/prevent-abbreviations': [
         'error',
         {
+          // Chromatic uses err as our catch convention.
+          // This is baked into pino transforms as well.
+          checkFilenames: false,
           allowList: {
             err: true,
             props: true,
@@ -148,11 +185,12 @@ export default [
       ],
       'unicorn/switch-case-braces': 'off',
       'unicorn/no-process-exit': 'off',
-      'unicorn/prefer-node-protocol': 'off', // This will error our Webpack build
+      // This will error our webpack build if it is turned on.
+      'unicorn/prefer-node-protocol': 'off',
     },
   },
-  // prefer TS to complain when we miss an arg vs. sending an intentional undefined
   {
+    // Prefer TS to complain when we miss an argument vs. silently sending an intentional undefined.
     files: ['**/*.ts'],
     rules: {
       'unicorn/no-useless-undefined': 'off',
@@ -164,7 +202,6 @@ export default [
       'unicorn/no-anonymous-default-export': 'off',
     },
   },
-  // security related lints
   security.configs.recommended,
   {
     files: ['**/*.js', '**/*.ts'],
@@ -186,10 +223,10 @@ export default [
       ],
     },
   },
-  // run prettier and expose problems as linting errors
-  // NOTE: This does slow down eslint (about 25% slower)
-  // If this becomes problematic, we can discuss removing it
   {
+    // Run prettier and expose problems as linting errors.
+    // NOTE: This does slow down eslint (about 25% slower)
+    // If this becomes problematic, we can discuss removing it
     plugins: {
       prettier: prettier,
     },
@@ -197,7 +234,6 @@ export default [
       ...prettier.configs.recommended.rules,
     },
   },
-  // lint jsdoc
   {
     files: ['**/*.js', '**/*.ts'],
     plugins: {
@@ -223,7 +259,6 @@ export default [
       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
     },
   },
-  // sort your imports
   {
     plugins: {
       'simple-import-sort': simpleImportSort,
@@ -231,13 +266,13 @@ export default [
     rules: {
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
-      // disable built-in import/order rule
       'import/order': 'off',
     },
   },
-  // sort class members
   {
-    plugins: { 'sort-class-members': sortClassMembers },
+    plugins: {
+      'sort-class-members': sortClassMembers,
+    },
     rules: {
       'sort-class-members/sort-class-members': [
         2,
@@ -255,22 +290,11 @@ export default [
       ],
     },
   },
-  // exceptions for files stuck in CJS for now
   {
     files: ['**/*.cjs'],
     rules: {
-      //   'unicorn/prefer-module': 'off',
       '@typescript-eslint/no-var-requires': 'off',
     },
   },
-  // exceptions for test files and support
-  {
-    files: ['**/*.test.*'],
-    rules: {
-      'no-secrets/no-secrets': 'warn',
-      'max-lines': 'warn',
-      'jsdoc/require-jsdoc': 'off',
-      'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value
-    },
-  },
+  ...storybook.configs['flat/recommended'],
 ];

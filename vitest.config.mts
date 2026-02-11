@@ -8,8 +8,9 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       exclude: [
-        'vitest.no-threads.config.ts',
+        'vitest.no-threads.config.mts',
         'scripts/**',
+        'test-stories/**',
         '**/*.stories.{t,j}s',
         'node-src/lib/testLogger.ts',
         ...coverageConfigDefaults.exclude,

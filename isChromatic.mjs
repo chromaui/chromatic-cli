@@ -1,6 +1,7 @@
 /* eslint-env browser */
 
 export default function isChromatic(windowArgument) {
+  // eslint-disable-next-line unicorn/prefer-global-this
   const windowToCheck = windowArgument || (typeof window !== 'undefined' && window);
   return !!(
     windowToCheck &&

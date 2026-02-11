@@ -17,6 +17,7 @@ export default defineConfig((options) => [
     sourcemap: true,
     clean: true,
     platform: 'node',
+    external: ['prettier'],
     target: 'node16', // Storybook still supports Node 16
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
