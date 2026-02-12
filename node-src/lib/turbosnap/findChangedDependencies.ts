@@ -107,6 +107,7 @@ export const findChangedDependencies = async (ctx: Context) => {
       packageConcurrency,
       baselineConcurrency,
       maxConcurrentOperations: packageConcurrency * baselineConcurrency,
+      totalPathsToCheck: filteredPathPairs.length,
     },
     'Applying concurrency limits to dependency checking'
   );
