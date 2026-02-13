@@ -43,7 +43,8 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
-  const manifestConcurrency = 100;
+  // TODO: set this to an environment variable
+  const manifestConcurrency = 20;
 
   // Handle monorepos with (multiple) nested package.json files.
   // Note that this does not use `path.join` to concatenate the file paths because
