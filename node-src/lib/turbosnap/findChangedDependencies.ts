@@ -43,12 +43,16 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
+  const manifestConcurrency = 100;
+
   // Handle monorepos with (multiple) nested package.json files.
   // Note that this does not use `path.join` to concatenate the file paths because
   // git uses forward slashes, even on windows
   const nestedManifestPaths = (await findFilesFromRepositoryRoot(ctx, `**/${PACKAGE_JSON}`)) || [];
-  const metadataPathPairs = await Promise.all(
-    nestedManifestPaths.map(async (manifestPath) => {
+  ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
+  const metadataPathPairs = await pMap(
+    nestedManifestPaths,
+    async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
       const [lockfilePath] =
         (await findFilesFromRepositoryRoot(
@@ -57,7 +61,8 @@ export const findChangedDependencies = async (ctx: Context) => {
         )) || [];
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
-    })
+    },
+    { concurrency: manifestConcurrency }
   );
 
   if (rootManifestPath && rootLockfilePath) {
