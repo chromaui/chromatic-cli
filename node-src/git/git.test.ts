@@ -174,14 +174,18 @@ describe('findFilesFromRepositoryRoot', () => {
     const filesFound = ['package.json', 'another/package/package.json'];
 
     // first call from getRepositoryRoot()
-    execGitCommand.mockResolvedValueOnce('/root');
     execGitCommand.mockResolvedValueOnce(filesFound.join(NULL_BYTE));
 
-    const results = await findFilesFromRepositoryRoot(ctx, 'package.json', '**/package.json');
+    const results = await findFilesFromRepositoryRoot(
+      ctx,
+      '/root',
+      'package.json',
+      '**/package.json'
+    );
 
-    expect(execGitCommand).toBeCalledTimes(2);
+    expect(execGitCommand).toBeCalledTimes(1);
     expect(execGitCommand).toHaveBeenNthCalledWith(
-      2,
+      1,
       ctx,
       'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"'
     );

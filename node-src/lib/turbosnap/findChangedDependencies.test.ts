@@ -42,7 +42,7 @@ const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGrap
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
   // always resolve files in the root, but not subdirs
-  findFilesFromRepositoryRoot.mockImplementation((_, file) =>
+  findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
     Promise.resolve(file.startsWith('**') ? [] : [file])
   );
   // always checkout files with the result path of "<commit>.<file>"
@@ -225,7 +225,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('looks for manifest and lock files in subpackages', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, file) =>
+    findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
       Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file])
     );
 
@@ -276,7 +276,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, file) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
       if (file === 'subdir/yarn.lock') return Promise.resolve([]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
@@ -309,7 +309,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('ignores lockfile changes if metadata file is untraced', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, file) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
       if (file === 'subdir/yarn.lock') return Promise.resolve([]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
     });
@@ -331,7 +331,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses package-lock.json if yarn.lock is missing', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, file) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
       if (file.endsWith('yarn.lock'))
         return Promise.resolve([file.replace('yarn.lock', 'package-lock.json')]);
       return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
@@ -363,7 +363,7 @@ describe('findChangedDependencies', () => {
     getRepositoryRoot.mockResolvedValue('/root/subdir');
 
     // Mock findFilesFromRepositoryRoot to return relative paths
-    findFilesFromRepositoryRoot.mockImplementation((_, ...patterns) => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, ...patterns) => {
       const results: string[] = [];
       for (const pattern of patterns) {
         if (pattern === 'package.json') {
