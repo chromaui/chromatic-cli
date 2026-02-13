@@ -1,5 +1,6 @@
 import fs from 'fs';
 import os from 'os';
+import pMap from 'p-map';
 import path from 'path';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../git/git';
@@ -14,7 +15,7 @@ export const SUPPORTED_LOCK_FILES = ['yarn.lock', 'pnpm-lock.yaml', 'package-loc
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
 // TODO: refactor this function
-// eslint-disable-next-line complexity
+// eslint-disable-next-line complexity,max-statements
 export const findChangedDependencies = async (ctx: Context) => {
   const { packageMetadataChanges } = ctx.git;
   const { untraced = [] } = ctx.options;
@@ -30,9 +31,9 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   const rootPath = (await getRepositoryRoot(ctx)) || '';
-  const [rootManifestPath] = (await findFilesFromRepositoryRoot(ctx, PACKAGE_JSON)) || [];
+  const [rootManifestPath] = (await findFilesFromRepositoryRoot(ctx, rootPath, PACKAGE_JSON)) || [];
   const [rootLockfilePath] =
-    (await findFilesFromRepositoryRoot(ctx, ...SUPPORTED_LOCK_FILES)) || [];
+    (await findFilesFromRepositoryRoot(ctx, rootPath, ...SUPPORTED_LOCK_FILES)) || [];
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -42,21 +43,29 @@ export const findChangedDependencies = async (ctx: Context) => {
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
+  // TODO: set this to an environment variable
+  const manifestConcurrency = 20;
+
   // Handle monorepos with (multiple) nested package.json files.
   // Note that this does not use `path.join` to concatenate the file paths because
   // git uses forward slashes, even on windows
-  const nestedManifestPaths = (await findFilesFromRepositoryRoot(ctx, `**/${PACKAGE_JSON}`)) || [];
-  const metadataPathPairs = await Promise.all(
-    nestedManifestPaths.map(async (manifestPath) => {
+  const nestedManifestPaths =
+    (await findFilesFromRepositoryRoot(ctx, rootPath, `**/${PACKAGE_JSON}`)) || [];
+  ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
+  const metadataPathPairs = await pMap(
+    nestedManifestPaths,
+    async (manifestPath) => {
       const dirname = path.dirname(manifestPath);
       const [lockfilePath] =
         (await findFilesFromRepositoryRoot(
           ctx,
+          rootPath,
           ...SUPPORTED_LOCK_FILES.map((lockfile) => `${dirname}/${lockfile}`)
         )) || [];
       // Fall back to the root lockfile if we can't find one in the same directory.
       return [manifestPath, lockfilePath || rootLockfilePath];
-    })
+    },
+    { concurrency: manifestConcurrency }
   );
 
   if (rootManifestPath && rootLockfilePath) {
@@ -98,13 +107,27 @@ export const findChangedDependencies = async (ctx: Context) => {
     return [];
   }
 
+  const packageConcurrency = ctx.env.CHROMATIC_DEPENDENCY_PACKAGE_CONCURRENCY;
+  const baselineConcurrency = ctx.env.CHROMATIC_DEPENDENCY_BASELINE_CONCURRENCY;
+
+  ctx.log.debug(
+    {
+      packageConcurrency,
+      baselineConcurrency,
+      maxConcurrentOperations: packageConcurrency * baselineConcurrency,
+      totalPathsToCheck: filteredPathPairs.length,
+    },
+    'Applying concurrency limits to dependency checking'
+  );
+
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
   const tmpdirsCreated = new Set<string>();
 
   try {
-    await Promise.all(
-      filteredPathPairs.map(async ([manifestPath, lockfilePath, commits]) => {
+    await pMap(
+      filteredPathPairs,
+      async ([manifestPath, lockfilePath, commits]) => {
         // Create a temporary directory for the HEAD dependencies. We do this to isolate the
         // package.json and lock files from the rest of the repository because the `inspect` function
         // from `snyk-nodejs-plugin` used inside getDependencies.ts hardcodes the file paths based on
@@ -131,8 +154,9 @@ export const findChangedDependencies = async (ctx: Context) => {
         // Retrieve the union of dependencies which changed compared to each baseline.
         // A change means either the version number is different or the dependency was added/removed.
         // If a manifest or lockfile is missing on the baseline, this throws and we'll end up bailing.
-        await Promise.all(
-          commits.map(async (reference) => {
+        await pMap(
+          commits,
+          async (reference) => {
             // Create a temporary directory for the baseline dependencies to also isolate the
             // package.json and lock files for the `inspect` function from `snyk-nodejs-plugin` in
             // getDependencies.ts.
@@ -151,9 +175,11 @@ export const findChangedDependencies = async (ctx: Context) => {
             for (const change of baselineChanges) {
               changedDependencyNames.add(change);
             }
-          })
+          },
+          { concurrency: baselineConcurrency }
         );
-      })
+      },
+      { concurrency: packageConcurrency }
     );
   } finally {
     for (const tmpdir of tmpdirsCreated) {

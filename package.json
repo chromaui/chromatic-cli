@@ -179,6 +179,7 @@
     "observable": "^2.1.4",
     "os-browserify": "^0.3.0",
     "p-limit": "3.1.0",
+    "p-map": "^7.0.4",
     "picomatch": "2.2.2",
     "pkg-up": "^3.1.0",
     "pluralize": "^8.0.0",

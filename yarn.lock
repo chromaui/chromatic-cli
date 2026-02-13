@@ -7692,6 +7692,7 @@ __metadata:
     observable: "npm:^2.1.4"
     os-browserify: "npm:^0.3.0"
     p-limit: "npm:3.1.0"
+    p-map: "npm:^7.0.4"
     picomatch: "npm:2.2.2"
     pkg-up: "npm:^3.1.0"
     pluralize: "npm:^8.0.0"
@@ -15326,6 +15327,13 @@ __metadata:
   dependencies:
     aggregate-error: "npm:^3.0.0"
   checksum: 10c0/592c05bd6262c466ce269ff172bb8de7c6975afca9b50c975135b974e9bdaafbfe80e61aaaf5be6d1200ba08b30ead04b88cfa7e25ff1e3b93ab28c9f62a2c75
+  languageName: node
+  linkType: hard
+
+"p-map@npm:^7.0.4":
+  version: 7.0.4
+  resolution: "p-map@npm:7.0.4"
+  checksum: 10c0/a5030935d3cb2919d7e89454d1ce82141e6f9955413658b8c9403cfe379283770ed3048146b44cde168aa9e8c716505f196d5689db0ae3ce9a71521a2fef3abd
   languageName: node
   linkType: hard
 
