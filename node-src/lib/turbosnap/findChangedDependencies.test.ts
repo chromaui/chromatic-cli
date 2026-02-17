@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { Context } from '../..';
 import * as git from '../../git/git';
+import getEnvironment from '../../lib/getEnvironment';
 import TestLogger from '../testLogger';
 import { findChangedDependencies } from './findChangedDependencies';
 
@@ -65,6 +66,7 @@ const getContext = (
   ({
     log: new TestLogger(),
     options: {},
+    env: getEnvironment(),
     ...input,
   }) as Context;
 
