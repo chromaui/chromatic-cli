@@ -1,3 +1,16 @@
+# v15.1.1 (Tue Feb 17 2026)
+
+#### 🐛 Bug Fix
+
+- Add concurrency limits to TurboSnap checks to fix OOM errors with large monorepos [#1242](https://github.com/chromaui/chromatic-cli/pull/1242) ([@Brookke](https://github.com/Brookke) [@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Brooke Hatton ([@Brookke](https://github.com/Brookke))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v15.1.0 (Tue Feb 10 2026)
 
 #### 🚀 Enhancement
