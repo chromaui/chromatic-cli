@@ -401,7 +401,7 @@ export async function getRepositoryRoot(ctx: Pick<Context, 'log'>) {
  * Find all files that match the given patterns within the repository.
  *
  * @param ctx Standard context object.
- * @param repoRoot The root path of the repository (usually from getRepositoryRoot()).
+ * @param repoRoot The root path of the repository (usually from `getRepositoryRoot()`).
  * @param patterns A list of patterns to filter file results.
  *
  * @returns A list of files matching the pattern.
