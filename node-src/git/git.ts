@@ -401,16 +401,16 @@ export async function getRepositoryRoot(ctx: Pick<Context, 'log'>) {
  * Find all files that match the given patterns within the repository.
  *
  * @param ctx Standard context object.
+ * @param repoRoot The root path of the repository (usually from getRepositoryRoot()).
  * @param patterns A list of patterns to filter file results.
  *
  * @returns A list of files matching the pattern.
  */
 export async function findFilesFromRepositoryRoot(
   ctx: Pick<Context, 'log'>,
+  repoRoot: string,
   ...patterns: string[]
 ) {
-  const repoRoot = await getRepositoryRoot(ctx);
-
   // Ensure patterns are referenced from the repository root so that running
   // from within a subdirectory does not skip the directories above
   // e.g. /root/package.json, /root/**/package.json
