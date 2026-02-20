@@ -15,7 +15,9 @@ import {
   getUserEmail,
   getVersion,
 } from '../git/git';
+import { filterChangedFilesByBaseDir, filterPackageMetadataByBaseDir } from '../lib/filterGitChanges';
 import { getHasRouter } from '../lib/getHasRouter';
+import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { isPackageMetadataFile, matchesFile } from '../lib/utils';
@@ -250,13 +252,27 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       // Take the distinct union of changed files across all baselines.
-      ctx.git.changedFiles = [
+      const allChangedFiles = [
         ...new Set(changedFilesWithInfo.flatMap(({ changedFiles }) => changedFiles)),
       ];
 
+      // Compute the baseDir early so we can scope changed files to the Storybook project.
+      // In a monorepo, this filters out files from unrelated workspaces before tracing.
+      // Cross-workspace dependencies that appear in the stats graph are recovered later
+      // in traceChangedFiles.
+      const baseDir = getStorybookBaseDirectory(ctx);
+      ctx.git.allChangedFiles = allChangedFiles;
+      ctx.git.changedFiles = filterChangedFilesByBaseDir(baseDir, allChangedFiles);
+
+      if (ctx.git.changedFiles.length < allChangedFiles.length) {
+        ctx.log.info(
+          `TurboSnap scope: filtered ${allChangedFiles.length} changed files to ${ctx.git.changedFiles.length} files relevant to base directory ${JSON.stringify(baseDir)}`
+        );
+      }
+
       // Track changed package manifest files along with the commit they were changed in.
       const { untraced = [] } = ctx.options;
-      ctx.git.packageMetadataChanges = changedFilesWithInfo.flatMap(
+      const allPackageMetadataChanges = changedFilesWithInfo.flatMap(
         ({ build, changedFiles, replacementBuild }) => {
           const metadataFiles = changedFiles
             .filter((f) => !untraced.some((glob) => matchesFile(glob, f)))
@@ -266,6 +282,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
             ? [{ changedFiles: metadataFiles, commit: replacementBuild?.commit ?? build.commit }]
             : [];
         }
+      );
+      ctx.git.packageMetadataChanges = filterPackageMetadataByBaseDir(
+        baseDir,
+        allPackageMetadataChanges
       );
 
       // Track replacement build info to pass along when we create the new build later on.

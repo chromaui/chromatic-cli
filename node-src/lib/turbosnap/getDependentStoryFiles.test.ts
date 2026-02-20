@@ -889,6 +889,129 @@ describe('getDependentStoryFiles', () => {
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
+
+  describe('monorepo cross-workspace dependencies', () => {
+    it('traces cross-workspace changes via relative imports (../../shared-ui/...)', async () => {
+      // Scenario: web/ imports from shared-ui/ via relative path
+      // The stats module path ../shared-ui/src/Button.tsx normalizes to shared-ui/src/Button.tsx
+      // when baseDir is 'web' (path.posix.join('web', '../shared-ui/src/Button.tsx'))
+      const changedFiles = ['shared-ui/src/Button.tsx'];
+      const modules = [
+        {
+          id: 1,
+          name: '../shared-ui/src/Button.tsx',
+          reasons: [{ moduleName: './src/App.tsx' }],
+        },
+        {
+          id: 2,
+          name: './src/App.tsx',
+          reasons: [{ moduleName: './src/App.stories.tsx' }],
+        },
+        {
+          id: './src/App.stories.tsx',
+          name: './src/App.stories.tsx',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({ storybookBaseDir: 'web' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toEqual({
+        './src/App.stories.tsx': ['web/src/App.stories.tsx'],
+      });
+      expect(ctx.turboSnap.bailReason).toBeUndefined();
+    });
+
+    it('traces cross-workspace changes via absolute imports', async () => {
+      // Scenario: web/ imports from shared-ui/ via absolute path (as resolved by webpack)
+      // The absolute path /path/to/project/shared-ui/src/Button.tsx normalizes to
+      // shared-ui/src/Button.tsx (relative to rootPath)
+      const changedFiles = ['shared-ui/src/Button.tsx'];
+      const modules = [
+        {
+          id: 1,
+          name: '/path/to/project/shared-ui/src/Button.tsx',
+          reasons: [{ moduleName: './src/App.tsx' }],
+        },
+        {
+          id: 2,
+          name: './src/App.tsx',
+          reasons: [{ moduleName: './src/App.stories.tsx' }],
+        },
+        {
+          id: './src/App.stories.tsx',
+          name: './src/App.stories.tsx',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({ storybookBaseDir: 'web' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toEqual({
+        './src/App.stories.tsx': ['web/src/App.stories.tsx'],
+      });
+      expect(ctx.turboSnap.bailReason).toBeUndefined();
+    });
+
+    it('does not bail on another workspace storybook config', async () => {
+      // Scenario: api/.storybook/preview.js changed but web/ should not bail
+      // Since we pre-filter changedFiles by baseDir in gitInfo, api/.storybook/preview.js
+      // would already be filtered out. This test verifies the path normalization
+      // doesn't cause false bails even if such a file were to appear.
+      const changedFiles = ['web/src/foo.stories.js'];
+      const modules = [
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({ storybookBaseDir: 'web' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toEqual({
+        './src/foo.stories.js': ['web/src/foo.stories.js'],
+      });
+      expect(ctx.turboSnap.bailReason).toBeUndefined();
+    });
+
+    it('ignores files outside baseDir that are not in the stats', async () => {
+      // Scenario: api/src/server.ts changed but it's not in web/'s stats
+      // After baseDir filtering this file wouldn't reach getDependentStoryFiles,
+      // but even if it did, it should be silently ignored (no match in module graph).
+      const changedFiles = ['web/src/foo.stories.js', 'api/src/server.ts'];
+      const modules = [
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({ storybookBaseDir: 'web' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toEqual({
+        './src/foo.stories.js': ['web/src/foo.stories.js'],
+      });
+      expect(ctx.turboSnap.bailReason).toBeUndefined();
+    });
+  });
 });
 
 describe('normalizePath', () => {

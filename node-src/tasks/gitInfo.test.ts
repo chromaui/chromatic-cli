@@ -6,6 +6,7 @@ import * as getCommitInfo from '../git/getCommitAndBranch';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
 import * as git from '../git/git';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
+import { getStorybookBaseDirectory as getStorybookBaseDirectoryUnmocked } from '../lib/getStorybookBaseDirectory';
 import TestLogger from '../lib/testLogger';
 import { setGitInfo } from './gitInfo';
 
@@ -15,6 +16,7 @@ vi.mock('../git/getParentCommits');
 vi.mock('../git/getBaselineBuilds');
 vi.mock('../git/getChangedFilesWithReplacement');
 vi.mock('../lib/getHasRouter');
+vi.mock('../lib/getStorybookBaseDirectory');
 
 const getCommitAndBranch = vi.mocked(getCommitInfo.default);
 const getChangedFilesWithReplacement = vi.mocked(getChangedFilesWithReplacementUnmocked);
@@ -30,6 +32,7 @@ const getUncommittedHash = vi.mocked(git.getUncommittedHash);
 const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
 const getParentCommits = vi.mocked(getParentCommitsUnmocked);
 const getHasRouter = vi.mocked(getHasRouterUnmocked);
+const getStorybookBaseDirectory = vi.mocked(getStorybookBaseDirectoryUnmocked);
 
 const log = new TestLogger();
 
@@ -62,6 +65,7 @@ beforeEach(() => {
   getNumberOfComitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
+  getStorybookBaseDirectory.mockReturnValue('.');
 
   client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
@@ -146,6 +150,74 @@ describe('setGitInfo', () => {
     const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] }, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toBeUndefined();
+  });
+
+  it('filters changedFiles by storybookBaseDir in monorepo', async () => {
+    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
+    getChangedFilesWithReplacement.mockResolvedValue({
+      changedFiles: [
+        'web/src/App.tsx',
+        'web/src/utils.ts',
+        'api/src/server.ts',
+        'api/src/routes.ts',
+        'shared-ui/src/Button.tsx',
+        'package.json',
+        'yarn.lock',
+      ],
+    });
+    getStorybookBaseDirectory.mockReturnValue('web');
+    const ctx = { log, options: { onlyChanged: true }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    // Only files under web/ and root-level package metadata should remain
+    expect(ctx.git.changedFiles).toEqual([
+      'web/src/App.tsx',
+      'web/src/utils.ts',
+      'package.json',
+      'yarn.lock',
+    ]);
+    // All files should be preserved for later stats-based recovery
+    expect(ctx.git.allChangedFiles).toEqual([
+      'web/src/App.tsx',
+      'web/src/utils.ts',
+      'api/src/server.ts',
+      'api/src/routes.ts',
+      'shared-ui/src/Button.tsx',
+      'package.json',
+      'yarn.lock',
+    ]);
+  });
+
+  it('filters packageMetadataChanges by storybookBaseDir in monorepo', async () => {
+    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
+    getChangedFilesWithReplacement.mockResolvedValue({
+      changedFiles: [
+        'web/package.json',
+        'api/package.json',
+        'package.json',
+        'yarn.lock',
+      ],
+    });
+    getStorybookBaseDirectory.mockReturnValue('web');
+    const ctx = { log, options: { onlyChanged: true }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    // packageMetadataChanges should only include web/ and root-level metadata
+    expect(ctx.git.packageMetadataChanges).toEqual([
+      {
+        changedFiles: ['web/package.json', 'package.json', 'yarn.lock'],
+        commit: '012qwes',
+      },
+    ]);
+  });
+
+  it('does not filter changedFiles when storybookBaseDir is "."', async () => {
+    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
+    getChangedFilesWithReplacement.mockResolvedValue({
+      changedFiles: ['web/src/App.tsx', 'api/src/server.ts'],
+    });
+    getStorybookBaseDirectory.mockReturnValue('.');
+    const ctx = { log, options: { onlyChanged: true }, client } as any;
+    await setGitInfo(ctx, {} as any);
+    expect(ctx.git.changedFiles).toEqual(['web/src/App.tsx', 'api/src/server.ts']);
   });
 
   it('forces rebuild automatically if app is onboarding', async () => {

@@ -7,7 +7,63 @@ import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
-import { getDependentStoryFiles } from './getDependentStoryFiles';
+import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
+import { posix } from '../posix';
+
+/**
+ * Given a stats module list and the full (unfiltered) list of changed files from git,
+ * returns any changed files from outside the baseDir that appear as modules in the stats.
+ *
+ * This recovers cross-workspace dependencies (e.g., `shared-ui/src/Button.tsx` imported
+ * by `web/`) that were pruned during the initial baseDir filter in gitInfo.
+ */
+function recoverCrossWorkspaceChanges(
+  ctx: Context,
+  stats: { modules: { name: string; modules?: { name: string }[] }[] },
+  changedFiles: string[],
+  allChangedFiles: string[]
+): string[] {
+  if (!allChangedFiles || allChangedFiles.length === changedFiles.length) {
+    return changedFiles;
+  }
+
+  const { rootPath = '' } = ctx.git || {};
+  const { baseDir: baseDirectory = '' } = ctx.storybook || {};
+
+  // Build a set of all normalized module paths from the stats
+  const statsModulePaths = new Set<string>();
+  for (const module of stats.modules) {
+    const normalized = normalizePath(posix(module.name), rootPath, baseDirectory);
+    if (normalized) statsModulePaths.add(normalized);
+    if (module.modules) {
+      for (const subModule of module.modules) {
+        const subNormalized = normalizePath(posix(subModule.name), rootPath, baseDirectory);
+        if (subNormalized) statsModulePaths.add(subNormalized);
+      }
+    }
+  }
+
+  // Find files that were filtered out but are actually in the dependency graph
+  const changedFileSet = new Set(changedFiles);
+  const recovered: string[] = [];
+  for (const file of allChangedFiles) {
+    if (!changedFileSet.has(file) && statsModulePaths.has(file)) {
+      recovered.push(file);
+    }
+  }
+
+  if (recovered.length > 0) {
+    ctx.log.info(
+      `TurboSnap scope: recovered ${recovered.length} cross-workspace changed files from stats`
+    );
+    ctx.log.debug(
+      `Recovered cross-workspace files:\n${recovered.map((f) => `  ${f}`).join('\n')}`
+    );
+    return [...changedFiles, ...recovered];
+  }
+
+  return changedFiles;
+}
 
 // eslint-disable-next-line complexity
 export const traceChangedFiles = async (ctx: Context) => {
@@ -58,11 +114,21 @@ export const traceChangedFiles = async (ctx: Context) => {
 
   await checkStorybookBaseDirectory(ctx, stats);
 
+  // Recover cross-workspace changed files that were filtered out by the baseDir scope
+  // but are actually present in the stats dependency graph (e.g., shared-ui/src/Button.tsx
+  // imported by the current workspace's Storybook).
+  const expandedChangedFiles = recoverCrossWorkspaceChanges(
+    ctx,
+    stats,
+    changedFiles,
+    ctx.git.allChangedFiles || changedFiles
+  );
+
   return await getDependentStoryFiles(
     ctx,
     stats,
     statsPath,
-    changedFiles,
+    expandedChangedFiles,
     changedDependencyNames || []
   );
 };

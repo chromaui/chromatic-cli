@@ -43,9 +43,18 @@ export const findChangedDependencies = async (ctx: Context) => {
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
 
   // Handle monorepos with (multiple) nested package.json files.
+  // When we have a baseDir (e.g., "web" in a monorepo), scope the search to only
+  // that subdirectory + root, rather than scanning every workspace in the entire monorepo.
+  // This prevents traversal of potentially thousands of unrelated package.json files.
+  const { baseDir } = ctx.storybook || {};
+  const scopedGlob =
+    baseDir && baseDir !== '.' && baseDir !== './'
+      ? `${baseDir}/**/${PACKAGE_JSON}`
+      : `**/${PACKAGE_JSON}`;
+
   // Note that this does not use `path.join` to concatenate the file paths because
   // git uses forward slashes, even on windows
-  const nestedManifestPaths = (await findFilesFromRepositoryRoot(ctx, `**/${PACKAGE_JSON}`)) || [];
+  const nestedManifestPaths = (await findFilesFromRepositoryRoot(ctx, scopedGlob)) || [];
   const metadataPathPairs = await Promise.all(
     nestedManifestPaths.map(async (manifestPath) => {
       const dirname = path.dirname(manifestPath);

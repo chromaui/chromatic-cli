@@ -226,7 +226,10 @@ export interface Context {
     uncommittedHash?: string;
     parentCommits?: string[];
     baselineCommits?: string[];
+    /** Changed files filtered to baseDir scope (used for TurboSnap tracing) */
     changedFiles?: string[];
+    /** All changed files from git diff, before baseDir filtering (used for stats-based recovery) */
+    allChangedFiles?: string[];
     changedDependencyNames?: string[];
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: boolean | string) => boolean;
