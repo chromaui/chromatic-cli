@@ -1,0 +1,36 @@
+trigger:
+  - reuben/test-azure-devops
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: UI_Tests
+    displayName: "UI Tests"
+    jobs:
+      - job: Chromatic
+        variables:
+          npm_config_cache: $(Pipeline.Workspace)/.npm
+        steps:
+          - checkout: self
+            displayName: "Get Full Git History"
+            fetchDepth: 0
+          - task: UseNode@1
+            displayName: "Install Node.js"
+            inputs:
+              version: "24.14.0"
+          - task: Cache@2
+            displayName: "Install and cache dependencies"
+            inputs:
+              key: 'yarn | "$(Agent.OS)" | yarn.lock'
+              restoreKeys: |
+                yarn | "$(Agent.OS)"
+              path: $(npm_config_cache)
+          - script: YARN_ENABLE_IMMUTABLE_INSTALLS=true yarn install 
+            condition: ne(variables.CACHE_RESTORED, 'true')
+          - task: CmdLine@2
+            displayName: "Run Chromatic"
+            inputs:
+              script: npx chromatic --exit-zero-on-changes --exit-once-uploaded
+            env:
+              CHROMATIC_PROJECT_TOKEN: $(CHROMATIC_PROJECT_TOKEN)
