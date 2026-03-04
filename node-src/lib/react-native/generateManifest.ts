@@ -85,7 +85,7 @@ function parseStoryIndex(
 }
 
 function writeManifest(ctx: Context, storyData: string) {
-  const outputFile = path.resolve(ctx.options.storybookBuildDir, 'manifest.json');
+  const outputFile = path.resolve(ctx.sourceDir, 'manifest.json');
   ctx.log.debug(`Writing manifest to file at "${outputFile}"`);
 
   mkdirSync(ctx.sourceDir, { recursive: true });

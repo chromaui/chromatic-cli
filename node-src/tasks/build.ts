@@ -22,7 +22,6 @@ import {
   missingBuildDirectoryForReactNative,
   pending,
   skipped,
-  skippedForReactNative,
   success,
 } from '../ui/tasks/build';
 
@@ -53,7 +52,13 @@ const getStatsFlag = (ctx: Context) => {
     : '--webpack-stats-json';
 };
 
+// eslint-disable-next-line complexity
 export const setBuildCommand = async (ctx: Context) => {
+  // We don't currently support building React Native Storybook so we'll skip this for now
+  if (ctx.isReactNativeApp) {
+    return;
+  }
+
   const buildCommand = ctx.flags?.buildCommand || ctx.options.buildCommand;
   const buildCommandOptions: string[] = [];
 
@@ -221,7 +226,8 @@ export default function main(ctx: Context) {
           throw new Error(missingBuildDirectoryForReactNative(ctx).output);
         }
         ctx.sourceDir = ctx.options.storybookBuildDir;
-        return skippedForReactNative(ctx).output;
+        ctx.options.outputDir = ctx.options.storybookBuildDir;
+        return false;
       }
       if (ctx.options.storybookBuildDir) {
         ctx.sourceDir = ctx.options.storybookBuildDir;
