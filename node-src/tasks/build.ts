@@ -7,6 +7,7 @@ import tmp from 'tmp-promise';
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
 import { isE2EBuild } from '../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
+import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
@@ -140,6 +141,11 @@ function e2eBuildErrorMessage(
 }
 
 export const buildStorybook = async (ctx: Context) => {
+  if (ctx.isReactNativeApp) {
+    ctx.log.debug('Generating manifest.json file for React Native build');
+    return await generateManifest(ctx);
+  }
+
   let logFile;
   if (ctx.options.storybookLogFile) {
     ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
