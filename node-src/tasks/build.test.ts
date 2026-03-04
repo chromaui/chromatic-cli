@@ -16,6 +16,13 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    existsSync: vi.fn(() => true),
+  };
+});
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
@@ -282,7 +289,7 @@ describe('buildStorybook', () => {
     );
   });
 
-  it('skips the build for React Native apps when storybookBuildDir is provided', async () => {
+  it('skips the build for React Native apps when storybookBuildDir is provided and manifest.json exists', async () => {
     const ctx = {
       ...baseContext,
       isReactNativeApp: true,
