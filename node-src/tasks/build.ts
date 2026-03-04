@@ -1,5 +1,5 @@
 import { execa, parseCommandString } from 'execa';
-import { createWriteStream, readFileSync } from 'fs';
+import { createWriteStream, existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -22,6 +22,7 @@ import {
   missingBuildDirectoryForReactNative,
   pending,
   skipped,
+  skippedForReactNative,
   success,
 } from '../ui/tasks/build';
 
@@ -225,8 +226,14 @@ export default function main(ctx: Context) {
           setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
           throw new Error(missingBuildDirectoryForReactNative(ctx).output);
         }
+
         ctx.sourceDir = ctx.options.storybookBuildDir;
         ctx.options.outputDir = ctx.options.storybookBuildDir;
+
+        // Use manifest.json from the storybook build directory if it exists
+        if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+          return skippedForReactNative(ctx).output;
+        }
         return false;
       }
       if (ctx.options.storybookBuildDir) {
