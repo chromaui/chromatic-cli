@@ -5,6 +5,7 @@ import { exitCodes } from '@cli/setExitCode';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import { describe, expect, it, vi } from 'vitest';
 
+import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
@@ -23,6 +24,9 @@ vi.mock('fs', async (importOriginal) => {
     existsSync: vi.fn(() => true),
   };
 });
+vi.mock('../lib/react-native/generateManifest', () => ({
+  generateManifest: vi.fn(() => Promise.resolve()),
+}));
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
@@ -287,6 +291,17 @@ describe('buildStorybook', () => {
         env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
       })
     );
+  });
+
+  it('builds the manifest.json for React Native apps when storybookBuildDir is provided', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      log: { debug: vi.fn() },
+      options: { storybookBuildDir: '/path/to/rn-build' },
+    } as any;
+    await buildStorybook(ctx);
+    expect(generateManifest).toHaveBeenCalledWith(ctx);
   });
 
   it('skips the build for React Native apps when storybookBuildDir is provided and manifest.json exists', async () => {
