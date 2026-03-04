@@ -44,15 +44,16 @@ async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
   const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
 
   try {
-    // Storybook 10+
+    // Storybook 10+ (ESM-only)
     // @ts-expect-error - optional peer @storybook/react-native
     const { buildIndex } = await import('@storybook/react-native/node');
     return buildIndex({ configPath });
   } catch {
     // Storybook 9
-    const require = createRequire(import.meta.url);
+    // Create require relative to user's project, not the bundled CLI location
+    const require = createRequire(path.join(process.cwd(), 'package.json'));
 
-    const { buildIndex } = await require('storybook/internal/core-server');
+    const { buildIndex } = require('storybook/internal/core-server');
     return buildIndex({ configDir: configPath });
   }
 }
