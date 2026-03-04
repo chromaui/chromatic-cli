@@ -22,12 +22,23 @@ export const Initial = () => initial(ctx);
 
 export const Building = () => pending({ ...ctx, buildCommand } as any);
 
+export const BuildingReactNative = () => pending({ ...ctx, isReactNativeApp: true } as any);
+
 export const Built = () =>
   success({
     ...ctx,
     now: 0,
     startedAt: -32_100,
     buildLogFile: '/users/me/project/build-storybook.log',
+  } as any);
+
+export const BuiltReactNative = () =>
+  success({
+    ...ctx,
+    now: 0,
+    startedAt: -32_100,
+    options: { storybookBuildDir: '/users/me/project/storybook-static' },
+    isReactNativeApp: true,
   } as any);
 
 export const Skipped = () =>
