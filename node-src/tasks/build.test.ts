@@ -7,7 +7,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
-import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
+import buildTask, {
+  buildStorybook,
+  generateManifestForReactNative as generateManifestForReactNativeDefault,
+  setBuildCommand,
+  setSourceDirectory,
+} from './build';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -30,11 +35,13 @@ vi.mock('../lib/react-native/generateManifest', () => ({
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
+const generateManifestForReactNative = vi.mocked(generateManifestForReactNativeDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
   execa.mockClear();
+  generateManifestForReactNative.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -293,7 +300,7 @@ describe('buildStorybook', () => {
     );
   });
 
-  it('builds the manifest.json for React Native apps when storybookBuildDir is provided', async () => {
+  it('skips building for React Native apps', async () => {
     const ctx = {
       ...baseContext,
       isReactNativeApp: true,
@@ -301,7 +308,7 @@ describe('buildStorybook', () => {
       options: { storybookBuildDir: '/path/to/rn-build' },
     } as any;
     await buildStorybook(ctx);
-    expect(generateManifest).toHaveBeenCalledWith(ctx);
+    expect(execa).not.toHaveBeenCalled();
   });
 
   it('skips the build for React Native apps when storybookBuildDir is provided and manifest.json exists', async () => {
@@ -387,5 +394,29 @@ describe('buildStorybook E2E', () => {
       expect.stringContaining('Failed to run `chromatic --playwright`')
     );
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+  });
+});
+
+describe('generateManifestForReactNative', () => {
+  it('generates manifest for React Native apps', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      log: { debug: vi.fn() },
+      options: { storybookBuildDir: '/path/to/rn-build' },
+    } as any;
+    await generateManifestForReactNative(ctx);
+    expect(generateManifest).toHaveBeenCalledWith(ctx);
+  });
+
+  it('skips manifest generation for non-React Native apps', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: false,
+      log: { debug: vi.fn() },
+      options: { storybookBuildDir: '/path/to/build' },
+    } as any;
+    await generateManifestForReactNative(ctx);
+    expect(generateManifest).not.toHaveBeenCalled();
   });
 });

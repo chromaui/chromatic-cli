@@ -147,9 +147,9 @@ function e2eBuildErrorMessage(
 }
 
 export const buildStorybook = async (ctx: Context) => {
+  // We don't currently support building React Native projects so we'll skip this for now
   if (ctx.isReactNativeApp) {
-    ctx.log.debug('Generating manifest.json file for React Native build');
-    return await generateManifest(ctx);
+    return;
   }
 
   let logFile;
@@ -207,6 +207,16 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
+export const generateManifestForReactNative = async (ctx: Context) => {
+  // The manifest file is only needed for React Native builds
+  if (!ctx.isReactNativeApp) {
+    return;
+  }
+
+  ctx.log.debug('Generating manifest.json file for React Native build');
+  return await generateManifest(ctx);
+};
+
 /**
  * Sets up the Listr task for building the user's Storybook or E2E project.
  *
@@ -248,6 +258,7 @@ export default function main(ctx: Context) {
       transitionTo(pending),
       startActivity,
       buildStorybook,
+      generateManifestForReactNative,
       endActivity,
       transitionTo(success, true),
     ],
