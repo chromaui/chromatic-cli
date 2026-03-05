@@ -65,21 +65,17 @@ function parseStoryIndex(
   ctx.log.debug('Building story manifest');
 
   const entries = Object.values(index.entries).filter((entry) => entry.type === 'story');
-
-  const stories: Story[] = [];
-  for (const entry of entries) {
-    stories.push({
-      storyId: entry.id,
-      name: entry.name,
-      fileName: entry.importPath,
-      component: {
-        name: entry.title,
-        csfId: entry.id.replace(/--.+$/, ''),
-        displayName: entry.title.split('/').at(-1) ?? '',
-        path: entry.title.split('/'),
-      },
-    });
-  }
+  const stories = entries.map((entry) => ({
+    storyId: entry.id,
+    name: entry.name,
+    fileName: entry.importPath,
+    component: {
+      name: entry.title,
+      csfId: entry.id.replace(/--.+$/, ''),
+      displayName: entry.title.split('/').at(-1) ?? '',
+      path: entry.title.split('/'),
+    },
+  }));
 
   ctx.log.debug(`Found ${stories.length} stories.`);
   return { stories, entries };
