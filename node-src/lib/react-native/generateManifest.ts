@@ -77,7 +77,7 @@ function parseStoryIndex(
     },
   }));
 
-  ctx.log.debug(`Found ${stories.length} stories.`);
+  ctx.log.debug(`Found ${stories.length} stories`);
   return { stories, entries };
 }
 
