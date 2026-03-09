@@ -37,8 +37,7 @@ interface Story {
 export async function generateManifest(ctx: Context) {
   const index = await buildStoryIndex(ctx);
   const { stories, entries } = parseStoryIndex(ctx, index);
-  // eslint-disable-next-line unicorn/no-null
-  writeManifest(ctx, JSON.stringify({ stories, json: entries }, null, 2));
+  writeManifest(ctx, JSON.stringify({ stories, json: entries }, undefined, 2));
 }
 
 async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
