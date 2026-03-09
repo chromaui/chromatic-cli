@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 import { Context } from '../../types';
 
@@ -45,8 +46,11 @@ async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
 
   try {
     // Storybook 10+ (ESM-only)
-    // @ts-expect-error - optional peer @storybook/react-native
-    const { buildIndex } = await import('@storybook/react-native/node');
+    // Create require relative to user's project, not the bundled CLI location
+    const require = createRequire(path.join(process.cwd(), 'package.json'));
+    const modulePath = require.resolve('@storybook/react-native/node');
+
+    const { buildIndex } = await import(pathToFileURL(modulePath).href);
     return buildIndex({ configPath });
   } catch {
     // Storybook 9
