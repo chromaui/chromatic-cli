@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -42,6 +42,12 @@ export async function generateManifest(ctx: Context) {
 
 async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
   const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
+
+  if (!existsSync(path.join(process.cwd(), configPath))) {
+    throw new Error(
+      `React Native Storybook config directory not found at "${configPath}". Please specify the correct path with --storybook-config-dir.`
+    );
+  }
 
   try {
     // Storybook 10+ (ESM-only)

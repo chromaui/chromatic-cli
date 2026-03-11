@@ -29,12 +29,14 @@ vi.mock('fs', async (importOriginal) => {
     ...actual,
     mkdirSync: vi.fn(),
     writeFileSync: vi.fn(),
+    existsSync: vi.fn(),
   };
 });
 
 const fs = await import('fs');
 const mkdirSync = vi.mocked(fs.mkdirSync);
 const writeFileSync = vi.mocked(fs.writeFileSync);
+const existsFileSync = vi.mocked(fs.existsSync);
 
 const sourceDirectory = '/tmp/chromatic';
 
@@ -52,6 +54,8 @@ beforeEach(() => {
 });
 
 describe('generateManifest', () => {
+  existsFileSync.mockReturnValue(true);
+
   it('writes manifest to sourceDirectory/manifest.json with correct story shape', async () => {
     mockBuildIndex.mockResolvedValue({
       entries: {
@@ -236,5 +240,14 @@ describe('generateManifest', () => {
         },
       ],
     });
+  });
+
+  it('should throw if the config directory does not exist', async () => {
+    existsFileSync.mockReturnValue(false);
+
+    const ctx = getContext();
+    await expect(() => generateManifest(ctx)).rejects.toThrow(
+      'React Native Storybook config directory not found at ".rnstorybook". Please specify the correct path with --storybook-config-dir.'
+    );
   });
 });
