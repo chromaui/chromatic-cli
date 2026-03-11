@@ -42,10 +42,11 @@ export async function generateManifest(ctx: Context) {
 
 async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
   const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
+  const fullConfigPath = path.join(process.cwd(), configPath);
 
-  if (!existsSync(path.join(process.cwd(), configPath))) {
+  if (!existsSync(fullConfigPath)) {
     throw new Error(
-      `React Native Storybook config directory not found at "${configPath}". Please specify the correct path with --storybook-config-dir.`
+      `React Native Storybook config directory not found at "${fullConfigPath}". Please specify the correct path with --storybook-config-dir.`
     );
   }
 

@@ -247,7 +247,7 @@ describe('generateManifest', () => {
 
     const ctx = getContext();
     await expect(() => generateManifest(ctx)).rejects.toThrow(
-      'React Native Storybook config directory not found at ".rnstorybook". Please specify the correct path with --storybook-config-dir.'
+      /React Native Storybook config directory not found at ".*\.rnstorybook"\. Please specify the correct path with --storybook-config-dir\./
     );
   });
 });

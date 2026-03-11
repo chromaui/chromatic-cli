@@ -73,6 +73,7 @@ export async function main(argv: string[]) {
   try {
     await generateManifest(ctx);
   } catch (err) {
-    log.error(err);
+    log.error(`Error: ${err.message}`);
+    process.exit(1);
   }
 }
