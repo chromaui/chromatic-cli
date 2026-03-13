@@ -49,20 +49,17 @@ async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
       `React Native Storybook config directory not found at "${fullConfigPath}". Please specify the correct path with --storybook-config-dir.`
     );
   }
+  // Create require relative to user's project, not the bundled CLI location
+  const require = createRequire(path.join(process.cwd(), 'package.json'));
 
   try {
     // Storybook 10+ (ESM-only)
-    // Create require relative to user's project, not the bundled CLI location
-    const require = createRequire(path.join(process.cwd(), 'package.json'));
     const modulePath = require.resolve('@storybook/react-native/node');
 
     const { buildIndex } = await import(pathToFileURL(modulePath).href);
     return buildIndex({ configPath });
   } catch {
     // Storybook 9
-    // Create require relative to user's project, not the bundled CLI location
-    const require = createRequire(path.join(process.cwd(), 'package.json'));
-
     const { buildIndex } = require('storybook/internal/core-server');
     return buildIndex({ configDir: configPath });
   }
