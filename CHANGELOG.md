@@ -1,3 +1,15 @@
+# v15.3.0 (Mon Mar 16 2026)
+
+#### 🚀 Enhancement
+
+- Integrate manifest generation script [#1244](https://github.com/chromaui/chromatic-cli/pull/1244) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v15.2.0 (Mon Feb 23 2026)
 
 #### 🚀 Enhancement
