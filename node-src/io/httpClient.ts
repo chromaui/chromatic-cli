@@ -18,6 +18,7 @@ export class HTTPClientError extends Error {
 
     // Maintains proper stack trace for where our error was thrown (only available on V8)
     if (Error.captureStackTrace) {
+      // eslint-disable-next-line unicorn/no-useless-error-capture-stack-trace
       Error.captureStackTrace(this, HTTPClientError);
     }
 

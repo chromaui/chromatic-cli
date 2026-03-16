@@ -4,5 +4,6 @@
     "hichroma",
     "opensource",
     "rebased"
-  ]
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

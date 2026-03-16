@@ -3,7 +3,7 @@ import { FormData } from 'formdata-node';
 import { createReadStream } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { default as compress } from '../lib/compress';
+import compress from '../lib/compress';
 import TestLogger from '../lib/testLogger';
 import { uploadStorybook, waitForSentinels } from './upload';
 

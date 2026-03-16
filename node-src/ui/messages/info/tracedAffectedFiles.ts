@@ -27,7 +27,7 @@ export const traceSuggestions = `If you are having trouble with tracing, please 
 `;
 
 // TODO: refactor this function
-// eslint-disable-next-line complexity
+
 export default (
   ctx: Context,
   {
@@ -41,6 +41,7 @@ export default (
     modulesByName: Record<string, Module>;
     normalize: (name: string) => string;
   }
+  // eslint-disable-next-line complexity
 ) => {
   const flag = ctx.log === (console as any) ? '--mode (-m)' : '--trace-changed';
   const basedir = ctx.options.storybookBaseDir || '.';
