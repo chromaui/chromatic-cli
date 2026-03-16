@@ -1,5 +1,5 @@
 import { execa, parseCommandString } from 'execa';
-import { createWriteStream, readFileSync } from 'fs';
+import { createWriteStream, existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -7,6 +7,7 @@ import tmp from 'tmp-promise';
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
 import { isE2EBuild } from '../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
+import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
@@ -52,7 +53,13 @@ const getStatsFlag = (ctx: Context) => {
     : '--webpack-stats-json';
 };
 
+// eslint-disable-next-line complexity
 export const setBuildCommand = async (ctx: Context) => {
+  // We don't currently support building React Native Storybook so we'll skip this for now
+  if (ctx.isReactNativeApp) {
+    return;
+  }
+
   const buildCommand = ctx.flags?.buildCommand || ctx.options.buildCommand;
   const buildCommandOptions: string[] = [];
 
@@ -140,6 +147,11 @@ function e2eBuildErrorMessage(
 }
 
 export const buildStorybook = async (ctx: Context) => {
+  // We don't currently support building React Native projects so we'll skip this for now
+  if (ctx.isReactNativeApp) {
+    return;
+  }
+
   let logFile;
   if (ctx.options.storybookLogFile) {
     ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
@@ -195,6 +207,16 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
+export const generateManifestForReactNative = async (ctx: Context) => {
+  // The manifest file is only needed for React Native builds
+  if (!ctx.isReactNativeApp) {
+    return;
+  }
+
+  ctx.log.debug('Generating manifest.json file for React Native build');
+  return await generateManifest(ctx);
+};
+
 /**
  * Sets up the Listr task for building the user's Storybook or E2E project.
  *
@@ -214,8 +236,15 @@ export default function main(ctx: Context) {
           setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
           throw new Error(missingBuildDirectoryForReactNative(ctx).output);
         }
+
         ctx.sourceDir = ctx.options.storybookBuildDir;
-        return skippedForReactNative(ctx).output;
+        ctx.options.outputDir = ctx.options.storybookBuildDir;
+
+        // Use manifest.json from the storybook build directory if it exists
+        if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+          return skippedForReactNative(ctx).output;
+        }
+        return false;
       }
       if (ctx.options.storybookBuildDir) {
         ctx.sourceDir = ctx.options.storybookBuildDir;
@@ -229,6 +258,7 @@ export default function main(ctx: Context) {
       transitionTo(pending),
       startActivity,
       buildStorybook,
+      generateManifestForReactNative,
       endActivity,
       transitionTo(success, true),
     ],
