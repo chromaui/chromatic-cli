@@ -215,18 +215,6 @@
     "zen-observable": "^0.8.15",
     "zod": "^3.22.2"
   },
-  "peerDependencies": {
-    "@chromatic-com/cypress": "^0.*.* || ^0.12.0-0 || ^0.13.0-0 || ^1.0.0 || ^1.0.0-0",
-    "@chromatic-com/playwright": "^0.*.* || ^0.12.0-0 || ^0.13.0-0 || ^1.0.0 || ^1.0.0-0"
-  },
-  "peerDependenciesMeta": {
-    "@chromatic-com/cypress": {
-      "optional": true
-    },
-    "@chromatic-com/playwright": {
-      "optional": true
-    }
-  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
