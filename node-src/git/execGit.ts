@@ -8,7 +8,12 @@ import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 
 const defaultOptions: Options = {
-  env: { LANG: 'C', LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+  env: {
+    LANG: 'C',
+    LC_ALL: 'C',
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_SSH_COMMAND: `${process.env.GIT_SSH_COMMAND || 'ssh'} -o BatchMode=yes`,
+  },
   timeout: 20_000, // 20 seconds
   all: true, // interleave stdout and stderr
   shell: true, // we'll deal with escaping ourselves (for now)
