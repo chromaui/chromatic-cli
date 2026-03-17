@@ -20,7 +20,7 @@ export default function parseArguments(argv: string[]) {
       $ chromatic --project-token <token>
 
     Required options
-      --project-token, -t <token>               The unique code for your project. Alternatively, set CHROMATIC_PROJECT_TOKEN.
+      --project-token, -t <token>               The unique code for your project. Alternatively, set CHROMATIC_PROJECT_TOKEN. Can be specified multiple times with --skip to skip multiple projects in one invocation.
 
     Storybook options
       --build-script-name, -b [name]            The npm script that builds your Storybook we should take snapshots against. Use this if your Storybook build script is named differently. [build-storybook]
@@ -42,7 +42,7 @@ export default function parseArguments(argv: string[]) {
       --only-story-names <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This flag can be specified multiple times.
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.
       --repository-slug <slug>                  Override the repository slug. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Format: <ownerName>/<repoName>.
-      --skip [branch]                           Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch.
+      --skip [branch]                           Skip Chromatic tests, but mark the commit as passing. Avoids blocking PRs due to required merge checks. Only for [branch], if specified. Globs are supported via picomatch. When multiple --project-token values are provided, all projects are skipped in one invocation.
       --storybook-base-dir <dirname>            Relative path from repository root to Storybook project root. Use with --only-changed and --storybook-build-dir when running Chromatic from a different directory than your Storybook.
       --storybook-config-dir <dirname>          Relative path from where you run Chromatic to your Storybook config directory ('.storybook'). Use with --only-changed and --storybook-build-dir when using a custom --config-dir (-c) flag for Storybook. [.storybook]
       --untraced <filepath>                     Disregard these files and their dependencies when tracing dependent stories for TurboSnap. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.

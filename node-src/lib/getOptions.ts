@@ -124,6 +124,7 @@ export default function getOptions(ctx: InitialContext): Options {
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
     projectToken: takeLast(flags.projectToken),
+    projectTokens: undefinedIfEmpty(ensureArray(flags.projectToken)),
 
     onlyChanged: trueIfSet(flags.onlyChanged),
     onlyStoryFiles: undefinedIfEmpty(ensureArray(flags.onlyStoryFiles)),
@@ -213,7 +214,8 @@ export default function getOptions(ctx: InitialContext): Options {
 
   if (
     !potentialOptions.projectToken &&
-    !(potentialOptions.projectId && potentialOptions.userToken)
+    !(potentialOptions.projectId && potentialOptions.userToken) &&
+    !(potentialOptions.projectTokens?.length && potentialOptions.skip)
   ) {
     throw new Error(missingProjectToken());
   }
