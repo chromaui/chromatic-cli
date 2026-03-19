@@ -9,7 +9,7 @@ import * as Sentry from '@sentry/node';
 
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay, throttle } from '../lib/utils';
+import { delay, throttle } from '../lib/utilities';
 import { Context, Task } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';

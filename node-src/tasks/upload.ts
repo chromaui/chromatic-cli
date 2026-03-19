@@ -2,7 +2,7 @@ import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import { uploadBuild } from '../lib/upload';
-import { throttle } from '../lib/utils';
+import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';

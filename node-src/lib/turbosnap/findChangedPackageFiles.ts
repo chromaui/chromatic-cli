@@ -1,6 +1,6 @@
 import { execGitCommand } from '../../git/execGit';
 import { Context } from '../../types';
-import { isPackageMetadataFile } from '../utils';
+import { isPackageMetadataFile } from '../utilities';
 
 // TODO: refactor this function
 // eslint-disable-next-line complexity

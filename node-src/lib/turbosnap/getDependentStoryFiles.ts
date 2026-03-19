@@ -5,7 +5,7 @@ import noCSFGlobs from '../../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { posix } from '../posix';
-import { isPackageManifestFile, matchesFile } from '../utils';
+import { isPackageManifestFile, matchesFile } from '../utilities';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 type FilePath = string;

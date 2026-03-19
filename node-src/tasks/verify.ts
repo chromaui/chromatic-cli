@@ -1,6 +1,6 @@
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay } from '../lib/utils';
+import { delay } from '../lib/utilities';
 import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import brokenStorybook from '../ui/messages/errors/brokenStorybook';

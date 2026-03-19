@@ -2,7 +2,7 @@ import pluralize from 'pluralize';
 
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { getDuration } from '../../lib/tasks';
-import { progressBar } from '../../lib/utils';
+import { progressBar } from '../../lib/utilities';
 import { Context } from '../../types';
 
 const testType = (ctx: Context) => (isE2EBuild(ctx.options) ? 'test suite' : 'stories');

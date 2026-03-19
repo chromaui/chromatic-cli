@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import React from 'react';
 
 import isChromatic from '../isChromatic';
@@ -12,9 +10,9 @@ export default {
 
 export const WithViewports = () => {
   let bg;
-  if (window.matchMedia('(max-width: 400px)').matches) {
+  if (globalThis.matchMedia('(max-width: 400px)').matches) {
     bg = 'cyan';
-  } else if (window.matchMedia('(max-width: 800px)').matches) {
+  } else if (globalThis.matchMedia('(max-width: 800px)').matches) {
     bg = 'orange';
   }
   return (

@@ -6,7 +6,7 @@ import { Context } from '../../../types';
 import { info, success } from '../../components/icons';
 import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
-import { buildType, capitalize } from '../../tasks/utils';
+import { buildType, capitalize } from '../../tasks/utilities';
 
 export default (ctx: Context) => {
   if (!ctx.storybookUrl) {

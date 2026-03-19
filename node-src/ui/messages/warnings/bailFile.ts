@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
-import { isPackageManifestFile } from '../../../lib/utils';
+import { isPackageManifestFile } from '../../../lib/utilities';
 import { Context } from '../../../types';
 import { info, warning } from '../../components/icons';
 import link from '../../components/link';

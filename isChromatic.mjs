@@ -1,7 +1,5 @@
-/* eslint-env browser */
-
 export default function isChromatic(windowArgument) {
-  const windowToCheck = windowArgument || (typeof window !== 'undefined' && window);
+  const windowToCheck = windowArgument || (globalThis.window !== undefined && globalThis);
   return !!(
     windowToCheck &&
     (/Chromatic/.test(windowToCheck.navigator.userAgent) ||

@@ -18,7 +18,7 @@ import {
 import { getHasRouter } from '../lib/getHasRouter';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { isPackageMetadataFile, matchesFile } from '../lib/utils';
+import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
 import { Context, Task } from '../types';
 import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';

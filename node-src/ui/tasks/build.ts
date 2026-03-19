@@ -2,7 +2,7 @@ import path from 'path';
 
 import { getDuration } from '../../lib/tasks';
 import { Context } from '../../types';
-import { buildType, capitalize } from './utils';
+import { buildType, capitalize } from './utilities';
 
 export const initial = (ctx: Context) => ({
   status: 'initial',
