@@ -7711,6 +7711,7 @@ __metadata:
     string-argv: "npm:^0.3.1"
     strip-ansi: "npm:^7.1.0"
     tmp-promise: "npm:3.0.2"
+    tree-kill: "npm:^1.2.2"
     ts-dedent: "npm:^1.0.0"
     ts-loader: "npm:^9.2.5"
     tsup: "npm:^7.2.0"
