@@ -18,7 +18,13 @@ export const getPackageManagerVersion = async (packageManager: string) => {
     throw new Error('No package manager provided');
   }
 
-  const { stdout } = await runCommand(`${packageManager} --version`);
+  const command = `${packageManager} --version`
+  const { stdout } = await runCommand(command);
+
+  if (stdout === undefined) {
+    throw new Error(`Unexpected missing output for command: '${command}'`);
+  }
+
   const [output] = (stdout.toString() as string).trim().split('\n', 1);
   return output.trim().replace(/^v/, '');
 };
