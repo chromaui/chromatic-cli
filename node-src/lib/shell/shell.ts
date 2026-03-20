@@ -39,7 +39,7 @@ export function runCommand(command: string, options: Options = {}): ResultPromis
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       subprocess.kill();
-      reject(new Error('Command timed out'));
+      reject(new Error(`Command timed out after ${timeout}ms`));
     }, timeout);
   });
 
