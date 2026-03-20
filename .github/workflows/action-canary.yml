@@ -1,0 +1,33 @@
+name: Publish GitHub Action Canary Release
+
+on:
+  push:
+    branches:
+      - action-canary
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Prepare repository
+        run: git fetch --unshallow --tags
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Build
+        run: yarn build
+      - name: Publish to Canary Action
+        run: yarn run publish-action canary
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
