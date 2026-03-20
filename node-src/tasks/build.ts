@@ -1,4 +1,3 @@
-import { execa, parseCommandString } from 'execa';
 import { createWriteStream, existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
@@ -9,6 +8,7 @@ import { isE2EBuild } from '../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
+import { runCommand } from '../lib/shell/shell';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
@@ -99,9 +99,6 @@ export const setBuildCommand = async (ctx: Context) => {
   ]);
 };
 
-const timeoutAfter = (ms) =>
-  new Promise((_resolve, reject) => setTimeout(reject, ms, new Error(`Operation timed out`)));
-
 function isE2EBuildCommandNotFoundError(errorMessage: string) {
   // It's hard to know if this is the case as each package manager has a different type of
   // error for this, but we'll try to figure it out.
@@ -171,20 +168,19 @@ export const buildStorybook = async (ctx: Context) => {
       throw new Error('No build command configured');
     }
 
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
-    const subprocess = execa(cmd, args, {
+    await runCommand(ctx.buildCommand, {
       stdio: [undefined, logFile, undefined],
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow
       preferLocal: false,
       cancelSignal: signal,
+      timeout: ctx.env.STORYBOOK_BUILD_TIMEOUT,
       env: {
         CI: '1',
         NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',
         STORYBOOK_INVOKED_BY: 'chromatic',
       },
     });
-    await Promise.race([subprocess, timeoutAfter(ctx.env.STORYBOOK_BUILD_TIMEOUT)]);
   } catch (err) {
     // If we tried to run the E2E package's bin directly (due to being in the action)
     // and it failed, that means we couldn't find it. This probably means they haven't

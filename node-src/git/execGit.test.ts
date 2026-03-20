@@ -79,11 +79,11 @@ function createExecaStreamer() {
     rejecter = aRejecter;
   }) as Promise<unknown> & {
     stdout: Transform;
-    kill: () => void;
+    _resolver: () => void;
     _rejecter: (err: Error) => void;
   };
   promiseLike.stdout = new PassThrough();
-  promiseLike.kill = resolver;
+  promiseLike._resolver = resolver;
   promiseLike._rejecter = rejecter;
   return promiseLike;
 }
@@ -119,7 +119,7 @@ describe('execGitCommandOneLine', () => {
 
     const promise = execGitCommandOneLine(ctx, 'some command');
 
-    streamer.kill();
+    streamer._resolver();
 
     await expect(promise).rejects.toThrow(/missing git command output/);
   });
@@ -145,7 +145,7 @@ describe('execGitCommandCountLines', () => {
 
     streamer.stdout.write('First line\n');
     streamer.stdout.write('Second line\n');
-    streamer.kill();
+    streamer._resolver();
 
     expect(await promise).toEqual(2);
   });
@@ -157,7 +157,7 @@ describe('execGitCommandCountLines', () => {
     const promise = execGitCommandCountLines(ctx, 'some command');
 
     streamer.stdout.write('First line\n');
-    streamer.kill();
+    streamer._resolver();
 
     expect(await promise).toEqual(1);
   });
@@ -168,7 +168,7 @@ describe('execGitCommandCountLines', () => {
 
     const promise = execGitCommandCountLines(ctx, 'some command');
 
-    streamer.kill();
+    streamer._resolver();
 
     expect(await promise).toEqual(0);
   });

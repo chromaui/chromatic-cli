@@ -1,7 +1,8 @@
 import { createInterface } from 'node:readline';
 
-import { execa, type Options, parseCommandString } from 'execa';
+import type { Options } from 'execa';
 
+import { runCommand } from '../lib/shell/shell';
 import { Context } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
@@ -31,8 +32,7 @@ export async function execGitCommand(
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
-    const [cmd, ...args] = parseCommandString(command);
-    const { all } = await execa(cmd, args, { ...defaultOptions, ...options });
+    const { all } = await runCommand(command, { ...defaultOptions, ...options });
 
     if (all === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}'`);
@@ -78,8 +78,11 @@ export async function execGitCommandOneLine(
   options?: Options
 ) {
   log.debug(`execGitCommandOneLine: ${command}`);
-  const [cmd, ...args] = parseCommandString(command);
-  const process = execa(cmd, args, { ...defaultOptions, buffer: false, ...options });
+  const process = runCommand(command, {
+    ...defaultOptions,
+    buffer: false,
+    ...options,
+  });
 
   return Promise.race([
     // This promise will resolve only if there is an error or it times out
@@ -121,8 +124,11 @@ export async function execGitCommandCountLines(
   options?: Options
 ) {
   log.debug(`execGitCommandCountLines: ${command}`);
-  const [cmd, ...args] = parseCommandString(command);
-  const process = execa(cmd, args, { ...defaultOptions, buffer: false, ...options });
+  const process = runCommand(command, {
+    ...defaultOptions,
+    buffer: false,
+    ...options,
+  });
   if (!process.stdout) {
     throw new Error('Unexpected missing stdout');
   }

@@ -259,7 +259,7 @@ describe('buildStorybook', () => {
     } as any;
     execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
     await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Operation timed out'));
+    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('Command timed out'));
   });
 
   it('passes NODE_ENV=production', async () => {
