@@ -55,7 +55,11 @@ const publishAction = async ({ major, version, repo }) => {
 
 export async function main(context) {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  const version = pkg.version;
+  let version = pkg.version;
+  if (context === 'canary') {
+    const { stdout: sha } = await $`git rev-parse --short HEAD`;
+    version += '-' + sha.trim();
+  }
   console.info(`📌 Using context arg: ${context}`);
   console.info(`📌 Using package.json version: ${version}`);
 
