@@ -15,13 +15,9 @@ async function main() {
   await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
 
   // https://github.blog/changelog/2023-09-13-github-actions-updates-to-github_ref-and-github-ref/
-  if (process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === 'refs/heads/main') {
-    await publishAction('latest');
-  } else {
-    console.info('Skipping automatic publish of action-canary.');
-    console.info('Run `yarn publish-action canary` to publish a canary action.');
-    return;
-  }
+  await (process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === 'refs/heads/main'
+    ? publishAction('latest')
+    : publishAction('canary'));
 }
 
 async function build() {
