@@ -1,3 +1,15 @@
+# v16.0.0 (Mon Mar 23 2026)
+
+#### 💥 Breaking Change
+
+- Drop support for Node 18 and update GitHub Action to Node 24 [#1251](https://github.com/chromaui/chromatic-cli/pull/1251) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v15.3.1 (Mon Mar 23 2026)
 
 #### 🐛 Bug Fix
