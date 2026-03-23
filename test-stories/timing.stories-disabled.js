@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { storiesOf } from '@storybook/react';
 import React, { useState } from 'react';
 

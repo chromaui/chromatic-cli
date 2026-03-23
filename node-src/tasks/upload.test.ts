@@ -3,7 +3,7 @@ import { FormData } from 'formdata-node';
 import { createReadStream } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { default as compress } from '../lib/compress';
+import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
 import { uploadStorybook, waitForSentinels } from './upload';
 
@@ -21,7 +21,7 @@ vi.mock('../lib/fileReaderBlob', () => ({
   },
 }));
 
-const makeZipFile = vi.mocked(compress);
+const makeZipFileMock = vi.mocked(makeZipFile);
 const createReadStreamMock = vi.mocked(createReadStream);
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
@@ -366,7 +366,7 @@ describe('uploadStorybook', () => {
         },
       });
 
-      makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
+      makeZipFileMock.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
       createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
       http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
 
@@ -457,7 +457,7 @@ describe('uploadStorybook', () => {
         },
       });
 
-      makeZipFile.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
+      makeZipFileMock.mockReturnValue(Promise.resolve({ path: 'storybook.zip', size: 80 }));
       createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
       http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
 

@@ -1,6 +1,6 @@
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { Context } from '../../types';
-import { buildType } from './utils';
+import { buildType } from './utilities';
 
 const capitalize = (string: string) =>
   string

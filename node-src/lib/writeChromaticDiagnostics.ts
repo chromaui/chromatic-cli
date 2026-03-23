@@ -4,7 +4,7 @@ import path from 'path';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
-import { redact } from './utils';
+import { redact } from './utilities';
 
 const { writeFile } = jsonfile;
 

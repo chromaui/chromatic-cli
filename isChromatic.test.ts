@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import { describe, expect, it } from 'vitest';
 
 import isChromatic from './isChromatic';

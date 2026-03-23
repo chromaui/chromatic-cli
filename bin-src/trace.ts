@@ -3,7 +3,7 @@ import meow from 'meow';
 
 import { getRepositoryRoot } from '../node-src/git/git';
 import { createLogger } from '../node-src/lib/log';
-import { isPackageManifestFile } from '../node-src/lib/utils';
+import { isPackageManifestFile } from '../node-src/lib/utilities';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Context } from '../node-src/types';
 

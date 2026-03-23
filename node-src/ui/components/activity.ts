@@ -1,4 +1,4 @@
-import { activityBar } from '../../lib/utils';
+import { activityBar } from '../../lib/utilities';
 import { Context, Task } from '../../types';
 
 const renderLoop = (ctx: Context, render: (frame: number) => void) => {

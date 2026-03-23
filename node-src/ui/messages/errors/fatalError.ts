@@ -4,7 +4,7 @@ import stripAnsi from 'strip-ansi';
 import { dedent } from 'ts-dedent';
 
 import { Context, InitialContext } from '../../..';
-import { redact } from '../../../lib/utils';
+import { redact } from '../../../lib/utilities';
 import link from '../../components/link';
 
 /**

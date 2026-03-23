@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { FetchError, Response } from 'node-fetch';
 import { dedent } from 'ts-dedent';
 
-import { lcfirst } from '../../../lib/utils';
+import { lcfirst } from '../../../lib/utilities';
 import { error as icon } from '../../components/icons';
 import link from '../../components/link';
 

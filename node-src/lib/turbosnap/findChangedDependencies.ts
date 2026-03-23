@@ -5,7 +5,7 @@ import path from 'path';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../git/git';
 import { Context } from '../../types';
-import { matchesFile } from '../utils';
+import { matchesFile } from '../utilities';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 

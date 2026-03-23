@@ -2,9 +2,9 @@ import { filesize } from 'filesize';
 import pluralize from 'pluralize';
 
 import { getDuration } from '../../lib/tasks';
-import { progressBar } from '../../lib/utils';
+import { progressBar } from '../../lib/utilities';
 import { Context } from '../../types';
-import { buildType } from './utils';
+import { buildType } from './utilities';
 
 export const initial = (ctx: Context) => ({
   status: 'initial',

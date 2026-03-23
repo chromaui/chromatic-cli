@@ -2,7 +2,7 @@ import pluralize from 'pluralize';
 
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { Context } from '../../types';
-import { buildType } from './utils';
+import { buildType } from './utilities';
 
 export const initial = (ctx: Context) => ({
   status: 'initial',

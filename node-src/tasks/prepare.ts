@@ -6,7 +6,7 @@ import slash from 'slash';
 
 import { getFileHashes } from '../lib/getFileHashes';
 import { createTask, transitionTo } from '../lib/tasks';
-import { rewriteErrorMessage } from '../lib/utils';
+import { rewriteErrorMessage } from '../lib/utilities';
 import { Context, Task } from '../types';
 import missingStatsFile from '../ui/messages/errors/missingStatsFile';
 import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
@@ -164,7 +164,7 @@ const isValidReactNativeStorybook = ({ paths, total }, browsers: string[] = []) 
  *
  * @param ctx - The CLI context containing source directory and build log info
  *
- * @throws Error if no valid Storybook build is found
+ * @throws {Error} if no valid Storybook build is found
  */
 export async function validateFiles(ctx: Context) {
   const validator = ctx.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
@@ -198,7 +198,7 @@ export async function validateFiles(ctx: Context) {
  * @param ctx - The CLI context containing git info and TurboSnap configuration
  * @param task - The current Listr task for UI updates
  *
- * @throws Error if stats file is missing or tracing fails
+ * @throws {Error} if stats file is missing or tracing fails
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity
