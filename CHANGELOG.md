@@ -1,3 +1,15 @@
+# v15.3.1 (Mon Mar 23 2026)
+
+#### 🐛 Bug Fix
+
+- Properly timeout process tree in shell commands [#1254](https://github.com/chromaui/chromatic-cli/pull/1254) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v15.3.0 (Mon Mar 16 2026)
 
 #### 🚀 Enhancement
