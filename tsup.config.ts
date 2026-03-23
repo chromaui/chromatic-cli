@@ -17,7 +17,7 @@ export default defineConfig((options) => [
     sourcemap: true,
     clean: true,
     platform: 'node',
-    target: 'node16', // Storybook still supports Node 16
+    target: 'node20', // Lowest supported Node version
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
       SENTRY_RELEASE: process.env.SENTRY_RELEASE || 'development',
@@ -34,7 +34,7 @@ export default defineConfig((options) => [
     sourcemap: true,
     clean: true,
     platform: 'node',
-    target: 'node20', // Sync with `runs.using` in action.yml
+    target: 'node20', // Lowest supported Node version
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
       SENTRY_RELEASE: process.env.SENTRY_RELEASE || 'development',
