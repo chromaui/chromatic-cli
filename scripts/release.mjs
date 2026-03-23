@@ -11,18 +11,23 @@ async function main() {
     return;
   }
 
-  await build();
-  await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
-
-  // https://github.blog/changelog/2023-09-13-github-actions-updates-to-github_ref-and-github-ref/
-  await (process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === 'refs/heads/main'
-    ? publishAction('latest')
-    : publishAction('canary'));
-}
-
-async function build() {
   const { stdout: nextVersion } = await $`auto shipit --dry-run --quiet`;
 
+  await build(nextVersion);
+  await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
+
+  if (process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === 'refs/heads/main') {
+    await publishAction('latest');
+  } else {
+    console.info(`📌 Temporarily bumping version to '${nextVersion}' for canary release`);
+    await $`npm --no-git-tag-version version ${nextVersion}`;
+    publishAction('canary');
+    console.info('🧹 Resetting changes');
+    await $`git reset --hard`;
+  }
+}
+
+async function build(nextVersion) {
   console.info(`📌 Temporarily bumping version to '${nextVersion}' for build step`);
   await $`npm --no-git-tag-version version ${nextVersion}`;
 
