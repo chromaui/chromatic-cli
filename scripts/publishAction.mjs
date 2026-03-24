@@ -30,7 +30,10 @@ const publishAction = async ({ major, version, repo }) => {
   await $`yarn clean-package restore`;
 
   const $$ = (strings, ...args) => {
-    console.info(strings.reduce((acc, s, i) => `${acc}${s}${args[i] || ''}`, '🏃 '));
+    console.info(
+      // eslint-disable-next-line unicorn/no-array-reduce
+      strings.reduce((accumulator, s, index) => `${accumulator}${s}${args[index] || ''}`, '🏃 ')
+    );
     return $({ cwd: path })(strings, ...args);
   };
 
@@ -88,13 +91,21 @@ export async function main(context) {
  *
  * Make sure to build the action before publishing manually.
  */
-// eslint-disable-next-line unicorn/prefer-module
+
 if (process.argv[1] === import.meta.filename) {
+  if (process.env.GH_TOKEN === undefined) {
+    console.error(
+      `❗️ GH_TOKEN environment variable is required to publish the action. Please set it and try again.`
+    );
+    process.exit(1);
+  }
+
   const { stdout: status } = await $`git status --porcelain`;
   if (status) {
     console.error(`❗️ Working directory is not clean:\n${status}`);
     process.exit(1);
   }
 
+  // eslint-disable-next-line unicorn/prefer-top-level-await
   main(process.argv[2]);
 }
