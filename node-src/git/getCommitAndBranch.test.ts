@@ -298,14 +298,11 @@ describe('getCommitAndBranch', () => {
   });
 
   describe('with mergeQueue branch', () => {
-    it('uses PRs branchName as branch instead of temporary mergeQueue branch', async () => {
-      mergeQueueBranchMatch.mockResolvedValue(4);
-      getBranchFromMergeQueue.mockResolvedValue('branch-before-merge-queue');
-      const info = await getCommitAndBranch(ctx, {
-        branchName:
-          'this-is-merge-queue-branch-format/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb',
-      });
-      expect(info).toMatchObject({ branch: 'branch-before-merge-queue' });
+    it('passes the merge queue branch name through unchanged', async () => {
+      const mergeQueueBranch =
+        'gh-readonly-queue/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb';
+      const info = await getCommitAndBranch(ctx, { branchName: mergeQueueBranch });
+      expect(info).toMatchObject({ branch: mergeQueueBranch });
     });
   });
 });
