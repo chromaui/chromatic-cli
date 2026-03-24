@@ -16,7 +16,6 @@ import {
   getUserEmail,
   getVersion,
   hasPreviousCommit,
-  mergeQueueBranchMatch,
   NULL_BYTE,
 } from './git';
 
@@ -154,18 +153,6 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
-  });
-});
-
-describe('mergeQueueBranchMatch', () => {
-  it('returns pr number if it is a merge queue branch', async () => {
-    const branch = 'gh-readonly-queue/main/pr-4-da07417adc889156224d03a7466ac712c647cd36';
-    expect(await mergeQueueBranchMatch(ctx, branch)).toEqual(4);
-  });
-
-  it('returns null if it is not a merge queue branch', async () => {
-    const branch = 'develop';
-    expect(await mergeQueueBranchMatch(ctx, branch)).toBeUndefined();
   });
 });
 

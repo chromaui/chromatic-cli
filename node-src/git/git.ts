@@ -426,21 +426,6 @@ export async function findFilesFromRepositoryRoot(
 }
 
 /**
- * Determine if the branch is from a GitHub merge queue.
- *
- * @param _ctx Standard context object.
- * @param branch The branch name in question.
- *
- * @returns The pull request number associated for the branch.
- */
-export async function mergeQueueBranchMatch(_ctx: Pick<Context, 'log'>, branch: string) {
-  const mergeQueuePattern = new RegExp(/gh-readonly-queue\/.*\/pr-(\d+)-[\da-f]{30}/);
-  const match = branch.match(mergeQueuePattern);
-
-  return match ? Number(match[1]) : undefined;
-}
-
-/**
  * Determine the date the repository was created
  *
  * @param ctx Standard context object.

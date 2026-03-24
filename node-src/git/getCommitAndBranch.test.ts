@@ -3,19 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import type { Context } from '../types';
-import * as mergeQueue from './getBranchFromMergeQueuePullRequestNumber';
 import getCommitAndBranch from './getCommitAndBranch';
 import * as git from './git';
 
 vi.mock('env-ci');
 vi.mock('./git');
-vi.mock('./getBranchFromMergeQueuePullRequestNumber');
 
 const getBranch = vi.mocked(git.getBranch);
 const getCommit = vi.mocked(git.getCommit);
 const hasPreviousCommit = vi.mocked(git.hasPreviousCommit);
-const getBranchFromMergeQueue = vi.mocked(mergeQueue.getBranchFromMergeQueuePullRequestNumber);
-const mergeQueueBranchMatch = vi.mocked(git.mergeQueueBranchMatch);
 
 const log = new TestLogger();
 const ctx = { log } as unknown as Context;
@@ -58,7 +54,6 @@ beforeEach(() => {
     committerEmail: 'noreply@github.com',
   });
   hasPreviousCommit.mockResolvedValue(true);
-  mergeQueueBranchMatch.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -66,7 +61,6 @@ afterEach(() => {
   envCi.mockReset();
   getBranch.mockReset();
   getCommit.mockReset();
-  getBranchFromMergeQueue.mockReset();
 });
 
 const commitInfo = {
