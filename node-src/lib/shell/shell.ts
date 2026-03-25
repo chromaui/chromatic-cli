@@ -1,5 +1,18 @@
 import { execa, Options, parseCommandString, type ResultPromise } from 'execa';
-import treeKill from 'tree-kill';
+import { promisify } from 'util';
+import { exec as execCallback } from 'child_process';
+import { kill } from 'process';
+
+const exec = promisify(execCallback);
+
+async function treeKill(pid) {
+  if(process.platform === 'win32') {
+    await exec(`taskkill /pid ${pid} /T /F`)
+  } else {
+    const processGroupId = -subprocess.pid
+    kill(processGroupId)
+  }
+}
 
 /**
  * Run a command in the shell. This is a wrapper around `execa` so .kill() and timeouts kill the
