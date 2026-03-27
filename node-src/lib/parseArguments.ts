@@ -36,6 +36,7 @@ export default function parseArguments(argv: string[]) {
       --exit-once-uploaded [branch]             Exit with 0 once the built version has been published to Chromatic. Only for [branch], if specified. Globs are supported via picomatch.
       --exit-zero-on-changes [branch]           If all snapshots render but there are visual changes, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --externals <filepath>                    Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
+      --fetch-missing-history                   In CI, when no ancestor build is reachable from the local checkout, deepen Git history and retry baseline discovery before bailing out.
       --ignore-last-build-on-branch <branch>    Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
       --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be inherited from the prior commit.
       --only-story-files <filepath>             Only run a single story or a subset of stories by their filename(s). Specify the full path to the story file relative to the root of your Storybook project. Globs are supported via picomatch. This flag can be specified multiple times.
@@ -96,6 +97,7 @@ export default function parseArguments(argv: string[]) {
         exitOnceUploaded: { type: 'string' },
         exitZeroOnChanges: { type: 'string' },
         externals: { type: 'string', isMultiple: true },
+        fetchMissingHistory: { type: 'boolean' },
         ignoreLastBuildOnBranch: { type: 'string' },
         onlyChanged: { type: 'string' },
         onlyStoryFiles: { type: 'string', isMultiple: true },

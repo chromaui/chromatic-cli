@@ -4,6 +4,7 @@ import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Context } from '../types';
 import { execGitCommand } from './execGit';
 import { commitExists } from './git';
+import { recoverMissingHistory } from './recoverMissingHistory';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -195,6 +196,76 @@ async function maximallyDescendentCommits(ctx: Pick<Context, 'log'>, commits: st
   return maxCommits;
 }
 
+// Add the most recent build on the branch as a parent build, unless:
+//   - the user opts out with `--ignore-last-build-on-branch`
+//   - the commit is newer than the build we are running, in which case we doing this build out
+//     of order and that could lead to problems.
+//   - the current branch is `HEAD`; this is fairly meaningless
+//     (CI systems that have been pushed tags can not set a branch)
+// @see https://www.chromatic.com/docs/branching-and-baselines#rebasing
+async function addLastBranchBuildCommit(
+  ctx: Context,
+  lastBuild: { commit: string; committedAt: number } | undefined,
+  {
+    branch,
+    committedAt,
+    ignoreLastBuildOnBranch,
+    initialCommitsWithBuilds,
+    extraParentCommits,
+  }: {
+    branch: string;
+    committedAt: number;
+    ignoreLastBuildOnBranch: boolean;
+    initialCommitsWithBuilds: string[];
+    extraParentCommits: string[];
+  }
+) {
+  const shouldAddLastBuild =
+    branch !== 'HEAD' &&
+    !ignoreLastBuildOnBranch &&
+    lastBuild &&
+    lastBuild.committedAt <= committedAt;
+
+  if (!shouldAddLastBuild) return;
+
+  if (await commitExists(ctx, lastBuild.commit)) {
+    ctx.log.debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
+    initialCommitsWithBuilds.push(lastBuild.commit);
+  } else {
+    ctx.log.debug(
+      `Last branch build commit ${lastBuild.commit} not in index, blindly appending to parents`
+    );
+    extraParentCommits.push(lastBuild.commit);
+  }
+}
+
+// Add the most recent build on a (merged) branch as an ancestor if we visit a commit
+// during our ancestor selection that was the merge commit for that PR.
+// @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
+async function processMergedPullRequests(
+  ctx: Context,
+  mergedPullRequests: MergeCommitsQueryResult['app']['mergedPullRequests'],
+  commitsWithBuilds: string[],
+  extraParentCommits: string[]
+) {
+  for (const pullRequest of mergedPullRequests) {
+    const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
+    if (lastHeadBuildCommit) {
+      if (await commitExists(ctx, lastHeadBuildCommit)) {
+        ctx.log.debug(
+          `Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`
+        );
+        commitsWithBuilds.push(lastHeadBuildCommit);
+      } else {
+        ctx.log.debug(
+          `Merged PR build commit ${lastHeadBuildCommit} not in index, blindly appending to parents`
+        );
+        extraParentCommits.push(lastHeadBuildCommit);
+      }
+    }
+  }
+}
+
 /**
  * Gather the parent commits from Git.
  *
@@ -206,101 +277,81 @@ async function maximallyDescendentCommits(ctx: Pick<Context, 'log'>, commits: st
  * @returns A list of parent commits associated with this branch.
  */
 // TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
+
 export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch = false } = {}) {
-  const { options, client, git, log } = ctx;
-  const { branch, committedAt } = git;
+  let shouldAttemptRecovery = true;
+  const getParentCommitsOnce = async () => {
+    const { options, client, git, log } = ctx;
+    const { branch, committedAt } = git;
 
-  // Include the latest build from this branch as an ancestor of the current build
-  const { app } = await client.runQuery<FirstCommittedAtQueryResult>(
-    FirstCommittedAtQuery,
-    { branch, localBuilds: localBuildsSpecifier({ options, git }) },
-    { retries: 5 } // This query requires a request to an upstream provider which may fail
-  );
-  const { firstBuild, lastBuild } = app;
-  log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, lastBuild);
+    // Include the latest build from this branch as an ancestor of the current build
+    const { app } = await client.runQuery<FirstCommittedAtQueryResult>(
+      FirstCommittedAtQuery,
+      { branch, localBuilds: localBuildsSpecifier({ options, git }) },
+      { retries: 5 } // This query requires a request to an upstream provider which may fail
+    );
+    const { firstBuild, lastBuild } = app;
+    log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, lastBuild);
 
-  if (!firstBuild) {
-    log.debug('App has no builds, returning []');
-    return [];
-  }
-
-  const initialCommitsWithBuilds: string[] = [];
-  const extraParentCommits: string[] = [];
-
-  // Add the most recent build on the branch as a parent build, unless:
-  //   - the user opts out with `--ignore-last-build-on-branch`
-  //   - the commit is newer than the build we are running, in which case we doing this build out
-  //     of order and that could lead to problems.
-  //   - the current branch is `HEAD`; this is fairly meaningless
-  //     (CI systems that have been pushed tags can not set a branch)
-  // @see https://www.chromatic.com/docs/branching-and-baselines#rebasing
-  if (
-    branch !== 'HEAD' &&
-    !ignoreLastBuildOnBranch &&
-    lastBuild &&
-    lastBuild.committedAt <= committedAt
-  ) {
-    if (await commitExists(ctx, lastBuild.commit)) {
-      log.debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
-      initialCommitsWithBuilds.push(lastBuild.commit);
-    } else {
-      log.debug(
-        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to parents`
-      );
-      extraParentCommits.push(lastBuild.commit);
+    if (!firstBuild) {
+      shouldAttemptRecovery = false;
+      log.debug('App has no builds, returning []');
+      return [];
     }
-  }
 
-  // Get a "covering" set of commits that have builds. This is a set of commits
-  // such that any ancestor of HEAD is either:
-  //   - in commitsWithBuilds
-  //   - an ancestor of a commit in commitsWithBuilds
-  //   - has no build
-  const { commitsWithBuilds, visitedCommitsWithoutBuilds } = await step(
-    { options, client, log, git },
-    FETCH_N_INITIAL_BUILD_COMMITS,
-    {
-      firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
-      commitsWithBuilds: initialCommitsWithBuilds,
-      commitsWithoutBuilds: [],
-    }
-  );
+    const initialCommitsWithBuilds: string[] = [];
+    const extraParentCommits: string[] = [];
 
-  const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
-    return { commit, baseRefName: branch };
-  });
-  const {
-    app: { mergedPullRequests },
-  } = await client.runQuery<MergeCommitsQueryResult>(
-    MergeCommitsQuery,
-    { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
-    { retries: 5 } // This query requires a request to an upstream provider which may fail
-  );
+    await addLastBranchBuildCommit(ctx, lastBuild, {
+      branch,
+      committedAt,
+      ignoreLastBuildOnBranch,
+      initialCommitsWithBuilds,
+      extraParentCommits,
+    });
 
-  for (const pullRequest of mergedPullRequests) {
-    // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
-    // during our ancestor selection that was the merge commit for that PR.
-    // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
-    const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
-    if (lastHeadBuildCommit) {
-      if (await commitExists(ctx, lastHeadBuildCommit)) {
-        log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
-        commitsWithBuilds.push(lastHeadBuildCommit);
-      } else {
-        log.debug(
-          `Merged PR build commit ${lastHeadBuildCommit} not in index, blindly appending to parents`
-        );
-        extraParentCommits.push(lastHeadBuildCommit);
+    // Get a "covering" set of commits that have builds. This is a set of commits
+    // such that any ancestor of HEAD is either:
+    //   - in commitsWithBuilds
+    //   - an ancestor of a commit in commitsWithBuilds
+    //   - has no build
+    const { commitsWithBuilds, visitedCommitsWithoutBuilds } = await step(
+      { options, client, log, git },
+      FETCH_N_INITIAL_BUILD_COMMITS,
+      {
+        firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
+        commitsWithBuilds: initialCommitsWithBuilds,
+        commitsWithoutBuilds: [],
       }
-    }
+    );
+
+    const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
+      return { commit, baseRefName: branch };
+    });
+    const {
+      app: { mergedPullRequests },
+    } = await client.runQuery<MergeCommitsQueryResult>(
+      MergeCommitsQuery,
+      { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
+      { retries: 5 } // This query requires a request to an upstream provider which may fail
+    );
+
+    await processMergedPullRequests(ctx, mergedPullRequests, commitsWithBuilds, extraParentCommits);
+
+    log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
+
+    // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
+    const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
+
+    const ancestorCommits = [...extraParentCommits, ...(descendentCommits || [])];
+    return ancestorCommits;
+  };
+
+  const parentCommits = await getParentCommitsOnce();
+
+  if (!ctx.options.fetchMissingHistory || parentCommits.length > 0 || !shouldAttemptRecovery) {
+    return parentCommits;
   }
 
-  log.debug(`Final commitsWithBuilds: ${commitsWithBuilds}`);
-
-  // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
-  const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
-
-  const ancestorCommits = [...extraParentCommits, ...(descendentCommits || [])];
-  return ancestorCommits;
+  return recoverMissingHistory(ctx, getParentCommitsOnce, parentCommits);
 }

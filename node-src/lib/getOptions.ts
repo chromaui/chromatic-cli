@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { InitialContext, Options } from '..';
+import ciOnlyOption from '../ui/messages/errors/ciOnlyOption';
 import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
@@ -68,6 +69,7 @@ export default function getOptions(ctx: InitialContext): Options {
     autoAcceptChanges: false,
     exitZeroOnChanges: false,
     exitOnceUploaded: false,
+    fetchMissingHistory: undefined,
     diagnosticsFile: undefined,
     fileHashing: true,
     interactive: false,
@@ -147,6 +149,7 @@ export default function getOptions(ctx: InitialContext): Options {
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
+    fetchMissingHistory: flags.fetchMissingHistory,
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
     // deprecated
     preserveMissingSpecs: flags.preserveMissing,
@@ -278,6 +281,10 @@ export default function getOptions(ctx: InitialContext): Options {
 
   if (potentialOptions.traceChanged && !potentialOptions.onlyChanged) {
     throw new Error(dependentOption('--trace-changed', '--only-changed'));
+  }
+
+  if (potentialOptions.fetchMissingHistory && !potentialOptions.fromCI) {
+    throw new Error(ciOnlyOption('--fetch-missing-history'));
   }
 
   if (potentialOptions.junitReport && potentialOptions.exitOnceUploaded) {

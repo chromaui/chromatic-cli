@@ -15,11 +15,13 @@ import {
   getUserEmail,
   getVersion,
 } from '../git/git';
+import { GitHistoryRecoveryError } from '../git/recoverMissingHistory';
 import { getHasRouter } from '../lib/getHasRouter';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
 import { Context, Task } from '../types';
+import gitHistoryRecoveryFailed from '../ui/messages/errors/gitHistoryRecoveryFailed';
 import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
 import replacedBuild from '../ui/messages/info/replacedBuild';
@@ -173,9 +175,21 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     throw new Error(skipFailed().output);
   }
 
-  const parentCommits = await getParentCommits(ctx, {
-    ignoreLastBuildOnBranch: ctx.git.matchesBranch?.(ctx.options.ignoreLastBuildOnBranch || false),
-  });
+  let parentCommits: string[];
+  try {
+    parentCommits = await getParentCommits(ctx, {
+      ignoreLastBuildOnBranch: ctx.git.matchesBranch?.(
+        ctx.options.ignoreLastBuildOnBranch || false
+      ),
+    });
+  } catch (err) {
+    if (err instanceof GitHistoryRecoveryError) {
+      setExitCode(ctx, exitCodes.GIT_HISTORY_RECOVERY_FAILED, true);
+      ctx.log.error(gitHistoryRecoveryFailed(err.message));
+      throw new Error('Failed to recover missing Git history');
+    }
+    throw err;
+  }
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 

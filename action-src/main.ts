@@ -112,6 +112,7 @@ async function run() {
     const exitOnceUploaded = getInput('exitOnceUploaded');
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const externals = getMultilineInput('externals');
+    const fetchMissingHistory = getInput('fetchMissingHistory');
     const fileHashing = getInput('fileHashing');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
@@ -171,6 +172,7 @@ async function run() {
         exitOnceUploaded: maybe(exitOnceUploaded),
         exitZeroOnChanges: maybe(exitZeroOnChanges, true),
         externals: maybe(externals),
+        fetchMissingHistory: maybe(fetchMissingHistory),
         fileHashing: maybe(fileHashing, true),
         forceRebuild: maybe(forceRebuild),
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),

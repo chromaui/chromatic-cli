@@ -5,7 +5,9 @@ import { getChangedFilesWithReplacement as getChangedFilesWithReplacementUnmocke
 import * as getCommitInfo from '../git/getCommitAndBranch';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
 import * as git from '../git/git';
+import { GitHistoryRecoveryError } from '../git/recoverMissingHistory';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
+import { exitCodes } from '../lib/setExitCode';
 import TestLogger from '../lib/testLogger';
 import { setGitInfo } from './gitInfo';
 
@@ -201,5 +203,16 @@ describe('setGitInfo', () => {
       numberOfCommitters: 17,
       numberOfAppFiles: 100,
     });
+  });
+
+  it('sets a dedicated exit code when git history recovery fails', async () => {
+    getParentCommits.mockRejectedValue(new GitHistoryRecoveryError('fatal: fetch failed'));
+    const ctx = { log, options: {}, client } as any;
+
+    await expect(setGitInfo(ctx, {} as any)).rejects.toThrow(
+      'Failed to recover missing Git history'
+    );
+    expect(ctx.exitCode).toBe(exitCodes.GIT_HISTORY_RECOVERY_FAILED);
+    expect(ctx.userError).toBe(true);
   });
 });

@@ -38,6 +38,7 @@ describe('getOptions', () => {
       autoAcceptChanges: false,
       exitZeroOnChanges: false,
       exitOnceUploaded: false,
+      fetchMissingHistory: undefined,
       diagnosticsFile: undefined,
       interactive: false,
       isLocalBuild: false,
@@ -89,6 +90,7 @@ describe('getOptions', () => {
           '--auto-accept-changes',
           '--exit-zero-on-changes',
           '--exit-once-uploaded',
+          '--fetch-missing-history',
           '--skip',
           '--debug',
           '--no-interactive',
@@ -101,9 +103,23 @@ describe('getOptions', () => {
       autoAcceptChanges: true,
       exitZeroOnChanges: true,
       exitOnceUploaded: true,
+      fetchMissingHistory: true,
       debug: true,
       interactive: false,
       storybookLogFile: false,
+    });
+  });
+
+  it('rejects fetchMissingHistory outside CI', async () => {
+    expect(() => getOptions(getContext(['--fetch-missing-history']))).toThrow(
+      'Invalid --fetch-missing-history'
+    );
+  });
+
+  it('allows fetchMissingHistory in CI', async () => {
+    expect(getOptions(getContext(['--ci', '--fetch-missing-history']))).toMatchObject({
+      fromCI: true,
+      fetchMissingHistory: true,
     });
   });
 

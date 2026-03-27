@@ -44,6 +44,9 @@ inputs:
   externals:
     description: 'Disable TurboSnap when any of these files have changed since the baseline build'
     required: false
+  fetchMissingHistory:
+    description: 'In CI, deepen Git history and retry ancestor discovery when no baseline ancestor is reachable from the current checkout'
+    required: false
   fileHashing:
     description: 'Whether to apply file hashing to skip uploading unchanged files (default: true)'
     required: false

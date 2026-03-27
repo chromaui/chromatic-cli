@@ -27,6 +27,7 @@ const configurationSchema = z
     autoAcceptChanges: z.union([z.string(), z.boolean()]),
     exitZeroOnChanges: z.union([z.string(), z.boolean()]),
     exitOnceUploaded: z.union([z.string(), z.boolean()]),
+    fetchMissingHistory: z.boolean(),
     ignoreLastBuildOnBranch: z.string(),
 
     buildScriptName: z.string(),

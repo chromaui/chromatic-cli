@@ -33,6 +33,7 @@ it('reads basic JSON configuration successfully', async () => {
       autoAcceptChanges: 'auto-accept-changes',
       exitZeroOnChanges: 'exit-zero-on-changes',
       exitOnceUploaded: 'exit-once-uploaded',
+      fetchMissingHistory: true,
       ignoreLastBuildOnBranch: 'ignore-last-build-on-branch',
 
       buildScriptName: 'build-script-name',
@@ -69,6 +70,7 @@ it('reads basic JSON configuration successfully', async () => {
     autoAcceptChanges: 'auto-accept-changes',
     exitZeroOnChanges: 'exit-zero-on-changes',
     exitOnceUploaded: 'exit-once-uploaded',
+    fetchMissingHistory: true,
     ignoreLastBuildOnBranch: 'ignore-last-build-on-branch',
 
     buildScriptName: 'build-script-name',
@@ -114,6 +116,7 @@ it('reads JSON5 configuration successfully', async () => {
       "autoAcceptChanges": "auto-accept-changes",
       "exitZeroOnChanges": "exit-zero-on-changes",
       "exitOnceUploaded": "exit-once-uploaded",
+      "fetchMissingHistory": true,
       "ignoreLastBuildOnBranch": "ignore-last-build-on-branch",
       "buildScriptName": "build-script-name",
       "outputDir": "output-dir",
@@ -148,6 +151,7 @@ it('reads JSON5 configuration successfully', async () => {
     autoAcceptChanges: 'auto-accept-changes',
     exitZeroOnChanges: 'exit-zero-on-changes',
     exitOnceUploaded: 'exit-once-uploaded',
+    fetchMissingHistory: true,
     ignoreLastBuildOnBranch: 'ignore-last-build-on-branch',
 
     buildScriptName: 'build-script-name',

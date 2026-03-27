@@ -167,6 +167,36 @@ export async function commitExists(ctx: Pick<Context, 'log'>, commit: string) {
 }
 
 /**
+ * Determine if the repository is shallow.
+ *
+ * @param ctx Standard context object.
+ *
+ * @returns True if the repository is shallow.
+ */
+export async function isShallowRepository(ctx: Pick<Context, 'log'>) {
+  const result = await execGitCommand(ctx, 'git rev-parse --is-shallow-repository');
+  return result?.trim() === 'true';
+}
+
+/**
+ * Deepen the current checkout using the configured fetch remote/refspec.
+ *
+ * @param ctx Standard context object.
+ * @param deepenBy How many commits to deepen by.
+ * @param options Additional command options.
+ * @param options.timeout Timeout for the fetch command in milliseconds.
+ *
+ * @returns The result of the fetch command.
+ */
+export async function deepenFetchHistory(
+  ctx: Pick<Context, 'log'>,
+  deepenBy: number,
+  { timeout = 120_000 }: { timeout?: number } = {}
+) {
+  return execGitCommand(ctx, `git fetch --deepen=${deepenBy} --no-tags`, { timeout });
+}
+
+/**
  * Get the changed files of a single commit or between two.
  *
  * @param ctx Standard context object.

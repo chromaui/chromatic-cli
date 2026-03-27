@@ -4,6 +4,7 @@ import TestLogger from '../lib/testLogger';
 import * as execGit from './execGit';
 import {
   commitExists,
+  deepenFetchHistory,
   findFilesFromRepositoryRoot,
   getBranch,
   getCommit,
@@ -16,6 +17,7 @@ import {
   getUserEmail,
   getVersion,
   hasPreviousCommit,
+  isShallowRepository,
   mergeQueueBranchMatch,
   NULL_BYTE,
 } from './git';
@@ -154,6 +156,30 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
+  });
+});
+
+describe('isShallowRepository', () => {
+  it('returns true when git reports a shallow repository', async () => {
+    execGitCommand.mockResolvedValue('true\n');
+    expect(await isShallowRepository(ctx)).toBe(true);
+  });
+
+  it('returns false when git reports a complete repository', async () => {
+    execGitCommand.mockResolvedValue('false\n');
+    expect(await isShallowRepository(ctx)).toBe(false);
+  });
+});
+
+describe('deepenFetchHistory', () => {
+  it('deepens the current checkout with a longer timeout', async () => {
+    execGitCommand.mockResolvedValue('');
+    await deepenFetchHistory(ctx, 50);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git fetch --deepen=50 --no-tags',
+      expect.objectContaining({ timeout: 120_000 })
+    );
   });
 });
 

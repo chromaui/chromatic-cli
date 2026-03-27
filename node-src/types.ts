@@ -29,6 +29,7 @@ export interface Flags {
   exitOnceUploaded?: string;
   exitZeroOnChanges?: string;
   externals?: string[];
+  fetchMissingHistory?: boolean;
   ignoreLastBuildOnBranch?: string;
   onlyChanged?: string;
   onlyStoryFiles?: string[];
@@ -93,6 +94,7 @@ export interface Options extends Configuration {
   autoAcceptChanges: boolean | string;
   exitZeroOnChanges: boolean | string;
   exitOnceUploaded: boolean | string;
+  fetchMissingHistory?: Flags['fetchMissingHistory'];
   isLocalBuild: boolean;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
   preserveMissingSpecs: boolean;
@@ -231,6 +233,11 @@ export interface Context {
     replacementBuildIds?: [string, string][];
     matchesBranch?: (glob: boolean | string) => boolean;
     packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+    historyRecovery?: {
+      status: 'recovered' | 'exhausted' | 'failed' | 'skipped-not-shallow';
+      attempts: { deepenBy: number; totalDepth: number }[];
+      failureMessage?: string;
+    };
   };
   storybook: {
     version: string;
