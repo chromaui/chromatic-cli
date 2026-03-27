@@ -168,7 +168,7 @@ export const buildStorybook = async (ctx: Context) => {
       throw new Error('No build command configured');
     }
 
-    await runCommand(ctx.buildCommand, {
+    await runCommand(ctx, ctx.buildCommand, {
       stdio: [undefined, logFile, undefined],
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow

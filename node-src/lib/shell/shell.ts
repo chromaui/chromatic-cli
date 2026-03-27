@@ -1,5 +1,8 @@
 import { execa, Options, parseCommandString, type ResultPromise } from 'execa';
+import { kill } from 'process';
 import treeKill from 'tree-kill';
+
+import { Context } from '../../types';
 
 /**
  * Run a command in the shell. This is a wrapper around `execa` so .kill() and timeouts kill the
@@ -9,12 +12,18 @@ import treeKill from 'tree-kill';
  * 1. Buffered mode: await the result to get stdout/stderr after completion
  * 2. Streaming mode: access .stdout/.stderr properties during execution (requires buffer: false)
  *
+ * @param context Standard context object.
+ * @param context.log Standard context logger.
  * @param command The command to run.
  * @param options Execa options. Note: `timeout` is handled internally.
  *
  * @returns An execa `ResultPromise` with .kill() and timeout overwritten.
  */
-export function runCommand(command: string, options: Options = {}): ResultPromise {
+export function runCommand(
+  { log }: Pick<Context, 'log'>,
+  command: string,
+  options: Options = {}
+): ResultPromise {
   const { timeout, ...optionsWithoutTimeout } = options;
   const [cmd, ...args] = parseCommandString(command);
   const subprocess = execa(cmd, args, optionsWithoutTimeout);
@@ -26,7 +35,12 @@ export function runCommand(command: string, options: Options = {}): ResultPromis
       return false;
     }
 
-    treeKill(subprocess.pid);
+    try {
+      treeKill(subprocess.pid);
+    } catch (err) {
+      log.warn(`Failed to terminate process tree for ${subprocess.pid}: ${err}`);
+      kill(subprocess.pid);
+    }
     return true;
   };
 

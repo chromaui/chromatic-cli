@@ -1,5 +1,6 @@
 import { getCliCommand, parseNa, parseNr } from '@antfu/ni';
 
+import { Context } from '../types';
 import { runCommand } from './shell/shell';
 
 // 'npm' | 'pnpm' | 'yarn' | 'bun'
@@ -13,13 +14,16 @@ export const getPackageManagerRunCommand = async (args: string[]) => {
 };
 
 // e.g. `8.19.2`
-export const getPackageManagerVersion = async (packageManager: string) => {
+export const getPackageManagerVersion = async (
+  { log }: Pick<Context, 'log'>,
+  packageManager: string
+) => {
   if (!packageManager) {
     throw new Error('No package manager provided');
   }
 
   const command = `${packageManager} --version`;
-  const { stdout } = await runCommand(command);
+  const { stdout } = await runCommand({ log }, command);
 
   if (stdout === undefined) {
     throw new Error(`Unexpected missing output for command: '${command}'`);

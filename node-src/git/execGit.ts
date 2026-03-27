@@ -32,7 +32,7 @@ export async function execGitCommand(
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
-    const { all } = await runCommand(command, { ...defaultOptions, ...options });
+    const { all } = await runCommand({ log }, command, { ...defaultOptions, ...options });
 
     if (all === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}'`);
@@ -78,7 +78,7 @@ export async function execGitCommandOneLine(
   options?: Options
 ) {
   log.debug(`execGitCommandOneLine: ${command}`);
-  const process = runCommand(command, {
+  const process = runCommand({ log }, command, {
     ...defaultOptions,
     buffer: false,
     ...options,
@@ -124,7 +124,7 @@ export async function execGitCommandCountLines(
   options?: Options
 ) {
   log.debug(`execGitCommandCountLines: ${command}`);
-  const process = runCommand(command, {
+  const process = runCommand({ log }, command, {
     ...defaultOptions,
     buffer: false,
     ...options,
