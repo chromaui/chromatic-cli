@@ -64,6 +64,19 @@ interface Output {
 
 export type { Configuration, Context, Flags, Options, TaskName } from './types';
 
+export interface ShareOptions {
+  userToken: string;
+  storyId?: string;
+  onUrl?: (url: string) => void;
+  onProgress?: (progress: number, total: number) => void;
+  onError?: (error: Error) => void;
+  abortSignal?: AbortSignal;
+}
+
+export interface ShareOutput {
+  shareUrl: string;
+}
+
 export type InitialContext = Omit<
   AtLeast<
     Context,
@@ -350,3 +363,47 @@ export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
 
 export { getConfiguration } from './lib/getConfiguration';
 export { createLogger, Logger } from './lib/log';
+
+export async function share(options: ShareOptions): Promise<ShareOutput> {
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const getAbortError = () => {
+    const error = new Error('Share aborted');
+    error.name = 'AbortError';
+    return error;
+  };
+  const throwIfAborted = () => {
+    if (options.abortSignal?.aborted) {
+      throw getAbortError();
+    }
+  };
+
+  try {
+    throwIfAborted();
+    await wait(500);
+    throwIfAborted();
+
+    const randomId = uuid();
+    const storyQuery = options.storyId ? `?path=/story/${encodeURIComponent(options.storyId)}` : '';
+    const shareUrl = `https://share.chromatic.com/${randomId}${storyQuery}`;
+
+    throwIfAborted();
+    options.onUrl?.(shareUrl);
+
+    const total = 10;
+    for (let i = 1; i <= total; i += 1) {
+      throwIfAborted();
+      await wait(300);
+      throwIfAborted();
+      options.onProgress?.(i, total);
+    }
+
+    return { shareUrl };
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw error;
+    }
+
+    options.onError?.(error as Error);
+    throw error;
+  }
+}
