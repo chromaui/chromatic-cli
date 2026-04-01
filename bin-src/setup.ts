@@ -22,7 +22,7 @@ const getPackageManagerInstallCommand = async (arguments_: string[]) => {
  *
  * @param storybookVersion - The version of `@storybook/react-native` to install, or 'latest'.
  */
-async function installReactNativeDependencies(storybookVersion: string) {
+export async function installReactNativeDependencies(storybookVersion: string) {
   const installArguments = [
     '-D',
     'chromatic',
@@ -45,7 +45,7 @@ async function installReactNativeDependencies(storybookVersion: string) {
  * @param packageJson - The parsed package.json object.
  * @param packagePath - The file path to package.json.
  */
-async function addChromaticScript(packageJson: Record<string, any>, packagePath: string) {
+export async function addChromaticScript(packageJson: Record<string, any>, packagePath: string) {
   const json = {
     ...packageJson,
     scripts: {
@@ -62,7 +62,7 @@ async function addChromaticScript(packageJson: Record<string, any>, packagePath:
  * @param configFile - The path to write the config file to.
  * @param storybookConfigDirectory - The Storybook config directory path.
  */
-async function writeChromaticConfig(configFile: string, storybookConfigDirectory: string) {
+export async function writeChromaticConfig(configFile: string, storybookConfigDirectory: string) {
   const configData: Record<string, string> = {
     storybookConfigDir: storybookConfigDirectory,
   };
@@ -135,6 +135,36 @@ async function gatherConfiguration(
 }
 
 /**
+ * Apply the setup steps: install deps, update package.json, write config.
+ *
+ * @param packagePath - Path to the project's package.json.
+ * @param packageJson - The parsed package.json object.
+ * @param storybookConfigDirectory - The Storybook config directory.
+ * @param storybookVersion - The version of storybook packages to install.
+ */
+async function applySetup(
+  packagePath: string,
+  packageJson: Record<string, any>,
+  storybookConfigDirectory: string,
+  storybookVersion: string
+) {
+  console.log(chalk.cyan('\n📦 Installing dependencies...\n'));
+  await installReactNativeDependencies(storybookVersion);
+  console.log(chalk.green('  ✓ Dependencies installed'));
+
+  console.log(chalk.cyan('\n📝 Updating package.json...\n'));
+  const writablePackageJson = { ...packageJson } as Record<string, any>;
+  delete writablePackageJson.readme;
+  delete writablePackageJson._id;
+  await addChromaticScript(writablePackageJson, packagePath);
+  console.log(chalk.green('  ✓ Added "chromatic" script to package.json'));
+
+  console.log(chalk.cyan('\n⚙️  Writing chromatic.config.json...\n'));
+  await writeChromaticConfig('chromatic.config.json', storybookConfigDirectory);
+  console.log(chalk.green('  ✓ Created chromatic.config.json'));
+}
+
+/**
  * The main entrypoint for `chromatic setup`.
  *
  * @param argv A list of arguments passed.
@@ -203,20 +233,12 @@ export async function main(argv: string[]) {
       flags.skipPrompts
     );
 
-    console.log(chalk.cyan('\n📦 Installing dependencies...\n'));
-    await installReactNativeDependencies(storybookVersion);
-    console.log(chalk.green('  ✓ Dependencies installed'));
-
-    console.log(chalk.cyan('\n📝 Updating package.json...\n'));
-    const writablePackageJson = { ...packageJson } as Record<string, any>;
-    delete writablePackageJson.readme;
-    delete writablePackageJson._id;
-    await addChromaticScript(writablePackageJson, packagePath);
-    console.log(chalk.green('  ✓ Added "chromatic" script to package.json'));
-
-    console.log(chalk.cyan('\n⚙️  Writing chromatic.config.json...\n'));
-    await writeChromaticConfig('chromatic.config.json', storybookConfigDirectory);
-    console.log(chalk.green('  ✓ Created chromatic.config.json'));
+    await applySetup(
+      packagePath,
+      packageJson as Record<string, any>,
+      storybookConfigDirectory,
+      storybookVersion
+    );
 
     console.log(
       boxen(
