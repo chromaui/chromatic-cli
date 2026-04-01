@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import path from 'path';
 
 /**
@@ -12,19 +12,20 @@ export interface ReactNativeProjectInfo {
   /** Whether expo-router is installed. */
   hasExpoRouter: boolean;
   /** Path to the Storybook config directory relative to project root. */
-  storybookConfigDir: string | null;
+  storybookConfigDirectory: string | undefined;
   /** The application name (from Expo config or iOS workspace). */
-  appName: string | null;
+  appName: string | undefined;
   /** Path to the iOS .xcworkspace file relative to project root. */
-  iosWorkspacePath: string | null;
+  iosWorkspacePath: string | undefined;
   /** The iOS build scheme name. */
-  iosScheme: string | null;
+  iosScheme: string | undefined;
 }
 
 /**
  * Checks whether the project at the given root is a React Native project.
  *
  * @param projectRoot - Absolute path to the project root directory.
+ *
  * @returns True if react-native is in dependencies or devDependencies.
  */
 export function isReactNativeProject(projectRoot: string): boolean {
@@ -37,6 +38,7 @@ export function isReactNativeProject(projectRoot: string): boolean {
  * Checks whether the project uses Expo.
  *
  * @param projectRoot - Absolute path to the project root directory.
+ *
  * @returns True if expo is in dependencies or devDependencies.
  */
 export function isExpoProject(projectRoot: string): boolean {
@@ -49,6 +51,7 @@ export function isExpoProject(projectRoot: string): boolean {
  * Checks whether expo-router is installed.
  *
  * @param projectRoot - Absolute path to the project root directory.
+ *
  * @returns True if expo-router is in dependencies or devDependencies.
  */
 export function hasExpoRouter(projectRoot: string): boolean {
@@ -61,25 +64,27 @@ export function hasExpoRouter(projectRoot: string): boolean {
  * Finds the Storybook config directory, checking .storybook/ first then .rnstorybook/.
  *
  * @param projectRoot - Absolute path to the project root directory.
- * @returns The relative config directory name, or null if neither exists.
+ *
+ * @returns The relative config directory name, or undefined if neither exists.
  */
-export function findStorybookConfigDir(projectRoot: string): string | null {
+export function findStorybookConfigDirectory(projectRoot: string): string | undefined {
   const candidates = ['.storybook', '.rnstorybook'];
   for (const candidate of candidates) {
     if (existsSync(path.join(projectRoot, candidate))) {
       return candidate;
     }
   }
-  return null;
+  return undefined;
 }
 
 /**
  * Discovers the app name from Expo config (app.json) or iOS workspace.
  *
  * @param projectRoot - Absolute path to the project root directory.
- * @returns The discovered app name, or null if detection fails.
+ *
+ * @returns The discovered app name, or undefined if detection fails.
  */
-export function getAppName(projectRoot: string): string | null {
+export function getAppName(projectRoot: string): string | undefined {
   const packageJson = readPackageJson(projectRoot);
   const isExpo = packageJson ? hasDependency(packageJson, 'expo') : false;
 
@@ -93,18 +98,19 @@ export function getAppName(projectRoot: string): string | null {
     return path.basename(workspace, '.xcworkspace');
   }
 
-  return null;
+  return undefined;
 }
 
 /**
- * Finds the iOS .xcworkspace path by globbing ios/*.xcworkspace.
+ * Finds the iOS .xcworkspace path by reading the ios/ directory.
  *
  * @param projectRoot - Absolute path to the project root directory.
- * @returns The relative workspace path, a list if multiple found, or null if none.
+ *
+ * @returns The relative workspace path, or undefined if none or multiple found.
  */
-export function getIosWorkspacePath(projectRoot: string): string | null {
+export function getIosWorkspacePath(projectRoot: string): string | undefined {
   const iosDirectory = path.join(projectRoot, 'ios');
-  if (!existsSync(iosDirectory)) return null;
+  if (!existsSync(iosDirectory)) return undefined;
 
   try {
     const entries = readdirSync(iosDirectory);
@@ -117,25 +123,26 @@ export function getIosWorkspacePath(projectRoot: string): string | null {
     // ios/ directory may not be readable
   }
 
-  return null;
+  return undefined;
 }
 
 /**
  * Discovers the iOS scheme name from the workspace. Falls back to the app name.
  *
  * @param projectRoot - Absolute path to the project root directory.
- * @returns The scheme name, or null if it cannot be determined.
+ *
+ * @returns The scheme name, or undefined if it cannot be determined.
  */
-export function getIosScheme(projectRoot: string): string | null {
+export function getIosScheme(projectRoot: string): string | undefined {
   // The scheme name typically matches the app name in React Native projects
-  const appName = getAppName(projectRoot);
-  return appName ?? null;
+  return getAppName(projectRoot);
 }
 
 /**
  * Main detection function that combines all checks into a single result object.
  *
  * @param projectRoot - Absolute path to the project root directory.
+ *
  * @returns A ReactNativeProjectInfo object with all detected values.
  */
 export function detectReactNativeProject(projectRoot: string): ReactNativeProjectInfo {
@@ -146,38 +153,33 @@ export function detectReactNativeProject(projectRoot: string): ReactNativeProjec
       isReactNative: false,
       isExpo: false,
       hasExpoRouter: false,
-      storybookConfigDir: null,
-      appName: null,
-      iosWorkspacePath: null,
-      iosScheme: null,
+      storybookConfigDirectory: undefined,
+      appName: undefined,
+      iosWorkspacePath: undefined,
+      iosScheme: undefined,
     };
   }
 
   const isExpo = isExpoProject(projectRoot);
-  const expoRouter = hasExpoRouter(projectRoot);
-  const storybookConfigDir = findStorybookConfigDir(projectRoot);
-  const appName = getAppName(projectRoot);
-  const iosWorkspacePath = getIosWorkspacePath(projectRoot);
-  const iosScheme = getIosScheme(projectRoot);
 
   return {
     isReactNative,
     isExpo,
-    hasExpoRouter: expoRouter,
-    storybookConfigDir,
-    appName,
-    iosWorkspacePath,
-    iosScheme,
+    hasExpoRouter: hasExpoRouter(projectRoot),
+    storybookConfigDirectory: findStorybookConfigDirectory(projectRoot),
+    appName: getAppName(projectRoot),
+    iosWorkspacePath: getIosWorkspacePath(projectRoot),
+    iosScheme: getIosScheme(projectRoot),
   };
 }
 
-function readPackageJson(projectRoot: string): Record<string, any> | null {
+function readPackageJson(projectRoot: string): Record<string, any> | undefined {
   const packageJsonPath = path.join(projectRoot, 'package.json');
   try {
     const content = readFileSync(packageJsonPath, 'utf8');
     return JSON.parse(content);
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -185,13 +187,13 @@ function hasDependency(packageJson: Record<string, any>, name: string): boolean 
   return !!(packageJson.dependencies?.[name] || packageJson.devDependencies?.[name]);
 }
 
-function getExpoAppName(projectRoot: string): string | null {
+function getExpoAppName(projectRoot: string): string | undefined {
   const appJsonPath = path.join(projectRoot, 'app.json');
   try {
     const content = readFileSync(appJsonPath, 'utf8');
     const appConfig = JSON.parse(content);
-    return appConfig.expo?.name || appConfig.expo?.slug || appConfig.name || null;
+    return appConfig.expo?.name || appConfig.expo?.slug || appConfig.name || undefined;
   } catch {
-    return null;
+    return undefined;
   }
 }
