@@ -329,6 +329,47 @@ describe('resolveConfigFileName', () => {
     await expect(getConfiguration('test.file')).rejects.toThrow(/random/);
   });
 
+  it('parses config with reactNative section', async () => {
+    mockedReadFile.mockReturnValue(
+      JSON.stringify({
+        projectId: 'test-id',
+        reactNative: {
+          platforms: ['android', 'ios'],
+          android: {
+            buildCommand: 'cd android && ./gradlew assembleRelease',
+            apkPath: 'android/app/build/outputs/apk/release/app-release.apk',
+          },
+          ios: {
+            workspace: 'ios/MyApp.xcworkspace',
+            scheme: 'MyApp',
+            appPath: '.chromatic/ios-build/Build/Products/Release-iphonesimulator/MyApp.app',
+          },
+        },
+      })
+    );
+
+    const config = await getConfiguration();
+    expect(config.reactNative).toEqual({
+      platforms: ['android', 'ios'],
+      android: {
+        buildCommand: 'cd android && ./gradlew assembleRelease',
+        apkPath: 'android/app/build/outputs/apk/release/app-release.apk',
+      },
+      ios: {
+        workspace: 'ios/MyApp.xcworkspace',
+        scheme: 'MyApp',
+        appPath: '.chromatic/ios-build/Build/Products/Release-iphonesimulator/MyApp.app',
+      },
+    });
+  });
+
+  it('parses config without reactNative section (backwards compatible)', async () => {
+    mockedReadFile.mockReturnValue(JSON.stringify({ projectId: 'test-id' }));
+
+    const config = await getConfiguration();
+    expect(config.reactNative).toBeUndefined();
+  });
+
   it('errors if config file is unparseable', async () => {
     {
       mockedReadFile.mockReturnValue('invalid json');

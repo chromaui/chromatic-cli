@@ -1,4 +1,4 @@
-import { createWriteStream, existsSync, readFileSync } from 'fs';
+import { copyFileSync, cpSync, createWriteStream, existsSync, mkdirSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -16,6 +16,8 @@ import buildFailed from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
 import missingStorybookBuildDirectory from '../ui/messages/errors/missingStorybookBuildDirectory';
+import reactNativeBuildFailed from '../ui/messages/errors/reactNativeBuildFailed';
+import reactNativeConfigMissing from '../ui/messages/errors/reactNativeConfigMissing';
 import {
   failed,
   initial,
@@ -143,10 +145,117 @@ function e2eBuildErrorMessage(
   };
 }
 
+function buildXcodebuildCommand(ios: { workspace?: string; scheme?: string }): string {
+  const parts = [
+    'xcodebuild',
+    `-workspace ${ios.workspace}`,
+    `-scheme ${ios.scheme}`,
+    '-configuration Release',
+    '-sdk iphonesimulator',
+    '-derivedDataPath .chromatic/ios-build',
+    '-arch arm64 -arch x86_64',
+    'CODE_SIGNING_ALLOWED=NO',
+  ];
+  return parts.join(' ');
+}
+
+export const buildReactNativeApp = async (ctx: Context) => {
+  if (!ctx.isReactNativeApp) return;
+
+  const config = ctx.configuration.reactNative;
+  if (!config) {
+    ctx.log.error(reactNativeConfigMissing());
+    throw new Error(
+      'React Native build configuration not found in chromatic.config.json. Run `npx chromatic init` to set up.'
+    );
+  }
+
+  const platforms = config.platforms || [];
+  const outputDir = path.resolve('.chromatic/output');
+  mkdirSync(outputDir, { recursive: true });
+
+  // Android build
+  if (platforms.includes('android') && config.android) {
+    ctx.log.debug('Building Android APK...');
+    const buildCommand = config.android.buildCommand;
+
+    if (!buildCommand) {
+      throw new Error('Android build command not configured');
+    }
+
+    try {
+      await runCommand(buildCommand, {
+        env: {
+          ...process.env,
+          STORYBOOK_ENABLED: 'true',
+        },
+        timeout: ctx.env.STORYBOOK_BUILD_TIMEOUT,
+      });
+    } catch (err: any) {
+      ctx.log.error(reactNativeBuildFailed({ platform: 'Android', errorMessage: err.message }));
+      throw new Error(failed(ctx).output);
+    }
+
+    const apkSource = path.resolve(
+      config.android.apkPath || 'android/app/build/outputs/apk/release/app-release.apk'
+    );
+    if (!existsSync(apkSource)) {
+      throw new Error(`Android build completed but APK not found at ${apkSource}`);
+    }
+    copyFileSync(apkSource, path.join(outputDir, 'storybook.apk'));
+    ctx.log.debug('Android APK copied to output directory');
+  }
+
+  // iOS build
+  if (platforms.includes('ios') && config.ios) {
+    ctx.log.debug('Building iOS app...');
+
+    // If Expo and no ios/ directory, run prebuild first
+    const isExpo = !!ctx.packageJson?.dependencies?.expo;
+    if (isExpo && !existsSync('ios')) {
+      ctx.log.debug('Running expo prebuild for iOS...');
+      await runCommand('npx expo prebuild --platform ios --clean', {
+        env: { ...process.env, STORYBOOK_ENABLED: 'true' },
+      });
+    }
+
+    // Run pod install if ios/Podfile exists and ios/Pods doesn't
+    if (existsSync('ios/Podfile') && !existsSync('ios/Pods')) {
+      ctx.log.debug('Running pod install...');
+      await runCommand('cd ios && pod install', {});
+    }
+
+    const buildCommand = config.ios.buildCommand || buildXcodebuildCommand(config.ios);
+
+    try {
+      await runCommand(buildCommand, {
+        env: {
+          ...process.env,
+          STORYBOOK_ENABLED: 'true',
+        },
+        timeout: ctx.env.STORYBOOK_BUILD_TIMEOUT,
+      });
+    } catch (err: any) {
+      ctx.log.error(reactNativeBuildFailed({ platform: 'iOS', errorMessage: err.message }));
+      throw new Error(failed(ctx).output);
+    }
+
+    const appSource = path.resolve(config.ios.appPath || '');
+    if (!existsSync(appSource)) {
+      throw new Error(`iOS build completed but .app not found at ${appSource}`);
+    }
+    cpSync(appSource, path.join(outputDir, 'storybook.app'), { recursive: true });
+    ctx.log.debug('iOS .app copied to output directory');
+  }
+
+  // Set the source directory for the rest of the pipeline
+  ctx.sourceDir = outputDir;
+  ctx.options.outputDir = outputDir;
+};
+
 export const buildStorybook = async (ctx: Context) => {
-  // We don't currently support building React Native projects so we'll skip this for now
   if (ctx.isReactNativeApp) {
-    return;
+    return buildReactNativeApp(ctx);
   }
 
   let logFile;
@@ -227,20 +336,25 @@ export default function main(ctx: Context) {
     skip: async (ctx) => {
       if (ctx.skip) return true;
       if (ctx.isReactNativeApp) {
-        if (!ctx.options.storybookBuildDir) {
-          ctx.log.error(missingStorybookBuildDirectory(ctx.announcedBuild?.browsers));
-          setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-          throw new Error(missingBuildDirectoryForReactNative(ctx).output);
+        // If user provided a pre-built directory, use it (existing behavior)
+        if (ctx.options.storybookBuildDir) {
+          ctx.sourceDir = ctx.options.storybookBuildDir;
+          ctx.options.outputDir = ctx.options.storybookBuildDir;
+          if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+            return skippedForReactNative(ctx).output;
+          }
+          return false;
         }
 
-        ctx.sourceDir = ctx.options.storybookBuildDir;
-        ctx.options.outputDir = ctx.options.storybookBuildDir;
-
-        // Use manifest.json from the storybook build directory if it exists
-        if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
-          return skippedForReactNative(ctx).output;
+        // If reactNative config exists in chromatic.config.json, we'll build
+        if (ctx.configuration.reactNative) {
+          return false; // Don't skip — let the build steps run
         }
-        return false;
+
+        // No config and no pre-built directory
+        ctx.log.error(missingStorybookBuildDirectory(ctx.announcedBuild?.browsers));
+        setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+        throw new Error(missingBuildDirectoryForReactNative(ctx).output);
       }
       if (ctx.options.storybookBuildDir) {
         ctx.sourceDir = ctx.options.storybookBuildDir;

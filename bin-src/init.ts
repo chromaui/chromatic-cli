@@ -162,6 +162,12 @@ export async function main(argv: string[]) {
     }
 
     const { path: packagePath, packageJson } = pkgInfo;
+
+    // Detect React Native projects early
+    const isReactNative = !!(
+      packageJson.dependencies?.['react-native'] || packageJson.devDependencies?.['react-native']
+    );
+
     const { testFramework } = await prompts([
       {
         type: flags.framework ? undefined : 'select',
@@ -178,6 +184,12 @@ export async function main(argv: string[]) {
 
     packageJson.readme = '';
     packageJson._id = '';
+
+    if (isReactNative && (!testFramework || testFramework === TestFramework.STORYBOOK)) {
+      const { setupReactNative } = await import('../node-src/lib/react-native/setup');
+      await setupReactNative(process.cwd(), packageJson, packagePath);
+      return;
+    }
 
     await intializeChromatic({
       testFramework: testFramework || flags.framework,

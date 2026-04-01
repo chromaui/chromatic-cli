@@ -90,13 +90,29 @@ describe('generateManifest', () => {
     expect(writeFileSync).toHaveBeenCalledWith(expectedPath, JSON.stringify(manifest, null, 2));
   });
 
-  it('uses default config path when storybookConfigDir is unset', async () => {
+  it('uses .storybook as default config path when it exists', async () => {
     mockBuildIndex.mockResolvedValue({ entries: {} });
 
     const ctx = getContext();
     await generateManifest(ctx);
 
+    expect(mockBuildIndex).toHaveBeenCalledWith({ configPath: '.storybook' });
+  });
+
+  it('falls back to .rnstorybook when .storybook does not exist', async () => {
+    mockBuildIndex.mockResolvedValue({ entries: {} });
+    existsFileSync.mockImplementation((p: any) => {
+      if (String(p).includes('.storybook')) return false;
+      return true;
+    });
+
+    const ctx = getContext();
+    await generateManifest(ctx);
+
     expect(mockBuildIndex).toHaveBeenCalledWith({ configPath: '.rnstorybook' });
+
+    // Restore default mock
+    existsFileSync.mockReturnValue(true);
   });
 
   it('uses custom storybookConfigDir when provided', async () => {

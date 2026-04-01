@@ -43,6 +43,29 @@ const configurationSchema = z
     storybookLogFile: z.union([z.string(), z.boolean()]),
     logFile: z.union([z.string(), z.boolean()]),
     uploadMetadata: z.boolean(),
+
+    reactNative: z
+      .object({
+        platforms: z.array(z.enum(['android', 'ios'])),
+        android: z
+          .object({
+            buildCommand: z.string(),
+            apkPath: z.string(),
+          })
+          .partial()
+          .optional(),
+        ios: z
+          .object({
+            workspace: z.string(),
+            scheme: z.string(),
+            buildCommand: z.string().optional(),
+            appPath: z.string(),
+          })
+          .partial()
+          .optional(),
+      })
+      .partial()
+      .optional(),
   })
   .partial()
   .strict();

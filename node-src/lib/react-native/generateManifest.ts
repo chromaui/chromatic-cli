@@ -41,7 +41,9 @@ export async function generateManifest(ctx: Context) {
 }
 
 async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
-  const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
+  const configPath =
+    ctx.options.storybookConfigDir ??
+    (existsSync(path.join(process.cwd(), '.storybook')) ? '.storybook' : '.rnstorybook');
   const fullConfigPath = path.join(process.cwd(), configPath);
 
   if (!existsSync(fullConfigPath)) {

@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import buildTask, {
+  buildReactNativeApp,
   buildStorybook,
   generateManifestForReactNative as generateManifestForReactNativeDefault,
   setBuildCommand,
@@ -27,6 +28,9 @@ vi.mock('fs', async (importOriginal) => {
   return {
     ...actual,
     existsSync: vi.fn(() => true),
+    copyFileSync: vi.fn(),
+    cpSync: vi.fn(),
+    mkdirSync: vi.fn(),
   };
 });
 vi.mock('../lib/react-native/generateManifest', () => ({
@@ -302,14 +306,17 @@ describe('buildStorybook', () => {
     );
   });
 
-  it('skips building for React Native apps', async () => {
+  it('delegates to buildReactNativeApp for React Native apps', async () => {
     const ctx = {
       ...baseContext,
       isReactNativeApp: true,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/rn-build' },
+      configuration: { reactNative: { platforms: [] } },
+      log: { debug: vi.fn(), error: vi.fn() },
+      env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
+      options: {},
     } as any;
     await buildStorybook(ctx);
+    // No execa call since no platforms configured
     expect(execa).not.toHaveBeenCalled();
   });
 
@@ -318,6 +325,7 @@ describe('buildStorybook', () => {
       ...baseContext,
       isReactNativeApp: true,
       options: { storybookBuildDir: '/path/to/rn-build' },
+      configuration: {},
     } as any;
     const task = buildTask(ctx);
     expect(task.skip).toBeDefined();
@@ -326,10 +334,23 @@ describe('buildStorybook', () => {
     expect(ctx.sourceDir).toBe('/path/to/rn-build');
   });
 
-  it('throws error for React Native apps without storybookBuildDir', async () => {
+  it('does not skip React Native build when reactNative config exists', async () => {
     const ctx = {
       ...baseContext,
       isReactNativeApp: true,
+      options: {},
+      configuration: { reactNative: { platforms: ['android'] } },
+    } as any;
+    const task = buildTask(ctx);
+    const skipResult = await task.skip?.(ctx);
+    expect(skipResult).toBe(false);
+  });
+
+  it('throws error for React Native apps without storybookBuildDir and no config', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      configuration: {},
       log: new TestLogger(),
     } as any;
     const task = buildTask(ctx);
@@ -396,6 +417,78 @@ describe('buildStorybook E2E', () => {
       expect.stringContaining('Failed to run `chromatic --playwright`')
     );
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+  });
+});
+
+describe('buildReactNativeApp', () => {
+  it('throws when reactNative config is missing', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      configuration: {},
+      log: new TestLogger(),
+      env: {},
+    } as any;
+    await expect(buildReactNativeApp(ctx)).rejects.toThrow(
+      'React Native build configuration not found'
+    );
+  });
+
+  it('runs Android build and copies APK', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      configuration: {
+        reactNative: {
+          platforms: ['android'],
+          android: {
+            buildCommand: 'cd android && ./gradlew assembleRelease',
+            apkPath: 'android/app/build/outputs/apk/release/app-release.apk',
+          },
+        },
+      },
+      log: new TestLogger(),
+      env: { STORYBOOK_BUILD_TIMEOUT: 60000 },
+    } as any;
+
+    await buildReactNativeApp(ctx);
+
+    expect(execa).toHaveBeenCalled();
+    expect(ctx.sourceDir).toMatch(/\.chromatic\/output/);
+  });
+
+  it('runs iOS build and copies .app', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      configuration: {
+        reactNative: {
+          platforms: ['ios'],
+          ios: {
+            workspace: 'ios/MyApp.xcworkspace',
+            scheme: 'MyApp',
+            appPath: '.chromatic/ios-build/Build/Products/Release-iphonesimulator/MyApp.app',
+          },
+        },
+      },
+      packageJson: {},
+      log: new TestLogger(),
+      env: { STORYBOOK_BUILD_TIMEOUT: 60000 },
+    } as any;
+
+    await buildReactNativeApp(ctx);
+
+    expect(execa).toHaveBeenCalled();
+    expect(ctx.sourceDir).toMatch(/\.chromatic\/output/);
+  });
+
+  it('does nothing for non-RN apps', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: false,
+    } as any;
+    await buildReactNativeApp(ctx);
+    expect(execa).not.toHaveBeenCalled();
   });
 });
 
