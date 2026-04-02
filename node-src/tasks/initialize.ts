@@ -4,6 +4,7 @@ import { emailHash } from '../lib/emailHash';
 import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
+import turboSnapNotAvailableForReactNative from '../ui/messages/errors/turboSnapNotAvailableForReactNative';
 import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../ui/tasks/initialize';
 
@@ -128,6 +129,22 @@ export const announceBuild = async (ctx: Context) => {
   Sentry.setTag('app_id', announcedBuild.app.id);
   Sentry.setContext('build', { id: announcedBuild.id });
 
+  updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
+
+  if (ctx.turboSnap && ctx.isReactNativeApp) {
+    throw new Error(turboSnapNotAvailableForReactNative());
+  }
+
+  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
+    ctx.log.warn(noAncestorBuild(ctx));
+  }
+};
+
+function updateContextFromAnnouncedBuild(
+  ctx: Context,
+  announcedBuild: Context['announcedBuild'],
+  input: ReturnType<typeof announceBuildInput>
+) {
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
     // possibly set from LastBuildQuery in setGitInfo
@@ -140,11 +157,7 @@ export const announceBuild = async (ctx: Context) => {
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;
   }
-
-  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
-    ctx.log.warn(noAncestorBuild(ctx));
-  }
-};
+}
 
 /**
  * Sets up the Listr task for announcing a new build on Chromatic.
