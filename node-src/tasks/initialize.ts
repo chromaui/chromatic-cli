@@ -118,7 +118,6 @@ const announceBuildInput = (ctx: Context) => {
   };
 };
 
-// eslint-disable-next-line complexity
 export const announceBuild = async (ctx: Context) => {
   const input = announceBuildInput(ctx);
   const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
@@ -130,6 +129,22 @@ export const announceBuild = async (ctx: Context) => {
   Sentry.setTag('app_id', announcedBuild.app.id);
   Sentry.setContext('build', { id: announcedBuild.id });
 
+  updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
+
+  if (ctx.turboSnap && ctx.isReactNativeApp) {
+    throw new Error(turboSnapNotAvailableForReactNative());
+  }
+
+  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
+    ctx.log.warn(noAncestorBuild(ctx));
+  }
+};
+
+function updateContextFromAnnouncedBuild(
+  ctx: Context,
+  announcedBuild: Context['announcedBuild'],
+  input: ReturnType<typeof announceBuildInput>
+) {
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
     // possibly set from LastBuildQuery in setGitInfo
@@ -139,18 +154,10 @@ export const announceBuild = async (ctx: Context) => {
 
   ctx.isReactNativeApp = announcedBuild.features?.isReactNativeApp ?? false;
 
-  if (ctx.turboSnap && ctx.isReactNativeApp) {
-    throw new Error(turboSnapNotAvailableForReactNative());
-  }
-
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;
   }
-
-  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
-    ctx.log.warn(noAncestorBuild(ctx));
-  }
-};
+}
 
 /**
  * Sets up the Listr task for announcing a new build on Chromatic.
