@@ -209,6 +209,6 @@ describe('announceBuild', () => {
     client.runQuery.mockReturnValue({ announceBuild: build });
 
     const ctx = { client, turboSnap: {}, ...defaultContext } as any;
-    await expect(announceBuild(ctx)).rejects.toThrow('not supported for React Native');
+    await expect(announceBuild(ctx)).rejects.toThrow('not supported for Storybook React Native');
   });
 });
