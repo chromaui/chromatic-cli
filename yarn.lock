@@ -3059,6 +3059,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/path-browserify@npm:^1":
+  version: 1.0.3
+  resolution: "@types/path-browserify@npm:1.0.3"
+  checksum: 10c0/6ed6de375c210dbc20d171ab547be6065ce9904463ca8ca63443a3b23efc7234ff5400d62be05b9be36fc2e863b77592c2e607896988ad39a45276b8a7e42d70
+  languageName: node
+  linkType: hard
+
 "@types/pg-pool@npm:2.0.6":
   version: 2.0.6
   resolution: "@types/pg-pool@npm:2.0.6"
@@ -5171,6 +5178,7 @@ __metadata:
     "@types/jsonfile": "npm:^6.0.1"
     "@types/listr": "npm:^0.14.4"
     "@types/node": "npm:18.x"
+    "@types/path-browserify": "npm:^1"
     "@types/picomatch": "npm:^2.3.0"
     "@types/progress-stream": "npm:^2.0.2"
     "@types/prompts": "npm:^2.4.9"
@@ -5230,6 +5238,7 @@ __metadata:
     observable: "npm:^2.1.4"
     os-browserify: "npm:^0.3.0"
     p-limit: "npm:3.1.0"
+    path-browserify: "npm:^1.0.1"
     picomatch: "npm:2.2.2"
     pkg-up: "npm:^3.1.0"
     pluralize: "npm:^8.0.0"
@@ -12555,6 +12564,13 @@ __metadata:
   version: 0.1.1
   resolution: "pascalcase@npm:0.1.1"
   checksum: 10c0/48dfe90618e33810bf58211d8f39ad2c0262f19ad6354da1ba563935b5f429f36409a1fb9187c220328f7a4dc5969917f8e3e01ee089b5f1627b02aefe39567b
+  languageName: node
+  linkType: hard
+
+"path-browserify@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "path-browserify@npm:1.0.1"
+  checksum: 10c0/8b8c3fd5c66bd340272180590ae4ff139769e9ab79522e2eb82e3d571a89b8117c04147f65ad066dccfb42fcad902e5b7d794b3d35e0fd840491a8ddbedf8c66
   languageName: node
   linkType: hard
 

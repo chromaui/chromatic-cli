@@ -17,6 +17,7 @@ const config: StorybookConfig = {
       alias: {
         ...config.resolve?.alias,
         os: fileURLToPath(import.meta.resolve('os-browserify/browser')),
+        path: "path-browserify",
       },
     };
     return config;
