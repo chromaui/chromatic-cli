@@ -1,5 +1,5 @@
 /* eslint-env browser */
-import type { Preview } from '@storybook/react';
+import type { Preview } from '@storybook/react-webpack5';
 
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';

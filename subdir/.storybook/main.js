@@ -6,10 +6,6 @@ module.exports = {
     options: {}
   },
 
-  docs: {
-    autodocs: true
-  },
-
   typescript: {
     reactDocgen: 'react-docgen-typescript'
   },

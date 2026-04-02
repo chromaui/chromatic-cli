@@ -1,10 +1,14 @@
+// This file has been automatically migrated to valid ESM format by Storybook.
+import { createRequire } from "node:module";
 import { StorybookConfig } from '@storybook/react-webpack5';
+
+const require = createRequire(import.meta.url);
 
 const config: StorybookConfig = {
   stories: process.env.SMOKE_TEST
     ? ['../test-stories/*.stories.*']
     : ['../node-src/**/*.@(mdx|stories.*)'],
-  addons: ['@storybook/addon-essentials', '@storybook/addon-webpack5-compiler-swc'],
+  addons: ['@storybook/addon-webpack5-compiler-swc', '@storybook/addon-docs'],
   framework: {
     name: '@storybook/react-webpack5',
     options: {},
