@@ -1,3 +1,22 @@
+# v16.1.0 (Thu Apr 02 2026)
+
+#### 🚀 Enhancement
+
+- Best effort alternative to tree-kill that swallows errors [#1261](https://github.com/chromaui/chromatic-cli/pull/1261) ([@jmhobbs](https://github.com/jmhobbs) [@justin-thurman](https://github.com/justin-thurman))
+
+#### 🐛 Bug Fix
+
+- Merge pull request #1265 from chromaui/CAP-4242-unit-tests [#1265](https://github.com/chromaui/chromatic-cli/pull/1265) ([@justin-thurman](https://github.com/justin-thurman))
+- Create workflow for action-canary release [#1255](https://github.com/chromaui/chromatic-cli/pull/1255) ([@jmhobbs](https://github.com/jmhobbs))
+- Upgrade `eslint` version [#1253](https://github.com/chromaui/chromatic-cli/pull/1253) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v16.0.0 (Mon Mar 23 2026)
 
 #### 💥 Breaking Change
