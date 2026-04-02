@@ -1,5 +1,6 @@
 import { execa, Options, parseCommandString, type ResultPromise } from 'execa';
-import treeKill from 'tree-kill';
+
+import { treeKill } from './treeKill';
 
 /**
  * Run a command in the shell. This is a wrapper around `execa` so .kill() and timeouts kill the
@@ -19,14 +20,25 @@ export function runCommand(command: string, options: Options = {}): ResultPromis
   const [cmd, ...args] = parseCommandString(command);
   const subprocess = execa(cmd, args, optionsWithoutTimeout);
 
-  // Override subprocess.kill() because we want to kill the entire process tree on timeout instead
-  // of just the child process created by `execa`
   subprocess.kill = () => {
     if (!subprocess.pid) {
       return false;
     }
+    const pid = subprocess.pid;
 
-    treeKill(subprocess.pid);
+    // Unfortunately, we can't change the signature of .kill() to be async, so we have to fire and forget the tree kill.
+    // This means that if the tree kill fails completely, we won't know about it, but it's better than leaving orphaned processes.
+    treeKill(pid)
+      .catch(() => {
+        /* noop - prevent unhandled promise rejection  */
+      })
+      .finally(() => {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          /* noop - process may already be dead, but we tried our best to kill it */
+        }
+      });
     return true;
   };
 
