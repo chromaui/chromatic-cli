@@ -71,7 +71,7 @@
   "scripts": {
     "build": "clean-package && tsdown && clean-package restore",
     "build-storybook": "storybook build --stats-json",
-    "build-test-storybook": "cross-env SMOKE_TEST=true storybook build -o test-storybook --stats-json",
+    "build-test-storybook": "cross-env storybook build -c ./.storybook-test -o test-storybook --stats-json",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
     "chromatic": "./dist/bin.cjs",
     "chromatic-prebuilt": "./dist/bin.cjs --storybook-build-dir=\"storybook-static\"",
