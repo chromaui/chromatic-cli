@@ -4,6 +4,7 @@ import { emailHash } from '../lib/emailHash';
 import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
+import turboSnapNotAvailableForReactNative from '../ui/messages/errors/turboSnapNotAvailableForReactNative';
 import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../ui/tasks/initialize';
 
@@ -117,6 +118,7 @@ const announceBuildInput = (ctx: Context) => {
   };
 };
 
+// eslint-disable-next-line complexity
 export const announceBuild = async (ctx: Context) => {
   const input = announceBuildInput(ctx);
   const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
@@ -136,6 +138,10 @@ export const announceBuild = async (ctx: Context) => {
     (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
 
   ctx.isReactNativeApp = announcedBuild.features?.isReactNativeApp ?? false;
+
+  if (ctx.turboSnap && ctx.isReactNativeApp) {
+    throw new Error(turboSnapNotAvailableForReactNative());
+  }
 
   if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
     ctx.turboSnap.unavailable = true;

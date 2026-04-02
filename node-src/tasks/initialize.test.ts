@@ -202,4 +202,13 @@ describe('announceBuild', () => {
       expect(ctx.isReactNativeApp).toBe(expected);
     }
   );
+
+  it('throws an error when TurboSnap is enabled for a React Native app', async () => {
+    const build = { number: 1, status: 'ANNOUNCED', app: {}, features: { isReactNativeApp: true } };
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({ announceBuild: build });
+
+    const ctx = { client, turboSnap: {}, ...defaultContext } as any;
+    await expect(announceBuild(ctx)).rejects.toThrow('not supported for React Native');
+  });
 });
