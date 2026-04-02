@@ -7,13 +7,13 @@ import TestLogger from '../testLogger';
 import { generateManifest } from './generateManifest';
 
 // Mock all the necessary bits for importing in a Storybook 10+ project
-vi.mock('module', () => ({
+vi.mock('node:module', () => ({
   createRequire: vi.fn().mockReturnValue({
     resolve: vi.fn().mockReturnValue('/fake/path/to/@storybook/react-native/node'),
   }),
 }));
 
-vi.mock('url', () => ({
+vi.mock('node:url', () => ({
   pathToFileURL: vi.fn().mockReturnValue({ href: '@storybook/react-native/node' }),
 }));
 

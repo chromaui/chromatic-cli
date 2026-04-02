@@ -26,3 +26,4 @@ node
 storybook-out
 coverage
 package.json.backup
+tests-file.xml
