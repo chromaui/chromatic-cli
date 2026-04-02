@@ -110,6 +110,7 @@
     "@snyk/dep-graph": "^2.9.0",
     "@storybook/addon-docs": "^10.3.4",
     "@storybook/builder-vite": "^10.3.4",
+    "@storybook/html-vite": "^10.3.4",
     "@storybook/linter-config": "^4.0.0",
     "@storybook/react-vite": "^10.3.4",
     "@tsconfig/node16": "^16.1.1",

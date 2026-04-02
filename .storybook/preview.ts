@@ -1,5 +1,5 @@
 /* eslint-env browser */
-import type { Preview } from '@storybook/react-vite';
+import type { Preview } from '@storybook/html-vite';
 
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';

@@ -2493,6 +2493,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@storybook/html-vite@npm:^10.3.4":
+  version: 10.3.4
+  resolution: "@storybook/html-vite@npm:10.3.4"
+  dependencies:
+    "@storybook/builder-vite": "npm:10.3.4"
+    "@storybook/html": "npm:10.3.4"
+  peerDependencies:
+    storybook: ^10.3.4
+  checksum: 10c0/973d97560b58caeeb11b841ef892911098e0176169811a18a610ec5a7779e5d14a535b9f46408eb8ec42f58d360611174a7bdec533f8a1b40a7de85ed1520e00
+  languageName: node
+  linkType: hard
+
+"@storybook/html@npm:10.3.4":
+  version: 10.3.4
+  resolution: "@storybook/html@npm:10.3.4"
+  dependencies:
+    "@storybook/global": "npm:^5.0.0"
+    ts-dedent: "npm:^2.0.0"
+  peerDependencies:
+    storybook: ^10.3.4
+  checksum: 10c0/2a1f40e1a3e92f7d7b5ecc3dda96d11392513a6229f9f53f5a96e0d5d05f0889fc806c499d1ac5cdd6f17765383f55b92ab754af2d8265b7547ee8988c720296
+  languageName: node
+  linkType: hard
+
 "@storybook/icons@npm:^2.0.1":
   version: 2.0.1
   resolution: "@storybook/icons@npm:2.0.1"
@@ -5136,6 +5160,7 @@ __metadata:
     "@snyk/dep-graph": "npm:^2.9.0"
     "@storybook/addon-docs": "npm:^10.3.4"
     "@storybook/builder-vite": "npm:^10.3.4"
+    "@storybook/html-vite": "npm:^10.3.4"
     "@storybook/linter-config": "npm:^4.0.0"
     "@storybook/react-vite": "npm:^10.3.4"
     "@tsconfig/node16": "npm:^16.1.1"
