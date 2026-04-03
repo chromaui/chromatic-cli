@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { Mock, vi } from 'vitest';
 
 import { Logger } from './log';
 
@@ -9,20 +9,20 @@ export default class TestLogger implements Logger {
   entries: any[];
   errors: any[];
   warnings: any[];
-  error: ReturnType<typeof vi.fn>;
-  warn: ReturnType<typeof vi.fn>;
-  info: ReturnType<typeof vi.fn>;
-  log: ReturnType<typeof vi.fn>;
-  debug: ReturnType<typeof vi.fn>;
-  file: ReturnType<typeof vi.fn>;
-  queue: ReturnType<typeof vi.fn>;
-  flush: ReturnType<typeof vi.fn>;
-  setLevel: ReturnType<typeof vi.fn>;
-  setInteractive: ReturnType<typeof vi.fn>;
-  setLogFile: ReturnType<typeof vi.fn>;
-  getLevel: ReturnType<typeof vi.fn>;
-  pause: ReturnType<typeof vi.fn>;
-  resume: ReturnType<typeof vi.fn>;
+  error: Mock;
+  warn: Mock;
+  info: Mock;
+  log: Mock;
+  debug: Mock;
+  file: Mock;
+  queue: Mock;
+  flush: Mock;
+  setLevel: Mock;
+  setInteractive: Mock;
+  setLogFile: Mock;
+  getLevel: Mock;
+  pause: Mock;
+  resume: Mock;
 
   constructor() {
     this.entries = [];

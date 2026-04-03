@@ -1,19 +1,12 @@
 import tsconfigPaths from 'vite-tsconfig-paths';
-import { configDefaults, coverageConfigDefaults, defineConfig, Plugin } from 'vitest/config';
+import { defineConfig, Plugin } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    exclude: [...configDefaults.exclude, '**/getParentCommits.test.ts'],
     clearMocks: true, // Clear all mocks between each test
     coverage: {
-      provider: 'v8',
-      exclude: [
-        'vitest.no-threads.config.ts',
-        'scripts/**',
-        '**/*.stories.{t,j}s',
-        'node-src/lib/testLogger.ts',
-        ...coverageConfigDefaults.exclude,
-      ],
+      include: ['{bin,node}-src/**/*.{ts,tsx}', 'isChromatic.{mjs,js}'],
+      exclude: ['**/*.stories.{t,j}s', '**/lib/testLogger.ts', '**/__mocks__/**'],
     },
   },
   plugins: [tsconfigPaths() as Plugin],
