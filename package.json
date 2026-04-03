@@ -96,7 +96,8 @@
   },
   "resolutions": {
     "any-observable": "^0.5.1",
-    "lodash": "4.17.21"
+    "lodash": "4.17.21",
+    "@types/minimatch": "5.1.2"
   },
   "devDependencies": {
     "@actions/core": "^1.10.0",
