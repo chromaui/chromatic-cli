@@ -156,7 +156,7 @@ describe('validateFiles', () => {
         announcedBuild: { browsers: [] },
       } as any;
       await expect(validateFiles(ctx)).rejects.toThrow(
-        'Invalid React Native Storybook build in directory /static/'
+        'Invalid React Native Storybook build in directory /static'
       );
     });
 
@@ -204,7 +204,7 @@ describe('validateFiles', () => {
           `Missing files:
 - manifest.json
 
-Invalid React Native Storybook build in directory /static/`
+Invalid React Native Storybook build in directory /static`
         );
       });
 
@@ -223,9 +223,9 @@ Invalid React Native Storybook build in directory /static/`
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
           `Missing files:
-- storybook.apk — rename your Android Storybook build to storybook.apk and place it in directory /static/
+- storybook.apk — rename your Android Storybook build to \`storybook.apk\` and place it in the directory /static
 
-Invalid React Native Storybook build in directory /static/`
+Invalid React Native Storybook build in directory /static`
         );
       });
     });
@@ -278,7 +278,7 @@ Invalid React Native Storybook build in directory /static/`
           `Missing files:
 - manifest.json
 
-Invalid React Native Storybook build in directory /static/`
+Invalid React Native Storybook build in directory /static`
         );
       });
 
@@ -297,9 +297,9 @@ Invalid React Native Storybook build in directory /static/`
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
           `Missing files:
-- storybook.app — rename your iOS Storybook build to storybook.app and place it in directory /static/
+- storybook.app — rename your iOS Storybook build directory to \`storybook.app\` and place it in the directory /static
 
-Invalid React Native Storybook build in directory /static/`
+Invalid React Native Storybook build in directory /static`
         );
       });
     });

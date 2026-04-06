@@ -1,3 +1,4 @@
+import path from 'path';
 import pluralize from 'pluralize';
 
 import { isE2EBuild } from '../../lib/e2eUtils';
@@ -31,17 +32,19 @@ export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) =>
   const lines: string[] = [];
 
   if (missingFiles.length > 0) {
-    const directory = ctx.sourceDir ? ` and place it in directory ${ctx.sourceDir}` : '';
+    const directory = ctx.sourceDir
+      ? ` and place it in the directory ${path.resolve(ctx.sourceDir)}`
+      : '';
     lines.push('Missing files:');
 
     for (const file of missingFiles) {
       if (file === 'storybook.apk') {
         lines.push(
-          `- storybook.apk — rename your Android Storybook build to storybook.apk${directory}`
+          `- storybook.apk — rename your Android Storybook build to \`storybook.apk\`${directory}`
         );
       } else if (file === 'storybook.app') {
         lines.push(
-          `- storybook.app — rename your iOS Storybook build to storybook.app${directory}`
+          `- storybook.app — rename your iOS Storybook build directory to \`storybook.app\`${directory}`
         );
       } else {
         lines.push(`- ${file}`);
@@ -51,7 +54,10 @@ export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) =>
 
   // Listr will display the last line of the output so we'll set the UI to a generic error message
   // with all the context above.
-  lines.push('', `Invalid React Native Storybook build in directory ${ctx.sourceDir}`);
+  lines.push(
+    '',
+    `Invalid React Native Storybook build in directory ${path.resolve(ctx.sourceDir)}`
+  );
 
   return {
     status: 'error',

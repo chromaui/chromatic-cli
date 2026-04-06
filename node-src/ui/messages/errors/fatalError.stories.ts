@@ -78,20 +78,28 @@ export const FatalErrorSimple = () => {
   return fatalError(context as any, error, timestamp);
 };
 
+const reactNativeContext = {
+  ...context,
+  sourceDir: 'storybook-static',
+};
+
 export const FatalErrorInvalidReactNativeAndroid = () => {
-  const message = invalidReactNative(context as any, ['storybook.apk']).output;
+  const message = invalidReactNative(reactNativeContext as any, ['storybook.apk']).output;
   const error = { name: 'InvalidBuild', message, stack };
   return fatalError(context as any, error, timestamp);
 };
 
 export const FatalErrorInvalidReactNativeIos = () => {
-  const message = invalidReactNative(context as any, ['storybook.app']).output;
+  const message = invalidReactNative(reactNativeContext as any, ['storybook.app']).output;
   const error = { name: 'InvalidBuild', message, stack };
   return fatalError(context as any, error, timestamp);
 };
 
 export const FatalErrorInvalidReactNativeBothMissing = () => {
-  const message = invalidReactNative(context as any, ['storybook.apk', 'storybook.app']).output;
+  const message = invalidReactNative(reactNativeContext as any, [
+    'storybook.apk',
+    'storybook.app',
+  ]).output;
   const error = { name: 'InvalidBuild', message, stack };
   return fatalError(context as any, error, timestamp);
 };
