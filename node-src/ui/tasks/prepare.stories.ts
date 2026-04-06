@@ -1,5 +1,15 @@
 import task from '../components/task';
-import { bailed, hashing, initial, invalid, success, traced, tracing, validating } from './prepare';
+import {
+  bailed,
+  hashing,
+  initial,
+  invalid,
+  invalidReactNative,
+  success,
+  traced,
+  tracing,
+  validating,
+} from './prepare';
 
 export default {
   title: 'CLI/Tasks/Prepare',
@@ -19,13 +29,20 @@ export const Invalid = () =>
     buildLogFile: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log',
   } as any);
 
-export const InvalidReactNative = () =>
-  invalid({
-    ...ctx,
-    isReactNativeApp: true,
-    sourceDir: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-20036LMP9FAlLEjpu',
-    buildLogFile: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log',
-  } as any);
+const reactNativeContext = {
+  ...ctx,
+  sourceDir: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-20036LMP9FAlLEjpu',
+  buildLogFile: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log',
+};
+
+export const InvalidReactNativeAndroidMissing = () =>
+  invalidReactNative(reactNativeContext as any, ['storybook.apk']);
+
+export const InvalidReactNativeIosMissing = () =>
+  invalidReactNative(reactNativeContext as any, ['storybook.app']);
+
+export const InvalidReactNativeBothMissing = () =>
+  invalidReactNative(reactNativeContext as any, ['storybook.apk', 'storybook.app']);
 
 export const Tracing = () =>
   tracing({ ...ctx, git: { changedFiles: Array.from({ length: 3 }) } } as any);

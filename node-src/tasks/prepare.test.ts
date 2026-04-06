@@ -36,6 +36,7 @@ const http = { fetch: vi.fn() };
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.resetAllMocks();
 });
 
 describe('validateFiles', () => {
@@ -137,6 +138,28 @@ describe('validateFiles', () => {
   });
 
   describe('with isReactNativeApp', () => {
+    it('throws when no React Native browsers are configured', async () => {
+      readdirSyncMock.mockReturnValue([
+        'storybook.apk',
+        'storybook.app/modules.json',
+        'manifest.json',
+      ] as any);
+      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+      const ctx = {
+        env: environment,
+        log,
+        http,
+        options: {},
+        sourceDir: '/static/',
+        isReactNativeApp: true,
+        announcedBuild: { browsers: [] },
+      } as any;
+      await expect(validateFiles(ctx)).rejects.toThrow(
+        'Invalid React Native Storybook build in directory /static/'
+      );
+    });
+
     describe('Android devices', () => {
       it('sets fileInfo on context with valid React Native build', async () => {
         readdirSyncMock.mockReturnValue(['storybook.apk', 'manifest.json'] as any);
@@ -175,9 +198,13 @@ describe('validateFiles', () => {
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
+          announcedBuild: { browsers: ['android'] },
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
-          'Invalid React Native Storybook build at /static/'
+          `Missing files:
+- manifest.json
+
+Invalid React Native Storybook build in directory /static/`
         );
       });
 
@@ -192,9 +219,13 @@ describe('validateFiles', () => {
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
+          announcedBuild: { browsers: ['android'] },
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
-          'Invalid React Native Storybook build at /static/'
+          `Missing files:
+- storybook.apk — rename your Android Storybook build to storybook.apk and place it in directory /static/
+
+Invalid React Native Storybook build in directory /static/`
         );
       });
     });
@@ -241,9 +272,13 @@ describe('validateFiles', () => {
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
+          announcedBuild: { browsers: ['ios'] },
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
-          'Invalid React Native Storybook build at /static/'
+          `Missing files:
+- manifest.json
+
+Invalid React Native Storybook build in directory /static/`
         );
       });
 
@@ -258,9 +293,13 @@ describe('validateFiles', () => {
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
+          announcedBuild: { browsers: ['ios'] },
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
-          'Invalid React Native Storybook build at /static/'
+          `Missing files:
+- storybook.app — rename your iOS Storybook build to storybook.app and place it in directory /static/
+
+Invalid React Native Storybook build in directory /static/`
         );
       });
     });
