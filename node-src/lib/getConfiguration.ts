@@ -33,6 +33,7 @@ const configurationSchema = z
     buildCommand: z.string(),
     playwright: z.boolean(),
     cypress: z.boolean(),
+    vitest: z.boolean(),
     outputDir: z.string(),
     skip: z.union([z.string(), z.boolean()]),
     skipUpdateCheck: z.boolean(),

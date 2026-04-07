@@ -95,6 +95,7 @@ export default function getOptions(ctx: InitialContext): Options {
     buildCommand: undefined,
     playwright: undefined,
     cypress: undefined,
+    vitest: undefined,
     outputDir: undefined,
     storybookBuildDir: undefined,
     storybookBaseDir: undefined,
@@ -155,13 +156,14 @@ export default function getOptions(ctx: InitialContext): Options {
     buildCommand: flags.buildCommand,
     playwright: trueIfSet(flags.playwright),
     cypress: trueIfSet(flags.cypress),
+    vitest: trueIfSet(flags.vitest),
     outputDir: takeLast(flags.outputDir),
     storybookBuildDir: takeLast(flags.storybookBuildDir),
     storybookBaseDir: flags.storybookBaseDir,
     storybookConfigDir: flags.storybookConfigDir,
     // We should rename this flag so it makes more sense in E2E contexts
     storybookLogFile:
-      flags.playwright || flags.cypress
+      flags.playwright || flags.cypress || flags.vitest
         ? defaultUnlessSet(flags.storybookLogFile, DEFAULT_E2E_LOG_FILE)
         : defaultUnlessSet(flags.storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
 
@@ -247,6 +249,7 @@ export default function getOptions(ctx: InitialContext): Options {
     storybookBuildDir: '--storybook-build-dir',
     playwright: '--playwright',
     cypress: '--cypress',
+    vitest: '--vitest',
   };
   const foundSingularOptions = Object.keys(singularOptions).filter(
     (name) => !!potentialOptions[name]

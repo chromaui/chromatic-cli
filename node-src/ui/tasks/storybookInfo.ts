@@ -17,6 +17,10 @@ const e2eMessage = (ctx: Context) => {
     return 'Cypress for E2E';
   }
 
+  if (ctx.options.vitest) {
+    return 'Vitest for E2E';
+  }
+
   return 'E2E';
 };
 

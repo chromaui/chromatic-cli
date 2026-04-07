@@ -99,6 +99,17 @@ describe('installArchiveDependencies', () => {
     expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
   });
 
+  it('successfully installs list of dependencies for Vitest if SB package is not found and Essentials is not found', async () => {
+    await installArchiveDependencies({} as NormalizedPackageJson, 'vitest');
+
+    const installCommand =
+      'yarn add -D chromatic @chromatic-com/vitest storybook@latest @storybook/addon-essentials@latest @storybook/server-webpack5@latest';
+    const [cmd, ...args] = parseCommandString(installCommand);
+
+    expect(execa).toHaveBeenCalledOnce();
+    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+  });
+
   it('successfully installs list of dependencies if SB package is found and Essentials is not found', async () => {
     await installArchiveDependencies(
       // @ts-expect-error Ignore the intentionally missing properties

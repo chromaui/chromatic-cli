@@ -136,6 +136,7 @@ async function run() {
     const traceChanged = getInput('traceChanged');
     const untraced = getMultilineInput('untraced');
     const uploadMetadata = getInput('uploadMetadata');
+    const vitest = getInput('vitest');
     const workingDir = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
     const junitReport = getInput('junitReport');
@@ -195,6 +196,7 @@ async function run() {
         traceChanged: maybe(traceChanged),
         untraced: maybe(untraced),
         uploadMetadata: maybe(uploadMetadata, false),
+        vitest: maybe(vitest),
         zip: maybe(zip, false),
         junitReport: maybe(junitReport),
       },
