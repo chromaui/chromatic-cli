@@ -12,12 +12,10 @@ vi.mock('fs', async () => {
       ...actual,
       existsSync: vi.fn(),
       mkdtempSync: vi.fn(),
-      createWriteStream: vi.fn(),
       rmSync: vi.fn(),
     },
     existsSync: vi.fn(),
     mkdtempSync: vi.fn(),
-    createWriteStream: vi.fn(),
     rmSync: vi.fn(),
   };
 });
@@ -30,7 +28,6 @@ import { main } from './reactNativeBuild';
 const mockedExeca = vi.mocked(execa);
 const mockedExistsSync = vi.mocked(fs.existsSync);
 const mockedMkdtempSync = vi.mocked(fs.mkdtempSync);
-const mockedCreateWriteStream = vi.mocked(fs.createWriteStream);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,7 +38,6 @@ beforeEach(() => {
   });
 
   mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-test');
-  mockedCreateWriteStream.mockReturnValue({ close: vi.fn() } as any);
 });
 
 describe('react-native-build', () => {

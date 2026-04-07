@@ -5,14 +5,14 @@ import meow from 'meow';
 import os from 'os';
 import path from 'path';
 
+
 interface ExpoConfig {
   platforms?: string[];
   scheme?: string;
 }
 
 /**
- * Run a shell command, streaming output to the terminal and teeing it into a log file.
- * Returns the log file path on failure for user reference.
+ * Run a shell command, streaming output to the terminal.
  *
  * @param command
  * @param args
@@ -24,21 +24,14 @@ async function runBuildCommand(
   args: string[],
   options: { cwd?: string } = {}
 ): Promise<void> {
-  const logFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-')), 'build.log');
-  const logStream = fs.createWriteStream(logFile);
-
   try {
-    const subprocess = execa(command, args, {
+    await execa(command, args, {
       cwd: options.cwd,
-      stdout: ['inherit', logStream],
-      stderr: ['inherit', logStream],
+      stdout: 'inherit',
+      stderr: 'inherit',
     });
-
-    await subprocess;
   } catch {
-    throw new Error(`Build command failed: ${command} ${args.join(' ')}\nSee log: ${logFile}`);
-  } finally {
-    logStream.close();
+    throw new Error(`Build command failed: ${command} ${args.join(' ')}`);
   }
 }
 
