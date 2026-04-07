@@ -75,6 +75,24 @@ describe('getOptions', () => {
     });
   });
 
+  it.each(['playwright', 'cypress'])(
+    'sets storybookLogFile to default e2e when %s is set',
+    async (e2eIntegration) => {
+      expect(getOptions(getContext([`--${e2eIntegration}`]))).toMatchObject({
+        [e2eIntegration]: true,
+        storybookLogFile: 'build-archive.log',
+      });
+    }
+  );
+
+  it('throws when multiple e2e integrations are set at once', async () => {
+    expect(() =>
+      getOptions(getContext(['--projectToken', 'example', '--playwright', '--cypress']))
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: ✖ You can only use one of --playwright, --cypress]`
+    );
+  });
+
   it('picks up project-token from environment', async () => {
     expect(getOptions(getContext([]))).toMatchObject({
       projectToken: 'env-code',

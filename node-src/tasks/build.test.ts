@@ -1,15 +1,14 @@
-import { beforeEach } from 'node:test';
-
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { exitCodes } from '@cli/setExitCode';
 import { execa as execaDefault, parseCommandString } from 'execa';
-import { describe, expect, it, vi } from 'vitest';
+import { Module } from 'module';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import buildTask, {
   buildStorybook,
-  generateManifestForReactNative as generateManifestForReactNativeDefault,
+  generateManifestForReactNative,
   setBuildCommand,
   setSourceDirectory,
 } from './build';
@@ -35,13 +34,11 @@ vi.mock('../lib/react-native/generateManifest', () => ({
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
-const generateManifestForReactNative = vi.mocked(generateManifestForReactNativeDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
   execa.mockClear();
-  generateManifestForReactNative.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -227,6 +224,30 @@ describe('setBuildCommand', () => {
     );
     expect(ctx.buildCommand).toEqual('npm run build:storybook');
   });
+
+  it.each(['playwright', 'cypress'])(
+    'resolves to the E2E build command when using %s',
+    async (e2ePackage) => {
+      const revertPatch = patchModulePath(
+        `@chromatic-com/${e2ePackage}/bin/build-archive-storybook`,
+        `path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook`
+      );
+      onTestFinished(revertPatch);
+
+      const ctx = {
+        ...baseContext,
+        options: { [e2ePackage]: true, buildScriptName: 'build:storybook', inAction: false },
+        sourceDir: './source-dir/',
+        git: {},
+        log: { error: console.error },
+      } as any;
+
+      await setBuildCommand(ctx);
+      expect(ctx.buildCommand).toEqual(
+        `node path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook --output-dir=./source-dir/`
+      );
+    }
+  );
 });
 
 describe('buildStorybook', () => {
@@ -422,3 +443,27 @@ describe('generateManifestForReactNative', () => {
     expect(generateManifest).not.toHaveBeenCalled();
   });
 });
+
+/*
+ * This is quite hacky solution to work-around mocking `require.resolve` but
+ * it works. Internally `require.resolve` calls `Module._resolveFilename` so we
+ * can intercept it.
+ */
+function patchModulePath(from: string, to: string) {
+  // @ts-expect-error -- untyped
+  const original = Module._resolveFilename;
+
+  // @ts-expect-error -- untyped
+  Module._resolveFilename = (request: string, parent: NodeModule) => {
+    if (request === from) {
+      return to;
+    }
+
+    return original(request, parent);
+  };
+
+  return function restore() {
+    // @ts-expect-error -- untyped
+    Module._resolveFilename = original;
+  };
+}
