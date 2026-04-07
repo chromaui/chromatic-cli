@@ -162,7 +162,7 @@ describe('react-native-build', () => {
 
     await expect(main([])).rejects.toThrow('process.exit');
     expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Build command failed')
+      expect.stringContaining('gradle failed')
     );
   });
 });

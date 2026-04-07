@@ -5,6 +5,9 @@ import meow from 'meow';
 import os from 'os';
 import path from 'path';
 
+const WARN_COLOR = '#FF4400';
+const INFO_COLOR = '#2750F5';
+const SUCCESS_COLOR = '#2ECC25';
 
 interface ExpoConfig {
   platforms?: string[];
@@ -12,38 +15,14 @@ interface ExpoConfig {
 }
 
 /**
- * Run a shell command, streaming output to the terminal.
- *
- * @param command
- * @param args
- * @param options
- * @param options.cwd
- */
-async function runBuildCommand(
-  command: string,
-  args: string[],
-  options: { cwd?: string } = {}
-): Promise<void> {
-  try {
-    await execa(command, args, {
-      cwd: options.cwd,
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
-  } catch {
-    throw new Error(`Build command failed: ${command} ${args.join(' ')}`);
-  }
-}
-
-/**
  * Read the Expo config by running `npx expo config --json`.
  *
- * @returns
+ * @returns Partial expo config.
  */
-async function readExpoConfig(): Promise<ExpoConfig> {
+async function readExpoConfig() {
   try {
     const result = await execa('npx', ['expo', 'config', '--json']);
-    return JSON.parse(result.stdout);
+    return JSON.parse(result.stdout) as ExpoConfig;
   } catch {
     throw new Error(
       'Failed to read Expo config. Ensure Expo is installed and you are in an Expo project directory.'
@@ -54,17 +33,35 @@ async function readExpoConfig(): Promise<ExpoConfig> {
 /**
  * Build the Android artifact via expo prebuild and gradlew assembleRelease.
  *
- * @returns
+ * @returns The path to the built APK file.
  */
-async function buildAndroid(): Promise<string> {
+async function buildAndroid() {
   console.log(
-    boxen('Building Android', { padding: 1, borderStyle: 'double', borderColor: '#0000FF' })
+    boxen('npx expo prebuild --platform android', {
+      title: 'Prebuild Android',
+      padding: 1,
+      borderStyle: 'single',
+      borderColor: INFO_COLOR,
+    })
   );
 
-  await runBuildCommand('npx', ['expo', 'prebuild', '--platform', 'android']);
+  await execa('npx', ['expo', 'prebuild', '--platform', 'android'], {
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
 
-  await runBuildCommand('./gradlew', ['assembleRelease'], {
+  console.log(
+    boxen('cd ./android && ./gradlew assembleRelease', {
+      title: 'Building Android',
+      padding: 1,
+      borderStyle: 'single',
+      borderColor: INFO_COLOR,
+    })
+  );
+  await execa('./gradlew', ['assembleRelease'], {
     cwd: path.resolve('android'),
+    stdout: 'inherit',
+    stderr: 'inherit',
   });
 
   const apkPath = path.resolve('android/app/build/outputs/apk/release/app-release.apk');
@@ -79,44 +76,65 @@ async function buildAndroid(): Promise<string> {
 /**
  * Build the iOS artifact via expo prebuild and xcodebuild.
  *
- * @param scheme
+ * @param scheme The iOS scheme to build, read from the Expo config.
  *
- * @returns
+ * @returns The path to the built .app bundle.
  */
-async function buildIos(scheme?: string): Promise<string> {
+async function buildIos(scheme?: string) {
   if (scheme === undefined) {
     throw new Error('Unable to determine scheme for iOS build.');
   }
   if (process.platform !== 'darwin') {
     throw new Error('iOS builds are only supported on macOS.');
   }
-  console.log(boxen('Building iOS', { padding: 1, borderStyle: 'double', borderColor: '#0000FF' }));
+  console.log(
+    boxen('npx expo prebuild --platform ios', {
+      title: 'Prebuild iOS',
+      padding: 1,
+      borderStyle: 'single',
+      borderColor: INFO_COLOR,
+    })
+  );
 
-  await runBuildCommand('npx', ['expo', 'prebuild', '--platform', 'ios']);
+  await execa('npx', ['expo', 'prebuild', '--platform', 'ios'], {
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
 
   const derivedDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-'));
 
-  await runBuildCommand(
-    'xcodebuild',
-    [
-      '-workspace',
-      `${scheme}.xcworkspace`,
-      '-scheme',
-      scheme,
-      '-configuration',
-      'Release',
-      '-sdk',
-      'iphonesimulator',
-      '-derivedDataPath',
-      derivedDataPath,
-      'CODE_SIGNING_ALLOWED=NO',
-      'CODE_SIGNING_REQUIRED=NO',
-      'CODE_SIGN_ENTITLEMENTS=""',
-      'CODE_SIGN_IDENTITY=""',
-      'build',
-    ],
-    { cwd: path.resolve('ios') }
+  const xcodebuildArguments = [
+    '-workspace',
+    `${scheme}.xcworkspace`,
+    '-scheme',
+    scheme,
+    '-configuration',
+    'Release',
+    '-sdk',
+    'iphonesimulator',
+    '-derivedDataPath',
+    derivedDataPath,
+    'CODE_SIGNING_ALLOWED=NO',
+    'CODE_SIGNING_REQUIRED=NO',
+    'CODE_SIGN_ENTITLEMENTS=""',
+    'CODE_SIGN_IDENTITY=""',
+    'build',
+  ];
+
+  console.log(
+    boxen(`xcodebuild ${xcodebuildArguments.join(' ')}`, {
+      title: 'Build iOS',
+      padding: 1,
+      borderStyle: 'single',
+      borderColor: INFO_COLOR,
+    })
   );
+
+  await execa('xcodebuild', xcodebuildArguments, {
+    cwd: path.resolve('ios'),
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
 
   const appPath = path.join(
     derivedDataPath,
@@ -159,10 +177,9 @@ Currently, only builds using Expo are supported.`,
       {
         title: 'Chromatic React Native Build',
         titleAlignment: 'center',
-        textAlignment: 'center',
         padding: 1,
         borderStyle: 'double',
-        borderColor: '#FF4400',
+        borderColor: WARN_COLOR,
       }
     )
   );
@@ -208,10 +225,12 @@ Currently, only builds using Expo are supported.`,
 
   const summary = artifacts.map((a) => `  ${a.platform}: ${a.path}`).join('\n');
   console.log(
-    boxen(`Build complete!\n${summary}`, {
+    boxen(summary, {
+      title: 'Build Complete',
+      titleAlignment: 'center',
       padding: 1,
       borderStyle: 'double',
-      borderColor: '#00FF00',
+      borderColor: SUCCESS_COLOR,
     })
   );
 }
