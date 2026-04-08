@@ -1,7 +1,8 @@
 ---
 exclude_paths:
   - 'CHANGELOG.md'
-  - 'vitest.no-threads.config.ts'
+  - '**/lib/testLogger.ts'
+  - '**/lib/testUtilities.ts'
   - '**/__mocks__/**'
 engines:
   duplication:

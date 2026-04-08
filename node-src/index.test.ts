@@ -6,7 +6,7 @@ import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
 import path from 'path';
 import { Readable } from 'stream';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { getGitInfo, run, runAll } from '.';
 import * as git from './git/git';
@@ -15,6 +15,7 @@ import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
 import TestLogger from './lib/testLogger';
+import { patchModulePath } from './lib/testUtilities';
 import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
@@ -46,14 +47,6 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
-
-// NOTE: we'd prefer to mock the require.resolve() of `@chromatic-com/playwright/..` but
-// vitest doesn't allow you to do that.
-const mockedBuildCommand = 'mocked build command';
-vi.mock(import('./lib/e2e'), async (importOriginal) => ({
-  ...(await importOriginal()),
-  getE2EBuildCommand: async () => mockedBuildCommand,
-}));
 
 const execa = vi.mocked(execaDefault);
 const fetch = vi.mocked(fetchDefault);
@@ -571,18 +564,17 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
   );
 });
 
-it('builds with playwright with --playwright', async () => {
-  const ctx = getContext(['--project-token=asdf1234', '--playwright']);
-  await runAll(ctx);
-  const [cmd, ...args] = parseCommandString(mockedBuildCommand);
-  expect(execa).toHaveBeenCalledWith(cmd, args, expect.objectContaining({}));
-  expect(ctx.exitCode).toBe(1);
-});
+it.each(['playwright', 'cypress'])('builds with $0 with --%s', async (e2ePackage) => {
+  const binPath = `path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook`;
+  const revertPatch = patchModulePath(
+    `@chromatic-com/${e2ePackage}/bin/build-archive-storybook`,
+    binPath
+  );
+  onTestFinished(revertPatch);
 
-it('builds with cypress with --cypress', async () => {
-  const ctx = getContext(['--project-token=asdf1234', '--cypress']);
+  const ctx = getContext(['--project-token=asdf1234', `--${e2ePackage}`]);
   await runAll(ctx);
-  const [cmd, ...args] = parseCommandString(mockedBuildCommand);
+  const [cmd, ...args] = parseCommandString(`node ${binPath} --output-dir=${ctx.sourceDir}`);
   expect(execa).toHaveBeenCalledWith(cmd, args, expect.objectContaining({}));
   expect(ctx.exitCode).toBe(1);
 });

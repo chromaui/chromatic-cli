@@ -1,15 +1,14 @@
-import { beforeEach } from 'node:test';
-
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { exitCodes } from '@cli/setExitCode';
 import { execa as execaDefault, parseCommandString } from 'execa';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
+import { patchModulePath } from '../lib/testUtilities';
 import buildTask, {
   buildStorybook,
-  generateManifestForReactNative as generateManifestForReactNativeDefault,
+  generateManifestForReactNative,
   setBuildCommand,
   setSourceDirectory,
 } from './build';
@@ -35,13 +34,11 @@ vi.mock('../lib/react-native/generateManifest', () => ({
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
-const generateManifestForReactNative = vi.mocked(generateManifestForReactNativeDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
   execa.mockClear();
-  generateManifestForReactNative.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -227,6 +224,30 @@ describe('setBuildCommand', () => {
     );
     expect(ctx.buildCommand).toEqual('npm run build:storybook');
   });
+
+  it.each(['playwright', 'cypress'])(
+    'resolves to the E2E build command when using %s',
+    async (e2ePackage) => {
+      const revertPatch = patchModulePath(
+        `@chromatic-com/${e2ePackage}/bin/build-archive-storybook`,
+        `path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook`
+      );
+      onTestFinished(revertPatch);
+
+      const ctx = {
+        ...baseContext,
+        options: { [e2ePackage]: true, buildScriptName: 'build:storybook', inAction: false },
+        sourceDir: './source-dir/',
+        git: {},
+        log: new TestLogger(),
+      } as any;
+
+      await setBuildCommand(ctx);
+      expect(ctx.buildCommand).toEqual(
+        `node path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook --output-dir=./source-dir/`
+      );
+    }
+  );
 });
 
 describe('buildStorybook', () => {
