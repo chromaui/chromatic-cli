@@ -211,10 +211,7 @@ export default function getOptions(ctx: InitialContext): Options {
     potentialOptions.diagnosticsFile = potentialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
 
-  if (
-    !potentialOptions.projectToken &&
-    !(potentialOptions.projectId && potentialOptions.userToken)
-  ) {
+  if (!potentialOptions.projectToken && !potentialOptions.userToken) {
     throw new Error(missingProjectToken());
   }
 

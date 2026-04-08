@@ -156,6 +156,7 @@ export type TaskName =
   | 'build'
   | 'prepare'
   | 'upload'
+  | 'share'
   | 'verify'
   | 'snapshot'
   | 'report'
@@ -357,6 +358,14 @@ export interface Context {
       contentLength: number;
     }[];
     total: number;
+  };
+  share?: {
+    shareUrl: string;
+    target: {
+      formAction: string;
+      formFields: Record<string, string>;
+      keyPrefix: string;
+    };
   };
   sentinelUrls?: string[];
   uploadedBytes?: number;
