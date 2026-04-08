@@ -14,6 +14,17 @@ interface ExpoConfig {
   scheme?: string;
 }
 
+function info(message: string, title?: string) {
+  console.log(
+    boxen(message, {
+      title,
+      padding: 1,
+      borderStyle: 'single',
+      borderColor: INFO_COLOR,
+    })
+  );
+}
+
 // execa wrapper for convenience
 async function exec(
   command: string,
@@ -67,25 +78,12 @@ async function readExpoConfig() {
  * @returns The path to the built APK file.
  */
 async function buildAndroid() {
-  console.log(
-    boxen('npx expo prebuild --platform android', {
-      title: 'Prebuild Android',
-      padding: 1,
-      borderStyle: 'single',
-      borderColor: INFO_COLOR,
-    })
-  );
+  const start = new Date();
 
+  info('npx expo prebuild --platform android', 'Prebuild Android');
   await exec('npx', ['expo', 'prebuild', '--platform', 'android']);
 
-  console.log(
-    boxen('cd ./android && ./gradlew assembleRelease', {
-      title: 'Building Android',
-      padding: 1,
-      borderStyle: 'single',
-      borderColor: INFO_COLOR,
-    })
-  );
+  info('cd ./android && ./gradlew assembleRelease', 'Building Android');
   await exec('./gradlew', ['assembleRelease'], { cwd: path.resolve('android') });
 
   const apkPath = path.resolve('android/app/build/outputs/apk/release/app-release.apk');
@@ -94,7 +92,7 @@ async function buildAndroid() {
     throw new Error(`Expected APK not found at ${apkPath}`);
   }
 
-  return apkPath;
+  return { artifactPath: apkPath, duration: (Date.now() - start.getTime()) / 1000 };
 }
 
 /**
@@ -105,21 +103,16 @@ async function buildAndroid() {
  * @returns The path to the built .app bundle.
  */
 async function buildIos(scheme?: string) {
+  const start = new Date();
+
   if (scheme === undefined) {
     throw new Error('Unable to determine scheme for iOS build.');
   }
   if (process.platform !== 'darwin') {
     throw new Error('iOS builds are only supported on macOS.');
   }
-  console.log(
-    boxen('npx expo prebuild --platform ios', {
-      title: 'Prebuild iOS',
-      padding: 1,
-      borderStyle: 'single',
-      borderColor: INFO_COLOR,
-    })
-  );
 
+  info('npx expo prebuild --platform ios', 'Prebuild iOS');
   await exec('npx', ['expo', 'prebuild', '--platform', 'ios']);
 
   const derivedDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-'));
@@ -142,17 +135,6 @@ async function buildIos(scheme?: string) {
     'build',
   ];
 
-  console.log(
-    boxen(`xcodebuild ${xcodebuildArguments.join(' ')}`, {
-      title: 'Build iOS',
-      padding: 1,
-      borderStyle: 'single',
-      borderColor: INFO_COLOR,
-    })
-  );
-
-  await execa('xcodebuild', xcodebuildArguments, { cwd: path.resolve('ios') });
-
   const appPath = path.join(
     derivedDataPath,
     'Build',
@@ -161,12 +143,17 @@ async function buildIos(scheme?: string) {
     `${scheme}.app`
   );
 
-  if (!fs.existsSync(appPath)) {
+  try {
+    info(`xcodebuild ${xcodebuildArguments.join(' ')}`, 'Build iOS');
+    await execa('xcodebuild', xcodebuildArguments, { cwd: path.resolve('ios') });
+    if (!fs.existsSync(appPath)) {
+      throw new Error(`Expected .app bundle not found at ${appPath}`);
+    }
+  } finally {
     fs.rmSync(derivedDataPath, { recursive: true, force: true });
-    throw new Error(`Expected .app bundle not found at ${appPath}`);
   }
 
-  return appPath;
+  return { artifactPath: appPath, duration: (Date.now() - start.getTime()) / 1000 };
 }
 
 /**
@@ -223,16 +210,16 @@ Currently, only builds using Expo are supported.`,
     process.exit(1);
   }
 
-  const artifacts: { platform: string; path: string }[] = [];
+  const artifacts: { platform: string; path: string; duration: number }[] = [];
 
   try {
     for (const platform of platforms) {
       if (platform === 'android') {
-        const artifactPath = await buildAndroid();
-        artifacts.push({ platform: 'Android', path: artifactPath });
+        const { artifactPath, duration } = await buildAndroid();
+        artifacts.push({ platform: 'Android', path: artifactPath, duration });
       } else if (platform === 'ios') {
-        const artifactPath = await buildIos(config.scheme);
-        artifacts.push({ platform: 'iOS', path: artifactPath });
+        const { artifactPath, duration } = await buildIos(config.scheme);
+        artifacts.push({ platform: 'iOS', path: artifactPath, duration });
       }
     }
   } catch (err) {
@@ -240,7 +227,8 @@ Currently, only builds using Expo are supported.`,
     process.exit(1);
   }
 
-  const summary = artifacts.map((a) => `  ${a.platform}: ${a.path}`).join('\n');
+  const summary = artifacts.map((a) => `${a.platform} (${a.duration})\n  ${a.path}`).join('\n');
+
   console.log(
     boxen(summary, {
       title: 'Build Complete',
