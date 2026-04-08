@@ -2,7 +2,6 @@
 import dns from 'dns';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import jsonfile from 'jsonfile';
-import { Module } from 'module';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
 import path from 'path';
@@ -16,6 +15,7 @@ import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
 import TestLogger from './lib/testLogger';
+import { patchModulePath } from './lib/testUtilities';
 import { uploadFiles } from './lib/uploadFiles';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { Context } from './types';
@@ -863,27 +863,3 @@ describe('parsing package.json', () => {
     expect(result.code).toBeDefined();
   });
 });
-
-/*
- * This is quite hacky solution to work-around mocking `require.resolve` but
- * it works. Internally `require.resolve` calls `Module._resolveFilename` so we
- * can intercept it.
- */
-function patchModulePath(from: string, to: string) {
-  // @ts-expect-error -- untyped
-  const original = Module._resolveFilename;
-
-  // @ts-expect-error -- untyped
-  Module._resolveFilename = (request: string, parent: NodeModule) => {
-    if (request === from) {
-      return to;
-    }
-
-    return original(request, parent);
-  };
-
-  return function restore() {
-    // @ts-expect-error -- untyped
-    Module._resolveFilename = original;
-  };
-}

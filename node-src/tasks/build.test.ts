@@ -1,11 +1,11 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { exitCodes } from '@cli/setExitCode';
 import { execa as execaDefault, parseCommandString } from 'execa';
-import { Module } from 'module';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
+import { patchModulePath } from '../lib/testUtilities';
 import buildTask, {
   buildStorybook,
   generateManifestForReactNative,
@@ -239,7 +239,7 @@ describe('setBuildCommand', () => {
         options: { [e2ePackage]: true, buildScriptName: 'build:storybook', inAction: false },
         sourceDir: './source-dir/',
         git: {},
-        log: { error: console.error },
+        log: new TestLogger(),
       } as any;
 
       await setBuildCommand(ctx);
@@ -443,27 +443,3 @@ describe('generateManifestForReactNative', () => {
     expect(generateManifest).not.toHaveBeenCalled();
   });
 });
-
-/*
- * This is quite hacky solution to work-around mocking `require.resolve` but
- * it works. Internally `require.resolve` calls `Module._resolveFilename` so we
- * can intercept it.
- */
-function patchModulePath(from: string, to: string) {
-  // @ts-expect-error -- untyped
-  const original = Module._resolveFilename;
-
-  // @ts-expect-error -- untyped
-  Module._resolveFilename = (request: string, parent: NodeModule) => {
-    if (request === from) {
-      return to;
-    }
-
-    return original(request, parent);
-  };
-
-  return function restore() {
-    // @ts-expect-error -- untyped
-    Module._resolveFilename = original;
-  };
-}
