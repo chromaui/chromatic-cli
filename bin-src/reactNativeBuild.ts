@@ -14,6 +14,37 @@ interface ExpoConfig {
   scheme?: string;
 }
 
+// execa wrapper for convenience
+async function exec(
+  command: string,
+  args: string[],
+  options: { env?: Record<string, string>; cwd?: string } = {}
+) {
+  return execa(command, args, {
+    ...options,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env: {
+      ...options.env,
+
+      EXPO_PUBLIC_STORYBOOK_ENABLED: 'true',
+      STORYBOOK_ENABLED: 'true',
+
+      EXPO_PUBLIC_STORYBOOK_LITE_MODE: 'true',
+      STORYBOOK_LITE_MODE: 'true',
+
+      EXPO_PUBLIC_STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
+      STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
+
+      EXPO_PUBLIC_STORYBOOK_WEBSOCKET_PORT: '7007',
+      STORYBOOK_WEBSOCKET_PORT: '7007',
+
+      EXPO_PUBLIC_STORYBOOK_WEBSOCKET_SECURED: 'true',
+      STORYBOOK_WEBSOCKET_SECURED: 'true',
+    },
+  });
+}
+
 /**
  * Read the Expo config by running `npx expo config --json`.
  *
@@ -45,10 +76,7 @@ async function buildAndroid() {
     })
   );
 
-  await execa('npx', ['expo', 'prebuild', '--platform', 'android'], {
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+  await exec('npx', ['expo', 'prebuild', '--platform', 'android']);
 
   console.log(
     boxen('cd ./android && ./gradlew assembleRelease', {
@@ -58,11 +86,7 @@ async function buildAndroid() {
       borderColor: INFO_COLOR,
     })
   );
-  await execa('./gradlew', ['assembleRelease'], {
-    cwd: path.resolve('android'),
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+  await exec('./gradlew', ['assembleRelease'], { cwd: path.resolve('android') });
 
   const apkPath = path.resolve('android/app/build/outputs/apk/release/app-release.apk');
 
@@ -96,10 +120,7 @@ async function buildIos(scheme?: string) {
     })
   );
 
-  await execa('npx', ['expo', 'prebuild', '--platform', 'ios'], {
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+  await exec('npx', ['expo', 'prebuild', '--platform', 'ios']);
 
   const derivedDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-'));
 
@@ -130,11 +151,7 @@ async function buildIos(scheme?: string) {
     })
   );
 
-  await execa('xcodebuild', xcodebuildArguments, {
-    cwd: path.resolve('ios'),
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+  await execa('xcodebuild', xcodebuildArguments, { cwd: path.resolve('ios') });
 
   const appPath = path.join(
     derivedDataPath,
