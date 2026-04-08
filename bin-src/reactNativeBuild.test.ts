@@ -58,7 +58,11 @@ describe('react-native-build', () => {
       ['expo', 'prebuild', '--platform', 'android'],
       expect.objectContaining({})
     );
-    expect(mockedExeca).toHaveBeenCalledWith('./gradlew', ['assembleRelease'], expect.objectContaining({ cwd: expect.stringContaining('android') }));
+    expect(mockedExeca).toHaveBeenCalledWith(
+      './gradlew',
+      ['assembleRelease'],
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
   });
 
   it('reads expo config and builds ios on darwin', async () => {
@@ -122,9 +126,7 @@ describe('react-native-build', () => {
     });
 
     await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('No scheme found')
-    );
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('No scheme found'));
   });
 
   it('skips ios on non-darwin platforms', async () => {
@@ -147,6 +149,7 @@ describe('react-native-build', () => {
   });
 
   it('exits when android build fails', async () => {
+    // eslint-disable-next-line complexity
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
         return { stdout: JSON.stringify({ platforms: ['android'], scheme: 'MyApp' }) } as any;
@@ -161,8 +164,6 @@ describe('react-native-build', () => {
     });
 
     await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('gradle failed')
-    );
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('gradle failed'));
   });
 });
