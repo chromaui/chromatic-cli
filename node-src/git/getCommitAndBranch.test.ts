@@ -3,19 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import type { Context } from '../types';
-import * as mergeQueue from './getBranchFromMergeQueuePullRequestNumber';
 import getCommitAndBranch from './getCommitAndBranch';
 import * as git from './git';
 
 vi.mock('env-ci');
 vi.mock('./git');
-vi.mock('./getBranchFromMergeQueuePullRequestNumber');
 
 const getBranch = vi.mocked(git.getBranch);
 const getCommit = vi.mocked(git.getCommit);
 const hasPreviousCommit = vi.mocked(git.hasPreviousCommit);
-const getBranchFromMergeQueue = vi.mocked(mergeQueue.getBranchFromMergeQueuePullRequestNumber);
-const mergeQueueBranchMatch = vi.mocked(git.mergeQueueBranchMatch);
 
 const log = new TestLogger();
 const ctx = { log } as unknown as Context;
@@ -58,7 +54,6 @@ beforeEach(() => {
     committerEmail: 'noreply@github.com',
   });
   hasPreviousCommit.mockResolvedValue(true);
-  mergeQueueBranchMatch.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -66,7 +61,6 @@ afterEach(() => {
   envCi.mockReset();
   getBranch.mockReset();
   getCommit.mockReset();
-  getBranchFromMergeQueue.mockReset();
 });
 
 const commitInfo = {
@@ -298,14 +292,11 @@ describe('getCommitAndBranch', () => {
   });
 
   describe('with mergeQueue branch', () => {
-    it('uses PRs branchName as branch instead of temporary mergeQueue branch', async () => {
-      mergeQueueBranchMatch.mockResolvedValue(4);
-      getBranchFromMergeQueue.mockResolvedValue('branch-before-merge-queue');
-      const info = await getCommitAndBranch(ctx, {
-        branchName:
-          'this-is-merge-queue-branch-format/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb',
-      });
-      expect(info).toMatchObject({ branch: 'branch-before-merge-queue' });
+    it('passes the merge queue branch name through unchanged', async () => {
+      const mergeQueueBranch =
+        'gh-readonly-queue/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb';
+      const info = await getCommitAndBranch(ctx, { branchName: mergeQueueBranch });
+      expect(info).toMatchObject({ branch: mergeQueueBranch });
     });
   });
 });

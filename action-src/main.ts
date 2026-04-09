@@ -154,6 +154,13 @@ async function run() {
 
     process.chdir(path.join(process.cwd(), workingDir || ''));
 
+    const isMergeQueueBuild = context.eventName === 'merge_group';
+    if (isMergeQueueBuild && exitZeroOnChanges === 'true') {
+      warning(
+        '`exitZeroOnChanges` is set to `true`, but you are running in a GitHub merge queue. Changes will not cause this build to fail. Consider removing this flag for merge queue runs to catch unexpected changes.'
+      );
+    }
+
     const output = await runNode({
       options: {
         inAction: true,
@@ -169,7 +176,7 @@ async function run() {
         diagnosticsFile: maybe(diagnosticsFile),
         dryRun: maybe(dryRun),
         exitOnceUploaded: maybe(exitOnceUploaded),
-        exitZeroOnChanges: maybe(exitZeroOnChanges, true),
+        exitZeroOnChanges: maybe(exitZeroOnChanges, !isMergeQueueBuild),
         externals: maybe(externals),
         fileHashing: maybe(fileHashing, true),
         forceRebuild: maybe(forceRebuild),
