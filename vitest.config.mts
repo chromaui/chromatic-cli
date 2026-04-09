@@ -1,4 +1,3 @@
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig, Plugin } from 'vitest/config';
 
 export default defineConfig({
@@ -9,5 +8,7 @@ export default defineConfig({
       exclude: ['**/*.stories.{t,j}s', '**/lib/testLogger.ts', '**/__mocks__/**'],
     },
   },
-  plugins: [tsconfigPaths() as Plugin],
+  resolve: {
+    tsconfigPaths: true,
+  },
 });
