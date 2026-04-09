@@ -1,3 +1,22 @@
+# v16.2.0 (Thu Apr 09 2026)
+
+#### 🚀 Enhancement
+
+- Improve merge queue support [#1256](https://github.com/chromaui/chromatic-cli/pull/1256) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- test: improve chromatic-e2e related tests [#1273](https://github.com/chromaui/chromatic-cli/pull/1273) ([@AriPerkkio](https://github.com/AriPerkkio))
+- test: update Vitest to v4 [#1266](https://github.com/chromaui/chromatic-cli/pull/1266) ([@AriPerkkio](https://github.com/AriPerkkio))
+- Throw error on React Native projects using TurboSnap [#1267](https://github.com/chromaui/chromatic-cli/pull/1267) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Ari Perkkiö ([@AriPerkkio](https://github.com/AriPerkkio))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v16.1.0 (Thu Apr 02 2026)
 
 #### 🚀 Enhancement
