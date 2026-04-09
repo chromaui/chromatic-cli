@@ -53,8 +53,8 @@ async function exec(
       EXPO_PUBLIC_STORYBOOK_ENABLED: 'true',
       STORYBOOK_ENABLED: 'true',
 
-      EXPO_PUBLIC_STORYBOOK_LITE_MODE: 'true',
-      STORYBOOK_LITE_MODE: 'true',
+      EXPO_PUBLIC_STORYBOOK_DISABLE_UI: 'true',
+      STORYBOOK_DISABLE_UI: 'true',
 
       EXPO_PUBLIC_STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
       STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
@@ -64,6 +64,9 @@ async function exec(
 
       EXPO_PUBLIC_STORYBOOK_WEBSOCKET_SECURED: 'true',
       STORYBOOK_WEBSOCKET_SECURED: 'true',
+
+      EXPO_STORYBOOK_SERVER: 'false',
+      STORYBOOK_SERVER: 'false',
     },
   });
 }
