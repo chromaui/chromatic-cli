@@ -42,17 +42,17 @@ export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) =>
 
     if (hasAndroid && hasIOS) {
       lines.push(
-        '  → This build is missing the `storybook.app` (iOS) and `storybook.apk` (Android) files required for React Native Storybook.',
-        '    Please ensure that the files are present in the output directory and named correctly before running the CLI.'
+        '→ This build is missing the storybook.app (iOS) and storybook.apk (Android) files required for React Native Storybook.',
+        '  Please ensure that the files are present in the output directory and named correctly before running the CLI.'
       );
     } else if (hasAndroid) {
       lines.push(
-        '→ This build is missing the `storybook.apk` file required for React Native Storybook for Android.',
+        '→ This build is missing the storybook.apk file required for React Native Storybook for Android.',
         '  Please ensure that the file is present in the output directory and named correctly before running the CLI.'
       );
     } else if (hasIOS) {
       lines.push(
-        '→ This build is missing the `storybook.app` file required for React Native Storybook for iOS.',
+        '→ This build is missing the storybook.app file required for React Native Storybook for iOS.',
         '  Please ensure that the file is present in the output directory and named correctly before running the CLI.'
       );
     }
