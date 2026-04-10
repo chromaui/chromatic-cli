@@ -202,7 +202,7 @@ describe('validateFiles', () => {
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
           `Missing files:
-- manifest.json
+  → manifest.json
 
 Invalid React Native Storybook build in directory /static`
         );
@@ -222,8 +222,8 @@ Invalid React Native Storybook build in directory /static`
           announcedBuild: { browsers: ['android'] },
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
-          `Missing files:
-- storybook.apk — rename your Android Storybook build to \`storybook.apk\` and place it in the directory /static
+          `→ This build is missing the \`storybook.apk\` file required for React Native Storybook for Android.
+  Please ensure that the file is present in the output directory and named correctly before running the CLI.
 
 Invalid React Native Storybook build in directory /static`
         );
@@ -276,7 +276,7 @@ Invalid React Native Storybook build in directory /static`
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
           `Missing files:
-- manifest.json
+  → manifest.json
 
 Invalid React Native Storybook build in directory /static`
         );
@@ -296,8 +296,31 @@ Invalid React Native Storybook build in directory /static`
           announcedBuild: { browsers: ['ios'] },
         } as any;
         await expect(validateFiles(ctx)).rejects.toThrow(
-          `Missing files:
-- storybook.app — rename your iOS Storybook build directory to \`storybook.app\` and place it in the directory /static
+          `→ This build is missing the \`storybook.app\` file required for React Native Storybook for iOS.
+  Please ensure that the file is present in the output directory and named correctly before running the CLI.
+
+Invalid React Native Storybook build in directory /static`
+        );
+      });
+    });
+
+    describe('Android and iOS devices', () => {
+      it('throws when both native build files are missing', async () => {
+        readdirSyncMock.mockReturnValue(['manifest.json'] as any);
+        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+        const ctx = {
+          env: environment,
+          log,
+          http,
+          options: {},
+          sourceDir: '/static/',
+          isReactNativeApp: true,
+          announcedBuild: { browsers: ['android', 'ios'] },
+        } as any;
+        await expect(validateFiles(ctx)).rejects.toThrow(
+          `  → This build is missing the \`storybook.app\` (iOS) and \`storybook.apk\` (Android) files required for React Native Storybook.
+    Please ensure that the files are present in the output directory and named correctly before running the CLI.
 
 Invalid React Native Storybook build in directory /static`
         );

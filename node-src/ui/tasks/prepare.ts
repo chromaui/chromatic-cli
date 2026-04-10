@@ -32,22 +32,34 @@ export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) =>
   const lines: string[] = [];
 
   if (missingFiles.length > 0) {
-    const directory = ctx.sourceDir
-      ? ` and place it in the directory ${path.resolve(ctx.sourceDir)}`
-      : '';
+    const hasAndroid = missingFiles.includes('storybook.apk');
+    const hasIOS = missingFiles.includes('storybook.app');
+    const otherFiles = missingFiles.filter(
+      (file) => file !== 'storybook.apk' && file !== 'storybook.app'
+    );
+
     lines.push('Missing files:');
 
-    for (const file of missingFiles) {
-      if (file === 'storybook.apk') {
-        lines.push(
-          `- storybook.apk — rename your Android Storybook build to \`storybook.apk\`${directory}`
-        );
-      } else if (file === 'storybook.app') {
-        lines.push(
-          `- storybook.app — rename your iOS Storybook build directory to \`storybook.app\`${directory}`
-        );
-      } else {
-        lines.push(`- ${file}`);
+    if (hasAndroid && hasIOS) {
+      lines.push(
+        '  → This build is missing the `storybook.app` (iOS) and `storybook.apk` (Android) files required for React Native Storybook.',
+        '    Please ensure that the files are present in the output directory and named correctly before running the CLI.'
+      );
+    } else if (hasAndroid) {
+      lines.push(
+        '→ This build is missing the `storybook.apk` file required for React Native Storybook for Android.',
+        '  Please ensure that the file is present in the output directory and named correctly before running the CLI.'
+      );
+    } else if (hasIOS) {
+      lines.push(
+        '→ This build is missing the `storybook.app` file required for React Native Storybook for iOS.',
+        '  Please ensure that the file is present in the output directory and named correctly before running the CLI.'
+      );
+    }
+
+    if (otherFiles.length > 0) {
+      for (const file of otherFiles) {
+        lines.push(`  → ${file}`);
       }
     }
   }
