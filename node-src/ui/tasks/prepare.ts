@@ -1,3 +1,4 @@
+import path from 'path';
 import pluralize from 'pluralize';
 
 import { isE2EBuild } from '../../lib/e2eUtils';
@@ -24,6 +25,56 @@ export const invalid = (ctx: Context, error?: Error) => {
     status: 'error',
     title: `Preparing your built ${buildType(ctx)}`,
     output,
+  };
+};
+
+export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) => {
+  const lines: string[] = [];
+
+  if (missingFiles.length > 0) {
+    const hasAndroid = missingFiles.includes('storybook.apk');
+    const hasIOS = missingFiles.includes('storybook.app');
+    const otherFiles = missingFiles.filter(
+      (file) => file !== 'storybook.apk' && file !== 'storybook.app'
+    );
+
+    lines.push('Missing files:');
+
+    if (hasAndroid && hasIOS) {
+      lines.push(
+        '→ This build is missing the storybook.app (iOS) and storybook.apk (Android) files required for React Native Storybook.',
+        '  Please ensure that the files are present in the output directory and named correctly before running the CLI.'
+      );
+    } else if (hasAndroid) {
+      lines.push(
+        '→ This build is missing the storybook.apk file required for React Native Storybook for Android.',
+        '  Please ensure that the file is present in the output directory and named correctly before running the CLI.'
+      );
+    } else if (hasIOS) {
+      lines.push(
+        '→ This build is missing the storybook.app file required for React Native Storybook for iOS.',
+        '  Please ensure that the file is present in the output directory and named correctly before running the CLI.'
+      );
+    }
+
+    if (otherFiles.length > 0) {
+      for (const file of otherFiles) {
+        lines.push(`  → ${file}`);
+      }
+    }
+  }
+
+  // Listr will display the last line of the output so we'll set the UI to a generic error message
+  // with all the context above.
+  lines.push(
+    '',
+    `Invalid React Native Storybook build in directory ${path.resolve(ctx.sourceDir)}`
+  );
+
+  return {
+    status: 'error',
+    title: 'Preparing your built React Native Storybook',
+    output: lines.join('\n'),
   };
 };
 

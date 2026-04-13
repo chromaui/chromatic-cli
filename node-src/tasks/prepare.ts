@@ -15,6 +15,7 @@ import {
   hashing,
   initial,
   invalid,
+  invalidReactNative,
   success,
   traced,
   tracing,
@@ -118,8 +119,10 @@ function getFileInfo(ctx: Context, sourceDirectory: string) {
  *
  * @returns True if the directory contains a valid Storybook build
  */
-const isValidStorybook = ({ paths, total }) =>
-  total > 0 && paths.includes('iframe.html') && paths.includes('index.html');
+const isValidStorybook = ({ paths, total }) => {
+  const missingFiles = ['iframe.html', 'index.html'].filter((f) => !paths.includes(f));
+  return { valid: total > 0 && missingFiles.length === 0, missingFiles };
+};
 
 /**
  * Determines if a directory contains a valid React Native Storybook build.
@@ -134,27 +137,33 @@ const isValidStorybook = ({ paths, total }) =>
  *
  * @returns True if the directory contains a valid React Native Storybook build
  */
-const isValidReactNativeStorybook = ({ paths, total }, browsers: string[] = []) => {
+const isValidReactNativeStorybook = (
+  { paths, total },
+  browsers: string[] = []
+): { valid: boolean; missingFiles: string[] } => {
   const hasAndroid = browsers.includes('android');
   const hasIOS = browsers.includes('ios');
+  const missingFiles: string[] = [];
 
   if (!hasAndroid && !hasIOS) {
-    return false;
+    return { valid: false, missingFiles };
+  }
+
+  if (!paths.includes('manifest.json')) {
+    missingFiles.push('manifest.json');
   }
 
   // Ensure we have a storybook.apk file on Android builds
   if (hasAndroid && !paths.includes('storybook.apk')) {
-    return false;
+    missingFiles.push('storybook.apk');
   }
 
   // Ensure we have a storybook.app directory on iOS builds
   if (hasIOS && !paths.some((path: string) => path.startsWith('storybook.app/'))) {
-    return false;
+    missingFiles.push('storybook.app');
   }
 
-  const hasManifest = paths.includes('manifest.json');
-
-  return total > 0 && hasManifest;
+  return { valid: total > 0 && missingFiles.length === 0, missingFiles };
 };
 
 /**
@@ -172,7 +181,7 @@ export async function validateFiles(ctx: Context) {
 
   ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
 
-  if (!validator(ctx.fileInfo, browsers) && ctx.buildLogFile) {
+  if (!validator(ctx.fileInfo, browsers).valid && ctx.buildLogFile) {
     try {
       const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
@@ -186,8 +195,13 @@ export async function validateFiles(ctx: Context) {
     }
   }
 
-  if (!validator(ctx.fileInfo, browsers)) {
-    throw new Error(invalid(ctx).output);
+  const validatorResult = validator(ctx.fileInfo, browsers);
+  if (!validatorResult.valid) {
+    throw new Error(
+      ctx.isReactNativeApp
+        ? invalidReactNative(ctx, validatorResult.missingFiles).output
+        : invalid(ctx).output
+    );
   }
 }
 
