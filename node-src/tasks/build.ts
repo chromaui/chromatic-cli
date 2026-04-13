@@ -1,10 +1,14 @@
+import { AnalyticsEvent } from '@cli/analytics/events';
+import * as Sentry from '@sentry/node';
 import { createWriteStream, existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
+import { sanitizeStackTrace } from '../lib/analytics/sanitization';
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
 import { isE2EBuild } from '../lib/e2eUtils';
+import { emailHash } from '../lib/emailHash';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -138,6 +142,53 @@ function e2eBuildErrorMessage(
   };
 }
 
+function handleBuildFailure(ctx: Context, err: any, signal?: AbortSignal): never {
+  if (isE2EBuild(ctx.options)) {
+    // If we tried to run the E2E package's bin directly (due to being in the action)
+    // and it failed, that means we couldn't find it. This probably means they haven't
+    // installed the right dependency or run from the right directory
+    const errorInfo = e2eBuildErrorMessage(err, process.cwd(), ctx);
+    const errorCategory =
+      errorInfo.exitCode === exitCodes.MISSING_DEPENDENCY
+        ? 'e2e_missing_dependency'
+        : 'e2e_build_failed';
+    trackBuildFailure(ctx, errorCategory, err);
+    ctx.log.error(errorInfo.message);
+    setExitCode(ctx, errorInfo.exitCode, true);
+    throw new Error(failed(ctx).output);
+  }
+
+  if (signal?.aborted) {
+    trackBuildFailure(ctx, 'aborted', err);
+    signal.throwIfAborted();
+  }
+
+  trackBuildFailure(ctx, 'storybook_build_failed', err);
+  const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
+  ctx.log.error(buildFailed(ctx, err, buildLog));
+  setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
+  throw new Error(failed(ctx).output);
+}
+
+function trackBuildFailure(ctx: Context, errorCategory: string, err: any) {
+  try {
+    ctx.analytics?.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {
+      errorCategory,
+      stackTrace: sanitizeStackTrace(err?.stack),
+      buildCommand: ctx.buildCommand,
+      source: 'cli',
+      cliVersion: ctx.pkg?.version,
+      storybookVersion: ctx.storybook?.version,
+      isCI: !!process.env.CI,
+      ciService: ctx.git?.ciService,
+      gitUserEmailHash: ctx.git?.gitUserEmail ? emailHash(ctx.git.gitUserEmail) : undefined, // avoid hashing empty string
+    });
+  } catch (error) {
+    // Analytics should be best-effort, never fail the build, but we want to know about it
+    Sentry.captureException(error);
+  }
+}
+
 export const buildStorybook = async (ctx: Context) => {
   // We don't currently support building React Native projects so we'll skip this for now
   if (ctx.isReactNativeApp) {
@@ -177,22 +228,7 @@ export const buildStorybook = async (ctx: Context) => {
       },
     });
   } catch (err) {
-    // If we tried to run the E2E package's bin directly (due to being in the action)
-    // and it failed, that means we couldn't find it. This probably means they haven't
-    // installed the right dependency or run from the right directory
-    if (isE2EBuild(ctx.options)) {
-      const errorInfo = e2eBuildErrorMessage(err, process.cwd(), ctx);
-      ctx.log.error(errorInfo.message);
-      setExitCode(ctx, errorInfo.exitCode, true);
-      throw new Error(failed(ctx).output);
-    }
-
-    signal?.throwIfAborted();
-
-    const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
-    ctx.log.error(buildFailed(ctx, err, buildLog));
-    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
-    throw new Error(failed(ctx).output);
+    handleBuildFailure(ctx, err, signal);
   } finally {
     logFile?.end();
   }
