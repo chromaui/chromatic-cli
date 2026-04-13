@@ -50,6 +50,9 @@ async function exec(
     env: {
       ...options.env,
 
+      // Expo requires the EXPO_PUBLIC_ prefix on environment variables, so we set
+      // both versions to support Expo and other tooling.
+
       EXPO_PUBLIC_STORYBOOK_ENABLED: 'true',
       STORYBOOK_ENABLED: 'true',
 
