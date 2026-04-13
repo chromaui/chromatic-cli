@@ -1,5 +1,8 @@
+/* eslint-disable max-lines */
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { AnalyticsEvent } from '@cli/analytics/events';
 import { exitCodes } from '@cli/setExitCode';
+import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
@@ -30,6 +33,9 @@ vi.mock('fs', async (importOriginal) => {
 });
 vi.mock('../lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(() => Promise.resolve()),
+}));
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(),
 }));
 
 const execa = vi.mocked(execaDefault);
@@ -417,6 +423,139 @@ describe('buildStorybook E2E', () => {
       expect.stringContaining('Failed to run `chromatic --playwright`')
     );
     expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+  });
+});
+
+function makeAnalyticsContext(overrides = {}) {
+  return {
+    ...baseContext,
+    buildCommand: 'npm run build:storybook',
+    env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+    log: new TestLogger(),
+    pkg: { version: '1.0.0' },
+    storybook: { version: '8.0.0' },
+    git: { gitUserEmail: 'test@example.com', ciService: 'github-actions' },
+    announcedBuild: { app: { id: 'app-123', account: { id: 'account-456' } } },
+    analytics: { trackEvent: vi.fn(), shutdown: vi.fn() },
+    ...overrides,
+  } as any;
+}
+
+describe('buildStorybook analytics', () => {
+  it('tracks storybook_build_failed on build failure', async () => {
+    // arrange
+    const ctx = makeAnalyticsContext();
+    execa.mockRejectedValueOnce(new Error('build failed'));
+
+    // act
+    await expect(buildStorybook(ctx)).rejects.toThrow();
+
+    // assert
+    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
+      expect.objectContaining({
+        errorCategory: 'storybook_build_failed',
+        buildCommand: 'npm run build:storybook',
+        source: 'cli',
+        cliVersion: '1.0.0',
+        storybookVersion: '8.0.0',
+        isCI: expect.any(Boolean),
+        ciService: 'github-actions',
+        gitUserEmailHash: expect.any(String),
+      })
+    );
+  });
+
+  it('tracks e2e_missing_dependency when E2E dependency is not found', async () => {
+    // arrange
+    const ctx = makeAnalyticsContext({ options: { playwright: true, buildScriptName: '' } });
+    execa.mockRejectedValueOnce(new Error('Command not found: build-archive-storybook'));
+
+    // act
+    await expect(buildStorybook(ctx)).rejects.toThrow();
+
+    // assert
+    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
+      expect.objectContaining({ errorCategory: 'e2e_missing_dependency' })
+    );
+  });
+
+  it('tracks e2e_build_failed on generic E2E build failure', async () => {
+    // arrange
+    const ctx = makeAnalyticsContext({ options: { playwright: true, buildScriptName: '' } });
+    const error = 'Command failed with exit code 1: build-archive-storybook\n\nMultiple lines';
+    execa.mockRejectedValueOnce(new Error(`${error}\n\nOf error`));
+
+    // act
+    await expect(buildStorybook(ctx)).rejects.toThrow();
+
+    // assert
+    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
+      expect.objectContaining({ errorCategory: 'e2e_build_failed' })
+    );
+  });
+
+  it('tracks aborted when build is cancelled via abort signal', async () => {
+    // arrange
+    const controller = new AbortController();
+    controller.abort();
+    const ctx = makeAnalyticsContext({
+      options: { experimental_abortSignal: controller.signal, buildScriptName: '' },
+    });
+    execa.mockRejectedValueOnce(new Error('aborted'));
+
+    // act
+    await expect(buildStorybook(ctx)).rejects.toThrow();
+
+    // assert
+    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
+      expect.objectContaining({ errorCategory: 'aborted' })
+    );
+  });
+
+  it('sanitizes the stack trace before sending', async () => {
+    // arrange
+    const ctx = makeAnalyticsContext();
+    const err = new Error('build failed');
+    err.stack = 'Error: build failed\n    at x (/Users/user/secret/project/file.js:1:1)';
+    execa.mockRejectedValueOnce(err);
+
+    // act
+    await expect(buildStorybook(ctx)).rejects.toThrow();
+
+    // assert
+    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
+      expect.objectContaining({
+        stackTrace: 'Error: build failed\n    at x (<path>/file.js:1:1)',
+      })
+    );
+  });
+
+  it('reports to Sentry and still throws the build failure when analytics throws', async () => {
+    // arrange
+    vi.mocked(Sentry.captureException).mockClear();
+    const analyticsError = new Error('analytics exploded');
+    const ctx = makeAnalyticsContext({
+      analytics: {
+        trackEvent: vi.fn(() => {
+          throw analyticsError;
+        }),
+        shutdown: vi.fn(),
+      },
+    });
+    execa.mockRejectedValueOnce(new Error('build failed'));
+
+    // act
+    const thrown = await buildStorybook(ctx).catch((err) => err);
+
+    // assert: outer throw is the build failure, not the analytics failure
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).not.toBe(analyticsError);
+    expect(Sentry.captureException).toHaveBeenCalledWith(analyticsError);
   });
 });
 
