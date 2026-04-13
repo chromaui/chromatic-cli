@@ -13,10 +13,12 @@ vi.mock('fs', async () => {
       existsSync: vi.fn(),
       mkdtempSync: vi.fn(),
       rmSync: vi.fn(),
+      renameSync: vi.fn(),
     },
     existsSync: vi.fn(),
     mkdtempSync: vi.fn(),
     rmSync: vi.fn(),
+    renameSync: vi.fn(),
   };
 });
 
@@ -37,7 +39,7 @@ beforeEach(() => {
     throw new Error('process.exit');
   });
 
-  mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-test');
+  mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-test' as any);
 });
 
 describe('react-native-build', () => {

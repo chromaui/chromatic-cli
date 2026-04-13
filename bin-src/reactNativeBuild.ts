@@ -164,11 +164,15 @@ async function buildIos(scheme?: string) {
     if (!fs.existsSync(appPath)) {
       throw new Error(`Expected .app bundle not found at ${appPath}`);
     }
+
+    const artifactDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-artifact-'));
+    const artifactPath = path.join(artifactDirectory, `${scheme}.app`);
+    fs.renameSync(appPath, artifactPath);
+
+    return { artifactPath, duration: (Date.now() - start.getTime()) / 1000 };
   } finally {
     fs.rmSync(derivedDataPath, { recursive: true, force: true });
   }
-
-  return { artifactPath: appPath, duration: (Date.now() - start.getTime()) / 1000 };
 }
 
 function humanizeDuration(seconds: number) {
