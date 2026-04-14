@@ -69,7 +69,7 @@
     "isChromatic.d.ts"
   ],
   "scripts": {
-    "build": "clean-package && tsup && clean-package restore",
+    "build": "clean-package && tsdown && clean-package restore",
     "build-storybook": "storybook build --stats-json",
     "build-test-storybook": "cross-env SMOKE_TEST=true storybook build -o test-storybook --stats-json",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
@@ -91,7 +91,7 @@
     "test": "vitest run --coverage",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
     "prepare": "yarn run build",
-    "dev": "tsup --watch",
+    "dev": "tsdown --watch",
     "clean:sourcemaps": "rm -f dist/*.map && rm -f action/*.map"
   },
   "resolutions": {
@@ -203,7 +203,7 @@
     "tmp-promise": "3.0.2",
     "ts-dedent": "^1.0.0",
     "ts-loader": "^9.2.5",
-    "tsup": "^7.2.0",
+    "tsdown": "^0.21.8",
     "typescript": "^5.2.2",
     "typescript-eslint": "^7.11.0",
     "util-deprecate": "^1.0.2",
