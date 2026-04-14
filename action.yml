@@ -116,6 +116,9 @@ inputs:
   uploadMetadata:
     description: 'Upload Chromatic metadata files as part of the published Storybook'
     required: false
+  vitest:
+    description: 'Run build against `@chromatic-com/vitest` test archives'
+    required: false
   workingDir:
     description: 'Working directory for the package.json file'
     required: false

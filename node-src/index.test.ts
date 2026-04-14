@@ -563,7 +563,7 @@ it('skips building and uploads directly with storybook-build-dir', async () => {
   );
 });
 
-it.each(['playwright', 'cypress'])('builds with $0 with --%s', async (e2ePackage) => {
+it.each(['playwright', 'cypress', 'vitest'])('builds with $0 with --%s', async (e2ePackage) => {
   const binPath = `path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook`;
   const revertPatch = patchModulePath(
     `@chromatic-com/${e2ePackage}/bin/build-archive-storybook`,

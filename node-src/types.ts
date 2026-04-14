@@ -20,6 +20,7 @@ export interface Flags {
   // E2E options
   playwright?: boolean;
   cypress?: boolean;
+  vitest?: boolean;
 
   // Chromatic options
   autoAcceptChanges?: string;
@@ -102,6 +103,7 @@ export interface Options extends Configuration {
   buildCommand: Flags['buildCommand'];
   playwright: Flags['playwright'];
   cypress: Flags['cypress'];
+  vitest: Flags['vitest'];
   outputDir: string;
   url?: string;
   storybookBuildDir: string;

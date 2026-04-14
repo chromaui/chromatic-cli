@@ -225,7 +225,7 @@ describe('setBuildCommand', () => {
     expect(ctx.buildCommand).toEqual('npm run build:storybook');
   });
 
-  it.each(['playwright', 'cypress'])(
+  it.each(['playwright', 'cypress', 'vitest'])(
     'resolves to the E2E build command when using %s',
     async (e2ePackage) => {
       const revertPatch = patchModulePath(

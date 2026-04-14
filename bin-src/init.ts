@@ -13,6 +13,7 @@ export const TestFramework = {
   STORYBOOK: 'storybook',
   PLAYWRIGHT: 'playwright',
   CYPRESS: 'cypress',
+  VITEST: 'vitest',
 };
 type TestFrameworkType = (typeof TestFramework)[keyof typeof TestFramework];
 
@@ -109,6 +110,9 @@ const intializeChromatic = async ({
     case TestFramework.PLAYWRIGHT:
       await installArchiveDependencies(packageJson, TestFramework.PLAYWRIGHT);
       break;
+    case TestFramework.VITEST:
+      await installArchiveDependencies(packageJson, TestFramework.VITEST);
+      break;
 
     default:
       break;
@@ -171,6 +175,7 @@ export async function main(argv: string[]) {
           { title: 'Storybook', value: TestFramework.STORYBOOK },
           { title: 'Playwright', value: TestFramework.PLAYWRIGHT },
           { title: 'Cypress', value: TestFramework.CYPRESS },
+          { title: 'Vitest', value: TestFramework.VITEST },
         ],
         initial: 0,
       },

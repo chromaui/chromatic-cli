@@ -26,3 +26,10 @@ export const SuccessCypress = () =>
     options: { ...ctx.options, playwright: false, cypress: true },
     storybook,
   } as any);
+
+export const SuccessVitest = () =>
+  success({
+    ...ctx,
+    options: { ...ctx.options, playwright: false, vitest: true },
+    storybook,
+  } as any);

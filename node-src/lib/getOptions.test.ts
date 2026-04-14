@@ -75,7 +75,7 @@ describe('getOptions', () => {
     });
   });
 
-  it.each(['playwright', 'cypress'])(
+  it.each(['playwright', 'cypress', 'vitest'])(
     'sets storybookLogFile to default e2e when %s is set',
     async (e2eIntegration) => {
       expect(getOptions(getContext([`--${e2eIntegration}`]))).toMatchObject({
@@ -87,9 +87,9 @@ describe('getOptions', () => {
 
   it('throws when multiple e2e integrations are set at once', async () => {
     expect(() =>
-      getOptions(getContext(['--projectToken', 'example', '--playwright', '--cypress']))
+      getOptions(getContext(['--projectToken', 'example', '--playwright', '--cypress', '--vitest']))
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: ✖ You can only use one of --playwright, --cypress]`
+      `[Error: ✖ You can only use one of --playwright, --cypress, --vitest]`
     );
   });
 

@@ -53,7 +53,6 @@ const getStatsFlag = (ctx: Context) => {
     : '--webpack-stats-json';
 };
 
-// eslint-disable-next-line complexity
 export const setBuildCommand = async (ctx: Context) => {
   // We don't currently support building React Native Storybook so we'll skip this for now
   if (ctx.isReactNativeApp) {
@@ -81,11 +80,7 @@ export const setBuildCommand = async (ctx: Context) => {
   }
 
   if (isE2EBuild(ctx.options)) {
-    ctx.buildCommand = await getE2EBuildCommand(
-      ctx,
-      ctx.options.playwright ? 'playwright' : 'cypress',
-      buildCommandOptions
-    );
+    ctx.buildCommand = await getE2EBuildCommand(ctx, resolveE2EFramework(ctx), buildCommandOptions);
     return;
   }
 
@@ -123,7 +118,7 @@ function e2eBuildErrorMessage(
   workingDirectory: string,
   ctx: Context
 ): { exitCode: number; message: string } {
-  const flag = ctx.options.playwright ? 'playwright' : 'cypress';
+  const flag = resolveE2EFramework(ctx);
   const errorMessage = err.message;
 
   // If we tried to run the E2E package's bin directly (due to being in the action)
@@ -259,4 +254,16 @@ export default function main(ctx: Context) {
       transitionTo(success, true),
     ],
   });
+}
+
+function resolveE2EFramework(ctx: Context) {
+  if (ctx.options.playwright) {
+    return 'playwright';
+  }
+
+  if (ctx.options.vitest) {
+    return 'vitest';
+  }
+
+  return 'cypress';
 }

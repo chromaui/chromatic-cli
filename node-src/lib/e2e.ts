@@ -37,7 +37,7 @@ const parseNexec = ((agent, args) => {
  */
 export async function getE2EBuildCommand(
   ctx: Context,
-  flag: 'playwright' | 'cypress',
+  flag: 'playwright' | 'cypress' | 'vitest',
   buildCommandOptions: string[]
 ) {
   // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec
