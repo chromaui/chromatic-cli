@@ -141,6 +141,7 @@ describe('announceBuild', () => {
           packageVersion: ctx.pkg.version,
           rebuildForBuildId: undefined,
           storybookAddons: ctx.storybook.addons,
+          storybookRefs: ctx.storybook.refs,
           storybookVersion: ctx.storybook.version,
           projectMetadata: {
             storybookBaseDir: '',

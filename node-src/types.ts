@@ -250,6 +250,7 @@ export interface Context {
       packageVersion?: string;
     };
     mainConfigFilePath?: string;
+    refs?: Record<string, unknown>;
   };
   projectMetadata: {
     hasRouter?: boolean;

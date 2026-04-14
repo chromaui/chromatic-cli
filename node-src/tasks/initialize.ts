@@ -110,6 +110,7 @@ const announceBuildInput = (ctx: Context) => {
     ...ctx.runtimeMetadata,
     rebuildForBuildId,
     storybookAddons: ctx.storybook.addons,
+    storybookRefs: ctx.storybook.refs,
     storybookVersion: ctx.storybook.version,
     projectMetadata: {
       ...ctx.projectMetadata,
