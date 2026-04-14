@@ -104,6 +104,7 @@ vi.mock('node-fetch', () => ({
               status: 'ANNOUNCED',
               app: {
                 turboSnapAvailability: 'APPLIED',
+                account: { id: 'account-id' },
               },
             },
           },
