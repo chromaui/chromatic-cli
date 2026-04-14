@@ -1,14 +1,9 @@
-import boxen from 'boxen';
+import chalk from 'chalk';
 import { execa } from 'execa';
 import fs from 'fs';
 import meow from 'meow';
 import os from 'os';
 import path from 'path';
-
-const ERROR_COLOR = '#FF0000';
-const WARN_COLOR = '#FF4400';
-const INFO_COLOR = '#2750F5';
-const SUCCESS_COLOR = '#2ECC25';
 
 interface ExpoConfig {
   platforms?: string[];
@@ -16,25 +11,11 @@ interface ExpoConfig {
 }
 
 function info(message: string, title?: string) {
-  console.log(
-    boxen(message, {
-      title,
-      padding: 1,
-      borderStyle: 'single',
-      borderColor: INFO_COLOR,
-    })
-  );
+  console.log('› ' + chalk.bold(title) + '\n  ' + chalk.dim('→ ' + message));
 }
 
 function error(message: string, title?: string) {
-  console.error(
-    boxen(message, {
-      title: title || 'Error',
-      padding: 1,
-      borderStyle: 'double',
-      borderColor: ERROR_COLOR,
-    })
-  );
+  console.error(chalk.bold.red('✖') + chalk.bold(title || 'Error') + '\n' + message);
 }
 
 // execa wrapper for convenience
@@ -303,18 +284,12 @@ export async function main(argv: string[]) {
   const requestedPlatforms = parseFlags(argv);
 
   console.log(
-    boxen(
-      `This command will attempt to build your React Native Storybook for Chromatic.
-This is alpha software, please report any issues you encounter on the Chromatic CLI GitHub repository.
-Currently, only projects using Expo are supported.`,
-      {
-        title: 'Chromatic React Native Build',
-        titleAlignment: 'center',
-        padding: 1,
-        borderStyle: 'double',
-        borderColor: WARN_COLOR,
-      }
-    )
+    chalk.bold.yellow('⚠ ') +
+      chalk.bold('Chromatic React Native Build is in alpha. Use with caution.') +
+      '\n' +
+      chalk.dim(
+        '  → Please report any issues you encounter on the Chromatic CLI GitHub repository.'
+      )
   );
 
   let config: ExpoConfig;
@@ -339,13 +314,5 @@ Currently, only projects using Expo are supported.`,
     .map((a) => `${a.platform} (${humanizeDuration(a.duration)})\n${a.path}`)
     .join('\n\n');
 
-  console.log(
-    boxen(summary, {
-      title: 'Build Complete',
-      titleAlignment: 'center',
-      padding: 1,
-      borderStyle: 'double',
-      borderColor: SUCCESS_COLOR,
-    })
-  );
+  console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete') + '\n' + summary);
 }
