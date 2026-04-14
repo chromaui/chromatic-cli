@@ -1,3 +1,17 @@
+# v16.3.0 (Tue Apr 14 2026)
+
+#### 🚀 Enhancement
+
+- feat: add `--vitest` flag for `@chromatic-com/vitest` integration [#1252](https://github.com/chromaui/chromatic-cli/pull/1252) ([@AriPerkkio](https://github.com/AriPerkkio))
+- Show more information on invalid React Native builds [#1271](https://github.com/chromaui/chromatic-cli/pull/1271) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Ari Perkkiö ([@AriPerkkio](https://github.com/AriPerkkio))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v16.2.0 (Thu Apr 09 2026)
 
 #### 🚀 Enhancement
