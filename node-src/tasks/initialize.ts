@@ -26,6 +26,9 @@ const AnnounceBuildMutation = `
       app {
         id
         turboSnapAvailability
+        account {
+          id
+        }
       }
     }
   }
