@@ -44,6 +44,13 @@ const configurationSchema = z
     storybookLogFile: z.union([z.string(), z.boolean()]),
     logFile: z.union([z.string(), z.boolean()]),
     uploadMetadata: z.boolean(),
+
+    reactNative: z
+      .object({
+        iosBuildCommand: z.string(),
+        androidBuildCommand: z.string(),
+      })
+      .partial(),
   })
   .partial()
   .strict();

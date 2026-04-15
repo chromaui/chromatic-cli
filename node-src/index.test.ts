@@ -104,6 +104,7 @@ vi.mock('node-fetch', () => ({
               status: 'ANNOUNCED',
               app: {
                 turboSnapAvailability: 'APPLIED',
+                account: { id: 'account-id' },
               },
             },
           },
@@ -799,11 +800,11 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
         contentLength: expect.any(Number),
         contentType: 'text/typescript',
         fileKey: '',
-        filePath: '.chromatic/preview.tsx',
+        filePath: '.chromatic/preview.ts',
         formAction: 'https://s3.amazonaws.com',
         formFields: {},
-        localPath: '.storybook/preview.tsx',
-        targetPath: '.chromatic/preview.tsx',
+        localPath: '.storybook/preview.ts',
+        targetPath: '.chromatic/preview.ts',
       },
       {
         contentLength: expect.any(Number),

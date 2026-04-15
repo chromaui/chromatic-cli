@@ -32,10 +32,8 @@ describe('getStorybookInfo', () => {
     expect(sbInfo).toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
-        // We're currently using `react` and `@storybook/react-webpack5` so the we can end up with
-        // either one based on when those promises resolve.
         version: expect.any(String),
-        builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+        builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
       })
     );
   });
@@ -62,7 +60,7 @@ describe('getStorybookInfo', () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
     await expect(getStorybookInfo(ctx)).resolves.toEqual(
       expect.objectContaining({
-        builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+        builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
       })
     );
   });
@@ -71,10 +69,8 @@ describe('getStorybookInfo', () => {
     await expect(getStorybookInfo(context)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
-        // We're currently using `react` and `@storybook/react-webpack5` so the we can end up with
-        // either one based on when those promises resolve.
         version: expect.any(String),
-        builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+        builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
       })
     );
     expect(log.info).toHaveBeenCalledWith(
@@ -90,7 +86,7 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
           version: '3.2.1',
-          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+          builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
         })
       );
     });
@@ -100,7 +96,7 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
           version: '3.2.1',
-          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+          builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
         })
       );
     });
@@ -109,7 +105,7 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+          builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
         })
       );
     });
@@ -118,7 +114,7 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
       expect(await getStorybookInfo(ctx)).toEqual(
         expect.objectContaining({
-          builder: { name: '@storybook/react-webpack5', packageVersion: expect.any(String) },
+          builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
         })
       );
     });

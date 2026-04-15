@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateManifest } from '../node-src/lib/react-native/generateManifest';
+import { validateStorybookReactNativeVersion } from '../node-src/lib/react-native/validateStorybookVersion';
 import TestLogger from '../node-src/lib/testLogger';
 import { main } from './generateManifest';
 
@@ -10,9 +11,15 @@ vi.mock('../node-src/lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(),
 }));
 
+vi.mock('../node-src/lib/react-native/validateStorybookVersion', () => ({
+  validateStorybookReactNativeVersion: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../node-src/lib/log', () => ({
   createLogger: vi.fn(() => testLogger),
 }));
+
+const mockValidateStorybookReactNativeVersion = vi.mocked(validateStorybookReactNativeVersion);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -50,5 +57,26 @@ describe('generate-manifest', () => {
 
     expect(testLogger.error).toHaveBeenCalledWith('Error: --output-dir is required');
     expect(generateManifest).not.toHaveBeenCalled();
+  });
+
+  it('validates Storybook React Native version before generating manifest', async () => {
+    await main(['-o', './.storybook-static']);
+
+    expect(mockValidateStorybookReactNativeVersion).toHaveBeenCalledTimes(1);
+    expect(generateManifest).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips manifest generation and exits when validation fails', async () => {
+    const validationError = new Error('Unsupported Storybook React Native version');
+    mockValidateStorybookReactNativeVersion.mockRejectedValue(validationError);
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    await main(['-o', './.storybook-static']);
+
+    expect(generateManifest).not.toHaveBeenCalled();
+    expect(testLogger.error).toHaveBeenCalledWith(expect.stringContaining(validationError.message));
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    exitSpy.mockRestore();
   });
 });

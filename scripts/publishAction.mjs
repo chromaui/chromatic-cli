@@ -20,11 +20,19 @@ const publishAction = async ({ major, version, repo }) => {
   await $`git clone https://${process.env.GH_TOKEN}@github.com/${repo}.git ${path}`;
 
   await $`yarn clean-package`;
-  await copy(['action/*.js', 'action/*.json', 'action.yml', 'package.json', 'CHANGELOG.md'], path, {
-    parents: true, // keep directory structure (i.e. action dir)
+  await copy(
+    ['action/*.cjs', 'action/*.json', 'action.yml', 'package.json', 'CHANGELOG.md'],
+    path,
+    {
+      parents: true, // keep directory structure (i.e. action dir)
+      overwrite: true,
+    }
+  );
+  await copy(['action-src/LICENSE', 'action-src/README.md'], path, {
     overwrite: true,
   });
-  await copy(['action-src/LICENSE', 'action-src/README.md'], path, {
+  await copy(['node_modules/semver/**'], path, {
+    parents: true,
     overwrite: true,
   });
   await $`yarn clean-package restore`;

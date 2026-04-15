@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 
 import { emailHash } from '../lib/emailHash';
 import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
+import { validateStorybookReactNativeVersion } from '../lib/react-native/validateStorybookVersion';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import turboSnapNotAvailableForReactNative from '../ui/messages/errors/turboSnapNotAvailableForReactNative';
@@ -26,6 +27,9 @@ const AnnounceBuildMutation = `
       app {
         id
         turboSnapAvailability
+        account {
+          id
+        }
       }
     }
   }
@@ -110,6 +114,7 @@ const announceBuildInput = (ctx: Context) => {
     ...ctx.runtimeMetadata,
     rebuildForBuildId,
     storybookAddons: ctx.storybook.addons,
+    storybookRefs: ctx.storybook.refs,
     storybookVersion: ctx.storybook.version,
     projectMetadata: {
       ...ctx.projectMetadata,
@@ -130,6 +135,10 @@ export const announceBuild = async (ctx: Context) => {
   Sentry.setContext('build', { id: announcedBuild.id });
 
   updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
+
+  if (ctx.isReactNativeApp) {
+    await validateStorybookReactNativeVersion(ctx);
+  }
 
   if (ctx.turboSnap && ctx.isReactNativeApp) {
     throw new Error(turboSnapNotAvailableForReactNative());

@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "16.3.0",
+  "version": "16.5.0",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -30,9 +30,9 @@
       "import": "./isChromatic.mjs"
     },
     "./node": {
-      "types": "./dist/node.d.ts",
-      "require": "./dist/node.js",
-      "node": "./dist/node.js"
+      "types": "./dist/node.d.cts",
+      "require": "./dist/node.cjs",
+      "node": "./dist/node.cjs"
     },
     "./isChromatic": {
       "types": "./isChromatic.d.ts",
@@ -52,31 +52,31 @@
         "./isChromatic.d.ts"
       ],
       "node": [
-        "dist/node.d.ts"
+        "dist/node.d.cts"
       ]
     }
   },
   "bin": {
-    "chroma": "dist/bin.js",
-    "chromatic": "dist/bin.js",
-    "chromatic-cli": "dist/bin.js"
+    "chroma": "dist/bin.cjs",
+    "chromatic": "dist/bin.cjs",
+    "chromatic-cli": "dist/bin.cjs"
   },
   "files": [
-    "dist/*.js",
-    "dist/node.d.ts",
+    "dist/*.cjs",
+    "dist/node.d.cts",
     "isChromatic.js",
     "isChromatic.mjs",
     "isChromatic.d.ts"
   ],
   "scripts": {
-    "build": "clean-package && tsup && clean-package restore",
+    "build": "clean-package && tsdown && clean-package restore",
     "build-storybook": "storybook build --stats-json",
-    "build-test-storybook": "cross-env SMOKE_TEST=true storybook build -o test-storybook --stats-json",
+    "build-test-storybook": "cross-env storybook build -c ./.storybook-test -o test-storybook --stats-json",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
-    "chromatic": "./dist/bin.js",
-    "chromatic-prebuilt": "./dist/bin.js --storybook-build-dir=\"storybook-static\"",
-    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.js",
-    "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.js",
+    "chromatic": "./dist/bin.cjs",
+    "chromatic-prebuilt": "./dist/bin.cjs --storybook-build-dir=\"storybook-static\"",
+    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.cjs",
+    "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.cjs",
     "lint": "yarn lint:js bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
@@ -85,18 +85,22 @@
     "prepack": "clean-package",
     "postpack": "clean-package restore",
     "publish-action": "./scripts/publishAction.mjs",
-    "trace": "./dist/bin.js trace",
-    "trim-stats": "./dist/bin.js trim-stats-file",
+    "trace": "./dist/bin.cjs trace",
+    "trim-stats": "./dist/bin.cjs trim-stats-file",
     "storybook": "storybook dev -p 9009",
     "test": "vitest run --coverage",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
     "prepare": "yarn run build",
-    "dev": "tsup --watch",
+    "dev": "tsdown --watch",
     "clean:sourcemaps": "rm -f dist/*.map && rm -f action/*.map"
   },
   "resolutions": {
     "any-observable": "^0.5.1",
-    "lodash": "4.17.21"
+    "lodash": "4.17.21",
+    "@types/minimatch": "5.1.2"
+  },
+  "dependencies": {
+    "semver": "^7.3.5"
   },
   "devDependencies": {
     "@actions/core": "^1.10.0",
@@ -108,12 +112,11 @@
     "@sentry/cli": "^2.37.0",
     "@sentry/node": "^8.30.0",
     "@snyk/dep-graph": "^2.9.0",
-    "@storybook/addon-essentials": "^8.1.5",
-    "@storybook/addon-webpack5-compiler-swc": "^1.0.3",
-    "@storybook/csf-tools": "^8.1.5",
+    "@storybook/addon-docs": "^10.3.4",
+    "@storybook/builder-vite": "^10.3.4",
+    "@storybook/html-vite": "^10.3.4",
     "@storybook/linter-config": "^4.0.0",
-    "@storybook/react": "^8.1.5",
-    "@storybook/react-webpack5": "^8.1.5",
+    "@storybook/react-vite": "^10.3.4",
     "@tsconfig/node16": "^16.1.1",
     "@types/archiver": "^5.3.1",
     "@types/async-retry": "^1.4.3",
@@ -122,14 +125,14 @@
     "@types/jsonfile": "^6.0.1",
     "@types/listr": "^0.14.4",
     "@types/node": "18.x",
+    "@types/path-browserify": "^1",
     "@types/picomatch": "^2.3.0",
     "@types/progress-stream": "^2.0.2",
     "@types/prompts": "^2.4.9",
     "@types/semver": "^7.3.9",
-    "@types/webpack-env": "^1.18.5",
     "@types/ws": "^8",
-    "@typescript-eslint/eslint-plugin": "^6.8.0",
-    "@typescript-eslint/parser": "^6.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.5.8",
+    "@typescript-eslint/parser": "^8.5.8",
     "@vitest/coverage-v8": "^4.1.2",
     "ansi-html": "0.0.9",
     "any-observable": "^0.5.1",
@@ -156,7 +159,7 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-sort-class-members": "^1.21.0",
-    "eslint-plugin-storybook": "^10.2.1",
+    "eslint-plugin-storybook": "^10.3.4",
     "eslint-plugin-unicorn": "^59.0.1",
     "esm": "^3.2.25",
     "execa": "^9.6.0",
@@ -182,6 +185,7 @@
     "observable": "^2.1.4",
     "os-browserify": "^0.3.0",
     "p-limit": "3.1.0",
+    "path-browserify": "^1.0.1",
     "picomatch": "2.2.2",
     "pkg-up": "^3.1.0",
     "pluralize": "^8.0.0",
@@ -192,18 +196,17 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "read-package-up": "^11.0.0",
-    "semver": "^7.3.5",
     "slash": "^3.0.0",
     "snyk-nodejs-lockfile-parser": "^1.58.18",
     "snyk-nodejs-plugin": "^1.4.3",
     "sort-package-json": "1.50.0",
-    "storybook": "^8.1.5",
+    "storybook": "^10.3.4",
     "string-argv": "^0.3.1",
     "strip-ansi": "^7.1.0",
     "tmp-promise": "3.0.2",
     "ts-dedent": "^1.0.0",
     "ts-loader": "^9.2.5",
-    "tsup": "^7.2.0",
+    "tsdown": "^0.21.8",
     "typescript": "^5.2.2",
     "typescript-eslint": "^7.11.0",
     "util-deprecate": "^1.0.2",
