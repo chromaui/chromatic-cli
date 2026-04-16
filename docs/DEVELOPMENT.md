@@ -34,7 +34,7 @@ SMOKE_TEST=1 CHROMATIC_INDEX_URL=https://index.dev-chromatic.com yarn chromatic 
 #### Call CLI directly
 
 ```
-node /path/to/cli/repo/dist/bin.js -t <token>
+node /path/to/cli/repo/dist/bin.cjs -t <token>
 ```
 
 _This should work in most cases. However, if you run into weird issues, try the symlink version below._

@@ -30,9 +30,9 @@
       "import": "./isChromatic.mjs"
     },
     "./node": {
-      "types": "./dist/node.d.ts",
-      "require": "./dist/node.js",
-      "node": "./dist/node.js"
+      "types": "./dist/node.d.cts",
+      "require": "./dist/node.cjs",
+      "node": "./dist/node.cjs"
     },
     "./isChromatic": {
       "types": "./isChromatic.d.ts",
@@ -52,18 +52,18 @@
         "./isChromatic.d.ts"
       ],
       "node": [
-        "dist/node.d.ts"
+        "dist/node.d.cts"
       ]
     }
   },
   "bin": {
-    "chroma": "dist/bin.js",
-    "chromatic": "dist/bin.js",
-    "chromatic-cli": "dist/bin.js"
+    "chroma": "dist/bin.cjs",
+    "chromatic": "dist/bin.cjs",
+    "chromatic-cli": "dist/bin.cjs"
   },
   "files": [
-    "dist/*.js",
-    "dist/node.d.ts",
+    "dist/*.cjs",
+    "dist/node.d.cts",
     "isChromatic.js",
     "isChromatic.mjs",
     "isChromatic.d.ts"
@@ -73,10 +73,10 @@
     "build-storybook": "storybook build --stats-json",
     "build-test-storybook": "cross-env SMOKE_TEST=true storybook build -o test-storybook --stats-json",
     "build-subdir": "cd subdir ; yarn build ; cd ..",
-    "chromatic": "./dist/bin.js",
-    "chromatic-prebuilt": "./dist/bin.js --storybook-build-dir=\"storybook-static\"",
-    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.js",
-    "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.js",
+    "chromatic": "./dist/bin.cjs",
+    "chromatic-prebuilt": "./dist/bin.cjs --storybook-build-dir=\"storybook-static\"",
+    "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.cjs",
+    "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.cjs",
     "lint": "yarn lint:js bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
@@ -85,8 +85,8 @@
     "prepack": "clean-package",
     "postpack": "clean-package restore",
     "publish-action": "./scripts/publishAction.mjs",
-    "trace": "./dist/bin.js trace",
-    "trim-stats": "./dist/bin.js trim-stats-file",
+    "trace": "./dist/bin.cjs trace",
+    "trim-stats": "./dist/bin.cjs trim-stats-file",
     "storybook": "storybook dev -p 9009",
     "test": "vitest run --coverage",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",

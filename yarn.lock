@@ -8153,9 +8153,9 @@ __metadata:
     "@chromatic-com/vitest":
       optional: true
   bin:
-    chroma: dist/bin.js
-    chromatic: dist/bin.js
-    chromatic-cli: dist/bin.js
+    chroma: dist/bin.cjs
+    chromatic: dist/bin.cjs
+    chromatic-cli: dist/bin.cjs
   languageName: unknown
   linkType: soft
 
