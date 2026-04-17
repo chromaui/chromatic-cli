@@ -99,6 +99,9 @@
     "lodash": "4.17.21",
     "@types/minimatch": "5.1.2"
   },
+  "dependencies": {
+    "semver": "^7.3.5"
+  },
   "devDependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.0.0",
@@ -193,7 +196,6 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "read-package-up": "^11.0.0",
-    "semver": "^7.3.5",
     "slash": "^3.0.0",
     "snyk-nodejs-lockfile-parser": "^1.58.18",
     "snyk-nodejs-plugin": "^1.4.3",
