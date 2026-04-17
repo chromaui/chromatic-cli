@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from 'tsdown';
 
 export default defineConfig((options) => [
   {
@@ -9,10 +9,6 @@ export default defineConfig((options) => [
     splitting: true,
     minify: !options.watch,
     format: ['cjs'],
-    dts: {
-      entry: { node: 'node-src/index.ts' },
-      resolve: true,
-    },
     treeshake: true,
     sourcemap: true,
     clean: true,
@@ -22,6 +18,9 @@ export default defineConfig((options) => [
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
       SENTRY_RELEASE: process.env.SENTRY_RELEASE || 'development',
       SENTRY_DIST: 'cli',
+    },
+    dts: {
+      entry: 'node-src/index.ts',
     },
   },
   {
