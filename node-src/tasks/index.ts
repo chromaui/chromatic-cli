@@ -12,7 +12,10 @@ import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
 import storybookInfo from './storybookInfo';
 import upload from './upload';
+import uploadShare from './uploadShare';
 import verify from './verify';
+
+export const runShareBuild = [build, prepare, uploadShare];
 
 export const runUploadBuild = [
   auth,

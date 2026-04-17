@@ -27,10 +27,11 @@ import LoggingRenderer from './lib/loggingRenderer';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
+import { uploadShare } from './lib/share';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
-import getTasks from './tasks';
+import getTasks, { runShareBuild } from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
@@ -81,7 +82,24 @@ export type InitialContext = Omit<
   'options'
 >;
 
-const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
+async function setupContext(ctx: InitialContext, configFile?: string): Promise<Context> {
+  ctx.http = new HTTPClient(ctx);
+  ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
+    headers: {
+      'x-chromatic-session-id': ctx.sessionId,
+      'x-chromatic-cli-version': ctx.pkg.version,
+      'apollographql-client-name': 'chromatic-cli',
+      'apollographql-client-version': ctx.pkg.version,
+    },
+    retries: 3,
+  });
+  ctx.configuration = await getConfiguration(configFile);
+  const options = getOptions(ctx);
+  (ctx as Context).options = options;
+  ctx.log.setLogFile(options.logFile);
+
+  return ctx as Context;
+}
 
 /**
  * Entry point for the CLI, GitHub Action, and Node API
@@ -159,50 +177,34 @@ export async function run({
 /**
  * Entry point for testing only (typically invoked via `run` above)
  *
- * @param ctx The context set when executing the CLI.
+ * @param initialContext The context set when executing the CLI.
  *
  * @returns A promise that resolves when all steps are completed.
  */
-export async function runAll(ctx: InitialContext) {
-  ctx.log.info('');
-  ctx.log.info(intro(ctx));
-  ctx.log.info('');
+export async function runAll(initialContext: InitialContext) {
+  initialContext.log.info('');
+  initialContext.log.info(intro(initialContext));
+  initialContext.log.info('');
 
   const onError = (err: Error | Error[]) => {
-    ctx.log.info('');
-    ctx.log.error(fatalError(ctx, [err].flat()));
-    ctx.extraOptions?.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, [err].flat()),
+    initialContext.log.info('');
+    initialContext.log.error(fatalError(initialContext, [err].flat()));
+    initialContext.extraOptions?.experimental_onTaskError?.(initialContext, {
+      formattedError: fatalError(initialContext, [err].flat()),
       originalError: err,
     });
-    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+    setExitCode(initialContext, exitCodes.INVALID_OPTIONS, true);
   };
 
+  let ctx: Context;
   try {
-    ctx.http = new HTTPClient(ctx);
-    ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
-      headers: {
-        'x-chromatic-session-id': ctx.sessionId,
-        'x-chromatic-cli-version': ctx.pkg.version,
-        'apollographql-client-name': 'chromatic-cli',
-        'apollographql-client-version': ctx.pkg.version,
-      },
-      retries: 3,
-    });
-    ctx.configuration = await getConfiguration(
-      ctx.extraOptions?.configFile || ctx.flags.configFile
+    ctx = await setupContext(
+      initialContext,
+      initialContext.extraOptions?.configFile || initialContext.flags.configFile
     );
-    const options = getOptions(ctx);
-    (ctx as Context).options = options;
-    ctx.log.setLogFile(options.logFile);
-
     setExitCode(ctx, exitCodes.OK);
   } catch (err) {
     return onError(err);
-  }
-
-  if (!isContext(ctx)) {
-    return onError(new Error('Invalid context'));
   }
 
   // Run these in parallel; neither should ever reject
@@ -294,6 +296,126 @@ async function runBuild(ctx: Context) {
     if (!ctx.exitCode) {
       setExitCode(ctx, exitCodes.UNKNOWN_ERROR);
     }
+  }
+}
+
+export interface ShareOptions {
+  userToken: string;
+  onUrl?: (url: string) => void;
+  onProgress?: (progress: number, total: number) => void;
+  onError?: (error: Error) => void;
+  abortSignal?: AbortSignal;
+}
+
+export interface ShareOutput {
+  shareUrl: string;
+}
+
+/**
+ * Share a Storybook without creating a full Chromatic build.
+ * Reserves a share URL, runs the upload pipeline, and resolves when the upload is complete.
+ *
+ * @param shareOptions Options for the share operation.
+ * @param shareOptions.userToken The user token for authentication.
+ * @param shareOptions.onUrl Callback fired as soon as the share URL is reserved.
+ * @param shareOptions.onProgress Callback reporting upload progress as (bytesUploaded, totalBytes).
+ * @param shareOptions.onError Callback for errors. When provided, share() resolves instead of rejecting.
+ * @param shareOptions.abortSignal An AbortSignal to cancel the share operation.
+ *
+ * @returns An object with the share URL.
+ */
+export async function share(shareOptions: ShareOptions): Promise<ShareOutput> {
+  const { onUrl, onError } = shareOptions;
+
+  let ctx: Context;
+  try {
+    ctx = await setupShareContext(shareOptions);
+  } catch (error) {
+    if (onError) {
+      onError(error);
+      return { shareUrl: '' };
+    }
+    throw error;
+  }
+
+  let shareUrl = '';
+  try {
+    const { shareUrl: shareUrlFromIndex, target } = await uploadShare(ctx);
+    shareUrl = shareUrlFromIndex;
+    ctx.share = { shareUrl, target };
+    ctx.git = { branch: '', commit: '', committedAt: 0, fromCI: false };
+
+    onUrl?.(shareUrl);
+
+    await runShareTasks(ctx);
+  } catch (error) {
+    // If a callback was provided, use that then resolve
+    if (onError) {
+      onError(error);
+      return { shareUrl };
+    }
+    throw error;
+  }
+
+  return { shareUrl };
+}
+
+async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
+  const { userToken, onProgress, abortSignal } = shareOptions;
+
+  const extraOptions: Partial<Options> = {
+    userToken,
+    ...(abortSignal && { experimental_abortSignal: abortSignal }),
+    ...(onProgress && {
+      experimental_onTaskProgress: (_ctx: Context, status: { progress: number; total: number }) => {
+        onProgress(status.progress, status.total);
+      },
+    }),
+  };
+  const config = {
+    ...parseArguments([]),
+    extraOptions,
+  };
+
+  const log = createLogger(config.flags, extraOptions);
+
+  const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
+  if (!packageInfo) {
+    throw new Error('No package.json found');
+  }
+
+  const { path: packagePath, packageJson } = packageInfo;
+  const initialContext: InitialContext = {
+    ...config,
+    flags: {
+      ...config.flags,
+      interactive: false,
+    },
+    packagePath,
+    packageJson,
+    env: getEnvironment(),
+    log,
+    sessionId: uuid(),
+  };
+
+  return setupContext(initialContext);
+}
+
+async function runShareTasks(ctx: Context): Promise<void> {
+  const listrOptions: any = {
+    log: ctx.log,
+    renderer: NonTTYRenderer,
+  };
+
+  try {
+    await new Listr(
+      runShareBuild.map((task) => task(ctx)),
+      listrOptions
+    ).run(ctx);
+    ctx.log.debug('Tasks completed');
+  } finally {
+    endActivity(ctx);
+    ctx.log.flush();
   }
 }
 
