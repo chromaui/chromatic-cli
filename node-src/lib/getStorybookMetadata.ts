@@ -166,6 +166,7 @@ export const findBuilder = async (mainConfig, v7) => {
   ]);
 };
 
+// TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
 // Only used by Chromatic - surfaces Storybook refs and is used when announcing a build.
 // The refs are consumed by the MCP Addon for hosted Storybooks with composition on Chromatic.
 const findReferences = async (mainConfig, v7) => {
