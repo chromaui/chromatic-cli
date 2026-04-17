@@ -166,13 +166,13 @@ export const findBuilder = async (mainConfig, v7) => {
   ]);
 };
 
-export const findRefs = async (mainConfig, v7) => {
+export const findReferences = async (mainConfig, v7) => {
   if (!mainConfig || !v7) {
     return {};
   }
 
-  const refs = mainConfig.getSafeFieldValue(['refs']);
-  return refs ? { refs } : {};
+  const references = mainConfig.getSafeFieldValue(['refs']);
+  return references ? { refs: references } : {};
 };
 
 export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => {
@@ -212,7 +212,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findConfigFlags(ctx),
     findStorybookVersion(ctx),
     findBuilder(mainConfig, v7),
-    findRefs(mainConfig, v7),
+    findReferences(mainConfig, v7),
   ]);
 
   ctx.log.debug(info);
