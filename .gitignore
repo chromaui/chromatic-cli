@@ -27,7 +27,3 @@ storybook-out
 coverage
 package.json.backup
 tests-file.xml
-
-# Compound Engineering plugin artifacts - not needed in repo
-docs/plans
-docs/brainstorms
