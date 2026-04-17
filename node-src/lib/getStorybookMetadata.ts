@@ -166,7 +166,10 @@ export const findBuilder = async (mainConfig, v7) => {
   ]);
 };
 
-export const findReferences = async (mainConfig, v7) => {
+// Only used by Chromatic - surfaces Storybook refs and is used when announcing a build.
+// The refs consumed by the MCP Addon for hosted Storybooks with composition on Chromatic.
+const findReferences = async (mainConfig, v7) => {
+  // The MCP Addon was first added within version 9; there is no need to check for older versions
   if (!mainConfig || !v7) {
     return {};
   }
