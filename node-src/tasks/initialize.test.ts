@@ -105,7 +105,14 @@ describe('announceBuild', () => {
     environment: ':environment',
     git: { version: 'whatever', matchesBranch: () => false, committedAt: 0 },
     pkg: { version: '1.0.0' },
-    storybook: { baseDir: '', version: '2.0.0', addons: [] },
+    storybook: {
+      baseDir: '',
+      version: '2.0.0',
+      addons: [],
+      refs: {
+        design: { title: 'Design System', url: 'https://design.example.com' },
+      },
+    },
     runtimeMetadata: {
       nodePlatform: 'darwin',
       nodeVersion: '18.12.1',
