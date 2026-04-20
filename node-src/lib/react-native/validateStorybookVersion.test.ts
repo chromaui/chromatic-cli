@@ -73,6 +73,17 @@ it('does not block when no candidate package.json exists on disk', async () => {
   expect(result).toBeUndefined();
 });
 
+it('falls back to later node_modules paths when earlier candidates are missing', async () => {
+  mockResolvePaths.mockReturnValue(['/missing/node_modules', '/found/node_modules']);
+  mockPathExists.mockImplementation(async (candidate: string) => candidate.startsWith('/found/'));
+  mockReadJson.mockResolvedValue({ version: '8.6.0' });
+
+  await expect(validateStorybookReactNativeVersion(ctx)).rejects.toThrow(/8\.6\.0/);
+  expect(mockReadJson).toHaveBeenCalledWith(
+    '/found/node_modules/@storybook/react-native/package.json'
+  );
+});
+
 it('does not block when require.resolve.paths returns null', async () => {
   mockResolvePaths.mockReturnValue(null);
   const result = await validateStorybookReactNativeVersion(ctx);
