@@ -42,8 +42,8 @@ export async function validateStorybookReactNativeVersion(
  * Node would search from the user's project root. Uses `createRequire` so pnpm/yarn/npm workspace
  * layouts (including symlinked node_modules) resolve instead of just the project root. We read
  * `package.json` directly off disk rather than via `require.resolve('.../package.json')` because
- * recent versions of `@storybook/react-native` declare an `exports` map that omits
- * `./package.json`, which would otherwise trigger ERR_PACKAGE_PATH_NOT_EXPORTED.
+ * `@storybook/react-native` declares an `exports` map that omits `./package.json`, which would
+ * otherwise trigger ERR_PACKAGE_PATH_NOT_EXPORTED.
  *
  * @param ctx The context set when executing the CLI.
  *
