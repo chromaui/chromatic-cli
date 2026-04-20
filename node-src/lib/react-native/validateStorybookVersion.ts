@@ -21,7 +21,7 @@ export async function validateStorybookReactNativeVersion(
   const version = await getInstalledStorybookReactNativeVersion(ctx);
 
   if (!version) {
-    ctx.log.error(`Could not determine @storybook/react-native version. Skipping version check.`);
+    ctx.log.debug(`Could not determine @storybook/react-native version. Skipping version check.`);
     return;
   }
 
@@ -69,7 +69,7 @@ async function getInstalledStorybookReactNativeVersion(
   }
 
   if (!packageJsonPath) {
-    ctx.log.error(`Could not resolve @storybook/react-native from ${workingDirectory}`);
+    ctx.log.debug(`Could not resolve @storybook/react-native from ${workingDirectory}`);
     return;
   }
   ctx.log.debug(`Resolved @storybook/react-native package.json at ${packageJsonPath}`);
@@ -78,7 +78,7 @@ async function getInstalledStorybookReactNativeVersion(
   try {
     installed = await readJson(packageJsonPath);
   } catch (err) {
-    ctx.log.error(
+    ctx.log.debug(
       `Failed to read @storybook/react-native package.json at ${packageJsonPath}: ${err.message}`
     );
     return;
