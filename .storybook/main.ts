@@ -35,7 +35,7 @@ const config: StorybookConfig = {
         TERM: 'xterm-256color',
       },
       platform: '${process.platform}',
-      cwd: () => './',
+      cwd: () => '/',
     };
     </script>
     `;
