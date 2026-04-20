@@ -133,7 +133,7 @@ export const announceBuild = async (ctx: Context) => {
   updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
 
   if (ctx.isReactNativeApp) {
-    await validateStorybookReactNativeVersion();
+    await validateStorybookReactNativeVersion(ctx);
   }
 
   if (ctx.turboSnap && ctx.isReactNativeApp) {

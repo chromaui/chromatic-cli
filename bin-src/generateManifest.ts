@@ -72,7 +72,7 @@ export async function main(argv: string[]) {
   } as any;
 
   try {
-    await validateStorybookReactNativeVersion();
+    await validateStorybookReactNativeVersion(ctx);
     await generateManifest(ctx);
   } catch (err) {
     log.error(`Error: ${err.message}`);
