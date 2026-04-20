@@ -259,6 +259,7 @@ describe('announceBuild', () => {
     it('propagates validation errors', async () => {
       const validationError = new Error('Unsupported Storybook React Native version');
       validateStorybookReactNativeVersion.mockRejectedValue(validationError);
+
       const build = {
         number: 1,
         status: 'ANNOUNCED',
@@ -275,6 +276,7 @@ describe('announceBuild', () => {
     it('reports the version error before the TurboSnap error when both apply', async () => {
       const validationError = new Error('Unsupported Storybook React Native version');
       validateStorybookReactNativeVersion.mockRejectedValue(validationError);
+
       const build = {
         number: 1,
         status: 'ANNOUNCED',
