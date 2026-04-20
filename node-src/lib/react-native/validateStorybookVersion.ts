@@ -4,18 +4,18 @@ import path from 'path';
 import semver from 'semver';
 
 import { Context } from '../../types';
-import missingStorybookReactNativePackage from '../../ui/messages/errors/missingStorybookReactNativePackage';
 import unsupportedStorybookReactNativeVersion from '../../ui/messages/errors/unsupportedStorybookReactNativeVersion';
 
 export const MINIMUM_STORYBOOK_REACT_NATIVE_VERSION = '9.0.0';
 
 /**
- * Ensures the installed `@storybook/react-native` package meets Chromatic's minimum supported
- * version. Throws a clear error if the package is missing or below the minimum so the build can
- * exit before running into less actionable downstream errors.
+ * Throws when the installed `@storybook/react-native` version is below the minimum supported
+ * version (if we can determine it). Any unknown state (package not resolved, package.json
+ * unreadable, invalid semver version) falls through in case we're simply looking in the wrong place
+ * for the package.json (e.g. due to workspace layouts, etc.).
  *
- * Resolution uses `createRequire` rooted at the user's project so pnpm/yarn/npm workspace
- * layouts (including symlinked node_modules) resolve instead of just the project root.
+ * Resolution uses `createRequire` rooted at the user's project so pnpm/yarn/npm workspace layouts
+ * (including symlinked node_modules) resolve instead of just the project root.
  *
  * @param ctx The context set when executing the CLI.
  */
@@ -33,7 +33,7 @@ export async function validateStorybookReactNativeVersion(
     ctx.log.debug(`Resolved @storybook/react-native package.json at ${packageJsonPath}`);
   } catch (err) {
     ctx.log.error(`Could not resolve @storybook/react-native from ${projectRoot}: ${err.message}`);
-    throw new Error(missingStorybookReactNativePackage());
+    return;
   }
 
   let installed: { version?: string };
