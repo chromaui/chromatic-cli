@@ -23,7 +23,6 @@ const mockValidateStorybookReactNativeVersion = vi.mocked(validateStorybookReact
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.resetAllMocks();
 });
 
 describe('generate-manifest', () => {

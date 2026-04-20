@@ -26,9 +26,15 @@ export async function validateStorybookReactNativeVersion(): Promise<void> {
     throw new Error(missingStorybookReactNativePackage());
   }
 
-  const installed = await readJson(packageJsonPath);
-  const version = installed?.version;
-  if (!version || !semver.gte(version, MINIMUM_STORYBOOK_REACT_NATIVE_VERSION)) {
-    throw new Error(unsupportedStorybookReactNativeVersion(version ?? 'unknown'));
+  let installed: { version?: string };
+  try {
+    installed = await readJson(packageJsonPath);
+  } catch {
+    return;
+  }
+
+  const version = installed?.version ?? 'unknown';
+  if (semver.valid(version) && semver.lt(version, MINIMUM_STORYBOOK_REACT_NATIVE_VERSION)) {
+    throw new Error(unsupportedStorybookReactNativeVersion(version));
   }
 }

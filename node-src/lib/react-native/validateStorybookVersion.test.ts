@@ -25,17 +25,20 @@ beforeEach(() => {
 describe('validateStorybookReactNativeVersion', () => {
   it('resolves when installed version is 9.0.0', async () => {
     mockReadJson.mockResolvedValue({ version: '9.0.0' });
-    await expect(validateStorybookReactNativeVersion()).resolves.toBeUndefined();
+    const result = await validateStorybookReactNativeVersion();
+    expect(result).toBeUndefined();
   });
 
   it('resolves when installed version is greater than 9.0.0', async () => {
     mockReadJson.mockResolvedValue({ version: '9.2.3' });
-    await expect(validateStorybookReactNativeVersion()).resolves.toBeUndefined();
+    const result = await validateStorybookReactNativeVersion();
+    expect(result).toBeUndefined();
   });
 
   it('resolves for pre-release patch of 9.0.1', async () => {
     mockReadJson.mockResolvedValue({ version: '9.0.1-beta.1' });
-    await expect(validateStorybookReactNativeVersion()).resolves.toBeUndefined();
+    const result = await validateStorybookReactNativeVersion();
+    expect(result).toBeUndefined();
   });
 
   it('rejects for pre-release of 9.0.0', async () => {
@@ -62,10 +65,21 @@ describe('validateStorybookReactNativeVersion', () => {
     );
   });
 
-  it('rejects with the unsupported-version error when version field is absent', async () => {
+  it('does not block when the version field is absent', async () => {
     mockReadJson.mockResolvedValue({});
-    await expect(validateStorybookReactNativeVersion()).rejects.toThrow(
-      /Unsupported Storybook React Native version/
-    );
+    const result = await validateStorybookReactNativeVersion();
+    expect(result).toBeUndefined();
+  });
+
+  it('does not block when the version field is not valid semver', async () => {
+    mockReadJson.mockResolvedValue({ version: 'workspace:*' });
+    const result = await validateStorybookReactNativeVersion();
+    expect(result).toBeUndefined();
+  });
+
+  it('does not block when reading package.json fails', async () => {
+    mockReadJson.mockRejectedValue(new Error('Unexpected end of JSON input'));
+    const result = await validateStorybookReactNativeVersion();
+    expect(result).toBeUndefined();
   });
 });
