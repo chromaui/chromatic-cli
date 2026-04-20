@@ -3,6 +3,7 @@ import path from 'path';
 
 import { createLogger } from '../node-src/lib/log';
 import { generateManifest } from '../node-src/lib/react-native/generateManifest';
+import { validateStorybookReactNativeVersion } from '../node-src/lib/react-native/validateStorybookVersion';
 import { Context } from '../node-src/types';
 
 /**
@@ -71,6 +72,7 @@ export async function main(argv: string[]) {
   } as any;
 
   try {
+    await validateStorybookReactNativeVersion();
     await generateManifest(ctx);
   } catch (err) {
     log.error(`Error: ${err.message}`);
