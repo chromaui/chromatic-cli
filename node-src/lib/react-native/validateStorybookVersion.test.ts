@@ -1,5 +1,5 @@
 import TestLogger from '@cli/testLogger';
-import { readJson } from 'fs-extra';
+import { pathExists, readJson } from 'fs-extra';
 import { createRequire } from 'module';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -10,19 +10,28 @@ vi.mock('module', () => ({
 }));
 
 vi.mock('fs-extra', () => ({
+  pathExists: vi.fn(),
   readJson: vi.fn(),
 }));
 
-const mockCreateRequire = vi.mocked(createRequire);
-const mockReadJson = vi.mocked(readJson) as unknown as ReturnType<typeof vi.fn>;
-const mockResolve = vi.fn();
+const mockCreateRequire = vi.mocked(
+  createRequire as (filename: string) => {
+    resolve: { paths: (request: string) => string[] | null };
+  }
+);
+const mockReadJson = vi.mocked(readJson as (file: string) => Promise<{ version?: string }>);
+const mockPathExists = vi.mocked(pathExists as (path: string) => Promise<boolean>);
+const mockResolvePaths = vi.fn();
 
 const ctx = { log: new TestLogger() };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockCreateRequire.mockReturnValue({ resolve: mockResolve } as unknown as NodeJS.Require);
-  mockResolve.mockReturnValue('/fake/node_modules/@storybook/react-native/package.json');
+  mockCreateRequire.mockReturnValue({
+    resolve: { paths: mockResolvePaths },
+  });
+  mockResolvePaths.mockReturnValue(['/fake/node_modules']);
+  mockPathExists.mockResolvedValue(true);
 });
 
 it('resolves when installed version is 9.0.0', async () => {
@@ -58,10 +67,14 @@ it('rejects with the unsupported-version error for 8.x', async () => {
   await expect(validateStorybookReactNativeVersion(ctx)).rejects.toThrow(/8\.6\.0/);
 });
 
-it('does not block when require.resolve throws', async () => {
-  mockResolve.mockImplementation(() => {
-    throw new Error('Cannot find module');
-  });
+it('does not block when no candidate package.json exists on disk', async () => {
+  mockPathExists.mockResolvedValue(false);
+  const result = await validateStorybookReactNativeVersion(ctx);
+  expect(result).toBeUndefined();
+});
+
+it('does not block when require.resolve.paths returns null', async () => {
+  mockResolvePaths.mockReturnValue(null);
   const result = await validateStorybookReactNativeVersion(ctx);
   expect(result).toBeUndefined();
 });
