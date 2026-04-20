@@ -5,8 +5,7 @@ import semver from 'semver';
 
 import { Context } from '../../types';
 import unsupportedStorybookReactNativeVersion from '../../ui/messages/errors/unsupportedStorybookReactNativeVersion';
-
-export const MINIMUM_STORYBOOK_REACT_NATIVE_VERSION = '9.0.0';
+import { MINIMUM_STORYBOOK_REACT_NATIVE_VERSION } from './constants';
 
 /**
  * Throws when the installed `@storybook/react-native` version is below the minimum supported

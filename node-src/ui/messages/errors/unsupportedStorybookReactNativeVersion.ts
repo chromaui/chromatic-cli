@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
-import { MINIMUM_STORYBOOK_REACT_NATIVE_VERSION } from '../../../lib/react-native/validateStorybookVersion';
+import { MINIMUM_STORYBOOK_REACT_NATIVE_VERSION } from '../../../lib/react-native/constants';
 import { error } from '../../components/icons';
 
 export default (installedVersion: string) =>
