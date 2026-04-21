@@ -17,13 +17,11 @@ ansiHTML.setColors({
 
 // @ts-expect-error chalk is not fully typed
 chalk.enabled = true;
-
 chalk.level = 3;
 
 const decorators = [
   (storyFn, { kind }) => {
     const value = storyFn();
-    console.log({value, kind});
     if (kind.startsWith('CLI/')) {
       document.body.style.backgroundColor = '#16242c';
       return `<pre class="code-style"><code>${ansiHTML(value)}</code></pre>`;
@@ -37,14 +35,12 @@ const decorators = [
   },
 ];
 
- const tags = ['autodocs', 'autodocs'];
-
 const preview: Preview = {
   parameters: {
     layout: 'fullscreen',
   },
   decorators,
-  tags,
+  tags: [ 'autodocs' ] ,
 };
 
 export default preview;
