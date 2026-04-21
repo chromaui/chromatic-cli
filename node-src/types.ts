@@ -1,6 +1,7 @@
 import { InitialContext } from '.';
 import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
+import type { AnalyticsClient } from './lib/analytics';
 import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
@@ -213,6 +214,7 @@ export interface Context {
     packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
     packageManagerVersion?: string;
   };
+  analytics?: AnalyticsClient;
   environment?: Record<string, string>;
   reportPath?: string;
   isPublishOnly?: boolean;

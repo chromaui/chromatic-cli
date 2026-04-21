@@ -276,6 +276,13 @@ async function runBuild(ctx: Context) {
       }
 
       ctx.log.flush();
+
+      try {
+        await ctx.analytics?.shutdown();
+      } catch (error) {
+        // Analytics shutdown should never crash the CLI, but we want to know about it
+        Sentry.captureException(error);
+      }
     }
   } catch (error) {
     const errors = [error].flat(); // GraphQLClient might throw an array of errors
