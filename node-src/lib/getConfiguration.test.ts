@@ -350,3 +350,44 @@ describe('resolveConfigFileName', () => {
     }
   });
 });
+
+describe('reactNative config', () => {
+  it('accepts a valid reactNative config', async () => {
+    mockedReadFile.mockReturnValue(
+      JSON.stringify({
+        reactNative: {
+          iosBuildCommand: 'my-ios-build',
+          androidBuildCommand: 'my-android-build',
+        },
+      })
+    );
+
+    expect(await getConfiguration()).toMatchObject({
+      reactNative: {
+        iosBuildCommand: 'my-ios-build',
+        androidBuildCommand: 'my-android-build',
+      },
+    });
+  });
+
+  it('accepts a partial reactNative config', async () => {
+    mockedReadFile.mockReturnValue(
+      JSON.stringify({
+        reactNative: {
+          iosBuildCommand: 'my-ios-build',
+        },
+      })
+    );
+
+    expect(await getConfiguration()).toMatchObject({
+      reactNative: { iosBuildCommand: 'my-ios-build' },
+    });
+  });
+
+  it('accepts config without reactNative', async () => {
+    mockedReadFile.mockReturnValue(JSON.stringify({ projectId: 'project-id' }));
+
+    const config = await getConfiguration();
+    expect(config.reactNative).toBeUndefined();
+  });
+});
