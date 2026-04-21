@@ -1,3 +1,20 @@
+# v16.4.0 (Tue Apr 21 2026)
+
+#### 🚀 Enhancement
+
+- Upgrade to Storybook 10 [#1268](https://github.com/chromaui/chromatic-cli/pull/1268) ([@jmhobbs](https://github.com/jmhobbs))
+- React Native build command [#1274](https://github.com/chromaui/chromatic-cli/pull/1274) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🐛 Bug Fix
+
+- Upgrade to `tsdown` [#1282](https://github.com/chromaui/chromatic-cli/pull/1282) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v16.3.0 (Tue Apr 14 2026)
 
 #### 🚀 Enhancement
