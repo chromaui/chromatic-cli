@@ -166,6 +166,19 @@ export const findBuilder = async (mainConfig, v7) => {
   ]);
 };
 
+// TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
+// Only used by Chromatic - surfaces Storybook refs and is used when announcing a build.
+// The refs are consumed by the MCP Addon for hosted Storybooks with composition on Chromatic.
+const findReferences = async (mainConfig, v7) => {
+  // The MCP Addon was first added within version 9; there is no need to check for older versions
+  if (!mainConfig || !v7) {
+    return {};
+  }
+
+  const references = mainConfig.getSafeFieldValue(['refs']);
+  return references ? { refs: references } : {};
+};
+
 export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => {
   const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
   const files = await readdir(configDirectory);
@@ -205,6 +218,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
     findConfigFlags(ctx),
     findStorybookVersion(ctx),
     findBuilder(mainConfig, v7),
+    findReferences(mainConfig, v7),
   ]);
 
   ctx.log.debug(info);

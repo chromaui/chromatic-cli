@@ -150,6 +150,18 @@ export interface Options extends Configuration {
   skipUpdateCheck: Flags['skipUpdateCheck'];
 }
 
+interface StorybookReferenceConfig {
+  title: string;
+  url: string;
+  expanded?: boolean;
+  sourceUrl?: string;
+}
+
+type StorybookReference =
+  | StorybookReferenceConfig
+  | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
+  | { disable: boolean };
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -250,6 +262,7 @@ export interface Context {
       packageVersion?: string;
     };
     mainConfigFilePath?: string;
+    refs?: Record<string, StorybookReference>;
   };
   projectMetadata: {
     hasRouter?: boolean;
