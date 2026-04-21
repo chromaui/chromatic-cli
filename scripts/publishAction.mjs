@@ -31,6 +31,10 @@ const publishAction = async ({ major, version, repo }) => {
   await copy(['action-src/LICENSE', 'action-src/README.md'], path, {
     overwrite: true,
   });
+  await copy(['node_modules/semver/**'], path, {
+    parents: true,
+    overwrite: true,
+  });
   await $`yarn clean-package restore`;
 
   const $$ = (strings, ...args) => {

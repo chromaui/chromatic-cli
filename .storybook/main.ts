@@ -1,29 +1,46 @@
-import { StorybookConfig } from '@storybook/react-webpack5';
+import { StorybookConfig } from '@storybook/html-vite';
+import { fileURLToPath } from 'node:url';
 
 const config: StorybookConfig = {
-  stories: process.env.SMOKE_TEST
-    ? ['../test-stories/*.stories.*']
-    : ['../node-src/**/*.@(mdx|stories.*)'],
-  addons: ['@storybook/addon-essentials', '@storybook/addon-webpack5-compiler-swc'],
+  stories: ['../node-src/**/*.@(mdx|stories.*)'],
+  addons: ['@storybook/addon-docs'],
   framework: {
-    name: '@storybook/react-webpack5',
+    name: '@storybook/html-vite',
     options: {},
   },
-  webpackFinal: async (config) => {
+  core: {
+    builder: '@storybook/builder-vite',
+  },
+  viteFinal: async (config) => {
     config.resolve = {
       ...config.resolve,
-      fallback: {
-        ...config?.resolve?.fallback,
-        os: require.resolve('os-browserify/browser'),
+      alias: {
+        ...config.resolve?.alias,
+        os: fileURLToPath(import.meta.resolve('os-browserify/browser')),
+        path: "path-browserify",
       },
     };
-
     return config;
   },
-  docs: {},
-  typescript: {
-    reactDocgen: 'react-docgen-typescript',
+  previewHead: (head) => {
+    return head + `
+    <link href="./css/global.css" rel="stylesheet" />
+
+    <script>
+    window.process = {
+      env: {
+        CI: '1',
+        NODE_ENV: 'production',
+        STORYBOOK_INVOKED_BY: 'chromatic',
+        TERM: 'xterm-256color',
+      },
+      platform: '${process.platform}',
+      cwd: () => '/',
+    };
+    </script>
+    `;
   },
+  typescript: {},
   staticDirs: ['../static'],
 };
 

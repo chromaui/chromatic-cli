@@ -1,9 +1,9 @@
-import { printConfig, readConfig } from '@storybook/csf-tools';
 import { readdir } from 'fs/promises';
 import { readJson } from 'fs-extra';
 import meow from 'meow';
 import path from 'path';
 import semver from 'semver';
+import { printConfig, readConfig } from 'storybook/internal/csf-tools';
 import { parseArgsStringToArgv } from 'string-argv';
 
 import { Context } from '../types';
@@ -175,6 +175,8 @@ export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => 
 
 export const getStorybookMetadata = async (ctx: Context) => {
   const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
+
+  // @ts-expect-error __non_webpack_require__ is only defined when bundled with webpack, and allows us to bypass webpack's module system to require files at runtime
   // eslint-disable-next-line unicorn/prefer-module
   const r = typeof __non_webpack_require__ === 'undefined' ? require : __non_webpack_require__;
 

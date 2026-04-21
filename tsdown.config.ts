@@ -34,6 +34,7 @@ export default defineConfig((options) => [
     clean: true,
     platform: 'node',
     target: 'node20', // Lowest supported Node version
+    external: ['semver'],
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
       SENTRY_RELEASE: process.env.SENTRY_RELEASE || 'development',
