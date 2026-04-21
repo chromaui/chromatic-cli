@@ -1,3 +1,22 @@
+# v16.5.0 (Tue Apr 21 2026)
+
+#### 🚀 Enhancement
+
+- [WFL-208] Extract `refs` field from Storybook and pass when announcing build [#1283](https://github.com/chromaui/chromatic-cli/pull/1283) ([@ax-vasquez](https://github.com/ax-vasquez))
+- Validate `@storybook/react-native` version [#1288](https://github.com/chromaui/chromatic-cli/pull/1288) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Add a React Native section to the config file [#1289](https://github.com/chromaui/chromatic-cli/pull/1289) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 3
+
+- Armando Vasquez ([@ax-vasquez](https://github.com/ax-vasquez))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v16.4.0 (Tue Apr 21 2026)
 
 #### 🚀 Enhancement
