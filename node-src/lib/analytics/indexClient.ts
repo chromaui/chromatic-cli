@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../io/graphqlClient';
 import { Logger } from '../log';
+import type { AnalyticsEvent } from './events';
 import type { AnalyticsClient } from './types';
 
 const TrackCLITelemetryEventMutation = `
@@ -28,7 +29,7 @@ export class IndexAnalyticsClient implements AnalyticsClient {
     this.logger = logger;
   }
 
-  trackEvent(eventName: string, properties?: Record<string, unknown>): void {
+  trackEvent(eventName: AnalyticsEvent, properties?: Record<string, unknown>): void {
     this.logger.debug(`[analytics] trackEvent: ${eventName}`, JSON.stringify(properties));
 
     const input = { event: eventName, properties };

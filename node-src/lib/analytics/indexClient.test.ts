@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../testLogger';
+import { AnalyticsEvent } from './events';
 import { IndexAnalyticsClient } from './indexClient';
 
 vi.mock('@sentry/node', () => ({
@@ -24,7 +25,7 @@ describe('IndexAnalyticsClient', () => {
     it('calls runQuery with TrackCLITelemetryEvent mutation and input built from properties', () => {
       const { client, runQuery } = makeClient();
 
-      client.trackEvent('CLI_STORYBOOK_BUILD_FAILED', {
+      client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {
         errorCategory: 'storybook_build_failed',
       });
 
@@ -32,7 +33,7 @@ describe('IndexAnalyticsClient', () => {
         expect.stringMatching(/TrackCLITelemetryEvent/),
         {
           input: {
-            event: 'CLI_STORYBOOK_BUILD_FAILED',
+            event: AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
             properties: { errorCategory: 'storybook_build_failed' },
           },
         },
@@ -44,7 +45,7 @@ describe('IndexAnalyticsClient', () => {
       const error = new Error('GQL failed');
       const { client } = makeClient(vi.fn().mockRejectedValue(error));
 
-      expect(() => client.trackEvent('some-event', {})).not.toThrow();
+      expect(() => client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {})).not.toThrow();
 
       await client.shutdown();
 
@@ -63,8 +64,8 @@ describe('IndexAnalyticsClient', () => {
       );
       const { client } = makeClient(runQuery);
 
-      client.trackEvent('event-1', {});
-      client.trackEvent('event-2', {});
+      client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {});
+      client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {});
 
       let resolved = false;
       const shutdownPromise = client.shutdown().then(() => {
@@ -86,7 +87,7 @@ describe('IndexAnalyticsClient', () => {
         const runQuery = vi.fn(() => new Promise(() => {}));
         const { client, logger } = makeClient(runQuery);
 
-        client.trackEvent('event-1', {});
+        client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {});
 
         const shutdownPromise = client.shutdown();
         vi.advanceTimersByTime(5000);
