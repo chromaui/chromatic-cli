@@ -289,9 +289,6 @@ export interface Context {
     app: {
       id: string;
       turboSnapAvailability: string;
-      account: {
-        id: string;
-      };
     };
   };
   build: {

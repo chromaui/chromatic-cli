@@ -135,7 +135,7 @@ describe('announceBuild', () => {
       number: 1,
       status: 'ANNOUNCED',
       id: 'announced-build-id',
-      app: { id: 'announced-build-app-id', account: { id: 'account-id' } },
+      app: { id: 'announced-build-app-id' },
     };
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ announceBuild: build });
