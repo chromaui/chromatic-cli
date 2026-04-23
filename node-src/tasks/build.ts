@@ -1,6 +1,6 @@
 import { AnalyticsEvent } from '@cli/analytics/events';
 import * as Sentry from '@sentry/node';
-import { createWriteStream, existsSync, readFileSync } from 'fs';
+import { createWriteStream, existsSync, readFileSync, renameSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -10,6 +10,8 @@ import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e'
 import { isE2EBuild } from '../lib/e2eUtils';
 import { emailHash } from '../lib/emailHash';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
+import { buildAndroid, buildIos } from '../lib/react-native/build';
+import { readExpoConfig } from '../lib/react-native/expoConfig';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { runCommand } from '../lib/shell/shell';
@@ -234,6 +236,55 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
+export const buildReactNative = async (ctx: Context) => {
+  if (!ctx.isReactNativeApp) return;
+
+  const platformsToBuild = (ctx.announcedBuild?.browsers ?? []).filter(
+    (b): b is 'ios' | 'android' => b === 'ios' || b === 'android'
+  );
+
+  if (platformsToBuild.length === 0) return;
+
+  const { iosBuildCommand, androidBuildCommand } = ctx.options.reactNative ?? {};
+
+  const runPlatformCommand = async (command: string) => {
+    ctx.log.debug('Running React Native build command:', command);
+    try {
+      await runCommand(command, {
+        stdout: 'inherit',
+        stderr: 'inherit',
+      });
+    } catch (err) {
+      setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
+      throw new Error(`React Native build command failed: ${command}\n${err.message}`);
+    }
+  };
+
+  let scheme: string | undefined;
+  if (platformsToBuild.includes('ios') && !iosBuildCommand) {
+    const config = await readExpoConfig();
+    scheme = config.scheme;
+  }
+
+  for (const platform of platformsToBuild) {
+    if (platform === 'android') {
+      if (androidBuildCommand) {
+        await runPlatformCommand(androidBuildCommand);
+      } else {
+        const { artifactPath } = await buildAndroid();
+        renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.apk'));
+      }
+    } else if (platform === 'ios') {
+      if (iosBuildCommand) {
+        await runPlatformCommand(iosBuildCommand);
+      } else {
+        const { artifactPath } = await buildIos(scheme);
+        renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.app'));
+      }
+    }
+  }
+};
+
 export const generateManifestForReactNative = async (ctx: Context) => {
   // The manifest file is only needed for React Native builds
   if (!ctx.isReactNativeApp) {
@@ -285,6 +336,7 @@ export default function main(ctx: Context) {
       transitionTo(pending),
       startActivity,
       buildStorybook,
+      buildReactNative,
       generateManifestForReactNative,
       endActivity,
       transitionTo(success, true),
