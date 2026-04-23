@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/node';
 
+import { createAnalyticsClient } from '../lib/analytics';
 import { emailHash } from '../lib/emailHash';
 import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
 import { validateStorybookReactNativeVersion } from '../lib/react-native/validateStorybookVersion';
@@ -166,6 +167,15 @@ function updateContextFromAnnouncedBuild(
 }
 
 /**
+ * Creates the analytics client and attaches it to the context.
+ *
+ * @param ctx The context set when executing the CLI.
+ */
+export const initializeAnalytics = async (ctx: Context) => {
+  ctx.analytics = createAnalyticsClient(ctx);
+};
+
+/**
  * Sets up the Listr task for announcing a new build on Chromatic.
  *
  * @param _ The context set when executing the CLI.
@@ -181,6 +191,7 @@ export default function main(_: Context) {
       transitionTo(pending),
       setEnvironment,
       setRuntimeMetadata,
+      initializeAnalytics,
       announceBuild,
       transitionTo(success, true),
     ],
