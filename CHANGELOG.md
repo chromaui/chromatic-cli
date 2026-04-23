@@ -1,3 +1,15 @@
+# v16.6.0 (Thu Apr 23 2026)
+
+#### 🚀 Enhancement
+
+- Send analytics for Storybook build failures [#1287](https://github.com/chromaui/chromatic-cli/pull/1287) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v16.5.0 (Tue Apr 21 2026)
 
 #### 🚀 Enhancement
