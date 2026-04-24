@@ -134,8 +134,15 @@ export async function run({
     env: environment,
     log,
     sessionId,
-    ports: createDefaultPorts({ log }),
+    // Assigned immediately below, but expressed in two steps so the ChromaticApi
+    // adapter's lazy GraphQLClient getter can close over `ctx`.
+    ports: undefined as any,
   };
+  ctx.ports = createDefaultPorts({
+    log,
+    getGraphQLClient: () => (ctx as Context).client,
+    cliTokenEndpoint: `${environment.CHROMATIC_INDEX_URL}/api`,
+  });
 
   await runAll(ctx);
 

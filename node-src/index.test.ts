@@ -393,7 +393,11 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
     packagePath: '',
     statsPath: 'preview-stats.json',
     options: {},
-    ports: createDefaultPorts({ log: testLogger }),
+    ports: createDefaultPorts({
+      log: testLogger,
+      getGraphQLClient: () => undefined as any,
+      cliTokenEndpoint: 'https://index.chromatic.com/api',
+    }),
     ...parseArguments(argv),
   } as any;
 };

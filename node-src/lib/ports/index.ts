@@ -1,4 +1,7 @@
+import GraphQLClient from '../../io/graphqlClient';
 import { Logger } from '../log';
+import { ChromaticApi } from './chromaticApi';
+import { createGraphqlChromaticApi } from './chromaticApiGraphqlAdapter';
 import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
 
@@ -10,10 +13,19 @@ import { createShellGitAdapter } from './gitShellAdapter';
  */
 export interface Ports {
   git: GitRepository;
+  chromatic: ChromaticApi;
 }
 
 interface DefaultPortsDeps {
   log: Logger;
+  /**
+   * Lazy accessor for the GraphQL client. The client is constructed partway
+   * through `runAll`, after the HTTP client is configured, so adapters must
+   * defer resolving it until first use.
+   */
+  getGraphQLClient: () => GraphQLClient;
+  /** Endpoint used by the auth-only CLI token mutation (usually `${indexUrl}/api`). */
+  cliTokenEndpoint: string;
 }
 
 /**
@@ -21,11 +33,17 @@ interface DefaultPortsDeps {
  *
  * @param deps Shared runtime dependencies the adapters need.
  * @param deps.log The logger forwarded to adapters that need it.
+ * @param deps.getGraphQLClient Lazy accessor for the GraphQL client.
+ * @param deps.cliTokenEndpoint Endpoint for the auth-only createCliToken mutation.
  *
  * @returns A `Ports` record wired with production adapters.
  */
 export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
   return {
     git: createShellGitAdapter({ log: deps.log }),
+    chromatic: createGraphqlChromaticApi({
+      getClient: deps.getGraphQLClient,
+      cliTokenEndpoint: deps.cliTokenEndpoint,
+    }),
   };
 }
