@@ -134,7 +134,7 @@ export async function run({
     env: environment,
     log,
     sessionId,
-    ports: createDefaultPorts(),
+    ports: createDefaultPorts({ log }),
   };
 
   await runAll(ctx);
