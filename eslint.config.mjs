@@ -266,11 +266,6 @@ export default [
         {
           paths: [
             {
-              name: 'execa',
-              message:
-                'Prefer ctx.ports.proc / ctx.ports.git once extracted.',
-            },
-            {
               name: 'fs',
               message: 'Prefer ctx.ports.fs once extracted.',
             },
@@ -301,6 +296,29 @@ export default [
             {
               name: 'listr2',
               message: 'Prefer ctx.ports.ui once extracted.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Git code and its consumers must go through the GitRepository port. Broader
+  // phase-code restrictions on `execa` arrive with the ProcessRunner port.
+  {
+    files: ['node-src/git/**/*.ts', 'node-src/tasks/gitInfo.ts'],
+    ignores: [
+      'node-src/git/execGit.ts',
+      'node-src/git/execGit.test.ts',
+      'node-src/git/generateGitRepository.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'execa',
+              message: 'Use ctx.ports.git or the shell runner in lib/shell instead.',
             },
           ],
         },

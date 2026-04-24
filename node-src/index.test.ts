@@ -14,6 +14,7 @@ import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
+import { createDefaultPorts } from './lib/ports';
 import TestLogger from './lib/testLogger';
 import { patchModulePath } from './lib/testUtilities';
 import { uploadFiles } from './lib/uploadFiles';
@@ -392,6 +393,7 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
     packagePath: '',
     statsPath: 'preview-stats.json',
     options: {},
+    ports: createDefaultPorts({ log: testLogger }),
     ...parseArguments(argv),
   } as any;
 };

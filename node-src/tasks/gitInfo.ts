@@ -4,17 +4,6 @@ import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import getCommitAndBranch from '../git/getCommitAndBranch';
 import { getParentCommits } from '../git/getParentCommits';
-import {
-  getCommittedFileCount,
-  getNumberOfComitters,
-  getRepositoryCreationDate,
-  getRepositoryRoot,
-  getSlug,
-  getStorybookCreationDate,
-  getUncommittedHash,
-  getUserEmail,
-  getVersion,
-} from '../git/git';
 import { getHasRouter } from '../lib/getHasRouter';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -101,32 +90,34 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
     isLocalBuild,
   } = ctx.options;
 
-  const version = await getVersion(ctx);
+  const git = ctx.ports.git;
+  const version = await git.version();
 
   const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
 
   ctx.git = {
     version,
-    gitUserEmail: await getUserEmail(ctx).catch((err) => {
+    gitUserEmail: await git.userEmail().catch((err) => {
       ctx.log.debug('Failed to retrieve Git user email', err);
       return undefined;
     }),
-    uncommittedHash: await getUncommittedHash(ctx).catch((err) => {
+    uncommittedHash: await git.uncommittedHash().catch((err) => {
       ctx.log.warn('Failed to retrieve uncommitted files hash', err);
       return undefined;
     }),
-    rootPath: await getRepositoryRoot(ctx),
+    rootPath: await git.repositoryRoot(),
     ...commitAndBranchInfo,
   };
 
   try {
     ctx.projectMetadata = {
       hasRouter: getHasRouter(ctx.packageJson),
-      creationDate: await getRepositoryCreationDate(ctx),
-      storybookCreationDate: await getStorybookCreationDate(ctx),
-      numberOfCommitters: await getNumberOfComitters(ctx),
-      numberOfAppFiles: await getCommittedFileCount(
-        ctx,
+      creationDate: await git.repositoryCreationDate(),
+      storybookCreationDate: await git.storybookCreationDate(
+        ctx.options.storybookConfigDir ?? '.storybook'
+      ),
+      numberOfCommitters: await git.committerCount(),
+      numberOfAppFiles: await git.committedFileCount(
         ['page', 'screen'],
         ['js', 'jsx', 'ts', 'tsx']
       ),
@@ -141,7 +132,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   if (!ctx.git.slug) {
     try {
-      ctx.git.slug = await getSlug(ctx);
+      ctx.git.slug = await git.slug();
     } catch (err) {
       ctx.log.debug('Failed to retrieve Git repository slug', err);
     }
