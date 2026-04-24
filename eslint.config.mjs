@@ -255,6 +255,58 @@ export default [
       ],
     },
   },
+  // context god object refactor: nudge direct imports of to-be-ported external modules
+  // through `ctx.ports`. Permissive (warn) today; each port-extraction PR tightens
+  // its own module to `error` and adds adapter-path exceptions.
+  {
+    files: ['**/*.ts', '**/*.js'],
+    rules: {
+      'no-restricted-imports': [
+        'warn',
+        {
+          paths: [
+            {
+              name: 'execa',
+              message:
+                'Prefer ctx.ports.proc / ctx.ports.git once extracted.',
+            },
+            {
+              name: 'fs',
+              message: 'Prefer ctx.ports.fs once extracted.',
+            },
+            {
+              name: 'fs/promises',
+              message: 'Prefer ctx.ports.fs once extracted.',
+            },
+            {
+              name: 'tmp-promise',
+              message: 'Prefer ctx.ports.fs.mkdtemp once extracted.',
+            },
+            {
+              name: '@sentry/node',
+              message: 'Prefer ctx.ports.errors once extracted.',
+            },
+            {
+              name: 'pino',
+              message: 'Prefer ctx.ports.log once extracted.',
+            },
+            {
+              name: 'snyk-nodejs-lockfile-parser',
+              message: 'Prefer ctx.ports.tracer once extracted.',
+            },
+            {
+              name: 'listr',
+              message: 'Prefer ctx.ports.ui once extracted.',
+            },
+            {
+              name: 'listr2',
+              message: 'Prefer ctx.ports.ui once extracted.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // exceptions for files stuck in CJS for now
   {
     files: ['**/*.cjs'],

@@ -5,6 +5,7 @@ import type { AnalyticsClient } from './lib/analytics';
 import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
+import type { Ports } from './lib/ports';
 
 type FilePath = string;
 
@@ -224,6 +225,7 @@ export interface Context {
 
   http: HTTPClient;
   client: GraphQLClient;
+  ports: Ports;
 
   git: {
     version?: string;
