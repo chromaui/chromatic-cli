@@ -398,6 +398,7 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
   ctx.ports = createDefaultPorts({
     log: testLogger,
     getGraphQLClient: () => ctx.client,
+    getHttpClient: () => ctx.http,
     cliTokenEndpoint: `${ctx.env.CHROMATIC_INDEX_URL}/api`,
   });
   return ctx;

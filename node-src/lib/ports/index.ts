@@ -1,9 +1,12 @@
 import GraphQLClient from '../../io/graphqlClient';
+import HTTPClient from '../../io/httpClient';
 import { Logger } from '../log';
 import { ChromaticApi } from './chromaticApi';
 import { createGraphqlChromaticApi } from './chromaticApiGraphqlAdapter';
 import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
+import { Uploader } from './uploader';
+import { createHttpUploader } from './uploaderHttpAdapter';
 
 /**
  * The collection of external-dependency boundaries ("ports") used by the
@@ -14,6 +17,7 @@ import { createShellGitAdapter } from './gitShellAdapter';
 export interface Ports {
   git: GitRepository;
   chromatic: ChromaticApi;
+  uploader: Uploader;
 }
 
 interface DefaultPortsDeps {
@@ -24,6 +28,11 @@ interface DefaultPortsDeps {
    * defer resolving it until first use.
    */
   getGraphQLClient: () => GraphQLClient;
+  /**
+   * Lazy accessor for the HTTP client. Same lifetime story as the GraphQL
+   * client — constructed after the Ports bag is built.
+   */
+  getHttpClient: () => HTTPClient;
   /** Endpoint used by the auth-only CLI token mutation (usually `${indexUrl}/api`). */
   cliTokenEndpoint: string;
 }
@@ -44,6 +53,10 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     chromatic: createGraphqlChromaticApi({
       getClient: deps.getGraphQLClient,
       cliTokenEndpoint: deps.cliTokenEndpoint,
+    }),
+    uploader: createHttpUploader({
+      getHttp: deps.getHttpClient,
+      log: deps.log,
     }),
   };
 }

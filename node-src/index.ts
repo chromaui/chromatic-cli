@@ -141,6 +141,7 @@ export async function run({
   ctx.ports = createDefaultPorts({
     log,
     getGraphQLClient: () => (ctx as Context).client,
+    getHttpClient: () => (ctx as Context).http,
     cliTokenEndpoint: `${environment.CHROMATIC_INDEX_URL}/api`,
   });
 
