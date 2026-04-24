@@ -28,6 +28,13 @@ export const invalid = (ctx: Context, error?: Error) => {
   };
 };
 
+export const invalidAndroidArtifact = (_ctx: Context) => ({
+  status: 'error',
+  title: 'Preparing your built React Native Storybook',
+  output:
+    'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.',
+});
+
 export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) => {
   const lines: string[] = [];
 
