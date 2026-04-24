@@ -1,42 +1,33 @@
 import * as Sentry from '@sentry/node';
 
-import GraphQLClient from '../../io/graphqlClient';
 import { Logger } from '../log';
+import { ChromaticApi } from '../ports/chromaticApi';
 import type { AnalyticsEvent } from './events';
 import type { AnalyticsClient } from './types';
-
-const TrackCLITelemetryEventMutation = `
-  mutation TrackCLITelemetryEvent($input: TrackCLITelemetryEventInput!) {
-    trackCLITelemetryEvent(input: $input)
-  }
-`;
 
 const SHUTDOWN_TIMEOUT_MS = 5000;
 
 interface IndexAnalyticsOptions {
-  client: GraphQLClient;
+  chromatic: ChromaticApi;
   logger: Logger;
 }
 
 /** Analytics client that sends events to the Chromatic Index via GraphQL. */
 export class IndexAnalyticsClient implements AnalyticsClient {
-  private client: GraphQLClient;
+  private chromatic: ChromaticApi;
   private logger: Logger;
   private pending: Promise<unknown>[] = [];
 
-  constructor({ client, logger }: IndexAnalyticsOptions) {
-    this.client = client;
+  constructor({ chromatic, logger }: IndexAnalyticsOptions) {
+    this.chromatic = chromatic;
     this.logger = logger;
   }
 
   trackEvent(eventName: AnalyticsEvent, properties?: Record<string, unknown>): void {
     this.logger.debug(`[analytics] trackEvent: ${eventName}`, JSON.stringify(properties));
 
-    const input = { event: eventName, properties };
-
-    const promise = this.client
-      // Sending analytics is best effort, so we'll skip retries to keep things fast
-      .runQuery(TrackCLITelemetryEventMutation, { input }, { retries: 0 })
+    const promise = this.chromatic
+      .trackTelemetryEvent({ event: eventName, properties })
       .catch((err) => {
         this.logger.debug('[analytics] trackEvent failed', err);
         Sentry.captureException(err);

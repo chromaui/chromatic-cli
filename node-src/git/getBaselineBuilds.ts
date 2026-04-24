@@ -1,42 +1,5 @@
-import gql from 'fake-tag';
-
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Context } from '../types';
-
-const BaselineCommitsQuery = gql`
-  query BaselineCommitsQuery(
-    $branch: String!
-    $parentCommits: [String!]!
-    $localBuilds: LocalBuildsSpecifierInput!
-  ) {
-    app {
-      baselineBuilds(branch: $branch, parentCommits: $parentCommits, localBuilds: $localBuilds) {
-        id
-        number
-        status(legacy: false)
-        commit
-        committedAt
-        uncommittedHash
-        isLocalBuild
-        changeCount
-      }
-    }
-  }
-`;
-interface BaselineCommitsQueryResult {
-  app: {
-    baselineBuilds: {
-      id: string;
-      number: number;
-      status: string;
-      commit: string;
-      committedAt: number;
-      uncommittedHash: string;
-      isLocalBuild: boolean;
-      changeCount: number;
-    }[];
-  };
-}
 
 /**
  * Get a list of baseline builds from the Index service
@@ -49,13 +12,12 @@ interface BaselineCommitsQueryResult {
  * @returns A list of baseline builds, if available.
  */
 export async function getBaselineBuilds(
-  ctx: Pick<Context, 'options' | 'client' | 'git'>,
+  ctx: Pick<Context, 'options' | 'ports' | 'git'>,
   { branch, parentCommits }: { branch: string; parentCommits: string[] }
 ) {
-  const { app } = await ctx.client.runQuery<BaselineCommitsQueryResult>(BaselineCommitsQuery, {
+  return ctx.ports.chromatic.getBaselineBuilds({
     branch,
     parentCommits,
     localBuilds: localBuildsSpecifier(ctx),
   });
-  return app.baselineBuilds;
 }

@@ -4,39 +4,15 @@ import invalidProjectId from '../ui/messages/errors/invalidProjectId';
 import invalidProjectToken from '../ui/messages/errors/invalidProjectToken';
 import { authenticated, authenticating, initial } from '../ui/tasks/auth';
 
-const CreateCLITokenMutation = `
-  mutation CreateCLITokenMutation($projectId: String!) {
-    cliToken: createCLIToken(projectId: $projectId)
-  }
-`;
-
-// Legacy mutation
-const CreateAppTokenMutation = `
-  mutation CreateAppTokenMutation($projectToken: String!) {
-    appToken: createAppToken(code: $projectToken)
-  }
-`;
-
 const getToken = async (ctx: Context) => {
   const { projectId, projectToken, userToken } = ctx.options;
 
   if (projectId && userToken) {
-    const { cliToken } = await ctx.client.runQuery<{ cliToken: string }>(
-      CreateCLITokenMutation,
-      { projectId },
-      {
-        endpoint: `${ctx.env.CHROMATIC_INDEX_URL}/api`,
-        headers: { Authorization: `Bearer ${userToken}` },
-      }
-    );
-    return cliToken;
+    return ctx.ports.chromatic.createCliToken({ projectId, userToken });
   }
 
   if (projectToken) {
-    const { appToken } = await ctx.client.runQuery<{ appToken: string }>(CreateAppTokenMutation, {
-      projectToken,
-    });
-    return appToken;
+    return ctx.ports.chromatic.createAppToken({ projectToken });
   }
 
   // Should never happen since we check for this in getOptions
@@ -46,7 +22,7 @@ const getToken = async (ctx: Context) => {
 export const setAuthorizationToken = async (ctx: Context) => {
   try {
     const token = await getToken(ctx);
-    ctx.client.setAuthorization(token);
+    ctx.ports.chromatic.setAuthorization(token);
   } catch (errors) {
     const message = errors[0]?.message;
     if (message?.match('Must login') || message?.match('No Access')) {

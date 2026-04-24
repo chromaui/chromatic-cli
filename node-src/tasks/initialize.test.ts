@@ -137,68 +137,60 @@ describe('announceBuild', () => {
       id: 'announced-build-id',
       app: { id: 'announced-build-app-id' },
     };
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({ announceBuild: build });
+    const announceBuildFunction = vi.fn().mockResolvedValue(build);
+    const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { ports, ...defaultContext } as any;
     await announceBuild(ctx);
 
-    expect(client.runQuery).toHaveBeenCalledWith(
-      expect.stringMatching(/AnnounceBuildMutation/),
-      {
-        input: {
-          autoAcceptChanges: false,
-          patchBaseRef: undefined,
-          patchHeadRef: undefined,
-          ciVariables: ctx.environment,
-          committedAt: new Date(0),
-          needsBaselines: false,
-          preserveMissingSpecs: undefined,
-          packageVersion: ctx.pkg.version,
-          rebuildForBuildId: undefined,
-          storybookAddons: ctx.storybook.addons,
-          storybookRefs: ctx.storybook.refs,
-          storybookVersion: ctx.storybook.version,
-          projectMetadata: {
-            storybookBaseDir: '',
-          },
-          ...defaultContext.runtimeMetadata,
+    expect(announceBuildFunction).toHaveBeenCalledWith({
+      input: {
+        autoAcceptChanges: false,
+        patchBaseRef: undefined,
+        patchHeadRef: undefined,
+        ciVariables: ctx.environment,
+        committedAt: new Date(0),
+        needsBaselines: false,
+        preserveMissingSpecs: undefined,
+        packageVersion: ctx.pkg.version,
+        rebuildForBuildId: undefined,
+        storybookAddons: ctx.storybook.addons,
+        storybookRefs: ctx.storybook.refs,
+        storybookVersion: ctx.storybook.version,
+        projectMetadata: {
+          storybookBaseDir: '',
         },
+        ...defaultContext.runtimeMetadata,
       },
-      { retries: 3 }
-    );
+    });
     expect(ctx.announcedBuild).toEqual(build);
     expect(ctx.isOnboarding).toBe(true);
   });
 
   it('requires baselines for TurboSnap-enabled builds', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {} };
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({ announceBuild: build });
+    const announceBuildFunction = vi.fn().mockResolvedValue(build);
+    const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-    const ctx = { client, ...defaultContext, turboSnap: {} } as any;
+    const ctx = { ports, ...defaultContext, turboSnap: {} } as any;
     await announceBuild(ctx);
 
-    expect(client.runQuery).toHaveBeenCalledWith(
-      expect.stringMatching(/AnnounceBuildMutation/),
-      { input: expect.objectContaining({ needsBaselines: true }) },
-      { retries: 3 }
-    );
+    expect(announceBuildFunction).toHaveBeenCalledWith({
+      input: expect.objectContaining({ needsBaselines: true }),
+    });
   });
 
   it('does not require baselines for TurboSnap bailed builds', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {} };
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({ announceBuild: build });
+    const announceBuildFunction = vi.fn().mockResolvedValue(build);
+    const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-    const ctx = { client, ...defaultContext, turboSnap: { bailReason: {} } } as any;
+    const ctx = { ports, ...defaultContext, turboSnap: { bailReason: {} } } as any;
     await announceBuild(ctx);
 
-    expect(client.runQuery).toHaveBeenCalledWith(
-      expect.stringMatching(/AnnounceBuildMutation/),
-      { input: expect.objectContaining({ needsBaselines: false }) },
-      { retries: 3 }
-    );
+    expect(announceBuildFunction).toHaveBeenCalledWith({
+      input: expect.objectContaining({ needsBaselines: false }),
+    });
   });
 
   it.each([
@@ -210,10 +202,10 @@ describe('announceBuild', () => {
     async ({ gqlValue, expected }) => {
       const features = { isReactNativeApp: gqlValue };
       const build = { number: 1, status: 'ANNOUNCED', app: {}, features };
-      const client = { runQuery: vi.fn() };
-      client.runQuery.mockReturnValue({ announceBuild: build });
+      const announceBuildFunction = vi.fn().mockResolvedValue(build);
+      const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-      const ctx = { client, ...defaultContext } as any;
+      const ctx = { ports, ...defaultContext } as any;
       await announceBuild(ctx);
 
       expect(ctx.isReactNativeApp).toBe(expected);
@@ -222,10 +214,10 @@ describe('announceBuild', () => {
 
   it('throws an error when TurboSnap is enabled for a React Native app', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {}, features: { isReactNativeApp: true } };
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({ announceBuild: build });
+    const announceBuildFunction = vi.fn().mockResolvedValue(build);
+    const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-    const ctx = { client, turboSnap: {}, ...defaultContext } as any;
+    const ctx = { ports, turboSnap: {}, ...defaultContext } as any;
     await expect(announceBuild(ctx)).rejects.toThrow(
       /TurboSnap is not supported for Storybook React Native projects./
     );
@@ -239,10 +231,10 @@ describe('announceBuild', () => {
         app: {},
         features: { isReactNativeApp: true },
       };
-      const client = { runQuery: vi.fn() };
-      client.runQuery.mockReturnValue({ announceBuild: build });
+      const announceBuildFunction = vi.fn().mockResolvedValue(build);
+      const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-      const ctx = { client, ...defaultContext } as any;
+      const ctx = { ports, ...defaultContext } as any;
       await announceBuild(ctx);
 
       expect(validateStorybookReactNativeVersion).toHaveBeenCalledTimes(1);
@@ -255,10 +247,10 @@ describe('announceBuild', () => {
         app: {},
         features: { isReactNativeApp: false },
       };
-      const client = { runQuery: vi.fn() };
-      client.runQuery.mockReturnValue({ announceBuild: build });
+      const announceBuildFunction = vi.fn().mockResolvedValue(build);
+      const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-      const ctx = { client, ...defaultContext } as any;
+      const ctx = { ports, ...defaultContext } as any;
       await announceBuild(ctx);
 
       expect(validateStorybookReactNativeVersion).not.toHaveBeenCalled();
@@ -274,10 +266,10 @@ describe('announceBuild', () => {
         app: {},
         features: { isReactNativeApp: true },
       };
-      const client = { runQuery: vi.fn() };
-      client.runQuery.mockReturnValue({ announceBuild: build });
+      const announceBuildFunction = vi.fn().mockResolvedValue(build);
+      const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-      const ctx = { client, ...defaultContext } as any;
+      const ctx = { ports, ...defaultContext } as any;
       await expect(announceBuild(ctx)).rejects.toThrow(validationError);
     });
 
@@ -291,10 +283,10 @@ describe('announceBuild', () => {
         app: {},
         features: { isReactNativeApp: true },
       };
-      const client = { runQuery: vi.fn() };
-      client.runQuery.mockReturnValue({ announceBuild: build });
+      const announceBuildFunction = vi.fn().mockResolvedValue(build);
+      const ports = { chromatic: { announceBuild: announceBuildFunction } };
 
-      const ctx = { client, turboSnap: {}, ...defaultContext } as any;
+      const ctx = { ports, turboSnap: {}, ...defaultContext } as any;
       await expect(announceBuild(ctx)).rejects.toThrow(validationError);
     });
   });

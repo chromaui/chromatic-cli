@@ -1,70 +1,7 @@
-import gql from 'fake-tag';
-
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Context } from '../types';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
-
-const FirstCommittedAtQuery = gql`
-  query FirstCommittedAtQuery($branch: String!, $localBuilds: LocalBuildsSpecifierInput!) {
-    app {
-      firstBuild(sortByCommittedAt: true, localBuilds: $localBuilds) {
-        committedAt
-      }
-      lastBuild(branch: $branch, sortByCommittedAt: true, localBuilds: $localBuilds) {
-        commit
-        committedAt
-      }
-    }
-  }
-`;
-interface FirstCommittedAtQueryResult {
-  app: {
-    firstBuild: {
-      committedAt: number;
-    };
-    lastBuild: {
-      commit: string;
-      committedAt: number;
-    };
-  };
-}
-
-const HasBuildsWithCommitsQuery = gql`
-  query HasBuildsWithCommitsQuery($commits: [String!]!, $localBuilds: LocalBuildsSpecifierInput!) {
-    app {
-      hasBuildsWithCommits(commits: $commits, localBuilds: $localBuilds)
-    }
-  }
-`;
-interface HasBuildsWithCommitsQueryResult {
-  app: {
-    hasBuildsWithCommits: string[];
-  };
-}
-
-const MergeCommitsQuery = gql`
-  query MergeCommitsQuery($mergeInfoList: [MergedInfoInput]!) {
-    app {
-      mergedPullRequests(mergeInfoList: $mergeInfoList) {
-        lastHeadBuild {
-          commit
-        }
-      }
-    }
-  }
-`;
-export interface MergeCommitsQueryResult {
-  app: {
-    mergedPullRequests: [
-      {
-        lastHeadBuild: {
-          commit: string;
-        };
-      },
-    ];
-  };
-}
 
 function commitsForCLI(commits: string[]) {
   return commits.map((c) => c.trim()).join(' ');
@@ -124,7 +61,7 @@ async function nextCommits(
 
 // Exponentially iterate `limit` up to infinity to find a "covering" set of commits with builds
 async function step(
-  ctx: Pick<Context, 'options' | 'client' | 'log' | 'git' | 'ports'>,
+  ctx: Pick<Context, 'options' | 'log' | 'git' | 'ports'>,
   limit: number,
   {
     firstCommittedAtSeconds,
@@ -136,7 +73,7 @@ async function step(
     commitsWithoutBuilds: string[];
   }
 ) {
-  const { options, client, log, git } = ctx;
+  const { options, log, git, ports } = ctx;
   log.debug(`step: checking ${limit} up to ${firstCommittedAtSeconds}`);
   log.debug(`step: commitsWithBuilds: ${commitsWithBuilds}`);
   log.debug(`step: commitsWithoutBuilds: ${commitsWithoutBuilds}`);
@@ -157,9 +94,7 @@ async function step(
     return { commitsWithBuilds, visitedCommitsWithoutBuilds };
   }
 
-  const {
-    app: { hasBuildsWithCommits: newCommitsWithBuilds },
-  } = await client.runQuery<HasBuildsWithCommitsQueryResult>(HasBuildsWithCommitsQuery, {
+  const newCommitsWithBuilds = await ports.chromatic.hasBuildsWithCommits({
     commits: candidateCommits,
     localBuilds: localBuildsSpecifier({ options, git }),
   });
@@ -205,18 +140,16 @@ async function maximallyDescendentCommits(ctx: Pick<Context, 'log' | 'ports'>, c
  * @returns A list of parent commits associated with this branch.
  */
 // TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
+// eslint-disable-next-line complexity
 export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch = false } = {}) {
-  const { options, client, git, log, ports } = ctx;
+  const { options, git, log, ports } = ctx;
   const { branch, committedAt } = git;
 
   // Include the latest build from this branch as an ancestor of the current build
-  const { app } = await client.runQuery<FirstCommittedAtQueryResult>(
-    FirstCommittedAtQuery,
-    { branch, localBuilds: localBuildsSpecifier({ options, git }) },
-    { retries: 5 } // This query requires a request to an upstream provider which may fail
-  );
-  const { firstBuild, lastBuild } = app;
+  const { firstBuild, lastBuild } = await ports.chromatic.getFirstCommittedAt({
+    branch,
+    localBuilds: localBuildsSpecifier({ options, git }),
+  });
   log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, lastBuild);
 
   if (!firstBuild) {
@@ -257,7 +190,7 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
   //   - an ancestor of a commit in commitsWithBuilds
   //   - has no build
   const { commitsWithBuilds, visitedCommitsWithoutBuilds } = await step(
-    { options, client, log, git, ports },
+    { options, log, git, ports },
     FETCH_N_INITIAL_BUILD_COMMITS,
     {
       firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
@@ -269,13 +202,9 @@ export async function getParentCommits(ctx: Context, { ignoreLastBuildOnBranch =
   const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
     return { commit, baseRefName: branch };
   });
-  const {
-    app: { mergedPullRequests },
-  } = await client.runQuery<MergeCommitsQueryResult>(
-    MergeCommitsQuery,
-    { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
-    { retries: 5 } // This query requires a request to an upstream provider which may fail
-  );
+  const mergedPullRequests = await ports.chromatic.getMergedPullRequests({
+    mergeInfoList: mergeInfoList?.slice(0, 100) ?? [], // Limit amount sent in API call
+  });
 
   for (const pullRequest of mergedPullRequests) {
     // Add the most recent build on a (merged) branch as an ancestor if we visit a commit

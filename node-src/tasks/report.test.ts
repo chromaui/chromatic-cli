@@ -51,6 +51,11 @@ vi.spyOn(reportBuilder, 'writeTo').mockImplementation(vi.fn());
 
 describe('generateReport', () => {
   const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
+  const ports = {
+    chromatic: {
+      getReport: vi.fn(),
+    },
+  };
   const build = {
     app: { repository: { provider: 'github' } },
     number: 1,
@@ -58,23 +63,20 @@ describe('generateReport', () => {
   };
   beforeEach(() => {
     vi.resetAllMocks();
-    client.runQuery.mockReturnValue({
-      app: {
-        build: {
-          number: 1,
-          status: 'PASSED',
-          createdAt: 0,
-          completedAt: 0,
-          webUrl: 'https://google.com',
-          storybookUrl: 'https://storybook.js.org',
-          tests: mockTests,
-        },
-      },
+    ports.chromatic.getReport.mockResolvedValue({
+      number: 1,
+      status: 'PASSED',
+      createdAt: 0,
+      completedAt: 0,
+      webUrl: 'https://google.com',
+      storybookUrl: 'https://storybook.js.org',
+      tests: mockTests,
     });
   });
   it('sucessfully generates report when passed a string', async () => {
     const ctx = {
       client,
+      ports,
       log,
       options: {
         junitReport: 'tests-file.xml',
@@ -90,6 +92,7 @@ describe('generateReport', () => {
   it('sucessfully generates report when passed a boolean equal to true', async () => {
     const ctx = {
       client,
+      ports,
       log,
       options: {
         junitReport: true,

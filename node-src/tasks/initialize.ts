@@ -10,33 +10,6 @@ import turboSnapNotAvailableForReactNative from '../ui/messages/errors/turboSnap
 import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../ui/tasks/initialize';
 
-const AnnounceBuildMutation = `
-  mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
-    announceBuild(input: $input) {
-      id
-      number
-      browsers
-      # no need for legacy:false on AnnouncedBuild.status
-      status
-      autoAcceptChanges
-      reportToken
-      features {
-        uiTests
-        uiReview
-        isReactNativeApp
-      }
-      app {
-        id
-        turboSnapAvailability
-      }
-    }
-  }
-`;
-
-interface AnnounceBuildMutationResult {
-  announceBuild: Context['announcedBuild'];
-}
-
 export const setEnvironment = async (ctx: Context) => {
   if (!ctx.environment) {
     ctx.environment = {};
@@ -123,11 +96,7 @@ const announceBuildInput = (ctx: Context) => {
 
 export const announceBuild = async (ctx: Context) => {
   const input = announceBuildInput(ctx);
-  const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
-    AnnounceBuildMutation,
-    { input },
-    { retries: 3 }
-  );
+  const announcedBuild = await ctx.ports.chromatic.announceBuild({ input });
 
   Sentry.setTag('app_id', announcedBuild.app.id);
   Sentry.setContext('build', { id: announcedBuild.id });

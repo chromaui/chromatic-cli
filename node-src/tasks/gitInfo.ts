@@ -28,55 +28,6 @@ import {
 
 const UNDEFINED_BRANCH_PREFIX_REGEXP = /^undefined:/;
 
-const SkipBuildMutation = `
-  mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
-    skipBuild(commit: $commit, branch: $branch, slug: $slug)
-  }
-`;
-
-const LastBuildQuery = `
-  query LastBuildQuery($commit: String!, $branch: String!) {
-    app {
-      isOnboarding
-      lastBuild(ref: $commit, branch: $branch) {
-        id
-        status(legacy: false)
-        storybookUrl
-        webUrl
-        specCount
-        componentCount
-        testCount
-        changeCount
-        errorCount: testCount(statuses: [BROKEN])
-        actualTestCount: testCount(statuses: [IN_PROGRESS])
-        actualCaptureCount
-        inheritedCaptureCount
-        interactionTestFailuresCount
-      }
-    }
-  }
-`;
-interface LastBuildQueryResult {
-  app: {
-    isOnboarding: boolean;
-    lastBuild: {
-      id: string;
-      status: string;
-      storybookUrl: string;
-      webUrl: string;
-      specCount: number;
-      componentCount: number;
-      testCount: number;
-      changeCount: number;
-      errorCount: number;
-      actualTestCount: number;
-      actualCaptureCount: number;
-      inheritedCaptureCount: number;
-      interactionTestFailuresCount: number;
-    };
-  };
-}
-
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export const setGitInfo = async (ctx: Context, task: Task) => {
@@ -154,8 +105,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   if (ctx.git.matchesBranch?.(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
-    // The SkipBuildMutation ensures the commit is tagged properly.
-    if (await ctx.client.runQuery(SkipBuildMutation, { commit, branch, slug })) {
+    // The skipBuild mutation ensures the commit is tagged properly.
+    if (await ctx.ports.chromatic.skipBuild({ commit, branch, slug })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);
       setExitCode(ctx, exitCodes.OK);
@@ -170,20 +121,17 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   ctx.git.parentCommits = parentCommits;
   ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
-  const result = await ctx.client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
-    commit,
-    branch,
-  });
-  ctx.isOnboarding = result.app.isOnboarding;
-  if (result.app.isOnboarding) {
+  const result = await ctx.ports.chromatic.getLastBuildForCommit({ commit, branch });
+  ctx.isOnboarding = result.isOnboarding;
+  if (result.isOnboarding) {
     ctx.options.forceRebuild = true;
   }
   // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
-  // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
+  // There's no need for a skipBuild mutation because we don't have to tag the commit again.
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
-    const mostRecentAncestor = result && result.app && result.app.lastBuild;
+    const mostRecentAncestor = result.lastBuild;
     if (mostRecentAncestor) {
       ctx.rebuildForBuildId = mostRecentAncestor.id;
       if (
@@ -191,8 +139,8 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
         !ctx.git.matchesBranch(ctx.options.forceRebuild)
       ) {
         ctx.skip = true;
-        ctx.rebuildForBuild = result.app.lastBuild;
-        ctx.storybookUrl = result.app.lastBuild.storybookUrl;
+        ctx.rebuildForBuild = mostRecentAncestor as Context['rebuildForBuild'];
+        ctx.storybookUrl = mostRecentAncestor.storybookUrl;
         transitionTo(skippedRebuild, true)(ctx, task);
         setExitCode(ctx, exitCodes.OK);
         ctx.log.info(forceRebuildHint());

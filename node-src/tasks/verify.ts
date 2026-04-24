@@ -22,23 +22,6 @@ import {
   success,
 } from '../ui/tasks/verify';
 
-const PublishBuildMutation = `
-  mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
-    publishBuild(id: $id, input: $input) {
-      # no need for legacy:false on PublishedBuild.status
-      status
-      storybookUrl
-    }
-  }
-`;
-
-interface PublishBuildMutationResult {
-  publishBuild: {
-    status: string;
-    storybookUrl: string;
-  };
-}
-
 export const publishBuild = async (ctx: Context) => {
   const { turboSnap } = ctx;
   const { id, reportToken } = ctx.announcedBuild;
@@ -52,8 +35,7 @@ export const publishBuild = async (ctx: Context) => {
     turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
   }
 
-  const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
-    PublishBuildMutation,
+  const publishedBuild = await ctx.ports.chromatic.publishBuild(
     {
       id,
       input: {
@@ -66,7 +48,7 @@ export const publishBuild = async (ctx: Context) => {
         turboSnapStatus,
       },
     },
-    { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }
+    { reportToken }
   );
 
   ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
@@ -79,104 +61,9 @@ export const publishBuild = async (ctx: Context) => {
   }
 };
 
-const StartedBuildQuery = `
-  query StartedBuildQuery($number: Int!) {
-    app {
-      build(number: $number) {
-        startedAt
-        failureReason
-        upgradeBuilds {
-          completedAt
-        }
-      }
-    }
-  }
-`;
-
-interface StartedBuildQueryResult {
-  app: {
-    build: {
-      startedAt?: number;
-      failureReason?: string;
-      upgradeBuilds?: {
-        completedAt?: number;
-      }[];
-    };
-  };
-}
-
-// these fields must be part of authorizedBuildFieldsViaAppCode in the public api
-const VerifyBuildQuery = `
-  query VerifyBuildQuery($number: Int!) {
-    app {
-      build(number: $number) {
-        id
-        number
-        status(legacy: false)
-        specCount
-        componentCount
-        testCount
-        changeCount
-        errorCount: testCount(statuses: [BROKEN])
-        actualTestCount: testCount(statuses: [IN_PROGRESS])
-        actualCaptureCount
-        inheritedCaptureCount
-        interactionTestFailuresCount
-        webUrl
-        browsers {
-          browser
-        }
-        features {
-          uiTests
-          uiReview
-          isReactNativeApp
-        }
-        autoAcceptChanges
-        turboSnapEnabled
-        wasLimited
-        app {
-          manageUrl
-          setupUrl
-          account {
-            exceededThreshold
-            paymentRequired
-            billingUrl
-          }
-          repository {
-            provider
-          }
-        }
-        tests {
-          spec {
-            name
-            component {
-              name
-              displayName
-            }
-          }
-          parameters {
-            viewport
-            viewportIsDefault
-          }
-          mode {
-            name
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface VerifyBuildQueryResult {
-  app: {
-    build: Context['build'];
-  };
-}
-
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { client } = ctx;
   const { list, onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
   const { matchesBranch } = ctx.git;
 
@@ -193,12 +80,8 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
   const waitForBuildToStart = async () => {
     const { storybookUrl } = ctx;
     const { number, reportToken } = ctx.announcedBuild;
-    const variables = { number };
-    const options = { headers: { Authorization: `Bearer ${reportToken}` } };
 
-    const {
-      app: { build },
-    } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
+    const build = await ctx.ports.chromatic.getStartedBuild({ number }, { reportToken });
 
     if (build.failureReason) {
       ctx.log.warn(brokenStorybook(ctx, { failureReason: build.failureReason, storybookUrl }));
@@ -222,10 +105,8 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
       return;
     }
 
-    const {
-      app: { build: startedBuild },
-    } = await client.runQuery<VerifyBuildQueryResult>(VerifyBuildQuery, variables, options);
-    ctx.build = { ...ctx.announcedBuild, ...ctx.build, ...startedBuild };
+    const startedBuild = await ctx.ports.chromatic.verifyBuild({ number }, { reportToken });
+    ctx.build = { ...ctx.announcedBuild, ...ctx.build, ...startedBuild } as Context['build'];
   };
 
   await Promise.race([

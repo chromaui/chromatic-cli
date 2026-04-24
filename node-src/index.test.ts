@@ -375,7 +375,7 @@ afterEach(() => {
 
 const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
   const testLogger = new TestLogger();
-  return {
+  const ctx = {
     title: '',
     env: getEnvironment(),
     log: testLogger,
@@ -393,13 +393,14 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
     packagePath: '',
     statsPath: 'preview-stats.json',
     options: {},
-    ports: createDefaultPorts({
-      log: testLogger,
-      getGraphQLClient: () => undefined as any,
-      cliTokenEndpoint: 'https://index.chromatic.com/api',
-    }),
     ...parseArguments(argv),
   } as any;
+  ctx.ports = createDefaultPorts({
+    log: testLogger,
+    getGraphQLClient: () => ctx.client,
+    cliTokenEndpoint: `${ctx.env.CHROMATIC_INDEX_URL}/api`,
+  });
+  return ctx;
 };
 
 it('fails on missing project token', async () => {

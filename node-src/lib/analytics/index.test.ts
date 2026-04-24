@@ -8,7 +8,7 @@ import { LogOnlyAnalyticsClient } from './logOnly';
 function makeContext() {
   return {
     log: new TestLogger(),
-    client: { runQuery: vi.fn() },
+    ports: { chromatic: { trackTelemetryEvent: vi.fn() } },
   } as any;
 }
 

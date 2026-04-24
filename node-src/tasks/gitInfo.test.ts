@@ -33,7 +33,12 @@ const getParentCommits = vi.mocked(getParentCommitsUnmocked);
 const getHasRouter = vi.mocked(getHasRouterUnmocked);
 
 const log = new TestLogger();
-const ports = { git: createShellGitAdapter({ log }) };
+const skipBuild = vi.fn().mockResolvedValue(true);
+const getLastBuildForCommit = vi
+  .fn()
+  .mockResolvedValue({ isOnboarding: false, lastBuild: undefined });
+const chromatic = { skipBuild, getLastBuildForCommit } as any;
+const ports = { git: createShellGitAdapter({ log }), chromatic };
 
 const commitInfo = {
   commit: '123asdf',
@@ -46,8 +51,6 @@ const commitInfo = {
   fromCI: false,
   ciService: undefined,
 };
-
-const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
 
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
@@ -65,12 +68,13 @@ beforeEach(() => {
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
 
-  client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
+  skipBuild.mockResolvedValue(true);
+  getLastBuildForCommit.mockResolvedValue({ isOnboarding: false, lastBuild: undefined });
 });
 
 describe('setGitInfo', () => {
   it('sets the git info on context', async () => {
-    const ctx = { log, options: {}, client, ports } as any;
+    const ctx = { log, options: {}, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({
       rootPath: '/path/to/project',
@@ -83,7 +87,7 @@ describe('setGitInfo', () => {
   });
 
   it('sets gitUserEmail to current user for local builds', async () => {
-    const ctx = { log, options: { isLocalBuild: true }, client, ports } as any;
+    const ctx = { log, options: { isLocalBuild: true }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({
       gitUserEmail: 'user@email.com',
@@ -91,7 +95,7 @@ describe('setGitInfo', () => {
   });
 
   it('supports overriding the owner name in the slug', async () => {
-    const ctx = { log, options: { ownerName: 'org' }, client, ports } as any;
+    const ctx = { log, options: { ownerName: 'org' }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git).toMatchObject({ slug: 'org/repo' });
   });
@@ -101,7 +105,7 @@ describe('setGitInfo', () => {
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: true }, client, ports } as any;
+    const ctx = { log, options: { onlyChanged: true }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
     expect(ctx.git.replacementBuildIds).toEqual([]);
@@ -116,7 +120,7 @@ describe('setGitInfo', () => {
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: '!(main)' }, client, ports } as any;
+    const ctx = { log, options: { onlyChanged: '!(main)' }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
     expect(ctx.git.replacementBuildIds).toEqual([]);
@@ -134,7 +138,7 @@ describe('setGitInfo', () => {
         isLocalBuild: false,
       },
     });
-    const ctx = { log, options: { onlyChanged: true }, client, ports } as any;
+    const ctx = { log, options: { onlyChanged: true }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
     expect(ctx.git.replacementBuildIds).toEqual([['rebased', 'parent']]);
@@ -148,7 +152,6 @@ describe('setGitInfo', () => {
     const ctx = {
       log,
       options: { onlyChanged: true, externals: ['**/*.scss'] },
-      client,
       ports,
     } as any;
     await setGitInfo(ctx, {} as any);
@@ -156,8 +159,8 @@ describe('setGitInfo', () => {
   });
 
   it('forces rebuild automatically if app is onboarding', async () => {
-    client.runQuery.mockReturnValue({ app: { isOnboarding: true } });
-    const ctx = { log, options: { ownerName: 'org' }, client, ports } as any;
+    getLastBuildForCommit.mockResolvedValue({ isOnboarding: true, lastBuild: undefined });
+    const ctx = { log, options: { ownerName: 'org' }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.options.forceRebuild).toBe(true);
   });
@@ -180,16 +183,16 @@ describe('setGitInfo', () => {
     };
 
     getParentCommits.mockResolvedValue([commitInfo.commit]);
-    client.runQuery.mockReturnValue({ app: { lastBuild } });
+    getLastBuildForCommit.mockResolvedValue({ isOnboarding: false, lastBuild });
 
-    const ctx = { log, options: {}, client, ports } as any;
+    const ctx = { log, options: {}, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.rebuildForBuild).toEqual(lastBuild);
     expect(ctx.storybookUrl).toEqual(lastBuild.storybookUrl);
   });
 
   it('removes undefined owner prefix from branch', async () => {
-    const ctx = { log, options: {}, client, ports } as any;
+    const ctx = { log, options: {}, ports } as any;
     getCommitAndBranch.mockResolvedValue({
       ...commitInfo,
       branch: 'undefined:repo',
@@ -199,7 +202,7 @@ describe('setGitInfo', () => {
   });
 
   it('sets projectMetadata on context', async () => {
-    const ctx = { log, options: { isLocalBuild: true }, client, ports } as any;
+    const ctx = { log, options: { isLocalBuild: true }, ports } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.projectMetadata).toMatchObject({
       hasRouter: true,

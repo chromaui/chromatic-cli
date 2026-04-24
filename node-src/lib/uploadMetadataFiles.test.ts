@@ -54,15 +54,15 @@ describe('uploadMetadataFiles', () => {
       },
       announcedBuild: { id: '1' },
       build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
-      client: {
-        runQuery: vi.fn().mockResolvedValue({
-          uploadMetadata: {
+      ports: {
+        chromatic: {
+          uploadMetadata: vi.fn().mockResolvedValue({
             info: {
               targets: [mockLogFileTarget],
             },
             userErrors: [],
-          },
-        }),
+          }),
+        },
       },
     } as any;
 

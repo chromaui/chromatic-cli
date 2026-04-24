@@ -31,52 +31,6 @@ interface VisualTest {
   mode: TestMode;
 }
 
-const ReportQuery = `
-  query ReportQuery($buildNumber: Int!, $skip: Int, $limit: Int) {
-    app {
-      build(number: $buildNumber) {
-        number
-        status(legacy: false)
-        storybookUrl
-        webUrl
-        createdAt
-        completedAt
-        tests(skip: $skip, limit: $limit) {
-          status
-          result
-          spec {
-            name
-            component {
-              name
-              displayName
-            }
-          }
-          parameters {
-            viewport
-            viewportIsDefault
-          }
-          mode {
-            name
-          }
-        }
-      }
-    }
-  }
-`;
-interface ReportQueryResult {
-  app: {
-    build: {
-      number: number;
-      status: string;
-      storybookUrl: string;
-      webUrl: string;
-      createdAt: number;
-      completedAt: number;
-      tests: VisualTest[];
-    };
-  };
-}
-
 /**
  * Generate a JUnit report XML file for a particular run.
  *
@@ -133,12 +87,9 @@ const queryBuildForReport = async (ctx: Context) => {
   const allTests: VisualTest[] = [];
 
   while (true) {
-    const {
-      app: { build },
-    } = await ctx.client.runQuery<ReportQueryResult>(
-      ReportQuery,
+    const build = await ctx.ports.chromatic.getReport(
       { buildNumber: ctx.build.number, skip, limit },
-      { headers: { Authorization: `Bearer ${ctx.build.reportToken}` } }
+      { reportToken: ctx.build.reportToken }
     );
 
     allTests.push(...build.tests);

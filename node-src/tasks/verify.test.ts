@@ -1,8 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createGraphqlChromaticApi } from '../lib/ports/chromaticApiGraphqlAdapter';
 import { exitCodes } from '../lib/setExitCode';
 import TestLogger from '../lib/testLogger';
 import { publishBuild, verifyBuild } from './verify';
+
+function makePorts(client: { runQuery: ReturnType<typeof vi.fn> }) {
+  return {
+    chromatic: createGraphqlChromaticApi({
+      getClient: () => client as any,
+      cliTokenEndpoint: 'https://index.chromatic.com/api',
+    }),
+  };
+}
 
 const environment = {
   CHROMATIC_POLL_INTERVAL: 10,
@@ -24,6 +34,7 @@ describe('publishBuild', () => {
       log,
       http,
       client,
+      ports: makePorts(client),
       announcedBuild,
       git: {},
       sourceDir: '/static/',
@@ -69,7 +80,7 @@ describe('verifyBuild', () => {
       .mockReturnValueOnce({ app: { build: publishedBuild } })
       .mockReturnValue({ app: { build } });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
 
     expect(client.runQuery).toHaveBeenNthCalledWith(
@@ -113,7 +124,7 @@ describe('verifyBuild', () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ app: { build: publishedBuild } });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await expect(verifyBuild(ctx, {} as any)).rejects.toThrow('Build verification timed out');
 
     expect(ctx.exitCode).toBe(exitCodes.VERIFICATION_TIMEOUT);
@@ -142,7 +153,7 @@ describe('verifyBuild', () => {
       .mockReturnValueOnce({ app: { build: { ...publishedBuild, upgradeBuilds: completed } } })
       .mockReturnValue({ app: { build } });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
 
     expect(ctx.build).toMatchObject(build);
@@ -161,7 +172,7 @@ describe('verifyBuild', () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ app: { build: publishedBuild } });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await expect(verifyBuild(ctx, {} as any)).rejects.toThrow(
       'Timed out waiting for upgrade builds to complete'
     );
@@ -183,7 +194,7 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
     expect(ctx.exitCode).toBe(5);
   });
@@ -204,7 +215,7 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
     expect(ctx.exitCode).toBe(11);
   });
@@ -225,7 +236,7 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
     expect(ctx.exitCode).toBe(12);
   });
@@ -246,7 +257,7 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
+    const ctx = { client, ports: makePorts(client), ...defaultContext } as any;
     await verifyBuild(ctx, {} as any);
     expect(ctx.exitCode).toBe(0);
     expect(ctx.skipSnapshots).toBe(true);

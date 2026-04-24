@@ -27,42 +27,10 @@ import {
   skipped,
 } from '../ui/tasks/snapshot';
 
-const SnapshotBuildQuery = `
-  query SnapshotBuildQuery($number: Int!) {
-    app {
-      build(number: $number) {
-        id
-        status(legacy: false)
-        autoAcceptChanges
-        inProgressCount: testCount(statuses: [IN_PROGRESS])
-        testCount
-        changeCount
-        errorCount: testCount(statuses: [BROKEN])
-        completedAt
-      }
-    }
-  }
-`;
-
-interface BuildQueryResult {
-  app: {
-    build: {
-      id: string;
-      status: string;
-      autoAcceptChanges: boolean;
-      inProgressCount: number;
-      testCount: number;
-      changeCount: number;
-      errorCount: number;
-      completedAt?: number;
-    };
-  };
-}
-
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export const takeSnapshots = async (ctx: Context, task: Task) => {
-  const { client, log, uploadedBytes } = ctx;
+  const { log, uploadedBytes } = ctx;
   const { app, number, tests, testCount, actualTestCount, reportToken } = ctx.build;
 
   if (app.repository && uploadedBytes && !ctx.options.junitReport) {
@@ -100,9 +68,8 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
   };
 
   const getCompletedBuild = async (): Promise<Context['build']> => {
-    const options = { headers: { Authorization: `Bearer ${reportToken}` } };
-    const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
-    ctx.build = { ...ctx.build, ...data.app.build };
+    const data = await ctx.ports.chromatic.getSnapshotBuild({ number }, { reportToken });
+    ctx.build = { ...ctx.build, ...data } as Context['build'];
 
     if (ctx.build.completedAt) {
       return ctx.build;

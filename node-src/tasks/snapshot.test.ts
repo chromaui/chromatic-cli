@@ -7,6 +7,7 @@ import waitForBuildToComplete, {
 import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createGraphqlChromaticApi } from '../lib/ports/chromaticApiGraphqlAdapter';
 import TestLogger from '../lib/testLogger';
 import { takeSnapshots } from './snapshot';
 
@@ -31,13 +32,21 @@ const environment = {
 const log = new TestLogger();
 const matchesBranch = () => false;
 
-const createBaseTestContext = () => ({
-  client: { runQuery: vi.fn(), setAuthorization: vi.fn() },
-  env: environment,
-  git: { matchesBranch },
-  log,
-  options: {},
-});
+const createBaseTestContext = () => {
+  const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
+  const chromatic = createGraphqlChromaticApi({
+    getClient: () => client as any,
+    cliTokenEndpoint: 'https://index.chromatic.com/api',
+  });
+  return {
+    client,
+    ports: { chromatic },
+    env: environment,
+    git: { matchesBranch },
+    log,
+    options: {},
+  };
+};
 
 const mockWaitForBuildToComplete = vi.mocked(waitForBuildToComplete);
 
