@@ -1,9 +1,4 @@
-import retry from 'async-retry';
-import { filesize } from 'filesize';
-import { FormData } from 'formdata-node';
-
 import { Context, TargetInfo } from '../types';
-import { FileReaderBlob } from './fileReaderBlob';
 
 /**
  * Upload a zip to Chromatic instead of individual files.
@@ -20,48 +15,14 @@ export async function uploadZip(
   onProgress: (progress: number) => void
 ) {
   const { experimental_abortSignal: signal } = ctx.options;
-  const { contentLength, filePath, formAction, formFields, localPath } = target;
   let totalProgress = 0;
 
-  ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)})`);
-
-  return retry(
-    async (bail) => {
-      if (signal?.aborted) {
-        return bail(signal.reason || new Error('Aborted'));
-      }
-
-      const blob = new FileReaderBlob(localPath, contentLength, (delta) => {
-        totalProgress += delta;
-        onProgress?.(totalProgress);
-      });
-
-      const formData = new FormData();
-      for (const [k, v] of Object.entries(formFields)) {
-        formData.append(k, v);
-      }
-      formData.append('file', blob);
-
-      const result = await ctx.http.fetch(
-        formAction,
-        // @ts-expect-error -  TS is not correctly resolving FormData in the types, but it is supported.
-        { body: formData, method: 'POST', signal },
-        { retries: 0 } // already retrying the whole operation
-      );
-
-      if (!result.ok) {
-        ctx.log.debug(`Uploading ${localPath} failed: %O`, result);
-        throw new Error(localPath);
-      }
-      ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
+  await ctx.ports.uploader.uploadFile(target, {
+    signal,
+    retries: ctx.env.CHROMATIC_RETRIES,
+    onProgress: (delta) => {
+      totalProgress += delta;
+      onProgress(totalProgress);
     },
-    {
-      retries: ctx.env.CHROMATIC_RETRIES,
-      onRetry: (err: Error) => {
-        totalProgress = 0;
-        ctx.log.debug('Retrying upload for %s, %O', localPath, err);
-        onProgress(totalProgress);
-      },
-    }
-  );
+  });
 }

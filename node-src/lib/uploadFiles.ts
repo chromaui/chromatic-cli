@@ -1,10 +1,6 @@
-import retry from 'async-retry';
-import { filesize } from 'filesize';
-import { FormData } from 'formdata-node';
 import pLimit from 'p-limit';
 
 import { Context, FileDesc, TargetInfo } from '../types';
-import { FileReaderBlob } from './fileReaderBlob';
 
 /**
  * Upload Storybook build files to Chromatic.
@@ -12,7 +8,7 @@ import { FileReaderBlob } from './fileReaderBlob';
  * @param ctx The context set when executing the CLI.
  * @param targets The list of files to upload.
  * @param onProgress A callback to report progress on the upload.
- 
+ *
  * @returns A promise that resolves when all files are uploaded.
  */
 export async function uploadFiles(
@@ -25,53 +21,17 @@ export async function uploadFiles(
   let totalProgress = 0;
 
   await Promise.all(
-    targets.map(({ contentLength, filePath, formAction, formFields, localPath }) => {
-      let fileProgress = 0; // The bytes uploaded for this this particular file
-
-      ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)}) to ${formAction}`);
-
-      return limitConcurrency(() =>
-        retry(
-          async (bail) => {
-            if (signal?.aborted) {
-              return bail(signal.reason || new Error('Aborted'));
-            }
-
-            const blob = new FileReaderBlob(localPath, contentLength, (delta) => {
-              fileProgress += delta;
-              totalProgress += delta;
-              onProgress?.(totalProgress);
-            });
-
-            const formData = new FormData();
-            for (const [k, v] of Object.entries(formFields)) {
-              formData.append(k, v);
-            }
-            formData.append('file', blob);
-
-            try {
-              await ctx.http.fetch(
-                formAction,
-                // @ts-expect-error -  TS is not correctly resolving FormData in the types, but it is supported.
-                { body: formData, method: 'POST', signal },
-                { retries: 0 } // already retrying the whole operation
-              );
-              ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
-            } catch {
-              throw new Error(localPath);
-            }
+    targets.map((target) =>
+      limitConcurrency(() =>
+        ctx.ports.uploader.uploadFile(target, {
+          signal,
+          retries: ctx.env.CHROMATIC_RETRIES,
+          onProgress: (delta) => {
+            totalProgress += delta;
+            onProgress?.(totalProgress);
           },
-          {
-            retries: ctx.env.CHROMATIC_RETRIES,
-            onRetry: (err: Error) => {
-              totalProgress -= fileProgress;
-              fileProgress = 0;
-              ctx.log.debug('Retrying upload for %s, %O', localPath, err);
-              onProgress?.(totalProgress);
-            },
-          }
-        )
-      );
-    })
+        })
+      )
+    )
   );
 }

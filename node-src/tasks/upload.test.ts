@@ -5,14 +5,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import { createGraphqlChromaticApi } from '../lib/ports/chromaticApiGraphqlAdapter';
+import { createHttpUploader } from '../lib/ports/uploaderHttpAdapter';
 import TestLogger from '../lib/testLogger';
 import { uploadStorybook, waitForSentinels } from './upload';
 
-function makePorts(client: { runQuery: ReturnType<typeof vi.fn> }) {
+function makePorts(
+  client: { runQuery: ReturnType<typeof vi.fn> },
+  http: { fetch: ReturnType<typeof vi.fn> }
+) {
   return {
     chromatic: createGraphqlChromaticApi({
       getClient: () => client as any,
       cliTokenEndpoint: 'https://index.chromatic.com/api',
+    }),
+    uploader: createHttpUploader({
+      getHttp: () => http as any,
+      log: { debug: vi.fn(), getLevel: () => 'info' } as any,
     }),
   };
 }
@@ -81,7 +89,7 @@ describe('uploadStorybook', () => {
     };
     const ctx = {
       client,
-      ports: makePorts(client),
+      ports: makePorts(client, http),
       env: environment,
       log,
       http,
@@ -151,7 +159,7 @@ describe('uploadStorybook', () => {
     };
     const ctx = {
       client,
-      ports: makePorts(client),
+      ports: makePorts(client, http),
       env: environment,
       log,
       http,
@@ -231,7 +239,7 @@ describe('uploadStorybook', () => {
     };
     const ctx = {
       client,
-      ports: makePorts(client),
+      ports: makePorts(client, http),
       env: environment,
       log,
       http,
@@ -314,7 +322,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log,
         http,
@@ -394,7 +402,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log,
         http,
@@ -486,7 +494,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log,
         http,
@@ -555,7 +563,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log: new TestLogger(),
         http,
@@ -617,7 +625,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log: new TestLogger(),
         http,
@@ -685,7 +693,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log: new TestLogger(),
         http,
@@ -747,7 +755,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log: new TestLogger(),
         http,
@@ -803,7 +811,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log: new TestLogger(),
         http,
@@ -878,7 +886,7 @@ describe('uploadStorybook', () => {
       };
       const ctx = {
         client,
-        ports: makePorts(client),
+        ports: makePorts(client, http),
         env: environment,
         log: new TestLogger(),
         http,
@@ -917,7 +925,7 @@ describe('waitForSentinels', () => {
     ];
     const ctx = {
       client,
-      ports: makePorts(client),
+      ports: makePorts(client, http),
       env: environment,
       log,
       http,
