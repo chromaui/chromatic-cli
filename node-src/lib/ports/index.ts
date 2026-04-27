@@ -7,6 +7,8 @@ import { FileSystem } from './fs';
 import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
+import { ProcessRunner } from './processRunner';
+import { createExecaProcessRunner } from './processRunnerExecaAdapter';
 import { Uploader } from './uploader';
 import { createHttpUploader } from './uploaderHttpAdapter';
 
@@ -21,6 +23,7 @@ export interface Ports {
   chromatic: ChromaticApi;
   uploader: Uploader;
   fs: FileSystem;
+  proc: ProcessRunner;
 }
 
 interface DefaultPortsDeps {
@@ -62,5 +65,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
       log: deps.log,
     }),
     fs: createNodeFileSystem(),
+    proc: createExecaProcessRunner(),
   };
 }
