@@ -255,32 +255,32 @@ const resolvePlatforms = (ctx: Context) => {
   );
 };
 
-export const buildReactNative = async (ctx: Context) => {
+export const buildReactNativeAndroid = async (ctx: Context) => {
   if (!ctx.isReactNativeApp) return;
+  if (!resolvePlatforms(ctx).includes('android')) return;
 
-  const platformsToBuild = resolvePlatforms(ctx);
-  if (platformsToBuild.length === 0) return;
+  const { androidBuildCommand } = ctx.options.reactNative ?? {};
 
-  const { iosBuildCommand, androidBuildCommand } = ctx.options.reactNative ?? {};
+  if (androidBuildCommand) {
+    await runPlatformCommand(ctx, androidBuildCommand);
+  } else {
+    const { artifactPath } = await buildAndroid();
+    renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.apk'));
+  }
+};
 
-  const config = await readExpoConfig();
+export const buildReactNativeIos = async (ctx: Context) => {
+  if (!ctx.isReactNativeApp) return;
+  if (!resolvePlatforms(ctx).includes('ios')) return;
 
-  for (const platform of platformsToBuild) {
-    if (platform === 'android') {
-      if (androidBuildCommand) {
-        await runPlatformCommand(ctx, androidBuildCommand);
-      } else {
-        const { artifactPath } = await buildAndroid();
-        renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.apk'));
-      }
-    } else if (platform === 'ios') {
-      if (iosBuildCommand) {
-        await runPlatformCommand(ctx, iosBuildCommand);
-      } else {
-        const { artifactPath } = await buildIos(config.name);
-        renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.app'));
-      }
-    }
+  const { iosBuildCommand } = ctx.options.reactNative ?? {};
+
+  if (iosBuildCommand) {
+    await runPlatformCommand(ctx, iosBuildCommand);
+  } else {
+    const config = await readExpoConfig();
+    const { artifactPath } = await buildIos(config.name);
+    renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.app'));
   }
 };
 
@@ -335,7 +335,8 @@ export default function main(ctx: Context) {
       transitionTo(pending),
       startActivity,
       buildStorybook,
-      buildReactNative,
+      buildReactNativeAndroid,
+      buildReactNativeIos,
       generateManifestForReactNative,
       endActivity,
       transitionTo(success, true),

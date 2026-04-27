@@ -15,7 +15,8 @@ import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import { patchModulePath } from '../lib/testUtilities';
 import buildTask, {
-  buildReactNative,
+  buildReactNativeAndroid,
+  buildReactNativeIos,
   buildStorybook,
   generateManifestForReactNative,
   setBuildCommand,
@@ -579,15 +580,26 @@ describe('buildStorybook analytics', () => {
   });
 });
 
-describe('buildReactNative', () => {
+describe('buildReactNativeAndroid', () => {
   it('skips when not a React Native app', async () => {
     const ctx = { ...baseContext, isReactNativeApp: false, log: new TestLogger() } as any;
-    await buildReactNative(ctx);
+    await buildReactNativeAndroid(ctx);
     expect(buildAndroid).not.toHaveBeenCalled();
-    expect(buildIos).not.toHaveBeenCalled();
   });
 
-  it('calls buildAndroid directly and moves artifact when android is in browsers', async () => {
+  it('skips when android is not in browsers', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['ios'] },
+      log: new TestLogger(),
+      options: {},
+    } as any;
+    await buildReactNativeAndroid(ctx);
+    expect(buildAndroid).not.toHaveBeenCalled();
+  });
+
+  it('calls buildAndroid and moves artifact when android is in browsers', async () => {
     const { renameSync } = await import('fs');
     const ctx = {
       ...baseContext,
@@ -596,45 +608,12 @@ describe('buildReactNative', () => {
       log: new TestLogger(),
       options: { storybookBuildDir: '/path/to/build' },
     } as any;
-    await buildReactNative(ctx);
+    await buildReactNativeAndroid(ctx);
     expect(buildAndroid).toHaveBeenCalled();
     expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
       '/tmp/app-release.apk',
       '/path/to/build/storybook.apk'
     );
-  });
-
-  it('reads expo config and calls buildIos directly when ios is in browsers', async () => {
-    const { renameSync } = await import('fs');
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      announcedBuild: { browsers: ['ios'] },
-      log: new TestLogger(),
-      options: { storybookBuildDir: '/path/to/build' },
-    } as any;
-    await buildReactNative(ctx);
-    expect(readExpoConfig).toHaveBeenCalled();
-    expect(buildIos).toHaveBeenCalledWith('MyApp');
-    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
-      '/tmp/MyApp.app',
-      '/path/to/build/storybook.app'
-    );
-  });
-
-  it('uses iosBuildCommand when set and does not call buildIos', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      announcedBuild: { browsers: ['ios'] },
-      log: new TestLogger(),
-      options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
-    } as any;
-    await buildReactNative(ctx);
-    expect(buildIos).not.toHaveBeenCalled();
-    expect(readExpoConfig).not.toHaveBeenCalled();
-    const [cmd, ...args] = parseCommandString('my-ios-build');
-    expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
   });
 
   it('uses androidBuildCommand when set and does not call buildAndroid', async () => {
@@ -645,37 +624,64 @@ describe('buildReactNative', () => {
       log: new TestLogger(),
       options: { reactNative: { androidBuildCommand: 'my-android-build' } },
     } as any;
-    await buildReactNative(ctx);
+    await buildReactNativeAndroid(ctx);
     expect(buildAndroid).not.toHaveBeenCalled();
     const [cmd, ...args] = parseCommandString('my-android-build');
     expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
   });
+});
 
-  it('does not call buildIos when ios is not in browsers', async () => {
+describe('buildReactNativeIos', () => {
+  it('skips when not a React Native app', async () => {
+    const ctx = { ...baseContext, isReactNativeApp: false, log: new TestLogger() } as any;
+    await buildReactNativeIos(ctx);
+    expect(buildIos).not.toHaveBeenCalled();
+  });
+
+  it('skips when ios is not in browsers', async () => {
     const ctx = {
       ...baseContext,
       isReactNativeApp: true,
       announcedBuild: { browsers: ['android'] },
       log: new TestLogger(),
-      options: { storybookBuildDir: '/path/to/build' },
+      options: {},
     } as any;
-    await buildReactNative(ctx);
+    await buildReactNativeIos(ctx);
     expect(buildIos).not.toHaveBeenCalled();
     expect(readExpoConfig).not.toHaveBeenCalled();
-    expect(buildAndroid).toHaveBeenCalled();
   });
 
-  it('builds nothing when browsers contains no React Native platforms', async () => {
+  it('reads expo config and calls buildIos when ios is in browsers', async () => {
+    const { renameSync } = await import('fs');
     const ctx = {
       ...baseContext,
       isReactNativeApp: true,
-      announcedBuild: { browsers: ['chrome'] },
+      announcedBuild: { browsers: ['ios'] },
       log: new TestLogger(),
-      options: {},
+      options: { storybookBuildDir: '/path/to/build' },
     } as any;
-    await buildReactNative(ctx);
-    expect(buildAndroid).not.toHaveBeenCalled();
+    await buildReactNativeIos(ctx);
+    expect(readExpoConfig).toHaveBeenCalled();
+    expect(buildIos).toHaveBeenCalledWith('MyApp');
+    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+      '/tmp/MyApp.app',
+      '/path/to/build/storybook.app'
+    );
+  });
+
+  it('uses iosBuildCommand when set and does not call buildIos or readExpoConfig', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['ios'] },
+      log: new TestLogger(),
+      options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
+    } as any;
+    await buildReactNativeIos(ctx);
     expect(buildIos).not.toHaveBeenCalled();
+    expect(readExpoConfig).not.toHaveBeenCalled();
+    const [cmd, ...args] = parseCommandString('my-ios-build');
+    expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
   });
 });
 
