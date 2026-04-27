@@ -173,7 +173,7 @@ async function handleBuildFailure(ctx: Context, err: any, signal?: AbortSignal):
 
 function trackBuildFailure(ctx: Context, errorCategory: string, err: any) {
   try {
-    ctx.analytics?.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {
+    ctx.ports.analytics.track(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {
       errorCategory,
       stackTrace: sanitizeStackTrace(err?.stack),
       buildCommand: ctx.buildCommand,

@@ -289,7 +289,7 @@ async function runBuild(ctx: Context) {
       ctx.log.flush();
 
       try {
-        await ctx.analytics?.shutdown();
+        await ctx.ports.analytics.flush();
       } catch (error) {
         // Analytics shutdown should never crash the CLI, but we want to know about it
         Sentry.captureException(error);

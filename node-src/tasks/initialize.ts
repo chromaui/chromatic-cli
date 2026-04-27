@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 
 import { createAnalyticsClient } from '../lib/analytics';
 import { emailHash } from '../lib/emailHash';
+import { createRealAnalytics } from '../lib/ports/analyticsRealAdapter';
 import { validateStorybookReactNativeVersion } from '../lib/react-native/validateStorybookVersion';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
@@ -137,7 +138,9 @@ function updateContextFromAnnouncedBuild(
  * @param ctx The context set when executing the CLI.
  */
 export const initializeAnalytics = async (ctx: Context) => {
-  ctx.analytics = createAnalyticsClient(ctx);
+  const client = createAnalyticsClient(ctx);
+  ctx.analytics = client;
+  ctx.ports.analytics = createRealAnalytics(client);
 };
 
 /**

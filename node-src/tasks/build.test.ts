@@ -449,7 +449,8 @@ describe('buildStorybook E2E', () => {
   });
 });
 
-function makeAnalyticsContext(overrides = {}) {
+function makeAnalyticsContext(overrides: Record<string, any> = {}) {
+  const analytics = { track: vi.fn(), flush: vi.fn() };
   return {
     ...baseContext,
     buildCommand: 'npm run build:storybook',
@@ -459,7 +460,7 @@ function makeAnalyticsContext(overrides = {}) {
     storybook: { version: '8.0.0' },
     git: { gitUserEmail: 'test@example.com', ciService: 'github-actions' },
     announcedBuild: { app: { id: 'app-123', account: { id: 'account-456' } } },
-    analytics: { trackEvent: vi.fn(), shutdown: vi.fn() },
+    ports: { ...baseContext.ports, analytics },
     ...overrides,
   } as any;
 }
@@ -474,7 +475,7 @@ describe('buildStorybook analytics', () => {
     await expect(buildStorybook(ctx)).rejects.toThrow();
 
     // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({
         errorCategory: 'storybook_build_failed',
@@ -498,7 +499,7 @@ describe('buildStorybook analytics', () => {
     await expect(buildStorybook(ctx)).rejects.toThrow();
 
     // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({ errorCategory: 'e2e_missing_dependency' })
     );
@@ -514,7 +515,7 @@ describe('buildStorybook analytics', () => {
     await expect(buildStorybook(ctx)).rejects.toThrow();
 
     // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({ errorCategory: 'e2e_build_failed' })
     );
@@ -533,7 +534,7 @@ describe('buildStorybook analytics', () => {
     await expect(buildStorybook(ctx)).rejects.toThrow();
 
     // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({ errorCategory: 'aborted' })
     );
@@ -550,7 +551,7 @@ describe('buildStorybook analytics', () => {
     await expect(buildStorybook(ctx)).rejects.toThrow();
 
     // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({
         stackTrace: 'Error: build failed\n    at x (<path>/file.js:1:1)',
@@ -563,11 +564,14 @@ describe('buildStorybook analytics', () => {
     vi.mocked(Sentry.captureException).mockClear();
     const analyticsError = new Error('analytics exploded');
     const ctx = makeAnalyticsContext({
-      analytics: {
-        trackEvent: vi.fn(() => {
-          throw analyticsError;
-        }),
-        shutdown: vi.fn(),
+      ports: {
+        ...stubPorts,
+        analytics: {
+          track: vi.fn(() => {
+            throw analyticsError;
+          }),
+          flush: vi.fn(),
+        },
       },
     });
     execa.mockRejectedValueOnce(new Error('build failed'));
