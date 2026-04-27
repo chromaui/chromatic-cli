@@ -1,6 +1,8 @@
 import GraphQLClient from '../../io/graphqlClient';
 import HTTPClient from '../../io/httpClient';
 import { Logger } from '../log';
+import { Analytics } from './analytics';
+import { createInMemoryAnalytics } from './analyticsInMemoryAdapter';
 import { BuildRunner } from './buildRunner';
 import { createShellBuildRunner } from './buildRunnerShellAdapter';
 import { ChromaticApi } from './chromaticApi';
@@ -44,6 +46,7 @@ export interface Ports {
   clock: Clock;
   host: Environment;
   log: LoggerPort;
+  analytics: Analytics;
 }
 
 interface DefaultPortsDeps {
@@ -94,5 +97,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     clock: createRealClock(),
     host: createRealEnvironment(),
     log: deps.log,
+    analytics: createInMemoryAnalytics(),
   };
 }
