@@ -41,7 +41,8 @@ export async function generateManifest(ctx: Context) {
 
 async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
   const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
-  const fullConfigPath = path.join(process.cwd(), configPath);
+  const cwd = ctx.ports.host.cwd();
+  const fullConfigPath = path.join(cwd, configPath);
 
   if (!(await ctx.ports.fs.exists(fullConfigPath))) {
     throw new Error(
@@ -49,7 +50,7 @@ async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
     );
   }
   // Create require relative to user's project, not the bundled CLI location
-  const require = createRequire(path.join(process.cwd(), 'package.json'));
+  const require = createRequire(path.join(cwd, 'package.json'));
 
   try {
     // Storybook 10+ (ESM-only)

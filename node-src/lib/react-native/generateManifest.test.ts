@@ -33,7 +33,10 @@ function getContext(overrides: Record<string, any> = {}) {
     sourceDir: sourceDirectory,
     log: new TestLogger(),
     options: {},
-    ports: { fs: { exists: mockExists, mkdir: mockMkdir, writeFile: mockWriteFile } },
+    ports: {
+      fs: { exists: mockExists, mkdir: mockMkdir, writeFile: mockWriteFile },
+      host: { cwd: () => process.cwd() },
+    },
     ...overrides,
   } as any;
 }

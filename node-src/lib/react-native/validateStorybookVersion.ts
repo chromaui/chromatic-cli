@@ -52,7 +52,7 @@ export async function validateStorybookReactNativeVersion(
 async function getInstalledStorybookReactNativeVersion(
   ctx: Pick<Context, 'log' | 'ports'>
 ): Promise<string | undefined> {
-  const workingDirectory = process.cwd();
+  const workingDirectory = ctx.ports.host.cwd();
   ctx.log.debug(`Validating @storybook/react-native version from ${workingDirectory}`);
 
   const require = createRequire(path.join(workingDirectory, 'package.json'));

@@ -31,7 +31,15 @@ beforeEach(() => {
 
 describe('setEnvironment', () => {
   it('sets the environment info on context', async () => {
-    const ctx = { env: environment, log } as any;
+    const ports = {
+      host: {
+        all: () => ({
+          GERRIT_BRANCH: 'foo/bar',
+          TRAVIS_EVENT_TYPE: 'pull_request',
+        }),
+      },
+    } as any;
+    const ctx = { env: environment, log, ports } as any;
     await setEnvironment(ctx);
     expect(ctx.environment).toMatchObject({
       GERRIT_BRANCH: 'foo/bar',
@@ -44,6 +52,10 @@ describe('setRuntimeMetadata', () => {
   const ports = {
     proc: { run: vi.fn(async () => ({ stdout: '1.2.3', stderr: '', exitCode: 0 })) },
     pkgMgr: { detect: vi.fn(async () => ({ name: 'npm', version: '1.2.3' })) },
+    host: {
+      platform: () => 'darwin' as NodeJS.Platform,
+      nodeVersion: () => process.versions.node,
+    },
   } as any;
 
   beforeEach(() => {

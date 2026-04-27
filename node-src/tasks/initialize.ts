@@ -17,7 +17,7 @@ export const setEnvironment = async (ctx: Context) => {
   // We send up all environment variables provided by these complicated systems.
   // We don't want to send up *all* environment vars as they could include sensitive information
   // about the user's build environment
-  for (const [key, value] of Object.entries(process.env)) {
+  for (const [key, value] of Object.entries(ctx.ports.host.all())) {
     if (!value) continue;
 
     if (ctx.env.ENVIRONMENT_WHITELIST.some((regex) => key.match(regex))) {
@@ -30,8 +30,8 @@ export const setEnvironment = async (ctx: Context) => {
 
 export const setRuntimeMetadata = async (ctx: Context) => {
   ctx.runtimeMetadata = {
-    nodePlatform: process.platform,
-    nodeVersion: process.versions.node,
+    nodePlatform: ctx.ports.host.platform(),
+    nodeVersion: ctx.ports.host.nodeVersion(),
   };
 
   try {

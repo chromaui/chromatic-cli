@@ -146,7 +146,7 @@ async function handleBuildFailure(ctx: Context, err: any, signal?: AbortSignal):
     // If we tried to run the E2E package's bin directly (due to being in the action)
     // and it failed, that means we couldn't find it. This probably means they haven't
     // installed the right dependency or run from the right directory
-    const errorInfo = e2eBuildErrorMessage(err, process.cwd(), ctx);
+    const errorInfo = e2eBuildErrorMessage(err, ctx.ports.host.cwd(), ctx);
     const errorCategory =
       errorInfo.exitCode === exitCodes.MISSING_DEPENDENCY
         ? 'e2e_missing_dependency'
@@ -180,7 +180,7 @@ function trackBuildFailure(ctx: Context, errorCategory: string, err: any) {
       source: 'cli',
       cliVersion: ctx.pkg?.version,
       storybookVersion: ctx.storybook?.version,
-      isCI: !!process.env.CI,
+      isCI: !!ctx.ports.host.get('CI'),
       ciService: ctx.git?.ciService,
       gitUserEmailHash: ctx.git?.gitUserEmail ? emailHash(ctx.git.gitUserEmail) : undefined, // avoid hashing empty string
     });

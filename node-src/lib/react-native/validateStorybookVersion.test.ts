@@ -19,7 +19,10 @@ const mockReadJson = vi.fn();
 
 const ctx = {
   log: new TestLogger(),
-  ports: { fs: { exists: mockExists, readJson: mockReadJson } } as any,
+  ports: {
+    fs: { exists: mockExists, readJson: mockReadJson },
+    host: { cwd: () => process.cwd() },
+  } as any,
 };
 
 beforeEach(() => {

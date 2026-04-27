@@ -53,6 +53,12 @@ const stubPorts = {
   proc: stubProc,
   builder: createShellBuildRunner({ proc: stubProc }),
   pkgMgr: createRealPackageManager({ proc: stubProc }),
+  host: {
+    cwd: () => '/cwd',
+    get: (key: string) => process.env[key],
+    platform: () => process.platform,
+    nodeVersion: () => process.versions.node,
+  },
 } as any;
 
 const baseContext = { options: {}, flags: {}, ports: stubPorts } as any;
