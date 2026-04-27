@@ -9,6 +9,8 @@ import { Clock } from './clock';
 import { createRealClock } from './clockRealAdapter';
 import { DependencyTracer } from './dependencyTracer';
 import { createTurbosnapDependencyTracer } from './dependencyTracerTurbosnapAdapter';
+import { Environment } from './environment';
+import { createRealEnvironment } from './environmentRealAdapter';
 import { FileSystem } from './fs';
 import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
@@ -39,6 +41,7 @@ export interface Ports {
   storybook: StorybookDetector;
   pkgMgr: PackageManager;
   clock: Clock;
+  host: Environment;
 }
 
 interface DefaultPortsDeps {
@@ -87,5 +90,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     storybook: createRealStorybookDetector(),
     pkgMgr: createRealPackageManager({ proc }),
     clock: createRealClock(),
+    host: createRealEnvironment(),
   };
 }
