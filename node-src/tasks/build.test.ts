@@ -8,6 +8,7 @@ import { PassThrough } from 'stream';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { createShellBuildRunner } from '../lib/ports/buildRunnerShellAdapter';
+import { createRealPackageManager } from '../lib/ports/packageManagerRealAdapter';
 import { createExecaProcessRunner } from '../lib/ports/processRunnerExecaAdapter';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
@@ -51,6 +52,7 @@ const stubPorts = {
   },
   proc: stubProc,
   builder: createShellBuildRunner({ proc: stubProc }),
+  pkgMgr: createRealPackageManager({ proc: stubProc }),
 } as any;
 
 const baseContext = { options: {}, flags: {}, ports: stubPorts } as any;
@@ -191,6 +193,7 @@ describe('setBuildCommand', () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '8.4.0' },
@@ -210,6 +213,7 @@ describe('setBuildCommand', () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '8.5.0' },
@@ -229,6 +233,7 @@ describe('setBuildCommand', () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
     const ctx = {
+      ...baseContext,
       sourceDir: './source-dir/',
       options: { buildScriptName: 'build:storybook' },
       git: { changedFiles: ['./index.js'] },

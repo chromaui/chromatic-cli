@@ -302,6 +302,30 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib) must go through the PackageManager port. The real
+  // adapter is the only module permitted to import @antfu/ni or yarn-or-npm
+  // directly.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    ignores: ['node-src/lib/ports/packageManagerRealAdapter.ts', '**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@antfu/ni',
+              message: 'Use ctx.ports.pkgMgr instead.',
+            },
+            {
+              name: 'yarn-or-npm',
+              message: 'Use ctx.ports.pkgMgr instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Phase code (tasks/lib) must go through the StorybookDetector port. The
   // real adapter and the underlying detection helpers are the only modules
   // permitted to import lib/getStorybookInfo directly.

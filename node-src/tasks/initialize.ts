@@ -2,7 +2,6 @@ import * as Sentry from '@sentry/node';
 
 import { createAnalyticsClient } from '../lib/analytics';
 import { emailHash } from '../lib/emailHash';
-import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
 import { validateStorybookReactNativeVersion } from '../lib/react-native/validateStorybookVersion';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
@@ -36,15 +35,12 @@ export const setRuntimeMetadata = async (ctx: Context) => {
   };
 
   try {
-    const packageManager = await getPackageManagerName();
-    if (!packageManager) {
-      throw new Error('Failed to determine package manager');
-    }
+    const { name: packageManager, version: packageManagerVersion } =
+      await ctx.ports.pkgMgr.detect();
 
     ctx.runtimeMetadata.packageManager = packageManager as any;
     Sentry.setTag('packageManager', packageManager);
 
-    const packageManagerVersion = await getPackageManagerVersion(ctx, packageManager);
     ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
     Sentry.setTag('packageManagerVersion', packageManagerVersion);
   } catch (err) {

@@ -1,5 +1,4 @@
 import { checkout, findMergeBase, getUpdateMessage, isClean, isUpToDate } from '../git/git';
-import installDependencies from '../lib/installDependencies';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context, Task } from '../types';
@@ -48,7 +47,7 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
 
   try {
     transitionTo(installingDependencies)(ctx, task);
-    await installDependencies(); // this might modify a lockfile
+    await ctx.ports.pkgMgr.exec(['install']); // this might modify a lockfile
   } catch (err) {
     ctx.mergeBase = undefined;
     setExitCode(ctx, exitCodes.NPM_INSTALL_FAILED);

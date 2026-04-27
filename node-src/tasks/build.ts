@@ -7,7 +7,6 @@ import { sanitizeStackTrace } from '../lib/analytics/sanitization';
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
 import { isE2EBuild } from '../lib/e2eUtils';
 import { emailHash } from '../lib/emailHash';
-import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -92,7 +91,7 @@ export const setBuildCommand = async (ctx: Context) => {
     throw new Error('Unable to determine build script');
   }
 
-  ctx.buildCommand = await getPackageManagerRunCommand([
+  ctx.buildCommand = await ctx.ports.pkgMgr.getRunCommand([
     ctx.options.buildScriptName,
     ...buildCommandOptions,
   ]);

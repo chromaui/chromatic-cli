@@ -1,4 +1,3 @@
-import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import TestLogger from '@cli/testLogger';
 import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateStorybookReactNativeVersion as validateStorybookReactNativeVersionDefault } from '../lib/react-native/validateStorybookVersion';
 import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
 
-vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
   const actual = await importOriginal<typeof import('execa')>();
   return {
@@ -19,7 +17,6 @@ vi.mock('../lib/react-native/validateStorybookVersion', () => ({
 }));
 
 const execa = vi.mocked(execaDefault);
-const getCliCommand = vi.mocked(getCliCommandDefault);
 const validateStorybookReactNativeVersion = vi.mocked(validateStorybookReactNativeVersionDefault);
 
 process.env.GERRIT_BRANCH = 'foo/bar';
@@ -46,15 +43,17 @@ describe('setEnvironment', () => {
 describe('setRuntimeMetadata', () => {
   const ports = {
     proc: { run: vi.fn(async () => ({ stdout: '1.2.3', stderr: '', exitCode: 0 })) },
+    pkgMgr: { detect: vi.fn(async () => ({ name: 'npm', version: '1.2.3' })) },
   } as any;
 
   beforeEach(() => {
     execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
     ports.proc.run.mockResolvedValue({ stdout: '1.2.3', stderr: '', exitCode: 0 });
+    ports.pkgMgr.detect.mockResolvedValue({ name: 'npm', version: '1.2.3' });
   });
 
   it('sets the build command on the context', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('npm'));
+    ports.pkgMgr.detect.mockResolvedValue({ name: 'npm', version: '1.2.3' });
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -74,7 +73,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports yarn', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('yarn'));
+    ports.pkgMgr.detect.mockResolvedValue({ name: 'yarn', version: '1.2.3' });
 
     const ctx = {
       sourceDir: './source-dir/',
@@ -94,7 +93,7 @@ describe('setRuntimeMetadata', () => {
   });
 
   it('supports pnpm', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('pnpm'));
+    ports.pkgMgr.detect.mockResolvedValue({ name: 'pnpm', version: '1.2.3' });
 
     const ctx = {
       sourceDir: './source-dir/',

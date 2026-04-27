@@ -336,9 +336,33 @@ vi.mock('./lib/getFileHashes', () => ({
     Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
 }));
 
-vi.mock('./lib/getPackageManager', () => ({
-  getPackageManagerName: () => Promise.resolve('pnpm'),
-  getPackageManagerRunCommand: (args) => Promise.resolve(`pnpm run ${args.join(' ')}`),
+vi.mock('@antfu/ni', () => ({
+  // Return a run-command string for parseNr (when args are provided); return
+  // undefined for the bare detect() call so the PackageManager adapter throws
+  // and no `<pm> --version` execa subprocess is spawned.
+  getCliCommand: vi.fn((_parser, args = []) => {
+    if (args && args.length > 0) return Promise.resolve(`pnpm run ${args.join(' ')}`);
+    return Promise.resolve(undefined);
+  }),
+  parseNa: {},
+  parseNr: {},
+}));
+
+vi.mock('yarn-or-npm', () => ({
+  hasYarn: vi.fn(() => false),
+  spawn: vi.fn(() => {
+    const child: any = {
+      stdout: {
+        on: (event: string, callback: any) =>
+          event === 'data' && callback(Buffer.from('https://npm.example.com')),
+      },
+      stderr: { on: () => {} },
+      on: (event: string, callback: any) => {
+        if (event === 'close') queueMicrotask(() => callback(0));
+      },
+    };
+    return child;
+  }),
 }));
 
 vi.mock('./lib/getStorybookInfo', () => ({
@@ -349,8 +373,6 @@ vi.mock('./lib/getStorybookInfo', () => ({
 }));
 
 vi.mock('./lib/uploadFiles');
-
-vi.mock('./lib/spawn', () => ({ default: () => Promise.resolve('https://npm.example.com') }));
 
 let processEnvironment;
 beforeEach(() => {

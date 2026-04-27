@@ -1,33 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
-import installDeps from '../lib/installDependencies';
 import TestLogger from '../lib/testLogger';
 import { runPrepareWorkspace } from './prepareWorkspace';
 
 vi.mock('../git/git');
-vi.mock('../lib/installDependencies');
 vi.mock('./restoreWorkspace');
 
 const checkout = vi.mocked(git.checkout);
 const isClean = vi.mocked(git.isClean);
 const isUpToDate = vi.mocked(git.isUpToDate);
 const findMergeBase = vi.mocked(git.findMergeBase);
-const installDependencies = vi.mocked(installDeps);
 
+const pkgMgrExec = vi.fn();
+const ports = { pkgMgr: { exec: pkgMgrExec } };
 const log = new TestLogger();
 
 describe('runPrepareWorkspace', () => {
   it('retrieves the merge base, does a git checkout and installs dependencies', async () => {
+    pkgMgrExec.mockResolvedValue('');
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    const ctx = {
+      log,
+      ports,
+      options: { patchHeadRef: 'head', patchBaseRef: 'base' },
+    } as any;
 
     await runPrepareWorkspace(ctx, {} as any);
     expect(ctx.mergeBase).toBe('1234asd');
     expect(checkout).toHaveBeenCalledWith(ctx, '1234asd');
-    expect(installDependencies).toHaveBeenCalled();
+    expect(pkgMgrExec).toHaveBeenCalledWith(['install']);
   });
 
   it('fails when not clean', async () => {
@@ -73,8 +77,12 @@ describe('runPrepareWorkspace', () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
-    installDependencies.mockRejectedValue(new Error('some error'));
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    pkgMgrExec.mockRejectedValue(new Error('some error'));
+    const ctx = {
+      log,
+      ports,
+      options: { patchHeadRef: 'head', patchBaseRef: 'base' },
+    } as any;
 
     await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(
       'Failed to install dependencies'
