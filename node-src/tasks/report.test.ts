@@ -55,6 +55,7 @@ describe('generateReport', () => {
     chromatic: {
       getReport: vi.fn(),
     },
+    clock: { now: () => 0, since: () => 0, sleep: () => Promise.resolve() },
   };
   const build = {
     app: { repository: { provider: 'github' } },

@@ -325,13 +325,13 @@ export async function calculateFileHashes(ctx: Context, task: Task) {
       throw new Error(invalid(ctx).output);
     }
 
-    const start = Date.now();
+    const start = ctx.ports.clock.now();
     ctx.fileInfo.hashes = await getFileHashes(
       ctx.fileInfo.paths,
       ctx.sourceDir,
       ctx.env.CHROMATIC_HASH_CONCURRENCY
     );
-    ctx.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
+    ctx.log.debug(`Calculated file hashes in ${ctx.ports.clock.since(start)}ms`);
   } catch (err) {
     ctx.log.warn('Failed to calculate file hashes');
     ctx.log.debug(err);

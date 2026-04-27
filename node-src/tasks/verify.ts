@@ -1,6 +1,5 @@
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay } from '../lib/utilities';
 import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import brokenStorybook from '../ui/messages/errors/brokenStorybook';
@@ -76,7 +75,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     transitionTo(runOnlyNames)(ctx, task);
   }
 
-  let timeoutStart = Date.now();
+  let timeoutStart = ctx.ports.clock.now();
   const waitForBuildToStart = async () => {
     const { storybookUrl } = ctx;
     const { number, reportToken } = ctx.announcedBuild;
@@ -94,13 +93,13 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
       // instead we only timeout on the actual build verification, after upgrades are complete.
       if (build.upgradeBuilds?.some((upgrade) => !upgrade.completedAt)) {
         task.output = awaitingUpgrades(ctx, build.upgradeBuilds).output;
-        timeoutStart = Date.now() + ctx.env.CHROMATIC_POLL_INTERVAL;
-      } else if (Date.now() - timeoutStart > ctx.env.STORYBOOK_VERIFY_TIMEOUT) {
+        timeoutStart = ctx.ports.clock.now() + ctx.env.CHROMATIC_POLL_INTERVAL;
+      } else if (ctx.ports.clock.since(timeoutStart) > ctx.env.STORYBOOK_VERIFY_TIMEOUT) {
         setExitCode(ctx, exitCodes.VERIFICATION_TIMEOUT);
         throw new Error('Build verification timed out');
       }
 
-      await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
+      await ctx.ports.clock.sleep(ctx.env.CHROMATIC_POLL_INTERVAL);
       await waitForBuildToStart();
       return;
     }
@@ -111,13 +110,9 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
 
   await Promise.race([
     waitForBuildToStart(),
-    new Promise((_, reject) =>
-      setTimeout(
-        reject,
-        ctx.env.CHROMATIC_UPGRADE_TIMEOUT,
-        new Error('Timed out waiting for upgrade builds to complete')
-      )
-    ),
+    ctx.ports.clock.sleep(ctx.env.CHROMATIC_UPGRADE_TIMEOUT).then(() => {
+      throw new Error('Timed out waiting for upgrade builds to complete');
+    }),
   ]);
 
   ctx.isPublishOnly = !ctx.build.features?.uiReview && !ctx.build.features?.uiTests;

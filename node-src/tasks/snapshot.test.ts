@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGraphqlChromaticApi } from '../lib/ports/chromaticApiGraphqlAdapter';
+import { createRealClock } from '../lib/ports/clockRealAdapter';
 import TestLogger from '../lib/testLogger';
 import { takeSnapshots } from './snapshot';
 
@@ -40,7 +41,7 @@ const createBaseTestContext = () => {
   });
   return {
     client,
-    ports: { chromatic },
+    ports: { chromatic, clock: createRealClock() },
     env: environment,
     git: { matchesBranch },
     log,

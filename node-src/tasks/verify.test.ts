@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGraphqlChromaticApi } from '../lib/ports/chromaticApiGraphqlAdapter';
+import { createRealClock } from '../lib/ports/clockRealAdapter';
 import { exitCodes } from '../lib/setExitCode';
 import TestLogger from '../lib/testLogger';
 import { publishBuild, verifyBuild } from './verify';
@@ -11,6 +12,7 @@ function makePorts(client: { runQuery: ReturnType<typeof vi.fn> }) {
       getClient: () => client as any,
       cliTokenEndpoint: 'https://index.chromatic.com/api',
     }),
+    clock: createRealClock(),
   };
 }
 

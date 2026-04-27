@@ -49,6 +49,7 @@ const ports = {
   tracer: {
     traceChangedFiles: tracerTraceChangedFiles,
   },
+  clock: { now: () => 0, since: () => 0, sleep: () => Promise.resolve() },
 } as any;
 
 afterEach(() => {

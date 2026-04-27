@@ -54,7 +54,7 @@ export const generateReport = async (ctx: Context) => {
   ctx.reportPath = path.resolve(file.replaceAll('{buildNumber}', String(buildNumber)));
 
   const build = await queryBuildForReport(ctx);
-  const buildTime = (build.completedAt || Date.now()) - build.createdAt;
+  const buildTime = (build.completedAt || ctx.ports.clock.now()) - build.createdAt;
 
   const suite: TestSuite = reportBuilder
     .testSuite()

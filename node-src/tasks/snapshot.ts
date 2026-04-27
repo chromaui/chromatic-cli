@@ -9,7 +9,7 @@ import * as Sentry from '@sentry/node';
 
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay, throttle } from '../lib/utilities';
+import { throttle } from '../lib/utilities';
 import { Context, Task } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
@@ -77,7 +77,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
 
     uiStateUpdater(ctx.build);
 
-    await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
+    await ctx.ports.clock.sleep(ctx.env.CHROMATIC_POLL_INTERVAL);
     return getCompletedBuild();
   };
 
