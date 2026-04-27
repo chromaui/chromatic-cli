@@ -1,3 +1,4 @@
+import { contentType as getContentType } from 'mime-types';
 import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
@@ -22,16 +23,23 @@ export const uploadShareFiles = async (ctx: Context, _task: Task) => {
     lengths.map(({ knownAs, contentLength }) => [knownAs, contentLength])
   );
 
-  const toTarget = (filePath: string) => ({
-    filePath,
-    formAction,
-    formFields: { ...formFields, key: `${keyPrefix}/${filePath}` },
-    contentType: '',
-    fileKey: '',
-    targetPath: filePath,
-    localPath: path.join(ctx.sourceDir, filePath),
-    contentLength: lengthsByPath.get(filePath) ?? 0,
-  });
+  const toTarget = (filePath: string) => {
+    const contentType = getContentType(path.extname(filePath)) || 'application/octet-stream';
+    return {
+      filePath,
+      formAction,
+      formFields: {
+        ...formFields,
+        key: `${keyPrefix}/${filePath}`,
+        'Content-Type': contentType,
+      },
+      contentType,
+      fileKey: '',
+      targetPath: filePath,
+      localPath: path.join(ctx.sourceDir, filePath),
+      contentLength: lengthsByPath.get(filePath) ?? 0,
+    };
+  };
 
   type Target = ReturnType<typeof toTarget>;
   const nonIndexTargets: Target[] = [];

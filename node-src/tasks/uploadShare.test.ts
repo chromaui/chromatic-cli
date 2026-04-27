@@ -80,6 +80,42 @@ describe('uploadShareFiles', () => {
     }
   });
 
+  it('sets Content-Type per file based on extension', async () => {
+    uploadFilesMock.mockResolvedValue(undefined);
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['main.js', 'styles.css', 'logo.svg', 'data.chromaticunknown', 'index.html'],
+        lengths: [
+          { knownAs: 'main.js', contentLength: 100 },
+          { knownAs: 'styles.css', contentLength: 50 },
+          { knownAs: 'logo.svg', contentLength: 20 },
+          { knownAs: 'data.chromaticunknown', contentLength: 10 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 222,
+      },
+    } as any;
+
+    await uploadShareFiles(ctx, {} as any);
+
+    const byPath = Object.fromEntries(
+      uploadFilesMock.mock.calls
+        .flatMap(([, targets]) => targets)
+        .map((t) => [t.filePath, t.formFields['Content-Type']])
+    );
+
+    expect(byPath['main.js']).toMatch(/javascript/);
+    expect(byPath['styles.css']).toBe('text/css; charset=utf-8');
+    expect(byPath['logo.svg']).toBe('image/svg+xml');
+    expect(byPath['index.html']).toBe('text/html; charset=utf-8');
+    expect(byPath['data.chromaticunknown']).toBe('application/octet-stream');
+  });
+
   it('rejects if a file upload fails', async () => {
     uploadFilesMock.mockRejectedValue(new Error('Upload failed'));
 
