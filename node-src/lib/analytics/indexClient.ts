@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node';
 
-import { Logger } from '../log';
 import { ChromaticApi } from '../ports/chromaticApi';
+import { Logger } from '../ports/logger';
 import type { AnalyticsEvent } from './events';
 import type { AnalyticsClient } from './types';
 

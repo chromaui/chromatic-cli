@@ -302,6 +302,33 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib/git) must go through the Logger port. The real
+  // adapter, the underlying logger module itself, the global type-only
+  // re-export site (`types.ts`), and the existing `testLogger` shim are the
+  // only modules permitted to import `lib/log` directly.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    ignores: [
+      'node-src/lib/log.ts',
+      'node-src/lib/logSerializers.ts',
+      'node-src/lib/testLogger.ts',
+      'node-src/lib/ports/loggerRealAdapter.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/lib/log', '@cli/log'],
+              message: 'Use ctx.ports.log (or import the Logger type from ports/logger).',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Phase code (tasks/lib) must go through the PackageManager port. The real
   // adapter is the only module permitted to import @antfu/ni or yarn-or-npm
   // directly.

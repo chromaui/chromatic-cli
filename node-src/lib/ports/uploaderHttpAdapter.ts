@@ -4,7 +4,7 @@ import { FormData } from 'formdata-node';
 
 import HTTPClient from '../../io/httpClient';
 import { FileReaderBlob } from '../fileReaderBlob';
-import { Logger } from '../log';
+import { Logger } from './logger';
 import {
   SentinelFile,
   Uploader,

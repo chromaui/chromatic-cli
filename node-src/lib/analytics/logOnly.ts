@@ -1,4 +1,4 @@
-import { Logger } from '../log';
+import { Logger } from '../ports/logger';
 import type { AnalyticsEvent } from './events';
 import type { AnalyticsClient } from './types';
 

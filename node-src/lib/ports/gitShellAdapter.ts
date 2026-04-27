@@ -24,8 +24,8 @@ import {
   isClean,
   isUpToDate,
 } from '../../git/git';
-import { Logger } from '../log';
 import { ExecCommandOptions, GitRepository } from './git';
+import { Logger } from './logger';
 
 interface ShellAdapterDeps {
   log: Logger;
