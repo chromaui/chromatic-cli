@@ -13,6 +13,8 @@ import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
 import { ProcessRunner } from './processRunner';
 import { createExecaProcessRunner } from './processRunnerExecaAdapter';
+import { StorybookDetector } from './storybookDetector';
+import { createRealStorybookDetector } from './storybookDetectorRealAdapter';
 import { Uploader } from './uploader';
 import { createHttpUploader } from './uploaderHttpAdapter';
 
@@ -30,6 +32,7 @@ export interface Ports {
   proc: ProcessRunner;
   tracer: DependencyTracer;
   builder: BuildRunner;
+  storybook: StorybookDetector;
 }
 
 interface DefaultPortsDeps {
@@ -75,5 +78,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     proc,
     tracer: createTurbosnapDependencyTracer(),
     builder: createShellBuildRunner({ proc }),
+    storybook: createRealStorybookDetector(),
   };
 }
