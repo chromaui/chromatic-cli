@@ -302,6 +302,32 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib) must go through the DependencyTracer port. The
+  // turbosnap adapter is the only module permitted to import the lib/turbosnap
+  // module directly; bin-src/trace.ts also imports a sub-helper but is outside
+  // the phase code (it's a separate CLI entry point) so the rule does not
+  // apply there.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/dependencyTracerTurbosnapAdapter.ts',
+      'node-src/lib/turbosnap/**/*.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@cli/turbosnap', '**/lib/turbosnap', '**/lib/turbosnap/index'],
+              message: 'Use ctx.ports.tracer.traceChangedFiles instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Phase code (tasks/lib) must go through the ProcessRunner port for non-git
   // subprocesses. The execa adapter and the legacy shell runner backing it are
   // the only modules permitted to import execa directly. Git's exec helper is

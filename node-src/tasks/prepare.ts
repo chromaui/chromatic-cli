@@ -1,4 +1,3 @@
-import * as turbosnap from '@cli/turbosnap';
 import AdmZip from 'adm-zip';
 import path from 'path';
 import semver from 'semver';
@@ -274,7 +273,7 @@ export async function traceChangedFiles(ctx: Context, task: Task) {
   const { changedFiles } = ctx.git;
 
   try {
-    const onlyStoryFiles = await turbosnap.traceChangedFiles(ctx);
+    const onlyStoryFiles = await ctx.ports.tracer.traceChangedFiles(ctx);
     if (onlyStoryFiles) {
       // Escape special characters in the filename so it does not conflict with picomatch
       ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>

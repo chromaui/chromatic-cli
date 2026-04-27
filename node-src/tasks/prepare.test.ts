@@ -1,4 +1,3 @@
-import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
 import AdmZip from 'adm-zip';
 import { access, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,7 +12,6 @@ import {
 
 vi.mock('adm-zip', () => ({ default: vi.fn() }));
 vi.mock('fs');
-vi.mock('@cli/turbosnap');
 vi.mock('./readStatsFile', () => ({
   readStatsFile: () =>
     Promise.resolve({
@@ -32,7 +30,7 @@ vi.mock('../lib/getFileHashes', () => ({
 }));
 
 const AdmZipMock = vi.mocked(AdmZip);
-const traceChangedFilesTurbosnap = vi.mocked(traceChangedFilesDep);
+const tracerTraceChangedFiles = vi.fn();
 const accessMock = vi.mocked(access);
 const readdirSyncMock = vi.mocked(readdirSync);
 const readFileSyncMock = vi.mocked(readFileSync);
@@ -47,6 +45,9 @@ const ports = {
     readDir: async (p: string) => readdirSyncMock(p) as any,
     stat: async (p: string) => statSyncMock(p) as any,
     readFile: async (p: string, encoding?: any) => readFileSyncMock(p, encoding) as any,
+  },
+  tracer: {
+    traceChangedFiles: tracerTraceChangedFiles,
   },
 } as any;
 
@@ -415,7 +416,7 @@ describe('traceChangedFiles', () => {
 
   it('sets onlyStoryFiles on context', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    traceChangedFilesTurbosnap.mockResolvedValue(deps);
+    tracerTraceChangedFiles.mockResolvedValue(deps);
 
     const ctx = {
       env: environment,
@@ -443,7 +444,7 @@ describe('traceChangedFiles', () => {
         '[./example/[account]/[id]/[unit]/language/example.stories.tsx]',
       ],
     };
-    traceChangedFilesTurbosnap.mockResolvedValue(deps);
+    tracerTraceChangedFiles.mockResolvedValue(deps);
 
     const ctx = {
       env: environment,
