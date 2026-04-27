@@ -302,6 +302,32 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib) must go through the StorybookDetector port. The
+  // real adapter and the underlying detection helpers are the only modules
+  // permitted to import lib/getStorybookInfo directly.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/storybookDetectorRealAdapter.ts',
+      'node-src/lib/getStorybookInfo.ts',
+      'node-src/lib/getStorybookMetadata.ts',
+      'node-src/lib/getPrebuiltStorybookMetadata.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/lib/getStorybookInfo', '**/getStorybookInfo'],
+              message: 'Use ctx.ports.storybook.detect instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Phase code (tasks/lib) must go through the DependencyTracer port. The
   // turbosnap adapter is the only module permitted to import the lib/turbosnap
   // module directly; bin-src/trace.ts also imports a sub-helper but is outside
