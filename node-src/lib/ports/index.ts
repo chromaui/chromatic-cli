@@ -3,6 +3,8 @@ import HTTPClient from '../../io/httpClient';
 import { Logger } from '../log';
 import { ChromaticApi } from './chromaticApi';
 import { createGraphqlChromaticApi } from './chromaticApiGraphqlAdapter';
+import { DependencyTracer } from './dependencyTracer';
+import { createTurbosnapDependencyTracer } from './dependencyTracerTurbosnapAdapter';
 import { FileSystem } from './fs';
 import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
@@ -24,6 +26,7 @@ export interface Ports {
   uploader: Uploader;
   fs: FileSystem;
   proc: ProcessRunner;
+  tracer: DependencyTracer;
 }
 
 interface DefaultPortsDeps {
@@ -66,5 +69,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     }),
     fs: createNodeFileSystem(),
     proc: createExecaProcessRunner(),
+    tracer: createTurbosnapDependencyTracer(),
   };
 }
