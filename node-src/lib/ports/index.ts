@@ -15,6 +15,7 @@ import { FileSystem } from './fs';
 import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
+import { Logger as LoggerPort } from './logger';
 import { PackageManager } from './packageManager';
 import { createRealPackageManager } from './packageManagerRealAdapter';
 import { ProcessRunner } from './processRunner';
@@ -42,6 +43,7 @@ export interface Ports {
   pkgMgr: PackageManager;
   clock: Clock;
   host: Environment;
+  log: LoggerPort;
 }
 
 interface DefaultPortsDeps {
@@ -91,5 +93,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     pkgMgr: createRealPackageManager({ proc }),
     clock: createRealClock(),
     host: createRealEnvironment(),
+    log: deps.log,
   };
 }
