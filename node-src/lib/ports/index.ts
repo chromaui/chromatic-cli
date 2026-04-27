@@ -11,6 +11,8 @@ import { FileSystem } from './fs';
 import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
+import { PackageManager } from './packageManager';
+import { createRealPackageManager } from './packageManagerRealAdapter';
 import { ProcessRunner } from './processRunner';
 import { createExecaProcessRunner } from './processRunnerExecaAdapter';
 import { StorybookDetector } from './storybookDetector';
@@ -33,6 +35,7 @@ export interface Ports {
   tracer: DependencyTracer;
   builder: BuildRunner;
   storybook: StorybookDetector;
+  pkgMgr: PackageManager;
 }
 
 interface DefaultPortsDeps {
@@ -79,5 +82,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     tracer: createTurbosnapDependencyTracer(),
     builder: createShellBuildRunner({ proc }),
     storybook: createRealStorybookDetector(),
+    pkgMgr: createRealPackageManager({ proc }),
   };
 }
