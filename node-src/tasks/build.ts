@@ -16,16 +16,14 @@ import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { runCommand } from '../lib/shell/shell';
 import { createTask, transitionTo } from '../lib/tasks';
-import { Context } from '../types';
+import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import buildFailed from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
-import missingStorybookBuildDirectory from '../ui/messages/errors/missingStorybookBuildDirectory';
 import {
   failed,
   initial,
-  missingBuildDirectoryForReactNative,
   pending,
   pendingAndroid,
   pendingIOS,
@@ -258,43 +256,63 @@ const resolvePlatforms = (ctx: Context) => {
   );
 };
 
+const runReactNativeBuildStep = (ctx: Context, platform: 'android' | 'ios') => {
+  return (
+    ctx.isReactNativeApp &&
+    resolvePlatforms(ctx).includes(platform) &&
+    !ctx.options.storybookBuildDir
+  );
+};
+
 export const buildReactNativeAndroid = async (ctx: Context) => {
-  if (!ctx.isReactNativeApp) return;
-  if (!resolvePlatforms(ctx).includes('android')) return;
+  if (!runReactNativeBuildStep(ctx, 'android')) return;
 
   const { androidBuildCommand } = ctx.options.reactNative ?? {};
+  ctx.log.debug({ androidBuildCommand }, 'Running Android build');
 
   if (androidBuildCommand) {
     await runPlatformCommand(ctx, androidBuildCommand);
   } else {
     const { artifactPath } = await buildAndroid();
-    renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.apk'));
+    renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.apk'));
   }
 };
 
 export const buildReactNativeIos = async (ctx: Context) => {
-  if (!ctx.isReactNativeApp) return;
-  if (!resolvePlatforms(ctx).includes('ios')) return;
+  if (!runReactNativeBuildStep(ctx, 'ios')) return;
 
   const { iosBuildCommand } = ctx.options.reactNative ?? {};
+  ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
 
   if (iosBuildCommand) {
     await runPlatformCommand(ctx, iosBuildCommand);
   } else {
     const config = await readExpoConfig();
     const { artifactPath } = await buildIos(config.name);
-    renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.app'));
+    renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.app'));
   }
 };
 
 export const generateManifestForReactNative = async (ctx: Context) => {
-  // The manifest file is only needed for React Native builds
-  if (!ctx.isReactNativeApp) {
-    return;
-  }
+  if (!ctx.isReactNativeApp) return;
 
   ctx.log.debug('Generating manifest.json file for React Native build');
   return await generateManifest(ctx);
+};
+
+const maybeTransitionToPendingAndroid = (ctx: Context, task: Task) => {
+  if (!runReactNativeBuildStep(ctx, 'android')) return;
+  transitionTo(pendingAndroid)(ctx, task);
+};
+
+const maybeTransitionToPendingIOS = (ctx: Context, task: Task) => {
+  if (!runReactNativeBuildStep(ctx, 'ios')) return;
+  transitionTo(pendingIOS)(ctx, task);
+};
+
+const maybeTransitionToPendingManifest = (ctx: Context, task: Task) => {
+  if (!ctx.isReactNativeApp) return;
+  transitionTo(pendingManifest)(ctx, task);
 };
 
 /**
@@ -310,18 +328,10 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: async (ctx) => {
       if (ctx.skip) return true;
-      if (ctx.isReactNativeApp) {
-        if (!ctx.options.storybookBuildDir) {
-          ctx.log.error(missingStorybookBuildDirectory(ctx.announcedBuild?.browsers));
-          setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-          throw new Error(missingBuildDirectoryForReactNative(ctx).output);
-        }
-
-        ctx.sourceDir = ctx.options.storybookBuildDir;
-        ctx.options.outputDir = ctx.options.storybookBuildDir;
-
+      if (ctx.isReactNativeApp && ctx.options.storybookBuildDir) {
         // Use manifest.json from the storybook build directory if it exists
         if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+          ctx.sourceDir = ctx.options.storybookBuildDir;
           return skippedForReactNative(ctx).output;
         }
         return false;
@@ -338,11 +348,11 @@ export default function main(ctx: Context) {
       transitionTo(pending),
       startActivity,
       buildStorybook,
-      transitionTo(pendingAndroid),
+      maybeTransitionToPendingAndroid,
       buildReactNativeAndroid,
-      transitionTo(pendingIOS),
+      maybeTransitionToPendingIOS,
       buildReactNativeIos,
-      transitionTo(pendingManifest),
+      maybeTransitionToPendingManifest,
       generateManifestForReactNative,
       endActivity,
       transitionTo(success, true),

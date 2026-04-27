@@ -1,7 +1,6 @@
 /* eslint-disable max-lines */
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { AnalyticsEvent } from '@cli/analytics/events';
-import { exitCodes } from '@cli/setExitCode';
 import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -373,17 +372,6 @@ describe('buildStorybook', () => {
     expect(skipResult).toBe('Using prebuilt React Native assets');
     expect(ctx.sourceDir).toBe('/path/to/rn-build');
   });
-
-  it('throws error for React Native apps without storybookBuildDir', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: new TestLogger(),
-    } as any;
-    const task = buildTask(ctx);
-    await expect(task.skip?.(ctx)).rejects.toThrow('Build directory required for React Native');
-    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
-  });
 });
 
 describe('buildStorybook E2E', () => {
@@ -599,6 +587,18 @@ describe('buildReactNativeAndroid', () => {
     expect(buildAndroid).not.toHaveBeenCalled();
   });
 
+  it('skips when storybookBuildDir is set', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      options: { storybookBuildDir: '/path/to/build' },
+    } as any;
+    await buildReactNativeAndroid(ctx);
+    expect(buildAndroid).not.toHaveBeenCalled();
+  });
+
   it('calls buildAndroid and moves artifact when android is in browsers', async () => {
     const { renameSync } = await import('fs');
     const ctx = {
@@ -606,7 +606,7 @@ describe('buildReactNativeAndroid', () => {
       isReactNativeApp: true,
       announcedBuild: { browsers: ['android'] },
       log: new TestLogger(),
-      options: { storybookBuildDir: '/path/to/build' },
+      sourceDir: '/path/to/build',
     } as any;
     await buildReactNativeAndroid(ctx);
     expect(buildAndroid).toHaveBeenCalled();
@@ -622,7 +622,10 @@ describe('buildReactNativeAndroid', () => {
       isReactNativeApp: true,
       announcedBuild: { browsers: ['android'] },
       log: new TestLogger(),
-      options: { reactNative: { androidBuildCommand: 'my-android-build' } },
+      options: {
+        reactNative: { androidBuildCommand: 'my-android-build' },
+      },
+      sourceDir: '/path/to/build',
     } as any;
     await buildReactNativeAndroid(ctx);
     expect(buildAndroid).not.toHaveBeenCalled();
@@ -651,6 +654,19 @@ describe('buildReactNativeIos', () => {
     expect(readExpoConfig).not.toHaveBeenCalled();
   });
 
+  it('skips when storybookBuildDir is set', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['ios'] },
+      log: new TestLogger(),
+      options: { storybookBuildDir: '/path/to/build' },
+    } as any;
+    await buildReactNativeIos(ctx);
+    expect(buildIos).not.toHaveBeenCalled();
+    expect(readExpoConfig).not.toHaveBeenCalled();
+  });
+
   it('reads expo config and calls buildIos when ios is in browsers', async () => {
     const { renameSync } = await import('fs');
     const ctx = {
@@ -658,7 +674,8 @@ describe('buildReactNativeIos', () => {
       isReactNativeApp: true,
       announcedBuild: { browsers: ['ios'] },
       log: new TestLogger(),
-      options: { storybookBuildDir: '/path/to/build' },
+      options: {},
+      sourceDir: '/path/to/build',
     } as any;
     await buildReactNativeIos(ctx);
     expect(readExpoConfig).toHaveBeenCalled();
@@ -675,7 +692,10 @@ describe('buildReactNativeIos', () => {
       isReactNativeApp: true,
       announcedBuild: { browsers: ['ios'] },
       log: new TestLogger(),
-      options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
+      options: {
+        reactNative: { iosBuildCommand: 'my-ios-build' },
+      },
+      sourceDir: '/path/to/build',
     } as any;
     await buildReactNativeIos(ctx);
     expect(buildIos).not.toHaveBeenCalled();

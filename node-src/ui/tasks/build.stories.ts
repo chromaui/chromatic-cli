@@ -2,7 +2,6 @@ import task from '../components/task';
 import {
   failed,
   initial,
-  missingBuildDirectoryForReactNative,
   pending,
   pendingAndroid,
   pendingIOS,
@@ -56,14 +55,7 @@ export const SkippedForReactNative = () =>
     isReactNativeApp: true,
   } as any);
 
-export const MissingBuildDirectoryWithReactNative = () =>
-  missingBuildDirectoryForReactNative({
-    ...ctx,
-    isReactNativeApp: true,
-  } as any);
-
-export const BuildingAndroid = () =>
-  pendingAndroid({ ...ctx, isReactNativeApp: true } as any);
+export const BuildingAndroid = () => pendingAndroid({ ...ctx, isReactNativeApp: true } as any);
 
 export const BuildingAndroidWithCommand = () =>
   pendingAndroid({
@@ -72,8 +64,7 @@ export const BuildingAndroidWithCommand = () =>
     options: { reactNative: { androidBuildCommand: 'my-android-build' } },
   } as any);
 
-export const BuildingIOS = () =>
-  pendingIOS({ ...ctx, isReactNativeApp: true } as any);
+export const BuildingIOS = () => pendingIOS({ ...ctx, isReactNativeApp: true } as any);
 
 export const BuildingIOSWithCommand = () =>
   pendingIOS({
