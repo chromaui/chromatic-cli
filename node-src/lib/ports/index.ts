@@ -3,6 +3,8 @@ import HTTPClient from '../../io/httpClient';
 import { Logger } from '../log';
 import { ChromaticApi } from './chromaticApi';
 import { createGraphqlChromaticApi } from './chromaticApiGraphqlAdapter';
+import { FileSystem } from './fs';
+import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
 import { createShellGitAdapter } from './gitShellAdapter';
 import { Uploader } from './uploader';
@@ -18,6 +20,7 @@ export interface Ports {
   git: GitRepository;
   chromatic: ChromaticApi;
   uploader: Uploader;
+  fs: FileSystem;
 }
 
 interface DefaultPortsDeps {
@@ -58,5 +61,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
       getHttp: deps.getHttpClient,
       log: deps.log,
     }),
+    fs: createNodeFileSystem(),
   };
 }
