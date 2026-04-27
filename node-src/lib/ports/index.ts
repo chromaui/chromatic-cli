@@ -5,6 +5,8 @@ import { BuildRunner } from './buildRunner';
 import { createShellBuildRunner } from './buildRunnerShellAdapter';
 import { ChromaticApi } from './chromaticApi';
 import { createGraphqlChromaticApi } from './chromaticApiGraphqlAdapter';
+import { Clock } from './clock';
+import { createRealClock } from './clockRealAdapter';
 import { DependencyTracer } from './dependencyTracer';
 import { createTurbosnapDependencyTracer } from './dependencyTracerTurbosnapAdapter';
 import { FileSystem } from './fs';
@@ -36,6 +38,7 @@ export interface Ports {
   builder: BuildRunner;
   storybook: StorybookDetector;
   pkgMgr: PackageManager;
+  clock: Clock;
 }
 
 interface DefaultPortsDeps {
@@ -83,5 +86,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     builder: createShellBuildRunner({ proc }),
     storybook: createRealStorybookDetector(),
     pkgMgr: createRealPackageManager({ proc }),
+    clock: createRealClock(),
   };
 }
