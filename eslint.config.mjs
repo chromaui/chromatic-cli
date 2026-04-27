@@ -325,6 +325,47 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib) must go through the FileSystem port. The node and
+  // in-memory adapters are the only modules permitted to import fs/tmp-promise
+  // directly. A few leaf-level helpers are explicitly excepted because they
+  // either back the adapter (fileReaderBlob), are slated for the Logger port
+  // (log), use low-level fs primitives for performance (getFileHashes), or sit
+  // outside the runtime ports lifecycle (getConfiguration / treeKill /
+  // readStatsFile bin-src callers).
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/fsNodeAdapter.ts',
+      'node-src/lib/fileReaderBlob.ts',
+      'node-src/lib/log.ts',
+      'node-src/lib/getFileHashes.ts',
+      'node-src/lib/getConfiguration.ts',
+      'node-src/lib/shell/treeKill.ts',
+      'node-src/tasks/readStatsFile.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'fs',
+              message: 'Use ctx.ports.fs instead.',
+            },
+            {
+              name: 'fs/promises',
+              message: 'Use ctx.ports.fs instead.',
+            },
+            {
+              name: 'tmp-promise',
+              message: 'Use ctx.ports.fs.mkdtemp / mkstemp instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // exceptions for files stuck in CJS for now
   {
     files: ['**/*.cjs'],

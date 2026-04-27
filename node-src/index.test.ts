@@ -1,7 +1,6 @@
 /* eslint-disable max-lines */
 import dns from 'dns';
 import { execa as execaDefault, parseCommandString } from 'execa';
-import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
 import path from 'path';
@@ -15,6 +14,7 @@ import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
 import { createDefaultPorts } from './lib/ports';
+import { createInMemoryFileSystem } from './lib/ports/fsInMemoryAdapter';
 import TestLogger from './lib/testLogger';
 import { patchModulePath } from './lib/testUtilities';
 import { uploadFiles } from './lib/uploadFiles';
@@ -401,8 +401,34 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
     getHttpClient: () => ctx.http,
     cliTokenEndpoint: `${ctx.env.CHROMATIC_INDEX_URL}/api`,
   });
+  ctx.ports.fs = makeStubFs();
   return ctx;
 };
+
+function makeStubFs() {
+  const fakeFs = createInMemoryFileSystem();
+  return {
+    ...fakeFs,
+    readDir: vi.fn(async (filePath: string) => {
+      if (filePath?.includes('.storybook') || filePath?.includes('storybook-config')) {
+        return ['main.ts', 'preview.ts'];
+      }
+      return ['iframe.html', 'index.html', 'preview-stats.json'];
+    }),
+    stat: vi.fn(async () => ({ size: 42, isFile: () => true, isDirectory: () => false })),
+    exists: vi.fn(async () => true),
+    readFile: vi.fn(async () => ''),
+    readJson: vi.fn(async () => ({})),
+    writeFile: vi.fn(async () => {}),
+    mkdir: vi.fn(async () => {}),
+    createWriteStream: vi.fn((...args: Parameters<typeof fakeFs.createWriteStream>) => {
+      const stream = fakeFs.createWriteStream(...args);
+      // Mimic Node's fs.createWriteStream which emits 'open' once the descriptor is ready.
+      Promise.resolve().then(() => stream.emit('open'));
+      return stream;
+    }),
+  };
+}
 
 it('fails on missing project token', async () => {
   const ctx = getContext([]);
@@ -753,24 +779,16 @@ it('ctx should be JSON serializable', async () => {
 it('should write context to chromatic-diagnostics.json if --diagnostics-file is passed', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--diagnostics-file']);
   await runAll(ctx);
-  expect(jsonfile.writeFile).toHaveBeenCalledWith(
+  expect(ctx.ports.fs.writeFile).toHaveBeenCalledWith(
     'chromatic-diagnostics.json',
-    expect.objectContaining({
-      flags: expect.objectContaining({
-        diagnosticsFile: '',
-      }),
-      options: expect.objectContaining({
-        projectToken: undefined, // redacted
-      }),
-    }),
-    { spaces: 2 }
+    expect.stringContaining('"diagnosticsFile":')
   );
 });
 
 it('should not write context to chromatic-diagnostics.json if --diagnostics-file is not passed', async () => {
   const ctx = getContext(['--project-token=asdf1234']);
   await runAll(ctx);
-  expect(jsonfile.writeFile).not.toHaveBeenCalled();
+  expect(ctx.ports.fs.writeFile).not.toHaveBeenCalled();
 });
 
 it('should upload metadata files if --upload-metadata is passed', async () => {

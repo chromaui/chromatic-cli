@@ -22,21 +22,9 @@ vi.mock('@storybook/react-native/node', () => ({
 }));
 
 const mockBuildIndex = vi.mocked(sbReactNative.buildIndex);
-
-vi.mock('fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs')>();
-  return {
-    ...actual,
-    mkdirSync: vi.fn(),
-    writeFileSync: vi.fn(),
-    existsSync: vi.fn(),
-  };
-});
-
-const fs = await import('fs');
-const mkdirSync = vi.mocked(fs.mkdirSync);
-const writeFileSync = vi.mocked(fs.writeFileSync);
-const existsFileSync = vi.mocked(fs.existsSync);
+const mockExists = vi.fn();
+const mockMkdir = vi.fn();
+const mockWriteFile = vi.fn();
 
 const sourceDirectory = '/tmp/chromatic';
 
@@ -45,6 +33,7 @@ function getContext(overrides: Record<string, any> = {}) {
     sourceDir: sourceDirectory,
     log: new TestLogger(),
     options: {},
+    ports: { fs: { exists: mockExists, mkdir: mockMkdir, writeFile: mockWriteFile } },
     ...overrides,
   } as any;
 }
@@ -54,7 +43,9 @@ beforeEach(() => {
 });
 
 describe('generateManifest', () => {
-  existsFileSync.mockReturnValue(true);
+  beforeEach(() => {
+    mockExists.mockResolvedValue(true);
+  });
 
   it('writes manifest to sourceDirectory/manifest.json with correct story shape', async () => {
     mockBuildIndex.mockResolvedValue({
@@ -72,7 +63,7 @@ describe('generateManifest', () => {
     const ctx = getContext();
     await generateManifest(ctx);
 
-    const content = writeFileSync.mock.calls[0][1] as string;
+    const content = mockWriteFile.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
 
     expect(manifest).toMatchObject({
@@ -85,9 +76,9 @@ describe('generateManifest', () => {
       ],
     });
 
-    expect(mkdirSync).toHaveBeenCalledWith(sourceDirectory, { recursive: true });
+    expect(mockMkdir).toHaveBeenCalledWith(sourceDirectory, { recursive: true });
     const expectedPath = path.resolve(sourceDirectory, 'manifest.json');
-    expect(writeFileSync).toHaveBeenCalledWith(expectedPath, JSON.stringify(manifest, null, 2));
+    expect(mockWriteFile).toHaveBeenCalledWith(expectedPath, JSON.stringify(manifest, null, 2));
   });
 
   it('uses default config path when storybookConfigDir is unset', async () => {
@@ -116,7 +107,7 @@ describe('generateManifest', () => {
     const ctx = getContext();
     await generateManifest(ctx);
 
-    const content = writeFileSync.mock.calls[0][1] as string;
+    const content = mockWriteFile.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
     expect(manifest).toMatchObject({ stories: [], json: [] });
   });
@@ -144,7 +135,7 @@ describe('generateManifest', () => {
     const ctx = getContext();
     await generateManifest(ctx);
 
-    const content = writeFileSync.mock.calls[0][1] as string;
+    const content = mockWriteFile.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
     expect(manifest).toMatchObject({
       stories: [
@@ -195,7 +186,7 @@ describe('generateManifest', () => {
     const ctx = getContext();
     await generateManifest(ctx);
 
-    const content = writeFileSync.mock.calls[0][1] as string;
+    const content = mockWriteFile.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
 
     expect(manifest).toMatchObject({
@@ -243,7 +234,7 @@ describe('generateManifest', () => {
   });
 
   it('should throw if the config directory does not exist', async () => {
-    existsFileSync.mockReturnValue(false);
+    mockExists.mockResolvedValue(false);
 
     const ctx = getContext();
     await expect(() => generateManifest(ctx)).rejects.toThrow(

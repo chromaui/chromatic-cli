@@ -1,5 +1,3 @@
-import { readdir } from 'fs/promises';
-import { readJson } from 'fs-extra';
 import meow from 'meow';
 import path from 'path';
 import semver from 'semver';
@@ -12,10 +10,10 @@ import { builders } from './builders';
 import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
 
-export const resolvePackageJson = (pkg: string) => {
+export const resolvePackageJson = (ctx: Pick<Context, 'ports'>, pkg: string) => {
   try {
     const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
-    return readJson(packagePath);
+    return ctx.ports.fs.readJson(packagePath);
   } catch (error) {
     return Promise.reject(error);
   }
@@ -49,7 +47,7 @@ const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, s
   return { dependency, version, dependencyPackage: pkg };
 };
 
-const findStorybookVersion = async ({ env, log, options, packageJson }) => {
+const findStorybookVersion = async ({ env, log, options, packageJson, ports }) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
@@ -80,8 +78,8 @@ const findStorybookVersion = async ({ env, log, options, packageJson }) => {
     }
     // Verify that the viewlayer package is actually present in node_modules.
     return Promise.race([
-      resolvePackageJson(pkg)
-        .then((json) => ({ version: json.version }))
+      resolvePackageJson({ ports }, pkg)
+        .then((json: any) => ({ version: json.version }))
         .catch(() => {
           throw new Error(packageDoesNotExist(pkg));
         }),
@@ -99,7 +97,7 @@ const findStorybookVersion = async ({ env, log, options, packageJson }) => {
   return Promise.race([
     raceFulfilled(
       Object.entries(viewLayers).map(async ([key]) => {
-        const json = await resolvePackageJson(key);
+        const json = (await resolvePackageJson({ ports }, key)) as any;
         return { version: json.version };
       })
     ).catch(() => {
@@ -129,7 +127,7 @@ const findConfigFlags = async ({ options, packageJson }) => {
 
 // TODO: refactor this function
 // eslint-disable-next-line complexity
-export const findBuilder = async (mainConfig, v7) => {
+export const findBuilder = async (ctx: Pick<Context, 'ports'>, mainConfig: any, v7: boolean) => {
   if (!mainConfig) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
   }
@@ -141,8 +139,10 @@ export const findBuilder = async (mainConfig, v7) => {
     const sbV7BuilderName = framework.name;
 
     return Promise.race([
-      resolvePackageJson(sbV7BuilderName)
-        .then((json) => ({ builder: { name: sbV7BuilderName, packageVersion: json.version } }))
+      resolvePackageJson(ctx, sbV7BuilderName)
+        .then((json: any) => ({
+          builder: { name: sbV7BuilderName, packageVersion: json.version },
+        }))
         .catch(() => {
           throw new Error(packageDoesNotExist(sbV7BuilderName));
         }),
@@ -157,8 +157,8 @@ export const findBuilder = async (mainConfig, v7) => {
   }
 
   return Promise.race([
-    resolvePackageJson(builders[name])
-      .then((json) => ({ builder: { name, packageVersion: json.version } }))
+    resolvePackageJson(ctx, builders[name])
+      .then((json: any) => ({ builder: { name, packageVersion: json.version } }))
       .catch(() => {
         throw new Error(packageDoesNotExist(builders[name]));
       }),
@@ -181,7 +181,7 @@ const findReferences = async (mainConfig, v7) => {
 
 export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => {
   const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
-  const files = await readdir(configDirectory);
+  const files = await ctx.ports.fs.readDir(configDirectory);
   const configFile = files.find((file) => pattern.test(file));
   return configFile && path.join(configDirectory, configFile);
 };
@@ -217,7 +217,7 @@ export const getStorybookMetadata = async (ctx: Context) => {
   const info = await Promise.allSettled([
     findConfigFlags(ctx),
     findStorybookVersion(ctx),
-    findBuilder(mainConfig, v7),
+    findBuilder(ctx, mainConfig, v7),
     findReferences(mainConfig, v7),
   ]);
 

@@ -1,4 +1,3 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -37,14 +36,14 @@ interface Story {
 export async function generateManifest(ctx: Context) {
   const index = await buildStoryIndex(ctx);
   const { stories, entries } = parseStoryIndex(ctx, index);
-  writeManifest(ctx, JSON.stringify({ stories, json: entries }, undefined, 2));
+  await writeManifest(ctx, JSON.stringify({ stories, json: entries }, undefined, 2));
 }
 
 async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
   const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
   const fullConfigPath = path.join(process.cwd(), configPath);
 
-  if (!existsSync(fullConfigPath)) {
+  if (!(await ctx.ports.fs.exists(fullConfigPath))) {
     throw new Error(
       `React Native Storybook config directory not found at "${fullConfigPath}". Please specify the correct path with --storybook-config-dir.`
     );
@@ -88,12 +87,12 @@ function parseStoryIndex(
   return { stories, entries };
 }
 
-function writeManifest(ctx: Context, storyData: string) {
+async function writeManifest(ctx: Context, storyData: string) {
   const outputFile = path.resolve(ctx.sourceDir, 'manifest.json');
   ctx.log.debug(`Writing manifest to file at "${outputFile}"`);
 
-  mkdirSync(ctx.sourceDir, { recursive: true });
-  writeFileSync(outputFile, storyData);
+  await ctx.ports.fs.mkdir(ctx.sourceDir, { recursive: true });
+  await ctx.ports.fs.writeFile(outputFile, storyData);
 
   ctx.log.debug('Manifest generation complete');
 }

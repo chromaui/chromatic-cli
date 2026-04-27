@@ -57,6 +57,16 @@ afterEach(() => {
   createChangedPackagesGraph.mockReset();
 });
 
+const portsFs = {
+  stat: vi.fn(async () => ({
+    size: 1,
+    isFile: () => true,
+    isDirectory: () => false,
+  })),
+  copyFile: vi.fn(async () => {}),
+  mkdtemp: vi.fn(async () => ({ path: tmpdir, cleanup: async () => {} })),
+};
+
 const getContext = (
   input: Partial<Omit<Context, 'git' | 'options'>> & {
     git: Partial<Context['git']>;
@@ -67,6 +77,7 @@ const getContext = (
     log: new TestLogger(),
     options: {},
     env: getEnvironment(),
+    ports: { fs: portsFs },
     ...input,
   }) as Context;
 
@@ -390,11 +401,11 @@ describe('findChangedDependencies', () => {
 
     await expect(findChangedDependencies(context)).resolves.toEqual(['react']);
 
-    expect(copyFileSync).toHaveBeenCalledWith(
+    expect(portsFs.copyFile).toHaveBeenCalledWith(
       '/root/subdir/package.json',
       `${tmpdir}/package.json`
     );
-    expect(copyFileSync).toHaveBeenCalledWith(
+    expect(portsFs.copyFile).toHaveBeenCalledWith(
       '/root/subdir/package-lock.json',
       `${tmpdir}/package-lock.json`
     );

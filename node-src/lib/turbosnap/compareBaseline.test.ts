@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it } from 'vitest';
 
+import { createNodeFileSystem } from '../ports/fsNodeAdapter';
 import TestLogger from '../testLogger';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
@@ -11,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const getContext: any = (baselineCommits: string[]) => ({
   log: new TestLogger(),
   git: { baselineCommits },
+  ports: { fs: createNodeFileSystem() },
 });
 
 async function getMockedDependencies(headName: string, baseName: string) {

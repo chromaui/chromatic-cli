@@ -1,4 +1,3 @@
-import { statSync } from 'fs';
 import path from 'path';
 import { inspect } from 'snyk-nodejs-plugin';
 
@@ -29,7 +28,7 @@ export const getDependencies = async (
 
   // We can run into OOM errors if the lock file is too large. Therefore, we bail early and skip
   // lock file parsing because some TurboSnap is better than no TurboSnap.
-  ensureLockFileSize(ctx, absoluteLockfilePath);
+  await ensureLockFileSize(ctx, absoluteLockfilePath);
 
   try {
     const headGraph = await inspect(path.dirname(absoluteManifestPath), absoluteLockfilePath, {
@@ -48,11 +47,11 @@ export const getDependencies = async (
   }
 };
 
-function ensureLockFileSize(ctx: Context, fullPath: string) {
+async function ensureLockFileSize(ctx: Context, fullPath: string) {
   const maxLockFileSize =
     Number.parseInt(process.env.MAX_LOCK_FILE_SIZE ?? '') || MAX_LOCK_FILE_SIZE;
 
-  const stats = statSync(fullPath);
+  const stats = await ctx.ports.fs.stat(fullPath);
   if (stats.size > maxLockFileSize) {
     ctx.log.warn({ fullPath }, 'Lock file too large to parse, skipping');
     throw new Error('Lock file too large to parse');

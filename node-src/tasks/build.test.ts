@@ -4,6 +4,7 @@ import { AnalyticsEvent } from '@cli/analytics/events';
 import { exitCodes } from '@cli/setExitCode';
 import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
+import { PassThrough } from 'stream';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { generateManifest } from '../lib/react-native/generateManifest';
@@ -24,13 +25,6 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
-vi.mock('fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs')>();
-  return {
-    ...actual,
-    existsSync: vi.fn(() => true),
-  };
-});
 vi.mock('../lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(() => Promise.resolve()),
 }));
@@ -41,7 +35,20 @@ vi.mock('@sentry/node', () => ({
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
-const baseContext = { options: {}, flags: {} } as any;
+const stubPorts = {
+  fs: {
+    exists: vi.fn(async () => true),
+    mkdtemp: vi.fn(async () => ({ path: '/tmp/chromatic-stub', cleanup: async () => {} })),
+    createWriteStream: vi.fn(() => {
+      const passThrough = new PassThrough();
+      setImmediate(() => passThrough.emit('open'));
+      return passThrough;
+    }),
+    readFile: vi.fn(async () => ''),
+  },
+} as any;
+
+const baseContext = { options: {}, flags: {}, ports: stubPorts } as any;
 
 beforeEach(() => {
   execa.mockClear();

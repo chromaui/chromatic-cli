@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import pLimit from 'p-limit';
 import path from 'path';
 
@@ -35,21 +34,16 @@ export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   // Check if any of the source module files exist in the storybookBaseDir
   try {
     await Promise.any(
-      sourceModuleFiles.map((file) => {
-        return limitConcurrency(() => {
+      sourceModuleFiles.map((file) =>
+        limitConcurrency(async () => {
           const absolutePath = path.join(repositoryRoot, storybookBaseDirectory, file.name);
-          return new Promise((resolve, reject) =>
-            fs.access(absolutePath, (err) => {
-              if (err) {
-                ctx.log.debug('Not found:', absolutePath);
-                reject();
-              } else {
-                resolve(true);
-              }
-            })
-          );
-        });
-      })
+          if (await ctx.ports.fs.exists(absolutePath)) {
+            return true;
+          }
+          ctx.log.debug('Not found:', absolutePath);
+          throw new Error('Not found');
+        })
+      )
     );
   } catch {
     ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDirectory}`);

@@ -1,6 +1,5 @@
 import * as turbosnap from '@cli/turbosnap';
 import AdmZip from 'adm-zip';
-import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import slash from 'slash';
@@ -48,20 +47,28 @@ const SPECIAL_CHARS_REGEXP = /([$()*+?[\]^])/g;
  *
  * @returns Array of path specifications with pathname and content length
  */
-function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = '.'): PathSpec[] {
+async function getPathSpecsInDirectory(
+  ctx: Context,
+  rootDirectory: string,
+  dirname = '.'
+): Promise<PathSpec[]> {
   // .chromatic is a special directory reserved for internal use and should not be uploaded
   if (dirname === '.chromatic') {
     return [];
   }
 
   try {
-    return readdirSync(path.join(rootDirectory, dirname)).flatMap((p: string) => {
-      const pathname = path.join(dirname, p);
-      const stats = statSync(path.join(rootDirectory, pathname));
-      return stats.isDirectory()
-        ? getPathSpecsInDirectory(ctx, rootDirectory, pathname)
-        : [{ pathname, contentLength: stats.size }];
-    });
+    const entries = await ctx.ports.fs.readDir(path.join(rootDirectory, dirname));
+    const nested = await Promise.all(
+      entries.map(async (p) => {
+        const pathname = path.join(dirname, p);
+        const stats = await ctx.ports.fs.stat(path.join(rootDirectory, pathname));
+        return stats.isDirectory()
+          ? getPathSpecsInDirectory(ctx, rootDirectory, pathname)
+          : [{ pathname, contentLength: stats.size }];
+      })
+    );
+    return nested.flat();
   } catch (err) {
     ctx.log.debug(err);
     throw new Error(invalid({ ...ctx, sourceDir: rootDirectory }, err).output);
@@ -95,8 +102,9 @@ function getOutputDirectory(buildLog: string) {
  *
  * @returns Object containing file lengths, paths, stats path, and total size
  */
-function getFileInfo(ctx: Context, sourceDirectory: string) {
-  const lengths = getPathSpecsInDirectory(ctx, sourceDirectory).map((o) => ({
+async function getFileInfo(ctx: Context, sourceDirectory: string) {
+  const pathSpecs = await getPathSpecsInDirectory(ctx, sourceDirectory);
+  const lengths = pathSpecs.map((o) => ({
     ...o,
     knownAs: slash(o.pathname),
   }));
@@ -181,16 +189,16 @@ export async function validateFiles(ctx: Context) {
   const validator = ctx.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
   const browsers = ctx.announcedBuild?.browsers;
 
-  ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
+  ctx.fileInfo = await getFileInfo(ctx, ctx.sourceDir);
 
   if (!validator(ctx.fileInfo, browsers).valid && ctx.buildLogFile) {
     try {
-      const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
+      const buildLog = await ctx.ports.fs.readFile(ctx.buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
       if (outputDirectory && outputDirectory !== ctx.sourceDir) {
         ctx.log.warn(deviatingOutputDirectory(ctx, outputDirectory));
         ctx.sourceDir = outputDirectory;
-        ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
+        ctx.fileInfo = await getFileInfo(ctx, ctx.sourceDir);
       }
     } catch (err) {
       ctx.log.debug(err);
@@ -219,7 +227,8 @@ export async function validateAndroidArtifact(ctx: Context) {
   if (!ctx.announcedBuild?.browsers?.includes('android')) return;
 
   const apkPath = path.join(ctx.sourceDir, 'storybook.apk');
-  const zip = new AdmZip(apkPath);
+  const apkBuffer = await ctx.ports.fs.readFile(apkPath);
+  const zip = new AdmZip(apkBuffer);
   const entries = zip.getEntries();
 
   const abiDirectories = new Set<string>();

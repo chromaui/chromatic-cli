@@ -4,11 +4,6 @@ import TestLogger from './testLogger';
 import { uploadFiles } from './uploadFiles';
 import { uploadMetadataFiles } from './uploadMetadataFiles';
 
-vi.mock('fs', () => ({
-  stat: vi.fn().mockImplementation((_path, callback) => callback(null, { size: 100 })),
-  writeFileSync: vi.fn().mockResolvedValue(undefined),
-}));
-
 vi.mock('./getStorybookMetadata', () => ({
   findStorybookConfigFile: vi.fn(() => Promise.resolve(false)),
 }));
@@ -17,11 +12,18 @@ vi.mock('./uploadFiles', () => ({
   uploadFiles: vi.fn().mockResolvedValue(undefined),
 }));
 
+const stubFs = {
+  stat: vi.fn(async () => ({ size: 100, isFile: () => true, isDirectory: () => false })),
+  writeFile: vi.fn(async () => {}),
+  mkstemp: vi.fn(async () => ({ path: '/tmp/metadata.html', cleanup: async () => {} })),
+};
+
 describe('uploadMetadataFiles', () => {
   const log = new TestLogger();
   const baseContext = {
     log,
     options: {},
+    ports: { fs: stubFs } as any,
   } as any;
 
   afterEach(() => {
@@ -55,6 +57,7 @@ describe('uploadMetadataFiles', () => {
       announcedBuild: { id: '1' },
       build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
       ports: {
+        fs: stubFs,
         chromatic: {
           uploadMetadata: vi.fn().mockResolvedValue({
             info: {

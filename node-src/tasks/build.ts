@@ -1,9 +1,7 @@
 import { AnalyticsEvent } from '@cli/analytics/events';
 import * as Sentry from '@sentry/node';
-import { createWriteStream, existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
-import tmp from 'tmp-promise';
 
 import { sanitizeStackTrace } from '../lib/analytics/sanitization';
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
@@ -37,7 +35,10 @@ export const setSourceDirectory = async (ctx: Context) => {
     // Storybook v4 doesn't support absolute paths like tmp.dir would yield
     ctx.sourceDir = 'storybook-static';
   } else {
-    const temporaryDirectory = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
+    const temporaryDirectory = await ctx.ports.fs.mkdtemp({
+      unsafeCleanup: true,
+      prefix: `chromatic-`,
+    });
     ctx.sourceDir = temporaryDirectory.path;
   }
 };
@@ -142,7 +143,7 @@ function e2eBuildErrorMessage(
   };
 }
 
-function handleBuildFailure(ctx: Context, err: any, signal?: AbortSignal): never {
+async function handleBuildFailure(ctx: Context, err: any, signal?: AbortSignal): Promise<never> {
   if (isE2EBuild(ctx.options)) {
     // If we tried to run the E2E package's bin directly (due to being in the action)
     // and it failed, that means we couldn't find it. This probably means they haven't
@@ -164,7 +165,9 @@ function handleBuildFailure(ctx: Context, err: any, signal?: AbortSignal): never
   }
 
   trackBuildFailure(ctx, 'storybook_build_failed', err);
-  const buildLog = ctx.buildLogFile && readFileSync(ctx.buildLogFile, 'utf8');
+  const buildLog = ctx.buildLogFile
+    ? await ctx.ports.fs.readFile(ctx.buildLogFile, 'utf8').catch(() => undefined)
+    : undefined;
   ctx.log.error(buildFailed(ctx, err, buildLog));
   setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
   throw new Error(failed(ctx).output);
@@ -198,7 +201,7 @@ export const buildStorybook = async (ctx: Context) => {
   let logFile;
   if (ctx.options.storybookLogFile) {
     ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
-    logFile = createWriteStream(ctx.buildLogFile);
+    logFile = ctx.ports.fs.createWriteStream(ctx.buildLogFile);
     await new Promise((resolve, reject) => {
       logFile.on('open', resolve);
       logFile.on('error', reject);
@@ -228,7 +231,7 @@ export const buildStorybook = async (ctx: Context) => {
       },
     });
   } catch (err) {
-    handleBuildFailure(ctx, err, signal);
+    await handleBuildFailure(ctx, err, signal);
   } finally {
     logFile?.end();
   }
@@ -268,7 +271,9 @@ export default function main(ctx: Context) {
         ctx.options.outputDir = ctx.options.storybookBuildDir;
 
         // Use manifest.json from the storybook build directory if it exists
-        if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+        if (
+          await ctx.ports.fs.exists(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))
+        ) {
           return skippedForReactNative(ctx).output;
         }
         return false;

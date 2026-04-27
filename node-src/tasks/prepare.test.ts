@@ -42,6 +42,14 @@ const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
 const http = { fetch: vi.fn() };
 
+const ports = {
+  fs: {
+    readDir: async (p: string) => readdirSyncMock(p) as any,
+    stat: async (p: string) => statSyncMock(p) as any,
+    readFile: async (p: string, encoding?: any) => readFileSyncMock(p, encoding) as any,
+  },
+} as any;
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.resetAllMocks();
@@ -52,7 +60,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['iframe.html', 'index.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, ports, sourceDir: '/static/' } as any;
     await validateFiles(ctx);
 
     expect(ctx.fileInfo).toEqual(
@@ -71,7 +79,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['iframe.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env: environment, log, http, options: {}, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, ports, options: {}, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -79,7 +87,7 @@ describe('validateFiles', () => {
     readdirSyncMock.mockReturnValue(['index.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const ctx = { env: environment, log, http, options: {}, sourceDir: '/static/' } as any;
+    const ctx = { env: environment, log, http, ports, options: {}, sourceDir: '/static/' } as any;
     await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
   });
 
@@ -97,7 +105,7 @@ describe('validateFiles', () => {
       return { isDirectory: () => false, size: 42 } as any;
     });
 
-    const ctx = { env: environment, log, http, sourceDir: '.' } as any;
+    const ctx = { env: environment, log, http, ports, sourceDir: '.' } as any;
     await validateFiles(ctx);
 
     expect(ctx.fileInfo).toEqual(
@@ -123,6 +131,7 @@ describe('validateFiles', () => {
         env: environment,
         log,
         http,
+        ports,
         sourceDir: '/static/',
         buildLogFile: 'build-storybook.log',
         options: {},
@@ -158,6 +167,7 @@ describe('validateFiles', () => {
         env: environment,
         log,
         http,
+        ports,
         options: {},
         sourceDir: '/static/',
         isReactNativeApp: true,
@@ -177,6 +187,7 @@ describe('validateFiles', () => {
           env: environment,
           log,
           http,
+          ports,
           sourceDir: '/static/',
           isReactNativeApp: true,
           announcedBuild: { browsers: ['android'] },
@@ -203,6 +214,7 @@ describe('validateFiles', () => {
           env: environment,
           log,
           http,
+          ports,
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
@@ -224,6 +236,7 @@ Invalid React Native Storybook build in directory /static`
           env: environment,
           log,
           http,
+          ports,
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
@@ -247,6 +260,7 @@ Invalid React Native Storybook build in directory /static`
           env: environment,
           log,
           http,
+          ports,
           sourceDir: '/static/',
           isReactNativeApp: true,
           announcedBuild: { browsers: ['ios'] },
@@ -277,6 +291,7 @@ Invalid React Native Storybook build in directory /static`
           env: environment,
           log,
           http,
+          ports,
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
@@ -298,6 +313,7 @@ Invalid React Native Storybook build in directory /static`
           env: environment,
           log,
           http,
+          ports,
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
@@ -321,6 +337,7 @@ Invalid React Native Storybook build in directory /static`
           env: environment,
           log,
           http,
+          ports,
           options: {},
           sourceDir: '/static/',
           isReactNativeApp: true,
@@ -342,6 +359,7 @@ const makeContext = (browsers: string[]) =>
     env: environment,
     log,
     http,
+    ports,
     sourceDir: '/static/',
     announcedBuild: { browsers },
   }) as any;
@@ -403,6 +421,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -430,6 +449,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -462,6 +482,7 @@ describe('calculateFileHashes', () => {
       env: environment,
       log,
       http,
+      ports,
       sourceDir: '/static/',
       options: { fileHashing: true },
       fileInfo,

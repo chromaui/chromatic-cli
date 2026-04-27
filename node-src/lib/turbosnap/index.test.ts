@@ -32,6 +32,7 @@ const accessMock = vi.mocked(access);
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
 const http = { fetch: vi.fn() };
+const ports = { fs: { exists: vi.fn(async () => true) } } as any;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -50,6 +51,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -72,6 +74,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -94,6 +97,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -110,14 +114,12 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue(deps);
-    accessMock.mockImplementation((_path, callback) =>
-      Promise.resolve(callback(new Error('some error')))
-    );
 
     const ctx = {
       env: environment,
       log,
       http,
+      ports: { fs: { exists: vi.fn(async () => false) } },
       options: { storybookBaseDir: '/wrong' },
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -139,6 +141,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       fileInfo: { statsPath: '/static/preview-stats.json' },
@@ -158,6 +161,7 @@ describe('traceChangedFiles', () => {
       env: environment,
       log,
       http,
+      ports,
       options: {},
       sourceDir: '/static/',
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },

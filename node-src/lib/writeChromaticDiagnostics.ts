@@ -1,12 +1,8 @@
-import { mkdirSync } from 'fs';
-import jsonfile from 'jsonfile';
 import path from 'path';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
 import { redact } from './utilities';
-
-const { writeFile } = jsonfile;
 
 /**
  * Extract important information from ctx, sort it and output into a json file
@@ -19,10 +15,12 @@ export async function writeChromaticDiagnostics(ctx: Context) {
   }
 
   try {
-    // Ensure the parent directory exists before writing file
-    mkdirSync(path.dirname(ctx.options.diagnosticsFile), { recursive: true });
+    await ctx.ports.fs.mkdir(path.dirname(ctx.options.diagnosticsFile), { recursive: true });
 
-    await writeFile(ctx.options.diagnosticsFile, getDiagnostics(ctx), { spaces: 2 });
+    await ctx.ports.fs.writeFile(
+      ctx.options.diagnosticsFile,
+      JSON.stringify(getDiagnostics(ctx), undefined, 2)
+    );
     ctx.log.info(wroteReport(ctx.options.diagnosticsFile, 'Chromatic diagnostics'));
   } catch (error) {
     ctx.log.error(error);
