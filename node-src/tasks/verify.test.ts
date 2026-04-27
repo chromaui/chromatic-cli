@@ -13,6 +13,14 @@ function makePorts(client: { runQuery: ReturnType<typeof vi.fn> }) {
       cliTokenEndpoint: 'https://index.chromatic.com/api',
     }),
     clock: createRealClock(),
+    ui: {
+      taskStart: vi.fn(),
+      taskUpdate: vi.fn(),
+      taskSucceed: vi.fn(),
+      taskFail: vi.fn(),
+      progress: vi.fn(),
+      withTask: async (_t: any, fn: () => Promise<any>) => fn(),
+    },
   };
 }
 

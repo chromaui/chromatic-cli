@@ -302,6 +302,30 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib/git) must go through the UI port. The Listr adapter
+  // is the only module permitted to wire phase events into a Listr renderer
+  // directly. lib/tasks.ts is exempt because `createTask` returns a
+  // `Listr.ListrTask` shape; that interop layer is the natural meeting point
+  // between the Listr type and the rest of the domain.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/uiListrAdapter.ts',
+      'node-src/lib/tasks.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'listr', message: 'Use ctx.ports.ui instead.' },
+            { name: 'listr2', message: 'Use ctx.ports.ui instead.' },
+          ],
+        },
+      ],
+    },
+  },
   // Phase code (tasks/lib/git) must go through the ErrorReporter port. Only
   // the Sentry adapter and the bootstrap module that initializes the SDK are
   // permitted to import @sentry/node directly.

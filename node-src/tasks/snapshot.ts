@@ -47,7 +47,7 @@ export const takeSnapshots = async (ctx: Context, task: Task) => {
 
   const updateProgress = throttle(
     ({ cursor, label }) => {
-      task.output = pending(ctx, { cursor, label }).output;
+      ctx.ports.ui.taskUpdate({ output: pending(ctx, { cursor, label }).output });
       ctx.options.experimental_onTaskProgress?.(
         { ...ctx },
         { progress: cursor, total: actualTestCount, unit: 'snapshots' }
