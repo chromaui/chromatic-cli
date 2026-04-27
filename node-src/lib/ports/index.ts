@@ -1,6 +1,8 @@
 import GraphQLClient from '../../io/graphqlClient';
 import HTTPClient from '../../io/httpClient';
 import { Logger } from '../log';
+import { BuildRunner } from './buildRunner';
+import { createShellBuildRunner } from './buildRunnerShellAdapter';
 import { ChromaticApi } from './chromaticApi';
 import { createGraphqlChromaticApi } from './chromaticApiGraphqlAdapter';
 import { DependencyTracer } from './dependencyTracer';
@@ -27,6 +29,7 @@ export interface Ports {
   fs: FileSystem;
   proc: ProcessRunner;
   tracer: DependencyTracer;
+  builder: BuildRunner;
 }
 
 interface DefaultPortsDeps {
@@ -57,6 +60,7 @@ interface DefaultPortsDeps {
  * @returns A `Ports` record wired with production adapters.
  */
 export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
+  const proc = createExecaProcessRunner();
   return {
     git: createShellGitAdapter({ log: deps.log }),
     chromatic: createGraphqlChromaticApi({
@@ -68,7 +72,8 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
       log: deps.log,
     }),
     fs: createNodeFileSystem(),
-    proc: createExecaProcessRunner(),
+    proc,
     tracer: createTurbosnapDependencyTracer(),
+    builder: createShellBuildRunner({ proc }),
   };
 }
