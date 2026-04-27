@@ -199,6 +199,7 @@
     "react-dom": "^17.0.2",
     "read-package-up": "^11.0.0",
     "slash": "^3.0.0",
+    "slugify": "^1.6.9",
     "snyk-nodejs-lockfile-parser": "^1.58.18",
     "snyk-nodejs-plugin": "^1.4.3",
     "sort-package-json": "1.50.0",

@@ -1,8 +1,29 @@
 import { execa } from 'execa';
+import slugify from 'slugify';
 
 export interface ExpoConfig {
+  name: string;
   platforms?: string[];
-  scheme?: string;
+}
+
+/**
+ * Sanitize a project name for use as an iOS xcodebuild scheme and workspace name.
+ * Replicates the behavior of `@expo/config-plugins` sanitizedName from
+ * `@expo/config-plugins/build/ios/utils/Xcodeproj.js`.
+ *
+ * @param name The raw project name from the Expo config.
+ *
+ * @returns The sanitized name safe for use as an xcodebuild scheme.
+ */
+export function sanitizedName(name: string): string {
+  return sanitizedNameForProjects(name) || sanitizedNameForProjects(slugify(name)) || 'app';
+}
+
+function sanitizedNameForProjects(name: string): string {
+  return name
+    .replaceAll(/[\W_]+/g, '')
+    .normalize('NFD')
+    .replaceAll(/[\u0300-\u036F]/g, '');
 }
 
 /**

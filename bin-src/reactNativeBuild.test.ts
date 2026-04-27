@@ -6,19 +6,23 @@ vi.mock('execa', () => ({
 
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
+  const existsSync = vi.fn();
+  const mkdtempSync = vi.fn();
+  const rmSync = vi.fn();
+  const renameSync = vi.fn();
   return {
     ...actual,
     default: {
       ...actual,
-      existsSync: vi.fn(),
-      mkdtempSync: vi.fn(),
-      rmSync: vi.fn(),
-      renameSync: vi.fn(),
+      existsSync,
+      mkdtempSync,
+      rmSync,
+      renameSync,
     },
-    existsSync: vi.fn(),
-    mkdtempSync: vi.fn(),
-    rmSync: vi.fn(),
-    renameSync: vi.fn(),
+    existsSync,
+    mkdtempSync,
+    rmSync,
+    renameSync,
   };
 });
 
@@ -46,7 +50,7 @@ describe('react-native-build', () => {
   it('reads expo config and builds android', async () => {
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['android'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -73,7 +77,7 @@ describe('react-native-build', () => {
 
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['ios'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['ios'], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -108,7 +112,7 @@ describe('react-native-build', () => {
   it('exits with error when no supported platforms found', async () => {
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: [], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: [], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -119,25 +123,13 @@ describe('react-native-build', () => {
     );
   });
 
-  it('exits with error when ios platform has no scheme', async () => {
-    mockedExeca.mockImplementation((command: any, args: any) => {
-      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['ios'] }) } as any;
-      }
-      return Promise.resolve({}) as any;
-    });
-
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('No scheme found'));
-  });
-
   it('skips ios on non-darwin platforms', async () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'linux' });
 
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['ios'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['ios'], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -154,7 +146,7 @@ describe('react-native-build', () => {
     // eslint-disable-next-line complexity
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['android'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
       }
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'prebuild') {
         return Promise.resolve({}) as any;

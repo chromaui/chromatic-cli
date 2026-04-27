@@ -43,7 +43,7 @@ vi.mock('../lib/react-native/build', () => ({
   buildIos: vi.fn(() => Promise.resolve({ artifactPath: '/tmp/MyApp.app', duration: 1 })),
 }));
 vi.mock('../lib/react-native/expoConfig', () => ({
-  readExpoConfig: vi.fn(() => Promise.resolve({ platforms: ['ios', 'android'], scheme: 'MyApp' })),
+  readExpoConfig: vi.fn(() => Promise.resolve({ platforms: ['ios', 'android'], name: 'MyApp' })),
 }));
 vi.mock('../lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(() => Promise.resolve()),

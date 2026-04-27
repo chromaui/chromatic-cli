@@ -236,49 +236,48 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
+const runPlatformCommand = async (ctx: Context, command: string) => {
+  ctx.log.debug('Running React Native build command:', command);
+  try {
+    await runCommand(command, {
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+  } catch (err) {
+    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
+    throw new Error(`React Native build command failed: ${command}\n${err.message}`);
+  }
+};
+
+const resolvePlatforms = (ctx: Context) => {
+  return (ctx.announcedBuild?.browsers ?? []).filter(
+    (b): b is 'ios' | 'android' => b === 'ios' || b === 'android'
+  );
+};
+
 export const buildReactNative = async (ctx: Context) => {
   if (!ctx.isReactNativeApp) return;
 
-  const platformsToBuild = (ctx.announcedBuild?.browsers ?? []).filter(
-    (b): b is 'ios' | 'android' => b === 'ios' || b === 'android'
-  );
-
+  const platformsToBuild = resolvePlatforms(ctx);
   if (platformsToBuild.length === 0) return;
 
   const { iosBuildCommand, androidBuildCommand } = ctx.options.reactNative ?? {};
 
-  const runPlatformCommand = async (command: string) => {
-    ctx.log.debug('Running React Native build command:', command);
-    try {
-      await runCommand(command, {
-        stdout: 'inherit',
-        stderr: 'inherit',
-      });
-    } catch (err) {
-      setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
-      throw new Error(`React Native build command failed: ${command}\n${err.message}`);
-    }
-  };
-
-  let scheme: string | undefined;
-  if (platformsToBuild.includes('ios') && !iosBuildCommand) {
-    const config = await readExpoConfig();
-    scheme = config.scheme;
-  }
+  const config = await readExpoConfig();
 
   for (const platform of platformsToBuild) {
     if (platform === 'android') {
       if (androidBuildCommand) {
-        await runPlatformCommand(androidBuildCommand);
+        await runPlatformCommand(ctx, androidBuildCommand);
       } else {
         const { artifactPath } = await buildAndroid();
         renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.apk'));
       }
     } else if (platform === 'ios') {
       if (iosBuildCommand) {
-        await runPlatformCommand(iosBuildCommand);
+        await runPlatformCommand(ctx, iosBuildCommand);
       } else {
-        const { artifactPath } = await buildIos(scheme);
+        const { artifactPath } = await buildIos(config.name);
         renameSync(artifactPath, path.join(ctx.options.storybookBuildDir, 'storybook.app'));
       }
     }

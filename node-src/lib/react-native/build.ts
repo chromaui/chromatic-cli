@@ -3,6 +3,8 @@ import { existsSync, mkdtempSync, renameSync, rmSync } from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { sanitizedName } from './expoConfig';
+
 async function exec(
   command: string,
   args: string[],
@@ -10,8 +12,8 @@ async function exec(
 ) {
   return execa(command, args, {
     ...options,
-    stdout: 'inherit',
-    stderr: 'inherit',
+    stdout: undefined, // 'inherit',
+    stderr: undefined, //'inherit',
     env: {
       ...options.env,
 
@@ -62,19 +64,18 @@ export async function buildAndroid() {
 /**
  * Build the iOS artifact via expo prebuild and xcodebuild.
  *
- * @param scheme The iOS scheme to build, read from the Expo config.
+ * @param name The app name from the Expo config, used to derive the xcodebuild file names and scheme.
  *
  * @returns The path to the built .app bundle and duration in seconds.
  */
-export async function buildIos(scheme?: string) {
+export async function buildIos(name: string) {
   const start = new Date();
 
-  if (scheme === undefined) {
-    throw new Error('Unable to determine scheme for iOS build.');
-  }
   if (process.platform !== 'darwin') {
     throw new Error('iOS builds are only supported on macOS.');
   }
+
+  const cleanName = sanitizedName(name);
 
   await exec('npx', ['expo', 'prebuild', '--platform', 'ios']);
 
@@ -82,9 +83,9 @@ export async function buildIos(scheme?: string) {
 
   const xcodebuildArguments = [
     '-workspace',
-    `${scheme}.xcworkspace`,
+    `${cleanName}.xcworkspace`,
     '-scheme',
-    scheme,
+    cleanName,
     '-configuration',
     'Release',
     '-sdk',
@@ -103,7 +104,7 @@ export async function buildIos(scheme?: string) {
     'Build',
     'Products',
     'Release-iphonesimulator',
-    `${scheme}.app`
+    `${cleanName}.app`
   );
 
   try {
@@ -113,7 +114,7 @@ export async function buildIos(scheme?: string) {
     }
 
     const artifactDirectory = mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-artifact-'));
-    const artifactPath = path.join(artifactDirectory, `${scheme}.app`);
+    const artifactPath = path.join(artifactDirectory, `${cleanName}.app`);
     renameSync(appPath, artifactPath);
 
     return { artifactPath, duration: (Date.now() - start.getTime()) / 1000 };

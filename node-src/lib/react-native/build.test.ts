@@ -61,12 +61,6 @@ describe('buildAndroid', () => {
 });
 
 describe('buildIos', () => {
-  it('throws when scheme is undefined', async () => {
-    await expect(buildIos(undefined)).rejects.toThrow(
-      'Unable to determine scheme for iOS build.'
-    );
-  });
-
   it('throws when not on macOS', async () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });

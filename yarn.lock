@@ -5032,6 +5032,7 @@ __metadata:
     read-package-up: "npm:^11.0.0"
     semver: "npm:^7.3.5"
     slash: "npm:^3.0.0"
+    slugify: "npm:^1.6.9"
     snyk-nodejs-lockfile-parser: "npm:^1.58.18"
     snyk-nodejs-plugin: "npm:^1.4.3"
     sort-package-json: "npm:1.50.0"
@@ -13414,6 +13415,13 @@ __metadata:
   version: 0.0.4
   resolution: "slice-ansi@npm:0.0.4"
   checksum: 10c0/997d4cc73e34aa8c0f60bdb71701b16c062cc4acd7a95e3b10e8c05d790eb5e735d9b470270dc6f443b1ba21492db7ceb849d5c93011d1256061bf7ed7216c7a
+  languageName: node
+  linkType: hard
+
+"slugify@npm:^1.6.9":
+  version: 1.6.9
+  resolution: "slugify@npm:1.6.9"
+  checksum: 10c0/8473c566ae00c5db26bfbf6182a4a9478ab3c912a9c926e1fdb410736a77228bfca4fdc5c755b46fafa7d2d9900de482fd7a9bd5e5c91128c4743c2c072d88da
   languageName: node
   linkType: hard
 

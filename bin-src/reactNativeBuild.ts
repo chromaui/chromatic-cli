@@ -92,11 +92,6 @@ Available platforms: ${configPlatforms.join(', ')}`);
     process.exit(1);
   }
 
-  if (platforms.includes('ios') && !config.scheme) {
-    error('No scheme found in Expo config. The scheme is required for iOS builds.');
-    process.exit(1);
-  }
-
   return platforms;
 }
 
@@ -104,11 +99,11 @@ Available platforms: ${configPlatforms.join(', ')}`);
  * Build all requested platforms and return the artifacts.
  *
  * @param platforms The platforms to build.
- * @param scheme The iOS scheme from Expo config.
+ * @param appName The app name from Expo config, required for iOS builds.
  *
  * @returns The list of build artifacts.
  */
-async function buildPlatforms(platforms: string[], scheme?: string) {
+async function buildPlatforms(platforms: string[], appName: string) {
   const artifacts: { platform: string; path: string; duration: number }[] = [];
 
   for (const platform of platforms) {
@@ -116,7 +111,7 @@ async function buildPlatforms(platforms: string[], scheme?: string) {
       const { artifactPath, duration } = await buildAndroid();
       artifacts.push({ platform: 'Android', path: artifactPath, duration });
     } else if (platform === 'ios') {
-      const { artifactPath, duration } = await buildIos(scheme);
+      const { artifactPath, duration } = await buildIos(appName);
       artifacts.push({ platform: 'iOS', path: artifactPath, duration });
     }
   }
@@ -153,7 +148,7 @@ export async function main(argv: string[]) {
 
   let artifacts: { platform: string; path: string; duration: number }[];
   try {
-    artifacts = await buildPlatforms(platforms, config.scheme);
+    artifacts = await buildPlatforms(platforms, config.name);
   } catch (err) {
     error(err.message);
     process.exit(1);
