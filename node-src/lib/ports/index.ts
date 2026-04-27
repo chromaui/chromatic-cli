@@ -13,6 +13,8 @@ import { DependencyTracer } from './dependencyTracer';
 import { createTurbosnapDependencyTracer } from './dependencyTracerTurbosnapAdapter';
 import { Environment } from './environment';
 import { createRealEnvironment } from './environmentRealAdapter';
+import { ErrorReporter } from './errorReporter';
+import { createSentryErrorReporter } from './errorReporterSentryAdapter';
 import { FileSystem } from './fs';
 import { createNodeFileSystem } from './fsNodeAdapter';
 import { GitRepository } from './git';
@@ -47,6 +49,7 @@ export interface Ports {
   host: Environment;
   log: LoggerPort;
   analytics: Analytics;
+  errors: ErrorReporter;
 }
 
 interface DefaultPortsDeps {
@@ -98,5 +101,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     host: createRealEnvironment(),
     log: deps.log,
     analytics: createInMemoryAnalytics(),
+    errors: createSentryErrorReporter(),
   };
 }
