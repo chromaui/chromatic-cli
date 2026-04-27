@@ -6,6 +6,7 @@ import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
+import deduplicationFailed from '../ui/messages/warnings/deduplicationFailed';
 import {
   dryRun,
   failed,
@@ -17,11 +18,9 @@ import {
   uploading,
 } from '../ui/tasks/upload';
 
-export const uploadStorybook = async (ctx: Context, task: Task) => {
-  if (ctx.skip) return;
-
+const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
   const files = ctx.fileInfo?.paths.map<FileDesc>((filePath) => ({
-    ...(ctx.fileInfo?.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
+    ...(withHashes && ctx.fileInfo?.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
     contentLength:
       ctx.fileInfo?.lengths.find(({ knownAs }) => knownAs === filePath)?.contentLength ?? -1,
     localPath: path.join(ctx.sourceDir, filePath),
@@ -32,6 +31,10 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
     throw new Error(invalid(ctx).output);
   }
 
+  return files;
+};
+
+const runUploadAndWaitForSentinels = async (ctx: Context, task: Task, files: FileDesc[]) => {
   await uploadBuild(ctx, files, {
     onProgress: throttle(
       (progress, total) => {
@@ -46,6 +49,35 @@ export const uploadStorybook = async (ctx: Context, task: Task) => {
       throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
     },
   });
+
+  if (!ctx.sentinelUrls?.length) return;
+
+  transitionTo(finalizing)(ctx, task);
+
+  // Dedupe sentinels, ignoring query params
+  const sentinels = Object.fromEntries(
+    ctx.sentinelUrls.map((url) => {
+      const { host, pathname } = new URL(url);
+      return [host + pathname, { name: pathname.split('/').at(-1) || '', url }];
+    })
+  );
+
+  await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
+};
+
+export const uploadStorybook = async (ctx: Context, task: Task) => {
+  if (ctx.skip) return;
+
+  try {
+    await runUploadAndWaitForSentinels(ctx, task, buildFileList(ctx, true));
+  } catch {
+    ctx.log.warn(deduplicationFailed());
+    // Retry without file deduplication ensuring we reset fields for a new upload
+    ctx.sentinelUrls = [];
+    ctx.uploadedBytes = 0;
+    ctx.uploadedFiles = 0;
+    await runUploadAndWaitForSentinels(ctx, task, buildFileList(ctx, false));
+  }
 };
 
 export const waitForSentinels = async (ctx: Context, task: Task) => {
@@ -84,6 +116,6 @@ export default function main(ctx: Context) {
       if (ctx.options.dryRun) return dryRun(ctx).output;
       return false;
     },
-    steps: [transitionTo(starting), uploadStorybook, waitForSentinels, transitionTo(success, true)],
+    steps: [transitionTo(starting), uploadStorybook, transitionTo(success, true)],
   });
 }

@@ -880,6 +880,139 @@ describe('uploadStorybook', () => {
       );
     });
   });
+
+  describe('deduplication fallback', () => {
+    it('retries without hashes when sentinel wait fails, sending all files', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: ['https://asdqwe.chromatic.com/sentinel.txt'],
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'iframe.html',
+                formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+                formFields: {},
+              },
+              {
+                contentType: 'text/html',
+                filePath: 'index.html',
+                formAction: 'https://s3.amazonaws.com/presigned?index.html',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      // First sentinel check fails, second succeeds (after fallback re-upload)
+      http.fetch
+        .mockReturnValueOnce({ ok: true }) // iframe.html upload (first attempt)
+        .mockReturnValueOnce({ ok: true }) // index.html upload (first attempt)
+        .mockReturnValueOnce({ text: () => Promise.resolve('ERROR') }) // sentinel fails (not OK)
+        .mockReturnValue({ ok: true, text: () => Promise.resolve('OK') }); // fallback uploads + sentinel
+
+      const fileInfo = {
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        paths: ['iframe.html', 'index.html'],
+        hashes: { 'iframe.html': 'hash1', 'index.html': 'hash2' },
+        total: 84,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      // First attempt uses hashes
+      expect(client.runQuery).toHaveBeenNthCalledWith(
+        1,
+        expect.stringMatching(/UploadBuildMutation/),
+        {
+          buildId: '1',
+          files: [
+            { contentHash: 'hash1', contentLength: 42, filePath: 'iframe.html' },
+            { contentHash: 'hash2', contentLength: 42, filePath: 'index.html' },
+          ],
+        }
+      );
+
+      // Fallback attempt removes file deduplication hashes, causing all files to be re-uploaded
+      expect(client.runQuery).toHaveBeenNthCalledWith(
+        2,
+        expect.stringMatching(/UploadBuildMutation/),
+        {
+          buildId: '1',
+          files: [
+            { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
+            { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
+          ],
+        }
+      );
+
+      expect(client.runQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it('resets uploadedBytes and uploadedFiles before fallback retry', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          info: {
+            sentinelUrls: ['https://asdqwe.chromatic.com/sentinel.txt'],
+            targets: [
+              {
+                contentType: 'text/html',
+                filePath: 'iframe.html',
+                formAction: 'https://s3.amazonaws.com/presigned?iframe.html',
+                formFields: {},
+              },
+            ],
+          },
+          userErrors: [],
+        },
+      });
+
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch
+        .mockReturnValueOnce({ ok: true }) // iframe.html upload (first attempt)
+        .mockReturnValueOnce({ text: () => Promise.resolve('ERROR') }) // sentinel fails (not OK)
+        .mockReturnValue({ ok: true, text: () => Promise.resolve('OK') }); // fallback upload + sentinel
+
+      const fileInfo = {
+        lengths: [{ knownAs: 'iframe.html', contentLength: 42 }],
+        paths: ['iframe.html'],
+        hashes: { 'iframe.html': 'hash1' },
+        total: 42,
+      };
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await uploadStorybook(ctx, {} as any);
+
+      // After fallback completes, counts reflect the retry upload only
+      expect(ctx.uploadedFiles).toBe(1);
+      expect(ctx.uploadedBytes).toBe(42);
+    });
+  });
 });
 
 describe('waitForSentinels', () => {
