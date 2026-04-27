@@ -1,5 +1,3 @@
-import * as Sentry from '@sentry/node';
-
 import { createAnalyticsClient } from '../lib/analytics';
 import { emailHash } from '../lib/emailHash';
 import { createRealAnalytics } from '../lib/ports/analyticsRealAdapter';
@@ -40,10 +38,10 @@ export const setRuntimeMetadata = async (ctx: Context) => {
       await ctx.ports.pkgMgr.detect();
 
     ctx.runtimeMetadata.packageManager = packageManager as any;
-    Sentry.setTag('packageManager', packageManager);
+    ctx.ports.errors.setTag('packageManager', packageManager);
 
     ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
-    Sentry.setTag('packageManagerVersion', packageManagerVersion);
+    ctx.ports.errors.setTag('packageManagerVersion', packageManagerVersion);
   } catch (err) {
     ctx.log.debug(`Failed to set runtime metadata: ${err.message}`);
   }
@@ -95,8 +93,8 @@ export const announceBuild = async (ctx: Context) => {
   const input = announceBuildInput(ctx);
   const announcedBuild = await ctx.ports.chromatic.announceBuild({ input });
 
-  Sentry.setTag('app_id', announcedBuild.app.id);
-  Sentry.setContext('build', { id: announcedBuild.id });
+  ctx.ports.errors.setTag('app_id', announcedBuild.app.id);
+  ctx.ports.errors.setContext('build', { id: announcedBuild.id });
 
   updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
 

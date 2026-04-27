@@ -16,7 +16,10 @@ describe('storybookInfo', () => {
     const ctx = {
       packageJson: {},
       git: { rootDir: process.cwd() },
-      ports: { storybook: { detect } },
+      ports: {
+        storybook: { detect },
+        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+      },
     } as any;
     await setStorybookInfo(ctx);
     expect(detect).toHaveBeenCalledWith(ctx);

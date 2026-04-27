@@ -1,6 +1,5 @@
-import * as Sentry from '@sentry/node';
-
 import { ChromaticApi } from '../ports/chromaticApi';
+import { ErrorReporter } from '../ports/errorReporter';
 import { Logger } from '../ports/logger';
 import type { AnalyticsEvent } from './events';
 import type { AnalyticsClient } from './types';
@@ -10,17 +9,20 @@ const SHUTDOWN_TIMEOUT_MS = 5000;
 interface IndexAnalyticsOptions {
   chromatic: ChromaticApi;
   logger: Logger;
+  errors: ErrorReporter;
 }
 
 /** Analytics client that sends events to the Chromatic Index via GraphQL. */
 export class IndexAnalyticsClient implements AnalyticsClient {
   private chromatic: ChromaticApi;
   private logger: Logger;
+  private errors: ErrorReporter;
   private pending: Promise<unknown>[] = [];
 
-  constructor({ chromatic, logger }: IndexAnalyticsOptions) {
+  constructor({ chromatic, logger, errors }: IndexAnalyticsOptions) {
     this.chromatic = chromatic;
     this.logger = logger;
+    this.errors = errors;
   }
 
   trackEvent(eventName: AnalyticsEvent, properties?: Record<string, unknown>): void {
@@ -30,7 +32,7 @@ export class IndexAnalyticsClient implements AnalyticsClient {
       .trackTelemetryEvent({ event: eventName, properties })
       .catch((err) => {
         this.logger.debug('[analytics] trackEvent failed', err);
-        Sentry.captureException(err);
+        this.errors.captureException(err);
       });
 
     this.pending.push(promise);

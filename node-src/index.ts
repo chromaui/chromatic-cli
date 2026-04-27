@@ -1,6 +1,5 @@
 import 'any-observable/register/zen';
 
-import * as Sentry from '@sentry/node';
 import Listr from 'listr';
 import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
@@ -218,7 +217,7 @@ export async function runAll(ctx: InitialContext) {
 
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch((error) => {
-    Sentry.captureException(error);
+    ctx.ports.errors.captureException(error);
     onError(error);
   });
 
@@ -256,7 +255,7 @@ async function runBuild(ctx: Context) {
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
-      Sentry.captureException(err);
+      ctx.ports.errors.captureException(err);
       endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);
@@ -292,7 +291,7 @@ async function runBuild(ctx: Context) {
         await ctx.ports.analytics.flush();
       } catch (error) {
         // Analytics shutdown should never crash the CLI, but we want to know about it
-        Sentry.captureException(error);
+        ctx.ports.errors.captureException(error);
       }
     }
   } catch (error) {

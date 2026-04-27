@@ -1,5 +1,3 @@
-import * as Sentry from '@sentry/node';
-
 import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
@@ -13,9 +11,9 @@ export const setStorybookInfo = async (ctx: Context) => {
 
   if (ctx.storybook) {
     if (ctx.storybook.version) {
-      Sentry.setTag('storybookVersion', ctx.storybook.version);
+      ctx.ports.errors.setTag('storybookVersion', ctx.storybook.version);
     }
-    Sentry.setContext('storybook', ctx.storybook);
+    ctx.ports.errors.setContext('storybook', ctx.storybook);
   }
 };
 

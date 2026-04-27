@@ -302,6 +302,30 @@ export default [
       ],
     },
   },
+  // Phase code (tasks/lib/git) must go through the ErrorReporter port. Only
+  // the Sentry adapter and the bootstrap module that initializes the SDK are
+  // permitted to import @sentry/node directly.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/errorReporterSentryAdapter.ts',
+      'node-src/errorMonitoring.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@sentry/node',
+              message: 'Use ctx.ports.errors instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Phase code (tasks/lib/git) must go through the Logger port. The real
   // adapter, the underlying logger module itself, the global type-only
   // re-export site (`types.ts`), and the existing `testLogger` shim are the

@@ -2,7 +2,6 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { AnalyticsEvent } from '@cli/analytics/events';
 import { exitCodes } from '@cli/setExitCode';
-import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import { PassThrough } from 'stream';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -31,10 +30,6 @@ vi.mock('execa', async (importOriginal) => {
 vi.mock('../lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(() => Promise.resolve()),
 }));
-vi.mock('@sentry/node', () => ({
-  captureException: vi.fn(),
-}));
-
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
@@ -58,6 +53,12 @@ const stubPorts = {
     get: (key: string) => process.env[key],
     platform: () => process.platform,
     nodeVersion: () => process.versions.node,
+  },
+  errors: {
+    captureException: vi.fn(),
+    setTag: vi.fn(),
+    setContext: vi.fn(),
+    flush: vi.fn(async () => true),
   },
 } as any;
 
@@ -559,10 +560,10 @@ describe('buildStorybook analytics', () => {
     );
   });
 
-  it('reports to Sentry and still throws the build failure when analytics throws', async () => {
+  it('reports through ctx.ports.errors and still throws the build failure when analytics throws', async () => {
     // arrange
-    vi.mocked(Sentry.captureException).mockClear();
     const analyticsError = new Error('analytics exploded');
+    const captureException = vi.fn();
     const ctx = makeAnalyticsContext({
       ports: {
         ...stubPorts,
@@ -572,6 +573,7 @@ describe('buildStorybook analytics', () => {
           }),
           flush: vi.fn(),
         },
+        errors: { ...stubPorts.errors, captureException },
       },
     });
     execa.mockRejectedValueOnce(new Error('build failed'));
@@ -582,7 +584,7 @@ describe('buildStorybook analytics', () => {
     // assert: outer throw is the build failure, not the analytics failure
     expect(thrown).toBeInstanceOf(Error);
     expect(thrown).not.toBe(analyticsError);
-    expect(Sentry.captureException).toHaveBeenCalledWith(analyticsError);
+    expect(captureException).toHaveBeenCalledWith(analyticsError);
   });
 });
 

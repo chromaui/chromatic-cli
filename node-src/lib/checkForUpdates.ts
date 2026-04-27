@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/node';
 import semver from 'semver';
 
 import { Context } from '..';
@@ -45,7 +44,7 @@ export default async function checkForUpdates(ctx: Context) {
     latestVersion = distributionTags.latest;
   } catch (err) {
     if (shouldReportVersionCheckFailure(err)) {
-      Sentry.captureException(err);
+      ctx.ports.errors.captureException(err);
     }
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
     ctx.log.warn(err);

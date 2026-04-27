@@ -5,7 +5,6 @@ import waitForBuildToComplete, {
   NotifyServiceError,
   NotifyServiceMessageTimeoutError,
 } from '@cli/waitForBuildToComplete';
-import * as Sentry from '@sentry/node';
 
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -151,7 +150,7 @@ async function waitForBuildToCompleteAndHandleErrors(
       },
     });
   } catch (error) {
-    Sentry.captureException(error);
+    ctx.ports.errors.captureException(error);
     if (error instanceof NotifyConnectionError) {
       ctx.log.debug(
         `Failed to connect to notify service, falling back to polling: code: ${error.statusCode}, original error: ${error.originalError?.message}`

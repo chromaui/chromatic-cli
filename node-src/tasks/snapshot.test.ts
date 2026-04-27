@@ -4,17 +4,12 @@ import waitForBuildToComplete, {
   NotifyServiceError,
   NotifyServiceMessageTimeoutError,
 } from '@cli/waitForBuildToComplete';
-import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGraphqlChromaticApi } from '../lib/ports/chromaticApiGraphqlAdapter';
 import { createRealClock } from '../lib/ports/clockRealAdapter';
 import TestLogger from '../lib/testLogger';
 import { takeSnapshots } from './snapshot';
-
-vi.mock('@sentry/node', () => ({
-  captureException: vi.fn(),
-}));
 
 vi.mock(import('@cli/waitForBuildToComplete'), async (importOriginal) => {
   const originalModule = await importOriginal();
@@ -32,6 +27,7 @@ const environment = {
 };
 const log = new TestLogger();
 const matchesBranch = () => false;
+const captureException = vi.fn();
 
 const createBaseTestContext = () => {
   const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
@@ -41,7 +37,11 @@ const createBaseTestContext = () => {
   });
   return {
     client,
-    ports: { chromatic, clock: createRealClock() },
+    ports: {
+      chromatic,
+      clock: createRealClock(),
+      errors: { captureException, setTag: vi.fn(), setContext: vi.fn(), flush: vi.fn() },
+    },
     env: environment,
     git: { matchesBranch },
     log,
@@ -343,7 +343,7 @@ describe('takeSnapshots', () => {
     expect(ctx.log.debug).toHaveBeenCalledWith(
       'Timed out waiting for message from notify service, falling back to polling'
     );
-    expect(Sentry.captureException).toHaveBeenCalledWith(timeoutError);
+    expect(captureException).toHaveBeenCalledWith(timeoutError);
     expect(ctx.build).toEqual({ ...build, changeCount: 0, status: 'PASSED', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);
   });

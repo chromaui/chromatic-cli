@@ -1,24 +1,22 @@
-import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createInMemoryErrorReporter } from '../ports/errorReporterInMemoryAdapter';
 import TestLogger from '../testLogger';
 import { AnalyticsEvent } from './events';
 import { IndexAnalyticsClient } from './indexClient';
 
-vi.mock('@sentry/node', () => ({
-  captureException: vi.fn(),
-}));
-
 function makeClient(trackTelemetryEvent = vi.fn().mockResolvedValue(undefined)) {
   const chromatic = { trackTelemetryEvent } as any;
   const logger = new TestLogger();
-  const client = new IndexAnalyticsClient({ chromatic, logger });
-  return { client, chromatic, logger, trackTelemetryEvent };
+  const errorsState = {} as any;
+  const errors = createInMemoryErrorReporter(errorsState);
+  const client = new IndexAnalyticsClient({ chromatic, logger, errors });
+  return { client, chromatic, logger, errors, errorsState, trackTelemetryEvent };
 }
 
 describe('IndexAnalyticsClient', () => {
   beforeEach(() => {
-    vi.mocked(Sentry.captureException).mockClear();
+    vi.clearAllMocks();
   });
 
   describe('trackEvent', () => {
@@ -35,15 +33,15 @@ describe('IndexAnalyticsClient', () => {
       });
     });
 
-    it('swallows GQL errors and reports to Sentry', async () => {
+    it('swallows GQL errors and reports through the ErrorReporter port', async () => {
       const error = new Error('GQL failed');
-      const { client } = makeClient(vi.fn().mockRejectedValue(error));
+      const { client, errorsState } = makeClient(vi.fn().mockRejectedValue(error));
 
       expect(() => client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {})).not.toThrow();
 
       await client.shutdown();
 
-      expect(Sentry.captureException).toHaveBeenCalledWith(error);
+      expect(errorsState.exceptions).toEqual([{ error, tags: undefined }]);
     });
   });
 

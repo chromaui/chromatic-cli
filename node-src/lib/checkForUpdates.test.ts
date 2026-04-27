@@ -1,16 +1,12 @@
-import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import checkForUpdates from './checkForUpdates';
 import TestLogger from './testLogger';
 
-vi.mock('@sentry/node', () => ({
-  captureException: vi.fn(),
-}));
-
 const http = { fetch: vi.fn() };
 const pkgMgrExec = vi.fn();
 const pkgMgrHasYarn = vi.fn(() => false);
+const captureException = vi.fn();
 
 const getContext = (skipUpdateCheck = false, version = '13.0.0') => {
   return {
@@ -18,13 +14,17 @@ const getContext = (skipUpdateCheck = false, version = '13.0.0') => {
     log: new TestLogger(),
     http,
     pkg: { name: 'chromatic', version },
-    ports: { pkgMgr: { exec: pkgMgrExec, hasYarn: pkgMgrHasYarn } },
+    ports: {
+      pkgMgr: { exec: pkgMgrExec, hasYarn: pkgMgrHasYarn },
+      errors: { captureException },
+    },
   };
 };
 
 beforeEach(() => {
   pkgMgrExec.mockReset().mockResolvedValue('https://registry.npmjs.org/');
   pkgMgrHasYarn.mockReset().mockReturnValue(false);
+  captureException.mockReset();
 });
 
 describe('checkForUpdates', () => {
@@ -73,7 +73,7 @@ describe('checkForUpdates', () => {
       // it should throw before the fetch
       expect(ctx.http.fetch).not.toHaveBeenCalled();
       // but it should not report to Sentry
-      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(captureException).not.toHaveBeenCalled();
       // http.fetch.mockRejectedValue(new Error('fetch failed'));
     });
 
@@ -85,7 +85,7 @@ describe('checkForUpdates', () => {
         )
       );
       await checkForUpdates(ctx as any);
-      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(captureException).not.toHaveBeenCalled();
     });
   });
 });

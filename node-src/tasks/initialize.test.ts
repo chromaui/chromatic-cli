@@ -56,6 +56,12 @@ describe('setRuntimeMetadata', () => {
       platform: () => 'darwin' as NodeJS.Platform,
       nodeVersion: () => process.versions.node,
     },
+    errors: {
+      captureException: vi.fn(),
+      setTag: vi.fn(),
+      setContext: vi.fn(),
+      flush: vi.fn(),
+    },
   } as any;
 
   beforeEach(() => {
@@ -157,7 +163,10 @@ describe('announceBuild', () => {
       app: { id: 'announced-build-app-id' },
     };
     const announceBuildFunction = vi.fn().mockResolvedValue(build);
-    const ports = { chromatic: { announceBuild: announceBuildFunction } };
+    const ports = {
+      chromatic: { announceBuild: announceBuildFunction },
+      errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+    };
 
     const ctx = { ports, ...defaultContext } as any;
     await announceBuild(ctx);
@@ -189,7 +198,10 @@ describe('announceBuild', () => {
   it('requires baselines for TurboSnap-enabled builds', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {} };
     const announceBuildFunction = vi.fn().mockResolvedValue(build);
-    const ports = { chromatic: { announceBuild: announceBuildFunction } };
+    const ports = {
+      chromatic: { announceBuild: announceBuildFunction },
+      errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+    };
 
     const ctx = { ports, ...defaultContext, turboSnap: {} } as any;
     await announceBuild(ctx);
@@ -202,7 +214,10 @@ describe('announceBuild', () => {
   it('does not require baselines for TurboSnap bailed builds', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {} };
     const announceBuildFunction = vi.fn().mockResolvedValue(build);
-    const ports = { chromatic: { announceBuild: announceBuildFunction } };
+    const ports = {
+      chromatic: { announceBuild: announceBuildFunction },
+      errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+    };
 
     const ctx = { ports, ...defaultContext, turboSnap: { bailReason: {} } } as any;
     await announceBuild(ctx);
@@ -222,7 +237,10 @@ describe('announceBuild', () => {
       const features = { isReactNativeApp: gqlValue };
       const build = { number: 1, status: 'ANNOUNCED', app: {}, features };
       const announceBuildFunction = vi.fn().mockResolvedValue(build);
-      const ports = { chromatic: { announceBuild: announceBuildFunction } };
+      const ports = {
+        chromatic: { announceBuild: announceBuildFunction },
+        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+      };
 
       const ctx = { ports, ...defaultContext } as any;
       await announceBuild(ctx);
@@ -234,7 +252,10 @@ describe('announceBuild', () => {
   it('throws an error when TurboSnap is enabled for a React Native app', async () => {
     const build = { number: 1, status: 'ANNOUNCED', app: {}, features: { isReactNativeApp: true } };
     const announceBuildFunction = vi.fn().mockResolvedValue(build);
-    const ports = { chromatic: { announceBuild: announceBuildFunction } };
+    const ports = {
+      chromatic: { announceBuild: announceBuildFunction },
+      errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+    };
 
     const ctx = { ports, turboSnap: {}, ...defaultContext } as any;
     await expect(announceBuild(ctx)).rejects.toThrow(
@@ -251,7 +272,10 @@ describe('announceBuild', () => {
         features: { isReactNativeApp: true },
       };
       const announceBuildFunction = vi.fn().mockResolvedValue(build);
-      const ports = { chromatic: { announceBuild: announceBuildFunction } };
+      const ports = {
+        chromatic: { announceBuild: announceBuildFunction },
+        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+      };
 
       const ctx = { ports, ...defaultContext } as any;
       await announceBuild(ctx);
@@ -267,7 +291,10 @@ describe('announceBuild', () => {
         features: { isReactNativeApp: false },
       };
       const announceBuildFunction = vi.fn().mockResolvedValue(build);
-      const ports = { chromatic: { announceBuild: announceBuildFunction } };
+      const ports = {
+        chromatic: { announceBuild: announceBuildFunction },
+        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+      };
 
       const ctx = { ports, ...defaultContext } as any;
       await announceBuild(ctx);
@@ -286,7 +313,10 @@ describe('announceBuild', () => {
         features: { isReactNativeApp: true },
       };
       const announceBuildFunction = vi.fn().mockResolvedValue(build);
-      const ports = { chromatic: { announceBuild: announceBuildFunction } };
+      const ports = {
+        chromatic: { announceBuild: announceBuildFunction },
+        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+      };
 
       const ctx = { ports, ...defaultContext } as any;
       await expect(announceBuild(ctx)).rejects.toThrow(validationError);
@@ -303,7 +333,10 @@ describe('announceBuild', () => {
         features: { isReactNativeApp: true },
       };
       const announceBuildFunction = vi.fn().mockResolvedValue(build);
-      const ports = { chromatic: { announceBuild: announceBuildFunction } };
+      const ports = {
+        chromatic: { announceBuild: announceBuildFunction },
+        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
+      };
 
       const ctx = { ports, turboSnap: {}, ...defaultContext } as any;
       await expect(announceBuild(ctx)).rejects.toThrow(validationError);

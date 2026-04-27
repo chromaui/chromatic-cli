@@ -1,5 +1,4 @@
 import { AnalyticsEvent } from '@cli/analytics/events';
-import * as Sentry from '@sentry/node';
 import path from 'path';
 import semver from 'semver';
 
@@ -186,7 +185,7 @@ function trackBuildFailure(ctx: Context, errorCategory: string, err: any) {
     });
   } catch (error) {
     // Analytics should be best-effort, never fail the build, but we want to know about it
-    Sentry.captureException(error);
+    ctx.ports.errors.captureException(error);
   }
 }
 
