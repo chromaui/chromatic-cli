@@ -26,6 +26,8 @@ import { ProcessRunner } from './processRunner';
 import { createExecaProcessRunner } from './processRunnerExecaAdapter';
 import { StorybookDetector } from './storybookDetector';
 import { createRealStorybookDetector } from './storybookDetectorRealAdapter';
+import { UI } from './ui';
+import { createListrUI } from './uiListrAdapter';
 import { Uploader } from './uploader';
 import { createHttpUploader } from './uploaderHttpAdapter';
 
@@ -50,6 +52,7 @@ export interface Ports {
   log: LoggerPort;
   analytics: Analytics;
   errors: ErrorReporter;
+  ui: UI;
 }
 
 interface DefaultPortsDeps {
@@ -102,5 +105,6 @@ export function createDefaultPorts(deps: DefaultPortsDeps): Ports {
     log: deps.log,
     analytics: createInMemoryAnalytics(),
     errors: createSentryErrorReporter(),
+    ui: createListrUI(),
   };
 }
