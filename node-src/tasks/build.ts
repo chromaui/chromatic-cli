@@ -216,13 +216,12 @@ export const buildStorybook = async (ctx: Context) => {
       throw new Error('No build command configured');
     }
 
-    await ctx.ports.proc.run(ctx.buildCommand, {
-      stdio: [undefined, logFile, undefined],
-      // When `true`, this will run in the node version set by the
-      // action (node20), not the version set in the workflow
-      preferLocal: false,
+    await ctx.ports.builder.build({
+      command: ctx.buildCommand,
+      outputDir: ctx.sourceDir,
+      logStream: logFile,
       signal,
-      timeout: ctx.env.STORYBOOK_BUILD_TIMEOUT,
+      timeoutMs: ctx.env.STORYBOOK_BUILD_TIMEOUT,
       env: {
         CI: '1',
         NODE_ENV: ctx.env.STORYBOOK_NODE_ENV || 'production',

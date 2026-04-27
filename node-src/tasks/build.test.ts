@@ -7,6 +7,7 @@ import { execa as execaDefault, parseCommandString } from 'execa';
 import { PassThrough } from 'stream';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { createShellBuildRunner } from '../lib/ports/buildRunnerShellAdapter';
 import { createExecaProcessRunner } from '../lib/ports/processRunnerExecaAdapter';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
@@ -36,6 +37,7 @@ vi.mock('@sentry/node', () => ({
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
+const stubProc = createExecaProcessRunner();
 const stubPorts = {
   fs: {
     exists: vi.fn(async () => true),
@@ -47,7 +49,8 @@ const stubPorts = {
     }),
     readFile: vi.fn(async () => ''),
   },
-  proc: createExecaProcessRunner(),
+  proc: stubProc,
+  builder: createShellBuildRunner({ proc: stubProc }),
 } as any;
 
 const baseContext = { options: {}, flags: {}, ports: stubPorts } as any;
