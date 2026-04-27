@@ -7,6 +7,7 @@ import { execa as execaDefault, parseCommandString } from 'execa';
 import { PassThrough } from 'stream';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { createExecaProcessRunner } from '../lib/ports/processRunnerExecaAdapter';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import { patchModulePath } from '../lib/testUtilities';
@@ -46,6 +47,7 @@ const stubPorts = {
     }),
     readFile: vi.fn(async () => ''),
   },
+  proc: createExecaProcessRunner(),
 } as any;
 
 const baseContext = { options: {}, flags: {}, ports: stubPorts } as any;

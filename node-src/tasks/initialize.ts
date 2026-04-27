@@ -44,7 +44,7 @@ export const setRuntimeMetadata = async (ctx: Context) => {
     ctx.runtimeMetadata.packageManager = packageManager as any;
     Sentry.setTag('packageManager', packageManager);
 
-    const packageManagerVersion = await getPackageManagerVersion(packageManager);
+    const packageManagerVersion = await getPackageManagerVersion(ctx, packageManager);
     ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
     Sentry.setTag('packageManagerVersion', packageManagerVersion);
   } catch (err) {

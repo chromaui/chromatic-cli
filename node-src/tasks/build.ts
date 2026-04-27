@@ -10,7 +10,6 @@ import { emailHash } from '../lib/emailHash';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { runCommand } from '../lib/shell/shell';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
@@ -217,12 +216,12 @@ export const buildStorybook = async (ctx: Context) => {
       throw new Error('No build command configured');
     }
 
-    await runCommand(ctx.buildCommand, {
+    await ctx.ports.proc.run(ctx.buildCommand, {
       stdio: [undefined, logFile, undefined],
       // When `true`, this will run in the node version set by the
       // action (node20), not the version set in the workflow
       preferLocal: false,
-      cancelSignal: signal,
+      signal,
       timeout: ctx.env.STORYBOOK_BUILD_TIMEOUT,
       env: {
         CI: '1',

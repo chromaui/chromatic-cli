@@ -1,8 +1,5 @@
-// eslint-disable-next-line no-restricted-imports
 import { createReadStream, createWriteStream } from 'fs';
-// eslint-disable-next-line no-restricted-imports
 import fsp from 'fs/promises';
-// eslint-disable-next-line no-restricted-imports
 import { dir as temporaryDirectoryFactory, file as temporaryFileFactory } from 'tmp-promise';
 
 import {

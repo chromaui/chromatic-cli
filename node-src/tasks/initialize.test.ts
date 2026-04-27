@@ -44,8 +44,13 @@ describe('setEnvironment', () => {
 });
 
 describe('setRuntimeMetadata', () => {
+  const ports = {
+    proc: { run: vi.fn(async () => ({ stdout: '1.2.3', stderr: '', exitCode: 0 })) },
+  } as any;
+
   beforeEach(() => {
     execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
+    ports.proc.run.mockResolvedValue({ stdout: '1.2.3', stderr: '', exitCode: 0 });
   });
 
   it('sets the build command on the context', async () => {
@@ -56,6 +61,7 @@ describe('setRuntimeMetadata', () => {
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.2.0' },
       git: { changedFiles: ['./index.js'] },
+      ports,
     } as any;
     await setRuntimeMetadata(ctx);
 
@@ -75,6 +81,7 @@ describe('setRuntimeMetadata', () => {
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.1.0' },
       git: {},
+      ports,
     } as any;
     await setRuntimeMetadata(ctx);
 
@@ -94,6 +101,7 @@ describe('setRuntimeMetadata', () => {
       options: { buildScriptName: 'build:storybook' },
       storybook: { version: '6.1.0' },
       git: {},
+      ports,
     } as any;
     await setRuntimeMetadata(ctx);
 

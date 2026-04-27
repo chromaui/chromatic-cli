@@ -302,14 +302,19 @@ export default [
       ],
     },
   },
-  // Git code and its consumers must go through the GitRepository port. Broader
-  // phase-code restrictions on `execa` arrive with the ProcessRunner port.
+  // Phase code (tasks/lib) must go through the ProcessRunner port for non-git
+  // subprocesses. The execa adapter and the legacy shell runner backing it are
+  // the only modules permitted to import execa directly. Git's exec helper is
+  // also exempt because it lives below the GitRepository port.
   {
-    files: ['node-src/git/**/*.ts', 'node-src/tasks/gitInfo.ts'],
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
     ignores: [
+      'node-src/lib/ports/processRunnerExecaAdapter.ts',
+      'node-src/lib/shell/shell.ts',
       'node-src/git/execGit.ts',
       'node-src/git/execGit.test.ts',
       'node-src/git/generateGitRepository.ts',
+      '**/*.test.ts',
     ],
     rules: {
       'no-restricted-imports': [
@@ -318,7 +323,7 @@ export default [
           paths: [
             {
               name: 'execa',
-              message: 'Use ctx.ports.git or the shell runner in lib/shell instead.',
+              message: 'Use ctx.ports.proc.run (or ctx.ports.git for git commands) instead.',
             },
           ],
         },
