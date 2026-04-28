@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { Context, Options } from '../types';
+import { Context } from '../types';
 import { ChromaticRun } from './chromaticRun';
 import { ChromaticConfig, RunEvent } from './types';
 
@@ -21,13 +21,11 @@ vi.mock('read-package-up', () => ({
 
 const log = new TestLogger();
 
-function makeConfig(extraOverrides: Partial<Options> = {}): ChromaticConfig {
+function makeConfig(overrides: Partial<ChromaticConfig> = {}): ChromaticConfig {
   return {
-    extraOptions: {
-      sessionId: 'session-1',
-      log,
-      ...extraOverrides,
-    } as Partial<Options>,
+    sessionId: 'session-1',
+    log,
+    ...overrides,
   };
 }
 
@@ -99,7 +97,7 @@ describe('ChromaticRun', () => {
     primeRunAllPipeline();
 
     const run = new ChromaticRun({
-      config: { argv: ['--project-token=abc'], extraOptions: { sessionId: 's', log } },
+      config: { argv: ['--project-token=abc'], sessionId: 's', log },
     });
     await run.execute();
 
@@ -114,7 +112,9 @@ describe('ChromaticRun', () => {
     const run = new ChromaticRun({
       config: {
         flags: { dryRun: true, projectToken: ['from-action'] },
-        extraOptions: { inAction: true, sessionId: 's', log },
+        inAction: true,
+        sessionId: 's',
+        log,
       },
     });
     await run.execute();
@@ -174,8 +174,8 @@ describe('ChromaticRun', () => {
     const onEvent = vi.fn();
     const run = new ChromaticRun({
       config: makeConfig({
-        experimental_onTaskStart: callerStart,
-        experimental_onTaskComplete: callerComplete,
+        onTaskStart: callerStart,
+        onTaskComplete: callerComplete,
       }),
       onEvent,
     });

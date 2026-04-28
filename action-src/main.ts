@@ -182,7 +182,7 @@ async function run() {
 
     const result = await new ChromaticRun({
       config: {
-        extraOptions: { inAction: true },
+        inAction: true,
         flags: {
           autoAcceptChanges: maybe(autoAcceptChanges),
           branchName: maybe(branchName),

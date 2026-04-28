@@ -96,7 +96,7 @@ const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
 export async function run({
   argv,
   flags,
-  options: extraOptions,
+  options,
 }: {
   argv?: string[];
   flags?: Flags;
@@ -106,10 +106,38 @@ export async function run({
     config: {
       ...(argv && { argv }),
       ...(flags && { flags }),
-      ...(extraOptions && { extraOptions }),
+      ...legacyOptionsToConfig(options),
     },
-  }).execute();
+  }).execute(options?.experimental_abortSignal);
   return projectOutput(result);
+}
+
+// Legacy `run({ options: Partial<Options> })` callers historically funnelled
+// arbitrary options through `extraOptions`. The public `ChromaticConfig` no
+// longer exposes that escape hatch, so translate the supported subset onto
+// named fields. Unknown options are silently ignored — external consumers that
+// pass anything beyond this list should migrate to a named field or the
+// `ChromaticRun` constructor directly.
+// eslint-disable-next-line complexity
+function legacyOptionsToConfig(options: Partial<Options> | undefined) {
+  if (!options) return {};
+  return {
+    ...(options.inAction !== undefined && { inAction: options.inAction }),
+    ...(options.configFile !== undefined && { configFile: options.configFile }),
+    ...(options.projectId !== undefined && { projectId: options.projectId }),
+    ...(options.userToken !== undefined && { userToken: options.userToken }),
+    ...(options.sessionId !== undefined && { sessionId: options.sessionId }),
+    ...(options.env !== undefined && { env: options.env }),
+    ...(options.log !== undefined && { log: options.log }),
+    ...(options.experimental_onTaskStart && { onTaskStart: options.experimental_onTaskStart }),
+    ...(options.experimental_onTaskComplete && {
+      onTaskComplete: options.experimental_onTaskComplete,
+    }),
+    ...(options.experimental_onTaskProgress && {
+      onTaskProgress: options.experimental_onTaskProgress,
+    }),
+    ...(options.experimental_onTaskError && { onTaskError: options.experimental_onTaskError }),
+  };
 }
 
 // Keep this in sync with the configured outputs in action.yml.

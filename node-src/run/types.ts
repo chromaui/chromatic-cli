@@ -1,16 +1,50 @@
-import type { Context, Flags, Options, TaskName, TurboSnap } from '../types';
+import type { InitialContext } from '..';
+import type { Environment } from '../lib/getEnvironment';
+import type { Logger } from '../lib/log';
+import type { Context, Flags, TaskName, TurboSnap } from '../types';
 
 /**
- * Resolved configuration consumed by {@link ChromaticRun}. Mirrors today's
- * `run()` argument shape: the raw process arguments to parse, an optional
- * pre-built `flags` override (used by the GitHub Action and programmatic
- * callers), and a legacy `extraOptions` escape hatch. A later refactor will
- * tighten this into a single immutable named-field type with no escape hatch.
+ * Resolved input consumed by {@link ChromaticRun}. Each knob is named and
+ * documented; there is no escape hatch. Composition roots (CLI, GitHub Action,
+ * programmatic API) build a `ChromaticConfig` and hand it off; the class never
+ * mutates it.
  */
 export interface ChromaticConfig {
+  /** Raw `process.argv`-style args. Parsed into flags when `flags` is omitted. */
   argv?: string[];
+  /** Pre-built flags. Skips argv parsing when supplied. */
   flags?: Flags;
-  extraOptions?: Partial<Options>;
+
+  /** True when the run was launched by the official GitHub Action. */
+  inAction?: boolean;
+  /** Override the chromatic.config.json path. Falls back to `flags.configFile`. */
+  configFile?: string;
+  /** Token-less auth: project identifier (paired with `userToken`). */
+  projectId?: string;
+  /** Token-less auth: user token (paired with `projectId`). */
+  userToken?: string;
+
+  /** Override the run's session id. Generated when omitted. */
+  sessionId?: string;
+  /** Override the resolved environment record. */
+  env?: Environment;
+  /** Override the logger; defaults to the built-in pino-backed adapter. */
+  log?: Logger;
+
+  /** Lifecycle callback fired at the start of each phase. */
+  onTaskStart?: (ctx: Context) => void;
+  /** Lifecycle callback fired at the end of each phase. */
+  onTaskComplete?: (ctx: Context) => void;
+  /** Lifecycle callback fired when a phase reports incremental progress. */
+  onTaskProgress?: (
+    ctx: Context,
+    status: { progress: number; total: number; unit: string }
+  ) => void;
+  /** Lifecycle callback fired when a phase fails. */
+  onTaskError?: (
+    ctx: InitialContext,
+    payload: { formattedError: string; originalError: Error | Error[] }
+  ) => void;
 }
 
 /** Phase identifiers emitted on {@link RunEvent | RunEvents}. */

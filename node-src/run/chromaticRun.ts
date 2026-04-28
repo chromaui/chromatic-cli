@@ -55,25 +55,36 @@ export class ChromaticRun {
 
   // eslint-disable-next-line complexity
   private async buildContext(signal?: AbortSignal): Promise<Context> {
-    const argv = this.config.argv ?? [];
+    const config = this.config;
+    const argv = config.argv ?? [];
     const parsed = parseArguments(argv);
-    const flags = this.config.flags ?? parsed.flags;
-    const extraOptions = this.config.extraOptions;
+    const flags = config.flags ?? parsed.flags;
 
-    const sessionId = extraOptions?.sessionId ?? uuid();
-    const environment = extraOptions?.env ?? getEnvironment();
-    const log = extraOptions?.log ?? createLogger(flags, extraOptions);
+    const sessionId = config.sessionId ?? uuid();
+    const environment = config.env ?? getEnvironment();
+    const log = config.log ?? createLogger(flags, { logLevel: flags.logLevel });
 
     const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
     if (!packageInfo) {
       throw new Error(noPackageJson());
     }
 
-    const wrappedExtraOptions = {
-      ...extraOptions,
+    // ctx.extraOptions is the internal channel that feeds the resolved-options
+    // normalizer (`getOptions`). It is populated here from the named
+    // ChromaticConfig fields and never read by public callers.
+    const internalExtraOptions: Partial<Context['options']> = {
+      ...(config.inAction !== undefined && { inAction: config.inAction }),
+      ...(config.configFile !== undefined && { configFile: config.configFile }),
+      ...(config.projectId !== undefined && { projectId: config.projectId }),
+      ...(config.userToken !== undefined && { userToken: config.userToken }),
+      ...(config.sessionId !== undefined && { sessionId: config.sessionId }),
+      ...(config.env !== undefined && { env: config.env }),
+      ...(config.log !== undefined && { log: config.log }),
+      ...(config.onTaskProgress && { experimental_onTaskProgress: config.onTaskProgress }),
+      ...(config.onTaskError && { experimental_onTaskError: config.onTaskError }),
       ...(signal && { experimental_abortSignal: signal }),
-      experimental_onTaskStart: this.wrapStart(extraOptions?.experimental_onTaskStart),
-      experimental_onTaskComplete: this.wrapComplete(extraOptions?.experimental_onTaskComplete),
+      experimental_onTaskStart: this.wrapStart(config.onTaskStart),
+      experimental_onTaskComplete: this.wrapComplete(config.onTaskComplete),
     };
 
     const context: Partial<Context> & { ports?: Ports } = {
@@ -81,7 +92,7 @@ export class ChromaticRun {
       flags,
       help: parsed.help,
       pkg: parsed.pkg as Context['pkg'],
-      extraOptions: wrappedExtraOptions,
+      extraOptions: internalExtraOptions,
       packagePath: packageInfo.path,
       packageJson: packageInfo.packageJson,
       env: environment,
