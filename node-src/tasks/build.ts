@@ -75,7 +75,6 @@ export default function main(ctx: Context) {
         }
 
         ctx.sourceDir = ctx.options.storybookBuildDir;
-        ctx.options.outputDir = ctx.options.storybookBuildDir;
 
         // Use manifest.json from the storybook build directory if it exists
         if (

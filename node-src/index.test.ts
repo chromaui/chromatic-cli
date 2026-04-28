@@ -415,6 +415,7 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
     packagePath: '',
     statsPath: 'preview-stats.json',
     options: {},
+    runtimeConfig: {},
     ...parseArguments(argv),
   } as any;
   ctx.ports = createDefaultPorts({

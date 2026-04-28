@@ -25,6 +25,7 @@ function baseSlice(overrides: Partial<GitInfoPhaseOutput> = {}): GitInfoPhaseOut
 function makeContext(overrides: Record<string, unknown> = {}): any {
   return {
     options: {},
+    runtimeConfig: {},
     packageJson: {},
     log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     ports: { git: {}, chromatic: {} },
@@ -45,7 +46,8 @@ describe('setGitInfo', () => {
     expect(ctx.git).toMatchObject({ branch: 'feature', commit: 'sha' });
     expect(ctx.projectMetadata).toEqual({ hasRouter: true });
     expect(ctx.isOnboarding).toBe(false);
-    expect(ctx.options.forceRebuild).toBe(true);
+    expect(ctx.runtimeConfig.forceRebuild).toBe(true);
+    expect(ctx.options.forceRebuild).toBeUndefined();
     expect(ctx.rebuildForBuildId).toBe('rebuild-id');
   });
 

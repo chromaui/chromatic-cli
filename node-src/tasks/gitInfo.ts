@@ -24,7 +24,10 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   ctx.projectMetadata = result.projectMetadata;
   ctx.isOnboarding = result.isOnboarding;
   if (result.optionsOverride?.forceRebuild !== undefined) {
-    ctx.options.forceRebuild = result.optionsOverride.forceRebuild;
+    ctx.runtimeConfig = {
+      ...ctx.runtimeConfig,
+      forceRebuild: result.optionsOverride.forceRebuild,
+    };
   }
   if (result.rebuildForBuildId) {
     ctx.rebuildForBuildId = result.rebuildForBuildId;

@@ -16,6 +16,8 @@ export interface ChromaticConfig {
 /** Phase identifiers emitted on {@link RunEvent | RunEvents}. */
 export type PhaseName = TaskName;
 
+export type { RuntimeConfig } from '../types';
+
 /**
  * A read-only projection of the build the run produced. This is the
  * forward-compatible subset of `ctx.build` callers actually consume; new

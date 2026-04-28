@@ -87,6 +87,7 @@ export class ChromaticRun {
       env: environment,
       log,
       sessionId,
+      runtimeConfig: {},
     };
     context.ports = {
       ...createDefaultPorts({

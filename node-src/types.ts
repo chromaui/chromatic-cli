@@ -164,6 +164,17 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+/**
+ * Runtime overrides produced by phases that need to influence later behavior
+ * without mutating the original {@link Options}. Today only `forceRebuild` is
+ * recorded (set by the gitInfo phase when the project is onboarding); future
+ * phases that need to "mutate options" should land their override here as a new
+ * named field instead of writing back into `ctx.options`.
+ */
+export interface RuntimeConfig {
+  forceRebuild?: boolean;
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -197,6 +208,7 @@ export interface Context {
   extraOptions?: Partial<Options>;
   configuration: Configuration;
   options: Options;
+  runtimeConfig: RuntimeConfig;
   task: TaskName;
   title: string;
   skip?: boolean;
