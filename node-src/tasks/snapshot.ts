@@ -1,20 +1,7 @@
-import waitForBuildToComplete, {
-  BuildProgressMessage,
-  NotifyConnectionError,
-  NotifyServiceAuthenticationError,
-  NotifyServiceError,
-  NotifyServiceMessageTimeoutError,
-} from '@cli/waitForBuildToComplete';
-import * as Sentry from '@sentry/node';
-
-import { exitCodes, setExitCode } from '../lib/setExitCode';
+import { setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { delay, throttle } from '../lib/utilities';
+import { runSnapshotPhase, SnapshotOutcome } from '../run/phases/snapshot';
 import { Context, Task } from '../types';
-import buildHasChanges from '../ui/messages/errors/buildHasChanges';
-import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildPassedMessage from '../ui/messages/info/buildPassed';
-import speedUpCI from '../ui/messages/info/speedUpCI';
 import {
   buildBroken,
   buildCanceled,
@@ -27,181 +14,41 @@ import {
   skipped,
 } from '../ui/tasks/snapshot';
 
-const SnapshotBuildQuery = `
-  query SnapshotBuildQuery($number: Int!) {
-    app {
-      build(number: $number) {
-        id
-        status(legacy: false)
-        autoAcceptChanges
-        inProgressCount: testCount(statuses: [IN_PROGRESS])
-        testCount
-        changeCount
-        errorCount: testCount(statuses: [BROKEN])
-        completedAt
-      }
-    }
-  }
-`;
-
-interface BuildQueryResult {
-  app: {
-    build: {
-      id: string;
-      status: string;
-      autoAcceptChanges: boolean;
-      inProgressCount: number;
-      testCount: number;
-      changeCount: number;
-      errorCount: number;
-      completedAt?: number;
-    };
-  };
-}
-
-// TODO: refactor this function
-// eslint-disable-next-line complexity
 export const takeSnapshots = async (ctx: Context, task: Task) => {
-  const { client, log, uploadedBytes } = ctx;
-  const { app, number, tests, testCount, actualTestCount, reportToken } = ctx.build;
-
-  if (app.repository && uploadedBytes && !ctx.options.junitReport) {
-    log.info(speedUpCI(app.repository.provider));
-  }
-
-  const testLabels =
-    ctx.options.interactive &&
-    testCount === actualTestCount &&
-    tests?.map(({ spec, parameters, mode }) => {
-      const testSuffixName = mode.name || `[${parameters.viewport}px]`;
-      const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
-      return `${spec.component.displayName} › ${spec.name} ${suffix}`;
-    });
-
-  const updateProgress = throttle(
-    ({ cursor, label }) => {
-      task.output = pending(ctx, { cursor, label }).output;
-      ctx.options.experimental_onTaskProgress?.(
-        { ...ctx },
-        { progress: cursor, total: actualTestCount, unit: 'snapshots' }
-      );
+  const result = await runSnapshotPhase({
+    options: ctx.options,
+    env: ctx.env,
+    git: ctx.git,
+    build: ctx.build,
+    uploadedBytes: ctx.uploadedBytes,
+    log: ctx.log,
+    ports: ctx.ports,
+    onProgress: ({ output }) => {
+      ctx.ports.ui.taskUpdate({ output });
     },
-    // Avoid spamming the logs with progress updates in non-interactive mode
-    ctx.options.interactive ? ctx.env.CHROMATIC_POLL_INTERVAL : ctx.env.CHROMATIC_OUTPUT_INTERVAL
-  );
+  });
 
-  const uiStateUpdater = (buildProgressData: BuildProgressMessage | Context['build']): void => {
-    if (actualTestCount > 0) {
-      const { inProgressCount = 0 } = buildProgressData;
-      const cursor = actualTestCount - inProgressCount + 1;
-      const label = (testLabels && testLabels[cursor - 1]) || '';
-      updateProgress({ cursor, label });
-    }
-  };
+  // Compatibility copy: downstream phases still read these via `ctx.*`.
+  ctx.build = result.build;
+  setExitCode(ctx, result.exitCodeIntent.exitCode, result.exitCodeIntent.userError);
 
-  const getCompletedBuild = async (): Promise<Context['build']> => {
-    const options = { headers: { Authorization: `Bearer ${reportToken}` } };
-    const data = await client.runQuery<BuildQueryResult>(SnapshotBuildQuery, { number }, options);
-    ctx.build = { ...ctx.build, ...data.app.build };
-
-    if (ctx.build.completedAt) {
-      return ctx.build;
-    }
-
-    uiStateUpdater(ctx.build);
-
-    await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
-    return getCompletedBuild();
-  };
-
-  if (actualTestCount > 0) {
-    await waitForBuildToCompleteAndHandleErrors(ctx, uiStateUpdater, reportToken);
-  }
-
-  const build = await getCompletedBuild();
-
-  switch (build.status) {
-    case 'PASSED':
-      setExitCode(ctx, exitCodes.OK);
-      ctx.log.info(buildPassedMessage(ctx));
-      transitionTo(buildPassed, true)(ctx, task);
-      break;
-
-    // They may have sneakily looked at the build while we were waiting
-    case 'ACCEPTED':
-    case 'PENDING':
-    case 'DENIED': {
-      if (
-        build.autoAcceptChanges ||
-        // The boolean version of this check is handled by ctx.git.matchesBranch
-        ctx.options?.exitZeroOnChanges === 'true' ||
-        ctx.git.matchesBranch?.(ctx.options?.exitZeroOnChanges || false)
-      ) {
-        setExitCode(ctx, exitCodes.OK);
-        ctx.log.info(buildPassedMessage(ctx));
-      } else {
-        setExitCode(ctx, exitCodes.BUILD_HAS_CHANGES, true);
-        ctx.log.error(buildHasChanges(ctx));
-      }
-      transitionTo(buildComplete, true)(ctx, task);
-      break;
-    }
-
-    case 'BROKEN':
-      setExitCode(ctx, exitCodes.BUILD_HAS_ERRORS, true);
-      ctx.log.error(buildHasErrors(ctx));
-      transitionTo(buildBroken, true)(ctx, task);
-      break;
-
-    case 'FAILED':
-      setExitCode(ctx, exitCodes.BUILD_FAILED, false);
-      transitionTo(buildFailed, true)(ctx, task);
-      break;
-
-    case 'CANCELLED':
-      setExitCode(ctx, exitCodes.BUILD_WAS_CANCELED, true);
-      transitionTo(buildCanceled, true)(ctx, task);
-      break;
-
-    default:
-      throw new Error(`Unexpected build status: ${build.status}`);
-  }
+  transitionTo(transitionFor(result.outcome), true)(ctx, task);
 };
 
-async function waitForBuildToCompleteAndHandleErrors(
-  ctx: Context,
-  uiStateUpdater: (buildProgressData: BuildProgressMessage | Context['build']) => void,
-  reportToken: string | undefined
-) {
-  try {
-    await waitForBuildToComplete({
-      notifyServiceUrl: ctx.env.CHROMATIC_NOTIFY_SERVICE_URL,
-      buildId: ctx.build.id,
-      progressMessageCallback: uiStateUpdater,
-      log: ctx.log,
-      headers: {
-        Authorization: `Bearer ${reportToken}`,
-      },
-    });
-  } catch (error) {
-    Sentry.captureException(error);
-    if (error instanceof NotifyConnectionError) {
-      ctx.log.debug(
-        `Failed to connect to notify service, falling back to polling: code: ${error.statusCode}, original error: ${error.originalError?.message}`
-      );
-    } else if (error instanceof NotifyServiceMessageTimeoutError) {
-      ctx.log.debug('Timed out waiting for message from notify service, falling back to polling');
-    } else if (error instanceof NotifyServiceAuthenticationError) {
-      ctx.log.debug(
-        `Error authenticating with notify service: ${error.statusCode} ${error.message}`
-      );
-    } else if (error instanceof NotifyServiceError) {
-      ctx.log.debug(
-        `Error getting updates from notify service: ${error.message} code: ${error.statusCode}, reason: ${error.reason}, original error: ${error.originalError?.message}`
-      );
-    } else {
-      ctx.log.error(`Unexpected error from notify service: ${error.message}`);
-    }
+function transitionFor(outcome: SnapshotOutcome) {
+  switch (outcome) {
+    case 'passed':
+      return buildPassed;
+    case 'has-changes':
+      return buildComplete;
+    case 'broken':
+      return buildBroken;
+    case 'failed':
+      return buildFailed;
+    case 'cancelled':
+      return buildCanceled;
+    default:
+      throw new Error(`Unhandled snapshot outcome: ${outcome as string}`);
   }
 }
 

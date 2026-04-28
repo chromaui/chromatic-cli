@@ -1,6 +1,6 @@
 import { Mock, vi } from 'vitest';
 
-import { Logger } from './log';
+import { Logger } from './ports/logger';
 
 /**
  * A test logger with spy functions for testing.

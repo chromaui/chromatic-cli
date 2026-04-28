@@ -5,6 +5,7 @@ import type { AnalyticsClient } from './lib/analytics';
 import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
+import type { Ports } from './lib/ports';
 
 type FilePath = string;
 
@@ -163,6 +164,17 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+/**
+ * Runtime overrides produced by phases that need to influence later behavior
+ * without mutating the original {@link Options}. Today only `forceRebuild` is
+ * recorded (set by the gitInfo phase when the project is onboarding); future
+ * phases that need to "mutate options" should land their override here as a new
+ * named field instead of writing back into `ctx.options`.
+ */
+export interface RuntimeConfig {
+  forceRebuild?: boolean;
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -177,6 +189,15 @@ export type TaskName =
   | 'prepareWorkspace'
   | 'restoreWorkspace';
 
+/**
+ * @deprecated The shared mutable context object is being retired in favor of
+ * typed phase state slices and the `ChromaticRun` public surface (see
+ * `node-src/run/chromaticRun.ts`). Existing in-tree callers and a few external
+ * consumers still rely on this shape, so the type stays exported until a major
+ * version bump cuts it. New code should consume per-phase input/output slice
+ * types from `node-src/run/types.ts` (`GitState`, `BuildArtifactsState`, etc.)
+ * and read the public {@link RunResult} returned by `ChromaticRun.execute()`.
+ */
 export interface Context {
   env: Environment;
   log: Logger;
@@ -196,6 +217,7 @@ export interface Context {
   extraOptions?: Partial<Options>;
   configuration: Configuration;
   options: Options;
+  runtimeConfig: RuntimeConfig;
   task: TaskName;
   title: string;
   skip?: boolean;
@@ -224,6 +246,7 @@ export interface Context {
 
   http: HTTPClient;
   client: GraphQLClient;
+  ports: Ports;
 
   git: {
     version?: string;

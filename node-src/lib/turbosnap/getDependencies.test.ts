@@ -13,7 +13,18 @@ import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const ctx = { log: new TestLogger() } as any;
+const statMock = vi.fn(async (filePath: string) => {
+  const stats = unmockedStatSync(filePath) as any;
+  return {
+    size: stats.size,
+    isFile: () => (stats.isFile ? stats.isFile() : true),
+    isDirectory: () => (stats.isDirectory ? stats.isDirectory() : false),
+  };
+});
+const ctx = {
+  log: new TestLogger(),
+  ports: { fs: { stat: statMock } },
+} as any;
 const statSync = unmockedStatSync as Mock;
 
 vi.mock('fs', async (original) => {

@@ -5,7 +5,25 @@ import { context } from '@actions/github';
 import * as Sentry from '@sentry/node';
 import path from 'path';
 
-import { run as runNode } from '../node-src';
+import { ChromaticRun } from '../node-src/run/chromaticRun';
+import type { RunResult } from '../node-src/run/types';
+
+// Keep this in sync with the configured outputs in action.yml.
+const projectActionOutputs = (result: RunResult) => ({
+  code: result.exitCode,
+  url: result.build?.webUrl ?? '',
+  buildUrl: result.build?.webUrl ?? '',
+  storybookUrl: result.storybookUrl ?? '',
+  specCount: result.build?.specCount ?? '',
+  componentCount: result.build?.componentCount ?? '',
+  testCount: result.build?.testCount ?? '',
+  changeCount: result.build?.changeCount ?? '',
+  errorCount: result.build?.errorCount ?? '',
+  interactionTestFailuresCount: result.build?.interactionTestFailuresCount ?? '',
+  actualTestCount: result.build?.actualTestCount ?? '',
+  actualCaptureCount: result.build?.actualCaptureCount ?? '',
+  inheritedCaptureCount: result.build?.inheritedCaptureCount ?? '',
+});
 
 const maybe = (a: string | string[], b: any = undefined) => {
   if (!a) {
@@ -162,60 +180,61 @@ async function run() {
       );
     }
 
-    const output = await runNode({
-      options: {
+    const result = await new ChromaticRun({
+      config: {
         inAction: true,
+        flags: {
+          autoAcceptChanges: maybe(autoAcceptChanges),
+          branchName: maybe(branchName),
+          buildScriptName: maybe(buildScriptName),
+          buildCommand: maybe(buildCommand),
+          configFile: maybe(configFile),
+          cypress: maybe(cypress),
+          debug: maybe(debug),
+          diagnosticsFile: maybe(diagnosticsFile),
+          dryRun: maybe(dryRun),
+          exitOnceUploaded: maybe(exitOnceUploaded),
+          exitZeroOnChanges: maybe(exitZeroOnChanges, !isMergeQueueBuild),
+          externals: maybe(externals),
+          fileHashing: maybe(fileHashing, true),
+          forceRebuild: maybe(forceRebuild),
+          ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+          interactive: false,
+          logFile: maybe(logFile),
+          logLevel: maybe(logLevel),
+          logPrefix: maybe(logPrefix),
+          onlyChanged: maybe(onlyChanged),
+          onlyStoryFiles: maybe(onlyStoryFiles),
+          onlyStoryNames: maybe(onlyStoryNames),
+          outputDir: maybe(outputDir),
+          playwright: maybe(playwright),
+          preserveMissing: maybe(preserveMissing),
+          projectToken: maybe(projectToken),
+          repositorySlug: maybe(repositorySlug),
+          skip: maybe(skip),
+          skipUpdateCheck: maybe(skipUpdateCheck, false),
+          storybookBaseDir: maybe(storybookBaseDir),
+          storybookBuildDir: maybe(storybookBuildDir),
+          storybookConfigDir: maybe(storybookConfigDir),
+          storybookLogFile: maybe(storybookLogFile),
+          traceChanged: maybe(traceChanged),
+          untraced: maybe(untraced),
+          uploadMetadata: maybe(uploadMetadata, false),
+          vitest: maybe(vitest),
+          zip: maybe(zip, false),
+          junitReport: maybe(junitReport),
+        },
       },
-      flags: {
-        autoAcceptChanges: maybe(autoAcceptChanges),
-        branchName: maybe(branchName),
-        buildScriptName: maybe(buildScriptName),
-        buildCommand: maybe(buildCommand),
-        configFile: maybe(configFile),
-        cypress: maybe(cypress),
-        debug: maybe(debug),
-        diagnosticsFile: maybe(diagnosticsFile),
-        dryRun: maybe(dryRun),
-        exitOnceUploaded: maybe(exitOnceUploaded),
-        exitZeroOnChanges: maybe(exitZeroOnChanges, !isMergeQueueBuild),
-        externals: maybe(externals),
-        fileHashing: maybe(fileHashing, true),
-        forceRebuild: maybe(forceRebuild),
-        ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
-        interactive: false,
-        logFile: maybe(logFile),
-        logLevel: maybe(logLevel),
-        logPrefix: maybe(logPrefix),
-        onlyChanged: maybe(onlyChanged),
-        onlyStoryFiles: maybe(onlyStoryFiles),
-        onlyStoryNames: maybe(onlyStoryNames),
-        outputDir: maybe(outputDir),
-        playwright: maybe(playwright),
-        preserveMissing: maybe(preserveMissing),
-        projectToken: maybe(projectToken),
-        repositorySlug: maybe(repositorySlug),
-        skip: maybe(skip),
-        skipUpdateCheck: maybe(skipUpdateCheck, false),
-        storybookBaseDir: maybe(storybookBaseDir),
-        storybookBuildDir: maybe(storybookBuildDir),
-        storybookConfigDir: maybe(storybookConfigDir),
-        storybookLogFile: maybe(storybookLogFile),
-        traceChanged: maybe(traceChanged),
-        untraced: maybe(untraced),
-        uploadMetadata: maybe(uploadMetadata, false),
-        vitest: maybe(vitest),
-        zip: maybe(zip, false),
-        junitReport: maybe(junitReport),
-      },
-    });
+    }).execute();
 
+    const output = projectActionOutputs(result);
     for (const [key, value] of Object.entries(output)) setOutput(key, String(value));
 
-    if (output.code !== 0) {
+    if (result.exitCode !== 0) {
       setFailed('non-zero exit code');
     }
 
-    process.exit(output.code);
+    process.exit(result.exitCode);
   } catch (error_) {
     if (error_.message) error(error_.message);
     if (error_.stack) error(error_.stack);

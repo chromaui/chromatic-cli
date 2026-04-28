@@ -1,104 +1,41 @@
-import reportBuilder from 'junit-report-builder';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import TestLogger from '../lib/testLogger';
+import * as phaseModule from '../run/phases/report';
 import { generateReport } from './report';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+vi.mock('../run/phases/report', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../run/phases/report')>();
+  return { ...actual, runReportPhase: vi.fn() };
+});
 
-const log = new TestLogger();
-const mockTests = [
-  {
-    status: 'ACCEPTED',
-    result: '',
-    spec: { name: '', component: { name: '' } },
-    parameters: { viewportIsDefault: true, viewport: 1080 },
-    mode: { name: 'Beast Mode' },
-  },
-  {
-    status: 'PENDING',
-    result: '',
-    spec: { name: '', component: { name: '' } },
-    parameters: { viewportIsDefault: true, viewport: 1080 },
-    mode: { name: 'Beast Mode' },
-  },
-  {
-    status: 'DENIED',
-    result: '',
-    spec: { name: '', component: { name: '' } },
-    parameters: { viewportIsDefault: false, viewport: 1080 },
-    mode: { name: 'Beast Mode' },
-  },
-  {
-    status: 'BROKEN',
-    result: '',
-    spec: { name: '', component: { name: '' } },
-    parameters: { viewportIsDefault: true, viewport: 1080 },
-    mode: { name: null },
-  },
-  {
-    status: 'FAILED',
-    result: '',
-    spec: { name: '', component: { name: '' } },
-    parameters: { viewportIsDefault: false, viewport: 1080 },
-    mode: { name: null },
-  },
-];
+const runReportPhase = vi.mocked(phaseModule.runReportPhase);
 
-vi.spyOn(reportBuilder, 'writeTo').mockImplementation(vi.fn());
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('generateReport', () => {
-  const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
-  const build = {
-    app: { repository: { provider: 'github' } },
-    number: 1,
-    reportToken: 'report-token',
-  };
-  beforeEach(() => {
-    vi.resetAllMocks();
-    client.runQuery.mockReturnValue({
-      app: {
-        build: {
-          number: 1,
-          status: 'PASSED',
-          createdAt: 0,
-          completedAt: 0,
-          webUrl: 'https://google.com',
-          storybookUrl: 'https://storybook.js.org',
-          tests: mockTests,
-        },
-      },
-    });
-  });
-  it('sucessfully generates report when passed a string', async () => {
+  it('mirrors reportPath onto context', async () => {
+    runReportPhase.mockResolvedValueOnce({ reportPath: '/abs/report.xml' });
     const ctx = {
-      client,
-      log,
-      options: {
-        junitReport: 'tests-file.xml',
-      },
-      build,
+      options: { junitReport: true },
+      build: { number: 1, reportToken: 'rt' },
+      log: { debug: vi.fn() },
+      ports: {},
     } as any;
     await generateReport(ctx);
-    expect(reportBuilder.writeTo).toHaveBeenCalledWith(
-      path.join(__dirname, '../../tests-file.xml')
-    );
+    expect(ctx.reportPath).toBe('/abs/report.xml');
   });
 
-  it('sucessfully generates report when passed a boolean equal to true', async () => {
+  it('does not set reportPath when phase returns none', async () => {
+    runReportPhase.mockResolvedValueOnce({});
     const ctx = {
-      client,
-      log,
-      options: {
-        junitReport: true,
-      },
-      build,
+      options: {},
+      build: { number: 1, reportToken: 'rt' },
+      log: { debug: vi.fn() },
+      ports: {},
     } as any;
     await generateReport(ctx);
-    expect(reportBuilder.writeTo).toHaveBeenCalledWith(
-      path.join(__dirname, '../../chromatic-build-1.xml')
-    );
+    expect(ctx.reportPath).toBeUndefined();
   });
 });

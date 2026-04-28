@@ -1,25 +1,27 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import * as phaseModule from '../run/phases/auth';
 import { setAuthorizationToken } from './auth';
 
+vi.mock('../run/phases/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../run/phases/auth')>();
+  return { ...actual, runAuthPhase: vi.fn() };
+});
+
+const runAuthPhase = vi.mocked(phaseModule.runAuthPhase);
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('setAuthorizationToken', () => {
-  it('updates the GraphQL client with an app token from the index', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
-    client.runQuery.mockReturnValue({ appToken: 'app-token' });
-
-    await setAuthorizationToken({ client, options: { projectToken: 'test' } } as any);
-    expect(client.setAuthorization).toHaveBeenCalledWith('app-token');
-  });
-
-  it('supports projectId + userToken', async () => {
-    const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
-    client.runQuery.mockReturnValue({ cliToken: 'cli-token' });
-
+  it('delegates to runAuthPhase', async () => {
+    runAuthPhase.mockResolvedValueOnce({ token: 'a' });
     await setAuthorizationToken({
-      client,
-      env: { CHROMATIC_INDEX_URL: 'https://index.chromatic.com' },
-      options: { projectId: 'Project:abc123', userToken: 'user-token' },
+      options: { projectToken: 'tok' },
+      log: { debug: vi.fn() },
+      ports: {},
     } as any);
-    expect(client.setAuthorization).toHaveBeenCalledWith('cli-token');
+    expect(runAuthPhase).toHaveBeenCalled();
   });
 });

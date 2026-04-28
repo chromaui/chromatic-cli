@@ -25,25 +25,47 @@ export const createTask = ({
 
     ctx.options.experimental_onTaskStart?.({ ...ctx });
 
-    for (const step of steps) {
-      ctx.options.experimental_abortSignal?.throwIfAborted();
-      await step(ctx, task);
-    }
+    const runSteps = async () => {
+      for (const step of steps) {
+        ctx.options.experimental_abortSignal?.throwIfAborted();
+        await step(ctx, task);
+      }
+    };
+    await (ctx.ports?.ui ? ctx.ports.ui.withTask(task, runSteps) : runSteps());
 
     ctx.options.experimental_onTaskComplete?.({ ...ctx });
   },
   ...config,
 });
 
+function resolveValue(value: ValueFunction | undefined, ctx: Context, task: Task) {
+  if (value === undefined) return undefined;
+  return typeof value === 'function' ? value(ctx, task) : value;
+}
+
+// Tests construct minimal Context literals without `ctx.ports`; fall back to
+// writing through the supplied Listr `task` directly so those callsites keep
+// working until they're individually migrated.
+function emit(ctx: Context, task: Task, state: { title?: string; output?: string }) {
+  if (ctx.ports?.ui) {
+    ctx.ports.ui.taskUpdate(state);
+    return;
+  }
+  if (state.title !== undefined && task) task.title = state.title;
+  if (state.output !== undefined && task) task.output = state.output;
+}
+
 export const setTitle =
   (title: ValueFunction, subtitle?: ValueFunction) => (ctx: Context, task: Task) => {
-    const ttl = typeof title === 'function' ? title(ctx, task) : title;
-    const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
-    task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
+    const ttl = resolveValue(title, ctx, task);
+    const sub = resolveValue(subtitle, ctx, task);
+    const formatted = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
+    emit(ctx, task, { title: formatted });
   };
 
 export const setOutput = (output: ValueFunction) => (ctx: Context, task: Task) => {
-  task.output = typeof output === 'function' ? output(ctx, task) : output;
+  const value = resolveValue(output, ctx, task);
+  if (value !== undefined) emit(ctx, task, { output: value });
 };
 
 export const transitionTo =

@@ -12,7 +12,7 @@
 
 // create a mock set of responses to the queries we run as part of our git algorithm
 
-import type { MergeCommitsQueryResult } from '../getParentCommits';
+import type { MergedPullRequest } from '../../lib/ports/chromaticApi';
 import { Repository } from '../getParentCommits.test';
 
 interface Build {
@@ -58,7 +58,7 @@ const mocks = {
     prs: PR[],
     { mergeInfoList }: { mergeInfoList: MergeInfo[] }
   ) => {
-    const mergedPrs: MergeCommitsQueryResult['app']['mergedPullRequests'][0][] = [];
+    const mergedPrs: MergedPullRequest[] = [];
     for (const mergeInfo of mergeInfoList) {
       const pr = prs.find((p) => p.mergeCommitHash === mergeInfo.commit);
       const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);

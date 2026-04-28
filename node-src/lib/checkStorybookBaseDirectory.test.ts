@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
 import { checkStorybookBaseDirectory } from './checkStorybookBaseDirectory';
+import { createNodeFileSystem } from './ports/fsNodeAdapter';
 import { exitCodes } from './setExitCode';
 import TestLogger from './testLogger';
 
@@ -23,6 +24,7 @@ afterEach(() => {
 const getContext: any = (storybookBaseDirectory?: string) => ({
   log: new TestLogger(),
   options: { storybookBaseDir: storybookBaseDirectory },
+  ports: { fs: createNodeFileSystem() },
 });
 
 describe('checkStorybookBaseDir', () => {

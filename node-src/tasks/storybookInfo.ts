@@ -1,23 +1,15 @@
-import * as Sentry from '@sentry/node';
-
-import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
-import getStorybookInfo from '../lib/getStorybookInfo';
 import { createTask, transitionTo } from '../lib/tasks';
+import { runStorybookInfoPhase } from '../run/phases/storybookInfo';
 import { Context } from '../types';
 import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
 export const setStorybookInfo = async (ctx: Context) => {
-  ctx.storybook = {
-    ...((await getStorybookInfo(ctx)) as Context['storybook']),
-    baseDir: getStorybookBaseDirectory(ctx),
-  };
-
-  if (ctx.storybook) {
-    if (ctx.storybook.version) {
-      Sentry.setTag('storybookVersion', ctx.storybook.version);
-    }
-    Sentry.setContext('storybook', ctx.storybook);
-  }
+  ctx.storybook = await runStorybookInfoPhase({
+    options: ctx.options,
+    git: ctx.git,
+    log: ctx.log,
+    ports: ctx.ports,
+  });
 };
 
 /**

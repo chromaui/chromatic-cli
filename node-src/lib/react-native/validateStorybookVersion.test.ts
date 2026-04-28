@@ -1,5 +1,4 @@
 import TestLogger from '@cli/testLogger';
-import { pathExists, readJson } from 'fs-extra';
 import { createRequire } from 'module';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,22 +8,22 @@ vi.mock('module', () => ({
   createRequire: vi.fn(),
 }));
 
-vi.mock('fs-extra', () => ({
-  pathExists: vi.fn(),
-  readJson: vi.fn(),
-}));
-
-// Mock imports and force a specific override to keep the tests simpler
 const mockCreateRequire = vi.mocked(
   createRequire as (filename: string) => {
     resolve: { paths: (request: string) => string[] | null };
   }
 );
-const mockReadJson = vi.mocked(readJson as (file: string) => Promise<{ version?: string }>);
-const mockPathExists = vi.mocked(pathExists as (path: string) => Promise<boolean>);
 const mockResolvePaths = vi.fn();
+const mockExists = vi.fn();
+const mockReadJson = vi.fn();
 
-const ctx = { log: new TestLogger() };
+const ctx = {
+  log: new TestLogger(),
+  ports: {
+    fs: { exists: mockExists, readJson: mockReadJson },
+    host: { cwd: () => process.cwd() },
+  } as any,
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,7 +31,7 @@ beforeEach(() => {
     resolve: { paths: mockResolvePaths },
   });
   mockResolvePaths.mockReturnValue(['/fake/node_modules']);
-  mockPathExists.mockResolvedValue(true);
+  mockExists.mockResolvedValue(true);
 });
 
 describe('resolve cases', () => {
@@ -74,14 +73,14 @@ describe('reject cases', () => {
 
 describe('gracefully handled error cases', () => {
   it('does not block when no candidate package.json exists on disk', async () => {
-    mockPathExists.mockResolvedValue(false);
+    mockExists.mockResolvedValue(false);
     const result = await validateStorybookReactNativeVersion(ctx);
     expect(result).toBeUndefined();
   });
 
   it('falls back to later node_modules paths when earlier candidates are missing', async () => {
     mockResolvePaths.mockReturnValue(['/missing/node_modules', '/found/node_modules']);
-    mockPathExists.mockImplementation(async (candidate: string) => candidate.startsWith('/found/'));
+    mockExists.mockImplementation(async (candidate: string) => candidate.startsWith('/found/'));
     mockReadJson.mockResolvedValue({ version: '8.6.0' });
 
     await expect(validateStorybookReactNativeVersion(ctx)).rejects.toThrow(/8\.6\.0/);

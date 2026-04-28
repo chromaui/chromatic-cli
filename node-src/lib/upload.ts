@@ -9,72 +9,6 @@ import { uploadZip } from './uploadZip';
 // This limit is imposed by the uploadBuild mutation
 const MAX_FILES_PER_REQUEST = 1000;
 
-const UploadBuildMutation = `
-  mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
-    uploadBuild(buildId: $buildId, files: $files, zip: $zip) {
-      info {
-        sentinelUrls
-        targets {
-          contentType
-          fileKey
-          filePath
-          formAction
-          formFields
-        }
-        zipTarget {
-          contentType
-          fileKey
-          filePath
-          formAction
-          formFields
-        }
-      }
-      userErrors {
-        __typename
-        ... on UserError {
-          message
-        }
-        ... on MaxFileCountExceededError {
-          maxFileCount
-          fileCount
-        }
-        ... on MaxFileSizeExceededError {
-          maxFileSize
-          filePaths
-        }
-      }
-    }
-  }
-`;
-
-interface UploadBuildMutationResult {
-  uploadBuild: {
-    info?: {
-      sentinelUrls: string[];
-      targets: TargetInfo[];
-      zipTarget?: TargetInfo;
-    };
-    userErrors: (
-      | {
-          __typename: 'UserError';
-          message: string;
-        }
-      | {
-          __typename: 'MaxFileCountExceededError';
-          message: string;
-          maxFileCount: number;
-          fileCount: number;
-        }
-      | {
-          __typename: 'MaxFileSizeExceededError';
-          message: string;
-          maxFileSize: number;
-          filePaths: string[];
-        }
-    )[];
-  };
-}
-
 /**
  * Filter bundle files based on browser requirements for React Native builds.
  * Always upload manifest.json.
@@ -159,18 +93,15 @@ export async function uploadBuild(
   for (const [index, batch] of batches.entries()) {
     ctx.log.debug(`Running uploadBuild batch ${index + 1} / ${batches.length}`);
 
-    const { uploadBuild } = await ctx.client.runQuery<UploadBuildMutationResult>(
-      UploadBuildMutation,
-      {
-        buildId: ctx.announcedBuild.id,
-        files: batch.map(({ contentHash, contentLength, targetPath }) => ({
-          contentHash,
-          contentLength,
-          filePath: targetPath,
-        })),
-        zip: ctx.options.zip,
-      }
-    );
+    const uploadBuild = await ctx.ports.chromatic.uploadBuild({
+      buildId: ctx.announcedBuild.id,
+      files: batch.map(({ contentHash, contentLength, targetPath }) => ({
+        contentHash,
+        contentLength,
+        targetPath,
+      })),
+      zip: ctx.options.zip,
+    });
 
     if (uploadBuild.userErrors.length > 0) {
       for (const err of uploadBuild.userErrors) {
@@ -235,38 +166,6 @@ export async function uploadBuild(
   }
 }
 
-const UploadMetadataMutation = `
-  mutation UploadMetadataMutation($buildId: ObjID!, $files: [FileUploadInput!]!) {
-    uploadMetadata(buildId: $buildId, files: $files) {
-      info {
-        targets {
-          contentType
-          fileKey
-          filePath
-          formAction
-          formFields
-        }
-      }
-      userErrors {
-        ... on UserError {
-          message
-        }
-      }
-    }
-  }
-`;
-
-interface UploadMetadataMutationResult {
-  uploadMetadata: {
-    info?: {
-      targets: TargetInfo[];
-    };
-    userErrors: {
-      message: string;
-    }[];
-  };
-}
-
 /**
  * Upload metadata files to Chromatic for debugging issues with Chromatic support.
  *
@@ -276,17 +175,14 @@ interface UploadMetadataMutationResult {
  * @returns A promise that resolves when all metadata files are uploaded.
  */
 export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
-  const { uploadMetadata } = await ctx.client.runQuery<UploadMetadataMutationResult>(
-    UploadMetadataMutation,
-    {
-      buildId: ctx.announcedBuild.id,
-      files: files.map(({ contentHash, contentLength, targetPath }) => ({
-        contentHash,
-        contentLength,
-        filePath: targetPath,
-      })),
-    }
-  );
+  const uploadMetadata = await ctx.ports.chromatic.uploadMetadata({
+    buildId: ctx.announcedBuild.id,
+    files: files.map(({ contentHash, contentLength, targetPath }) => ({
+      contentHash,
+      contentLength,
+      targetPath,
+    })),
+  });
 
   if (uploadMetadata.info) {
     const targets = uploadMetadata.info.targets.map((target) => {

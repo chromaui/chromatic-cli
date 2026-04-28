@@ -1,4 +1,3 @@
-import { pathExists, readJson } from 'fs-extra';
 import { createRequire } from 'module';
 import path from 'path';
 import semver from 'semver';
@@ -16,7 +15,7 @@ import { MINIMUM_STORYBOOK_REACT_NATIVE_VERSION } from './constants';
  * @param ctx The context set when executing the CLI.
  */
 export async function validateStorybookReactNativeVersion(
-  ctx: Pick<Context, 'log'>
+  ctx: Pick<Context, 'log' | 'ports'>
 ): Promise<void> {
   const version = await getInstalledStorybookReactNativeVersion(ctx);
 
@@ -51,9 +50,9 @@ export async function validateStorybookReactNativeVersion(
  * determined.
  */
 async function getInstalledStorybookReactNativeVersion(
-  ctx: Pick<Context, 'log'>
+  ctx: Pick<Context, 'log' | 'ports'>
 ): Promise<string | undefined> {
-  const workingDirectory = process.cwd();
+  const workingDirectory = ctx.ports.host.cwd();
   ctx.log.debug(`Validating @storybook/react-native version from ${workingDirectory}`);
 
   const require = createRequire(path.join(workingDirectory, 'package.json'));
@@ -62,7 +61,7 @@ async function getInstalledStorybookReactNativeVersion(
   let packageJsonPath: string | undefined;
   for (const nodeModulesPath of searchPaths) {
     const candidate = path.join(nodeModulesPath, '@storybook/react-native/package.json');
-    if (await pathExists(candidate)) {
+    if (await ctx.ports.fs.exists(candidate)) {
       packageJsonPath = candidate;
       break;
     }
@@ -76,7 +75,7 @@ async function getInstalledStorybookReactNativeVersion(
 
   let installed: { version?: string };
   try {
-    installed = await readJson(packageJsonPath);
+    installed = (await ctx.ports.fs.readJson(packageJsonPath)) as { version?: string };
   } catch (err) {
     ctx.log.debug(
       `Failed to read @storybook/react-native package.json at ${packageJsonPath}: ${err.message}`

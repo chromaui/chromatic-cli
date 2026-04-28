@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
+import { createNodeFileSystem } from './ports/fsNodeAdapter';
 
 vi.useFakeTimers();
 
 const log = new TestLogger();
-const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
+const ports = { fs: createNodeFileSystem() } as any;
+const context: Context = { env: {}, log, options: {}, packageJson: {}, ports } as any;
 const getContext = (ctx: any): Context => ({ ...context, ...ctx });
 
 const REACT = { '@storybook/react': '1.2.3' };

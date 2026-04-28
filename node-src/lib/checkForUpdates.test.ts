@@ -1,19 +1,12 @@
-import * as Sentry from '@sentry/node';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import checkForUpdates from './checkForUpdates';
-import spawn from './spawn';
 import TestLogger from './testLogger';
 
-vi.mock('@sentry/node', () => ({
-  captureException: vi.fn(),
-}));
-
-vi.mock('./spawn', () => ({
-  default: vi.fn(),
-}));
-
 const http = { fetch: vi.fn() };
+const pkgMgrExec = vi.fn();
+const pkgMgrHasYarn = vi.fn(() => false);
+const captureException = vi.fn();
 
 const getContext = (skipUpdateCheck = false, version = '13.0.0') => {
   return {
@@ -21,8 +14,18 @@ const getContext = (skipUpdateCheck = false, version = '13.0.0') => {
     log: new TestLogger(),
     http,
     pkg: { name: 'chromatic', version },
+    ports: {
+      pkgMgr: { exec: pkgMgrExec, hasYarn: pkgMgrHasYarn },
+      errors: { captureException },
+    },
   };
 };
+
+beforeEach(() => {
+  pkgMgrExec.mockReset().mockResolvedValue('https://registry.npmjs.org/');
+  pkgMgrHasYarn.mockReset().mockReturnValue(false);
+  captureException.mockReset();
+});
 
 describe('checkForUpdates', () => {
   it('skips update check when "skipUpdateCheck" option is true', async () => {
@@ -44,17 +47,17 @@ describe('checkForUpdates', () => {
   describe('registry url', () => {
     it('defaults to the npm registry on error', async () => {
       const ctx = getContext();
-      vi.mocked(spawn).mockRejectedValue(new Error('spawn error'));
+      pkgMgrExec.mockRejectedValue(new Error('spawn error'));
       await checkForUpdates(ctx as any);
-      expect(spawn).toHaveBeenCalledWith(['config', 'get', 'registry']);
+      expect(pkgMgrExec).toHaveBeenCalledWith(['config', 'get', 'registry']);
       expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
     });
 
     it('uses custom registries', async () => {
       const ctx = getContext();
-      vi.mocked(spawn).mockResolvedValue('https://custom-registry.example.com/');
+      pkgMgrExec.mockResolvedValue('https://custom-registry.example.com/');
       await checkForUpdates(ctx as any);
-      expect(spawn).toHaveBeenCalledWith(['config', 'get', 'registry']);
+      expect(pkgMgrExec).toHaveBeenCalledWith(['config', 'get', 'registry']);
       expect(ctx.log.info).toHaveBeenCalledWith(
         expect.stringContaining('https://custom-registry.example.com/')
       );
@@ -65,12 +68,12 @@ describe('checkForUpdates', () => {
   describe('registry fetch errors', () => {
     it('does not report invalid URL errors', async () => {
       const ctx = getContext();
-      vi.mocked(spawn).mockResolvedValue('invalid-url');
+      pkgMgrExec.mockResolvedValue('invalid-url');
       await checkForUpdates(ctx as any);
       // it should throw before the fetch
       expect(ctx.http.fetch).not.toHaveBeenCalled();
       // but it should not report to Sentry
-      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(captureException).not.toHaveBeenCalled();
       // http.fetch.mockRejectedValue(new Error('fetch failed'));
     });
 
@@ -82,7 +85,7 @@ describe('checkForUpdates', () => {
         )
       );
       await checkForUpdates(ctx as any);
-      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(captureException).not.toHaveBeenCalled();
     });
   });
 });

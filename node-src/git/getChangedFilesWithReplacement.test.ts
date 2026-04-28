@@ -12,11 +12,16 @@ vi.mock('./git', () => ({
 }));
 
 describe('getChangedFilesWithReplacements', () => {
-  const client = { runQuery: vi.fn() } as any;
+  const getAncestorBuilds = vi.fn();
+  const commitExists = vi.fn(async (sha: string) => Boolean(/exists/.test(sha)));
+  const ports = {
+    chromatic: { getAncestorBuilds } as any,
+    git: { commitExists } as any,
+  };
   beforeEach(() => {
-    client.runQuery.mockReset();
+    getAncestorBuilds.mockReset();
   });
-  const context = { client, log: new TestLogger() } as any;
+  const context = { log: new TestLogger(), ports } as any;
 
   it('passes changedFiles on through on the happy path', async () => {
     expect(
@@ -31,7 +36,7 @@ describe('getChangedFilesWithReplacements', () => {
       changedFiles: ['changed', 'files'],
     });
 
-    expect(client.runQuery).not.toHaveBeenCalled();
+    expect(getAncestorBuilds).not.toHaveBeenCalled();
   });
 
   it('uses a replacement when build has missing commit', async () => {
@@ -41,7 +46,7 @@ describe('getChangedFilesWithReplacements', () => {
       commit: 'exists',
       uncommittedHash: '',
     };
-    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+    getAncestorBuilds.mockReturnValue([replacementBuild]);
 
     expect(
       await getChangedFilesWithReplacement(context, {
@@ -56,7 +61,7 @@ describe('getChangedFilesWithReplacements', () => {
       replacementBuild,
     });
 
-    expect(client.runQuery).toHaveBeenCalled();
+    expect(getAncestorBuilds).toHaveBeenCalled();
   });
 
   it('uses a replacement when local build has uncommitted changes', async () => {
@@ -66,7 +71,7 @@ describe('getChangedFilesWithReplacements', () => {
       commit: 'exists',
       uncommittedHash: '',
     };
-    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+    getAncestorBuilds.mockReturnValue([replacementBuild]);
 
     expect(
       await getChangedFilesWithReplacement(context, {
@@ -81,7 +86,7 @@ describe('getChangedFilesWithReplacements', () => {
       replacementBuild,
     });
 
-    expect(client.runQuery).toHaveBeenCalled();
+    expect(getAncestorBuilds).toHaveBeenCalled();
   });
 
   it('does not use a replacement when non-local build has uncommitted changes', async () => {
@@ -91,7 +96,7 @@ describe('getChangedFilesWithReplacements', () => {
       commit: 'exists',
       uncommittedHash: '',
     };
-    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+    getAncestorBuilds.mockReturnValue([replacementBuild]);
 
     expect(
       await getChangedFilesWithReplacement(context, {
@@ -113,7 +118,7 @@ describe('getChangedFilesWithReplacements', () => {
       commit: 'also-missing',
       uncommittedHash: '',
     };
-    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+    getAncestorBuilds.mockReturnValue([replacementBuild]);
 
     await expect(
       getChangedFilesWithReplacement(context, {

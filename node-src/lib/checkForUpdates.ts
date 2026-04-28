@@ -1,10 +1,7 @@
-import * as Sentry from '@sentry/node';
 import semver from 'semver';
-import { hasYarn } from 'yarn-or-npm';
 
 import { Context } from '..';
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
-import spawn from './spawn';
 
 const rejectIn = (ms: number) => new Promise<any>((_, reject) => setTimeout(reject, ms));
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
@@ -30,9 +27,9 @@ export default async function checkForUpdates(ctx: Context) {
 
   let latestVersion: string;
   try {
-    const registryUrl = await spawn(['config', 'get', 'registry']).catch(
-      () => 'https://registry.npmjs.org/'
-    );
+    const registryUrl = await ctx.ports.pkgMgr
+      .exec(['config', 'get', 'registry'])
+      .catch(() => 'https://registry.npmjs.org/');
     if (!['https://registry.npmjs.org/', 'https://registry.yarnpkg.com'].includes(registryUrl)) {
       ctx.log.info(`Using custom npm registry: ${registryUrl}`);
     }
@@ -47,7 +44,7 @@ export default async function checkForUpdates(ctx: Context) {
     latestVersion = distributionTags.latest;
   } catch (err) {
     if (shouldReportVersionCheckFailure(err)) {
-      Sentry.captureException(err);
+      ctx.ports.errors.captureException(err);
     }
     ctx.log.warn(`Could not retrieve package info from registry; skipping update check`);
     ctx.log.warn(err);
@@ -55,7 +52,7 @@ export default async function checkForUpdates(ctx: Context) {
   }
 
   if (semver.major(ctx.pkg.version) < semver.major(latestVersion)) {
-    ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn()));
+    ctx.log.warn(outdatedPackage(ctx, latestVersion, ctx.ports.pkgMgr.hasYarn()));
   }
 }
 

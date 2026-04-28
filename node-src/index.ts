@@ -1,9 +1,6 @@
 import 'any-observable/register/zen';
 
-import * as Sentry from '@sentry/node';
 import Listr from 'listr';
-import { readPackageUp } from 'read-package-up';
-import { v4 as uuid } from 'uuid';
 
 import {
   getBranch,
@@ -20,16 +17,15 @@ import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
-import getEnvironment from './lib/getEnvironment';
 import getOptions from './lib/getOptions';
-import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import NonTTYRenderer from './lib/nonTTYRenderer';
-import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import { ChromaticRun } from './run/chromaticRun';
+import { RunResult } from './run/types';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -38,7 +34,6 @@ import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
 import missingStories from './ui/messages/errors/missingStories';
-import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
@@ -64,6 +59,12 @@ interface Output {
 
 export type { Configuration, Context, Flags, Options, TaskName } from './types';
 
+/**
+ * @deprecated Pre-`getOptions` view of {@link Context}. Lives on for the
+ * legacy {@link runAll} entry point and tests that hand-build a context;
+ * `ChromaticRun` constructs the resolved Context internally so external
+ * callers do not need this type. Will be removed in a future major version.
+ */
 export type InitialContext = Omit<
   AtLeast<
     Context,
@@ -77,6 +78,7 @@ export type InitialContext = Omit<
     | 'env'
     | 'log'
     | 'sessionId'
+    | 'ports'
   >,
   'options'
 >;
@@ -84,7 +86,10 @@ export type InitialContext = Omit<
 const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
 
 /**
- * Entry point for the CLI, GitHub Action, and Node API
+ * Entry point for the CLI, GitHub Action, and Node API. Thin wrapper around
+ * {@link ChromaticRun} that preserves the legacy {@link Output} shape for
+ * external consumers. New callers should construct `ChromaticRun` directly and
+ * read fields off the returned `RunResult`.
  *
  * @param args The arguments set by the environment in which the CLI is running (CLI, GitHub Action,
  * or Node API)
@@ -94,76 +99,86 @@ const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
  *
  * @returns An object with details from the result of the new build.
  */
-// TODO: refactor this function
-// eslint-disable-next-line complexity
 export async function run({
-  argv = [],
+  argv,
   flags,
-  options: extraOptions,
+  options,
 }: {
   argv?: string[];
   flags?: Flags;
   options?: Partial<Options>;
 }): Promise<Partial<Output>> {
-  const config = {
-    ...parseArguments(argv),
-    ...(flags && { flags }),
-    ...(extraOptions && { extraOptions }),
-  };
-  const {
-    sessionId = uuid(),
-    env: environment = getEnvironment(),
-    log = createLogger(config.flags, config.extraOptions),
-  } = extraOptions || {};
+  const result = await new ChromaticRun({
+    config: {
+      ...(argv && { argv }),
+      ...(flags && { flags }),
+      ...legacyOptionsToConfig(options),
+    },
+  }).execute(options?.experimental_abortSignal);
+  return projectOutput(result);
+}
 
-  // We don't normalize because if the `version` field isn't a proper semver string, the process
-  // silently exits.
-  const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
-  if (!packageInfo) {
-    log.error(noPackageJson());
-    process.exit(253);
-  }
-
-  const { path: packagePath, packageJson } = packageInfo;
-  const ctx: InitialContext = {
-    ...config,
-    packagePath,
-    packageJson,
-    env: environment,
-    log,
-    sessionId,
-  };
-
-  await runAll(ctx);
-
+// Legacy `run({ options: Partial<Options> })` callers historically funnelled
+// arbitrary options through `extraOptions`. The public `ChromaticConfig` no
+// longer exposes that escape hatch, so translate the supported subset onto
+// named fields. Unknown options are silently ignored — external consumers that
+// pass anything beyond this list should migrate to a named field or the
+// `ChromaticRun` constructor directly.
+// eslint-disable-next-line complexity
+function legacyOptionsToConfig(options: Partial<Options> | undefined) {
+  if (!options) return {};
   return {
-    // Keep this in sync with the configured outputs in action.yml
-    code: ctx.exitCode,
-    url: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
-    buildUrl: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
-    storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
-    specCount: ctx.build?.specCount ?? ctx.rebuildForBuild?.specCount,
-    componentCount: ctx.build?.componentCount ?? ctx.rebuildForBuild?.componentCount,
-    testCount: ctx.build?.testCount ?? ctx.rebuildForBuild?.testCount,
-    changeCount: ctx.build?.changeCount ?? ctx.rebuildForBuild?.changeCount,
-    errorCount: ctx.build?.errorCount ?? ctx.rebuildForBuild?.errorCount,
-    interactionTestFailuresCount:
-      ctx.build?.interactionTestFailuresCount ?? ctx.rebuildForBuild?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount ?? ctx.rebuildForBuild?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount ?? ctx.rebuildForBuild?.actualCaptureCount,
-    inheritedCaptureCount:
-      ctx.build?.inheritedCaptureCount ?? ctx.rebuildForBuild?.inheritedCaptureCount,
+    ...(options.inAction !== undefined && { inAction: options.inAction }),
+    ...(options.configFile !== undefined && { configFile: options.configFile }),
+    ...(options.projectId !== undefined && { projectId: options.projectId }),
+    ...(options.userToken !== undefined && { userToken: options.userToken }),
+    ...(options.sessionId !== undefined && { sessionId: options.sessionId }),
+    ...(options.env !== undefined && { env: options.env }),
+    ...(options.log !== undefined && { log: options.log }),
+    ...(options.experimental_onTaskStart && { onTaskStart: options.experimental_onTaskStart }),
+    ...(options.experimental_onTaskComplete && {
+      onTaskComplete: options.experimental_onTaskComplete,
+    }),
+    ...(options.experimental_onTaskProgress && {
+      onTaskProgress: options.experimental_onTaskProgress,
+    }),
+    ...(options.experimental_onTaskError && { onTaskError: options.experimental_onTaskError }),
+  };
+}
+
+// Keep this in sync with the configured outputs in action.yml.
+// eslint-disable-next-line complexity
+function projectOutput(result: RunResult): Partial<Output> {
+  return {
+    code: result.exitCode,
+    url: result.build?.webUrl,
+    buildUrl: result.build?.webUrl,
+    storybookUrl: result.storybookUrl,
+    specCount: result.build?.specCount,
+    componentCount: result.build?.componentCount,
+    testCount: result.build?.testCount,
+    changeCount: result.build?.changeCount,
+    errorCount: result.build?.errorCount,
+    interactionTestFailuresCount: result.build?.interactionTestFailuresCount,
+    actualTestCount: result.build?.actualTestCount,
+    actualCaptureCount: result.build?.actualCaptureCount,
+    inheritedCaptureCount: result.build?.inheritedCaptureCount,
   };
 }
 
 /**
- * Entry point for testing only (typically invoked via `run` above)
+ * Drives the legacy task pipeline against a pre-built `Context`. Owned by the
+ * `ChromaticRun` orchestrator and exposed only so the deprecated
+ * {@link runAll} shim can delegate here. External callers must use
+ * `ChromaticRun.execute()` instead.
  *
  * @param ctx The context set when executing the CLI.
  *
  * @returns A promise that resolves when all steps are completed.
+ *
+ * @internal
  */
-export async function runAll(ctx: InitialContext) {
+export async function runPipeline(ctx: InitialContext) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
   ctx.log.info('');
@@ -207,7 +222,7 @@ export async function runAll(ctx: InitialContext) {
 
   // Run these in parallel; neither should ever reject
   await Promise.all([runBuild(ctx), checkForUpdates(ctx)]).catch((error) => {
-    Sentry.captureException(error);
+    ctx.ports.errors.captureException(error);
     onError(error);
   });
 
@@ -222,6 +237,21 @@ export async function runAll(ctx: InitialContext) {
   if (ctx.options.uploadMetadata) {
     await uploadMetadataFiles(ctx);
   }
+}
+
+/**
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A promise that resolves when all steps are completed.
+ *
+ * @deprecated Use {@link ChromaticRun} and consume the returned
+ * {@link RunResult} instead. This export is a thin shim around the same
+ * internal pipeline that `ChromaticRun.execute()` runs, preserved so that
+ * external consumers and the in-tree test suite that hand-build a `Context`
+ * keep working. Will be removed in a future major version.
+ */
+export async function runAll(ctx: InitialContext) {
+  return runPipeline(ctx);
 }
 
 // TODO: refactor this function
@@ -245,7 +275,7 @@ async function runBuild(ctx: Context) {
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
-      Sentry.captureException(err);
+      ctx.ports.errors.captureException(err);
       endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);
@@ -278,10 +308,10 @@ async function runBuild(ctx: Context) {
       ctx.log.flush();
 
       try {
-        await ctx.analytics?.shutdown();
+        await ctx.ports.analytics.flush();
       } catch (error) {
         // Analytics shutdown should never crash the CLI, but we want to know about it
-        Sentry.captureException(error);
+        ctx.ports.errors.captureException(error);
       }
     }
   } catch (error) {

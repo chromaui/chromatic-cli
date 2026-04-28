@@ -1,7 +1,8 @@
-import { Logger } from '@cli/log';
 import type { IncomingMessage } from 'http';
 import WebSocket from 'ws';
 import { z } from 'zod';
+
+import { Logger } from './ports/logger';
 
 const NORMAL_CLOSURE_STATUS_CODE = 1000; // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 const CONNECTION_FAILED_STATUS_CODE = 1006; // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code

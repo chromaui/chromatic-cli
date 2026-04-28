@@ -19,5 +19,9 @@ export function createAnalyticsClient(ctx: Context): AnalyticsClient {
   }
 
   ctx.log.debug('[analytics] initializing Index analytics client');
-  return new IndexAnalyticsClient({ client: ctx.client, logger: ctx.log });
+  return new IndexAnalyticsClient({
+    chromatic: ctx.ports.chromatic,
+    logger: ctx.log,
+    errors: ctx.ports.errors,
+  });
 }

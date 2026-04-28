@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AncestorBuild } from '../lib/ports/chromaticApi';
 import TestLogger from '../lib/testLogger';
-import {
-  AncestorBuildsQueryResult,
-  findAncestorBuildWithCommit,
-} from './findAncestorBuildWithCommit';
+import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 
-vi.mock('./git', () => ({
-  commitExists: (_, hash) => hash.match(/exists/),
-}));
+const getAncestorBuilds = vi.fn();
+const commitExists = vi.fn(async (sha: string) => Boolean(/exists/.test(sha)));
 
-const ctx = { log: new TestLogger() };
+const ports = {
+  chromatic: { getAncestorBuilds } as any,
+  git: { commitExists } as any,
+};
+const ctx = { log: new TestLogger(), ports } as any;
 
-type Build = AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0];
-const makeBuild = (build: Partial<Build> = {}): Build => ({
+const makeBuild = (build: Partial<AncestorBuild> = {}): AncestorBuild => ({
   id: 'id',
   number: 1,
   commit: 'missing',
@@ -21,80 +21,80 @@ const makeBuild = (build: Partial<Build> = {}): Build => ({
   isLocalBuild: false,
   ...build,
 });
-const makeResult = (ancestorBuilds: Build[]): AncestorBuildsQueryResult => ({
-  app: { build: { ancestorBuilds } },
-});
 
 describe('findAncestorBuildWithCommit', () => {
-  const client = { runQuery: vi.fn() } as any;
   beforeEach(() => {
-    client.runQuery.mockReset();
+    getAncestorBuilds.mockReset();
   });
 
   it('returns a result in the first list of results', async () => {
     const toFind = makeBuild({ number: 3, commit: 'exists' });
-    client.runQuery.mockReturnValue(makeResult([makeBuild(), makeBuild(), toFind]));
+    getAncestorBuilds.mockReturnValue([makeBuild(), makeBuild(), toFind]);
 
-    expect(await findAncestorBuildWithCommit({ ...ctx, client }, 1)).toEqual(toFind);
-    expect(client.runQuery).toHaveBeenCalledTimes(1);
-    expect(client.runQuery.mock.calls[0][1]).toMatchObject({ buildNumber: 1 });
+    expect(await findAncestorBuildWithCommit(ctx, 1)).toEqual(toFind);
+    expect(getAncestorBuilds).toHaveBeenCalledTimes(1);
+    expect(getAncestorBuilds.mock.calls[0][0]).toMatchObject({ buildNumber: 1 });
   });
 
   it('does not return a local build with uncommitted changes', async () => {
-    client.runQuery.mockReturnValue(
-      makeResult([makeBuild({ commit: 'exists', uncommittedHash: 'abc123', isLocalBuild: true })])
-    );
+    getAncestorBuilds.mockReturnValue([
+      makeBuild({ commit: 'exists', uncommittedHash: 'abc123', isLocalBuild: true }),
+    ]);
 
-    expect(
-      await findAncestorBuildWithCommit({ ...ctx, client }, 1, { page: 1, limit: 1 })
-    ).toBeUndefined();
+    expect(await findAncestorBuildWithCommit(ctx, 1, { page: 1, limit: 1 })).toBeUndefined();
   });
 
   it('DOES return a CI build with uncommitted changes', async () => {
-    client.runQuery.mockReturnValue(
-      makeResult([makeBuild({ commit: 'exists', uncommittedHash: 'abc123' })])
-    );
+    getAncestorBuilds.mockReturnValue([makeBuild({ commit: 'exists', uncommittedHash: 'abc123' })]);
 
-    expect(
-      await findAncestorBuildWithCommit({ ...ctx, client }, 1, { page: 1, limit: 1 })
-    ).toMatchObject({
+    expect(await findAncestorBuildWithCommit(ctx, 1, { page: 1, limit: 1 })).toMatchObject({
       commit: 'exists',
     });
   });
 
   it('passes skip and limit and recurse', async () => {
     const toFind = makeBuild({ number: 3, commit: 'exists' });
-    client.runQuery
-      .mockReturnValueOnce(makeResult([makeBuild(), makeBuild()]))
-      .mockReturnValueOnce(makeResult([makeBuild(), toFind]));
+    getAncestorBuilds
+      .mockReturnValueOnce([makeBuild(), makeBuild()])
+      .mockReturnValueOnce([makeBuild(), toFind]);
 
-    expect(
-      await findAncestorBuildWithCommit({ ...ctx, client }, 1, { page: 2, limit: 100 })
-    ).toEqual(toFind);
-    expect(client.runQuery).toHaveBeenCalledTimes(2);
-    expect(client.runQuery.mock.calls[0][1]).toMatchObject({ buildNumber: 1, skip: 0, limit: 2 });
-    expect(client.runQuery.mock.calls[1][1]).toMatchObject({ buildNumber: 1, skip: 2, limit: 2 });
+    expect(await findAncestorBuildWithCommit(ctx, 1, { page: 2, limit: 100 })).toEqual(toFind);
+    expect(getAncestorBuilds).toHaveBeenCalledTimes(2);
+    expect(getAncestorBuilds.mock.calls[0][0]).toMatchObject({
+      buildNumber: 1,
+      skip: 0,
+      limit: 2,
+    });
+    expect(getAncestorBuilds.mock.calls[1][0]).toMatchObject({
+      buildNumber: 1,
+      skip: 2,
+      limit: 2,
+    });
   });
 
   it('bails out if we go past a limit', async () => {
-    client.runQuery
-      .mockReturnValueOnce(makeResult([makeBuild(), makeBuild()]))
-      .mockReturnValueOnce(makeResult([makeBuild(), makeBuild()]));
+    getAncestorBuilds
+      .mockReturnValueOnce([makeBuild(), makeBuild()])
+      .mockReturnValueOnce([makeBuild(), makeBuild()]);
 
-    expect(
-      await findAncestorBuildWithCommit({ ...ctx, client }, 1, { page: 2, limit: 3 })
-    ).toBeUndefined();
-    expect(client.runQuery).toHaveBeenCalledTimes(2);
-    expect(client.runQuery.mock.calls[0][1]).toMatchObject({ buildNumber: 1, skip: 0, limit: 2 });
-    expect(client.runQuery.mock.calls[1][1]).toMatchObject({ buildNumber: 1, skip: 2, limit: 1 });
+    expect(await findAncestorBuildWithCommit(ctx, 1, { page: 2, limit: 3 })).toBeUndefined();
+    expect(getAncestorBuilds).toHaveBeenCalledTimes(2);
+    expect(getAncestorBuilds.mock.calls[0][0]).toMatchObject({
+      buildNumber: 1,
+      skip: 0,
+      limit: 2,
+    });
+    expect(getAncestorBuilds.mock.calls[1][0]).toMatchObject({
+      buildNumber: 1,
+      skip: 2,
+      limit: 1,
+    });
   });
 
   it('stops querying when the results run out', async () => {
-    client.runQuery.mockReturnValueOnce(makeResult([makeBuild()]));
+    getAncestorBuilds.mockReturnValueOnce([makeBuild()]);
 
-    expect(
-      await findAncestorBuildWithCommit({ ...ctx, client }, 1, { page: 2, limit: 3 })
-    ).toBeUndefined();
-    expect(client.runQuery).toHaveBeenCalledTimes(1);
+    expect(await findAncestorBuildWithCommit(ctx, 1, { page: 2, limit: 3 })).toBeUndefined();
+    expect(getAncestorBuilds).toHaveBeenCalledTimes(1);
   });
 });

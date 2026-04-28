@@ -1,55 +1,47 @@
-import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createInMemoryErrorReporter } from '../ports/errorReporterInMemoryAdapter';
 import TestLogger from '../testLogger';
 import { AnalyticsEvent } from './events';
 import { IndexAnalyticsClient } from './indexClient';
 
-vi.mock('@sentry/node', () => ({
-  captureException: vi.fn(),
-}));
-
-function makeClient(runQuery = vi.fn().mockResolvedValue({ trackEvent: { success: true } })) {
-  const gqlClient = { runQuery } as any;
+function makeClient(trackTelemetryEvent = vi.fn().mockResolvedValue(undefined)) {
+  const chromatic = { trackTelemetryEvent } as any;
   const logger = new TestLogger();
-  const client = new IndexAnalyticsClient({ client: gqlClient, logger });
-  return { client, gqlClient, logger, runQuery };
+  const errorsState = {} as any;
+  const errors = createInMemoryErrorReporter(errorsState);
+  const client = new IndexAnalyticsClient({ chromatic, logger, errors });
+  return { client, chromatic, logger, errors, errorsState, trackTelemetryEvent };
 }
 
 describe('IndexAnalyticsClient', () => {
   beforeEach(() => {
-    vi.mocked(Sentry.captureException).mockClear();
+    vi.clearAllMocks();
   });
 
   describe('trackEvent', () => {
-    it('calls runQuery with TrackCLITelemetryEvent mutation and input built from properties', () => {
-      const { client, runQuery } = makeClient();
+    it('forwards event + properties to the ChromaticApi port', () => {
+      const { client, trackTelemetryEvent } = makeClient();
 
       client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {
         errorCategory: 'storybook_build_failed',
       });
 
-      expect(runQuery).toHaveBeenCalledWith(
-        expect.stringMatching(/TrackCLITelemetryEvent/),
-        {
-          input: {
-            event: AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
-            properties: { errorCategory: 'storybook_build_failed' },
-          },
-        },
-        { retries: 0 }
-      );
+      expect(trackTelemetryEvent).toHaveBeenCalledWith({
+        event: AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
+        properties: { errorCategory: 'storybook_build_failed' },
+      });
     });
 
-    it('swallows GQL errors and reports to Sentry', async () => {
+    it('swallows GQL errors and reports through the ErrorReporter port', async () => {
       const error = new Error('GQL failed');
-      const { client } = makeClient(vi.fn().mockRejectedValue(error));
+      const { client, errorsState } = makeClient(vi.fn().mockRejectedValue(error));
 
       expect(() => client.trackEvent(AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED, {})).not.toThrow();
 
       await client.shutdown();
 
-      expect(Sentry.captureException).toHaveBeenCalledWith(error);
+      expect(errorsState.exceptions).toEqual([{ error, tags: undefined }]);
     });
   });
 

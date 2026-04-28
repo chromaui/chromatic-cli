@@ -1,13 +1,8 @@
-import { mkdirSync } from 'fs';
-import jsonfile from 'jsonfile';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createLogger } from './log';
 import { getDiagnostics, writeChromaticDiagnostics } from './writeChromaticDiagnostics';
-
-vi.mock('jsonfile');
-vi.mock('fs');
 
 describe('getDiagnostics', () => {
   it('returns context object', () => {
@@ -36,19 +31,18 @@ describe('getDiagnostics', () => {
 
 describe('writeChromaticDiagnostics', () => {
   it('should create the parent directory if it does not exist', async () => {
+    const mkdir = vi.fn(async () => {});
+    const writeFile = vi.fn(async () => {});
     const ctx = {
       log: createLogger(),
       options: { diagnosticsFile: '/tmp/doesnotexist/diagnostics.json' },
+      ports: { fs: { mkdir, writeFile } } as any,
     };
     await writeChromaticDiagnostics(ctx as any);
 
-    expect(mkdirSync).toHaveBeenCalledWith(path.dirname(ctx.options.diagnosticsFile), {
+    expect(mkdir).toHaveBeenCalledWith(path.dirname(ctx.options.diagnosticsFile), {
       recursive: true,
     });
-    expect(jsonfile.writeFile).toHaveBeenCalledWith(
-      ctx.options.diagnosticsFile,
-      expect.any(Object),
-      expect.any(Object)
-    );
+    expect(writeFile).toHaveBeenCalledWith(ctx.options.diagnosticsFile, expect.any(String));
   });
 });

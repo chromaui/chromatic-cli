@@ -19,10 +19,10 @@ const renderLoop = (ctx: Context, render: (frame: number) => void) => {
   };
 };
 
-export const startActivity = async (ctx: Context, task: Task) => {
+export const startActivity = async (ctx: Context, _task: Task) => {
   if (ctx.options.interactive) return;
   ctx.activity = renderLoop(ctx, (n) => {
-    task.output = activityBar(n);
+    ctx.ports.ui.taskUpdate({ output: activityBar(n) });
   });
 };
 

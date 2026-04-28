@@ -1,6 +1,4 @@
-import { stat, writeFileSync } from 'fs';
 import path from 'path';
-import { withFile } from 'tmp-promise';
 
 import { main as trimStatsFile } from '../../bin-src/trimStatsFile';
 import { Context, FileDesc } from '../types';
@@ -9,8 +7,14 @@ import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
 import { findStorybookConfigFile } from './getStorybookMetadata';
 import { uploadMetadata } from './upload';
 
-const fileSize = (path: string): Promise<number> =>
-  new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
+const fileSize = async (ctx: Context, filePath: string): Promise<number> => {
+  try {
+    const stats = await ctx.ports.fs.stat(filePath);
+    return stats.size;
+  } catch {
+    return 0;
+  }
+};
 
 /**
  * Upload metadata files to Chromatic for debugging issues with Chromatic support.
@@ -37,7 +41,7 @@ export async function uploadMetadataFiles(ctx: Context) {
 
     const unfilteredFiles = await Promise.all(
       metadataFiles.map(async (localPath) => {
-        const contentLength = await fileSize(localPath);
+        const contentLength = await fileSize(ctx, localPath);
         const targetPath = `.chromatic/${path.basename(localPath)}`;
         return contentLength && { contentLength, localPath, targetPath };
       })
@@ -51,12 +55,13 @@ export async function uploadMetadataFiles(ctx: Context) {
       return;
     }
 
-    await withFile(async ({ path }) => {
+    const temporary = await ctx.ports.fs.mkstemp();
+    try {
       const html = metadataHtml(ctx, files);
-      writeFileSync(path, html);
+      await ctx.ports.fs.writeFile(temporary.path, html);
       files.push({
         contentLength: html.length,
-        localPath: path,
+        localPath: temporary.path,
         targetPath: '.chromatic/index.html',
       });
 
@@ -64,7 +69,9 @@ export async function uploadMetadataFiles(ctx: Context) {
       ctx.log.info(uploadingMetadata(directoryUrl, files));
 
       await uploadMetadata(ctx, files);
-    });
+    } finally {
+      await temporary.cleanup();
+    }
   });
 }
 

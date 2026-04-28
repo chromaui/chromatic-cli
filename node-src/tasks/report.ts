@@ -1,188 +1,19 @@
-import reportBuilder, { TestSuite } from 'junit-report-builder';
-import path from 'path';
-
 import { createTask, transitionTo } from '../lib/tasks';
+import { runReportPhase } from '../run/phases/report';
 import { Context } from '../types';
-import wroteReport from '../ui/messages/info/wroteReport';
 import { initial, pending, success } from '../ui/tasks/report';
 
-interface TestMode {
-  name: string;
-}
+export { generateReportTestCase } from '../run/phases/report';
 
-interface TestSpec {
-  name: string;
-  component: {
-    name: string;
-    displayName: string;
-  };
-}
-
-interface TestParameters {
-  viewport: number;
-  viewportIsDefault: boolean;
-}
-
-interface VisualTest {
-  status: string;
-  result: string;
-  spec: TestSpec;
-  parameters: TestParameters;
-  mode: TestMode;
-}
-
-const ReportQuery = `
-  query ReportQuery($buildNumber: Int!, $skip: Int, $limit: Int) {
-    app {
-      build(number: $buildNumber) {
-        number
-        status(legacy: false)
-        storybookUrl
-        webUrl
-        createdAt
-        completedAt
-        tests(skip: $skip, limit: $limit) {
-          status
-          result
-          spec {
-            name
-            component {
-              name
-              displayName
-            }
-          }
-          parameters {
-            viewport
-            viewportIsDefault
-          }
-          mode {
-            name
-          }
-        }
-      }
-    }
-  }
-`;
-interface ReportQueryResult {
-  app: {
-    build: {
-      number: number;
-      status: string;
-      storybookUrl: string;
-      webUrl: string;
-      createdAt: number;
-      completedAt: number;
-      tests: VisualTest[];
-    };
-  };
-}
-
-/**
- * Generate a JUnit report XML file for a particular run.
- *
- * @param ctx The {@link Context} for which we're generating a report.
- */
 export const generateReport = async (ctx: Context) => {
-  const { log } = ctx;
-  const { junitReport } = ctx.options;
-  const { number: buildNumber } = ctx.build;
-
-  const file =
-    typeof junitReport === 'boolean' && junitReport
-      ? 'chromatic-build-{buildNumber}.xml'
-      : junitReport;
-
-  if (!file) {
-    log.debug('junit report not configured, skipping');
-    return;
-  }
-
-  ctx.reportPath = path.resolve(file.replaceAll('{buildNumber}', String(buildNumber)));
-
-  const build = await queryBuildForReport(ctx);
-  const buildTime = (build.completedAt || Date.now()) - build.createdAt;
-
-  const suite: TestSuite = reportBuilder
-    .testSuite()
-    .name(`Chromatic build ${build.number}`)
-    .time(Math.round(buildTime / 1000))
-    .timestamp(new Date(build.createdAt).toISOString())
-    .property('buildNumber', build.number)
-    .property('buildStatus', build.status)
-    .property('buildUrl', build.webUrl)
-    .property('storybookUrl', build.storybookUrl);
-
-  for (const test of build.tests) {
-    generateReportTestCase(suite, test);
-  }
-
-  reportBuilder.writeTo(ctx.reportPath);
-  log.info(wroteReport(ctx.reportPath, 'JUnit XML'));
-};
-
-/**
- * Query the build for the report and return the build with all the paginated tests.
- *
- * @param ctx The {@link Context} for which we're generating a report.
- *
- * @returns The build with all the tests.
- */
-const queryBuildForReport = async (ctx: Context) => {
-  const limit = 1000;
-  let skip = 0;
-  const allTests: VisualTest[] = [];
-
-  while (true) {
-    const {
-      app: { build },
-    } = await ctx.client.runQuery<ReportQueryResult>(
-      ReportQuery,
-      { buildNumber: ctx.build.number, skip, limit },
-      { headers: { Authorization: `Bearer ${ctx.build.reportToken}` } }
-    );
-
-    allTests.push(...build.tests);
-
-    // We've reached the end of the tests, return the build with all the tests.
-    if (build.tests.length < limit) {
-      return { ...build, tests: allTests };
-    }
-
-    skip += limit;
-  }
-};
-
-/**
- * Generate a single `<testcase>` within a JUnit report and test run with Chromatic.
- *
- * @param suite The {@link TestSuite} we're currently processing.
- * @param test The {@link VisualTest} we're currently processing, contained in `suite`.
- */
-export const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
-  const { status, result, spec, parameters, mode } = test;
-  const testSuffixName = mode.name || `[${parameters.viewport}px]`;
-  const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
-  const testCase: any = suite.testCase().className(spec.component.name.replaceAll(/[/|]/g, '.')); // transform story path to class path
-  testCase.property('result', status).name(`${spec.name} ${suffix}`);
-
-  switch (status) {
-    case 'FAILED':
-      testCase.error('Server error while taking snapshot, please try again', status);
-      break;
-    case 'BROKEN':
-      testCase.error('Snapshot is broken due to an error in your Storybook', status);
-      break;
-    case 'DENIED':
-      testCase.failure('Snapshot was denied by a user', status);
-      break;
-    case 'PENDING':
-      testCase.failure('Snapshot contains visual changes and must be reviewed', status);
-      break;
-    default: {
-      if (['SKIPPED', 'PRESERVED'].includes(result)) {
-        testCase.skipped();
-      }
-    }
+  const result = await runReportPhase({
+    options: ctx.options,
+    build: ctx.build,
+    log: ctx.log,
+    ports: ctx.ports,
+  });
+  if (result.reportPath !== undefined) {
+    ctx.reportPath = result.reportPath;
   }
 };
 

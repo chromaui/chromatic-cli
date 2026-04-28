@@ -1,478 +1,109 @@
-import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
-import AdmZip from 'adm-zip';
-import { access, readdirSync, readFileSync, statSync } from 'fs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import TestLogger from '../lib/testLogger';
-import {
-  calculateFileHashes,
-  traceChangedFiles,
-  validateAndroidArtifact,
-  validateFiles,
-} from './prepare';
+import * as phaseModule from '../run/phases/prepare';
+import { PreparePhaseError } from '../run/phases/prepare';
+import { runPrepare } from './prepare';
 
-vi.mock('adm-zip', () => ({ default: vi.fn() }));
-vi.mock('fs');
-vi.mock('@cli/turbosnap');
-vi.mock('./readStatsFile', () => ({
-  readStatsFile: () =>
-    Promise.resolve({
-      modules: [
-        {
-          id: '../__mocks__/storybookBaseDir/test.ts',
-          name: '../__mocks__/storybookBaseDir/test.ts',
-        },
-      ],
-    }),
-}));
+vi.mock('../run/phases/prepare', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../run/phases/prepare')>();
+  return { ...actual, runPreparePhase: vi.fn() };
+});
 
-vi.mock('../lib/getFileHashes', () => ({
-  getFileHashes: (files: string[]) =>
-    Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
-}));
-
-const AdmZipMock = vi.mocked(AdmZip);
-const traceChangedFilesTurbosnap = vi.mocked(traceChangedFilesDep);
-const accessMock = vi.mocked(access);
-const readdirSyncMock = vi.mocked(readdirSync);
-const readFileSyncMock = vi.mocked(readFileSync);
-const statSyncMock = vi.mocked(statSync);
-
-const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = new TestLogger();
-const http = { fetch: vi.fn() };
+const runPreparePhase = vi.mocked(phaseModule.runPreparePhase);
 
 afterEach(() => {
-  vi.restoreAllMocks();
-  vi.resetAllMocks();
+  vi.clearAllMocks();
 });
 
-describe('validateFiles', () => {
-  it('sets fileInfo on context', async () => {
-    readdirSyncMock.mockReturnValue(['iframe.html', 'index.html'] as any);
-    statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+function makeContext(overrides: Record<string, unknown> = {}): any {
+  return {
+    options: {},
+    env: {},
+    storybook: {},
+    git: {},
+    packageJson: {},
+    sourceDir: '/static',
+    ports: {},
+    log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    ...overrides,
+  };
+}
 
-    const ctx = { env: environment, log, http, sourceDir: '/static/' } as any;
-    await validateFiles(ctx);
-
-    expect(ctx.fileInfo).toEqual(
-      expect.objectContaining({
-        lengths: [
-          { contentLength: 42, knownAs: 'iframe.html', pathname: 'iframe.html' },
-          { contentLength: 42, knownAs: 'index.html', pathname: 'index.html' },
-        ],
-        paths: ['iframe.html', 'index.html'],
-        total: 84,
-      })
-    );
-  });
-
-  it("throws when index.html doesn't exist", async () => {
-    readdirSyncMock.mockReturnValue(['iframe.html'] as any);
-    statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-    const ctx = { env: environment, log, http, options: {}, sourceDir: '/static/' } as any;
-    await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
-  });
-
-  it("throws when iframe.html doesn't exist", async () => {
-    readdirSyncMock.mockReturnValue(['index.html'] as any);
-    statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-    const ctx = { env: environment, log, http, options: {}, sourceDir: '/static/' } as any;
-    await expect(validateFiles(ctx)).rejects.toThrow('Invalid Storybook build at /static/');
-  });
-
-  it('does not include the .chromatic directory in the file list', async () => {
-    readdirSyncMock.mockImplementation((path) => {
-      if (path === '.chromatic') {
-        return ['zip-unpacked.txt'] as any;
-      }
-      return ['iframe.html', 'index.html', '.chromatic'] as any;
-    });
-    statSyncMock.mockImplementation((path) => {
-      if (path === '.chromatic') {
-        return { isDirectory: () => true, size: 42 } as any;
-      }
-      return { isDirectory: () => false, size: 42 } as any;
-    });
-
-    const ctx = { env: environment, log, http, sourceDir: '.' } as any;
-    await validateFiles(ctx);
-
-    expect(ctx.fileInfo).toEqual(
-      expect.objectContaining({
-        lengths: [
-          { contentLength: 42, knownAs: 'iframe.html', pathname: 'iframe.html' },
-          { contentLength: 42, knownAs: 'index.html', pathname: 'index.html' },
-        ],
-        paths: ['iframe.html', 'index.html'],
-        total: 84,
-      })
-    );
-  });
-
-  describe('with buildLogFile', () => {
-    it('retries using outputDir from build-storybook.log', async () => {
-      readdirSyncMock.mockReturnValueOnce([]);
-      readdirSyncMock.mockReturnValueOnce(['iframe.html', 'index.html'] as any);
-      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-      readFileSyncMock.mockReturnValue('info => Output directory: /var/storybook-static');
-
-      const ctx = {
-        env: environment,
-        log,
-        http,
-        sourceDir: '/static/',
-        buildLogFile: 'build-storybook.log',
-        options: {},
-        packageJson: {},
-      } as any;
-      await validateFiles(ctx);
-
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Unexpected build directory'));
-      expect(ctx.sourceDir).toBe('/var/storybook-static');
-      expect(ctx.fileInfo).toEqual(
-        expect.objectContaining({
-          lengths: [
-            { contentLength: 42, knownAs: 'iframe.html', pathname: 'iframe.html' },
-            { contentLength: 42, knownAs: 'index.html', pathname: 'index.html' },
-          ],
-          paths: ['iframe.html', 'index.html'],
-          total: 84,
-        })
-      );
-    });
-  });
-
-  describe('with isReactNativeApp', () => {
-    it('throws when no React Native browsers are configured', async () => {
-      readdirSyncMock.mockReturnValue([
-        'storybook.apk',
-        'storybook.app/modules.json',
-        'manifest.json',
-      ] as any);
-      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-      const ctx = {
-        env: environment,
-        log,
-        http,
-        options: {},
-        sourceDir: '/static/',
-        isReactNativeApp: true,
-        announcedBuild: { browsers: [] },
-      } as any;
-      await expect(validateFiles(ctx)).rejects.toThrow(
-        'Invalid React Native Storybook build in directory /static'
-      );
-    });
-
-    describe('Android devices', () => {
-      it('sets fileInfo on context with valid React Native build', async () => {
-        readdirSyncMock.mockReturnValue(['storybook.apk', 'manifest.json'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['android'] },
-        } as any;
-        await validateFiles(ctx);
-
-        expect(ctx.fileInfo).toEqual(
-          expect.objectContaining({
-            lengths: [
-              { contentLength: 42, knownAs: 'storybook.apk', pathname: 'storybook.apk' },
-              { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
-            ],
-            paths: ['storybook.apk', 'manifest.json'],
-            total: 84,
-          })
-        );
-      });
-
-      it("throws when manifest.json doesn't exist", async () => {
-        readdirSyncMock.mockReturnValue(['storybook.apk'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          options: {},
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['android'] },
-        } as any;
-        await expect(validateFiles(ctx)).rejects.toThrow(
-          `Missing files:
-  → manifest.json
-
-Invalid React Native Storybook build in directory /static`
-        );
-      });
-
-      it("throws when APK doesn't exist", async () => {
-        readdirSyncMock.mockReturnValue(['manifest.json'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          options: {},
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['android'] },
-        } as any;
-        await expect(validateFiles(ctx)).rejects.toThrow(
-          `→ This build is missing the storybook.apk file required for React Native Storybook for Android.
-  Please ensure that the file is present in the output directory and named correctly before running the CLI.
-
-Invalid React Native Storybook build in directory /static`
-        );
-      });
-    });
-
-    describe('iOS devices', () => {
-      it('sets fileInfo on context with valid React Native build', async () => {
-        readdirSyncMock.mockReturnValue(['storybook.app/modules.json', 'manifest.json'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['ios'] },
-        } as any;
-        await validateFiles(ctx);
-
-        expect(ctx.fileInfo).toEqual(
-          expect.objectContaining({
-            lengths: [
-              {
-                contentLength: 42,
-                knownAs: 'storybook.app/modules.json',
-                pathname: 'storybook.app/modules.json',
-              },
-              { contentLength: 42, knownAs: 'manifest.json', pathname: 'manifest.json' },
-            ],
-            paths: ['storybook.app/modules.json', 'manifest.json'],
-            total: 84,
-          })
-        );
-      });
-
-      it("throws when manifest.json doesn't exist", async () => {
-        readdirSyncMock.mockReturnValue(['storybook.app/modules.json'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          options: {},
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['ios'] },
-        } as any;
-        await expect(validateFiles(ctx)).rejects.toThrow(
-          `Missing files:
-  → manifest.json
-
-Invalid React Native Storybook build in directory /static`
-        );
-      });
-
-      it("throws when the APP directory doesn't exist", async () => {
-        readdirSyncMock.mockReturnValue(['manifest.json'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          options: {},
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['ios'] },
-        } as any;
-        await expect(validateFiles(ctx)).rejects.toThrow(
-          `→ This build is missing the storybook.app file required for React Native Storybook for iOS.
-  Please ensure that the file is present in the output directory and named correctly before running the CLI.
-
-Invalid React Native Storybook build in directory /static`
-        );
-      });
-    });
-
-    describe('Android and iOS devices', () => {
-      it('throws when both native build files are missing', async () => {
-        readdirSyncMock.mockReturnValue(['manifest.json'] as any);
-        statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
-
-        const ctx = {
-          env: environment,
-          log,
-          http,
-          options: {},
-          sourceDir: '/static/',
-          isReactNativeApp: true,
-          announcedBuild: { browsers: ['android', 'ios'] },
-        } as any;
-        await expect(validateFiles(ctx)).rejects.toThrow(
-          `→ This build is missing the storybook.app (iOS) and storybook.apk (Android) files required for React Native Storybook.
-  Please ensure that the files are present in the output directory and named correctly before running the CLI.
-
-Invalid React Native Storybook build in directory /static`
-        );
-      });
-    });
-  });
-});
-
-const makeContext = (browsers: string[]) =>
-  ({
-    env: environment,
-    log,
-    http,
-    sourceDir: '/static/',
-    announcedBuild: { browsers },
-  }) as any;
-
-const mockEntries = (entryNames: string[]) => {
-  const entries = entryNames.map((entryName) => ({ entryName }));
-  AdmZipMock.mockImplementation(function (this: { getEntries: () => typeof entries }) {
-    this.getEntries = () => entries;
-  } as any);
+const baseFileInfo = {
+  paths: ['iframe.html', 'index.html'],
+  statsPath: '',
+  lengths: [
+    { pathname: 'iframe.html', knownAs: 'iframe.html', contentLength: 42 },
+    { pathname: 'index.html', knownAs: 'index.html', contentLength: 42 },
+  ],
+  total: 84,
 };
 
-describe('validateAndroidArtifact', () => {
-  it('skips when android is not in browsers', async () => {
-    const ctx = makeContext(['ios']);
-    await expect(validateAndroidArtifact(ctx)).resolves.toBeUndefined();
-    expect(AdmZipMock).not.toHaveBeenCalled();
-  });
+const fakeTask = { title: '' } as any;
 
-  it('passes when APK has no lib/ entries', async () => {
-    mockEntries(['AndroidManifest.xml', 'classes.dex']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
-  });
-
-  it('passes when APK has only lib/x86_64/ entries', async () => {
-    mockEntries(['lib/x86_64/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
-  });
-
-  it('passes when APK has lib/x86_64/ alongside other ABIs', async () => {
-    mockEntries(['lib/x86_64/libnative.so', 'lib/arm64-v8a/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
-  });
-
-  it('throws when APK has only ARM ABI entries', async () => {
-    mockEntries(['lib/armeabi-v7a/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).rejects.toThrow(
-      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
-    );
-  });
-
-  it('throws when APK has multiple ARM ABIs but no x86_64', async () => {
-    mockEntries(['lib/armeabi-v7a/libnative.so', 'lib/arm64-v8a/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).rejects.toThrow(
-      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
-    );
-  });
-});
-
-describe('traceChangedFiles', () => {
-  beforeEach(() => {
-    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(null)));
-  });
-
-  it('sets onlyStoryFiles on context', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    traceChangedFilesTurbosnap.mockResolvedValue(deps);
-
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
-  });
-
-  it('escapes special characters on context', async () => {
-    const deps = {
-      './$example-new.stories.js': ['./$example-new.stories.js'],
-      './+example-new.stories.js': ['./+example-new.stories.js'],
-      './example-(new).stories.js': ['./example-(new).stories.js'],
-      './example[[lang=language]].stories.js': ['./example[[lang=language]].stories.js'],
-      '[./example/[account]/[id]/[unit]/language/example.stories.tsx]': [
-        '[./example/[account]/[id]/[unit]/language/example.stories.tsx]',
-      ],
-    };
-    traceChangedFilesTurbosnap.mockResolvedValue(deps);
-
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
-
-    expect(ctx.onlyStoryFiles).toStrictEqual([
-      String.raw`./\$example-new.stories.js`,
-      String.raw`./\+example-new.stories.js`,
-      String.raw`./example-\(new\).stories.js`,
-      String.raw`./example\[\[lang=language\]\].stories.js`,
-      String.raw`\[./example/\[account\]/\[id\]/\[unit\]/language/example.stories.tsx\]`,
-    ]);
-  });
-});
-
-describe('calculateFileHashes', () => {
-  it('sets hashes on context.fileInfo', async () => {
-    const fileInfo = {
-      lengths: [
-        { knownAs: 'iframe.html', contentLength: 42 },
-        { knownAs: 'index.html', contentLength: 42 },
-      ],
-      paths: ['iframe.html', 'index.html'],
-      total: 84,
-    };
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: { fileHashing: true },
-      fileInfo,
-      announcedBuild: { id: '1' },
-    } as any;
-
-    await calculateFileHashes(ctx, {} as any);
-
-    expect(ctx.fileInfo.hashes).toMatchObject({
-      'iframe.html': 'hash',
-      'index.html': 'hash',
+describe('runPrepare', () => {
+  it('mirrors the prepared slice onto context on the happy path', async () => {
+    runPreparePhase.mockResolvedValueOnce({
+      sourceDir: '/var/storybook-static',
+      fileInfo: baseFileInfo,
+      outcome: { kind: 'prepared' },
     });
+    const ctx = makeContext();
+    await runPrepare(ctx, fakeTask);
+    expect(ctx.sourceDir).toBe('/var/storybook-static');
+    expect(ctx.fileInfo).toBe(baseFileInfo);
+  });
+
+  it('skips when ctx.skip is set', async () => {
+    const ctx = makeContext({ skip: true });
+    await runPrepare(ctx, fakeTask);
+    expect(runPreparePhase).not.toHaveBeenCalled();
+  });
+
+  it('mirrors turboSnap and onlyStoryFiles when the trace succeeds', async () => {
+    const turboSnap = { rootPath: '/repo' };
+    runPreparePhase.mockResolvedValueOnce({
+      sourceDir: '/static',
+      fileInfo: baseFileInfo,
+      onlyStoryFiles: ['./a.stories.js'],
+      untracedFiles: ['./misc.txt'],
+      turboSnap,
+      outcome: { kind: 'turbosnap-traced', affectedStoryFiles: 1 },
+    });
+    const ctx = makeContext({ turboSnap: { rootPath: '/old' } });
+    await runPrepare(ctx, fakeTask);
+    expect(ctx.onlyStoryFiles).toEqual(['./a.stories.js']);
+    expect(ctx.untracedFiles).toEqual(['./misc.txt']);
+    expect(ctx.turboSnap).toBe(turboSnap);
+  });
+
+  it('mirrors a turbosnap bail outcome onto turboSnap.bailReason', async () => {
+    runPreparePhase.mockResolvedValueOnce({
+      sourceDir: '/static',
+      fileInfo: baseFileInfo,
+      turboSnap: { bailReason: { changedExternalFiles: ['vite.config.ts'] } },
+      outcome: { kind: 'turbosnap-bailed' },
+    });
+    const ctx = makeContext({ turboSnap: {} });
+    await runPrepare(ctx, fakeTask);
+    expect(ctx.turboSnap?.bailReason).toEqual({ changedExternalFiles: ['vite.config.ts'] });
+  });
+
+  it('mirrors PreparePhaseError.turboSnap onto context before rethrowing', async () => {
+    const error = new PreparePhaseError('Missing stats file', {
+      category: 'missing-stats-file',
+      turboSnap: { bailReason: { missingStatsFile: true } },
+    });
+    runPreparePhase.mockRejectedValueOnce(error);
+    const ctx = makeContext({ turboSnap: {} });
+    await expect(runPrepare(ctx, fakeTask)).rejects.toBe(error);
+    expect(ctx.turboSnap?.bailReason).toEqual({ missingStatsFile: true });
+  });
+
+  it('rethrows non-PreparePhaseError unchanged', async () => {
+    const original = new Error('weird');
+    runPreparePhase.mockRejectedValueOnce(original);
+    const ctx = makeContext();
+    await expect(runPrepare(ctx, fakeTask)).rejects.toBe(original);
   });
 });

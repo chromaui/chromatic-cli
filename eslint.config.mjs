@@ -255,6 +255,293 @@ export default [
       ],
     },
   },
+  // context god object refactor: nudge direct imports of to-be-ported external modules
+  // through `ctx.ports`. Permissive (warn) today; each port-extraction PR tightens
+  // its own module to `error` and adds adapter-path exceptions.
+  {
+    files: ['**/*.ts', '**/*.js'],
+    rules: {
+      'no-restricted-imports': [
+        'warn',
+        {
+          paths: [
+            {
+              name: 'fs',
+              message: 'Prefer ctx.ports.fs once extracted.',
+            },
+            {
+              name: 'fs/promises',
+              message: 'Prefer ctx.ports.fs once extracted.',
+            },
+            {
+              name: 'tmp-promise',
+              message: 'Prefer ctx.ports.fs.mkdtemp once extracted.',
+            },
+            {
+              name: '@sentry/node',
+              message: 'Prefer ctx.ports.errors once extracted.',
+            },
+            {
+              name: 'pino',
+              message: 'Prefer ctx.ports.log once extracted.',
+            },
+            {
+              name: 'snyk-nodejs-lockfile-parser',
+              message: 'Prefer ctx.ports.tracer once extracted.',
+            },
+            {
+              name: 'listr',
+              message: 'Prefer ctx.ports.ui once extracted.',
+            },
+            {
+              name: 'listr2',
+              message: 'Prefer ctx.ports.ui once extracted.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/git) must go through the UI port. The Listr adapter
+  // is the only module permitted to wire phase events into a Listr renderer
+  // directly. lib/tasks.ts is exempt because `createTask` returns a
+  // `Listr.ListrTask` shape; that interop layer is the natural meeting point
+  // between the Listr type and the rest of the domain.
+  {
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
+    ignores: [
+      'node-src/lib/ports/uiListrAdapter.ts',
+      'node-src/lib/tasks.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'listr', message: 'Use ctx.ports.ui instead.' },
+            { name: 'listr2', message: 'Use ctx.ports.ui instead.' },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/git/run) must go through the ErrorReporter port.
+  // Only the Sentry adapter and the bootstrap module that initializes the SDK
+  // are permitted to import @sentry/node directly.
+  {
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
+    ignores: [
+      'node-src/lib/ports/errorReporterSentryAdapter.ts',
+      'node-src/errorMonitoring.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@sentry/node',
+              message: 'Use ctx.ports.errors instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/git/run) must go through the Logger port. The real
+  // adapter, the underlying logger module itself, the global type-only
+  // re-export site (`types.ts`), and the existing `testLogger` shim are the
+  // only modules permitted to import `lib/log` directly.
+  {
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
+    ignores: [
+      'node-src/lib/log.ts',
+      'node-src/lib/logSerializers.ts',
+      'node-src/lib/testLogger.ts',
+      'node-src/lib/ports/loggerRealAdapter.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/lib/log', '@cli/log'],
+              message: 'Use ctx.ports.log (or import the Logger type from ports/logger).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/run) must go through the PackageManager port. The
+  // real adapter is the only module permitted to import @antfu/ni or
+  // yarn-or-npm directly.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
+    ignores: ['node-src/lib/ports/packageManagerRealAdapter.ts', '**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@antfu/ni',
+              message: 'Use ctx.ports.pkgMgr instead.',
+            },
+            {
+              name: 'yarn-or-npm',
+              message: 'Use ctx.ports.pkgMgr instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/run) must go through the StorybookDetector port.
+  // The real adapter and the underlying detection helpers are the only
+  // modules permitted to import lib/getStorybookInfo directly.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/storybookDetectorRealAdapter.ts',
+      'node-src/lib/getStorybookInfo.ts',
+      'node-src/lib/getStorybookMetadata.ts',
+      'node-src/lib/getPrebuiltStorybookMetadata.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/lib/getStorybookInfo', '**/getStorybookInfo'],
+              message: 'Use ctx.ports.storybook.detect instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/run) must go through the DependencyTracer port. The
+  // turbosnap adapter is the only module permitted to import the lib/turbosnap
+  // module directly; bin-src/trace.ts also imports a sub-helper but is outside
+  // the phase code (it's a separate CLI entry point) so the rule does not
+  // apply there.
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/dependencyTracerTurbosnapAdapter.ts',
+      'node-src/lib/turbosnap/**/*.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@cli/turbosnap', '**/lib/turbosnap', '**/lib/turbosnap/index'],
+              message: 'Use ctx.ports.tracer.traceChangedFiles instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/git/run) must go through the ProcessRunner port for
+  // non-git subprocesses. The execa adapter and the legacy shell runner
+  // backing it are the only modules permitted to import execa directly. Git's
+  // exec helper is also exempt because it lives below the GitRepository port.
+  {
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
+    ignores: [
+      'node-src/lib/ports/processRunnerExecaAdapter.ts',
+      'node-src/lib/shell/shell.ts',
+      'node-src/git/execGit.ts',
+      'node-src/git/execGit.test.ts',
+      'node-src/git/generateGitRepository.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'execa',
+              message: 'Use ctx.ports.proc.run (or ctx.ports.git for git commands) instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Phase code (tasks/lib/run) must go through the FileSystem port. The node
+  // and in-memory adapters are the only modules permitted to import
+  // fs/tmp-promise directly. A few leaf-level helpers are explicitly excepted
+  // because they either back the adapter (fileReaderBlob), are slated for the
+  // Logger port (log), use low-level fs primitives for performance
+  // (getFileHashes), or sit outside the runtime ports lifecycle
+  // (getConfiguration / treeKill / readStatsFile bin-src callers).
+  {
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
+    ignores: [
+      'node-src/lib/ports/fsNodeAdapter.ts',
+      'node-src/lib/fileReaderBlob.ts',
+      'node-src/lib/log.ts',
+      'node-src/lib/getFileHashes.ts',
+      'node-src/lib/getConfiguration.ts',
+      'node-src/lib/shell/treeKill.ts',
+      'node-src/tasks/readStatsFile.ts',
+      '**/*.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'fs',
+              message: 'Use ctx.ports.fs instead.',
+            },
+            {
+              name: 'fs/promises',
+              message: 'Use ctx.ports.fs instead.',
+            },
+            {
+              name: 'tmp-promise',
+              message: 'Use ctx.ports.fs.mkdtemp / mkstemp instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // exceptions for files stuck in CJS for now
   {
     files: ['**/*.cjs'],

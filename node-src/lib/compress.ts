@@ -1,6 +1,4 @@
 import archiver from 'archiver';
-import { createReadStream, createWriteStream } from 'fs';
-import { file as temporaryFile } from 'tmp-promise';
 
 import { Context, FileDesc } from '../types';
 
@@ -14,9 +12,8 @@ import { Context, FileDesc } from '../types';
  */
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
   const archive = archiver('zip', { zlib: { level: 9 } });
-  const temporary = await temporaryFile({ postfix: '.zip' });
-  // Passing a fd will cause `createWriteStream` to ignore the path (first) argument
-  const sink = createWriteStream('', { fd: temporary.fd });
+  const temporary = await ctx.ports.fs.mkstemp({ postfix: '.zip' });
+  const sink = ctx.ports.fs.createWriteStream(temporary.path);
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
     sink.on('close', () => {
@@ -34,7 +31,7 @@ export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
 
     for (const { localPath, targetPath: name } of files) {
       ctx.log.debug(`Adding to zip archive: ${name}`);
-      archive.append(createReadStream(localPath), { name });
+      archive.append(ctx.ports.fs.createReadStream(localPath), { name });
     }
 
     ctx.log.debug('Finalizing zip archive');
