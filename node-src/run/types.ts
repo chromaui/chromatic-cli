@@ -197,6 +197,16 @@ export interface UploadedState {
 }
 
 /**
+ * Output of the `snapshot` phase: the final build returned by the polling
+ * loop and an optional carry-over `rebuildForBuild` reference (set by the
+ * gitInfo phase's skip-rebuild outcome and forwarded through unchanged).
+ */
+export interface SnapshotState {
+  build: Context['build'];
+  rebuildForBuild?: Context['rebuildForBuild'];
+}
+
+/**
  * Output of the `verify` phase: the verified build, the published Storybook
  * URL, and whether the run should skip the snapshot phase (publish-only,
  * `--list`, or `--exit-once-uploaded` for the matching branch).
