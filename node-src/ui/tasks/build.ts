@@ -38,7 +38,9 @@ export const pendingIOS = (ctx: Context) => ({
 export const success = (ctx: Context) => ({
   status: 'success',
   title: `${capitalize(buildType(ctx))} built in ${getDuration(ctx)}`,
-  output: `View build log at ${ctx.buildLogFile}`,
+  output: ctx.isReactNativeApp
+    ? `View build log at ${ctx.reactNativeBuildLogFile}`
+    : `View build log at ${ctx.buildLogFile}`,
 });
 
 export const skipped = (ctx: Context) => ({
@@ -56,5 +58,7 @@ export const skippedForReactNative = (ctx: Context) => ({
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: `Building your ${buildType(ctx)}`,
-  output: `Command failed: ${ctx.buildCommand}`,
+  output: ctx.isReactNativeApp
+    ? `Build failed, see logs at ${ctx.reactNativeBuildLogFile}`
+    : `Command failed: ${ctx.buildCommand}`,
 });

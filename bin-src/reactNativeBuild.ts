@@ -1,6 +1,10 @@
 import chalk from 'chalk';
+import { type WriteStream } from 'fs';
 import meow from 'meow';
+import os from 'os';
+import path from 'path';
 
+import { openLogFileStream } from '../node-src/lib/logFile';
 import { buildAndroid, buildIos } from '../node-src/lib/react-native/build';
 import { ExpoConfig, readExpoConfig } from '../node-src/lib/react-native/expoConfig';
 
@@ -100,18 +104,19 @@ Available platforms: ${configPlatforms.join(', ')}`);
  *
  * @param platforms The platforms to build.
  * @param appName The app name from Expo config, required for iOS builds.
+ * @param logStream The WriteStream to write build logs to.
  *
  * @returns The list of build artifacts.
  */
-async function buildPlatforms(platforms: string[], appName: string) {
+async function buildPlatforms(platforms: string[], appName: string, logStream: WriteStream) {
   const artifacts: { platform: string; path: string; duration: number }[] = [];
 
   for (const platform of platforms) {
     if (platform === 'android') {
-      const { artifactPath, duration } = await buildAndroid();
+      const { artifactPath, duration } = await buildAndroid(logStream);
       artifacts.push({ platform: 'Android', path: artifactPath, duration });
     } else if (platform === 'ios') {
-      const { artifactPath, duration } = await buildIos(appName);
+      const { artifactPath, duration } = await buildIos(appName, logStream);
       artifacts.push({ platform: 'iOS', path: artifactPath, duration });
     }
   }
@@ -146,13 +151,21 @@ export async function main(argv: string[]) {
 
   const platforms = resolvePlatforms(config, requestedPlatforms);
 
+  const logFilePath = path.join(os.tmpdir(), `chromatic-react-native-build-${Date.now()}.log`);
+  console.log(chalk.dim(`  → Build log: ${logFilePath}`));
+
+  const logStream = await openLogFileStream(logFilePath);
+
   let artifacts: { platform: string; path: string; duration: number }[];
   try {
-    artifacts = await buildPlatforms(platforms, config.name);
+    artifacts = await buildPlatforms(platforms, config.name, logStream);
   } catch (err) {
-    error(err.message);
+    await new Promise<void>((resolve) => logStream.end(resolve));
+    error(err);
     process.exit(1);
   }
+
+  await new Promise<void>((resolve) => logStream.end(resolve));
 
   const summary = artifacts
     .map((a) => `${a.platform} (${humanizeDuration(a.duration)})\n${a.path}`)

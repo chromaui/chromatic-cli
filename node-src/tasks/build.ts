@@ -1,7 +1,15 @@
 import { AnalyticsEvent } from '@cli/analytics/events';
 import * as Sentry from '@sentry/node';
-import { createWriteStream, existsSync, readFileSync, renameSync } from 'fs';
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  type WriteStream,
+} from 'fs';
 import path from 'path';
+import { createInterface } from 'readline';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
@@ -10,6 +18,7 @@ import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e'
 import { isE2EBuild } from '../lib/e2eUtils';
 import { emailHash } from '../lib/emailHash';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
+import { openLogFileStream } from '../lib/logFile';
 import { buildAndroid, buildIos } from '../lib/react-native/build';
 import { readExpoConfig } from '../lib/react-native/expoConfig';
 import { generateManifest } from '../lib/react-native/generateManifest';
@@ -18,7 +27,7 @@ import { runCommand } from '../lib/shell/shell';
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
-import buildFailed from '../ui/messages/errors/buildFailed';
+import { buildFailed, reactNativeBuildFailed } from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
 import {
@@ -32,6 +41,21 @@ import {
   skippedForReactNative,
   success,
 } from '../ui/tasks/build';
+
+const MAX_REACT_NATIVE_LOG_LINES = 20;
+
+async function readLastLines(filePath: string, lineCount: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const buffer: string[] = [];
+    const rl = createInterface({ input: createReadStream(filePath), crlfDelay: Infinity });
+    rl.on('line', (line) => {
+      buffer.push(line);
+      if (buffer.length > lineCount) buffer.shift();
+    });
+    rl.on('close', () => resolve(buffer.join('\n')));
+    rl.on('error', reject);
+  });
+}
 
 export const setSourceDirectory = async (ctx: Context) => {
   // if it has been set upstream of us, do not overwrite it
@@ -204,11 +228,7 @@ export const buildStorybook = async (ctx: Context) => {
   let logFile;
   if (ctx.options.storybookLogFile) {
     ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
-    logFile = createWriteStream(ctx.buildLogFile);
-    await new Promise((resolve, reject) => {
-      logFile.on('open', resolve);
-      logFile.on('error', reject);
-    });
+    logFile = await openLogFileStream(ctx.buildLogFile);
   }
 
   const { experimental_abortSignal: signal } = ctx.options;
@@ -240,12 +260,19 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
-const runPlatformCommand = async (ctx: Context, command: string) => {
+const runPlatformCommand = async (
+  ctx: Context,
+  platform: 'android' | 'ios',
+  command: string,
+  logStream: WriteStream
+) => {
   ctx.log.debug('Running React Native build command:', command);
+  const label = platform === 'android' ? 'Android' : 'iOS';
+  logStream.write(`\n[chromatic] ${label} build: ${command}\n`);
   try {
     await runCommand(command, {
-      stdout: 'inherit',
-      stderr: 'inherit',
+      stdout: logStream,
+      stderr: logStream,
     });
   } catch (err) {
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
@@ -259,40 +286,55 @@ const resolvePlatforms = (ctx: Context) => {
   );
 };
 
-const runReactNativeBuildStep = (ctx: Context, platform: 'android' | 'ios') => {
-  return (
-    ctx.isReactNativeApp &&
-    resolvePlatforms(ctx).includes(platform) &&
-    !ctx.options.storybookBuildDir
-  );
-};
+/* eslint-disable-next-line complexity, max-statements */
+export const buildReactNativeArtifacts = async (ctx: Context, task: Task) => {
+  // we skip this build step if not React Native, or we have prebuilt assets.
+  if (!ctx.isReactNativeApp || !!ctx.options.storybookBuildDir) return;
 
-export const buildReactNativeAndroid = async (ctx: Context) => {
-  if (!runReactNativeBuildStep(ctx, 'android')) return;
+  const platforms = resolvePlatforms(ctx);
+  const needsAndroid = platforms.includes('android');
+  const needsIos = platforms.includes('ios');
 
-  const { androidBuildCommand } = ctx.options.reactNative ?? {};
-  ctx.log.debug({ androidBuildCommand }, 'Running Android build');
+  if (!needsAndroid && !needsIos) return;
 
-  if (androidBuildCommand) {
-    await runPlatformCommand(ctx, androidBuildCommand);
-  } else {
-    const { artifactPath } = await buildAndroid();
-    renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.apk'));
-  }
-};
+  mkdirSync(path.join(ctx.sourceDir, '.chromatic'), { recursive: true });
+  ctx.reactNativeBuildLogFile = path.join(ctx.sourceDir, '.chromatic', 'react-native-build.log');
 
-export const buildReactNativeIos = async (ctx: Context) => {
-  if (!runReactNativeBuildStep(ctx, 'ios')) return;
+  const logStream = await openLogFileStream(ctx.reactNativeBuildLogFile);
 
-  const { iosBuildCommand } = ctx.options.reactNative ?? {};
-  ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
+  try {
+    if (needsAndroid) {
+      transitionTo(pendingAndroid)(ctx, task);
+      const { androidBuildCommand } = ctx.options.reactNative ?? {};
+      ctx.log.debug({ androidBuildCommand }, 'Running Android build');
+      if (androidBuildCommand) {
+        await runPlatformCommand(ctx, 'android', androidBuildCommand, logStream);
+      } else {
+        const { artifactPath } = await buildAndroid(logStream);
+        renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.apk'));
+      }
+    }
 
-  if (iosBuildCommand) {
-    await runPlatformCommand(ctx, iosBuildCommand);
-  } else {
-    const config = await readExpoConfig();
-    const { artifactPath } = await buildIos(config.name);
-    renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.app'));
+    if (needsIos) {
+      transitionTo(pendingIOS)(ctx, task);
+      const { iosBuildCommand } = ctx.options.reactNative ?? {};
+      ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
+      if (iosBuildCommand) {
+        await runPlatformCommand(ctx, 'ios', iosBuildCommand, logStream);
+      } else {
+        const config = await readExpoConfig();
+        const { artifactPath } = await buildIos(config.name, logStream);
+        renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.app'));
+      }
+    }
+  } catch (buildError) {
+    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
+    await new Promise<void>((resolve) => logStream.end(resolve));
+    const tail = await readLastLines(ctx.reactNativeBuildLogFile, MAX_REACT_NATIVE_LOG_LINES);
+    ctx.log.error(reactNativeBuildFailed(ctx, buildError, tail));
+    throw new Error(failed(ctx).output);
+  } finally {
+    logStream.end();
   }
 };
 
@@ -301,16 +343,6 @@ export const generateManifestForReactNative = async (ctx: Context) => {
 
   ctx.log.debug('Generating manifest.json file for React Native build');
   return await generateManifest(ctx);
-};
-
-const maybeTransitionToPendingAndroid = (ctx: Context, task: Task) => {
-  if (!runReactNativeBuildStep(ctx, 'android')) return;
-  transitionTo(pendingAndroid)(ctx, task);
-};
-
-const maybeTransitionToPendingIOS = (ctx: Context, task: Task) => {
-  if (!runReactNativeBuildStep(ctx, 'ios')) return;
-  transitionTo(pendingIOS)(ctx, task);
 };
 
 const maybeTransitionToPendingManifest = (ctx: Context, task: Task) => {
@@ -352,10 +384,7 @@ export default function main(ctx: Context) {
       transitionTo(pending),
       startActivity,
       buildStorybook,
-      maybeTransitionToPendingAndroid,
-      buildReactNativeAndroid,
-      maybeTransitionToPendingIOS,
-      buildReactNativeIos,
+      buildReactNativeArtifacts,
       maybeTransitionToPendingManifest,
       generateManifestForReactNative,
       endActivity,

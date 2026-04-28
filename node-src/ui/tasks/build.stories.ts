@@ -41,6 +41,7 @@ export const BuiltReactNative = () =>
     startedAt: -32_100,
     options: { storybookBuildDir: '/users/me/project/storybook-static' },
     isReactNativeApp: true,
+    reactNativeBuildLogFile: '/users/me/project/storybook-static/.chromatic/react-native-build.log',
   } as any);
 
 export const Skipped = () =>
@@ -76,3 +77,10 @@ export const BuildingIOSWithCommand = () =>
 export const GeneratingManifest = () => pendingManifest();
 
 export const Failed = () => failed({ ...ctx, buildCommand } as any);
+
+export const FailedReactNative = () =>
+  failed({
+    ...ctx,
+    isReactNativeApp: true,
+    reactNativeBuildLogFile: '/path/to/project/storybook-static/.chromatic/react-native-build.log',
+  } as any);

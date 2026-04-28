@@ -1,5 +1,5 @@
 import { execa } from 'execa';
-import { existsSync, mkdtempSync, renameSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, renameSync, rmSync, type WriteStream } from 'fs';
 import os from 'os';
 import path from 'path';
 
@@ -8,12 +8,13 @@ import { sanitizedName } from './expoConfig';
 async function exec(
   command: string,
   args: string[],
-  options: { env?: Record<string, string>; cwd?: string } = {}
+  options: { env?: Record<string, string>; cwd?: string } = {},
+  logStream: WriteStream
 ) {
   return execa(command, args, {
     ...options,
-    stdout: undefined, // 'inherit',
-    stderr: undefined, //'inherit',
+    stdout: logStream,
+    stderr: logStream,
     env: {
       ...options.env,
 
@@ -44,13 +45,18 @@ async function exec(
 /**
  * Build the Android artifact via expo prebuild and gradlew assembleRelease.
  *
+ * @param logStream The WriteStream to write build logs to.
+ *
  * @returns The path to the built APK file and duration in seconds.
  */
-export async function buildAndroid() {
+export async function buildAndroid(logStream: WriteStream) {
   const start = new Date();
 
-  await exec('npx', ['expo', 'prebuild', '--platform', 'android']);
-  await exec('./gradlew', ['assembleRelease'], { cwd: path.resolve('android') });
+  logStream.write('\n[chromatic] Android build: npx expo prebuild --platform android\n');
+  await exec('npx', ['expo', 'prebuild', '--platform', 'android'], {}, logStream);
+
+  logStream.write('\n[chromatic] Android build: ./gradlew assembleRelease\n');
+  await exec('./gradlew', ['assembleRelease'], { cwd: path.resolve('android') }, logStream);
 
   const apkPath = path.resolve('android/app/build/outputs/apk/release/app-release.apk');
 
@@ -65,10 +71,11 @@ export async function buildAndroid() {
  * Build the iOS artifact via expo prebuild and xcodebuild.
  *
  * @param name The app name from the Expo config, used to derive the xcodebuild file names and scheme.
+ * @param logStream The WriteStream to write build logs to.
  *
  * @returns The path to the built .app bundle and duration in seconds.
  */
-export async function buildIos(name: string) {
+export async function buildIos(name: string, logStream: WriteStream) {
   const start = new Date();
 
   if (process.platform !== 'darwin') {
@@ -77,7 +84,8 @@ export async function buildIos(name: string) {
 
   const cleanName = sanitizedName(name);
 
-  await exec('npx', ['expo', 'prebuild', '--platform', 'ios']);
+  logStream.write('\n[chromatic] iOS build: npx expo prebuild --platform ios\n');
+  await exec('npx', ['expo', 'prebuild', '--platform', 'ios'], {}, logStream);
 
   const derivedDataPath = mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-'));
 
@@ -107,8 +115,14 @@ export async function buildIos(name: string) {
     `${cleanName}.app`
   );
 
+  logStream.write(`\n[chromatic] iOS build: xcodebuild ${xcodebuildArguments.join(' ')}\n`);
+
   try {
-    await execa('xcodebuild', xcodebuildArguments, { cwd: path.resolve('ios') });
+    await execa('xcodebuild', xcodebuildArguments, {
+      cwd: path.resolve('ios'),
+      stdout: logStream,
+      stderr: logStream,
+    });
     if (!existsSync(appPath)) {
       throw new Error(`Expected .app bundle not found at ${appPath}`);
     }

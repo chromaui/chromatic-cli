@@ -1,4 +1,5 @@
 import { execa as execaDefault } from 'execa';
+import { type WriteStream } from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildAndroid, buildIos } from './build';
@@ -21,6 +22,8 @@ vi.mock('fs', async (importOriginal) => {
 
 const execa = vi.mocked(execaDefault);
 
+const makeLogStream = () => ({ write: vi.fn(), end: vi.fn() }) as unknown as WriteStream;
+
 beforeEach(() => {
   execa.mockClear();
   execa.mockResolvedValue(undefined as any);
@@ -28,7 +31,8 @@ beforeEach(() => {
 
 describe('buildAndroid', () => {
   it('calls expo prebuild and gradlew with Storybook env vars', async () => {
-    await buildAndroid();
+    const logStream = makeLogStream();
+    await buildAndroid(logStream);
     expect(execa).toHaveBeenCalledWith(
       'npx',
       ['expo', 'prebuild', '--platform', 'android'],
@@ -47,8 +51,19 @@ describe('buildAndroid', () => {
     );
   });
 
+  it('writes command headers to the log stream', async () => {
+    const logStream = makeLogStream();
+    await buildAndroid(logStream);
+    expect(logStream.write).toHaveBeenCalledWith(
+      expect.stringContaining('[chromatic] Android build: npx expo prebuild')
+    );
+    expect(logStream.write).toHaveBeenCalledWith(
+      expect.stringContaining('[chromatic] Android build: ./gradlew assembleRelease')
+    );
+  });
+
   it('returns the APK path and duration on success', async () => {
-    const result = await buildAndroid();
+    const result = await buildAndroid(makeLogStream());
     expect(result.artifactPath).toMatch(/app-release\.apk$/);
     expect(result.duration).toBeGreaterThanOrEqual(0);
   });
@@ -56,7 +71,7 @@ describe('buildAndroid', () => {
   it('throws when the APK is not found after build', async () => {
     const { existsSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValueOnce(false);
-    await expect(buildAndroid()).rejects.toThrow('Expected APK not found at');
+    await expect(buildAndroid(makeLogStream())).rejects.toThrow('Expected APK not found at');
   });
 });
 
@@ -65,7 +80,9 @@ describe('buildIos', () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     try {
-      await expect(buildIos('MyApp')).rejects.toThrow('iOS builds are only supported on macOS.');
+      await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
+        'iOS builds are only supported on macOS.'
+      );
     } finally {
       Object.defineProperty(process, 'platform', {
         value: originalPlatform,
@@ -77,7 +94,8 @@ describe('buildIos', () => {
   it('calls expo prebuild and xcodebuild with correct args on macOS', async () => {
     if (process.platform !== 'darwin') return;
 
-    await buildIos('MyApp');
+    const logStream = makeLogStream();
+    await buildIos('MyApp', logStream);
 
     expect(execa).toHaveBeenCalledWith(
       'npx',
@@ -95,10 +113,23 @@ describe('buildIos', () => {
     );
   });
 
+  it('writes command headers to the log stream on macOS', async () => {
+    if (process.platform !== 'darwin') return;
+
+    const logStream = makeLogStream();
+    await buildIos('MyApp', logStream);
+    expect(logStream.write).toHaveBeenCalledWith(
+      expect.stringContaining('[chromatic] iOS build: npx expo prebuild')
+    );
+    expect(logStream.write).toHaveBeenCalledWith(
+      expect.stringContaining('[chromatic] iOS build: xcodebuild')
+    );
+  });
+
   it('returns the .app path and duration on macOS', async () => {
     if (process.platform !== 'darwin') return;
 
-    const result = await buildIos('MyApp');
+    const result = await buildIos('MyApp', makeLogStream());
     expect(result.artifactPath).toMatch(/MyApp\.app$/);
     expect(result.duration).toBeGreaterThanOrEqual(0);
   });
@@ -108,6 +139,8 @@ describe('buildIos', () => {
 
     const { existsSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValueOnce(false);
-    await expect(buildIos('MyApp')).rejects.toThrow('Expected .app bundle not found at');
+    await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
+      'Expected .app bundle not found at'
+    );
   });
 });
