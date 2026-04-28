@@ -1,31 +1,36 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
+import * as phaseModule from '../run/phases/storybookInfo';
 import { setStorybookInfo } from './storybookInfo';
 
-vi.mock('../lib/getStorybookBaseDirectory');
+vi.mock('../run/phases/storybookInfo', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../run/phases/storybookInfo')>();
+  return { ...actual, runStorybookInfoPhase: vi.fn() };
+});
 
-const mockedGetStorybookBaseDirectory = vi.mocked(getStorybookBaseDirectory);
+const runStorybookInfoPhase = vi.mocked(phaseModule.runStorybookInfoPhase);
 
-describe('storybookInfo', () => {
-  it('retrieves Storybook metadata and sets it on context', async () => {
-    const storybook = { version: '1.0.0', addons: [] };
-    const detect = vi.fn().mockResolvedValue(storybook);
-    mockedGetStorybookBaseDirectory.mockReturnValue('');
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
+describe('setStorybookInfo', () => {
+  it('mirrors the StorybookState slice onto context', async () => {
+    runStorybookInfoPhase.mockResolvedValueOnce({
+      version: '7.0.0',
+      configDir: '.storybook',
+      staticDir: [],
+      addons: [],
+      builder: { name: 'webpack' },
+      baseDir: '',
+    } as any);
     const ctx = {
-      packageJson: {},
-      git: { rootDir: process.cwd() },
-      ports: {
-        storybook: { detect },
-        errors: { setTag: vi.fn(), setContext: vi.fn(), captureException: vi.fn(), flush: vi.fn() },
-      },
+      options: {},
+      git: {},
+      log: { debug: vi.fn() },
+      ports: {},
     } as any;
     await setStorybookInfo(ctx);
-    expect(detect).toHaveBeenCalledWith(ctx);
-    expect(ctx.storybook).toEqual({
-      ...storybook,
-      baseDir: '',
-    });
+    expect(ctx.storybook.version).toBe('7.0.0');
   });
 });

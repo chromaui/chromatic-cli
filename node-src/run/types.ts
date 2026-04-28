@@ -177,6 +177,13 @@ export interface TurboSnapState {
 }
 
 /**
+ * Output of the `storybookInfo` phase: the detected Storybook configuration
+ * the orchestrator and downstream phases consume. Backed by Context's
+ * canonical `storybook` shape so existing readers keep working unchanged.
+ */
+export type StorybookState = Context['storybook'];
+
+/**
  * Output of the `auth` phase: the resolved API token plus optional
  * user/account identifiers per RFC. The phase also installs the token on
  * `ports.chromatic` so downstream phases can issue authorized requests.
