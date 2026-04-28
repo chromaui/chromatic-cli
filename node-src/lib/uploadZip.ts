@@ -44,6 +44,7 @@ export async function uploadZip(
 
       const result = await ctx.http.fetch(
         formAction,
+        // @ts-expect-error -  TS is not correctly resolving FormData in the types, but it is supported.
         { body: formData, method: 'POST', signal },
         { retries: 0 } // already retrying the whole operation
       );

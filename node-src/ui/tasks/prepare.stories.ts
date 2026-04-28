@@ -4,6 +4,7 @@ import {
   hashing,
   initial,
   invalid,
+  invalidAndroidArtifact,
   invalidReactNative,
   success,
   traced,
@@ -34,6 +35,8 @@ const reactNativeContext = {
   sourceDir: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-20036LMP9FAlLEjpu',
   buildLogFile: '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log',
 };
+
+export const InvalidAndroidArtifact = () => invalidAndroidArtifact(ctx);
 
 export const InvalidReactNativeAndroidMissing = () =>
   invalidReactNative(reactNativeContext as any, ['storybook.apk']);

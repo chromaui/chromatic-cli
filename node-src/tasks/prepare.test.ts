@@ -1,10 +1,17 @@
 import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
+import AdmZip from 'adm-zip';
 import { access, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { calculateFileHashes, traceChangedFiles, validateFiles } from './prepare';
+import {
+  calculateFileHashes,
+  traceChangedFiles,
+  validateAndroidArtifact,
+  validateFiles,
+} from './prepare';
 
+vi.mock('adm-zip', () => ({ default: vi.fn() }));
 vi.mock('fs');
 vi.mock('@cli/turbosnap');
 vi.mock('./readStatsFile', () => ({
@@ -24,6 +31,7 @@ vi.mock('../lib/getFileHashes', () => ({
     Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
 }));
 
+const AdmZipMock = vi.mocked(AdmZip);
 const traceChangedFilesTurbosnap = vi.mocked(traceChangedFilesDep);
 const accessMock = vi.mocked(access);
 const readdirSyncMock = vi.mocked(readdirSync);
@@ -326,6 +334,59 @@ Invalid React Native Storybook build in directory /static`
         );
       });
     });
+  });
+});
+
+const makeContext = (browsers: string[]) =>
+  ({
+    env: environment,
+    log,
+    http,
+    sourceDir: '/static/',
+    announcedBuild: { browsers },
+  }) as any;
+
+const mockEntries = (entryNames: string[]) => {
+  const entries = entryNames.map((entryName) => ({ entryName }));
+  AdmZipMock.mockImplementation(function (this: { getEntries: () => typeof entries }) {
+    this.getEntries = () => entries;
+  } as any);
+};
+
+describe('validateAndroidArtifact', () => {
+  it('skips when android is not in browsers', async () => {
+    const ctx = makeContext(['ios']);
+    await expect(validateAndroidArtifact(ctx)).resolves.toBeUndefined();
+    expect(AdmZipMock).not.toHaveBeenCalled();
+  });
+
+  it('passes when APK has no lib/ entries', async () => {
+    mockEntries(['AndroidManifest.xml', 'classes.dex']);
+    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
+  });
+
+  it('passes when APK has only lib/x86_64/ entries', async () => {
+    mockEntries(['lib/x86_64/libnative.so']);
+    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
+  });
+
+  it('passes when APK has lib/x86_64/ alongside other ABIs', async () => {
+    mockEntries(['lib/x86_64/libnative.so', 'lib/arm64-v8a/libnative.so']);
+    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
+  });
+
+  it('throws when APK has only ARM ABI entries', async () => {
+    mockEntries(['lib/armeabi-v7a/libnative.so']);
+    await expect(validateAndroidArtifact(makeContext(['android']))).rejects.toThrow(
+      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
+    );
+  });
+
+  it('throws when APK has multiple ARM ABIs but no x86_64', async () => {
+    mockEntries(['lib/armeabi-v7a/libnative.so', 'lib/arm64-v8a/libnative.so']);
+    await expect(validateAndroidArtifact(makeContext(['android']))).rejects.toThrow(
+      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
+    );
   });
 });
 
