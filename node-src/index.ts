@@ -167,13 +167,18 @@ function projectOutput(result: RunResult): Partial<Output> {
 }
 
 /**
- * Entry point for testing only (typically invoked via `run` above)
+ * Drives the legacy task pipeline against a pre-built `Context`. Owned by the
+ * `ChromaticRun` orchestrator and exposed only so the deprecated
+ * {@link runAll} shim can delegate here. External callers must use
+ * `ChromaticRun.execute()` instead.
  *
  * @param ctx The context set when executing the CLI.
  *
  * @returns A promise that resolves when all steps are completed.
+ *
+ * @internal
  */
-export async function runAll(ctx: InitialContext) {
+export async function runPipeline(ctx: InitialContext) {
   ctx.log.info('');
   ctx.log.info(intro(ctx));
   ctx.log.info('');
@@ -232,6 +237,21 @@ export async function runAll(ctx: InitialContext) {
   if (ctx.options.uploadMetadata) {
     await uploadMetadataFiles(ctx);
   }
+}
+
+/**
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A promise that resolves when all steps are completed.
+ *
+ * @deprecated Use {@link ChromaticRun} and consume the returned
+ * {@link RunResult} instead. This export is a thin shim around the same
+ * internal pipeline that `ChromaticRun.execute()` runs, preserved so that
+ * external consumers and the in-tree test suite that hand-build a `Context`
+ * keep working. Will be removed in a future major version.
+ */
+export async function runAll(ctx: InitialContext) {
+  return runPipeline(ctx);
 }
 
 // TODO: refactor this function

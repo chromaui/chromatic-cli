@@ -5,11 +5,11 @@ import { Context } from '../types';
 import { ChromaticRun } from './chromaticRun';
 import { ChromaticConfig, RunEvent } from './types';
 
-const { runAllMock } = vi.hoisted(() => ({ runAllMock: vi.fn() }));
+const { runPipelineMock } = vi.hoisted(() => ({ runPipelineMock: vi.fn() }));
 
 vi.mock('..', async () => {
   const actual = await vi.importActual<typeof import('..')>('..');
-  return { ...actual, runAll: runAllMock };
+  return { ...actual, runPipeline: runPipelineMock };
 });
 
 vi.mock('read-package-up', () => ({
@@ -30,8 +30,8 @@ function makeConfig(overrides: Partial<ChromaticConfig> = {}): ChromaticConfig {
 }
 
 function primeRunAllPipeline(extra?: (context: Context) => void) {
-  runAllMock.mockReset();
-  runAllMock.mockImplementation(async (context: Context) => {
+  runPipelineMock.mockReset();
+  runPipelineMock.mockImplementation(async (context: Context) => {
     context.exitCode = 0;
     context.exitCodeKey = 'OK';
     extra?.(context);
@@ -71,8 +71,8 @@ describe('ChromaticRun', () => {
     const run = new ChromaticRun({ config: makeConfig() });
     const result = await run.execute();
 
-    expect(runAllMock).toHaveBeenCalledOnce();
-    const [contextArgument] = runAllMock.mock.calls[0];
+    expect(runPipelineMock).toHaveBeenCalledOnce();
+    const [contextArgument] = runPipelineMock.mock.calls[0];
     expect(contextArgument.sessionId).toBe('session-1');
     expect(contextArgument.packagePath).toBe('/repo/package.json');
     expect(contextArgument.packageJson).toEqual({ name: 'demo', version: '1.2.3' });
@@ -101,7 +101,7 @@ describe('ChromaticRun', () => {
     });
     await run.execute();
 
-    const [contextArgument] = runAllMock.mock.calls[0];
+    const [contextArgument] = runPipelineMock.mock.calls[0];
     expect(contextArgument.flags.projectToken).toEqual(['abc']);
     expect(contextArgument.argv).toEqual(['--project-token=abc']);
   });
@@ -119,7 +119,7 @@ describe('ChromaticRun', () => {
     });
     await run.execute();
 
-    const [contextArgument] = runAllMock.mock.calls[0];
+    const [contextArgument] = runPipelineMock.mock.calls[0];
     expect(contextArgument.flags.dryRun).toBe(true);
     expect(contextArgument.flags.projectToken).toEqual(['from-action']);
     expect(contextArgument.extraOptions.inAction).toBe(true);
@@ -196,7 +196,7 @@ describe('ChromaticRun', () => {
     });
     await run.execute();
 
-    expect(runAllMock.mock.calls[0][0].ports.clock).toBe(fakeClock);
+    expect(runPipelineMock.mock.calls[0][0].ports.clock).toBe(fakeClock);
   });
 
   it('forwards an AbortSignal to extraOptions', async () => {
@@ -206,7 +206,7 @@ describe('ChromaticRun', () => {
     const run = new ChromaticRun({ config: makeConfig() });
     await run.execute(controller.signal);
 
-    expect(runAllMock.mock.calls[0][0].extraOptions.experimental_abortSignal).toBe(
+    expect(runPipelineMock.mock.calls[0][0].extraOptions.experimental_abortSignal).toBe(
       controller.signal
     );
   });

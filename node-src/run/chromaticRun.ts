@@ -1,7 +1,7 @@
 import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
 
-import { runAll } from '..';
+import { runPipeline } from '..';
 import getEnvironment from '../lib/getEnvironment';
 import { createLogger } from '../lib/log';
 import parseArguments from '../lib/parseArguments';
@@ -42,7 +42,7 @@ export class ChromaticRun {
   async execute(signal?: AbortSignal): Promise<RunResult> {
     this.startWallClock = Date.now();
     this.context = await this.buildContext(signal);
-    await runAll(this.context);
+    await runPipeline(this.context);
     return this.toResult(this.context);
   }
 
