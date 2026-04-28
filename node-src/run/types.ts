@@ -95,6 +95,8 @@ export interface GitState {
   parentCommits?: string[];
   baselineCommits?: string[];
   changedFiles?: string[];
+  /** Populated by the dependency tracer when packageMetadataChanges drive a rebuild scope. */
+  changedDependencyNames?: string[];
   replacementBuildIds?: [string, string][];
   /**
    * Branch glob matcher for resolving boolean/string flags (`--skip`,
@@ -172,4 +174,14 @@ export interface PreparedState {
 export interface TurboSnapState {
   turboSnap?: TurboSnap;
   mergeBase?: string;
+}
+
+/**
+ * Output of the `initialize` phase: the announced build returned by the
+ * Chromatic API plus the resolved onboarding flag. Consumed by every
+ * downstream phase that mentions `ctx.announcedBuild` today.
+ */
+export interface AnnouncedState {
+  announcedBuild: Context['announcedBuild'];
+  isOnboarding: boolean;
 }
