@@ -185,3 +185,20 @@ export interface AnnouncedState {
   announcedBuild: Context['announcedBuild'];
   isOnboarding: boolean;
 }
+
+/**
+ * Output of the `verify` phase: the verified build, the published Storybook
+ * URL, and whether the run should skip the snapshot phase (publish-only,
+ * `--list`, or `--exit-once-uploaded` for the matching branch).
+ */
+export interface VerifiedState {
+  build: Context['build'];
+  /**
+   * The announced build merged with the publish-mutation response. Carried
+   * forward so downstream phases keep reading the post-publish version.
+   */
+  announcedBuild: Context['announcedBuild'];
+  storybookUrl: string;
+  skipSnapshots?: boolean;
+  isPublishOnly?: boolean;
+}

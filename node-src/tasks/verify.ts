@@ -1,158 +1,41 @@
-import { exitCodes, setExitCode } from '../lib/setExitCode';
+import { setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
+import { runVerifyPhase, VerifyPhaseError } from '../run/phases/verify';
 import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
-import brokenStorybook from '../ui/messages/errors/brokenStorybook';
-import listingStories from '../ui/messages/info/listingStories';
-import storybookPublished from '../ui/messages/info/storybookPublished';
-import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
-import buildLimited from '../ui/messages/warnings/buildLimited';
-import paymentRequired from '../ui/messages/warnings/paymentRequired';
-import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import turboSnapUnavailable from '../ui/messages/warnings/turboSnapUnavailable';
-import {
-  awaitingUpgrades,
-  dryRun,
-  initial,
-  pending,
-  publishFailed,
-  runOnlyFiles,
-  runOnlyNames,
-  success,
-} from '../ui/tasks/verify';
+import { dryRun, initial, pending, success } from '../ui/tasks/verify';
 
-export const publishBuild = async (ctx: Context) => {
-  const { turboSnap } = ctx;
-  const { id, reportToken } = ctx.announcedBuild;
-  const { replacementBuildIds } = ctx.git;
-  const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
+export const verify = async (ctx: Context, task: Task) => {
+  if (ctx.skip) return;
+  try {
+    const result = await runVerifyPhase({
+      options: ctx.options,
+      env: ctx.env,
+      git: ctx.git,
+      storybook: ctx.storybook,
+      announcedBuild: ctx.announcedBuild,
+      turboSnap: ctx.turboSnap,
+      onlyStoryFiles: ctx.onlyStoryFiles,
+      log: ctx.log,
+      ports: ctx.ports,
+    });
 
-  let turboSnapBailReason;
-  let turboSnapStatus = 'UNUSED';
-  if (turboSnap) {
-    turboSnapBailReason = turboSnap.bailReason;
-    turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
-  }
-
-  const publishedBuild = await ctx.ports.chromatic.publishBuild(
-    {
-      id,
-      input: {
-        ...(onlyStoryFiles && { onlyStoryFiles }),
-        ...(onlyStoryNames && { onlyStoryNames: [onlyStoryNames].flat() }),
-        ...(replacementBuildIds && { replacementBuildIds }),
-        // GraphQL does not support union input types (yet), so we send an object
-        // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnapBailReason && { turboSnapBailReason }),
-        turboSnapStatus,
-      },
-    },
-    { reportToken }
-  );
-
-  ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
-  ctx.storybookUrl = publishedBuild.storybookUrl;
-
-  // Queueing the extract may have failed
-  if (publishedBuild.status === 'FAILED') {
-    setExitCode(ctx, exitCodes.BUILD_FAILED, false);
-    throw new Error(publishFailed(ctx).output);
-  }
-};
-
-// TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
-export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { list, onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
-  const { matchesBranch } = ctx.git;
-
-  // It's not possible to set both --only-changed and --only-story-files and/or --only-story-names
-  // onlyStoryFiles may be passed directly, or calculated via --only-changed
-  if (onlyStoryFiles) {
-    transitionTo(runOnlyFiles)(ctx, task);
-  }
-  if (onlyStoryNames) {
-    transitionTo(runOnlyNames)(ctx, task);
-  }
-
-  let timeoutStart = ctx.ports.clock.now();
-  const waitForBuildToStart = async () => {
-    const { storybookUrl } = ctx;
-    const { number, reportToken } = ctx.announcedBuild;
-
-    const build = await ctx.ports.chromatic.getStartedBuild({ number }, { reportToken });
-
-    if (build.failureReason) {
-      ctx.log.warn(brokenStorybook(ctx, { failureReason: build.failureReason, storybookUrl }));
-      setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
-      throw new Error(publishFailed(ctx).output);
+    // Compatibility copy: downstream phases still read these via `ctx.*`.
+    ctx.announcedBuild = result.announcedBuild;
+    ctx.build = result.build;
+    ctx.storybookUrl = result.storybookUrl;
+    ctx.isPublishOnly = result.isPublishOnly;
+    if (result.skipSnapshots) ctx.skipSnapshots = true;
+    if (result.exitCodeIntent) {
+      setExitCode(ctx, result.exitCodeIntent.exitCode, result.exitCodeIntent.userError);
     }
 
-    if (!build.startedAt) {
-      // Upgrade builds can take a long time to complete, so we can't apply a hard timeout yet,
-      // instead we only timeout on the actual build verification, after upgrades are complete.
-      if (build.upgradeBuilds?.some((upgrade) => !upgrade.completedAt)) {
-        ctx.ports.ui.taskUpdate({ output: awaitingUpgrades(ctx, build.upgradeBuilds).output });
-        timeoutStart = ctx.ports.clock.now() + ctx.env.CHROMATIC_POLL_INTERVAL;
-      } else if (ctx.ports.clock.since(timeoutStart) > ctx.env.STORYBOOK_VERIFY_TIMEOUT) {
-        setExitCode(ctx, exitCodes.VERIFICATION_TIMEOUT);
-        throw new Error('Build verification timed out');
-      }
-
-      await ctx.ports.clock.sleep(ctx.env.CHROMATIC_POLL_INTERVAL);
-      await waitForBuildToStart();
-      return;
+    transitionTo(success, true)(ctx, task);
+  } catch (error) {
+    if (error instanceof VerifyPhaseError) {
+      setExitCode(ctx, error.exitCode, error.userError);
     }
-
-    const startedBuild = await ctx.ports.chromatic.verifyBuild({ number }, { reportToken });
-    ctx.build = { ...ctx.announcedBuild, ...ctx.build, ...startedBuild } as Context['build'];
-  };
-
-  await Promise.race([
-    waitForBuildToStart(),
-    ctx.ports.clock.sleep(ctx.env.CHROMATIC_UPGRADE_TIMEOUT).then(() => {
-      throw new Error('Timed out waiting for upgrade builds to complete');
-    }),
-  ]);
-
-  ctx.isPublishOnly = !ctx.build.features?.uiReview && !ctx.build.features?.uiTests;
-
-  if (list && ctx.build.tests) {
-    ctx.log.info(listingStories(ctx.build.tests));
-  }
-
-  if (ctx.turboSnap) {
-    if (ctx.turboSnap.unavailable) {
-      ctx.log.warn(turboSnapUnavailable(ctx));
-    } else if (ctx.build.turboSnapEnabled) {
-      ctx.log.info(turboSnapEnabled(ctx));
-    }
-  }
-
-  if (ctx.build.wasLimited) {
-    const { account } = ctx.build.app;
-    if (account?.exceededThreshold) {
-      ctx.log.warn(snapshotQuotaReached(account));
-      setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
-    } else if (account?.paymentRequired) {
-      ctx.log.warn(paymentRequired(account));
-      setExitCode(ctx, exitCodes.ACCOUNT_PAYMENT_REQUIRED, true);
-    } else {
-      // Future proofing for reasons we aren't aware of
-      if (account) ctx.log.warn(buildLimited(account));
-      setExitCode(ctx, exitCodes.BUILD_WAS_LIMITED, true);
-    }
-  }
-
-  if (ctx.build && ctx.storybookUrl) {
-    ctx.log.info(storybookPublished(ctx));
-  }
-
-  transitionTo(success, true)(ctx, task);
-
-  if (list || ctx.isPublishOnly || matchesBranch?.(ctx.options.exitOnceUploaded)) {
-    setExitCode(ctx, exitCodes.OK);
-    ctx.skipSnapshots = true;
+    throw error;
   }
 };
 
@@ -172,6 +55,6 @@ export default function main(ctx: Context) {
       if (ctx.options.dryRun) return dryRun(ctx).output;
       return false;
     },
-    steps: [transitionTo(pending), startActivity, publishBuild, verifyBuild, endActivity],
+    steps: [transitionTo(pending), startActivity, verify, endActivity],
   });
 }
