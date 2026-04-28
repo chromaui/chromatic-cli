@@ -29,7 +29,7 @@ export interface BuildRunnerResult {
 /**
  * Boundary over the Storybook build subprocess. The domain decides *what* to
  * build (command string, output directory, environment); this port handles
- * *how* to invoke it (subprocess lifecycle, log streaming, abort, timeout).
+ * how* to invoke it (subprocess lifecycle, log streaming, abort, timeout).
  */
 export interface BuildRunner {
   /** Run the build and resolve once it exits successfully; rejects on non-zero exit, abort, or timeout. */

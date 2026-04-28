@@ -1,4 +1,4 @@
-import type { Context, Options, TaskName } from '../types';
+import type { Context, Options, TaskName, TurboSnap } from '../types';
 
 /**
  * Resolved configuration consumed by {@link ChromaticRun}. For now this is a
@@ -126,4 +126,50 @@ export interface BuildArtifactsState {
   buildCommand?: string;
   /** Absolute path to the build log file, when one was requested. */
   buildLogFile?: string;
+}
+
+/** Path/length pair plus its slash-normalized "knownAs" key, computed during preparation. */
+export interface FileLength {
+  pathname: string;
+  knownAs: string;
+  contentLength: number;
+}
+
+/**
+ * Enumerated file inventory produced by the prepare phase. Consumed by
+ * `upload` (to build the per-file descriptor list) and by metadata serializers.
+ */
+export interface PreparedFileInfo {
+  paths: string[];
+  hashes?: Record<string, string>;
+  statsPath: string;
+  lengths: FileLength[];
+  total: number;
+}
+
+/**
+ * Output of the prepare phase: the validated source directory and the
+ * enumerated file inventory, plus optional turbosnap-derived narrowing.
+ */
+export interface PreparedState {
+  /**
+   * Effective source directory. May differ from the input
+   * {@link BuildArtifactsState.sourceDir} when validation re-resolves it from
+   * the `Output directory:` line of the build log.
+   */
+  sourceDir: string;
+  fileInfo: PreparedFileInfo;
+  /** Subset of stories the run should snapshot, when turbosnap traced cleanly. */
+  onlyStoryFiles?: string[];
+  /** Files the dependency tracer could not resolve back to a known module. */
+  untracedFiles?: string[];
+}
+
+/**
+ * TurboSnap and patch-build state. The prepare phase populates `turboSnap`;
+ * `mergeBase` is set later by the workspace phase for patch builds.
+ */
+export interface TurboSnapState {
+  turboSnap?: TurboSnap;
+  mergeBase?: string;
 }
