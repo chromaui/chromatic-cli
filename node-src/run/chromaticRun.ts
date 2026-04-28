@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { runAll } from '..';
 import getEnvironment from '../lib/getEnvironment';
 import { createLogger } from '../lib/log';
+import parseArguments from '../lib/parseArguments';
 import { createDefaultPorts, Ports } from '../lib/ports';
 import { Context } from '../types';
 import noPackageJson from '../ui/messages/errors/noPackageJson';
@@ -18,8 +19,8 @@ interface ChromaticRunInput {
 /**
  * Public entry point for executing a Chromatic build. Wraps the existing
  * task pipeline with a stable surface (`execute`/`state` + typed
- * {@link RunResult}/{@link RunEvent}) so that phase code can be migrated off
- * the shared mutable Context one phase at a time.
+ * {@link RunResult}/{@link RunEvent}) so phase code can be migrated off the
+ * shared mutable Context one phase at a time.
  *
  * For now this delegates to `runAll`; over subsequent issues phases will be
  * ported to typed state slices and the class will own orchestration directly.
@@ -52,27 +53,35 @@ export class ChromaticRun {
     return Object.freeze({ ...this.context }) as RunState;
   }
 
+  // eslint-disable-next-line complexity
   private async buildContext(signal?: AbortSignal): Promise<Context> {
-    const sessionId = this.config.sessionId ?? uuid();
-    const environment = this.config.env ?? getEnvironment();
-    const log = this.config.log ?? createLogger({}, this.config);
+    const argv = this.config.argv ?? [];
+    const parsed = parseArguments(argv);
+    const flags = this.config.flags ?? parsed.flags;
+    const extraOptions = this.config.extraOptions;
+
+    const sessionId = extraOptions?.sessionId ?? uuid();
+    const environment = extraOptions?.env ?? getEnvironment();
+    const log = extraOptions?.log ?? createLogger(flags, extraOptions);
 
     const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
     if (!packageInfo) {
       throw new Error(noPackageJson());
     }
 
-    const extraOptions = {
-      ...this.config,
+    const wrappedExtraOptions = {
+      ...extraOptions,
       ...(signal && { experimental_abortSignal: signal }),
-      experimental_onTaskStart: this.wrapStart(this.config.experimental_onTaskStart),
-      experimental_onTaskComplete: this.wrapComplete(this.config.experimental_onTaskComplete),
+      experimental_onTaskStart: this.wrapStart(extraOptions?.experimental_onTaskStart),
+      experimental_onTaskComplete: this.wrapComplete(extraOptions?.experimental_onTaskComplete),
     };
 
     const context: Partial<Context> & { ports?: Ports } = {
-      argv: [],
-      flags: {},
-      extraOptions,
+      argv: parsed.argv,
+      flags,
+      help: parsed.help,
+      pkg: parsed.pkg as Context['pkg'],
+      extraOptions: wrappedExtraOptions,
       packagePath: packageInfo.path,
       packageJson: packageInfo.packageJson,
       env: environment,

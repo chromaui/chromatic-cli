@@ -1,12 +1,17 @@
-import type { Context, Options, TaskName, TurboSnap } from '../types';
+import type { Context, Flags, Options, TaskName, TurboSnap } from '../types';
 
 /**
- * Resolved configuration consumed by {@link ChromaticRun}. For now this is a
- * direct alias over the historical resolved {@link Options} shape produced by
- * `getOptions`. A later refactor will tighten this to an explicit named-field
- * type with no `extraOptions` escape hatch.
+ * Resolved configuration consumed by {@link ChromaticRun}. Mirrors today's
+ * `run()` argument shape: the raw process arguments to parse, an optional
+ * pre-built `flags` override (used by the GitHub Action and programmatic
+ * callers), and a legacy `extraOptions` escape hatch. A later refactor will
+ * tighten this into a single immutable named-field type with no escape hatch.
  */
-export type ChromaticConfig = Options;
+export interface ChromaticConfig {
+  argv?: string[];
+  flags?: Flags;
+  extraOptions?: Partial<Options>;
+}
 
 /** Phase identifiers emitted on {@link RunEvent | RunEvents}. */
 export type PhaseName = TaskName;

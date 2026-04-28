@@ -2,7 +2,7 @@ import '../node-src/errorMonitoring';
 
 import * as Sentry from '@sentry/node';
 
-import { run } from '../node-src';
+import { ChromaticRun } from '../node-src/run/chromaticRun';
 
 /**
  * The main entrypoint for the CLI.
@@ -11,8 +11,8 @@ import { run } from '../node-src';
  */
 export async function main(argv: string[]) {
   try {
-    const { code } = await run({ argv });
-    process.exitCode = code;
+    const result = await new ChromaticRun({ config: { argv } }).execute();
+    process.exitCode = result.exitCode;
   } catch (err) {
     Sentry.captureException(err);
   } finally {

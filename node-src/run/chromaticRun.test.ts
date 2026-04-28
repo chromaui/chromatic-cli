@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { Context } from '../types';
+import { Context, Options } from '../types';
 import { ChromaticRun } from './chromaticRun';
 import { ChromaticConfig, RunEvent } from './types';
 
@@ -21,12 +21,14 @@ vi.mock('read-package-up', () => ({
 
 const log = new TestLogger();
 
-function makeConfig(overrides: Partial<ChromaticConfig> = {}): ChromaticConfig {
+function makeConfig(extraOverrides: Partial<Options> = {}): ChromaticConfig {
   return {
-    log,
-    sessionId: 'session-1',
-    ...overrides,
-  } as unknown as ChromaticConfig;
+    extraOptions: {
+      sessionId: 'session-1',
+      log,
+      ...extraOverrides,
+    } as Partial<Options>,
+  };
 }
 
 function primeRunAllPipeline(extra?: (context: Context) => void) {
@@ -78,6 +80,8 @@ describe('ChromaticRun', () => {
     expect(contextArgument.packageJson).toEqual({ name: 'demo', version: '1.2.3' });
     expect(contextArgument.ports).toBeDefined();
     expect(contextArgument.ports.git).toBeDefined();
+    expect(contextArgument.argv).toEqual([]);
+    expect(contextArgument.flags).toBeDefined();
     expect(contextArgument.extraOptions.experimental_onTaskStart).toBeTypeOf('function');
     expect(contextArgument.extraOptions.experimental_onTaskComplete).toBeTypeOf('function');
 
@@ -89,6 +93,36 @@ describe('ChromaticRun', () => {
     expect(result.warnings).toEqual([]);
     expect(result.diagnostics.sessionId).toBe('session-1');
     expect(result.diagnostics.phasesRun).toEqual([]);
+  });
+
+  it('parses argv into flags when no flags override is supplied', async () => {
+    primeRunAllPipeline();
+
+    const run = new ChromaticRun({
+      config: { argv: ['--project-token=abc'], extraOptions: { sessionId: 's', log } },
+    });
+    await run.execute();
+
+    const [contextArgument] = runAllMock.mock.calls[0];
+    expect(contextArgument.flags.projectToken).toEqual(['abc']);
+    expect(contextArgument.argv).toEqual(['--project-token=abc']);
+  });
+
+  it('uses an explicit flags override (action-src path) without re-parsing argv', async () => {
+    primeRunAllPipeline();
+
+    const run = new ChromaticRun({
+      config: {
+        flags: { dryRun: true, projectToken: ['from-action'] },
+        extraOptions: { inAction: true, sessionId: 's', log },
+      },
+    });
+    await run.execute();
+
+    const [contextArgument] = runAllMock.mock.calls[0];
+    expect(contextArgument.flags.dryRun).toBe(true);
+    expect(contextArgument.flags.projectToken).toEqual(['from-action']);
+    expect(contextArgument.extraOptions.inAction).toBe(true);
   });
 
   it('exposes a frozen state snapshot after execute()', async () => {
