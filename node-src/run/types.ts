@@ -187,6 +187,16 @@ export interface AnnouncedState {
 }
 
 /**
+ * Output of the `upload` phase: the totals reported back to the caller and
+ * the sentinel URLs the verify phase (or external consumers) wait on.
+ */
+export interface UploadedState {
+  uploadedBytes: number;
+  uploadedFiles: number;
+  sentinelUrls: string[];
+}
+
+/**
  * Output of the `verify` phase: the verified build, the published Storybook
  * URL, and whether the run should skip the snapshot phase (publish-only,
  * `--list`, or `--exit-once-uploaded` for the matching branch).
