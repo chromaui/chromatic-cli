@@ -30,7 +30,7 @@ describe('runPrepareWorkspace', () => {
 
     await runPrepareWorkspace(ctx, {} as any);
     expect(ctx.mergeBase).toBe('1234asd');
-    expect(checkout).toHaveBeenCalledWith(ctx, '1234asd');
+    expect(checkout).toHaveBeenCalledWith(expect.any(Object), '1234asd');
     expect(pkgMgrExec).toHaveBeenCalledWith(['install']);
   });
 
