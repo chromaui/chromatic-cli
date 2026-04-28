@@ -1,32 +1,27 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import * as phaseModule from '../run/phases/auth';
 import { setAuthorizationToken } from './auth';
 
+vi.mock('../run/phases/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../run/phases/auth')>();
+  return { ...actual, runAuthPhase: vi.fn() };
+});
+
+const runAuthPhase = vi.mocked(phaseModule.runAuthPhase);
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('setAuthorizationToken', () => {
-  it('updates the ChromaticApi with an app token from the index', async () => {
-    const chromatic = {
-      createAppToken: vi.fn().mockResolvedValue('app-token'),
-      setAuthorization: vi.fn(),
-    };
-
+  it('delegates to runAuthPhase', async () => {
+    runAuthPhase.mockResolvedValueOnce({ token: 'a' });
     await setAuthorizationToken({
-      ports: { chromatic },
-      options: { projectToken: 'test' },
+      options: { projectToken: 'tok' },
+      log: { debug: vi.fn() },
+      ports: {},
     } as any);
-    expect(chromatic.setAuthorization).toHaveBeenCalledWith('app-token');
-  });
-
-  it('supports projectId + userToken', async () => {
-    const chromatic = {
-      createCliToken: vi.fn().mockResolvedValue('cli-token'),
-      setAuthorization: vi.fn(),
-    };
-
-    await setAuthorizationToken({
-      ports: { chromatic },
-      env: { CHROMATIC_INDEX_URL: 'https://index.chromatic.com' },
-      options: { projectId: 'Project:abc123', userToken: 'user-token' },
-    } as any);
-    expect(chromatic.setAuthorization).toHaveBeenCalledWith('cli-token');
+    expect(runAuthPhase).toHaveBeenCalled();
   });
 });

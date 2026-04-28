@@ -177,6 +177,17 @@ export interface TurboSnapState {
 }
 
 /**
+ * Output of the `auth` phase: the resolved API token plus optional
+ * user/account identifiers per RFC. The phase also installs the token on
+ * `ports.chromatic` so downstream phases can issue authorized requests.
+ */
+export interface AuthState {
+  token: string;
+  userId?: string;
+  accountId?: string;
+}
+
+/**
  * Output of the `initialize` phase: the announced build returned by the
  * Chromatic API plus the resolved onboarding flag. Consumed by every
  * downstream phase that mentions `ctx.announcedBuild` today.
