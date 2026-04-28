@@ -59,6 +59,12 @@ interface Output {
 
 export type { Configuration, Context, Flags, Options, TaskName } from './types';
 
+/**
+ * @deprecated Pre-`getOptions` view of {@link Context}. Lives on for the
+ * legacy {@link runAll} entry point and tests that hand-build a context;
+ * `ChromaticRun` constructs the resolved Context internally so external
+ * callers do not need this type. Will be removed in a future major version.
+ */
 export type InitialContext = Omit<
   AtLeast<
     Context,

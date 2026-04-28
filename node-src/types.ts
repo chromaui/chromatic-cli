@@ -189,6 +189,15 @@ export type TaskName =
   | 'prepareWorkspace'
   | 'restoreWorkspace';
 
+/**
+ * @deprecated The shared mutable context object is being retired in favor of
+ * typed phase state slices and the `ChromaticRun` public surface (see
+ * `node-src/run/chromaticRun.ts`). Existing in-tree callers and a few external
+ * consumers still rely on this shape, so the type stays exported until a major
+ * version bump cuts it. New code should consume per-phase input/output slice
+ * types from `node-src/run/types.ts` (`GitState`, `BuildArtifactsState`, etc.)
+ * and read the public {@link RunResult} returned by `ChromaticRun.execute()`.
+ */
 export interface Context {
   env: Environment;
   log: Logger;
