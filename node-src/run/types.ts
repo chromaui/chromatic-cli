@@ -113,3 +113,17 @@ export interface ProjectMetadata {
   numberOfCommitters?: number;
   numberOfAppFiles?: number;
 }
+
+/**
+ * Output of the build phase: the artifacts directory plus the resolved
+ * command line and (optional) build log file. Consumed by `prepare` and
+ * `upload` phases.
+ */
+export interface BuildArtifactsState {
+  /** Directory containing the built Storybook output. */
+  sourceDir: string;
+  /** Resolved build command actually executed (undefined for prebuilt RN). */
+  buildCommand?: string;
+  /** Absolute path to the build log file, when one was requested. */
+  buildLogFile?: string;
+}

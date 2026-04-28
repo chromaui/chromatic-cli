@@ -1,613 +1,113 @@
-/* eslint-disable max-lines */
-import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
-import { AnalyticsEvent } from '@cli/analytics/events';
-import { exitCodes } from '@cli/setExitCode';
-import { execa as execaDefault, parseCommandString } from 'execa';
-import { PassThrough } from 'stream';
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createShellBuildRunner } from '../lib/ports/buildRunnerShellAdapter';
-import { createRealPackageManager } from '../lib/ports/packageManagerRealAdapter';
-import { createExecaProcessRunner } from '../lib/ports/processRunnerExecaAdapter';
-import { generateManifest } from '../lib/react-native/generateManifest';
-import TestLogger from '../lib/testLogger';
-import { patchModulePath } from '../lib/testUtilities';
-import buildTask, {
-  buildStorybook,
-  generateManifestForReactNative,
-  setBuildCommand,
-  setSourceDirectory,
-} from './build';
+import { exitCodes } from '../lib/setExitCode';
+import * as phaseModule from '../run/phases/build';
+import { BuildPhaseError } from '../run/phases/build';
+import buildTask, { generateManifestForReactNative, runBuild } from './build';
 
-vi.mock('@antfu/ni');
-vi.mock('execa', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('execa')>();
-  return {
-    ...actual,
-    execa: vi.fn(() => Promise.resolve()),
-  };
+vi.mock('../run/phases/build', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../run/phases/build')>();
+  return { ...actual, runBuildPhase: vi.fn() };
 });
 vi.mock('../lib/react-native/generateManifest', () => ({
-  generateManifest: vi.fn(() => Promise.resolve()),
+  generateManifest: vi.fn(async () => undefined),
 }));
-const execa = vi.mocked(execaDefault);
-const getCliCommand = vi.mocked(getCliCommandDefault);
 
-const stubProc = createExecaProcessRunner();
-const stubPorts = {
-  fs: {
-    exists: vi.fn(async () => true),
-    mkdtemp: vi.fn(async () => ({ path: '/tmp/chromatic-stub', cleanup: async () => {} })),
-    createWriteStream: vi.fn(() => {
-      const passThrough = new PassThrough();
-      setImmediate(() => passThrough.emit('open'));
-      return passThrough;
-    }),
-    readFile: vi.fn(async () => ''),
-  },
-  proc: stubProc,
-  builder: createShellBuildRunner({ proc: stubProc }),
-  pkgMgr: createRealPackageManager({ proc: stubProc }),
-  host: {
-    cwd: () => '/cwd',
-    get: (key: string) => process.env[key],
-    platform: () => process.platform,
-    nodeVersion: () => process.versions.node,
-  },
-  errors: {
-    captureException: vi.fn(),
-    setTag: vi.fn(),
-    setContext: vi.fn(),
-    flush: vi.fn(async () => true),
-  },
-} as any;
+const runBuildPhase = vi.mocked(phaseModule.runBuildPhase);
 
-const baseContext = { options: {}, flags: {}, ports: stubPorts } as any;
-
-beforeEach(() => {
-  execa.mockClear();
+afterEach(() => {
+  vi.clearAllMocks();
 });
 
-describe('setSourceDir', () => {
-  it('sets a random temp directory path on the context', async () => {
-    const ctx = { ...baseContext, storybook: { version: '5.0.0' } } as any;
-    await setSourceDirectory(ctx);
-    expect(ctx.sourceDir).toMatch(/chromatic-/);
-  });
-
-  it('falls back to the default output dir for older Storybooks', async () => {
-    const ctx = { ...baseContext, storybook: { version: '4.0.0' } } as any;
-    await setSourceDirectory(ctx);
-    expect(ctx.sourceDir).toBe('storybook-static');
-  });
-
-  it('uses the outputDir option if provided', async () => {
-    const ctx = {
-      ...baseContext,
-      options: { outputDir: 'storybook-out' },
-      storybook: { version: '5.0.0' },
-    } as any;
-    await setSourceDirectory(ctx);
-    expect(ctx.sourceDir).toBe('storybook-out');
-  });
-
-  it('uses the outputDir option if provided, even for older Storybooks', async () => {
-    const ctx = {
-      ...baseContext,
-      options: { outputDir: 'storybook-out' },
-      storybook: { version: '4.0.0' },
-    } as any;
-    await setSourceDirectory(ctx);
-    expect(ctx.sourceDir).toBe('storybook-out');
-  });
-});
-
-describe('setBuildCommand', () => {
-  it('sets the build command on the context', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.2.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).toHaveBeenCalledWith(
-      expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
-      { programmatic: true }
-    );
-    expect(ctx.buildCommand).toEqual('npm run build:storybook');
-  });
-
-  it('supports yarn', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('yarn run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.2.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).toHaveBeenCalledWith(
-      expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
-      { programmatic: true }
-    );
-    expect(ctx.buildCommand).toEqual('yarn run build:storybook');
-  });
-
-  it('supports pnpm', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('pnpm run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.2.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).toHaveBeenCalledWith(
-      expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
-      { programmatic: true }
-    );
-    expect(ctx.buildCommand).toEqual('pnpm run build:storybook');
-  });
-
-  it('uses --build-command, if set', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildCommand: 'nx run my-app:build-storybook' },
-      storybook: { version: '6.2.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).not.toHaveBeenCalled();
-    expect(ctx.buildCommand).toEqual(
-      'nx run my-app:build-storybook --webpack-stats-json=./source-dir/'
-    );
-  });
-
-  it('warns if --only-changes is not supported', async () => {
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: { changedFiles: ['./index.js'] },
-      log: new TestLogger(),
-    } as any;
-    await setBuildCommand(ctx);
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      'Storybook version 6.2.0 or later is required to use the --only-changed flag'
-    );
-  });
-
-  it('uses the correct flag for webpack stats for < 8.5.0', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '8.4.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).toHaveBeenCalledWith(
-      expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
-      { programmatic: true }
-    );
-    expect(ctx.buildCommand).toEqual('npm run build:storybook');
-  });
-
-  it('uses the correct flag for webpack stats for >= 8.5.0', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '8.5.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).toHaveBeenCalledWith(
-      expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/', '--stats-json=./source-dir/'],
-      { programmatic: true }
-    );
-    expect(ctx.buildCommand).toEqual('npm run build:storybook');
-  });
-
-  it('uses the old flag when it storybook version is undetected', async () => {
-    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
-
-    const ctx = {
-      ...baseContext,
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setBuildCommand(ctx);
-
-    expect(getCliCommand).toHaveBeenCalledWith(
-      expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
-      { programmatic: true }
-    );
-    expect(ctx.buildCommand).toEqual('npm run build:storybook');
-  });
-
-  it.each(['playwright', 'cypress', 'vitest'])(
-    'resolves to the E2E build command when using %s',
-    async (e2ePackage) => {
-      const revertPatch = patchModulePath(
-        `@chromatic-com/${e2ePackage}/bin/build-archive-storybook`,
-        `path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook`
-      );
-      onTestFinished(revertPatch);
-
-      const ctx = {
-        ...baseContext,
-        options: { [e2ePackage]: true, buildScriptName: 'build:storybook', inAction: false },
-        sourceDir: './source-dir/',
-        git: {},
-        log: new TestLogger(),
-      } as any;
-
-      await setBuildCommand(ctx);
-      expect(ctx.buildCommand).toEqual(
-        `node path/to/@chromatic-com/${e2ePackage}/bin/build-archive-storybook --output-dir=./source-dir/`
-      );
-    }
-  );
-});
-
-describe('buildStorybook', () => {
-  it('runs the build command', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
-      env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: new TestLogger(),
-      options: { storybookLogFile: 'build-storybook.log' },
-    } as any;
-    await buildStorybook(ctx);
-    expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
-    expect(execa).toHaveBeenCalledWith(
-      cmd,
-      args,
-      expect.objectContaining({ stdio: expect.any(Array) })
-    );
-    expect(ctx.log.debug).toHaveBeenCalledWith('Running build command:', ctx.buildCommand);
-  });
-
-  it('fails when build times out', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
-      options: { buildScriptName: '' },
-      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: new TestLogger(),
-    } as any;
-    execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
-    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-    expect(ctx.log.error).toHaveBeenCalledWith(
-      expect.stringContaining('Command timed out after 0ms')
-    );
-  });
-
-  it('passes NODE_ENV=production', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
-      env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
-      log: new TestLogger(),
-      options: { storybookLogFile: 'build-storybook.log' },
-    } as any;
-    await buildStorybook(ctx);
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
-    expect(execa).toHaveBeenCalledWith(
-      cmd,
-      args,
-      expect.objectContaining({
-        env: { CI: '1', NODE_ENV: 'production', STORYBOOK_INVOKED_BY: 'chromatic' },
-      })
-    );
-  });
-
-  it('allows overriding NODE_ENV with STORYBOOK_NODE_ENV', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
-      env: { STORYBOOK_BUILD_TIMEOUT: 1000, STORYBOOK_NODE_ENV: 'test' },
-      log: { debug: vi.fn() },
-      options: { storybookLogFile: 'build-storybook.log' },
-    } as any;
-    await buildStorybook(ctx);
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
-    expect(execa).toHaveBeenCalledWith(
-      cmd,
-      args,
-      expect.objectContaining({
-        env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
-      })
-    );
-  });
-
-  it('skips building for React Native apps', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
-    await buildStorybook(ctx);
-    expect(execa).not.toHaveBeenCalled();
-  });
-
-  it('skips the build for React Native apps when storybookBuildDir is provided and manifest.json exists', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
-    const task = buildTask(ctx);
-    expect(task.skip).toBeDefined();
-    const skipResult = await task.skip?.(ctx);
-    expect(skipResult).toBe('Using prebuilt React Native assets');
-    expect(ctx.sourceDir).toBe('/path/to/rn-build');
-  });
-
-  it('throws error for React Native apps without storybookBuildDir', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: new TestLogger(),
-    } as any;
-    const task = buildTask(ctx);
-    await expect(task.skip?.(ctx)).rejects.toThrow('Build directory required for React Native');
-    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
-  });
-});
-
-describe('buildStorybook E2E', () => {
-  // Error messages that we expect to result in the missing dependency error
-  const missingDependencyErrorMessages = [
-    { name: 'not found 1', error: 'Command not found: build-archive-storybook' },
-    { name: 'not found 2', error: 'Command "build-archive-storybook" not found' },
-    { name: 'npm not found', error: 'NPM error code E404\n\nMore error info' },
-    {
-      name: 'exit code not found',
-      error: 'Command failed with exit code 127: some command\n\nsome error line\n\n',
-    },
-    {
-      name: 'single line command failure',
-      error:
-        'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe',
-    },
-  ];
-
-  it.each(missingDependencyErrorMessages)(
-    'fails with missing dependency error when error message is $name',
-    async ({ error }) => {
-      const ctx = {
-        ...baseContext,
-        buildCommand: 'npm exec build-archive-storybook',
-        options: { buildScriptName: '', playwright: true },
-        env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-        log: { debug: vi.fn(), error: vi.fn() },
-      } as any;
-
-      execa.mockRejectedValueOnce(new Error(error));
-      await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-      expect(ctx.log.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to import `@chromatic-com/playwright`')
-      );
-
-      ctx.log.error.mockClear();
-    }
-  );
-
-  it('fails with generic error message when not missing dependency error', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm exec build-archive-storybook',
-      options: { buildScriptName: '', playwright: true },
-      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-      log: { debug: vi.fn(), error: vi.fn() },
-    } as any;
-
-    const errorMessage =
-      'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe\n\nMore error message lines\n\nAnd more';
-    execa.mockRejectedValueOnce(new Error(errorMessage));
-    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-    expect(ctx.log.error).not.toHaveBeenCalledWith(
-      expect.stringContaining('Failed to import `@chromatic-com/playwright`')
-    );
-    expect(ctx.log.error).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to run `chromatic --playwright`')
-    );
-    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
-  });
-});
-
-function makeAnalyticsContext(overrides: Record<string, any> = {}) {
-  const analytics = { track: vi.fn(), flush: vi.fn() };
+function makeContext(overrides: Record<string, unknown> = {}): any {
   return {
-    ...baseContext,
-    buildCommand: 'npm run build:storybook',
-    env: { STORYBOOK_BUILD_TIMEOUT: 0 },
-    log: new TestLogger(),
+    options: {},
+    flags: {},
+    env: {},
+    git: {},
+    packageJson: {},
     pkg: { version: '1.0.0' },
-    storybook: { version: '8.0.0' },
-    git: { gitUserEmail: 'test@example.com', ciService: 'github-actions' },
-    announcedBuild: { app: { id: 'app-123', account: { id: 'account-456' } } },
-    ports: { ...baseContext.ports, analytics },
+    ports: {
+      fs: { exists: vi.fn(async () => false) },
+    },
+    log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     ...overrides,
-  } as any;
+  };
 }
 
-describe('buildStorybook analytics', () => {
-  it('tracks storybook_build_failed on build failure', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext();
-    execa.mockRejectedValueOnce(new Error('build failed'));
-
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
-
-    // assert
-    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
-      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
-      expect.objectContaining({
-        errorCategory: 'storybook_build_failed',
-        buildCommand: 'npm run build:storybook',
-        source: 'cli',
-        cliVersion: '1.0.0',
-        storybookVersion: '8.0.0',
-        isCI: expect.any(Boolean),
-        ciService: 'github-actions',
-        gitUserEmailHash: expect.any(String),
-      })
-    );
-  });
-
-  it('tracks e2e_missing_dependency when E2E dependency is not found', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext({ options: { playwright: true, buildScriptName: '' } });
-    execa.mockRejectedValueOnce(new Error('Command not found: build-archive-storybook'));
-
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
-
-    // assert
-    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
-      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
-      expect.objectContaining({ errorCategory: 'e2e_missing_dependency' })
-    );
-  });
-
-  it('tracks e2e_build_failed on generic E2E build failure', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext({ options: { playwright: true, buildScriptName: '' } });
-    const error = 'Command failed with exit code 1: build-archive-storybook\n\nMultiple lines';
-    execa.mockRejectedValueOnce(new Error(`${error}\n\nOf error`));
-
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
-
-    // assert
-    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
-      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
-      expect.objectContaining({ errorCategory: 'e2e_build_failed' })
-    );
-  });
-
-  it('tracks aborted when build is cancelled via abort signal', async () => {
-    // arrange
-    const controller = new AbortController();
-    controller.abort();
-    const ctx = makeAnalyticsContext({
-      options: { experimental_abortSignal: controller.signal, buildScriptName: '' },
+describe('runBuild', () => {
+  it('mirrors phase artifacts onto context', async () => {
+    runBuildPhase.mockResolvedValue({
+      sourceDir: '/tmp/sb',
+      buildCommand: 'npm run build',
+      buildLogFile: '/tmp/build.log',
     });
-    execa.mockRejectedValueOnce(new Error('aborted'));
-
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
-
-    // assert
-    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
-      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
-      expect.objectContaining({ errorCategory: 'aborted' })
-    );
+    const ctx = makeContext();
+    await runBuild(ctx);
+    expect(ctx.sourceDir).toBe('/tmp/sb');
+    expect(ctx.buildCommand).toBe('npm run build');
+    expect(ctx.buildLogFile).toBe('/tmp/build.log');
   });
 
-  it('sanitizes the stack trace before sending', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext();
-    const err = new Error('build failed');
-    err.stack = 'Error: build failed\n    at x (/Users/user/secret/project/file.js:1:1)';
-    execa.mockRejectedValueOnce(err);
-
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
-
-    // assert
-    expect(ctx.ports.analytics.track).toHaveBeenCalledWith(
-      AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
-      expect.objectContaining({
-        stackTrace: 'Error: build failed\n    at x (<path>/file.js:1:1)',
-      })
-    );
+  it('skips when ctx.skip is set', async () => {
+    runBuildPhase.mockResolvedValue({ sourceDir: 'unused' });
+    const ctx = makeContext({ skip: true });
+    await runBuild(ctx);
+    expect(runBuildPhase).not.toHaveBeenCalled();
   });
 
-  it('reports through ctx.ports.errors and still throws the build failure when analytics throws', async () => {
-    // arrange
-    const analyticsError = new Error('analytics exploded');
-    const captureException = vi.fn();
-    const ctx = makeAnalyticsContext({
-      ports: {
-        ...stubPorts,
-        analytics: {
-          track: vi.fn(() => {
-            throw analyticsError;
-          }),
-          flush: vi.fn(),
-        },
-        errors: { ...stubPorts.errors, captureException },
-      },
-    });
-    execa.mockRejectedValueOnce(new Error('build failed'));
+  it('translates BuildPhaseError into setExitCode + a wrapped throw', async () => {
+    runBuildPhase.mockRejectedValueOnce(
+      new BuildPhaseError('build failed', exitCodes.NPM_BUILD_STORYBOOK_FAILED)
+    );
+    const ctx = makeContext();
+    await expect(runBuild(ctx)).rejects.toThrow();
+    expect(ctx.exitCode).toBe(exitCodes.NPM_BUILD_STORYBOOK_FAILED);
+    expect(ctx.userError).toBe(true);
+  });
 
-    // act
-    const thrown = await buildStorybook(ctx).catch((err) => err);
-
-    // assert: outer throw is the build failure, not the analytics failure
-    expect(thrown).toBeInstanceOf(Error);
-    expect(thrown).not.toBe(analyticsError);
-    expect(captureException).toHaveBeenCalledWith(analyticsError);
+  it('rethrows non-BuildPhaseError unchanged', async () => {
+    const original = new Error('weird');
+    runBuildPhase.mockRejectedValueOnce(original);
+    const ctx = makeContext();
+    await expect(runBuild(ctx)).rejects.toBe(original);
   });
 });
 
 describe('generateManifestForReactNative', () => {
-  it('generates manifest for React Native apps', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
+  it('runs only for React Native apps', async () => {
+    const generateManifestModule = await import('../lib/react-native/generateManifest');
+    const ctx = makeContext({ isReactNativeApp: true });
     await generateManifestForReactNative(ctx);
-    expect(generateManifest).toHaveBeenCalledWith(ctx);
+    expect(generateManifestModule.generateManifest).toHaveBeenCalledWith(ctx);
   });
 
-  it('skips manifest generation for non-React Native apps', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: false,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/build' },
-    } as any;
+  it('is a no-op for non-RN apps', async () => {
+    const generateManifestModule = await import('../lib/react-native/generateManifest');
+    const ctx = makeContext({ isReactNativeApp: false });
     await generateManifestForReactNative(ctx);
-    expect(generateManifest).not.toHaveBeenCalled();
+    expect(generateManifestModule.generateManifest).not.toHaveBeenCalled();
+  });
+});
+
+describe('build task skip()', () => {
+  it('throws and sets exit code when RN app is missing storybookBuildDir', async () => {
+    const ctx = makeContext({
+      isReactNativeApp: true,
+      announcedBuild: { browsers: [] },
+    });
+    const task = buildTask(ctx);
+    await expect(task.skip?.(ctx)).rejects.toThrow();
+    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
+  });
+
+  it('returns the skipped string when --storybook-build-dir is supplied (non-RN)', async () => {
+    const ctx = makeContext({
+      options: { storybookBuildDir: '/path/to/build' },
+    });
+    const task = buildTask(ctx);
+    const result = await task.skip?.(ctx);
+    expect(typeof result).toBe('string');
+    expect(ctx.sourceDir).toBe('/path/to/build');
   });
 });
