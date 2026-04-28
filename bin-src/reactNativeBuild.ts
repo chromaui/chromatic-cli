@@ -8,8 +8,17 @@ import { openLogFileStream } from '../node-src/lib/logFile';
 import { buildAndroid, buildIos } from '../node-src/lib/react-native/build';
 import { ExpoConfig, readExpoConfig } from '../node-src/lib/react-native/expoConfig';
 
+const platformNames: Record<string, string> = {
+  android: 'Android',
+  ios: 'iOS',
+};
+
+function info(title: string, message?: string) {
+  console.log('› ' + chalk.bold(title) + (message ? '\n  ' + chalk.dim('→ ' + message) : ''));
+}
+
 function error(message: string, title?: string) {
-  console.error(chalk.bold.red('✖') + chalk.bold(title || 'Error') + '\n' + message);
+  console.error(chalk.bold.red('✖ ') + chalk.bold(title || 'Error') + '\n  → ' + message);
 }
 
 function humanizeDuration(seconds: number) {
@@ -112,6 +121,7 @@ async function buildPlatforms(platforms: string[], appName: string, logStream: W
   const artifacts: { platform: string; path: string; duration: number }[] = [];
 
   for (const platform of platforms) {
+    info(`Building for ${platformNames[platform]}`);
     if (platform === 'android') {
       const { artifactPath, duration } = await buildAndroid(logStream);
       artifacts.push({ platform: 'Android', path: artifactPath, duration });
@@ -143,6 +153,7 @@ export async function main(argv: string[]) {
 
   let config: ExpoConfig;
   try {
+    info('Reading configuration from Expo', 'npx expo config --json');
     config = await readExpoConfig();
   } catch (err) {
     error(err.message);
@@ -152,8 +163,6 @@ export async function main(argv: string[]) {
   const platforms = resolvePlatforms(config, requestedPlatforms);
 
   const logFilePath = path.join(os.tmpdir(), `chromatic-react-native-build-${Date.now()}.log`);
-  console.log(chalk.dim(`  → Build log: ${logFilePath}`));
-
   const logStream = await openLogFileStream(logFilePath);
 
   let artifacts: { platform: string; path: string; duration: number }[];
@@ -161,11 +170,12 @@ export async function main(argv: string[]) {
     artifacts = await buildPlatforms(platforms, config.name, logStream);
   } catch (err) {
     await new Promise<void>((resolve) => logStream.end(resolve));
-    error(err);
+    error(err.message);
+    info('Build failed, see log for details', logFilePath);
     process.exit(1);
+  } finally {
+    await new Promise<void>((resolve) => logStream.end(resolve));
   }
-
-  await new Promise<void>((resolve) => logStream.end(resolve));
 
   const summary = artifacts
     .map((a) => `${a.platform} (${humanizeDuration(a.duration)})\n${a.path}`)
