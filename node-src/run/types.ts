@@ -58,25 +58,25 @@ export type { RuntimeConfig } from '../types';
  * fields land here as named-only additions.
  */
 export interface PublishedBuild {
-  id?: string;
-  number?: number;
-  status?: string;
-  webUrl?: string;
-  storybookUrl?: string;
-  specCount?: number;
-  componentCount?: number;
-  testCount?: number;
-  changeCount?: number;
-  errorCount?: number;
-  interactionTestFailuresCount?: number;
-  actualTestCount?: number;
-  actualCaptureCount?: number;
-  inheritedCaptureCount?: number;
+  readonly id?: string;
+  readonly number?: number;
+  readonly status?: string;
+  readonly webUrl?: string;
+  readonly storybookUrl?: string;
+  readonly specCount?: number;
+  readonly componentCount?: number;
+  readonly testCount?: number;
+  readonly changeCount?: number;
+  readonly errorCount?: number;
+  readonly interactionTestFailuresCount?: number;
+  readonly actualTestCount?: number;
+  readonly actualCaptureCount?: number;
+  readonly inheritedCaptureCount?: number;
 }
 
 export interface Diagnostic {
-  message: string;
-  level?: 'info' | 'warn' | 'error';
+  readonly message: string;
+  readonly level?: 'info' | 'warn' | 'error';
 }
 
 export type RunEvent =
@@ -93,20 +93,20 @@ export type RunEvent =
   | { type: 'build:announced'; buildNumber: number; webUrl: string };
 
 export interface RunDiagnostics {
-  sessionId: string;
-  durationMs: number;
-  phasesRun: readonly PhaseName[];
-  reportPath?: string;
+  readonly sessionId: string;
+  readonly durationMs: number;
+  readonly phasesRun: readonly PhaseName[];
+  readonly reportPath?: string;
 }
 
 export interface RunResult {
-  exitCode: number;
-  exitCodeKey: string;
-  build?: PublishedBuild;
-  storybookUrl?: string;
-  errors: readonly Error[];
-  warnings: readonly Error[];
-  diagnostics: RunDiagnostics;
+  readonly exitCode: number;
+  readonly exitCodeKey: string;
+  readonly build?: PublishedBuild;
+  readonly storybookUrl?: string;
+  readonly errors: readonly Error[];
+  readonly warnings: readonly Error[];
+  readonly diagnostics: RunDiagnostics;
 }
 
 /**

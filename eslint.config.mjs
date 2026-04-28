@@ -308,7 +308,12 @@ export default [
   // `Listr.ListrTask` shape; that interop layer is the natural meeting point
   // between the Listr type and the rest of the domain.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
     ignores: [
       'node-src/lib/ports/uiListrAdapter.ts',
       'node-src/lib/tasks.ts',
@@ -326,11 +331,16 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib/git) must go through the ErrorReporter port. Only
-  // the Sentry adapter and the bootstrap module that initializes the SDK are
-  // permitted to import @sentry/node directly.
+  // Phase code (tasks/lib/git/run) must go through the ErrorReporter port.
+  // Only the Sentry adapter and the bootstrap module that initializes the SDK
+  // are permitted to import @sentry/node directly.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
     ignores: [
       'node-src/lib/ports/errorReporterSentryAdapter.ts',
       'node-src/errorMonitoring.ts',
@@ -350,12 +360,17 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib/git) must go through the Logger port. The real
+  // Phase code (tasks/lib/git/run) must go through the Logger port. The real
   // adapter, the underlying logger module itself, the global type-only
   // re-export site (`types.ts`), and the existing `testLogger` shim are the
   // only modules permitted to import `lib/log` directly.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
     ignores: [
       'node-src/lib/log.ts',
       'node-src/lib/logSerializers.ts',
@@ -377,11 +392,11 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib) must go through the PackageManager port. The real
-  // adapter is the only module permitted to import @antfu/ni or yarn-or-npm
-  // directly.
+  // Phase code (tasks/lib/run) must go through the PackageManager port. The
+  // real adapter is the only module permitted to import @antfu/ni or
+  // yarn-or-npm directly.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
     ignores: ['node-src/lib/ports/packageManagerRealAdapter.ts', '**/*.test.ts'],
     rules: {
       'no-restricted-imports': [
@@ -401,11 +416,11 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib) must go through the StorybookDetector port. The
-  // real adapter and the underlying detection helpers are the only modules
-  // permitted to import lib/getStorybookInfo directly.
+  // Phase code (tasks/lib/run) must go through the StorybookDetector port.
+  // The real adapter and the underlying detection helpers are the only
+  // modules permitted to import lib/getStorybookInfo directly.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
     ignores: [
       'node-src/lib/ports/storybookDetectorRealAdapter.ts',
       'node-src/lib/getStorybookInfo.ts',
@@ -427,13 +442,13 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib) must go through the DependencyTracer port. The
+  // Phase code (tasks/lib/run) must go through the DependencyTracer port. The
   // turbosnap adapter is the only module permitted to import the lib/turbosnap
   // module directly; bin-src/trace.ts also imports a sub-helper but is outside
   // the phase code (it's a separate CLI entry point) so the rule does not
   // apply there.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
     ignores: [
       'node-src/lib/ports/dependencyTracerTurbosnapAdapter.ts',
       'node-src/lib/turbosnap/**/*.ts',
@@ -453,12 +468,17 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib) must go through the ProcessRunner port for non-git
-  // subprocesses. The execa adapter and the legacy shell runner backing it are
-  // the only modules permitted to import execa directly. Git's exec helper is
-  // also exempt because it lives below the GitRepository port.
+  // Phase code (tasks/lib/git/run) must go through the ProcessRunner port for
+  // non-git subprocesses. The execa adapter and the legacy shell runner
+  // backing it are the only modules permitted to import execa directly. Git's
+  // exec helper is also exempt because it lives below the GitRepository port.
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/git/**/*.ts'],
+    files: [
+      'node-src/tasks/**/*.ts',
+      'node-src/lib/**/*.ts',
+      'node-src/git/**/*.ts',
+      'node-src/run/**/*.ts',
+    ],
     ignores: [
       'node-src/lib/ports/processRunnerExecaAdapter.ts',
       'node-src/lib/shell/shell.ts',
@@ -481,15 +501,15 @@ export default [
       ],
     },
   },
-  // Phase code (tasks/lib) must go through the FileSystem port. The node and
-  // in-memory adapters are the only modules permitted to import fs/tmp-promise
-  // directly. A few leaf-level helpers are explicitly excepted because they
-  // either back the adapter (fileReaderBlob), are slated for the Logger port
-  // (log), use low-level fs primitives for performance (getFileHashes), or sit
-  // outside the runtime ports lifecycle (getConfiguration / treeKill /
-  // readStatsFile bin-src callers).
+  // Phase code (tasks/lib/run) must go through the FileSystem port. The node
+  // and in-memory adapters are the only modules permitted to import
+  // fs/tmp-promise directly. A few leaf-level helpers are explicitly excepted
+  // because they either back the adapter (fileReaderBlob), are slated for the
+  // Logger port (log), use low-level fs primitives for performance
+  // (getFileHashes), or sit outside the runtime ports lifecycle
+  // (getConfiguration / treeKill / readStatsFile bin-src callers).
   {
-    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts'],
+    files: ['node-src/tasks/**/*.ts', 'node-src/lib/**/*.ts', 'node-src/run/**/*.ts'],
     ignores: [
       'node-src/lib/ports/fsNodeAdapter.ts',
       'node-src/lib/fileReaderBlob.ts',
