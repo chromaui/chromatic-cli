@@ -74,3 +74,42 @@ export interface RunResult {
  * once each phase produces a typed slice this collapses to the slice product.
  */
 export type RunState = Readonly<Context>;
+
+/**
+ * Output of the gitInfo phase. Consumed by every downstream phase that
+ * reasons about the repository, baseline builds, or change-driven scoping.
+ */
+export interface GitState {
+  version?: string;
+  rootPath?: string;
+  gitUserEmail?: string;
+  branch: string;
+  commit: string;
+  committerEmail?: string;
+  committedAt: number;
+  slug?: string;
+  fromCI: boolean;
+  ciService?: string;
+  mergeCommit?: string;
+  uncommittedHash?: string;
+  parentCommits?: string[];
+  baselineCommits?: string[];
+  changedFiles?: string[];
+  replacementBuildIds?: [string, string][];
+  /**
+   * Branch glob matcher for resolving boolean/string flags (`--skip`,
+   * `--only-changed`, etc.) against the resolved branch. Closure-captured;
+   * not serializable.
+   */
+  matchesBranch?: (glob: boolean | string) => boolean;
+  packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+}
+
+/** Repository-scoped metadata captured alongside {@link GitState}. */
+export interface ProjectMetadata {
+  hasRouter?: boolean;
+  creationDate?: Date;
+  storybookCreationDate?: Date;
+  numberOfCommitters?: number;
+  numberOfAppFiles?: number;
+}
