@@ -1,3 +1,15 @@
+# v16.6.1 (Tue Apr 28 2026)
+
+#### 🐛 Bug Fix
+
+- On React Native builds check for ABI compatibility before upload [#1295](https://github.com/chromaui/chromatic-cli/pull/1295) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v16.6.0 (Thu Apr 23 2026)
 
 #### 🚀 Enhancement
