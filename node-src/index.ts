@@ -1,8 +1,6 @@
 import 'any-observable/register/zen';
 
 import Listr from 'listr';
-import { readPackageUp } from 'read-package-up';
-import { v4 as uuid } from 'uuid';
 
 import {
   getBranch,
@@ -19,17 +17,15 @@ import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
-import getEnvironment from './lib/getEnvironment';
 import getOptions from './lib/getOptions';
-import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import NonTTYRenderer from './lib/nonTTYRenderer';
-import parseArguments from './lib/parseArguments';
-import { createDefaultPorts } from './lib/ports';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import { ChromaticRun } from './run/chromaticRun';
+import { RunResult } from './run/types';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -38,7 +34,6 @@ import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
 import graphqlError from './ui/messages/errors/graphqlError';
 import missingStories from './ui/messages/errors/missingStories';
-import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
@@ -85,7 +80,10 @@ export type InitialContext = Omit<
 const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
 
 /**
- * Entry point for the CLI, GitHub Action, and Node API
+ * Entry point for the CLI, GitHub Action, and Node API. Thin wrapper around
+ * {@link ChromaticRun} that preserves the legacy {@link Output} shape for
+ * external consumers. New callers should construct `ChromaticRun` directly and
+ * read fields off the returned `RunResult`.
  *
  * @param args The arguments set by the environment in which the CLI is running (CLI, GitHub Action,
  * or Node API)
@@ -95,10 +93,8 @@ const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
  *
  * @returns An object with details from the result of the new build.
  */
-// TODO: refactor this function
-// eslint-disable-next-line complexity
 export async function run({
-  argv = [],
+  argv,
   flags,
   options: extraOptions,
 }: {
@@ -106,63 +102,33 @@ export async function run({
   flags?: Flags;
   options?: Partial<Options>;
 }): Promise<Partial<Output>> {
-  const config = {
-    ...parseArguments(argv),
-    ...(flags && { flags }),
-    ...(extraOptions && { extraOptions }),
-  };
-  const {
-    sessionId = uuid(),
-    env: environment = getEnvironment(),
-    log = createLogger(config.flags, config.extraOptions),
-  } = extraOptions || {};
+  const result = await new ChromaticRun({
+    config: {
+      ...(argv && { argv }),
+      ...(flags && { flags }),
+      ...(extraOptions && { extraOptions }),
+    },
+  }).execute();
+  return projectOutput(result);
+}
 
-  // We don't normalize because if the `version` field isn't a proper semver string, the process
-  // silently exits.
-  const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
-  if (!packageInfo) {
-    log.error(noPackageJson());
-    process.exit(253);
-  }
-
-  const { path: packagePath, packageJson } = packageInfo;
-  const ctx: InitialContext = {
-    ...config,
-    packagePath,
-    packageJson,
-    env: environment,
-    log,
-    sessionId,
-    // Assigned immediately below, but expressed in two steps so the ChromaticApi
-    // adapter's lazy GraphQLClient getter can close over `ctx`.
-    ports: undefined as any,
-  };
-  ctx.ports = createDefaultPorts({
-    log,
-    getGraphQLClient: () => (ctx as Context).client,
-    getHttpClient: () => (ctx as Context).http,
-    cliTokenEndpoint: `${environment.CHROMATIC_INDEX_URL}/api`,
-  });
-
-  await runAll(ctx);
-
+// Keep this in sync with the configured outputs in action.yml.
+// eslint-disable-next-line complexity
+function projectOutput(result: RunResult): Partial<Output> {
   return {
-    // Keep this in sync with the configured outputs in action.yml
-    code: ctx.exitCode,
-    url: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
-    buildUrl: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
-    storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
-    specCount: ctx.build?.specCount ?? ctx.rebuildForBuild?.specCount,
-    componentCount: ctx.build?.componentCount ?? ctx.rebuildForBuild?.componentCount,
-    testCount: ctx.build?.testCount ?? ctx.rebuildForBuild?.testCount,
-    changeCount: ctx.build?.changeCount ?? ctx.rebuildForBuild?.changeCount,
-    errorCount: ctx.build?.errorCount ?? ctx.rebuildForBuild?.errorCount,
-    interactionTestFailuresCount:
-      ctx.build?.interactionTestFailuresCount ?? ctx.rebuildForBuild?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount ?? ctx.rebuildForBuild?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount ?? ctx.rebuildForBuild?.actualCaptureCount,
-    inheritedCaptureCount:
-      ctx.build?.inheritedCaptureCount ?? ctx.rebuildForBuild?.inheritedCaptureCount,
+    code: result.exitCode,
+    url: result.build?.webUrl,
+    buildUrl: result.build?.webUrl,
+    storybookUrl: result.storybookUrl,
+    specCount: result.build?.specCount,
+    componentCount: result.build?.componentCount,
+    testCount: result.build?.testCount,
+    changeCount: result.build?.changeCount,
+    errorCount: result.build?.errorCount,
+    interactionTestFailuresCount: result.build?.interactionTestFailuresCount,
+    actualTestCount: result.build?.actualTestCount,
+    actualCaptureCount: result.build?.actualCaptureCount,
+    inheritedCaptureCount: result.build?.inheritedCaptureCount,
   };
 }
 
