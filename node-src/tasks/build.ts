@@ -34,6 +34,9 @@ import {
 } from '../ui/tasks/build';
 
 export const setSourceDirectory = async (ctx: Context) => {
+  // if it has been set upstream of us, do not overwrite it
+  if (ctx.sourceDir) return;
+
   if (ctx.options.outputDir) {
     ctx.sourceDir = ctx.options.outputDir;
   } else if (ctx.storybook && ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
@@ -329,9 +332,10 @@ export default function main(ctx: Context) {
     skip: async (ctx) => {
       if (ctx.skip) return true;
       if (ctx.isReactNativeApp && ctx.options.storybookBuildDir) {
+        ctx.sourceDir = ctx.options.storybookBuildDir;
+
         // Use manifest.json from the storybook build directory if it exists
         if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
-          ctx.sourceDir = ctx.options.storybookBuildDir;
           return skippedForReactNative(ctx).output;
         }
         return false;
