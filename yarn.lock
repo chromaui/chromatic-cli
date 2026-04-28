@@ -5045,7 +5045,7 @@ __metadata:
     typescript: "npm:^5.2.2"
     typescript-eslint: "npm:^7.11.0"
     util-deprecate: "npm:^1.0.2"
-    uuid: "npm:^8.3.2"
+    uuid: "npm:^14.0.0"
     vite: "npm:^8.0.3"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.1.2"
@@ -15293,7 +15293,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^8.3.0, uuid@npm:^8.3.2":
+"uuid@npm:^14.0.0":
+  version: 14.0.0
+  resolution: "uuid@npm:14.0.0"
+  bin:
+    uuid: dist-node/bin/uuid
+  checksum: 10c0/a57ae7794c45005c1a9208989196c5baf79a7679c30f43c1bee9033a2c4d113a2cea216fa6fcc9663b08b0d55635df1a7c6eb7e7f3d21c3e50688c698fa39a50
+  languageName: node
+  linkType: hard
+
+"uuid@npm:^8.3.0":
   version: 8.3.2
   resolution: "uuid@npm:8.3.2"
   bin:
