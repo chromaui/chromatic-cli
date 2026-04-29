@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { type WriteStream } from 'fs';
+import { mkdirSync, renameSync, type WriteStream } from 'fs';
 import meow from 'meow';
 import os from 'os';
 import path from 'path';
@@ -8,6 +8,8 @@ import { openLogFileStream } from '../node-src/lib/logFile';
 import { buildAndroid, buildIos } from '../node-src/lib/react-native/build';
 import { ExpoConfig, readExpoConfig } from '../node-src/lib/react-native/expoConfig';
 
+const SUPPORTED_PLATFORMS = ['android', 'ios'];
+
 const platformNames: Record<string, string> = {
   android: 'Android',
   ios: 'iOS',
@@ -15,6 +17,23 @@ const platformNames: Record<string, string> = {
 
 function info(title: string, message?: string) {
   console.log('› ' + chalk.bold(title) + (message ? '\n  ' + chalk.dim('→ ' + message) : ''));
+}
+
+function callout(title: string, message?: string) {
+  console.log(
+    chalk.bold.blue('i') +
+      ' ' +
+      chalk.bold(title) +
+      (message ? '\n  ' + chalk.dim('→ ' + message) : '')
+  );
+}
+
+function warn(title: string, message?: string) {
+  console.warn(
+    chalk.bold.yellow('⚠ ') +
+      chalk.bold(title) +
+      (message ? '\n  ' + chalk.dim('→ ' + message) : '')
+  );
 }
 
 function error(message: string, title?: string) {
@@ -32,8 +51,6 @@ function humanizeDuration(seconds: number) {
   return parts.join(' ');
 }
 
-const SUPPORTED_PLATFORMS = ['android', 'ios'];
-
 /**
  * Parse CLI flags from argv.
  *
@@ -48,7 +65,8 @@ function parseFlags(argv: string[]) {
           $ chromatic react-native-build [options]
 
         Options
-          --platform  Platform to build (android, ios). Can be specified multiple times. Defaults to all platforms in Expo config.
+          --platform    Platform to build (android, ios). Can be specified multiple times. Defaults to all platforms in Expo config.
+          --output-dir  Directory to write build artifacts and log file to.
         `,
     {
       argv,
@@ -58,6 +76,9 @@ function parseFlags(argv: string[]) {
           type: 'string',
           isMultiple: true,
         },
+        outputDir: {
+          type: 'string',
+        },
       },
     }
   );
@@ -65,7 +86,7 @@ function parseFlags(argv: string[]) {
   const requestedPlatforms =
     flags.platform && flags.platform.length > 0 ? flags.platform : undefined;
 
-  return requestedPlatforms;
+  return { requestedPlatforms, outputDir: flags.outputDir };
 }
 
 /**
@@ -134,21 +155,18 @@ async function buildPlatforms(platforms: string[], appName: string, logStream: W
   return artifacts;
 }
 
+/* eslint-disable max-statements */
 /**
  * The main entrypoint for `chromatic react-native-build`.
  *
  * @param argv A list of arguments passed.
  */
 export async function main(argv: string[]) {
-  const requestedPlatforms = parseFlags(argv);
+  const { requestedPlatforms, outputDir } = parseFlags(argv);
 
-  console.log(
-    chalk.bold.yellow('⚠ ') +
-      chalk.bold('Chromatic React Native Build is in alpha. Use with caution.') +
-      '\n' +
-      chalk.dim(
-        '  → Please report any issues you encounter on the Chromatic CLI GitHub repository.'
-      )
+  warn(
+    'Chromatic React Native Build is in alpha. Use with caution.',
+    'Please report any issues you encounter on the Chromatic CLI GitHub repository.'
   );
 
   let config: ExpoConfig;
@@ -162,7 +180,11 @@ export async function main(argv: string[]) {
 
   const platforms = resolvePlatforms(config, requestedPlatforms);
 
-  const logFilePath = path.join(os.tmpdir(), `chromatic-react-native-build-${Date.now()}.log`);
+  const logDirectory = outputDir ?? os.tmpdir();
+  if (outputDir) {
+    mkdirSync(outputDir, { recursive: true });
+  }
+  const logFilePath = path.join(logDirectory, `chromatic-react-native-build-${Date.now()}.log`);
   const logStream = await openLogFileStream(logFilePath);
 
   let artifacts: { platform: string; path: string; duration: number }[];
@@ -177,9 +199,19 @@ export async function main(argv: string[]) {
     await new Promise<void>((resolve) => logStream.end(resolve));
   }
 
-  const summary = artifacts
-    .map((a) => `${a.platform} (${humanizeDuration(a.duration)})\n${a.path}`)
-    .join('\n\n');
+  if (outputDir) {
+    for (const artifact of artifacts) {
+      const extension = artifact.platform === 'Android' ? 'apk' : 'app';
+      const destinationPath = path.join(outputDir, `storybook.${extension}`);
+      renameSync(artifact.path, destinationPath);
+      artifact.path = destinationPath;
+    }
+  }
 
-  console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete') + '\n' + summary);
+  console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete'));
+  callout('Log File', logFilePath);
+  for (const a of artifacts) {
+    callout(`${a.platform} (${humanizeDuration(a.duration)})`, a.path);
+  }
 }
+/* eslint-enable max-statements */
