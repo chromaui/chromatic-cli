@@ -4,7 +4,7 @@ import { execa as execaDefault } from 'execa';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { share } from '.';
-import { uploadShare } from './lib/share';
+import { confirmShare, reserveShareOnAPI } from './lib/share';
 import { uploadFiles } from './lib/uploadFiles';
 
 vi.mock('execa', async (importOriginal) => {
@@ -40,7 +40,9 @@ vi.mock('node-fetch', () => ({
 }));
 
 vi.mock('./lib/share', () => ({
-  uploadShare: vi.fn(async () => ({
+  confirmShare: vi.fn(async () => ({ status: 'received' })),
+  reserveShareOnAPI: vi.fn(async () => ({
+    shareId: 'test-share-id',
     shareUrl: 'https://share.chromatic.com/test-share-id',
     target: {
       formAction: 'https://s3.amazonaws.com',
@@ -88,7 +90,8 @@ vi.mock('fs', async (importOriginal) => {
 
 const execa = vi.mocked(execaDefault);
 const upload = vi.mocked(uploadFiles);
-const mockUploadShare = vi.mocked(uploadShare);
+const mockUploadShare = vi.mocked(reserveShareOnAPI);
+const mockConfirmShare = vi.mocked(confirmShare);
 
 let processEnvironment: NodeJS.ProcessEnv;
 
@@ -201,5 +204,65 @@ describe('share()', () => {
         options: expect.objectContaining({ userToken: 'my-user-token' }),
       })
     );
+  });
+
+  it('confirms share with status "complete" on success', async () => {
+    await share({ userToken: 'user-token' });
+
+    expect(mockConfirmShare).toHaveBeenCalledWith(
+      expect.objectContaining({ share: expect.objectContaining({ shareId: 'test-share-id' }) }),
+      'complete'
+    );
+  });
+
+  it('confirms share with status "error" when upload fails', async () => {
+    upload.mockRejectedValueOnce(new Error('S3 upload failed'));
+
+    await expect(share({ userToken: 'user-token' })).rejects.toThrow();
+
+    expect(mockConfirmShare).toHaveBeenCalledWith(
+      expect.objectContaining({ share: expect.objectContaining({ shareId: 'test-share-id' }) }),
+      'error'
+    );
+  });
+
+  it('confirms share with status "cancelled" when aborted mid-upload', async () => {
+    const controller = new AbortController();
+    upload.mockImplementationOnce(async () => {
+      controller.abort();
+      throw new Error('Aborted');
+    });
+
+    await expect(
+      share({ userToken: 'user-token', abortSignal: controller.signal })
+    ).rejects.toThrow();
+
+    expect(mockConfirmShare).toHaveBeenCalledWith(
+      expect.objectContaining({ share: expect.objectContaining({ shareId: 'test-share-id' }) }),
+      'cancelled'
+    );
+  });
+
+  it('does not call confirmShare when uploadShare fails', async () => {
+    mockUploadShare.mockRejectedValueOnce(new Error('Reserve failed'));
+
+    await expect(share({ userToken: 'user-token' })).rejects.toThrow('Reserve failed');
+
+    expect(mockConfirmShare).not.toHaveBeenCalled();
+  });
+
+  it('swallows confirmShare errors and still resolves on success', async () => {
+    mockConfirmShare.mockRejectedValueOnce(new Error('Confirm failed'));
+
+    const result = await share({ userToken: 'user-token' });
+
+    expect(result.shareUrl).toBe('https://share.chromatic.com/test-share-id');
+  });
+
+  it('swallows confirmShare errors and still surfaces the original upload error', async () => {
+    upload.mockRejectedValueOnce(new Error('S3 upload failed'));
+    mockConfirmShare.mockRejectedValueOnce(new Error('Confirm failed'));
+
+    await expect(share({ userToken: 'user-token' })).rejects.toThrow('S3 upload failed');
   });
 });

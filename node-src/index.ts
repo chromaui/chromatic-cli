@@ -27,7 +27,7 @@ import LoggingRenderer from './lib/loggingRenderer';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
-import { uploadShare } from './lib/share';
+import { confirmShare, ConfirmShareStatus, reserveShareOnAPI } from './lib/share';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
@@ -324,6 +324,7 @@ export interface ShareOutput {
  *
  * @returns An object with the share URL.
  */
+// eslint-disable-next-line complexity
 export async function share(shareOptions: ShareOptions): Promise<ShareOutput> {
   const { onUrl, onError } = shareOptions;
 
@@ -338,26 +339,39 @@ export async function share(shareOptions: ShareOptions): Promise<ShareOutput> {
     throw error;
   }
 
-  let shareUrl = '';
   try {
-    const { shareUrl: shareUrlFromIndex, target } = await uploadShare(ctx);
-    shareUrl = shareUrlFromIndex;
-    ctx.share = { shareUrl, target };
+    ctx.share = await reserveShareOnAPI(ctx);
     ctx.git = { branch: '', commit: '', committedAt: 0, fromCI: false };
 
-    onUrl?.(shareUrl);
+    onUrl?.(ctx.share.shareUrl);
 
-    await runShareTasks(ctx);
+    let status: ConfirmShareStatus = 'complete';
+    try {
+      await runShareTasks(ctx);
+    } catch (error) {
+      status = ctx.options.experimental_abortSignal?.aborted ? 'cancelled' : 'error';
+      throw error;
+    } finally {
+      await reportShareStatus(ctx, status);
+    }
   } catch (error) {
     // If a callback was provided, use that then resolve
     if (onError) {
       onError(error);
-      return { shareUrl };
+      return { shareUrl: ctx.share?.shareUrl ?? '' };
     }
     throw error;
   }
 
-  return { shareUrl };
+  return { shareUrl: ctx.share?.shareUrl ?? '' };
+}
+
+async function reportShareStatus(ctx: Context, status: ConfirmShareStatus) {
+  try {
+    await confirmShare(ctx, status);
+  } catch (error) {
+    ctx.log.warn(`Failed to confirm share status (${status}): ${error.message}`);
+  }
 }
 
 async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
