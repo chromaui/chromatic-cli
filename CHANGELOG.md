@@ -1,3 +1,15 @@
+# v16.6.3 (Wed Apr 29 2026)
+
+#### 🐛 Bug Fix
+
+- Retry file upload if file deduplication fails [#1296](https://github.com/chromaui/chromatic-cli/pull/1296) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v16.6.2 (Wed Apr 29 2026)
 
 #### 🐛 Bug Fix
