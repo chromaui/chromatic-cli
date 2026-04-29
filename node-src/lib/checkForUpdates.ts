@@ -72,7 +72,9 @@ export default async function checkForUpdates(ctx: Context) {
  * @returns True if we should report the error, false otherwise.
  */
 function shouldReportVersionCheckFailure(err: unknown) {
-  if (!(err instanceof Error)) return false;
+  if (!(err instanceof Error)) {
+    return false;
+  }
 
   // npm registry was set to an invalid URL
   const isInvalidUrlError = err instanceof TypeError && err.message.includes('Invalid URL');
