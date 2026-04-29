@@ -1,24 +1,26 @@
 import { pathExistsSync } from 'fs-extra';
 import path from 'path';
 
-import { Context } from '../types';
+import { Deps, Storybook } from '../types';
 import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 import { getStorybookMetadata } from './getStorybookMetadata';
+
+type StorybookInfoDeps = Pick<Deps, 'env' | 'log' | 'options' | 'packageJson'>;
 
 /**
  * Get Storybook information from the user's local project.
  *
- * @param ctx The context set when executing the CLI.
+ * @param deps Narrow dependencies needed to detect Storybook metadata.
  *
  * @returns Any Storybook information we can find from the user's local project (which may be
  * nothing).
  */
 export default async function getStorybookInfo(
-  ctx: Context
-): Promise<Partial<Context['storybook']>> {
+  deps: StorybookInfoDeps
+): Promise<Partial<Storybook>> {
   try {
-    if (ctx.options.storybookBuildDir) {
-      const projectJsonPath = path.resolve(ctx.options.storybookBuildDir, 'project.json');
+    if (deps.options.storybookBuildDir) {
+      const projectJsonPath = path.resolve(deps.options.storybookBuildDir, 'project.json');
       // This test makes sure we fall through if the file does not exist.
       if (pathExistsSync(projectJsonPath)) {
         /*
@@ -29,9 +31,9 @@ export default async function getStorybookInfo(
       }
     }
     // Same for this await.
-    return await getStorybookMetadata(ctx);
+    return await getStorybookMetadata(deps);
   } catch (err) {
-    ctx.log.debug(err);
+    deps.log.debug(err);
     return {};
   }
 }

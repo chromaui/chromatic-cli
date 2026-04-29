@@ -1,14 +1,13 @@
 import TestLogger from '@cli/testLogger';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Context } from '../types';
 import getStorybookInfo from './getStorybookInfo';
 
 vi.useFakeTimers();
 
 const log = new TestLogger();
-const context: Context = { env: {}, log, options: {}, packageJson: {} } as any;
-const getContext = (ctx: any): Context => ({ ...context, ...ctx });
+const baseDeps = { env: {}, log, options: {}, packageJson: {} } as any;
+const getContext = (overrides: any) => ({ ...baseDeps, ...overrides });
 
 const REACT = { '@storybook/react': '1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
@@ -66,7 +65,7 @@ describe('getStorybookInfo', () => {
   });
 
   it('looks up package in node_modules on missing dependency', async () => {
-    await expect(getStorybookInfo(context)).resolves.toEqual(
+    await expect(getStorybookInfo(baseDeps)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
         version: expect.any(String),
