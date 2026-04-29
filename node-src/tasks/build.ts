@@ -273,6 +273,9 @@ const runPlatformCommand = async (
     await runCommand(command, {
       stdout: logStream,
       stderr: logStream,
+      env: {
+        CHROMATIC_ARTIFACT_DIRECTORY: ctx.sourceDir,
+      },
     });
   } catch (err) {
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
