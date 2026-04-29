@@ -1,1 +1,1 @@
-export { uploadShare } from './upload';
+export { reserveShareOnAPI } from './upload';
