@@ -433,6 +433,7 @@ export interface Context {
     total: number;
   };
   share?: {
+    shareId: string;
     shareUrl: string;
     target: {
       formAction: string;
