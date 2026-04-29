@@ -13,6 +13,7 @@ vi.mock('./spawn', () => ({
   default: vi.fn(),
 }));
 
+const mockedSpawn = vi.mocked(spawn);
 const http = { fetch: vi.fn() };
 
 const getContext = (skipUpdateCheck = false, version = '13.0.0') => {
@@ -44,7 +45,7 @@ describe('checkForUpdates', () => {
   describe('registry url', () => {
     it('defaults to the npm registry on error', async () => {
       const ctx = getContext();
-      vi.mocked(spawn).mockRejectedValue(new Error('spawn error'));
+      mockedSpawn.mockRejectedValue(new Error('spawn error'));
       await checkForUpdates(ctx as any);
       expect(spawn).toHaveBeenCalledWith(['config', 'get', 'registry']);
       expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
@@ -52,7 +53,7 @@ describe('checkForUpdates', () => {
 
     it('uses custom registries', async () => {
       const ctx = getContext();
-      vi.mocked(spawn).mockResolvedValue('https://custom-registry.example.com/');
+      mockedSpawn.mockResolvedValue('https://custom-registry.example.com/');
       await checkForUpdates(ctx as any);
       expect(spawn).toHaveBeenCalledWith(['config', 'get', 'registry']);
       expect(ctx.log.info).toHaveBeenCalledWith(
@@ -65,7 +66,7 @@ describe('checkForUpdates', () => {
   describe('registry fetch errors', () => {
     it('does not report invalid URL errors', async () => {
       const ctx = getContext();
-      vi.mocked(spawn).mockResolvedValue('invalid-url');
+      mockedSpawn.mockResolvedValue('invalid-url');
       await checkForUpdates(ctx as any);
       // it should throw before the fetch
       expect(ctx.http.fetch).not.toHaveBeenCalled();
@@ -83,6 +84,23 @@ describe('checkForUpdates', () => {
       );
       await checkForUpdates(ctx as any);
       expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
+    it('does not crash when the registry fetch times out', async () => {
+      vi.useFakeTimers();
+      try {
+        const ctx = getContext();
+        mockedSpawn.mockResolvedValue('https://registry.npmjs.org/');
+        http.fetch.mockReturnValue(new Promise(() => {}));
+        const promise = checkForUpdates(ctx as any);
+        await vi.advanceTimersByTimeAsync(5000);
+        await expect(promise).resolves.toBeUndefined();
+        expect(ctx.log.warn).toHaveBeenCalledWith(
+          expect.objectContaining({ message: expect.stringContaining('Timed out after 5000ms') })
+        );
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
