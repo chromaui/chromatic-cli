@@ -6,7 +6,10 @@ import { Context } from '..';
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
 import spawn from './spawn';
 
-const rejectIn = (ms: number) => new Promise<any>((_, reject) => setTimeout(reject, ms));
+const rejectIn = (ms: number) =>
+  new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+  );
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   Promise.race([promise, rejectIn(ms)]);
 
@@ -68,7 +71,11 @@ export default async function checkForUpdates(ctx: Context) {
  *
  * @returns True if we should report the error, false otherwise.
  */
-function shouldReportVersionCheckFailure(err: Error) {
+function shouldReportVersionCheckFailure(err: unknown) {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+
   // npm registry was set to an invalid URL
   const isInvalidUrlError = err instanceof TypeError && err.message.includes('Invalid URL');
 
