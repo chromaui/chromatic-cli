@@ -186,6 +186,33 @@ export type TaskName =
  */
 export type Runtime = Pick<Options, 'forceRebuild'>;
 
+/**
+ * Cross-cutting dependencies passed to every task. Individual tasks will
+ * `Pick` the dependencies they need.
+ */
+export interface Deps {
+  log: Logger;
+  client: GraphQLClient;
+  http: HTTPClient;
+  env: Environment;
+  options: Readonly<Options>;
+  runtime: Runtime;
+  analytics?: AnalyticsClient;
+  pkg: Context['pkg'];
+  sessionId: string;
+  packageJson: Record<string, any>;
+}
+
+export type TaskResult<TOutput, TPartial = never> =
+  | { kind: 'continue'; output: TOutput }
+  | { kind: 'partial'; output: TPartial; reason?: string }
+  | { kind: 'skip'; reason?: string };
+
+export type TaskFunction<TInput, TOutput, TDeps = Deps, TPartial = never> = (
+  deps: TDeps,
+  input: TInput
+) => Promise<TaskResult<TOutput, TPartial>>;
+
 export interface Context {
   env: Environment;
   log: Logger;
