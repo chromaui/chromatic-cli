@@ -1,30 +1,6 @@
+import { IOSConfig } from '@expo/config-plugins';
+import { ExpoConfig } from '@expo/config-types';
 import { execa } from 'execa';
-import slugify from 'slugify';
-
-export interface ExpoConfig {
-  name: string;
-  platforms?: string[];
-}
-
-/**
- * Sanitize a project name for use as an iOS xcodebuild scheme and workspace name.
- * Replicates the behavior of `@expo/config-plugins` sanitizedName from
- * `@expo/config-plugins/build/ios/utils/Xcodeproj.js`.
- *
- * @param name The raw project name from the Expo config.
- *
- * @returns The sanitized name safe for use as an xcodebuild scheme.
- */
-export function sanitizedName(name: string): string {
-  return sanitizedNameForProjects(name) || sanitizedNameForProjects(slugify(name)) || 'app';
-}
-
-function sanitizedNameForProjects(name: string): string {
-  return name
-    .replaceAll(/[\W_]+/g, '')
-    .normalize('NFD')
-    .replaceAll(/[\u0300-\u036F]/g, '');
-}
 
 /**
  * Read the Expo config by running `npx expo config --json`.
@@ -41,3 +17,8 @@ export async function readExpoConfig(): Promise<ExpoConfig> {
     );
   }
 }
+
+// Re-export the sanitizedName function from expo/config-plugins to ensure iOS filename consistency.
+export const sanitizedName = IOSConfig.XcodeUtils.sanitizedName;
+
+export { ExpoConfig } from '@expo/config-types';
