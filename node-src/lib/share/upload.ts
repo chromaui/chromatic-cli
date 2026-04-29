@@ -29,15 +29,11 @@ interface UploadShareResult {
 /**
  * Reserve a share upload slot and obtain S3 presigned POST credentials.
  *
- * Request:  mutation UploadShareMutation
- * Headers:  Authorization: Bearer <userToken>
- * Response: { shareId, shareUrl, target: { formAction, formFields, keyPrefix } }
- *
  * @param ctx The task context, used for the GraphQL client and user token.
  *
- * @returns The share ID, share URL, and S3 presigned POST target for uploading files.
+ * @returns Details about the share such as the URL and S3 upload credentials.
  */
-export async function uploadShare(ctx: Context) {
+export async function reserveShareOnAPI(ctx: Context) {
   const { uploadShare: result } = await ctx.client.runQuery<UploadShareResult>(
     UploadShareMutation,
     {},
