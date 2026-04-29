@@ -57,22 +57,36 @@ export const uploadShareFiles = async (ctx: Context, _task: Task) => {
     }
   }
 
-  // Since we're doing multi-phase uploads, we need to track progress across all phases and report
-  // it as a single progress value
-  let uploadedBytes = 0;
-  let lastProgress = 0;
+  // Since we're doing multi-phase uploads, track the highest progress reached in the current phase.
+  // The lower-level uploader rewinds progress when a file retries, but the share progress should
+  // not rewind.
+  let completedPhaseBytes = 0;
+  let phaseProgress = 0;
+  let reportedProgress = -1;
   const onProgress = (progress: number) => {
-    uploadedBytes += progress - lastProgress;
-    lastProgress = progress;
+    phaseProgress = Math.max(phaseProgress, progress);
+    const totalProgress = completedPhaseBytes + phaseProgress;
+
+    if (totalProgress === reportedProgress) {
+      return;
+    }
+
+    reportedProgress = totalProgress;
+
     ctx.options.experimental_onTaskProgress?.(
       { ...ctx },
-      { progress: uploadedBytes, total: totalBytes, unit: 'bytes' }
+      {
+        progress: totalProgress,
+        total: totalBytes,
+        unit: 'bytes',
+      }
     );
   };
 
   // Upload all non-index.html files in parallel, then index.html last — signals CDN readiness
   await uploadFiles(ctx, nonIndexTargets, onProgress);
-  lastProgress = 0; // reset progress for next phase
+  completedPhaseBytes += phaseProgress;
+  phaseProgress = 0;
   if (indexTarget) await uploadFiles(ctx, [indexTarget], onProgress);
 };
 

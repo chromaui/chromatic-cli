@@ -136,4 +136,43 @@ describe('uploadShareFiles', () => {
 
     await expect(uploadShareFiles(ctx, {} as any)).rejects.toThrow('Upload failed');
   });
+
+  it('onProgress handles upload retries properly', async () => {
+    const experimental_onTaskProgress = vi.fn();
+    uploadFilesMock
+      .mockImplementationOnce(async (_ctx, _targets, onProgress) => {
+        onProgress?.(60);
+        onProgress?.(100);
+        onProgress?.(40); // retry rewind from lower-level uploader
+        onProgress?.(90);
+      })
+      .mockImplementationOnce(async (_ctx, _targets, onProgress) => {
+        onProgress?.(10);
+        onProgress?.(42);
+      });
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: { experimental_onTaskProgress },
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['iframe.html', 'index.html'],
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 100 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 142,
+      },
+    } as any;
+
+    await uploadShareFiles(ctx, {} as any);
+
+    expect(experimental_onTaskProgress.mock.calls.map(([, status]) => status.progress)).toEqual([
+      60, 100, 110, 142,
+    ]);
+    expect(experimental_onTaskProgress.mock.calls.map(([, status]) => status.total)).toEqual([
+      142, 142, 142, 142,
+    ]);
+  });
 });
