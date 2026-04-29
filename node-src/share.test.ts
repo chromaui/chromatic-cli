@@ -4,7 +4,7 @@ import { execa as execaDefault } from 'execa';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { share } from '.';
-import { uploadShare } from './lib/share';
+import { confirmShare, reserveShareOnAPI } from './lib/share';
 import { uploadFiles } from './lib/uploadFiles';
 
 vi.mock('execa', async (importOriginal) => {
@@ -40,7 +40,9 @@ vi.mock('node-fetch', () => ({
 }));
 
 vi.mock('./lib/share', () => ({
-  uploadShare: vi.fn(async () => ({
+  confirmShare: vi.fn(async () => ({ status: 'received' })),
+  reserveShareOnAPI: vi.fn(async () => ({
+    shareId: 'test-share-id',
     shareUrl: 'https://share.chromatic.com/test-share-id',
     target: {
       formAction: 'https://s3.amazonaws.com',
