@@ -1,162 +1,43 @@
 import chalk from 'chalk';
-import { execa } from 'execa';
-import fs from 'fs';
+import { mkdirSync, renameSync, type WriteStream } from 'fs';
 import meow from 'meow';
 import os from 'os';
 import path from 'path';
 
-interface ExpoConfig {
-  platforms?: string[];
-  scheme?: string;
+import { openLogFileStream } from '../node-src/lib/logFile';
+import { buildAndroid, buildIos } from '../node-src/lib/react-native/build';
+import { ExpoConfig, readExpoConfig } from '../node-src/lib/react-native/expoConfig';
+
+const SUPPORTED_PLATFORMS = ['android', 'ios'];
+
+const platformNames: Record<string, string> = {
+  android: 'Android',
+  ios: 'iOS',
+};
+
+function info(title: string, message?: string) {
+  console.log('› ' + chalk.bold(title) + (message ? '\n  ' + chalk.dim('→ ' + message) : ''));
 }
 
-function info(message: string, title?: string) {
-  console.log('› ' + chalk.bold(title) + '\n  ' + chalk.dim('→ ' + message));
+function callout(title: string, message?: string) {
+  console.log(
+    chalk.bold.blue('i') +
+      ' ' +
+      chalk.bold(title) +
+      (message ? '\n  ' + chalk.dim('→ ' + message) : '')
+  );
+}
+
+function warn(title: string, message?: string) {
+  console.warn(
+    chalk.bold.yellow('⚠ ') +
+      chalk.bold(title) +
+      (message ? '\n  ' + chalk.dim('→ ' + message) : '')
+  );
 }
 
 function error(message: string, title?: string) {
-  console.error(chalk.bold.red('✖') + chalk.bold(title || 'Error') + '\n' + message);
-}
-
-// execa wrapper for convenience
-async function exec(
-  command: string,
-  args: string[],
-  options: { env?: Record<string, string>; cwd?: string } = {}
-) {
-  return execa(command, args, {
-    ...options,
-    stdout: 'inherit',
-    stderr: 'inherit',
-    env: {
-      ...options.env,
-
-      // Expo requires the EXPO_PUBLIC_ prefix on environment variables, so we set
-      // both versions to support Expo and other tooling.
-
-      EXPO_PUBLIC_STORYBOOK_ENABLED: 'true',
-      STORYBOOK_ENABLED: 'true',
-
-      EXPO_PUBLIC_STORYBOOK_DISABLE_UI: 'true',
-      STORYBOOK_DISABLE_UI: 'true',
-
-      EXPO_PUBLIC_STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
-      STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
-
-      EXPO_PUBLIC_STORYBOOK_WEBSOCKET_PORT: '7007',
-      STORYBOOK_WEBSOCKET_PORT: '7007',
-
-      EXPO_PUBLIC_STORYBOOK_WEBSOCKET_SECURED: 'true',
-      STORYBOOK_WEBSOCKET_SECURED: 'true',
-
-      EXPO_STORYBOOK_SERVER: 'false',
-      STORYBOOK_SERVER: 'false',
-    },
-  });
-}
-
-/**
- * Read the Expo config by running `npx expo config --json`.
- *
- * @returns Partial expo config.
- */
-async function readExpoConfig() {
-  try {
-    const result = await execa('npx', ['expo', 'config', '--json']);
-    return JSON.parse(result.stdout) as ExpoConfig;
-  } catch {
-    throw new Error(
-      'Failed to read Expo config. Ensure Expo is installed and you are in an Expo project directory.'
-    );
-  }
-}
-
-/**
- * Build the Android artifact via expo prebuild and gradlew assembleRelease.
- *
- * @returns The path to the built APK file.
- */
-async function buildAndroid() {
-  const start = new Date();
-
-  info('npx expo prebuild --platform android', 'Prebuild Android');
-  await exec('npx', ['expo', 'prebuild', '--platform', 'android']);
-
-  info('cd ./android && ./gradlew assembleRelease', 'Building Android');
-  await exec('./gradlew', ['assembleRelease'], { cwd: path.resolve('android') });
-
-  const apkPath = path.resolve('android/app/build/outputs/apk/release/app-release.apk');
-
-  if (!fs.existsSync(apkPath)) {
-    throw new Error(`Expected APK not found at ${apkPath}`);
-  }
-
-  return { artifactPath: apkPath, duration: (Date.now() - start.getTime()) / 1000 };
-}
-
-/**
- * Build the iOS artifact via expo prebuild and xcodebuild.
- *
- * @param scheme The iOS scheme to build, read from the Expo config.
- *
- * @returns The path to the built .app bundle.
- */
-async function buildIos(scheme?: string) {
-  const start = new Date();
-
-  if (scheme === undefined) {
-    throw new Error('Unable to determine scheme for iOS build.');
-  }
-  if (process.platform !== 'darwin') {
-    throw new Error('iOS builds are only supported on macOS.');
-  }
-
-  info('npx expo prebuild --platform ios', 'Prebuild iOS');
-  await exec('npx', ['expo', 'prebuild', '--platform', 'ios']);
-
-  const derivedDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-'));
-
-  const xcodebuildArguments = [
-    '-workspace',
-    `${scheme}.xcworkspace`,
-    '-scheme',
-    scheme,
-    '-configuration',
-    'Release',
-    '-sdk',
-    'iphonesimulator',
-    '-derivedDataPath',
-    derivedDataPath,
-    'CODE_SIGNING_ALLOWED=NO',
-    'CODE_SIGNING_REQUIRED=NO',
-    'CODE_SIGN_ENTITLEMENTS=""',
-    'CODE_SIGN_IDENTITY=""',
-    'build',
-  ];
-
-  const appPath = path.join(
-    derivedDataPath,
-    'Build',
-    'Products',
-    'Release-iphonesimulator',
-    `${scheme}.app`
-  );
-
-  try {
-    info(`xcodebuild ${xcodebuildArguments.join(' ')}`, 'Build iOS');
-    await execa('xcodebuild', xcodebuildArguments, { cwd: path.resolve('ios') });
-    if (!fs.existsSync(appPath)) {
-      throw new Error(`Expected .app bundle not found at ${appPath}`);
-    }
-
-    const artifactDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-artifact-'));
-    const artifactPath = path.join(artifactDirectory, `${scheme}.app`);
-    fs.renameSync(appPath, artifactPath);
-
-    return { artifactPath, duration: (Date.now() - start.getTime()) / 1000 };
-  } finally {
-    fs.rmSync(derivedDataPath, { recursive: true, force: true });
-  }
+  console.error(chalk.bold.red('✖ ') + chalk.bold(title || 'Error') + '\n  → ' + message);
 }
 
 function humanizeDuration(seconds: number) {
@@ -169,8 +50,6 @@ function humanizeDuration(seconds: number) {
   parts.push(`${s}s`);
   return parts.join(' ');
 }
-
-const SUPPORTED_PLATFORMS = ['android', 'ios'];
 
 /**
  * Parse CLI flags from argv.
@@ -186,7 +65,8 @@ function parseFlags(argv: string[]) {
           $ chromatic react-native-build [options]
 
         Options
-          --platform  Platform to build (android, ios). Can be specified multiple times. Defaults to all platforms in Expo config.
+          --platform    Platform to build (android, ios). Can be specified multiple times. Defaults to all platforms in Expo config.
+          --output-dir  Directory to write build artifacts and log file to.
         `,
     {
       argv,
@@ -196,6 +76,9 @@ function parseFlags(argv: string[]) {
           type: 'string',
           isMultiple: true,
         },
+        outputDir: {
+          type: 'string',
+        },
       },
     }
   );
@@ -203,7 +86,7 @@ function parseFlags(argv: string[]) {
   const requestedPlatforms =
     flags.platform && flags.platform.length > 0 ? flags.platform : undefined;
 
-  return requestedPlatforms;
+  return { requestedPlatforms, outputDir: flags.outputDir };
 }
 
 /**
@@ -243,11 +126,6 @@ Available platforms: ${configPlatforms.join(', ')}`);
     process.exit(1);
   }
 
-  if (platforms.includes('ios') && !config.scheme) {
-    error('No scheme found in Expo config. The scheme is required for iOS builds.');
-    process.exit(1);
-  }
-
   return platforms;
 }
 
@@ -255,19 +133,21 @@ Available platforms: ${configPlatforms.join(', ')}`);
  * Build all requested platforms and return the artifacts.
  *
  * @param platforms The platforms to build.
- * @param scheme The iOS scheme from Expo config.
+ * @param appName The app name from Expo config, required for iOS builds.
+ * @param logStream The WriteStream to write build logs to.
  *
  * @returns The list of build artifacts.
  */
-async function buildPlatforms(platforms: string[], scheme?: string) {
+async function buildPlatforms(platforms: string[], appName: string, logStream: WriteStream) {
   const artifacts: { platform: string; path: string; duration: number }[] = [];
 
   for (const platform of platforms) {
+    info(`Building for ${platformNames[platform]}`);
     if (platform === 'android') {
-      const { artifactPath, duration } = await buildAndroid();
+      const { artifactPath, duration } = await buildAndroid(logStream);
       artifacts.push({ platform: 'Android', path: artifactPath, duration });
     } else if (platform === 'ios') {
-      const { artifactPath, duration } = await buildIos(scheme);
+      const { artifactPath, duration } = await buildIos(appName, logStream);
       artifacts.push({ platform: 'iOS', path: artifactPath, duration });
     }
   }
@@ -275,25 +155,23 @@ async function buildPlatforms(platforms: string[], scheme?: string) {
   return artifacts;
 }
 
+/* eslint-disable max-statements */
 /**
  * The main entrypoint for `chromatic react-native-build`.
  *
  * @param argv A list of arguments passed.
  */
 export async function main(argv: string[]) {
-  const requestedPlatforms = parseFlags(argv);
+  const { requestedPlatforms, outputDir } = parseFlags(argv);
 
-  console.log(
-    chalk.bold.yellow('⚠ ') +
-      chalk.bold('Chromatic React Native Build is in alpha. Use with caution.') +
-      '\n' +
-      chalk.dim(
-        '  → Please report any issues you encounter on the Chromatic CLI GitHub repository.'
-      )
+  warn(
+    'Chromatic React Native Build is in alpha. Use with caution.',
+    'Please report any issues you encounter on the Chromatic CLI GitHub repository.'
   );
 
   let config: ExpoConfig;
   try {
+    info('Reading configuration from Expo', 'npx expo config --json');
     config = await readExpoConfig();
   } catch (err) {
     error(err.message);
@@ -302,17 +180,38 @@ export async function main(argv: string[]) {
 
   const platforms = resolvePlatforms(config, requestedPlatforms);
 
+  const logDirectory = outputDir ?? os.tmpdir();
+  if (outputDir) {
+    mkdirSync(outputDir, { recursive: true });
+  }
+  const logFilePath = path.join(logDirectory, `chromatic-react-native-build-${Date.now()}.log`);
+  const logStream = await openLogFileStream(logFilePath);
+
   let artifacts: { platform: string; path: string; duration: number }[];
   try {
-    artifacts = await buildPlatforms(platforms, config.scheme);
+    artifacts = await buildPlatforms(platforms, config.name, logStream);
   } catch (err) {
+    await new Promise<void>((resolve) => logStream.end(resolve));
     error(err.message);
+    info('Build failed, see log for details', logFilePath);
     process.exit(1);
+  } finally {
+    await new Promise<void>((resolve) => logStream.end(resolve));
   }
 
-  const summary = artifacts
-    .map((a) => `${a.platform} (${humanizeDuration(a.duration)})\n${a.path}`)
-    .join('\n\n');
+  if (outputDir) {
+    for (const artifact of artifacts) {
+      const extension = artifact.platform === 'Android' ? 'apk' : 'app';
+      const destinationPath = path.join(outputDir, `storybook.${extension}`);
+      renameSync(artifact.path, destinationPath);
+      artifact.path = destinationPath;
+    }
+  }
 
-  console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete') + '\n' + summary);
+  console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete'));
+  callout('Log File', logFilePath);
+  for (const a of artifacts) {
+    callout(`${a.platform} (${humanizeDuration(a.duration)})`, a.path);
+  }
 }
+/* eslint-enable max-statements */

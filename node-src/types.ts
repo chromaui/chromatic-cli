@@ -364,6 +364,7 @@ export interface Context {
   sourceDir: string;
   buildCommand?: string;
   buildLogFile?: string;
+  reactNativeBuildLogFile?: string;
   fileInfo?: {
     paths: string[];
     hashes?: Record<FilePath, string>;

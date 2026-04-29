@@ -1,15 +1,21 @@
 /* eslint-disable max-lines */
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { AnalyticsEvent } from '@cli/analytics/events';
-import { exitCodes } from '@cli/setExitCode';
 import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
+import { Readable } from 'stream';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import {
+  buildAndroid as buildAndroidDefault,
+  buildIos as buildIosDefault,
+} from '../lib/react-native/build';
+import { readExpoConfig as readExpoConfigDefault } from '../lib/react-native/expoConfig';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import { patchModulePath } from '../lib/testUtilities';
 import buildTask, {
+  buildReactNativeArtifacts,
   buildStorybook,
   generateManifestForReactNative,
   setBuildCommand,
@@ -24,13 +30,37 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
+const mockLogStream = {
+  write: vi.fn(),
+  end: vi.fn((callback?: () => void) => {
+    callback?.();
+  }),
+  on: vi.fn((event: string, callback: () => void) => {
+    if (event === 'open') callback();
+  }),
+};
+
+const mockLogLines = Array.from({ length: 25 }, (_, index) => `line ${index + 1}`).join('\n');
+
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
   return {
     ...actual,
     existsSync: vi.fn(() => true),
+    renameSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    createWriteStream: vi.fn(() => mockLogStream),
+    createReadStream: vi.fn(() => Readable.from([mockLogLines])),
+    readFileSync: vi.fn(() => 'mock log content'),
   };
 });
+vi.mock('../lib/react-native/build', () => ({
+  buildAndroid: vi.fn(() => Promise.resolve({ artifactPath: '/tmp/app-release.apk', duration: 1 })),
+  buildIos: vi.fn(() => Promise.resolve({ artifactPath: '/tmp/MyApp.app', duration: 1 })),
+}));
+vi.mock('../lib/react-native/expoConfig', () => ({
+  readExpoConfig: vi.fn(() => Promise.resolve({ platforms: ['ios', 'android'], name: 'MyApp' })),
+}));
 vi.mock('../lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(() => Promise.resolve()),
 }));
@@ -40,11 +70,17 @@ vi.mock('@sentry/node', () => ({
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
+const buildAndroid = vi.mocked(buildAndroidDefault);
+const buildIos = vi.mocked(buildIosDefault);
+const readExpoConfig = vi.mocked(readExpoConfigDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
   execa.mockClear();
+  buildAndroid.mockClear();
+  buildIos.mockClear();
+  readExpoConfig.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -352,17 +388,6 @@ describe('buildStorybook', () => {
     expect(skipResult).toBe('Using prebuilt React Native assets');
     expect(ctx.sourceDir).toBe('/path/to/rn-build');
   });
-
-  it('throws error for React Native apps without storybookBuildDir', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: new TestLogger(),
-    } as any;
-    const task = buildTask(ctx);
-    await expect(task.skip?.(ctx)).rejects.toThrow('Build directory required for React Native');
-    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
-  });
 });
 
 describe('buildStorybook E2E', () => {
@@ -556,6 +581,149 @@ describe('buildStorybook analytics', () => {
     expect(thrown).toBeInstanceOf(Error);
     expect(thrown).not.toBe(analyticsError);
     expect(Sentry.captureException).toHaveBeenCalledWith(analyticsError);
+  });
+});
+
+describe('buildReactNativeArtifacts', () => {
+  const task = { title: '', output: '' } as any;
+
+  beforeEach(() => {
+    mockLogStream.write.mockClear();
+    mockLogStream.end.mockClear();
+    mockLogStream.on.mockClear();
+    mockLogStream.on.mockImplementation((event: string, callback: () => void) => {
+      if (event === 'open') callback();
+    });
+  });
+
+  it('returns early when neither platform needs building', async () => {
+    const ctx = { ...baseContext, isReactNativeApp: false, log: new TestLogger() } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(buildAndroid).not.toHaveBeenCalled();
+    expect(buildIos).not.toHaveBeenCalled();
+  });
+
+  it('sets ctx.reactNativeBuildLogFile and creates the .chromatic directory', async () => {
+    const { mkdirSync } = await import('fs');
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith('/path/to/build/.chromatic', {
+      recursive: true,
+    });
+    expect(ctx.reactNativeBuildLogFile).toBe('/path/to/build/.chromatic/react-native-build.log');
+  });
+
+  it('calls buildAndroid and moves artifact when android is in browsers', async () => {
+    const { renameSync } = await import('fs');
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(buildAndroid).toHaveBeenCalledWith(mockLogStream);
+    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+      '/tmp/app-release.apk',
+      '/path/to/build/storybook.apk'
+    );
+  });
+
+  it('reads expo config and calls buildIos when ios is in browsers', async () => {
+    const { renameSync } = await import('fs');
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['ios'] },
+      log: new TestLogger(),
+      options: {},
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(readExpoConfig).toHaveBeenCalled();
+    expect(buildIos).toHaveBeenCalledWith('MyApp', mockLogStream);
+    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+      '/tmp/MyApp.app',
+      '/path/to/build/storybook.app'
+    );
+  });
+
+  it('uses androidBuildCommand when set and does not call buildAndroid', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      options: { reactNative: { androidBuildCommand: 'my-android-build' } },
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(buildAndroid).not.toHaveBeenCalled();
+    const [cmd, ...args] = parseCommandString('my-android-build');
+    expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
+  });
+
+  it('uses iosBuildCommand when set and does not call buildIos or readExpoConfig', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['ios'] },
+      log: new TestLogger(),
+      options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(buildIos).not.toHaveBeenCalled();
+    expect(readExpoConfig).not.toHaveBeenCalled();
+    const [cmd, ...args] = parseCommandString('my-ios-build');
+    expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
+  });
+
+  it('closes the log stream after a successful build', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(mockLogStream.end).toHaveBeenCalled();
+  });
+
+  it('closes the log stream and includes a truncated tail on build error', async () => {
+    buildAndroid.mockRejectedValueOnce(new Error('Gradle build failed'));
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      sourceDir: '/path/to/build',
+    } as any;
+    await expect(buildReactNativeArtifacts(ctx, task)).rejects.toThrow(
+      'Build failed, see logs at /path/to/build/.chromatic/react-native-build.log'
+    );
+    expect(mockLogStream.end).toHaveBeenCalled();
+  });
+
+  it('skips when storybookBuildDir is set', async () => {
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      announcedBuild: { browsers: ['android', 'ios'] },
+      log: new TestLogger(),
+      options: { storybookBuildDir: '/path/to/build' },
+    } as any;
+    await buildReactNativeArtifacts(ctx, task);
+    expect(buildAndroid).not.toHaveBeenCalled();
+    expect(buildIos).not.toHaveBeenCalled();
   });
 });
 

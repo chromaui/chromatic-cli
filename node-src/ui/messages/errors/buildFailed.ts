@@ -6,7 +6,7 @@ import { Context } from '../../../types';
 import { info } from '../../components/icons';
 import link from '../../components/link';
 
-export default (
+export const buildFailed = (
   { options, buildCommand, buildLogFile, runtimeMetadata }: Context,
   { message },
   buildLog?: string
@@ -34,5 +34,24 @@ export default (
     chalk`${info} Runtime metadata:\n{dim ${JSON.stringify(runtimeMetadata, undefined, 2)}}`,
     chalk`${info} Storybook build output:\n{dim ${buildLogFile}}`,
     lines.join(`\n`),
+  ].join('\n\n');
+};
+
+export const reactNativeBuildFailed = (
+  { reactNativeBuildLogFile, runtimeMetadata }: Context,
+  { message },
+  buildLog?: string
+) => {
+  return [
+    dedent(chalk`
+      The CLI tried to run your React Native app, but failed. This may indicate a problem with your Storybook. Here's what to do:
+
+      - Check the React Native build log.
+      - Run the build steps in the log yourself and make sure it outputs a valid APK/APP.
+    `),
+    message,
+    chalk`${info} Runtime metadata:\n{dim ${JSON.stringify(runtimeMetadata, undefined, 2)}}`,
+    chalk`${info} Build log:\n{dim ${reactNativeBuildLogFile}}`,
+    buildLog,
   ].join('\n\n');
 };

@@ -2,8 +2,10 @@ import task from '../components/task';
 import {
   failed,
   initial,
-  missingBuildDirectoryForReactNative,
   pending,
+  pendingAndroid,
+  pendingIOS,
+  pendingManifest,
   skipped,
   skippedForReactNative,
   success,
@@ -39,6 +41,7 @@ export const BuiltReactNative = () =>
     startedAt: -32_100,
     options: { storybookBuildDir: '/users/me/project/storybook-static' },
     isReactNativeApp: true,
+    reactNativeBuildLogFile: '/users/me/project/storybook-static/.chromatic/react-native-build.log',
   } as any);
 
 export const Skipped = () =>
@@ -53,10 +56,31 @@ export const SkippedForReactNative = () =>
     isReactNativeApp: true,
   } as any);
 
-export const MissingBuildDirectoryWithReactNative = () =>
-  missingBuildDirectoryForReactNative({
+export const BuildingAndroid = () => pendingAndroid({ ...ctx, isReactNativeApp: true } as any);
+
+export const BuildingAndroidWithCommand = () =>
+  pendingAndroid({
     ...ctx,
     isReactNativeApp: true,
+    options: { reactNative: { androidBuildCommand: 'my-android-build' } },
   } as any);
 
+export const BuildingIOS = () => pendingIOS({ ...ctx, isReactNativeApp: true } as any);
+
+export const BuildingIOSWithCommand = () =>
+  pendingIOS({
+    ...ctx,
+    isReactNativeApp: true,
+    options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
+  } as any);
+
+export const GeneratingManifest = () => pendingManifest();
+
 export const Failed = () => failed({ ...ctx, buildCommand } as any);
+
+export const FailedReactNative = () =>
+  failed({
+    ...ctx,
+    isReactNativeApp: true,
+    reactNativeBuildLogFile: '/path/to/project/storybook-static/.chromatic/react-native-build.log',
+  } as any);

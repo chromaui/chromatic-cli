@@ -109,6 +109,8 @@
     "@auto-it/slack": "^11.1.6",
     "@discoveryjs/json-ext": "^0.5.7",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.3.0",
+    "@expo/config-plugins": "55.0.8",
+    "@expo/config-types": "55.0.5",
     "@sentry/cli": "^2.37.0",
     "@sentry/node": "^8.30.0",
     "@snyk/dep-graph": "^2.9.0",

@@ -4,32 +4,47 @@ vi.mock('execa', () => ({
   execa: vi.fn(),
 }));
 
+vi.mock('../node-src/lib/logFile', () => ({
+  openLogFileStream: vi.fn(),
+}));
+
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
+  const existsSync = vi.fn();
+  const mkdirSync = vi.fn();
+  const mkdtempSync = vi.fn();
+  const rmSync = vi.fn();
+  const renameSync = vi.fn();
   return {
     ...actual,
     default: {
       ...actual,
-      existsSync: vi.fn(),
-      mkdtempSync: vi.fn(),
-      rmSync: vi.fn(),
-      renameSync: vi.fn(),
+      existsSync,
+      mkdirSync,
+      mkdtempSync,
+      rmSync,
+      renameSync,
     },
-    existsSync: vi.fn(),
-    mkdtempSync: vi.fn(),
-    rmSync: vi.fn(),
-    renameSync: vi.fn(),
+    existsSync,
+    mkdirSync,
+    mkdtempSync,
+    rmSync,
+    renameSync,
   };
 });
 
 import { execa } from 'execa';
 import fs from 'fs';
 
+import { openLogFileStream } from '../node-src/lib/logFile';
 import { main } from './reactNativeBuild';
 
 const mockedExeca = vi.mocked(execa);
 const mockedExistsSync = vi.mocked(fs.existsSync);
 const mockedMkdtempSync = vi.mocked(fs.mkdtempSync);
+const mockedMkdirSync = vi.mocked(fs.mkdirSync);
+const mockedRenameSync = vi.mocked(fs.renameSync);
+const mockedOpenLogFileStream = vi.mocked(openLogFileStream);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,13 +55,17 @@ beforeEach(() => {
   });
 
   mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-test' as any);
+  mockedOpenLogFileStream.mockResolvedValue({
+    write: vi.fn(),
+    end: vi.fn((callback: () => void) => callback()),
+  } as any);
 });
 
 describe('react-native-build', () => {
   it('reads expo config and builds android', async () => {
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['android'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -73,7 +92,7 @@ describe('react-native-build', () => {
 
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['ios'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['ios'], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -108,7 +127,7 @@ describe('react-native-build', () => {
   it('exits with error when no supported platforms found', async () => {
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: [], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: [], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -119,25 +138,13 @@ describe('react-native-build', () => {
     );
   });
 
-  it('exits with error when ios platform has no scheme', async () => {
-    mockedExeca.mockImplementation((command: any, args: any) => {
-      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['ios'] }) } as any;
-      }
-      return Promise.resolve({}) as any;
-    });
-
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('No scheme found'));
-  });
-
   it('skips ios on non-darwin platforms', async () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'linux' });
 
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['ios'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['ios'], name: 'MyApp' }) } as any;
       }
       return Promise.resolve({}) as any;
     });
@@ -150,11 +157,56 @@ describe('react-native-build', () => {
     Object.defineProperty(process, 'platform', { value: originalPlatform });
   });
 
+  it('creates output-dir if it does not exist when --output-dir is specified', async () => {
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main(['--output-dir', '/output']);
+
+    expect(mockedMkdirSync).toHaveBeenCalledWith('/output', { recursive: true });
+  });
+
+  it('moves artifacts to output-dir and renames them when --output-dir is specified', async () => {
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main(['--output-dir', '/output']);
+
+    expect(mockedRenameSync).toHaveBeenCalledWith(
+      expect.stringContaining('app-release.apk'),
+      '/output/storybook.apk'
+    );
+  });
+
+  it('writes log file to output-dir when --output-dir is specified', async () => {
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main(['--output-dir', '/output']);
+
+    expect(mockedOpenLogFileStream).toHaveBeenCalledWith(expect.stringMatching(/^\/output\//));
+  });
+
   it('exits when android build fails', async () => {
     // eslint-disable-next-line complexity
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
-        return { stdout: JSON.stringify({ platforms: ['android'], scheme: 'MyApp' }) } as any;
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
       }
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'prebuild') {
         return Promise.resolve({}) as any;
