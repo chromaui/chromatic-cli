@@ -185,7 +185,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   });
   ctx.isOnboarding = result.app.isOnboarding;
   if (result.app.isOnboarding) {
-    ctx.options.forceRebuild = true;
+    ctx.runtime.forceRebuild = true;
   }
   // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
@@ -197,7 +197,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       ctx.rebuildForBuildId = mostRecentAncestor.id;
       if (
         ['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status) &&
-        !ctx.git.matchesBranch(ctx.options.forceRebuild)
+        !ctx.git.matchesBranch(ctx.runtime.forceRebuild)
       ) {
         ctx.skip = true;
         ctx.rebuildForBuild = result.app.lastBuild;

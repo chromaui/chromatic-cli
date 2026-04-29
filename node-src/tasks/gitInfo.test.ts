@@ -150,9 +150,9 @@ describe('setGitInfo', () => {
 
   it('forces rebuild automatically if app is onboarding', async () => {
     client.runQuery.mockReturnValue({ app: { isOnboarding: true } });
-    const ctx = { log, options: { ownerName: 'org' }, client } as any;
+    const ctx = { log, options: { ownerName: 'org' }, runtime: {}, client } as any;
     await setGitInfo(ctx, {} as any);
-    expect(ctx.options.forceRebuild).toBe(true);
+    expect(ctx.runtime.forceRebuild).toBe(true);
   });
 
   it('sets storybookUrl and rebuildForBuild on skipped rebuild', async () => {
@@ -175,7 +175,7 @@ describe('setGitInfo', () => {
     getParentCommits.mockResolvedValue([commitInfo.commit]);
     client.runQuery.mockReturnValue({ app: { lastBuild } });
 
-    const ctx = { log, options: {}, client } as any;
+    const ctx = { log, options: {}, runtime: {}, client } as any;
     await setGitInfo(ctx, {} as any);
     expect(ctx.rebuildForBuild).toEqual(lastBuild);
     expect(ctx.storybookUrl).toEqual(lastBuild.storybookUrl);

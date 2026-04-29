@@ -177,6 +177,15 @@ export type TaskName =
   | 'prepareWorkspace'
   | 'restoreWorkspace';
 
+/**
+ * Mutable runtime state that overrides Options mid-pipeline. Tasks write
+ * Runtime; Options stays as the user's original spec and is treated as read-only.
+ *
+ * Each field is seeded from its Options counterpart at init time, then may be
+ * overridden later by tasks that need to change effective behavior.
+ */
+export type Runtime = Pick<Options, 'forceRebuild'>;
+
 export interface Context {
   env: Environment;
   log: Logger;
@@ -196,6 +205,7 @@ export interface Context {
   extraOptions?: Partial<Options>;
   configuration: Configuration;
   options: Options;
+  runtime: Runtime;
   task: TaskName;
   title: string;
   skip?: boolean;
