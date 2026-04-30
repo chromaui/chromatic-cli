@@ -55,8 +55,15 @@ export async function buildAndroid(logStream: WriteStream) {
   logStream.write('\n[chromatic] Android build: npx expo prebuild --platform android\n');
   await exec('npx', ['expo', 'prebuild', '--platform', 'android'], {}, logStream);
 
-  logStream.write('\n[chromatic] Android build: ./gradlew assembleRelease\n');
-  await exec('./gradlew', ['assembleRelease'], { cwd: path.resolve('android') }, logStream);
+  logStream.write(
+    '\n[chromatic] Android build: ./gradlew assembleRelease -PreactNativeArchitectures=x86_64\n'
+  );
+  await exec(
+    './gradlew',
+    ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
+    { cwd: path.resolve('android') },
+    logStream
+  );
 
   const apkPath = path.resolve('android/app/build/outputs/apk/release/app-release.apk');
 

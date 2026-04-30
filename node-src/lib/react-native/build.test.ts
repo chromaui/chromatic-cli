@@ -46,7 +46,7 @@ describe('buildAndroid', () => {
     );
     expect(execa).toHaveBeenCalledWith(
       './gradlew',
-      ['assembleRelease'],
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
       expect.objectContaining({ cwd: expect.stringContaining('android') })
     );
   });
@@ -58,7 +58,9 @@ describe('buildAndroid', () => {
       expect.stringContaining('[chromatic] Android build: npx expo prebuild')
     );
     expect(logStream.write).toHaveBeenCalledWith(
-      expect.stringContaining('[chromatic] Android build: ./gradlew assembleRelease')
+      expect.stringContaining(
+        '[chromatic] Android build: ./gradlew assembleRelease -PreactNativeArchitectures=x86_64'
+      )
     );
   });
 
