@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, mkdirSync, renameSync, type WriteStream } from 'fs';
+import { createReadStream, mkdirSync, renameSync, type WriteStream } from 'fs';
 import path from 'path';
 import { createInterface } from 'readline';
 
@@ -8,22 +8,15 @@ import { readExpoConfig } from '../lib/react-native/expoConfig';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { runCommand } from '../lib/shell/shell';
-import { createTask, transitionTo } from '../lib/tasks';
+import { transitionTo } from '../lib/tasks';
 import { Context, Task } from '../types';
-import { endActivity, startActivity } from '../ui/components/activity';
 import { reactNativeBuildFailed } from '../ui/messages/errors/buildFailed';
 import {
   failed,
   failedNoValidPlatforms,
-  initial,
-  pending,
   pendingAndroid,
   pendingIOS,
-  pendingManifest,
-  skipped,
-  success,
 } from '../ui/tasks/buildReactNative';
-import { setSourceDirectory } from './build';
 
 const MAX_REACT_NATIVE_LOG_LINES = 20;
 
@@ -123,41 +116,3 @@ export const generateManifestStep = async (ctx: Context) => {
   ctx.log.debug('Generating manifest.json file for React Native build');
   return await generateManifest(ctx);
 };
-
-/**
- * Sets up the Listr task for building the user's Storybook or E2E project.
- *
- * @param _ctx The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(_ctx: Context) {
-  return createTask({
-    name: 'buildReactNative',
-    title: initial().title,
-    skip: async (ctx) => {
-      if (ctx.skip) return true;
-      if (!ctx.isReactNativeApp) return true;
-
-      if (ctx.options.storybookBuildDir) {
-        ctx.sourceDir = ctx.options.storybookBuildDir;
-        if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
-          return skipped().output;
-        }
-        return false;
-      }
-
-      return false;
-    },
-    steps: [
-      setSourceDirectory,
-      transitionTo(pending),
-      startActivity,
-      buildArtifacts,
-      transitionTo(pendingManifest),
-      generateManifestStep,
-      endActivity,
-      transitionTo(success, true),
-    ],
-  });
-}

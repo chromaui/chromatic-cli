@@ -3,7 +3,6 @@ import Listr from 'listr';
 import { Context } from '../types';
 import auth from './auth';
 import build from './build';
-import buildReactNative from './buildReactNative';
 import gitInfo from './gitInfo';
 import initialize from './initialize';
 import prepare from './prepare';
@@ -21,7 +20,6 @@ export const runUploadBuild = [
   storybookInfo,
   initialize,
   build,
-  buildReactNative,
   prepare,
   upload,
   verify,

@@ -9,7 +9,7 @@ import {
 import { readExpoConfig as readExpoConfigDefault } from '../lib/react-native/expoConfig';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
-import buildReactNativeTask, { buildArtifacts, generateManifestStep } from './buildReactNative';
+import { buildArtifacts, generateManifestStep } from './buildReactNative';
 
 vi.mock('execa', async (importOriginal) => {
   const actual = await importOriginal<typeof import('execa')>();
@@ -67,27 +67,6 @@ beforeEach(() => {
   readExpoConfig.mockClear();
 });
 
-describe('buildReactNative task', () => {
-  it('skips when not a React Native app', async () => {
-    const ctx = { ...baseContext, isReactNativeApp: false } as any;
-    const task = buildReactNativeTask(ctx);
-    const skipResult = await task.skip?.(ctx);
-    expect(skipResult).toBe(true);
-  });
-
-  it('skips with prebuilt message when storybookBuildDir is set and manifest.json exists', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
-    const task = buildReactNativeTask(ctx);
-    const skipResult = await task.skip?.(ctx);
-    expect(skipResult).toBe('Using prebuilt React Native assets');
-    expect(ctx.sourceDir).toBe('/path/to/rn-build');
-  });
-});
-
 describe('buildArtifacts', () => {
   const task = { title: '', output: '' } as any;
 
@@ -100,13 +79,15 @@ describe('buildArtifacts', () => {
     });
   });
 
-  it('returns early when neither platform needs building', async () => {
+  it('throws when no valid platforms are in browsers', async () => {
     const ctx = {
       ...baseContext,
       announcedBuild: { browsers: [] },
       log: new TestLogger(),
     } as any;
-    await buildArtifacts(ctx, task);
+    await expect(buildArtifacts(ctx, task)).rejects.toThrow(
+      'Unable to build for React Native, your project does not include any supported platforms'
+    );
     expect(buildAndroid).not.toHaveBeenCalled();
     expect(buildIos).not.toHaveBeenCalled();
   });

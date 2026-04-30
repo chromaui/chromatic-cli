@@ -1,6 +1,6 @@
 import { AnalyticsEvent } from '@cli/analytics/events';
 import * as Sentry from '@sentry/node';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -14,12 +14,18 @@ import { openLogFileStream } from '../lib/logFile';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { runCommand } from '../lib/shell/shell';
 import { createTask, transitionTo } from '../lib/tasks';
-import { Context } from '../types';
+import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
 import { buildFailed } from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
 import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
+import {
+  pendingManifest,
+  skipped as reactNativeSkipped,
+  success as reactNativeSuccess,
+} from '../ui/tasks/buildReactNative';
+import { buildArtifacts, generateManifestStep } from './buildReactNative';
 
 const isStatsFlagSupported = (ctx: Context) => {
   return ctx.storybook && ctx.storybook.version
@@ -228,21 +234,46 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: async (ctx) => {
       if (ctx.skip) return true;
-      if (ctx.isReactNativeApp) return true;
-      if (ctx.options.storybookBuildDir) {
-        ctx.sourceDir = ctx.options.storybookBuildDir;
-        return skipped(ctx).output;
+
+      if (ctx.isReactNativeApp) {
+        // react native build can be skipped if the user has provided build artifacts and included a manifest
+        if (ctx.options.storybookBuildDir) {
+          ctx.sourceDir = ctx.options.storybookBuildDir;
+          if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+            return reactNativeSkipped().output;
+          }
+          return false;
+        }
+      } else {
+        // web build can be skipped if the user has already built their storybook and provided the output directory
+        if (ctx.options.storybookBuildDir) {
+          ctx.sourceDir = ctx.options.storybookBuildDir;
+          return skipped(ctx).output;
+        }
       }
       return false;
     },
     steps: [
       setSourceDirectory,
-      setBuildCommand,
-      transitionTo(pending),
-      startActivity,
-      buildStorybook,
-      endActivity,
-      transitionTo(success, true),
+      // to avoid duplicated UI, we handle both paths of the build process in one task
+      async (ctx: Context, task: Task) => {
+        if (ctx.isReactNativeApp) {
+          transitionTo(pending)(ctx, task);
+          await startActivity(ctx, task);
+          await buildArtifacts(ctx, task);
+          transitionTo(pendingManifest)(ctx, task);
+          await generateManifestStep(ctx);
+          endActivity(ctx);
+          transitionTo(reactNativeSuccess, true)(ctx, task);
+        } else {
+          await setBuildCommand(ctx);
+          transitionTo(pending)(ctx, task);
+          await startActivity(ctx, task);
+          await buildStorybook(ctx);
+          endActivity(ctx);
+          transitionTo(success, true)(ctx, task);
+        }
+      },
     ],
   });
 }
