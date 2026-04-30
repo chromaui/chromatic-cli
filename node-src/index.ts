@@ -26,6 +26,7 @@ import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
+import { createDefaultPorts } from './lib/ports';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
@@ -77,6 +78,7 @@ export type InitialContext = Omit<
     | 'env'
     | 'log'
     | 'sessionId'
+    | 'ports'
   >,
   'options'
 >;
@@ -132,6 +134,7 @@ export async function run({
     env: environment,
     log,
     sessionId,
+    ports: createDefaultPorts({ log }),
   };
 
   await runAll(ctx);
