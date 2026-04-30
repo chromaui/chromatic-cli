@@ -1,5 +1,3 @@
-import picomatch from 'picomatch';
-
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import getCommitAndBranch from '../git/getCommitAndBranch';
@@ -16,6 +14,7 @@ import {
   getVersion,
 } from '../git/git';
 import { getHasRouter } from '../lib/getHasRouter';
+import matchesBranch from '../lib/matchesBranch';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
@@ -158,8 +157,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   const { branch, commit, slug } = ctx.git;
 
-  ctx.git.matchesBranch = (glob: string | boolean) =>
-    typeof glob === 'string' && glob.length > 0 ? picomatch(glob, { bash: true })(branch) : !!glob;
+  ctx.git.matchesBranch = (glob: string | boolean) => matchesBranch(branch, glob);
 
   if (ctx.git.matchesBranch?.(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);

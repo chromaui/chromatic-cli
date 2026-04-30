@@ -47,17 +47,9 @@ const defaultUnlessSetOrFalse = (input: string | boolean | undefined, fallback: 
   }
 };
 
-/**
- * Parse options set when executing the CLI.
- *
- * @param ctx The context set when executing the CLI.
- *
- * @returns An object containing parsed options
- */
-// TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
-export default function getOptions(ctx: InitialContext): Options {
-  const { argv, env, flags, extraOptions, configuration, log, packageJson, packagePath } = ctx;
+// eslint-disable-next-line complexity
+export const getPotentialOptions = (ctx: InitialContext): Partial<Options> => {
+  const { argv, env, flags, extraOptions, configuration, log } = ctx;
 
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
@@ -114,7 +106,7 @@ export default function getOptions(ctx: InitialContext): Options {
     .split('...')
     .filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
-  const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
+  const [repositoryOwner] = flags.repositorySlug?.split('/') || [];
 
   const DEFAULT_LOG_FILE = 'chromatic.log';
   const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
@@ -212,6 +204,24 @@ export default function getOptions(ctx: InitialContext): Options {
     potentialOptions.logFile = potentialOptions.logFile ?? DEFAULT_LOG_FILE;
     potentialOptions.diagnosticsFile = potentialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
+
+  return potentialOptions;
+};
+
+/**
+ * Parse options set when executing the CLI.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns An object containing parsed options
+ */
+// TODO: refactor this function
+// eslint-disable-next-line complexity, max-statements
+export default function getOptions(ctx: InitialContext): Options {
+  const { flags, log, packageJson, packagePath } = ctx;
+  const potentialOptions = getPotentialOptions(ctx);
+  const [, branchOwner] = (flags.branchName || '').split(':').reverse();
+  const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
   if (
     !potentialOptions.projectToken &&

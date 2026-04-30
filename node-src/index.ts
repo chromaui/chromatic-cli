@@ -5,6 +5,7 @@ import Listr from 'listr';
 import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
 
+import getCommitAndBranch from './git/getCommitAndBranch';
 import {
   getBranch,
   getCommit,
@@ -21,9 +22,10 @@ import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
-import getOptions from './lib/getOptions';
+import getOptions, { getPotentialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
+import matchesBranch from './lib/matchesBranch';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
@@ -42,6 +44,7 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 
 // Make keys of `T` outside of `R` optional.
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
@@ -192,6 +195,11 @@ export async function runAll(ctx: InitialContext) {
     ctx.configuration = await getConfiguration(
       ctx.extraOptions?.configFile || ctx.flags.configFile
     );
+
+    if (await shouldSkipWithoutProjectToken(ctx)) {
+      return;
+    }
+
     const options = getOptions(ctx);
     (ctx as Context).options = options;
     ctx.log.setLogFile(options.logFile);
@@ -222,6 +230,33 @@ export async function runAll(ctx: InitialContext) {
   if (ctx.options.uploadMetadata) {
     await uploadMetadataFiles(ctx);
   }
+}
+
+async function shouldSkipWithoutProjectToken(ctx: InitialContext) {
+  const preflightOptions = getPotentialOptions(ctx);
+  if (!preflightOptions.skip) {
+    return false;
+  }
+
+  const hasProjectCredentials =
+    !!preflightOptions.projectToken || !!(preflightOptions.projectId && preflightOptions.userToken);
+  if (hasProjectCredentials) {
+    return false;
+  }
+
+  const { branch } = await getCommitAndBranch(ctx as Context, {
+    branchName: preflightOptions.branchName,
+    patchBaseRef: preflightOptions.patchBaseRef,
+    ci: preflightOptions.fromCI,
+  });
+
+  if (!matchesBranch(branch, preflightOptions.skip)) {
+    return false;
+  }
+
+  ctx.log.warn(skipNoProjectToken());
+  setExitCode(ctx, exitCodes.OK);
+  return true;
 }
 
 // TODO: refactor this function
