@@ -10,37 +10,13 @@ export const initial = (ctx: Context) => ({
 export const pending = (ctx: Context) => ({
   status: 'pending',
   title: `Building your ${buildType(ctx)}`,
-  output: ctx.isReactNativeApp ? 'Building' : `Running command: ${ctx.buildCommand}`,
-});
-
-export const pendingManifest = () => ({
-  status: 'pending',
-  title: 'Generating story manifest',
-  output: 'Generating manifest.json file for React Native build',
-});
-
-export const pendingAndroid = (ctx: Context) => ({
-  status: 'pending',
-  title: `Building your ${buildType(ctx)}`,
-  output: ctx.options?.reactNative?.androidBuildCommand
-    ? `Running command: ${ctx.options.reactNative.androidBuildCommand}`
-    : 'Building Android',
-});
-
-export const pendingIOS = (ctx: Context) => ({
-  status: 'pending',
-  title: `Building your ${buildType(ctx)}`,
-  output: ctx.options?.reactNative?.iosBuildCommand
-    ? `Running command: ${ctx.options.reactNative.iosBuildCommand}`
-    : 'Building iOS',
+  output: `Running command: ${ctx.buildCommand}`,
 });
 
 export const success = (ctx: Context) => ({
   status: 'success',
   title: `${capitalize(buildType(ctx))} built in ${getDuration(ctx)}`,
-  output: ctx.isReactNativeApp
-    ? `View build log at ${ctx.reactNativeBuildLogFile}`
-    : `View build log at ${ctx.buildLogFile}`,
+  output: `View build log at ${ctx.buildLogFile}`,
 });
 
 export const skipped = (ctx: Context) => ({
@@ -49,16 +25,8 @@ export const skipped = (ctx: Context) => ({
   output: `Using prebuilt ${buildType(ctx)} at ${ctx.options.storybookBuildDir}`,
 });
 
-export const skippedForReactNative = (ctx: Context) => ({
-  status: 'skipped',
-  title: `Build ${buildType(ctx)} [skipped]`,
-  output: 'Using prebuilt React Native assets',
-});
-
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: `Building your ${buildType(ctx)}`,
-  output: ctx.isReactNativeApp
-    ? `Build failed, see logs at ${ctx.reactNativeBuildLogFile}`
-    : `Command failed: ${ctx.buildCommand}`,
+  output: `Command failed: ${ctx.buildCommand}`,
 });
