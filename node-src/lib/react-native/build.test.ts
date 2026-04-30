@@ -24,6 +24,19 @@ const execa = vi.mocked(execaDefault);
 
 const makeLogStream = () => ({ write: vi.fn(), end: vi.fn() }) as unknown as WriteStream;
 
+async function mockedProcessPlatform(platform: string, fn: () => Promise<void>) {
+  const originalPlatform = process.platform;
+  Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  try {
+    await fn();
+  } finally {
+    Object.defineProperty(process, 'platform', {
+      value: originalPlatform,
+      configurable: true,
+    });
+  }
+}
+
 beforeEach(() => {
   execa.mockClear();
   execa.mockResolvedValue(undefined as any);
@@ -77,70 +90,63 @@ describe('buildAndroid', () => {
 
 describe('buildIos', () => {
   it('throws when not on macOS', async () => {
-    const originalPlatform = process.platform;
-    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
-    try {
+    await mockedProcessPlatform('linux', async () => {
       await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
         'iOS builds are only supported on macOS.'
       );
-    } finally {
-      Object.defineProperty(process, 'platform', {
-        value: originalPlatform,
-        configurable: true,
-      });
-    }
+    });
   });
 
   it('calls expo prebuild and xcodebuild with correct args on macOS', async () => {
-    if (process.platform !== 'darwin') return;
+    await mockedProcessPlatform('darwin', async () => {
+      const logStream = makeLogStream();
+      await buildIos('MyApp', logStream);
 
-    const logStream = makeLogStream();
-    await buildIos('MyApp', logStream);
-
-    expect(execa).toHaveBeenCalledWith(
-      'npx',
-      ['expo', 'prebuild', '--platform', 'ios'],
-      expect.objectContaining({
-        env: expect.objectContaining({
-          STORYBOOK_ENABLED: 'true',
-        }),
-      })
-    );
-    expect(execa).toHaveBeenCalledWith(
-      'xcodebuild',
-      expect.arrayContaining(['-scheme', 'MyApp', '-sdk', 'iphonesimulator']),
-      expect.objectContaining({ cwd: expect.stringContaining('ios') })
-    );
+      expect(execa).toHaveBeenCalledWith(
+        'npx',
+        ['expo', 'prebuild', '--platform', 'ios'],
+        expect.objectContaining({
+          env: expect.objectContaining({
+            STORYBOOK_ENABLED: 'true',
+          }),
+        })
+      );
+      expect(execa).toHaveBeenCalledWith(
+        'xcodebuild',
+        expect.arrayContaining(['-scheme', 'MyApp', '-sdk', 'iphonesimulator']),
+        expect.objectContaining({ cwd: expect.stringContaining('ios') })
+      );
+    });
   });
 
   it('writes command headers to the log stream on macOS', async () => {
-    if (process.platform !== 'darwin') return;
-
-    const logStream = makeLogStream();
-    await buildIos('MyApp', logStream);
-    expect(logStream.write).toHaveBeenCalledWith(
-      expect.stringContaining('[chromatic] iOS build: npx expo prebuild')
-    );
-    expect(logStream.write).toHaveBeenCalledWith(
-      expect.stringContaining('[chromatic] iOS build: xcodebuild')
-    );
+    await mockedProcessPlatform('darwin', async () => {
+      const logStream = makeLogStream();
+      await buildIos('MyApp', logStream);
+      expect(logStream.write).toHaveBeenCalledWith(
+        expect.stringContaining('[chromatic] iOS build: npx expo prebuild')
+      );
+      expect(logStream.write).toHaveBeenCalledWith(
+        expect.stringContaining('[chromatic] iOS build: xcodebuild')
+      );
+    });
   });
 
   it('returns the .app path and duration on macOS', async () => {
-    if (process.platform !== 'darwin') return;
-
-    const result = await buildIos('MyApp', makeLogStream());
-    expect(result.artifactPath).toMatch(/MyApp\.app$/);
-    expect(result.duration).toBeGreaterThanOrEqual(0);
+    await mockedProcessPlatform('darwin', async () => {
+      const result = await buildIos('MyApp', makeLogStream());
+      expect(result.artifactPath).toMatch(/MyApp\.app$/);
+      expect(result.duration).toBeGreaterThanOrEqual(0);
+    });
   });
 
   it('throws when the .app bundle is not found after build', async () => {
-    if (process.platform !== 'darwin') return;
-
-    const { existsSync } = await import('fs');
-    vi.mocked(existsSync).mockReturnValueOnce(false);
-    await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
-      'Expected .app bundle not found at'
-    );
+    await mockedProcessPlatform('darwin', async () => {
+      const { existsSync } = await import('fs');
+      vi.mocked(existsSync).mockReturnValueOnce(false);
+      await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
+        'Expected .app bundle not found at'
+      );
+    });
   });
 });
