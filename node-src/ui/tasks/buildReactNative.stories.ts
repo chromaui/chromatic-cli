@@ -1,6 +1,7 @@
 import task from '../components/task';
 import {
   failed,
+  failedNoValidPlatforms,
   initial,
   pending,
   pendingAndroid,
@@ -11,7 +12,7 @@ import {
 } from './buildReactNative';
 
 export default {
-  title: 'CLI/Tasks/BuildReactNative',
+  title: 'CLI/Tasks/Build/React Native',
   decorators: [(storyFunction) => task(storyFunction())],
 };
 
@@ -48,6 +49,8 @@ export const Built = () =>
   } as any);
 
 export const Skipped = () => skipped();
+
+export const NoValidPlatforms = () => failedNoValidPlatforms();
 
 export const Failed = () =>
   failed({

@@ -14,6 +14,7 @@ import { endActivity, startActivity } from '../ui/components/activity';
 import { reactNativeBuildFailed } from '../ui/messages/errors/buildFailed';
 import {
   failed,
+  failedNoValidPlatforms,
   initial,
   pending,
   pendingAndroid,
@@ -71,7 +72,11 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
   const needsAndroid = platforms.includes('android');
   const needsIos = platforms.includes('ios');
 
-  if (!needsAndroid && !needsIos) return;
+  if (!needsAndroid && !needsIos) {
+    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
+    ctx.log.debug('No supported platforms found for React Native build:', platforms);
+    throw new Error(failedNoValidPlatforms().output);
+  }
 
   mkdirSync(path.join(ctx.sourceDir, '.chromatic'), { recursive: true });
   ctx.reactNativeBuildLogFile = path.join(ctx.sourceDir, '.chromatic', 'react-native-build.log');

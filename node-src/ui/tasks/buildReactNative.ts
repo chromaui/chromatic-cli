@@ -46,6 +46,12 @@ export const skipped = () => ({
   output: 'Using prebuilt React Native assets',
 });
 
+export const failedNoValidPlatforms = () => ({
+  status: 'error',
+  title: 'Building your React Native Storybook',
+  output: 'Unable to build for React Native, your project does not include any supported platforms',
+});
+
 export const failed = (ctx: Context) => ({
   status: 'error',
   title: 'Building your React Native Storybook',
