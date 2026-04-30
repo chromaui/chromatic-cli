@@ -232,4 +232,24 @@ describe('getOptions', () => {
       diagnosticsFile: 'output.json',
     });
   });
+
+  it('populates projectTokens when multiple --project-token flags are passed', async () => {
+    const options = getOptions(
+      getContext(['--project-token', 'token-a', '--project-token', 'token-b', '--skip'])
+    );
+    expect(options.projectToken).toBe('token-b');
+    expect(options.projectTokens).toEqual(['token-a', 'token-b']);
+    expect(options.skip).toBe(true);
+  });
+
+  it('populates projectTokens with a single token', async () => {
+    const options = getOptions(getContext(['--project-token', 'token-a']));
+    expect(options.projectToken).toBe('token-a');
+    expect(options.projectTokens).toEqual(['token-a']);
+  });
+
+  it('does not require a single projectToken when multiple tokens are given with --skip', async () => {
+    const ctx = getContext(['--project-token', 'token-a', '--project-token', 'token-b', '--skip']);
+    expect(() => getOptions(ctx)).not.toThrow();
+  });
 });

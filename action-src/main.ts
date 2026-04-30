@@ -124,7 +124,9 @@ async function run() {
     const outputDir = getInput('outputDir');
     const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
-    const projectToken = getInput('projectToken');
+    const projectTokenInput = getInput('projectToken');
+    const projectTokens = getMultilineInput('projectToken');
+    const projectToken = projectTokens.length > 1 ? projectTokens : projectTokenInput;
     const repositorySlug = getInput('repositorySlug');
     const shaInput = getInput('chromaticSha');
     const skip = getInput('skip');
