@@ -81,7 +81,7 @@ describe('react-native-build', () => {
     );
     expect(mockedExeca).toHaveBeenCalledWith(
       './gradlew',
-      ['assembleRelease'],
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
       expect.objectContaining({ cwd: expect.stringContaining('android') })
     );
   });
