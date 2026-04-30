@@ -6,30 +6,10 @@ export default {
   decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
-const storybook = {
-  version: '5.3.0',
-  builder: { name: 'webpack4', packageVersion: '5.3.0' },
-  addons: [],
-};
-
 const ctx = { options: { playwright: true } } as any;
 
 export const Initial = () => initial(ctx);
 
 export const Pending = () => pending(ctx);
 
-export const SuccessPlaywright = () => success({ ...ctx, storybook } as any);
-
-export const SuccessCypress = () =>
-  success({
-    ...ctx,
-    options: { ...ctx.options, playwright: false, cypress: true },
-    storybook,
-  } as any);
-
-export const SuccessVitest = () =>
-  success({
-    ...ctx,
-    options: { ...ctx.options, playwright: false, vitest: true },
-    storybook,
-  } as any);
+export const Success = () => success(ctx);
