@@ -6,11 +6,13 @@ import semver from 'semver';
 import { printConfig, readConfig } from 'storybook/internal/csf-tools';
 import { parseArgsStringToArgv } from 'string-argv';
 
-import { Context } from '../types';
+import { Deps, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
 import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
+
+type StorybookMetadataDeps = Pick<Deps, 'env' | 'log' | 'options' | 'packageJson'>;
 
 export const resolvePackageJson = (pkg: string) => {
   try {
@@ -22,7 +24,7 @@ export const resolvePackageJson = (pkg: string) => {
 };
 
 const findDependency = (
-  { dependencies, devDependencies, peerDependencies },
+  { dependencies, devDependencies, peerDependencies }: Record<string, any>,
   predicate: (key: string) => string
 ) => [
   Object.keys(dependencies || {}).find((dependency) => predicate(dependency)),
@@ -30,7 +32,10 @@ const findDependency = (
   Object.keys(peerDependencies || {}).find((dependency) => predicate(dependency)),
 ];
 
-const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, string>) => {
+const getDependencyInfo = (
+  { packageJson, log }: Pick<StorybookMetadataDeps, 'packageJson' | 'log'>,
+  dependencyMap: Record<string, string>
+) => {
   // eslint-disable-next-line unicorn/prevent-abbreviations
   const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
   const [pkg, version] = dep || devDep || peerDep || [];
@@ -49,7 +54,7 @@ const getDependencyInfo = ({ packageJson, log }, dependencyMap: Record<string, s
   return { dependency, version, dependencyPackage: pkg };
 };
 
-const findStorybookVersion = async ({ env, log, options, packageJson }) => {
+const findStorybookVersion = async ({ env, log, options, packageJson }: StorybookMetadataDeps) => {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
@@ -109,7 +114,10 @@ const findStorybookVersion = async ({ env, log, options, packageJson }) => {
   ]);
 };
 
-const findConfigFlags = async ({ options, packageJson }) => {
+const findConfigFlags = async ({
+  options,
+  packageJson,
+}: Pick<StorybookMetadataDeps, 'options' | 'packageJson'>) => {
   const { scripts = {} } = packageJson;
   if (!options.buildScriptName || !scripts[options.buildScriptName]) return {};
 
@@ -179,15 +187,20 @@ const findReferences = async (mainConfig, v7) => {
   return references ? { refs: references } : {};
 };
 
-export const findStorybookConfigFile = async (ctx: Context, pattern: RegExp) => {
-  const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
+export const findStorybookConfigFile = async (
+  storybookConfigDirectory: string | undefined,
+  pattern: RegExp
+) => {
+  const configDirectory = storybookConfigDirectory ?? '.storybook';
   const files = await readdir(configDirectory);
   const configFile = files.find((file) => pattern.test(file));
   return configFile && path.join(configDirectory, configFile);
 };
 
-export const getStorybookMetadata = async (ctx: Context) => {
-  const configDirectory = ctx.options.storybookConfigDir ?? '.storybook';
+export const getStorybookMetadata = async (
+  deps: StorybookMetadataDeps
+): Promise<Partial<Storybook>> => {
+  const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
 
   // @ts-expect-error __non_webpack_require__ is only defined when bundled with webpack, and allows us to bypass webpack's module system to require files at runtime
   // eslint-disable-next-line unicorn/prefer-module
@@ -197,31 +210,34 @@ export const getStorybookMetadata = async (ctx: Context) => {
   let v7 = false;
   try {
     mainConfig = await r(path.resolve(configDirectory, 'main'));
-    ctx.log.debug({ configDirectory, mainConfig });
+    deps.log.debug({ configDirectory, mainConfig });
   } catch (err) {
-    ctx.log.debug({ storybookV6error: err });
+    deps.log.debug({ storybookV6error: err });
     try {
-      const storybookConfig = await findStorybookConfigFile(ctx, /^main\.[jt]sx?$/);
+      const storybookConfig = await findStorybookConfigFile(
+        deps.options.storybookConfigDir,
+        /^main\.[jt]sx?$/
+      );
       if (!storybookConfig) {
         throw new Error('Failed to locate Storybook config file');
       }
 
       mainConfig = await readConfig(storybookConfig);
-      ctx.log.debug({ configDirectory, mainConfig: printConfig(mainConfig) });
+      deps.log.debug({ configDirectory, mainConfig: printConfig(mainConfig) });
       v7 = true;
     } catch (err) {
-      ctx.log.debug({ storybookV7error: err });
+      deps.log.debug({ storybookV7error: err });
     }
   }
 
   const info = await Promise.allSettled([
-    findConfigFlags(ctx),
-    findStorybookVersion(ctx),
+    findConfigFlags(deps),
+    findStorybookVersion(deps),
     findBuilder(mainConfig, v7),
     findReferences(mainConfig, v7),
   ]);
 
-  ctx.log.debug(info);
+  deps.log.debug(info);
   let metadata = {};
   for (const sbItem of info) {
     if (sbItem.status === 'fulfilled') {

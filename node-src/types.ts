@@ -151,17 +151,36 @@ export interface Options extends Configuration {
   skipUpdateCheck: Flags['skipUpdateCheck'];
 }
 
-interface StorybookReferenceConfig {
+export interface StorybookReferenceConfig {
   title: string;
   url: string;
   expanded?: boolean;
   sourceUrl?: string;
 }
 
-type StorybookReference =
+export type StorybookReference =
   | StorybookReferenceConfig
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
+
+export interface Storybook {
+  version: string;
+  baseDir?: string;
+  configDir: string;
+  staticDir: string[];
+  addons: {
+    name: string;
+    packageName?: string;
+    packageVersion?: string;
+  }[];
+  builder: {
+    name: string;
+    packageName?: string;
+    packageVersion?: string;
+  };
+  mainConfigFilePath?: string;
+  refs?: Record<string, StorybookReference>;
+}
 
 export type TaskName =
   | 'auth'
@@ -285,24 +304,7 @@ export interface Context {
     matchesBranch?: (glob: boolean | string) => boolean;
     packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
   };
-  storybook: {
-    version: string;
-    baseDir?: string;
-    configDir: string;
-    staticDir: string[];
-    addons: {
-      name: string;
-      packageName?: string;
-      packageVersion?: string;
-    }[];
-    builder: {
-      name: string;
-      packageName?: string;
-      packageVersion?: string;
-    };
-    mainConfigFilePath?: string;
-    refs?: Record<string, StorybookReference>;
-  };
+  storybook: Storybook;
   projectMetadata: {
     hasRouter?: boolean;
     creationDate?: Date;
