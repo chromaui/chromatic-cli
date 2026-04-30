@@ -37,7 +37,8 @@ const getStatsFlag = (ctx: Context) => {
 };
 
 export const setSourceDirectory = async (ctx: Context) => {
-  // if it has been set upstream of us, do not overwrite it
+  // do not overwrite if it is already set, for instance in
+  // the skip condition of the buildReactNative task
   if (ctx.sourceDir) return;
 
   if (ctx.options.outputDir) {

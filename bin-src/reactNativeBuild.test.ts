@@ -164,7 +164,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main(['--output-dir', '/output']);
 

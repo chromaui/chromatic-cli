@@ -115,7 +115,7 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
     ctx.log.error(reactNativeBuildFailed(ctx, buildError, tail));
     throw new Error(failed(ctx).output);
   } finally {
-    logStream.end();
+    await new Promise<void>((resolve) => logStream.end(resolve));
   }
 };
 
