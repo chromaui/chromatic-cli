@@ -22,7 +22,7 @@ import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
-import getOptions, { getPotentialOptions } from './lib/getOptions';
+import getOptions, { getPartialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import matchesBranch from './lib/matchesBranch';
