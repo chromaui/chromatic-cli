@@ -19,6 +19,8 @@ export async function readExpoConfig(): Promise<ExpoConfig> {
 }
 
 // Re-export the sanitizedName function from expo/config-plugins to ensure iOS filename consistency.
-export const sanitizedName = IOSConfig.XcodeUtils.sanitizedName;
+export const sanitizedName = (name: string) => {
+  return IOSConfig.XcodeUtils.sanitizedName(name);
+};
 
-export { ExpoConfig } from '@expo/config-types';
+export type { ExpoConfig } from '@expo/config-types';
