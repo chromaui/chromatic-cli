@@ -81,7 +81,7 @@ export const Initializing = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Pending,
     build.Initial,
     upload.Initial,
@@ -95,7 +95,7 @@ export const Building = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Building,
     upload.Initial,
@@ -109,7 +109,7 @@ export const Uploading = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Uploading,
@@ -123,7 +123,7 @@ export const Verifying = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Success,
@@ -137,7 +137,7 @@ export const Snapshotting = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Success,
@@ -151,7 +151,7 @@ export const Passed = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Success,
@@ -166,7 +166,7 @@ export const ChangesFound = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Success,
@@ -181,7 +181,7 @@ export const FirstBuild = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Success,
@@ -196,7 +196,7 @@ export const Published = () => [
   steps(
     auth.Authenticated,
     gitInfo.Success,
-    storybookInfo.SuccessPlaywright,
+    storybookInfo.Success,
     initialize.Success,
     build.Built,
     upload.Success,
