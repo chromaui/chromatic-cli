@@ -260,7 +260,10 @@ export default function main(ctx: Context) {
         if (ctx.isReactNativeApp) {
           transitionTo(pending)(ctx, task);
           await startActivity(ctx, task);
-          await buildArtifacts(ctx, task);
+          // if the user has not provided build artifacts, we need to build them ourselves
+          if (!ctx.options.storybookBuildDir) {
+            await buildArtifacts(ctx, task);
+          }
           transitionTo(pendingManifest)(ctx, task);
           await generateManifestStep(ctx);
           endActivity(ctx);

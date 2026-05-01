@@ -37,7 +37,11 @@ export const pendingIOS = (ctx: Context) => ({
 export const success = (ctx: Context) => ({
   status: 'success',
   title: `React Native Storybook built in ${getDuration(ctx)}`,
-  output: `View build log at ${ctx.reactNativeBuildLogFile}`,
+  // success can occur on a partial build where we only generate manifest.json
+  // in that case there is no log file to display
+  output: ctx.options.storybookBuildDir
+    ? `Using prebuilt React Native assets at ${ctx.options.storybookBuildDir}`
+    : `View build log at ${ctx.reactNativeBuildLogFile}`,
 });
 
 export const skipped = () => ({
