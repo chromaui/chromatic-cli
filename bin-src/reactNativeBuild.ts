@@ -190,13 +190,12 @@ export async function main(argv: string[]) {
   let artifacts: { platform: string; path: string; duration: number }[];
   try {
     artifacts = await buildPlatforms(platforms, config.name, logStream);
+    await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (err) {
     await new Promise<void>((resolve) => logStream.end(resolve));
     error(err.message);
     info('Build failed, see log for details', logFilePath);
     process.exit(1);
-  } finally {
-    await new Promise<void>((resolve) => logStream.end(resolve));
   }
 
   if (outputDir) {

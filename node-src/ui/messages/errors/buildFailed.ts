@@ -44,7 +44,7 @@ export const reactNativeBuildFailed = (
 ) => {
   return [
     dedent(chalk`
-      The CLI tried to run your React Native app, but failed. This may indicate a problem with your Storybook. Here's what to do:
+      The CLI tried to build your React Native app, but failed. This may indicate a problem with your Storybook. Here's what to do:
 
       - Check the React Native build log.
       - Run the build steps in the log yourself and make sure it outputs a valid APK/APP.

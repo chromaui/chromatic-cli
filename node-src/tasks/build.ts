@@ -44,7 +44,7 @@ const getStatsFlag = (ctx: Context) => {
 
 export const setSourceDirectory = async (ctx: Context) => {
   // do not overwrite if it is already set, for instance in
-  // the skip condition of the buildReactNative task
+  // the skip condition of the build task on React Native
   if (ctx.sourceDir) return;
 
   if (ctx.options.outputDir) {
@@ -236,7 +236,7 @@ export default function main(ctx: Context) {
       if (ctx.skip) return true;
 
       if (ctx.isReactNativeApp) {
-        // react native build can be skipped if the user has provided build artifacts and included a manifest
+        // react native build can be skipped if the user has provided build artifacts AND included a manifest
         if (ctx.options.storybookBuildDir) {
           ctx.sourceDir = ctx.options.storybookBuildDir;
           if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {

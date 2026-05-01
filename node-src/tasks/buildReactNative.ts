@@ -48,7 +48,6 @@ const runPlatformCommand = async (
       stderr: logStream,
     });
   } catch (err) {
-    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     throw new Error(`React Native build command failed: ${command}\n${err.message}`);
   }
 };
@@ -101,14 +100,14 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
         renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.app'));
       }
     }
+
+    await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (buildError) {
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     await new Promise<void>((resolve) => logStream.end(resolve));
     const tail = await readLastLines(ctx.reactNativeBuildLogFile, MAX_REACT_NATIVE_LOG_LINES);
     ctx.log.error(reactNativeBuildFailed(ctx, buildError, tail));
     throw new Error(failed(ctx).output);
-  } finally {
-    await new Promise<void>((resolve) => logStream.end(resolve));
   }
 };
 

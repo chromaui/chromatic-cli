@@ -170,6 +170,29 @@ describe('buildArtifacts', () => {
     expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
   });
 
+  it('calls buildAndroid and buildIos when both are in browsers', async () => {
+    const { renameSync } = await import('fs');
+    const ctx = {
+      ...baseContext,
+      announcedBuild: { browsers: ['android', 'ios'] },
+      log: new TestLogger(),
+      options: {},
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildArtifacts(ctx, task);
+    expect(buildAndroid).toHaveBeenCalledWith(mockLogStream);
+    expect(readExpoConfig).toHaveBeenCalled();
+    expect(buildIos).toHaveBeenCalledWith('MyApp', mockLogStream);
+    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+      '/tmp/app-release.apk',
+      '/path/to/build/storybook.apk'
+    );
+    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+      '/tmp/MyApp.app',
+      '/path/to/build/storybook.app'
+    );
+  });
+
   it('closes the log stream after a successful build', async () => {
     const ctx = {
       ...baseContext,

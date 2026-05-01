@@ -169,7 +169,6 @@ export type TaskName =
   | 'storybookInfo'
   | 'initialize'
   | 'build'
-  | 'buildReactNative'
   | 'prepare'
   | 'upload'
   | 'verify'
