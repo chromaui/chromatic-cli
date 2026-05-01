@@ -254,6 +254,24 @@ describe('setBuildCommand', () => {
       );
     }
   );
+
+  it('forwards E2E build arguments through npm exec when running in the action', async () => {
+    getCliCommand.mockImplementation(async (runner, args) => runner('npm', args as string[]));
+
+    const ctx = {
+      ...baseContext,
+      sourceDir: './source-dir/',
+      options: { playwright: true, inAction: true },
+      git: {},
+      log: new TestLogger(),
+    } as any;
+
+    await setBuildCommand(ctx);
+
+    expect(ctx.buildCommand).toEqual(
+      'npm exec -- build-archive-storybook --output-dir=./source-dir/'
+    );
+  });
 });
 
 describe('buildStorybook', () => {

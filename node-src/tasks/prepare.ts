@@ -77,13 +77,24 @@ function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = 
  * @returns The output directory path if found, undefined otherwise
  */
 function getOutputDirectory(buildLog: string) {
-  const outputString = 'Output directory: ';
-  const outputIndex = buildLog.lastIndexOf(outputString);
-  if (outputIndex === -1) return undefined;
-  const remainingLog = buildLog.slice(outputIndex + outputString.length);
-  const newlineIndex = remainingLog.indexOf('\n');
-  const outputDirectory = newlineIndex === -1 ? remainingLog : remainingLog.slice(0, newlineIndex);
-  return outputDirectory.trim();
+  const cleanLog = buildLog.replaceAll(/\u001B\[[0-?]*[ -/]*[@-~]/g, '');
+  const lines = cleanLog.split('\n');
+
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const outputIndex = lines[i].lastIndexOf('Output directory:');
+    if (outputIndex === -1) continue;
+
+    const sameLineOutput = lines[i].slice(outputIndex + 'Output directory:'.length).trim();
+    if (sameLineOutput) return sameLineOutput;
+
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const candidate = lines[j].replace(/^[\s│└┌├┬┴─]+/, '').trim();
+      if (!candidate) continue;
+      return candidate;
+    }
+  }
+
+  return undefined;
 }
 
 /**
