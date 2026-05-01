@@ -78,10 +78,10 @@ export type InitialContext = Omit<
     | 'log'
     | 'sessionId'
   >,
-  'options'
+  'options' | 'runtime'
 >;
 
-const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
+const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx && 'runtime' in ctx;
 
 /**
  * Entry point for the CLI, GitHub Action, and Node API
@@ -194,6 +194,7 @@ export async function runAll(ctx: InitialContext) {
     );
     const options = getOptions(ctx);
     (ctx as Context).options = options;
+    (ctx as Context).runtime = { forceRebuild: options.forceRebuild };
     ctx.log.setLogFile(options.logFile);
 
     setExitCode(ctx, exitCodes.OK);
