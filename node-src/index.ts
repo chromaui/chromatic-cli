@@ -199,6 +199,8 @@ export async function runAll(ctx: InitialContext) {
     const partialOptions = getPartialOptions(ctx);
 
     if (await shouldSkipWithoutProjectToken(ctx, partialOptions)) {
+      ctx.log.warn(skipNoProjectToken());
+      setExitCode(ctx, exitCodes.OK);
       return;
     }
 
@@ -234,31 +236,45 @@ export async function runAll(ctx: InitialContext) {
   }
 }
 
-async function shouldSkipWithoutProjectToken(ctx: InitialContext) {
-  const preflightOptions = getPotentialOptions(ctx);
-  if (!preflightOptions.skip) {
+async function shouldSkipWithoutProjectToken(
+  ctx: InitialContext,
+  partialOptions: Partial<Options>
+) {
+  if (!partialOptions.skip) {
     return false;
   }
 
   const hasProjectCredentials =
-    !!preflightOptions.projectToken || !!(preflightOptions.projectId && preflightOptions.userToken);
+    !!partialOptions.projectToken || !!(partialOptions.projectId && partialOptions.userToken);
   if (hasProjectCredentials) {
     return false;
   }
 
-  const { branch } = await getCommitAndBranch(ctx as Context, {
-    branchName: preflightOptions.branchName,
-    patchBaseRef: preflightOptions.patchBaseRef,
-    ci: preflightOptions.fromCI,
-  });
-
-  if (!matchesBranch(branch, preflightOptions.skip)) {
+  const branch = await getBranchForSkip(ctx, partialOptions);
+  if (!branch) {
     return false;
   }
 
-  ctx.log.warn(skipNoProjectToken());
-  setExitCode(ctx, exitCodes.OK);
+  if (!matchesBranch(branch, partialOptions.skip)) {
+    return false;
+  }
+
   return true;
+}
+
+async function getBranchForSkip(ctx: InitialContext, partialOptions: Partial<Options>) {
+  try {
+    const { branch } = await getCommitAndBranch(ctx, {
+      branchName: partialOptions.branchName,
+      patchBaseRef: partialOptions.patchBaseRef,
+      ci: partialOptions.fromCI,
+    });
+
+    return branch;
+  } catch (err) {
+    ctx.log.debug('Failed to determine branch while handling --skip without a project token', err);
+    return false;
+  }
 }
 
 // TODO: refactor this function

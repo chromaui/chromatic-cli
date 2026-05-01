@@ -437,6 +437,15 @@ it('fails on missing project token when skip does not match the current branch',
   expect(ctx.testLogger.errors[0]).toMatch(/Missing project token/);
 });
 
+it('fails on missing project token when branch lookup fails during skip preflight', async () => {
+  getCommit.mockRejectedValueOnce(new Error('git failed'));
+  const ctx = getContext(['--skip=dependabot/**']);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(254);
+  expect(ctx.testLogger.errors[0]).toMatch(/Missing project token/);
+});
+
 // Note this tests options errors, but not fatal task or runtime errors.
 it('passes options error to experimental_onTaskError', async () => {
   const ctx = getContext([]);
