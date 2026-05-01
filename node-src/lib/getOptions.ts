@@ -56,8 +56,8 @@ const defaultUnlessSetOrFalse = (input: string | boolean | undefined, fallback: 
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
-export default function getOptions(ctx: InitialContext): Options {
-  const { argv, env, flags, extraOptions, configuration, log, packageJson, packagePath } = ctx;
+export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
+  const { argv, env, flags, extraOptions, configuration, log } = ctx;
 
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
@@ -234,9 +234,6 @@ export default function getOptions(ctx: InitialContext): Options {
     throw new Error(invalidOnlyStoryNames());
   }
 
-  const { storybookBuildDir } = potentialOptions;
-  let { buildScriptName } = potentialOptions;
-
   // We can only have one of these arguments
   const singularOptions = {
     storybookBuildDir: '--storybook-build-dir',
@@ -299,6 +296,28 @@ export default function getOptions(ctx: InitialContext): Options {
 
   return partialOptions;
 };
+
+/**
+ * Parse options set when executing the CLI.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param partialOptions Precomputed partial options used during preflight checks.
+ *
+ * @returns An object containing parsed options
+ */
+// TODO: refactor this function
+// eslint-disable-next-line complexity
+export default function getOptions(
+  ctx: InitialContext,
+  partialOptions = getPartialOptions(ctx)
+): Options {
+  const { flags, log, packageJson, packagePath } = ctx;
+  const { storybookBuildDir } = partialOptions;
+  let { buildScriptName } = partialOptions;
+
+  if (!partialOptions.projectToken && !(partialOptions.projectId && partialOptions.userToken)) {
+    throw new Error(missingProjectToken());
+  }
 
   // All options are validated and can now be used
   const options = partialOptions as Options;

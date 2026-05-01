@@ -196,11 +196,13 @@ export async function runAll(ctx: InitialContext) {
       ctx.extraOptions?.configFile || ctx.flags.configFile
     );
 
-    if (await shouldSkipWithoutProjectToken(ctx)) {
+    const partialOptions = getPartialOptions(ctx);
+
+    if (await shouldSkipWithoutProjectToken(ctx, partialOptions)) {
       return;
     }
 
-    const options = getOptions(ctx);
+    const options = getOptions(ctx, partialOptions);
     (ctx as Context).options = options;
     ctx.log.setLogFile(options.logFile);
 
