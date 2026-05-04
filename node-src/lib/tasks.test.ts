@@ -76,6 +76,50 @@ describe('createTask (typed shape)', () => {
     expect(ctx.skip).toBe(true);
   });
 
+  it('fires transitions.partial after applyPartial on partial result', async () => {
+    const ctx = baseContext();
+    const partialOutput = { phase: 'rebuild-noop' };
+    const run = vi.fn().mockResolvedValue({ kind: 'partial', output: partialOutput });
+    const applyPartial = vi.fn();
+    const partialTransition = vi
+      .fn()
+      .mockReturnValue({ status: 'success', title: 'Skipped', output: 'rebuilt' });
+    const listrTask = createTask({
+      name: 'gitInfo',
+      title: 'Test',
+      transitions: { partial: partialTransition },
+      extractInput: () => ({}),
+      applyPartial,
+      run,
+    });
+
+    const taskWrapper: any = {};
+    await (listrTask.task as any)(ctx, taskWrapper);
+
+    expect(applyPartial).toHaveBeenCalledWith(ctx, partialOutput);
+    expect(partialTransition).toHaveBeenCalledWith(ctx, partialOutput);
+    expect(taskWrapper.title).toContain('Skipped');
+    expect(ctx.skip).toBe(true);
+  });
+
+  it('passes listrTask to extractInput', async () => {
+    const ctx = baseContext();
+    const extractInput = vi.fn().mockReturnValue({});
+    const run = vi.fn().mockResolvedValue({ kind: 'continue', output: {} });
+
+    const listrTask = createTask({
+      name: 'auth',
+      title: 'Test',
+      extractInput,
+      run,
+    });
+
+    const taskWrapper = { title: '' };
+    await (listrTask.task as any)(ctx, taskWrapper);
+
+    expect(extractInput).toHaveBeenCalledWith(ctx, taskWrapper);
+  });
+
   it('still supports legacy steps[] config for unmigrated tasks', async () => {
     const ctx = baseContext();
     const step1 = vi.fn();
