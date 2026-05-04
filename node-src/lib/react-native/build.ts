@@ -43,13 +43,28 @@ async function exec(
 }
 
 /**
+ * Validate that the parent directory of the output path exists.
+ *
+ * @param outputPath The full file path where the built artifact should be placed.
+ */
+function validateOutputPath(outputPath: string) {
+  const parentDirectory = path.dirname(outputPath);
+  if (!existsSync(parentDirectory)) {
+    throw new Error(`Output directory does not exist: ${parentDirectory}`);
+  }
+}
+
+/**
  * Build the Android artifact via expo prebuild and gradlew assembleRelease.
  *
+ * @param outputPath The full file path where the built APK should be placed.
  * @param logStream The WriteStream to write build logs to.
  *
- * @returns The path to the built APK file and duration in seconds.
+ * @returns The build duration in seconds.
  */
-export async function buildAndroid(logStream: WriteStream) {
+export async function buildAndroid(outputPath: string, logStream: WriteStream) {
+  validateOutputPath(outputPath);
+
   const start = new Date();
 
   logStream.write('\n[chromatic] Android build: npx expo prebuild --platform android\n');
@@ -64,18 +79,23 @@ export async function buildAndroid(logStream: WriteStream) {
     throw new Error(`Expected APK not found at ${apkPath}`);
   }
 
-  return { artifactPath: apkPath, duration: (Date.now() - start.getTime()) / 1000 };
+  renameSync(apkPath, outputPath);
+
+  return (Date.now() - start.getTime()) / 1000;
 }
 
 /**
  * Build the iOS artifact via expo prebuild and xcodebuild.
  *
  * @param name The app name from the Expo config, used to derive the xcodebuild file names and scheme.
+ * @param outputPath The full file path where the built .app bundle should be placed.
  * @param logStream The WriteStream to write build logs to.
  *
- * @returns The path to the built .app bundle and duration in seconds.
+ * @returns The build duration in seconds.
  */
-export async function buildIos(name: string, logStream: WriteStream) {
+export async function buildIos(name: string, outputPath: string, logStream: WriteStream) {
+  validateOutputPath(outputPath);
+
   const start = new Date();
 
   if (process.platform !== 'darwin') {
@@ -127,11 +147,9 @@ export async function buildIos(name: string, logStream: WriteStream) {
       throw new Error(`Expected .app bundle not found at ${appPath}`);
     }
 
-    const artifactDirectory = mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-artifact-'));
-    const artifactPath = path.join(artifactDirectory, `${cleanName}.app`);
-    renameSync(appPath, artifactPath);
+    renameSync(appPath, outputPath);
 
-    return { artifactPath, duration: (Date.now() - start.getTime()) / 1000 };
+    return (Date.now() - start.getTime()) / 1000;
   } finally {
     rmSync(derivedDataPath, { recursive: true, force: true });
   }

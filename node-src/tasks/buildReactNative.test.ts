@@ -43,8 +43,8 @@ vi.mock('fs', async (importOriginal) => {
   };
 });
 vi.mock('../lib/react-native/build', () => ({
-  buildAndroid: vi.fn(() => Promise.resolve({ artifactPath: '/tmp/app-release.apk', duration: 1 })),
-  buildIos: vi.fn(() => Promise.resolve({ artifactPath: '/tmp/MyApp.app', duration: 1 })),
+  buildAndroid: vi.fn(() => Promise.resolve(1)),
+  buildIos: vi.fn(() => Promise.resolve(1)),
 }));
 vi.mock('../lib/react-native/expoConfig', () => ({
   readExpoConfig: vi.fn(() => Promise.resolve({ platforms: ['ios', 'android'], name: 'MyApp' })),
@@ -107,8 +107,7 @@ describe('buildArtifacts', () => {
     expect(ctx.reactNativeBuildLogFile).toBe('/path/to/build/.chromatic/react-native-build.log');
   });
 
-  it('calls buildAndroid and moves artifact when android is in browsers', async () => {
-    const { renameSync } = await import('fs');
+  it('calls buildAndroid with output path when android is in browsers', async () => {
     const ctx = {
       ...baseContext,
       announcedBuild: { browsers: ['android'] },
@@ -116,15 +115,10 @@ describe('buildArtifacts', () => {
       sourceDir: '/path/to/build',
     } as any;
     await buildArtifacts(ctx, task);
-    expect(buildAndroid).toHaveBeenCalledWith(mockLogStream);
-    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
-      '/tmp/app-release.apk',
-      '/path/to/build/storybook.apk'
-    );
+    expect(buildAndroid).toHaveBeenCalledWith('/path/to/build/storybook.apk', mockLogStream);
   });
 
-  it('reads expo config and calls buildIos when ios is in browsers', async () => {
-    const { renameSync } = await import('fs');
+  it('reads expo config and calls buildIos with output path when ios is in browsers', async () => {
     const ctx = {
       ...baseContext,
       announcedBuild: { browsers: ['ios'] },
@@ -134,11 +128,7 @@ describe('buildArtifacts', () => {
     } as any;
     await buildArtifacts(ctx, task);
     expect(readExpoConfig).toHaveBeenCalled();
-    expect(buildIos).toHaveBeenCalledWith('MyApp', mockLogStream);
-    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
-      '/tmp/MyApp.app',
-      '/path/to/build/storybook.app'
-    );
+    expect(buildIos).toHaveBeenCalledWith('MyApp', '/path/to/build/storybook.app', mockLogStream);
   });
 
   it('uses androidBuildCommand when set and does not call buildAndroid', async () => {
@@ -171,7 +161,6 @@ describe('buildArtifacts', () => {
   });
 
   it('calls buildAndroid and buildIos when both are in browsers', async () => {
-    const { renameSync } = await import('fs');
     const ctx = {
       ...baseContext,
       announcedBuild: { browsers: ['android', 'ios'] },
@@ -180,17 +169,9 @@ describe('buildArtifacts', () => {
       sourceDir: '/path/to/build',
     } as any;
     await buildArtifacts(ctx, task);
-    expect(buildAndroid).toHaveBeenCalledWith(mockLogStream);
+    expect(buildAndroid).toHaveBeenCalledWith('/path/to/build/storybook.apk', mockLogStream);
     expect(readExpoConfig).toHaveBeenCalled();
-    expect(buildIos).toHaveBeenCalledWith('MyApp', mockLogStream);
-    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
-      '/tmp/app-release.apk',
-      '/path/to/build/storybook.apk'
-    );
-    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
-      '/tmp/MyApp.app',
-      '/path/to/build/storybook.app'
-    );
+    expect(buildIos).toHaveBeenCalledWith('MyApp', '/path/to/build/storybook.app', mockLogStream);
   });
 
   it('closes the log stream after a successful build', async () => {

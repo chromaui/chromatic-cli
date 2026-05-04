@@ -45,7 +45,7 @@ beforeEach(() => {
 describe('buildAndroid', () => {
   it('calls expo prebuild and gradlew with Storybook env vars', async () => {
     const logStream = makeLogStream();
-    await buildAndroid(logStream);
+    await buildAndroid('/tmp/out/storybook.apk', logStream);
     expect(execa).toHaveBeenCalledWith(
       'npx',
       ['expo', 'prebuild', '--platform', 'android'],
@@ -66,7 +66,7 @@ describe('buildAndroid', () => {
 
   it('writes command headers to the log stream', async () => {
     const logStream = makeLogStream();
-    await buildAndroid(logStream);
+    await buildAndroid('/tmp/out/storybook.apk', logStream);
     expect(logStream.write).toHaveBeenCalledWith(
       expect.stringContaining('[chromatic] Android build: npx expo prebuild')
     );
@@ -75,23 +75,37 @@ describe('buildAndroid', () => {
     );
   });
 
-  it('returns the APK path and duration on success', async () => {
-    const result = await buildAndroid(makeLogStream());
-    expect(result.artifactPath).toMatch(/app-release\.apk$/);
-    expect(result.duration).toBeGreaterThanOrEqual(0);
+  it('moves the APK to outputPath and returns duration on success', async () => {
+    const { renameSync } = await import('fs');
+    const duration = await buildAndroid('/tmp/out/storybook.apk', makeLogStream());
+    expect(duration).toBeGreaterThanOrEqual(0);
+    expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+      expect.stringContaining('app-release.apk'),
+      '/tmp/out/storybook.apk'
+    );
   });
 
   it('throws when the APK is not found after build', async () => {
     const { existsSync } = await import('fs');
+    vi.mocked(existsSync).mockReturnValueOnce(true).mockReturnValueOnce(false);
+    await expect(buildAndroid('/tmp/out/storybook.apk', makeLogStream())).rejects.toThrow(
+      'Expected APK not found at'
+    );
+  });
+
+  it('throws when the output directory does not exist', async () => {
+    const { existsSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValueOnce(false);
-    await expect(buildAndroid(makeLogStream())).rejects.toThrow('Expected APK not found at');
+    await expect(buildAndroid('/nonexistent/dir/storybook.apk', makeLogStream())).rejects.toThrow(
+      'Output directory does not exist'
+    );
   });
 });
 
 describe('buildIos', () => {
   it('throws when not on macOS', async () => {
     await mockedProcessPlatform('linux', async () => {
-      await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
+      await expect(buildIos('MyApp', '/tmp/out/MyApp.app', makeLogStream())).rejects.toThrow(
         'iOS builds are only supported on macOS.'
       );
     });
@@ -100,7 +114,7 @@ describe('buildIos', () => {
   it('calls expo prebuild and xcodebuild with correct args on macOS', async () => {
     await mockedProcessPlatform('darwin', async () => {
       const logStream = makeLogStream();
-      await buildIos('MyApp', logStream);
+      await buildIos('MyApp', '/tmp/out/MyApp.app', logStream);
 
       expect(execa).toHaveBeenCalledWith(
         'npx',
@@ -122,7 +136,7 @@ describe('buildIos', () => {
   it('writes command headers to the log stream on macOS', async () => {
     await mockedProcessPlatform('darwin', async () => {
       const logStream = makeLogStream();
-      await buildIos('MyApp', logStream);
+      await buildIos('MyApp', '/tmp/out/MyApp.app', logStream);
       expect(logStream.write).toHaveBeenCalledWith(
         expect.stringContaining('[chromatic] iOS build: npx expo prebuild')
       );
@@ -132,21 +146,35 @@ describe('buildIos', () => {
     });
   });
 
-  it('returns the .app path and duration on macOS', async () => {
+  it('moves the .app to outputPath and returns duration on macOS', async () => {
     await mockedProcessPlatform('darwin', async () => {
-      const result = await buildIos('MyApp', makeLogStream());
-      expect(result.artifactPath).toMatch(/MyApp\.app$/);
-      expect(result.duration).toBeGreaterThanOrEqual(0);
+      const { renameSync } = await import('fs');
+      const duration = await buildIos('MyApp', '/tmp/out/MyApp.app', makeLogStream());
+      expect(duration).toBeGreaterThanOrEqual(0);
+      expect(vi.mocked(renameSync)).toHaveBeenCalledWith(
+        expect.stringContaining('MyApp.app'),
+        '/tmp/out/MyApp.app'
+      );
     });
   });
 
   it('throws when the .app bundle is not found after build', async () => {
     await mockedProcessPlatform('darwin', async () => {
       const { existsSync } = await import('fs');
-      vi.mocked(existsSync).mockReturnValueOnce(false);
-      await expect(buildIos('MyApp', makeLogStream())).rejects.toThrow(
+      vi.mocked(existsSync).mockReturnValueOnce(true).mockReturnValueOnce(false);
+      await expect(buildIos('MyApp', '/tmp/out/MyApp.app', makeLogStream())).rejects.toThrow(
         'Expected .app bundle not found at'
       );
+    });
+  });
+
+  it('throws when the output directory does not exist', async () => {
+    await mockedProcessPlatform('darwin', async () => {
+      const { existsSync } = await import('fs');
+      vi.mocked(existsSync).mockReturnValueOnce(false);
+      await expect(
+        buildIos('MyApp', '/nonexistent/dir/MyApp.app', makeLogStream())
+      ).rejects.toThrow('Output directory does not exist');
     });
   });
 });

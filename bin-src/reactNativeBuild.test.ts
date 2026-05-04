@@ -43,7 +43,7 @@ const mockedExeca = vi.mocked(execa);
 const mockedExistsSync = vi.mocked(fs.existsSync);
 const mockedMkdtempSync = vi.mocked(fs.mkdtempSync);
 const mockedMkdirSync = vi.mocked(fs.mkdirSync);
-const mockedRenameSync = vi.mocked(fs.renameSync);
+const mockedRmSync = vi.mocked(fs.rmSync);
 const mockedOpenLogFileStream = vi.mocked(openLogFileStream);
 
 beforeEach(() => {
@@ -54,7 +54,7 @@ beforeEach(() => {
     throw new Error('process.exit');
   });
 
-  mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-test' as any);
+  mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-build-test' as any);
   mockedOpenLogFileStream.mockResolvedValue({
     write: vi.fn(),
     end: vi.fn((callback: () => void) => callback()),
@@ -164,13 +164,14 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
+    mockedExistsSync.mockReturnValue(true);
 
     await main(['--output-dir', '/output']);
 
     expect(mockedMkdirSync).toHaveBeenCalledWith('/output', { recursive: true });
   });
 
-  it('moves artifacts to output-dir and renames them when --output-dir is specified', async () => {
+  it('builds artifacts directly into output-dir when --output-dir is specified', async () => {
     mockedExeca.mockImplementation((command: any, args: any) => {
       if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
         return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
@@ -181,9 +182,10 @@ describe('react-native-build', () => {
 
     await main(['--output-dir', '/output']);
 
-    expect(mockedRenameSync).toHaveBeenCalledWith(
-      expect.stringContaining('app-release.apk'),
-      '/output/storybook.apk'
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'npx',
+      ['expo', 'prebuild', '--platform', 'android'],
+      expect.objectContaining({})
     );
   });
 
@@ -199,6 +201,63 @@ describe('react-native-build', () => {
     await main(['--output-dir', '/output']);
 
     expect(mockedOpenLogFileStream).toHaveBeenCalledWith(expect.stringMatching(/^\/output\//));
+  });
+
+  it('creates a temp directory when no --output-dir is specified', async () => {
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main([]);
+
+    expect(mockedMkdtempSync).toHaveBeenCalledWith(expect.stringContaining('chromatic-rn-build-'));
+  });
+
+  it('cleans up temp directory on build failure when no --output-dir is specified', async () => {
+    // eslint-disable-next-line complexity
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'prebuild') {
+        return Promise.resolve({}) as any;
+      }
+      if (command === './gradlew') {
+        return Promise.reject(new Error('gradle failed')) as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await expect(main([])).rejects.toThrow('process.exit');
+    expect(mockedRmSync).toHaveBeenCalledWith('/tmp/chromatic-rn-build-test', {
+      recursive: true,
+      force: true,
+    });
+  });
+
+  it('does not clean up output-dir on build failure when --output-dir is specified', async () => {
+    // eslint-disable-next-line complexity
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'prebuild') {
+        return Promise.resolve({}) as any;
+      }
+      if (command === './gradlew') {
+        return Promise.reject(new Error('gradle failed')) as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await expect(main(['--output-dir', '/output'])).rejects.toThrow('process.exit');
+    expect(mockedRmSync).not.toHaveBeenCalled();
   });
 
   it('exits when android build fails', async () => {

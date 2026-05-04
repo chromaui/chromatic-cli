@@ -1,4 +1,4 @@
-import { createReadStream, mkdirSync, renameSync, type WriteStream } from 'fs';
+import { createReadStream, mkdirSync, type WriteStream } from 'fs';
 import path from 'path';
 import { createInterface } from 'readline';
 
@@ -58,7 +58,6 @@ const resolvePlatforms = (ctx: Context) => {
   );
 };
 
-/* eslint-disable-next-line max-statements */
 export const buildArtifacts = async (ctx: Context, task: Task) => {
   const platforms = resolvePlatforms(ctx);
   const needsAndroid = platforms.includes('android');
@@ -80,12 +79,9 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
       transitionTo(pendingAndroid)(ctx, task);
       const { androidBuildCommand } = ctx.options.reactNative ?? {};
       ctx.log.debug({ androidBuildCommand }, 'Running Android build');
-      if (androidBuildCommand) {
-        await runPlatformCommand(ctx, 'android', androidBuildCommand, logStream);
-      } else {
-        const { artifactPath } = await buildAndroid(logStream);
-        renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.apk'));
-      }
+      await (androidBuildCommand
+        ? runPlatformCommand(ctx, 'android', androidBuildCommand, logStream)
+        : buildAndroid(path.join(ctx.sourceDir, 'storybook.apk'), logStream));
     }
 
     if (needsIos) {
@@ -96,8 +92,7 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
         await runPlatformCommand(ctx, 'ios', iosBuildCommand, logStream);
       } else {
         const config = await readExpoConfig();
-        const { artifactPath } = await buildIos(config.name, logStream);
-        renameSync(artifactPath, path.join(ctx.sourceDir, 'storybook.app'));
+        await buildIos(config.name, path.join(ctx.sourceDir, 'storybook.app'), logStream);
       }
     }
 

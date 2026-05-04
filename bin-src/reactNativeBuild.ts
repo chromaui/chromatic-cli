@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { mkdirSync, renameSync, type WriteStream } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, type WriteStream } from 'fs';
 import meow from 'meow';
 import os from 'os';
 import path from 'path';
@@ -134,28 +134,35 @@ Available platforms: ${configPlatforms.join(', ')}`);
  *
  * @param platforms The platforms to build.
  * @param appName The app name from Expo config, required for iOS builds.
+ * @param artifactDirectory The directory to place build artifacts in.
  * @param logStream The WriteStream to write build logs to.
  *
  * @returns The list of build artifacts.
  */
-async function buildPlatforms(platforms: string[], appName: string, logStream: WriteStream) {
+async function buildPlatforms(
+  platforms: string[],
+  appName: string,
+  artifactDirectory: string,
+  logStream: WriteStream
+) {
   const artifacts: { platform: string; path: string; duration: number }[] = [];
 
   for (const platform of platforms) {
     info(`Building for ${platformNames[platform]}`);
     if (platform === 'android') {
-      const { artifactPath, duration } = await buildAndroid(logStream);
-      artifacts.push({ platform: 'Android', path: artifactPath, duration });
+      const outputPath = path.join(artifactDirectory, 'storybook.apk');
+      const duration = await buildAndroid(outputPath, logStream);
+      artifacts.push({ platform: 'Android', path: outputPath, duration });
     } else if (platform === 'ios') {
-      const { artifactPath, duration } = await buildIos(appName, logStream);
-      artifacts.push({ platform: 'iOS', path: artifactPath, duration });
+      const outputPath = path.join(artifactDirectory, 'storybook.app');
+      const duration = await buildIos(appName, outputPath, logStream);
+      artifacts.push({ platform: 'iOS', path: outputPath, duration });
     }
   }
 
   return artifacts;
 }
 
-/* eslint-disable max-statements */
 /**
  * The main entrypoint for `chromatic react-native-build`.
  *
@@ -180,31 +187,32 @@ export async function main(argv: string[]) {
 
   const platforms = resolvePlatforms(config, requestedPlatforms);
 
-  const logDirectory = outputDir ?? os.tmpdir();
+  const isTemporary = !outputDir;
+  const artifactDirectory = outputDir ?? mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-build-'));
+
   if (outputDir) {
     mkdirSync(outputDir, { recursive: true });
   }
-  const logFilePath = path.join(logDirectory, `chromatic-react-native-build-${Date.now()}.log`);
+
+  const logFilePath = path.join(
+    artifactDirectory,
+    `chromatic-react-native-build-${Date.now()}.log`
+  );
   const logStream = await openLogFileStream(logFilePath);
 
   let artifacts: { platform: string; path: string; duration: number }[];
   try {
-    artifacts = await buildPlatforms(platforms, config.name, logStream);
+    artifacts = await buildPlatforms(platforms, config.name, artifactDirectory, logStream);
     await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (err) {
     await new Promise<void>((resolve) => logStream.end(resolve));
     error(err.message);
-    info('Build failed, see log for details', logFilePath);
-    process.exit(1);
-  }
-
-  if (outputDir) {
-    for (const artifact of artifacts) {
-      const extension = artifact.platform === 'Android' ? 'apk' : 'app';
-      const destinationPath = path.join(outputDir, `storybook.${extension}`);
-      renameSync(artifact.path, destinationPath);
-      artifact.path = destinationPath;
+    if (isTemporary) {
+      rmSync(artifactDirectory, { recursive: true, force: true });
+    } else {
+      info('Build failed, see log for details', logFilePath);
     }
+    process.exit(1);
   }
 
   console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete'));
@@ -213,4 +221,3 @@ export async function main(argv: string[]) {
     callout(`${a.platform} (${humanizeDuration(a.duration)})`, a.path);
   }
 }
-/* eslint-enable max-statements */
