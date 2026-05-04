@@ -1,20 +1,14 @@
 /* eslint-disable max-lines */
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
 import { AnalyticsEvent } from '@cli/analytics/events';
-import { exitCodes } from '@cli/setExitCode';
 import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
+import { existsSync as existsSyncDefault } from 'fs';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { generateManifest } from '../lib/react-native/generateManifest';
 import TestLogger from '../lib/testLogger';
 import { patchModulePath } from '../lib/testUtilities';
-import buildTask, {
-  buildStorybook,
-  generateManifestForReactNative,
-  setBuildCommand,
-  setSourceDirectory,
-} from './build';
+import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -24,27 +18,28 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
+
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
   return {
     ...actual,
-    existsSync: vi.fn(() => true),
+    existsSync: vi.fn(() => false),
+    readFileSync: vi.fn(() => 'mock log content'),
   };
 });
-vi.mock('../lib/react-native/generateManifest', () => ({
-  generateManifest: vi.fn(() => Promise.resolve()),
-}));
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
 }));
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
+const existsSync = vi.mocked(existsSyncDefault);
 
 const baseContext = { options: {}, flags: {} } as any;
 
 beforeEach(() => {
   execa.mockClear();
+  existsSync.mockClear();
 });
 
 describe('setSourceDir', () => {
@@ -256,6 +251,61 @@ describe('setBuildCommand', () => {
   );
 });
 
+describe('build task skip', () => {
+  it('returns true when ctx.skip is set', async () => {
+    const ctx = { ...baseContext, skip: true } as any;
+    const task = buildTask(ctx);
+    expect(await task.skip?.(ctx)).toBe(true);
+  });
+
+  it('returns false when isReactNativeApp and no storybookBuildDir', async () => {
+    const ctx = { ...baseContext, isReactNativeApp: true } as any;
+    const task = buildTask(ctx);
+    expect(await task.skip?.(ctx)).toBe(false);
+  });
+
+  it('sets sourceDir and returns false when isReactNativeApp, storybookBuildDir set, and no manifest', async () => {
+    existsSync.mockReturnValueOnce(false);
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      options: { storybookBuildDir: '/path/to/rn-build' },
+    } as any;
+    const task = buildTask(ctx);
+    expect(await task.skip?.(ctx)).toBe(false);
+    expect(ctx.sourceDir).toBe('/path/to/rn-build');
+  });
+
+  it('sets sourceDir and returns skipped message when isReactNativeApp and manifest.json exists', async () => {
+    existsSync.mockReturnValueOnce(true);
+    const ctx = {
+      ...baseContext,
+      isReactNativeApp: true,
+      options: { storybookBuildDir: '/path/to/rn-build' },
+    } as any;
+    const task = buildTask(ctx);
+    expect(await task.skip?.(ctx)).toBe('Using prebuilt React Native assets');
+    expect(ctx.sourceDir).toBe('/path/to/rn-build');
+  });
+
+  it('sets sourceDir and returns skipped message when storybookBuildDir is set for web', async () => {
+    const ctx = {
+      ...baseContext,
+      options: { storybookBuildDir: '/path/to/sb-build' },
+    } as any;
+    const task = buildTask(ctx);
+    const result = await task.skip?.(ctx);
+    expect(result).toContain('/path/to/sb-build');
+    expect(ctx.sourceDir).toBe('/path/to/sb-build');
+  });
+
+  it('returns false when no storybookBuildDir for web', async () => {
+    const ctx = { ...baseContext } as any;
+    const task = buildTask(ctx);
+    expect(await task.skip?.(ctx)).toBe(false);
+  });
+});
+
 describe('buildStorybook', () => {
   it('runs the build command', async () => {
     const ctx = {
@@ -327,41 +377,6 @@ describe('buildStorybook', () => {
         env: { CI: '1', NODE_ENV: 'test', STORYBOOK_INVOKED_BY: 'chromatic' },
       })
     );
-  });
-
-  it('skips building for React Native apps', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
-    await buildStorybook(ctx);
-    expect(execa).not.toHaveBeenCalled();
-  });
-
-  it('skips the build for React Native apps when storybookBuildDir is provided and manifest.json exists', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
-    const task = buildTask(ctx);
-    expect(task.skip).toBeDefined();
-    const skipResult = await task.skip?.(ctx);
-    expect(skipResult).toBe('Using prebuilt React Native assets');
-    expect(ctx.sourceDir).toBe('/path/to/rn-build');
-  });
-
-  it('throws error for React Native apps without storybookBuildDir', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: new TestLogger(),
-    } as any;
-    const task = buildTask(ctx);
-    await expect(task.skip?.(ctx)).rejects.toThrow('Build directory required for React Native');
-    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 });
 
@@ -556,29 +571,5 @@ describe('buildStorybook analytics', () => {
     expect(thrown).toBeInstanceOf(Error);
     expect(thrown).not.toBe(analyticsError);
     expect(Sentry.captureException).toHaveBeenCalledWith(analyticsError);
-  });
-});
-
-describe('generateManifestForReactNative', () => {
-  it('generates manifest for React Native apps', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: true,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/rn-build' },
-    } as any;
-    await generateManifestForReactNative(ctx);
-    expect(generateManifest).toHaveBeenCalledWith(ctx);
-  });
-
-  it('skips manifest generation for non-React Native apps', async () => {
-    const ctx = {
-      ...baseContext,
-      isReactNativeApp: false,
-      log: { debug: vi.fn() },
-      options: { storybookBuildDir: '/path/to/build' },
-    } as any;
-    await generateManifestForReactNative(ctx);
-    expect(generateManifest).not.toHaveBeenCalled();
   });
 });

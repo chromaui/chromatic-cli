@@ -226,7 +226,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.16.0, @babel/code-frame@npm:^7.21.4, @babel/code-frame@npm:^7.26.2, @babel/code-frame@npm:^7.28.6, @babel/code-frame@npm:^7.29.0":
+"@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.16.0, @babel/code-frame@npm:^7.20.0, @babel/code-frame@npm:^7.21.4, @babel/code-frame@npm:^7.26.2, @babel/code-frame@npm:^7.28.6, @babel/code-frame@npm:^7.29.0":
   version: 7.29.0
   resolution: "@babel/code-frame@npm:7.29.0"
   dependencies:
@@ -833,6 +833,62 @@ __metadata:
     "@eslint/core": "npm:^0.17.0"
     levn: "npm:^0.4.1"
   checksum: 10c0/51600f78b798f172a9915dffb295e2ffb44840d583427bc732baf12ecb963eb841b253300e657da91d890f4b323d10a1bd12934bf293e3018d8bb66fdce5217b
+  languageName: node
+  linkType: hard
+
+"@expo/config-plugins@npm:55.0.8":
+  version: 55.0.8
+  resolution: "@expo/config-plugins@npm:55.0.8"
+  dependencies:
+    "@expo/config-types": "npm:^55.0.5"
+    "@expo/json-file": "npm:~10.0.13"
+    "@expo/plist": "npm:^0.5.2"
+    "@expo/sdk-runtime-versions": "npm:^1.0.0"
+    chalk: "npm:^4.1.2"
+    debug: "npm:^4.3.5"
+    getenv: "npm:^2.0.0"
+    glob: "npm:^13.0.0"
+    resolve-from: "npm:^5.0.0"
+    semver: "npm:^7.5.4"
+    slugify: "npm:^1.6.6"
+    xcode: "npm:^3.0.1"
+    xml2js: "npm:0.6.0"
+  checksum: 10c0/14f15495ea885c295dbb4df6d0c88753099601b109489d8bdb7fd75caa52a47349edde11265fc5af26e48680cf5b54ccccffe7305cacf22542f24519bb13de58
+  languageName: node
+  linkType: hard
+
+"@expo/config-types@npm:55.0.5, @expo/config-types@npm:^55.0.5":
+  version: 55.0.5
+  resolution: "@expo/config-types@npm:55.0.5"
+  checksum: 10c0/24ce0481cc465ddd3b53cfdde099ef4e899b1f8fff224a0f249b88c93e6c98930e99a55f3929eb53d08138b1b66102ece7b76e16f4e5fadcdf5bbac26c9c3d7e
+  languageName: node
+  linkType: hard
+
+"@expo/json-file@npm:~10.0.13":
+  version: 10.0.13
+  resolution: "@expo/json-file@npm:10.0.13"
+  dependencies:
+    "@babel/code-frame": "npm:^7.20.0"
+    json5: "npm:^2.2.3"
+  checksum: 10c0/81f2073aea613264c0c802b13cfe6b5fdda2469ceabdff105a69e2ba3bc72c1b82f8b3c1c7eb6c9e5a7c4322239e6adcbb37cd3ddb305ed2de3e18e962d57887
+  languageName: node
+  linkType: hard
+
+"@expo/plist@npm:^0.5.2":
+  version: 0.5.2
+  resolution: "@expo/plist@npm:0.5.2"
+  dependencies:
+    "@xmldom/xmldom": "npm:^0.8.8"
+    base64-js: "npm:^1.5.1"
+    xmlbuilder: "npm:^15.1.1"
+  checksum: 10c0/19adae2a365ac1a12db93682fb310ff8be03c711f9173bebe5841cbe60cdfb749247bc1a95fa0977b5bac3aa6a078a0fceeafe4ff6c66d1ed67cce496679e310
+  languageName: node
+  linkType: hard
+
+"@expo/sdk-runtime-versions@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "@expo/sdk-runtime-versions@npm:1.0.0"
+  checksum: 10c0/f80ae78a294daf396f3eff2eb412948ced5501395a6d3b88058866da9c5135dbacbb2804f8d062222e7452159a61eebefd2f548a2939f539f0f0efe8145588a2
   languageName: node
   linkType: hard
 
@@ -3569,6 +3625,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@xmldom/xmldom@npm:^0.8.8":
+  version: 0.8.13
+  resolution: "@xmldom/xmldom@npm:0.8.13"
+  checksum: 10c0/06405ee6fffba631abf715a305ace338420ebcea8baf1317f19f2752f5c505952b7df45159908e7be8451a42faa54326b780616ab4d08242b20477b2973da24b
+  languageName: node
+  linkType: hard
+
+"@xmldom/xmldom@npm:^0.9.10":
+  version: 0.9.10
+  resolution: "@xmldom/xmldom@npm:0.9.10"
+  checksum: 10c0/38a9c9b95450d7fccebc61371c8e0b90ceaae992886484108333d29ccbd2640e3555b6af012f15ce1beb5067aeb40486659b6183fad38af179e82d28028bfc5d
+  languageName: node
+  linkType: hard
+
 "@yarnpkg/core@npm:^2.4.0":
   version: 2.4.0
   resolution: "@yarnpkg/core@npm:2.4.0"
@@ -4478,7 +4548,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"base64-js@npm:^1.3.1":
+"base64-js@npm:^1.3.1, base64-js@npm:^1.5.1":
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
   checksum: 10c0/f23823513b63173a001030fae4f2dabe283b99a9d324ade3ad3d148e218134676f1ee8568c877cd79ec1c53158dcf2d2ba527a97c606618928ba99dd930102bf
@@ -4528,6 +4598,13 @@ __metadata:
   peerDependencies:
     ajv: 4.11.8 - 8
   checksum: 10c0/42bdb63d2e1ec3b8aea234ccad777313750d015f0b0fbcf7dc4471ef412c3a93604d4b702d70ad66e03f2d52a57b131357458ffec7cae083f3b120100c17d36a
+  languageName: node
+  linkType: hard
+
+"big-integer@npm:1.6.x":
+  version: 1.6.52
+  resolution: "big-integer@npm:1.6.52"
+  checksum: 10c0/9604224b4c2ab3c43c075d92da15863077a9f59e5d4205f4e7e76acd0cd47e8d469ec5e5dba8d9b32aa233951893b29329ca56ac80c20ce094b4a647a66abae0
   languageName: node
   linkType: hard
 
@@ -4583,6 +4660,24 @@ __metadata:
     widest-line: "npm:^4.0.1"
     wrap-ansi: "npm:^8.1.0"
   checksum: 10c0/3a9891dc98ac40d582c9879e8165628258e2c70420c919e70fff0a53ccc7b42825e73cda6298199b2fbc1f41f5d5b93b492490ad2ae27623bed3897ddb4267f8
+  languageName: node
+  linkType: hard
+
+"bplist-creator@npm:0.1.1":
+  version: 0.1.1
+  resolution: "bplist-creator@npm:0.1.1"
+  dependencies:
+    stream-buffers: "npm:2.2.x"
+  checksum: 10c0/427ec37263ce0e8c68a83f595fc9889a9cbf2e6fda2de18e1f8ef7f0c6ce68c0cdbb7c9c1f3bb3f2d217407af8cffbdf254bf0f71c99f2186175d07752f08a47
+  languageName: node
+  linkType: hard
+
+"bplist-parser@npm:0.3.2":
+  version: 0.3.2
+  resolution: "bplist-parser@npm:0.3.2"
+  dependencies:
+    big-integer: "npm:1.6.x"
+  checksum: 10c0/4dc307c11d2511a01255e87e370d4ab6f1962b35fdc27605fd4ce9a557a259c2dc9f87822617ddb1f7aa062a71e30ef20d6103329ac7ce235628f637fb0ed763
   languageName: node
   linkType: hard
 
@@ -4941,6 +5036,8 @@ __metadata:
     "@auto-it/slack": "npm:^11.1.6"
     "@discoveryjs/json-ext": "npm:^0.5.7"
     "@eslint-community/eslint-plugin-eslint-comments": "npm:^4.3.0"
+    "@expo/config-plugins": "npm:55.0.8"
+    "@expo/config-types": "npm:55.0.5"
     "@sentry/cli": "npm:^2.37.0"
     "@sentry/node": "npm:^8.30.0"
     "@snyk/dep-graph": "npm:^2.9.0"
@@ -7541,6 +7638,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"getenv@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "getenv@npm:2.0.0"
+  checksum: 10c0/397ff641dd70cd78e414430258651e9a2228d3c5553a8cf15ae7840f75d3f10dfcb83f668f84829e84ea665b0fce2f08a9eddda3c9dcd7faa2d3da1c182c1854
+  languageName: node
+  linkType: hard
+
 "git-hooks-list@npm:1.0.3":
   version: 1.0.3
   resolution: "git-hooks-list@npm:1.0.3"
@@ -7609,7 +7713,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^13.0.1":
+"glob@npm:^13.0.0, glob@npm:^13.0.1":
   version: 13.0.6
   resolution: "glob@npm:13.0.6"
   dependencies:
@@ -11825,6 +11929,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"plist@npm:^3.0.5":
+  version: 3.1.1
+  resolution: "plist@npm:3.1.1"
+  dependencies:
+    "@xmldom/xmldom": "npm:^0.9.10"
+    base64-js: "npm:^1.5.1"
+    xmlbuilder: "npm:^15.1.1"
+  checksum: 10c0/af681277c2e541c6aab0ddee57f59459c43beeea1ee7aa2d4218aa39595fb41c068e2d2be3e4abb17e3252eaf2c1b806ecfb1d402fa5a3f4a6e1a7a32c880c9a
+  languageName: node
+  linkType: hard
+
 "pluralize@npm:^7.0.0":
   version: 7.0.0
   resolution: "pluralize@npm:7.0.0"
@@ -13163,6 +13278,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sax@npm:>=0.6.0":
+  version: 1.6.0
+  resolution: "sax@npm:1.6.0"
+  checksum: 10c0/e5593f4a91eb25761a688c4d96902e4e95a0dd6017bc65146b6f21236e3d715cf893333b76bc758923c9574c2fb5a7a76c3a81e96ea15432f2624f906c027c1e
+  languageName: node
+  linkType: hard
+
 "scheduler@npm:^0.20.2":
   version: 0.20.2
   resolution: "scheduler@npm:0.20.2"
@@ -13382,6 +13504,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"simple-plist@npm:^1.1.0":
+  version: 1.4.0
+  resolution: "simple-plist@npm:1.4.0"
+  dependencies:
+    bplist-creator: "npm:0.1.1"
+    bplist-parser: "npm:0.3.2"
+    plist: "npm:^3.0.5"
+  checksum: 10c0/226c283492d8518d715e4133d94bdbd15c0619561bcde583b4807b36cde106c0078c615b9b4e25c0e8758a4ae4e79ed5dd76e57cd528d8b7001ecab5ad35e343
+  languageName: node
+  linkType: hard
+
 "sisteransi@npm:^1.0.5":
   version: 1.0.5
   resolution: "sisteransi@npm:1.0.5"
@@ -13414,6 +13547,13 @@ __metadata:
   version: 0.0.4
   resolution: "slice-ansi@npm:0.0.4"
   checksum: 10c0/997d4cc73e34aa8c0f60bdb71701b16c062cc4acd7a95e3b10e8c05d790eb5e735d9b470270dc6f443b1ba21492db7ceb849d5c93011d1256061bf7ed7216c7a
+  languageName: node
+  linkType: hard
+
+"slugify@npm:^1.6.6":
+  version: 1.6.9
+  resolution: "slugify@npm:1.6.9"
+  checksum: 10c0/8473c566ae00c5db26bfbf6182a4a9478ab3c912a9c926e1fdb410736a77228bfca4fdc5c755b46fafa7d2d9900de482fd7a9bd5e5c91128c4743c2c072d88da
   languageName: node
   linkType: hard
 
@@ -13822,6 +13962,13 @@ __metadata:
   bin:
     storybook: ./dist/bin/dispatcher.js
   checksum: 10c0/1443e4710b0bb972db7704d8445c039a6335afafebe853d2b0d89b161262050cd7ae5eda3811c771d54d832f0acc80cf2c231d24f73d1f547d020898394afde6
+  languageName: node
+  linkType: hard
+
+"stream-buffers@npm:2.2.x":
+  version: 2.2.0
+  resolution: "stream-buffers@npm:2.2.0"
+  checksum: 10c0/14a351f0a066eaa08c8c64a74f4aedd87dd7a8e59d4be224703da33dca3eb370828ee6c0ae3fff59a9c743e8098728fc95c5f052ae7741672a31e6b1430ba50a
   languageName: node
   linkType: hard
 
@@ -15293,6 +15440,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"uuid@npm:^7.0.3":
+  version: 7.0.3
+  resolution: "uuid@npm:7.0.3"
+  bin:
+    uuid: dist/bin/uuid
+  checksum: 10c0/2eee5723b0fcce8256f5bfd3112af6c453b5471db00af9c3533e3d5a6e57de83513f9a145a570890457bd7abf2c2aa05797291d950ac666e5a074895dc63168b
+  languageName: node
+  linkType: hard
+
 "uuid@npm:^8.3.0, uuid@npm:^8.3.2":
   version: 8.3.2
   resolution: "uuid@npm:8.3.2"
@@ -15861,10 +16017,37 @@ __metadata:
   languageName: node
   linkType: hard
 
+"xcode@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "xcode@npm:3.0.1"
+  dependencies:
+    simple-plist: "npm:^1.1.0"
+    uuid: "npm:^7.0.3"
+  checksum: 10c0/51bf35cee52909aeb18f868ecf9828f93b8042fadf968159320f9f11e757a52e43f6563a53b586986cfe5a34d576f3300c4c0cf1e14300084344ae206eaa53c3
+  languageName: node
+  linkType: hard
+
+"xml2js@npm:0.6.0":
+  version: 0.6.0
+  resolution: "xml2js@npm:0.6.0"
+  dependencies:
+    sax: "npm:>=0.6.0"
+    xmlbuilder: "npm:~11.0.0"
+  checksum: 10c0/db1ad659210eda4b77929aa692271308ec7e04830112161b8c707f3bcc7138947409c8461ae5c8bcb36b378d62594a8d1cb78770ff5c3dc46a68c67a0838b486
+  languageName: node
+  linkType: hard
+
 "xmlbuilder@npm:^15.1.1":
   version: 15.1.1
   resolution: "xmlbuilder@npm:15.1.1"
   checksum: 10c0/665266a8916498ff8d82b3d46d3993913477a254b98149ff7cff060d9b7cc0db7cf5a3dae99aed92355254a808c0e2e3ec74ad1b04aa1061bdb8dfbea26c18b8
+  languageName: node
+  linkType: hard
+
+"xmlbuilder@npm:~11.0.0":
+  version: 11.0.1
+  resolution: "xmlbuilder@npm:11.0.1"
+  checksum: 10c0/74b979f89a0a129926bc786b913459bdbcefa809afaa551c5ab83f89b1915bdaea14c11c759284bb9b931e3b53004dbc2181e21d3ca9553eeb0b2a7b4e40c35b
   languageName: node
   linkType: hard
 

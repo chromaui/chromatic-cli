@@ -1,6 +1,6 @@
 import { AnalyticsEvent } from '@cli/analytics/events';
 import * as Sentry from '@sentry/node';
-import { createWriteStream, existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
@@ -10,37 +10,22 @@ import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e'
 import { isE2EBuild } from '../lib/e2eUtils';
 import { emailHash } from '../lib/emailHash';
 import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { generateManifest } from '../lib/react-native/generateManifest';
+import { openLogFileStream } from '../lib/logFile';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { runCommand } from '../lib/shell/shell';
 import { createTask, transitionTo } from '../lib/tasks';
-import { Context } from '../types';
+import { Context, Task } from '../types';
 import { endActivity, startActivity } from '../ui/components/activity';
-import buildFailed from '../ui/messages/errors/buildFailed';
+import { buildFailed } from '../ui/messages/errors/buildFailed';
 import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
 import missingDependency from '../ui/messages/errors/missingDependency';
-import missingStorybookBuildDirectory from '../ui/messages/errors/missingStorybookBuildDirectory';
+import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
 import {
-  failed,
-  initial,
-  missingBuildDirectoryForReactNative,
-  pending,
-  skipped,
-  skippedForReactNative,
-  success,
-} from '../ui/tasks/build';
-
-export const setSourceDirectory = async (ctx: Context) => {
-  if (ctx.options.outputDir) {
-    ctx.sourceDir = ctx.options.outputDir;
-  } else if (ctx.storybook && ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
-    // Storybook v4 doesn't support absolute paths like tmp.dir would yield
-    ctx.sourceDir = 'storybook-static';
-  } else {
-    const temporaryDirectory = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
-    ctx.sourceDir = temporaryDirectory.path;
-  }
-};
+  pendingManifest,
+  skipped as reactNativeSkipped,
+  success as reactNativeSuccess,
+} from '../ui/tasks/buildReactNative';
+import { buildArtifacts, generateManifestStep } from './buildReactNative';
 
 const isStatsFlagSupported = (ctx: Context) => {
   return ctx.storybook && ctx.storybook.version
@@ -57,12 +42,23 @@ const getStatsFlag = (ctx: Context) => {
     : '--webpack-stats-json';
 };
 
-export const setBuildCommand = async (ctx: Context) => {
-  // We don't currently support building React Native Storybook so we'll skip this for now
-  if (ctx.isReactNativeApp) {
-    return;
-  }
+export const setSourceDirectory = async (ctx: Context) => {
+  // do not overwrite if it is already set, for instance in
+  // the skip condition of the build task on React Native
+  if (ctx.sourceDir) return;
 
+  if (ctx.options.outputDir) {
+    ctx.sourceDir = ctx.options.outputDir;
+  } else if (ctx.storybook && ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
+    // Storybook v4 doesn't support absolute paths like tmp.dir would yield
+    ctx.sourceDir = 'storybook-static';
+  } else {
+    const temporaryDirectory = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
+    ctx.sourceDir = temporaryDirectory.path;
+  }
+};
+
+export const setBuildCommand = async (ctx: Context) => {
   const buildCommand = ctx.flags?.buildCommand || ctx.options.buildCommand;
   const buildCommandOptions: string[] = [];
 
@@ -190,19 +186,10 @@ function trackBuildFailure(ctx: Context, errorCategory: string, err: any) {
 }
 
 export const buildStorybook = async (ctx: Context) => {
-  // We don't currently support building React Native projects so we'll skip this for now
-  if (ctx.isReactNativeApp) {
-    return;
-  }
-
   let logFile;
   if (ctx.options.storybookLogFile) {
     ctx.buildLogFile = path.resolve(ctx.options.storybookLogFile);
-    logFile = createWriteStream(ctx.buildLogFile);
-    await new Promise((resolve, reject) => {
-      logFile.on('open', resolve);
-      logFile.on('error', reject);
-    });
+    logFile = await openLogFileStream(ctx.buildLogFile);
   }
 
   const { experimental_abortSignal: signal } = ctx.options;
@@ -234,16 +221,6 @@ export const buildStorybook = async (ctx: Context) => {
   }
 };
 
-export const generateManifestForReactNative = async (ctx: Context) => {
-  // The manifest file is only needed for React Native builds
-  if (!ctx.isReactNativeApp) {
-    return;
-  }
-
-  ctx.log.debug('Generating manifest.json file for React Native build');
-  return await generateManifest(ctx);
-};
-
 /**
  * Sets up the Listr task for building the user's Storybook or E2E project.
  *
@@ -257,37 +234,49 @@ export default function main(ctx: Context) {
     title: initial(ctx).title,
     skip: async (ctx) => {
       if (ctx.skip) return true;
+
       if (ctx.isReactNativeApp) {
-        if (!ctx.options.storybookBuildDir) {
-          ctx.log.error(missingStorybookBuildDirectory(ctx.announcedBuild?.browsers));
-          setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-          throw new Error(missingBuildDirectoryForReactNative(ctx).output);
+        // react native build can be skipped if the user has provided build artifacts AND included a manifest
+        if (ctx.options.storybookBuildDir) {
+          ctx.sourceDir = ctx.options.storybookBuildDir;
+          if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
+            return reactNativeSkipped().output;
+          }
+          return false;
         }
-
-        ctx.sourceDir = ctx.options.storybookBuildDir;
-        ctx.options.outputDir = ctx.options.storybookBuildDir;
-
-        // Use manifest.json from the storybook build directory if it exists
-        if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
-          return skippedForReactNative(ctx).output;
+      } else {
+        // web build can be skipped if the user has already built their storybook and provided the output directory
+        if (ctx.options.storybookBuildDir) {
+          ctx.sourceDir = ctx.options.storybookBuildDir;
+          return skipped(ctx).output;
         }
-        return false;
-      }
-      if (ctx.options.storybookBuildDir) {
-        ctx.sourceDir = ctx.options.storybookBuildDir;
-        return skipped(ctx).output;
       }
       return false;
     },
     steps: [
       setSourceDirectory,
-      setBuildCommand,
-      transitionTo(pending),
-      startActivity,
-      buildStorybook,
-      generateManifestForReactNative,
-      endActivity,
-      transitionTo(success, true),
+      // to avoid duplicated UI, we handle both paths of the build process in one task
+      async (ctx: Context, task: Task) => {
+        if (ctx.isReactNativeApp) {
+          transitionTo(pending)(ctx, task);
+          await startActivity(ctx, task);
+          // if the user has not provided build artifacts, we need to build them ourselves
+          if (!ctx.options.storybookBuildDir) {
+            await buildArtifacts(ctx, task);
+          }
+          transitionTo(pendingManifest)(ctx, task);
+          await generateManifestStep(ctx);
+          endActivity(ctx);
+          transitionTo(reactNativeSuccess, true)(ctx, task);
+        } else {
+          await setBuildCommand(ctx);
+          transitionTo(pending)(ctx, task);
+          await startActivity(ctx, task);
+          await buildStorybook(ctx);
+          endActivity(ctx);
+          transitionTo(success, true)(ctx, task);
+        }
+      },
     ],
   });
 }

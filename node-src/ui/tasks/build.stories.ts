@@ -1,13 +1,5 @@
 import task from '../components/task';
-import {
-  failed,
-  initial,
-  missingBuildDirectoryForReactNative,
-  pending,
-  skipped,
-  skippedForReactNative,
-  success,
-} from './build';
+import { failed, initial, pending, skipped, success } from './build';
 
 export default {
   title: 'CLI/Tasks/Build',
@@ -22,8 +14,6 @@ export const Initial = () => initial(ctx);
 
 export const Building = () => pending({ ...ctx, buildCommand } as any);
 
-export const BuildingReactNative = () => pending({ ...ctx, isReactNativeApp: true } as any);
-
 export const Built = () =>
   success({
     ...ctx,
@@ -32,31 +22,10 @@ export const Built = () =>
     buildLogFile: '/users/me/project/build-storybook.log',
   } as any);
 
-export const BuiltReactNative = () =>
-  success({
-    ...ctx,
-    now: 0,
-    startedAt: -32_100,
-    options: { storybookBuildDir: '/users/me/project/storybook-static' },
-    isReactNativeApp: true,
-  } as any);
-
 export const Skipped = () =>
   skipped({
     ...ctx,
     options: { ...ctx.options, storybookBuildDir: '/users/me/project/storybook-static' },
-  } as any);
-
-export const SkippedForReactNative = () =>
-  skippedForReactNative({
-    ...ctx,
-    isReactNativeApp: true,
-  } as any);
-
-export const MissingBuildDirectoryWithReactNative = () =>
-  missingBuildDirectoryForReactNative({
-    ...ctx,
-    isReactNativeApp: true,
   } as any);
 
 export const Failed = () => failed({ ...ctx, buildCommand } as any);
