@@ -528,8 +528,8 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
-    it('does not bail on changed external Storybook config file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'path/to/other-storybook-config/file.js'];
+  it('does not bail on changed external Storybook config file', async () => {
+    const changedFiles = ['src/foo.stories.js', 'path/to/other-storybook/.storybook/file.js'];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -539,10 +539,10 @@ describe('getDependentStoryFiles', () => {
       {
         id: CSF_GLOB,
         name: CSF_GLOB,
-        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(result).toEqual({
