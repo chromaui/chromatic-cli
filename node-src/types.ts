@@ -163,6 +163,25 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+export interface Storybook {
+  version: string;
+  baseDir?: string;
+  configDir: string;
+  staticDir: string[];
+  addons: {
+    name: string;
+    packageName?: string;
+    packageVersion?: string;
+  }[];
+  builder: {
+    name: string;
+    packageName?: string;
+    packageVersion?: string;
+  };
+  mainConfigFilePath?: string;
+  refs?: Record<string, StorybookReference>;
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -285,24 +304,7 @@ export interface Context {
     matchesBranch?: (glob: boolean | string) => boolean;
     packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
   };
-  storybook: {
-    version: string;
-    baseDir?: string;
-    configDir: string;
-    staticDir: string[];
-    addons: {
-      name: string;
-      packageName?: string;
-      packageVersion?: string;
-    }[];
-    builder: {
-      name: string;
-      packageName?: string;
-      packageVersion?: string;
-    };
-    mainConfigFilePath?: string;
-    refs?: Record<string, StorybookReference>;
-  };
+  storybook: Storybook;
   projectMetadata: {
     hasRouter?: boolean;
     creationDate?: Date;
