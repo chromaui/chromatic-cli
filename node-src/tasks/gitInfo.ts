@@ -172,6 +172,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
   }
 
   const parentCommits = await getParentCommits(ctx, {
+    git: ctx.git,
     ignoreLastBuildOnBranch: ctx.git.matchesBranch?.(ctx.options.ignoreLastBuildOnBranch || false),
   });
   ctx.git.parentCommits = parentCommits;
@@ -229,7 +230,7 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       return;
     }
 
-    const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
+    const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits, git: ctx.git });
     ctx.git.baselineCommits = baselineBuilds.map((build) => build.commit);
     ctx.log.debug(`Found baselineCommits: ${ctx.git.baselineCommits.join(', ')}`);
 
