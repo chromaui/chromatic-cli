@@ -1,3 +1,23 @@
+# v16.7.0 (Mon May 04 2026)
+
+#### 🚀 Enhancement
+
+- Add React Native build stage [#1297](https://github.com/chromaui/chromatic-cli/pull/1297) ([@jmhobbs](https://github.com/jmhobbs))
+- Make Storybook metadata output generic [#1311](https://github.com/chromaui/chromatic-cli/pull/1311) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Migrate `setStorybookInfo` task to typed inputs and outputs [#1306](https://github.com/chromaui/chromatic-cli/pull/1306) ([@justin-thurman](https://github.com/justin-thurman))
+- Scaffolding for removing `Context` from CLI task bodies [#1302](https://github.com/chromaui/chromatic-cli/pull/1302) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v16.6.3 (Wed Apr 29 2026)
 
 #### 🐛 Bug Fix
