@@ -142,7 +142,11 @@ describe('buildArtifacts', () => {
     await buildArtifacts(ctx, task);
     expect(buildAndroid).not.toHaveBeenCalled();
     const [cmd, ...args] = parseCommandString('my-android-build');
-    expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
+      expect.objectContaining({ env: { CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' } })
+    );
   });
 
   it('uses iosBuildCommand when set and does not call buildIos or readExpoConfig', async () => {
@@ -157,7 +161,11 @@ describe('buildArtifacts', () => {
     expect(buildIos).not.toHaveBeenCalled();
     expect(readExpoConfig).not.toHaveBeenCalled();
     const [cmd, ...args] = parseCommandString('my-ios-build');
-    expect(execa).toHaveBeenCalledWith(cmd, args, expect.anything());
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
+      expect.objectContaining({ env: { CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' } })
+    );
   });
 
   it('calls buildAndroid and buildIos when both are in browsers', async () => {
