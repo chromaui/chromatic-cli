@@ -5,12 +5,25 @@ import path from 'path';
 
 import { sanitizedName } from './expoConfig';
 
-async function exec(
+/**
+ * Execute a command with the needed context for a React Native Storybook build.
+ *
+ * @param command The command to execute.
+ * @param args The arguments to pass to the command.
+ * @param options Additional options for command execution, such as environment variables and working directory.
+ * @param options.env Environment variables to add for the command execution.
+ * @param options.cwd The working directory to execute the command in.
+ * @param logStream The WriteStream to write command output to.
+ *
+ * @returns A promise that resolves when the command execution is complete.
+ */
+export async function execWithBuildEnvironment(
   command: string,
   args: string[],
   options: { env?: Record<string, string>; cwd?: string } = {},
   logStream: WriteStream
 ) {
+  logStream.write(`\n[chromatic] build: "${command} ${args.join(' ')}"\n`);
   return execa(command, args, {
     ...options,
     stdout: logStream,
@@ -68,12 +81,17 @@ export async function buildAndroid(outputPath: string, logStream: WriteStream) {
   const start = new Date();
 
   logStream.write('\n[chromatic] Android build: npx expo prebuild --platform android\n');
-  await exec('npx', ['expo', 'prebuild', '--platform', 'android'], {}, logStream);
+  await execWithBuildEnvironment(
+    'npx',
+    ['expo', 'prebuild', '--platform', 'android'],
+    {},
+    logStream
+  );
 
   logStream.write(
     '\n[chromatic] Android build: ./gradlew assembleRelease -PreactNativeArchitectures=x86_64\n'
   );
-  await exec(
+  await execWithBuildEnvironment(
     './gradlew',
     ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
     { cwd: path.resolve('android') },
@@ -112,7 +130,7 @@ export async function buildIos(name: string, outputPath: string, logStream: Writ
   const cleanName = sanitizedName(name);
 
   logStream.write('\n[chromatic] iOS build: npx expo prebuild --platform ios\n');
-  await exec('npx', ['expo', 'prebuild', '--platform', 'ios'], {}, logStream);
+  await execWithBuildEnvironment('npx', ['expo', 'prebuild', '--platform', 'ios'], {}, logStream);
 
   const derivedDataPath = mkdtempSync(path.join(os.tmpdir(), 'chromatic-rn-ios-'));
 
@@ -145,11 +163,14 @@ export async function buildIos(name: string, outputPath: string, logStream: Writ
   logStream.write(`\n[chromatic] iOS build: xcodebuild ${xcodebuildArguments.join(' ')}\n`);
 
   try {
-    await execa('xcodebuild', xcodebuildArguments, {
-      cwd: path.resolve('ios'),
-      stdout: logStream,
-      stderr: logStream,
-    });
+    await execWithBuildEnvironment(
+      'xcodebuild',
+      xcodebuildArguments,
+      {
+        cwd: path.resolve('ios'),
+      },
+      logStream
+    );
     if (!existsSync(appPath)) {
       throw new Error(`Expected .app bundle not found at ${appPath}`);
     }
