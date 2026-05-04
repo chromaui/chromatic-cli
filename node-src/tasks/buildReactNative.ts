@@ -46,6 +46,9 @@ const runPlatformCommand = async (
     await runCommand(command, {
       stdout: logStream,
       stderr: logStream,
+      env: {
+        CHROMATIC_ARTIFACT_DIRECTORY: ctx.sourceDir,
+      },
     });
   } catch (err) {
     throw new Error(`React Native build command failed: ${command}\n${err.message}`);
