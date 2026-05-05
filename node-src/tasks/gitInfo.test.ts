@@ -202,4 +202,118 @@ describe('setGitInfo', () => {
       numberOfAppFiles: 100,
     });
   });
+
+  describe('skip with multiple project tokens', () => {
+    it('skips all projects when multiple tokens are provided with --skip', async () => {
+      client.runQuery.mockImplementation((query, variables) => {
+        if (query.includes('CreateAppTokenMutation')) {
+          return { appToken: `token-for-${variables.projectToken}` };
+        }
+        if (query.includes('SkipBuildMutation')) {
+          return { skipBuild: true };
+        }
+        return { app: { isOnboarding: false } };
+      });
+
+      const ctx = {
+        log,
+        options: {
+          skip: true,
+          projectToken: 'token-c',
+          projectTokens: ['token-a', 'token-b', 'token-c'],
+        },
+        client,
+      } as any;
+      await setGitInfo(ctx, {} as any);
+
+      expect(ctx.skip).toBe(true);
+
+      const createAppTokenCalls = client.runQuery.mock.calls.filter(([q]) =>
+        q.includes('CreateAppTokenMutation')
+      );
+      expect(createAppTokenCalls).toHaveLength(3);
+      expect(createAppTokenCalls[0][1]).toEqual({ projectToken: 'token-a' });
+      expect(createAppTokenCalls[1][1]).toEqual({ projectToken: 'token-b' });
+      expect(createAppTokenCalls[2][1]).toEqual({ projectToken: 'token-c' });
+
+      const skipBuildCalls = client.runQuery.mock.calls.filter(([q]) =>
+        q.includes('SkipBuildMutation')
+      );
+      expect(skipBuildCalls).toHaveLength(3);
+    });
+
+    it('still skips when some tokens fail and others succeed', async () => {
+      let callCount = 0;
+      client.runQuery.mockImplementation((query, variables) => {
+        if (query.includes('CreateAppTokenMutation')) {
+          callCount++;
+          if (callCount === 1) throw new Error('Invalid token');
+          return { appToken: `token-for-${variables.projectToken}` };
+        }
+        if (query.includes('SkipBuildMutation')) {
+          return { skipBuild: true };
+        }
+        return { app: { isOnboarding: false } };
+      });
+
+      const ctx = {
+        log,
+        options: {
+          skip: true,
+          projectToken: 'token-b',
+          projectTokens: ['bad-token', 'token-b'],
+        },
+        client,
+      } as any;
+      await setGitInfo(ctx, {} as any);
+
+      expect(ctx.skip).toBe(true);
+    });
+
+    it('throws when all tokens fail', async () => {
+      client.runQuery.mockImplementation((query) => {
+        if (query.includes('CreateAppTokenMutation')) {
+          throw new Error('Invalid token');
+        }
+        return { app: { isOnboarding: false } };
+      });
+
+      const ctx = {
+        log,
+        options: {
+          skip: true,
+          projectToken: 'bad-a',
+          projectTokens: ['bad-a', 'bad-b'],
+        },
+        client,
+      } as any;
+
+      await expect(setGitInfo(ctx, {} as any)).rejects.toThrow('Failed to skip build');
+    });
+
+    it('uses single-token path when only one token is provided', async () => {
+      client.runQuery.mockImplementation((query) => {
+        if (query.includes('SkipBuildMutation')) {
+          return { skipBuild: true };
+        }
+        return { app: { isOnboarding: false } };
+      });
+
+      const ctx = {
+        log,
+        options: {
+          skip: true,
+          projectToken: 'single-token',
+        },
+        client,
+      } as any;
+      await setGitInfo(ctx, {} as any);
+
+      expect(ctx.skip).toBe(true);
+      const createAppTokenCalls = client.runQuery.mock.calls.filter(([q]) =>
+        q.includes('CreateAppTokenMutation')
+      );
+      expect(createAppTokenCalls).toHaveLength(0);
+    });
+  });
 });

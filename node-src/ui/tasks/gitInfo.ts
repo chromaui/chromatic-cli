@@ -36,11 +36,15 @@ export const skippingBuild = (ctx: Context) => ({
   output: `Skipping build for commit ${ctx.git.commit.slice(0, 7)}`,
 });
 
-export const skippedForCommit = (ctx: Context) => ({
-  status: 'success',
-  title: 'Skipping build',
-  output: `Skipped build for commit ${ctx.git.commit.slice(0, 7)} due to --skip`,
-});
+export const skippedForCommit = (ctx: Context) => {
+  const tokenCount = ctx.options.projectTokens?.length || 1;
+  const suffix = tokenCount > 1 ? ` (${tokenCount} projects)` : '';
+  return {
+    status: 'success',
+    title: 'Skipping build',
+    output: `Skipped build for commit ${ctx.git.commit.slice(0, 7)} due to --skip${suffix}`,
+  };
+};
 
 export const skipFailed = () => ({
   status: 'error',

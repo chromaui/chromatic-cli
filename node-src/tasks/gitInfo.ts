@@ -39,6 +39,14 @@ import {
 
 const UNDEFINED_BRANCH_PREFIX_REGEXP = /^undefined:/;
 
+const mask = (secret: string) => '*'.repeat(secret.length - 4) + secret.slice(-4);
+
+const CreateAppTokenMutation = `
+  mutation CreateAppTokenMutation($projectToken: String!) {
+    appToken: createAppToken(code: $projectToken)
+  }
+`;
+
 const SkipBuildMutation = `
   mutation SkipBuildMutation($commit: String!, $branch: String, $slug: String) {
     skipBuild(commit: $commit, branch: $branch, slug: $slug)
@@ -163,7 +171,40 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
   if (ctx.git.matchesBranch?.(ctx.options.skip)) {
     transitionTo(skippingBuild)(ctx, task);
-    // The SkipBuildMutation ensures the commit is tagged properly.
+
+    const tokens = ctx.options.projectTokens?.length
+      ? ctx.options.projectTokens
+      : [ctx.options.projectToken];
+
+    if (tokens.length > 1) {
+      let skippedCount = 0;
+      for (const token of tokens) {
+        try {
+          const { appToken } = await ctx.client.runQuery<{ appToken: string }>(
+            CreateAppTokenMutation,
+            { projectToken: token }
+          );
+          const result = await ctx.client.runQuery(
+            SkipBuildMutation,
+            { commit, branch, slug },
+            { headers: { Authorization: `Bearer ${appToken}` } }
+          );
+          if (result) skippedCount++;
+        } catch (err) {
+          ctx.log.warn(`Failed to skip project with token '${mask(token)}': ${err.message || err}`);
+        }
+      }
+
+      if (skippedCount > 0) {
+        ctx.skip = true;
+        transitionTo(skippedForCommit, true)(ctx, task);
+        setExitCode(ctx, exitCodes.OK);
+        return;
+      }
+      throw new Error(skipFailed().output);
+    }
+
+    // Single token: existing behavior
     if (await ctx.client.runQuery(SkipBuildMutation, { commit, branch, slug })) {
       ctx.skip = true;
       transitionTo(skippedForCommit, true)(ctx, task);

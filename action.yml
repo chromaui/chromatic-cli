@@ -81,13 +81,13 @@ inputs:
     description: 'Deprecated, use onlyChanged, onlyStoryNames or onlyStoryFiles instead'
     required: false
   projectToken:
-    description: 'Your chromatic project token (best provided via env.CHROMATIC_PROJECT_TOKEN)'
+    description: 'Your chromatic project token (best provided via env.CHROMATIC_PROJECT_TOKEN). Provide multiple tokens (one per line) with skip to skip multiple projects in one invocation.'
     required: false
   repositorySlug:
     description: 'Override the repository slug (e.g. ownerName/repositoryName)'
     required: false
   skip:
-    description: 'Skip Chromatic tests, but mark the commit as passing'
+    description: 'Skip Chromatic tests, but mark the commit as passing. When multiple project tokens are provided, all projects are skipped in one invocation.'
     required: false
   skipUpdateCheck:
     description: 'Skips Chromatic CLI update check'

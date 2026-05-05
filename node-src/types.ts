@@ -66,6 +66,7 @@ export interface Flags {
 
 export interface Options extends Configuration {
   projectToken: string;
+  projectTokens?: string[];
   userToken?: string;
 
   configFile?: Flags['configFile'];
