@@ -2,7 +2,7 @@ import { Context } from '../../types';
 
 const UploadShareMutation = `
   mutation UploadShareMutation {
-    uploadShare {
+    uploadStorybookShare {
       shareId
       shareUrl
       target {
@@ -15,7 +15,7 @@ const UploadShareMutation = `
 `;
 
 interface UploadShareResult {
-  uploadShare: {
+  uploadStorybookShare: {
     shareId: string;
     shareUrl: string;
     target: {
@@ -34,7 +34,7 @@ interface UploadShareResult {
  * @returns Details about the share such as the URL and S3 upload credentials.
  */
 export async function reserveShareOnAPI(ctx: Context) {
-  const { uploadShare: result } = await ctx.client.runQuery<UploadShareResult>(
+  const { uploadStorybookShare: result } = await ctx.client.runQuery<UploadShareResult>(
     UploadShareMutation,
     {},
     {

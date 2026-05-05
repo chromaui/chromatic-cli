@@ -2,14 +2,14 @@ import { Context } from '../../types';
 
 const ConfirmShareMutation = `
   mutation ConfirmShare($shareId: ID!, $status: ShareStatus!) {
-    confirmShare(shareId: $shareId, status: $status) {
+    confirmStorybookShare(shareId: $shareId, status: $status) {
       status
     }
   }
 `;
 
 interface ConfirmShareResult {
-  confirmShare: {
+  confirmStorybookShare: {
     status: string;
   };
 }
@@ -29,7 +29,7 @@ export async function confirmShare(ctx: Context, status: ConfirmShareStatus) {
     throw new Error('Missing share ID in context');
   }
 
-  const { confirmShare: result } = await ctx.client.runQuery<ConfirmShareResult>(
+  const { confirmStorybookShare: result } = await ctx.client.runQuery<ConfirmShareResult>(
     ConfirmShareMutation,
     { shareId: ctx.share.shareId, status },
     {
