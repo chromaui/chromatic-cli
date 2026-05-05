@@ -2,7 +2,7 @@ import { execa as execaDefault } from 'execa';
 import { type WriteStream } from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildAndroid, buildIos } from './build';
+import { buildAndroid, buildIos, execWithBuildEnvironment } from './build';
 
 vi.mock('execa', async (importOriginal) => {
   const actual = await importOriginal<typeof import('execa')>();
@@ -37,9 +37,69 @@ async function mockedProcessPlatform(platform: string, fn: () => Promise<void>) 
   }
 }
 
+const expectedBuildEnvironment = {
+  STORYBOOK_ENABLED: 'true',
+  EXPO_PUBLIC_STORYBOOK_ENABLED: 'true',
+
+  STORYBOOK_DISABLE_UI: 'true',
+  EXPO_PUBLIC_STORYBOOK_DISABLE_UI: 'true',
+
+  STORYBOOK_SERVER: 'false',
+  EXPO_STORYBOOK_SERVER: 'false',
+
+  STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
+  EXPO_PUBLIC_STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
+  STORYBOOK_WS_HOST: 'react-native.capture.chromatic.com',
+  EXPO_PUBLIC_STORYBOOK_WS_HOST: 'react-native.capture.chromatic.com',
+
+  STORYBOOK_WEBSOCKET_PORT: '7007',
+  EXPO_PUBLIC_STORYBOOK_WEBSOCKET_PORT: '7007',
+  STORYBOOK_WS_PORT: '7007',
+  EXPO_PUBLIC_STORYBOOK_WS_PORT: '7007',
+
+  STORYBOOK_WEBSOCKET_SECURED: 'true',
+  EXPO_PUBLIC_STORYBOOK_WEBSOCKET_SECURED: 'true',
+  STORYBOOK_WS_SECURED: 'true',
+  EXPO_PUBLIC_STORYBOOK_WS_SECURED: 'true',
+};
+
 beforeEach(() => {
   execa.mockClear();
   execa.mockResolvedValue(undefined as any);
+});
+
+describe('execWithBuildEnvironment', () => {
+  it('passes the full set of Storybook environment variables', async () => {
+    const logStream = makeLogStream();
+    await execWithBuildEnvironment('echo', [], {}, logStream);
+
+    expect(execa).toHaveBeenCalledWith(
+      'echo',
+      [],
+      expect.objectContaining({ env: expectedBuildEnvironment })
+    );
+  });
+
+  it('merges caller-supplied env vars without overriding Storybook vars', async () => {
+    const logStream = makeLogStream();
+    await execWithBuildEnvironment(
+      'echo',
+      [],
+      { env: { STORYBOOK_WS_HOST: 'this.would.break.chromatic', MY_VAR: 'hello' } },
+      logStream
+    );
+
+    expect(execa).toHaveBeenCalledWith(
+      'echo',
+      [],
+      expect.objectContaining({
+        env: expect.objectContaining({
+          MY_VAR: 'hello',
+          ...expectedBuildEnvironment,
+        }),
+      })
+    );
+  });
 });
 
 describe('buildAndroid', () => {
@@ -50,11 +110,7 @@ describe('buildAndroid', () => {
       'npx',
       ['expo', 'prebuild', '--platform', 'android'],
       expect.objectContaining({
-        env: expect.objectContaining({
-          STORYBOOK_ENABLED: 'true',
-          STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
-          STORYBOOK_DISABLE_UI: 'true',
-        }),
+        env: expect.objectContaining(expectedBuildEnvironment),
       })
     );
     expect(execa).toHaveBeenCalledWith(
@@ -122,9 +178,7 @@ describe('buildIos', () => {
         'npx',
         ['expo', 'prebuild', '--platform', 'ios'],
         expect.objectContaining({
-          env: expect.objectContaining({
-            STORYBOOK_ENABLED: 'true',
-          }),
+          env: expect.objectContaining(expectedBuildEnvironment),
         })
       );
       expect(execa).toHaveBeenCalledWith(
