@@ -1,3 +1,22 @@
+# v16.8.0 (Tue May 05 2026)
+
+#### 🚀 Enhancement
+
+- Add test for external storybook config changes and TS [#1316](https://github.com/chromaui/chromatic-cli/pull/1316) ([@tmeasday](https://github.com/tmeasday))
+
+#### 🐛 Bug Fix
+
+- Move `xcodebuild` to shared executor [#1318](https://github.com/chromaui/chromatic-cli/pull/1318) ([@jmhobbs](https://github.com/jmhobbs))
+- Only build Android ABI for x86_64 [#1308](https://github.com/chromaui/chromatic-cli/pull/1308) ([@jmhobbs](https://github.com/jmhobbs))
+- Add output environment variable to RN builds [#1307](https://github.com/chromaui/chromatic-cli/pull/1307) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v16.7.0 (Mon May 04 2026)
 
 #### 🚀 Enhancement
