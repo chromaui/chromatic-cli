@@ -3,11 +3,10 @@ import path from 'path';
 import { createInterface } from 'readline';
 
 import { openLogFileStream } from '../lib/logFile';
-import { buildAndroid, buildIos } from '../lib/react-native/build';
+import { buildAndroid, buildIos, execWithBuildEnvironment } from '../lib/react-native/build';
 import { readExpoConfig } from '../lib/react-native/expoConfig';
 import { generateManifest } from '../lib/react-native/generateManifest';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { runCommand } from '../lib/shell/shell';
 import { transitionTo } from '../lib/tasks';
 import { Context, Task } from '../types';
 import { reactNativeBuildFailed } from '../ui/messages/errors/buildFailed';
@@ -33,23 +32,15 @@ async function readLastLines(filePath: string, lineCount: number): Promise<strin
   });
 }
 
-const runPlatformCommand = async (
-  ctx: Context,
-  platform: 'android' | 'ios',
-  command: string,
-  logStream: WriteStream
-) => {
+const runPlatformCommand = async (ctx: Context, command: string, logStream: WriteStream) => {
   ctx.log.debug('Running React Native build command:', command);
-  const label = platform === 'android' ? 'Android' : 'iOS';
-  logStream.write(`\n[chromatic] ${label} build: ${command}\n`);
   try {
-    await runCommand(command, {
-      stdout: logStream,
-      stderr: logStream,
-      env: {
-        CHROMATIC_ARTIFACT_DIRECTORY: ctx.sourceDir,
-      },
-    });
+    await execWithBuildEnvironment(
+      command,
+      [],
+      { env: { CHROMATIC_ARTIFACT_DIRECTORY: ctx.sourceDir } },
+      logStream
+    );
   } catch (err) {
     throw new Error(`React Native build command failed: ${command}\n${err.message}`);
   }
@@ -83,7 +74,7 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
       const { androidBuildCommand } = ctx.options.reactNative ?? {};
       ctx.log.debug({ androidBuildCommand }, 'Running Android build');
       await (androidBuildCommand
-        ? runPlatformCommand(ctx, 'android', androidBuildCommand, logStream)
+        ? runPlatformCommand(ctx, androidBuildCommand, logStream)
         : buildAndroid(path.join(ctx.sourceDir, 'storybook.apk'), logStream));
     }
 
@@ -92,7 +83,7 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
       const { iosBuildCommand } = ctx.options.reactNative ?? {};
       ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
       if (iosBuildCommand) {
-        await runPlatformCommand(ctx, 'ios', iosBuildCommand, logStream);
+        await runPlatformCommand(ctx, iosBuildCommand, logStream);
       } else {
         const config = await readExpoConfig();
         await buildIos(config.name, path.join(ctx.sourceDir, 'storybook.app'), logStream);

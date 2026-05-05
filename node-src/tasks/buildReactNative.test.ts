@@ -42,10 +42,14 @@ vi.mock('fs', async (importOriginal) => {
     createReadStream: vi.fn(() => Readable.from([mockLogLines])),
   };
 });
-vi.mock('../lib/react-native/build', () => ({
-  buildAndroid: vi.fn(() => Promise.resolve(1)),
-  buildIos: vi.fn(() => Promise.resolve(1)),
-}));
+vi.mock('../lib/react-native/build', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/react-native/build')>();
+  return {
+    ...actual,
+    buildAndroid: vi.fn(() => Promise.resolve(1)),
+    buildIos: vi.fn(() => Promise.resolve(1)),
+  };
+});
 vi.mock('../lib/react-native/expoConfig', () => ({
   readExpoConfig: vi.fn(() => Promise.resolve({ platforms: ['ios', 'android'], name: 'MyApp' })),
 }));
@@ -145,7 +149,9 @@ describe('buildArtifacts', () => {
     expect(execa).toHaveBeenCalledWith(
       cmd,
       args,
-      expect.objectContaining({ env: { CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' } })
+      expect.objectContaining({
+        env: expect.objectContaining({ CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' }),
+      })
     );
   });
 
@@ -164,7 +170,9 @@ describe('buildArtifacts', () => {
     expect(execa).toHaveBeenCalledWith(
       cmd,
       args,
-      expect.objectContaining({ env: { CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' } })
+      expect.objectContaining({
+        env: expect.objectContaining({ CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' }),
+      })
     );
   });
 
