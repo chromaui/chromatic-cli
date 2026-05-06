@@ -1,6 +1,5 @@
 import { createAnalyticsClient } from '@cli/analytics';
 import { emailHash } from '@cli/emailHash';
-import { getPackageManagerName, getPackageManagerVersion } from '@cli/getPackageManager';
 import { validateStorybookReactNativeVersion } from '@cli/react-native/validateStorybookVersion';
 import { createTask, transitionTo } from '@cli/tasks';
 import * as Sentry from '@sentry/node';
@@ -10,6 +9,7 @@ import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboS
 import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../../ui/tasks/initialize';
 import { gatherEnvironment } from './gatherEnvironment';
+import { setRuntimeMetadata } from './setRuntimeMetadata';
 
 const AnnounceBuildMutation = `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
@@ -37,29 +37,6 @@ const AnnounceBuildMutation = `
 interface AnnounceBuildMutationResult {
   announceBuild: Context['announcedBuild'];
 }
-
-export const setRuntimeMetadata = async (ctx: Context) => {
-  ctx.runtimeMetadata = {
-    nodePlatform: process.platform,
-    nodeVersion: process.versions.node,
-  };
-
-  try {
-    const packageManager = await getPackageManagerName();
-    if (!packageManager) {
-      throw new Error('Failed to determine package manager');
-    }
-
-    ctx.runtimeMetadata.packageManager = packageManager as any;
-    Sentry.setTag('packageManager', packageManager);
-
-    const packageManagerVersion = await getPackageManagerVersion(packageManager);
-    ctx.runtimeMetadata.packageManagerVersion = packageManagerVersion;
-    Sentry.setTag('packageManagerVersion', packageManagerVersion);
-  } catch (err) {
-    ctx.log.debug(`Failed to set runtime metadata: ${err.message}`);
-  }
-};
 
 const announceBuildInput = (ctx: Context) => {
   const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
