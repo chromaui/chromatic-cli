@@ -1,14 +1,14 @@
+import { createAnalyticsClient } from '@cli/analytics';
+import { emailHash } from '@cli/emailHash';
+import { getPackageManagerName, getPackageManagerVersion } from '@cli/getPackageManager';
+import { validateStorybookReactNativeVersion } from '@cli/react-native/validateStorybookVersion';
+import { createTask, transitionTo } from '@cli/tasks';
 import * as Sentry from '@sentry/node';
 
-import { createAnalyticsClient } from '../lib/analytics';
-import { emailHash } from '../lib/emailHash';
-import { getPackageManagerName, getPackageManagerVersion } from '../lib/getPackageManager';
-import { validateStorybookReactNativeVersion } from '../lib/react-native/validateStorybookVersion';
-import { createTask, transitionTo } from '../lib/tasks';
-import { Context } from '../types';
-import turboSnapNotAvailableForReactNative from '../ui/messages/errors/turboSnapNotAvailableForReactNative';
-import noAncestorBuild from '../ui/messages/warnings/noAncestorBuild';
-import { initial, pending, success } from '../ui/tasks/initialize';
+import { Context } from '../../types';
+import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
+import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
+import { initial, pending, success } from '../../ui/tasks/initialize';
 
 const AnnounceBuildMutation = `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {

@@ -1,10 +1,10 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import { validateStorybookReactNativeVersion as validateStorybookReactNativeVersionDefault } from '@cli/react-native/validateStorybookVersion';
 import TestLogger from '@cli/testLogger';
 import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { validateStorybookReactNativeVersion as validateStorybookReactNativeVersionDefault } from '../lib/react-native/validateStorybookVersion';
-import { announceBuild, setEnvironment, setRuntimeMetadata } from './initialize';
+import { announceBuild, setEnvironment, setRuntimeMetadata } from './index';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -14,7 +14,7 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
-vi.mock('../lib/react-native/validateStorybookVersion', () => ({
+vi.mock('../../lib/react-native/validateStorybookVersion', () => ({
   validateStorybookReactNativeVersion: vi.fn().mockResolvedValue(undefined),
 }));
 
