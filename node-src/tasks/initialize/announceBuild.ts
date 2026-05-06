@@ -1,10 +1,27 @@
 import { emailHash } from '@cli/emailHash';
-import { validateStorybookReactNativeVersion } from '@cli/react-native/validateStorybookVersion';
 import * as Sentry from '@sentry/node';
 
-import { Context } from '../../types';
-import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
-import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
+import {
+  AnnouncedBuild,
+  Deps,
+  Git,
+  ProjectMetadata,
+  RuntimeMetadata,
+  Storybook,
+  TurboSnap,
+} from '../../types';
+
+export type AnnounceBuildDeps = Pick<Deps, 'log' | 'client' | 'options' | 'pkg'>;
+
+export interface AnnounceBuildInput {
+  git: Git;
+  environment?: Record<string, string>;
+  turboSnap?: TurboSnap;
+  rebuildForBuildId?: string;
+  runtimeMetadata: RuntimeMetadata;
+  storybook: Storybook;
+  projectMetadata: ProjectMetadata;
+}
 
 const AnnounceBuildMutation = `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
@@ -33,8 +50,8 @@ interface AnnounceBuildMutationResult {
   announceBuild: AnnouncedBuild;
 }
 
-const announceBuildInput = (ctx: Context) => {
-  const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
+const parseAnnounceBuildMutationInput = (deps: AnnounceBuildDeps, input: AnnounceBuildInput) => {
+  const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = deps.options;
   const {
     version,
     matchesBranch,
@@ -47,9 +64,9 @@ const announceBuildInput = (ctx: Context) => {
     gitUserEmail,
     rootPath,
     ...commitInfo
-  } = ctx.git; // omit some fields;
-  const { rebuildForBuildId, turboSnap } = ctx;
-  const autoAcceptChanges = matchesBranch?.(ctx.options.autoAcceptChanges);
+  } = input.git; // omit some fields;
+  const { rebuildForBuildId, turboSnap } = input;
+  const autoAcceptChanges = matchesBranch?.(deps.options.autoAcceptChanges);
 
   return {
     autoAcceptChanges,
@@ -59,62 +76,35 @@ const announceBuildInput = (ctx: Context) => {
     ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
     ...commitInfo,
     committedAt: new Date(committedAt),
-    ciVariables: ctx.environment,
+    ciVariables: input.environment,
     isLocalBuild,
     needsBaselines: !!turboSnap && !turboSnap.bailReason,
-    packageVersion: ctx.pkg.version,
-    ...ctx.runtimeMetadata,
+    packageVersion: deps.pkg.version,
+    ...input.runtimeMetadata,
     rebuildForBuildId,
-    storybookAddons: ctx.storybook.addons,
-    storybookRefs: ctx.storybook.refs,
-    storybookVersion: ctx.storybook.version,
+    storybookAddons: input.storybook.addons,
+    storybookRefs: input.storybook.refs,
+    storybookVersion: input.storybook.version,
     projectMetadata: {
-      ...ctx.projectMetadata,
-      storybookBaseDir: ctx.storybook?.baseDir,
+      ...input.projectMetadata,
+      storybookBaseDir: input.storybook?.baseDir,
     },
   };
 };
-export const announceBuild = async (ctx: Context) => {
-  const input = announceBuildInput(ctx);
-  const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
+
+export const announceBuild = async (
+  deps: AnnounceBuildDeps,
+  input: AnnounceBuildInput
+): Promise<AnnouncedBuild> => {
+  const gqlInput = parseAnnounceBuildMutationInput(deps, input);
+  const { announceBuild: announcedBuild } = await deps.client.runQuery<AnnounceBuildMutationResult>(
     AnnounceBuildMutation,
-    { input },
+    { input: gqlInput },
     { retries: 3 }
   );
 
   Sentry.setTag('app_id', announcedBuild.app.id);
   Sentry.setContext('build', { id: announcedBuild.id });
 
-  updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
-
-  if (ctx.isReactNativeApp) {
-    await validateStorybookReactNativeVersion(ctx);
-  }
-
-  if (ctx.turboSnap && ctx.isReactNativeApp) {
-    throw new Error(turboSnapNotAvailableForReactNative());
-  }
-
-  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
-    ctx.log.warn(noAncestorBuild(ctx));
-  }
+  return announcedBuild;
 };
-
-function updateContextFromAnnouncedBuild(
-  ctx: Context,
-  announcedBuild: Context['announcedBuild'],
-  input: ReturnType<typeof announceBuildInput>
-) {
-  ctx.announcedBuild = announcedBuild;
-  ctx.isOnboarding =
-    // possibly set from LastBuildQuery in gatherGitInfo
-    ctx.isOnboarding ||
-    announcedBuild.number === 1 ||
-    (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
-
-  ctx.isReactNativeApp = announcedBuild.features?.isReactNativeApp ?? false;
-
-  if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
-    ctx.turboSnap.unavailable = true;
-  }
-}

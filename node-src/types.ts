@@ -233,6 +233,24 @@ export interface RuntimeMetadata {
   packageManagerVersion?: string;
 }
 
+export interface AnnouncedBuild {
+  id: string;
+  number: number;
+  browsers: string[];
+  status: string;
+  autoAcceptChanges: boolean;
+  reportToken: string;
+  features?: {
+    uiTests: boolean;
+    uiReview: boolean;
+    isReactNativeApp: boolean;
+  };
+  app: {
+    id: string;
+    turboSnapAvailability: string;
+  };
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -332,23 +350,7 @@ export interface Context {
   storybook: Storybook;
   projectMetadata: ProjectMetadata;
   storybookUrl?: string;
-  announcedBuild: {
-    id: string;
-    number: number;
-    browsers: string[];
-    status: string;
-    autoAcceptChanges: boolean;
-    reportToken: string;
-    features?: {
-      uiTests: boolean;
-      uiReview: boolean;
-      isReactNativeApp: boolean;
-    };
-    app: {
-      id: string;
-      turboSnapAvailability: string;
-    };
-  };
+  announcedBuild: AnnouncedBuild;
   build: {
     id: string;
     number: number;
