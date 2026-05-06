@@ -1,3 +1,15 @@
+# v16.9.0 (Wed May 06 2026)
+
+#### 🚀 Enhancement
+
+- Allow skip without a project token [#1310](https://github.com/chromaui/chromatic-cli/pull/1310) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v16.8.0 (Tue May 05 2026)
 
 #### 🚀 Enhancement
