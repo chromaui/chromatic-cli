@@ -9,6 +9,7 @@ import { Context } from '../../types';
 import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
 import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../../ui/tasks/initialize';
+import { setEnvironment } from './setEnvironment';
 
 const AnnounceBuildMutation = `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
@@ -36,25 +37,6 @@ const AnnounceBuildMutation = `
 interface AnnounceBuildMutationResult {
   announceBuild: Context['announcedBuild'];
 }
-
-export const setEnvironment = async (ctx: Context) => {
-  if (!ctx.environment) {
-    ctx.environment = {};
-  }
-
-  // We send up all environment variables provided by these complicated systems.
-  // We don't want to send up *all* environment vars as they could include sensitive information
-  // about the user's build environment
-  for (const [key, value] of Object.entries(process.env)) {
-    if (!value) continue;
-
-    if (ctx.env.ENVIRONMENT_WHITELIST.some((regex) => key.match(regex))) {
-      ctx.environment[key] = value;
-    }
-  }
-
-  ctx.log.debug(`Got environment:\n${JSON.stringify(ctx.environment, undefined, 2)}`);
-};
 
 export const setRuntimeMetadata = async (ctx: Context) => {
   ctx.runtimeMetadata = {

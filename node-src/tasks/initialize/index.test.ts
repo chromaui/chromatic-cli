@@ -4,7 +4,7 @@ import TestLogger from '@cli/testLogger';
 import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { announceBuild, setEnvironment, setRuntimeMetadata } from './index';
+import { announceBuild, setRuntimeMetadata } from './index';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -22,25 +22,10 @@ const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
 const validateStorybookReactNativeVersion = vi.mocked(validateStorybookReactNativeVersionDefault);
 
-process.env.GERRIT_BRANCH = 'foo/bar';
-process.env.TRAVIS_EVENT_TYPE = 'pull_request';
-
-const environment = { ENVIRONMENT_WHITELIST: [/^GERRIT/, /^TRAVIS/] };
 const log = new TestLogger();
 
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-describe('setEnvironment', () => {
-  it('sets the environment info on context', async () => {
-    const ctx = { env: environment, log } as any;
-    await setEnvironment(ctx);
-    expect(ctx.environment).toMatchObject({
-      GERRIT_BRANCH: 'foo/bar',
-      TRAVIS_EVENT_TYPE: 'pull_request',
-    });
-  });
 });
 
 describe('setRuntimeMetadata', () => {
@@ -108,7 +93,6 @@ describe('setRuntimeMetadata', () => {
 
 describe('announceBuild', () => {
   const defaultContext = {
-    env: environment,
     log,
     options: {},
     environment: ':environment',
