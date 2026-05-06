@@ -315,6 +315,7 @@ export interface Context {
     packageManagerVersion?: string;
   };
   analytics?: AnalyticsClient;
+  /** @deprecated Will be removed in the next major. */
   environment?: Record<string, string>;
   reportPath?: string;
   isPublishOnly?: boolean;
