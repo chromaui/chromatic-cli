@@ -1,0 +1,120 @@
+import { emailHash } from '@cli/emailHash';
+import { validateStorybookReactNativeVersion } from '@cli/react-native/validateStorybookVersion';
+import * as Sentry from '@sentry/node';
+
+import { Context } from '../../types';
+import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
+import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
+
+const AnnounceBuildMutation = `
+  mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
+    announceBuild(input: $input) {
+      id
+      number
+      browsers
+      # no need for legacy:false on AnnouncedBuild.status
+      status
+      autoAcceptChanges
+      reportToken
+      features {
+        uiTests
+        uiReview
+        isReactNativeApp
+      }
+      app {
+        id
+        turboSnapAvailability
+      }
+    }
+  }
+`;
+
+interface AnnounceBuildMutationResult {
+  announceBuild: AnnouncedBuild;
+}
+
+const announceBuildInput = (ctx: Context) => {
+  const { patchBaseRef, patchHeadRef, preserveMissingSpecs, isLocalBuild } = ctx.options;
+  const {
+    version,
+    matchesBranch,
+    changedFiles,
+    changedDependencyNames,
+    replacementBuildIds,
+    committedAt,
+    baselineCommits,
+    packageMetadataChanges,
+    gitUserEmail,
+    rootPath,
+    ...commitInfo
+  } = ctx.git; // omit some fields;
+  const { rebuildForBuildId, turboSnap } = ctx;
+  const autoAcceptChanges = matchesBranch?.(ctx.options.autoAcceptChanges);
+
+  return {
+    autoAcceptChanges,
+    patchBaseRef,
+    patchHeadRef,
+    preserveMissingSpecs,
+    ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
+    ...commitInfo,
+    committedAt: new Date(committedAt),
+    ciVariables: ctx.environment,
+    isLocalBuild,
+    needsBaselines: !!turboSnap && !turboSnap.bailReason,
+    packageVersion: ctx.pkg.version,
+    ...ctx.runtimeMetadata,
+    rebuildForBuildId,
+    storybookAddons: ctx.storybook.addons,
+    storybookRefs: ctx.storybook.refs,
+    storybookVersion: ctx.storybook.version,
+    projectMetadata: {
+      ...ctx.projectMetadata,
+      storybookBaseDir: ctx.storybook?.baseDir,
+    },
+  };
+};
+export const announceBuild = async (ctx: Context) => {
+  const input = announceBuildInput(ctx);
+  const { announceBuild: announcedBuild } = await ctx.client.runQuery<AnnounceBuildMutationResult>(
+    AnnounceBuildMutation,
+    { input },
+    { retries: 3 }
+  );
+
+  Sentry.setTag('app_id', announcedBuild.app.id);
+  Sentry.setContext('build', { id: announcedBuild.id });
+
+  updateContextFromAnnouncedBuild(ctx, announcedBuild, input);
+
+  if (ctx.isReactNativeApp) {
+    await validateStorybookReactNativeVersion(ctx);
+  }
+
+  if (ctx.turboSnap && ctx.isReactNativeApp) {
+    throw new Error(turboSnapNotAvailableForReactNative());
+  }
+
+  if (!ctx.isOnboarding && !ctx.git.parentCommits) {
+    ctx.log.warn(noAncestorBuild(ctx));
+  }
+};
+
+function updateContextFromAnnouncedBuild(
+  ctx: Context,
+  announcedBuild: Context['announcedBuild'],
+  input: ReturnType<typeof announceBuildInput>
+) {
+  ctx.announcedBuild = announcedBuild;
+  ctx.isOnboarding =
+    // possibly set from LastBuildQuery in gatherGitInfo
+    ctx.isOnboarding ||
+    announcedBuild.number === 1 ||
+    (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
+
+  ctx.isReactNativeApp = announcedBuild.features?.isReactNativeApp ?? false;
+
+  if (ctx.turboSnap && announcedBuild.app.turboSnapAvailability === 'UNAVAILABLE') {
+    ctx.turboSnap.unavailable = true;
+  }
+}
