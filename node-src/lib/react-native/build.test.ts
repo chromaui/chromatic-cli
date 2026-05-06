@@ -64,6 +64,36 @@ describe('buildAndroid', () => {
     );
   });
 
+  it('includes additional architectures in the gradlew command', async () => {
+    const logStream = makeLogStream();
+    await buildAndroid('/tmp/out/storybook.apk', logStream, ['arm64-v8a']);
+    expect(execa).toHaveBeenCalledWith(
+      './gradlew',
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64,arm64-v8a'],
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
+  });
+
+  it('deduplicates x86_64 when provided in additional architectures', async () => {
+    const logStream = makeLogStream();
+    await buildAndroid('/tmp/out/storybook.apk', logStream, ['x86_64', 'arm64-v8a']);
+    expect(execa).toHaveBeenCalledWith(
+      './gradlew',
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64,arm64-v8a'],
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
+  });
+
+  it('always includes x86_64 even with empty additional architectures', async () => {
+    const logStream = makeLogStream();
+    await buildAndroid('/tmp/out/storybook.apk', logStream, []);
+    expect(execa).toHaveBeenCalledWith(
+      './gradlew',
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
+  });
+
   it('writes command headers to the log stream', async () => {
     const logStream = makeLogStream();
     await buildAndroid('/tmp/out/storybook.apk', logStream);

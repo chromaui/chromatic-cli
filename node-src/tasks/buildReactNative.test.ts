@@ -119,7 +119,25 @@ describe('buildArtifacts', () => {
       sourceDir: '/path/to/build',
     } as any;
     await buildArtifacts(ctx, task);
-    expect(buildAndroid).toHaveBeenCalledWith('/path/to/build/storybook.apk', mockLogStream);
+    expect(buildAndroid).toHaveBeenCalledWith(
+      '/path/to/build/storybook.apk',
+      mockLogStream,
+      undefined
+    );
+  });
+
+  it('passes androidBuildArchitectures to buildAndroid', async () => {
+    const ctx = {
+      ...baseContext,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      options: { reactNative: { androidBuildArchitectures: ['arm64-v8a'] } },
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildArtifacts(ctx, task);
+    expect(buildAndroid).toHaveBeenCalledWith('/path/to/build/storybook.apk', mockLogStream, [
+      'arm64-v8a',
+    ]);
   });
 
   it('reads expo config and calls buildIos with output path when ios is in browsers', async () => {
@@ -155,6 +173,27 @@ describe('buildArtifacts', () => {
     );
   });
 
+  it('ignores androidBuildArchitectures when androidBuildCommand is set and logs debug message', async () => {
+    const log = new TestLogger();
+    const ctx = {
+      ...baseContext,
+      announcedBuild: { browsers: ['android'] },
+      log,
+      options: {
+        reactNative: {
+          androidBuildCommand: 'my-android-build',
+          androidBuildArchitectures: ['arm64-v8a'],
+        },
+      },
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildArtifacts(ctx, task);
+    expect(buildAndroid).not.toHaveBeenCalled();
+    expect(log.debug).toHaveBeenCalledWith(
+      'androidBuildArchitectures is ignored when androidBuildCommand is set'
+    );
+  });
+
   it('uses iosBuildCommand when set and does not call buildIos or readExpoConfig', async () => {
     const ctx = {
       ...baseContext,
@@ -185,7 +224,11 @@ describe('buildArtifacts', () => {
       sourceDir: '/path/to/build',
     } as any;
     await buildArtifacts(ctx, task);
-    expect(buildAndroid).toHaveBeenCalledWith('/path/to/build/storybook.apk', mockLogStream);
+    expect(buildAndroid).toHaveBeenCalledWith(
+      '/path/to/build/storybook.apk',
+      mockLogStream,
+      undefined
+    );
     expect(readExpoConfig).toHaveBeenCalled();
     expect(buildIos).toHaveBeenCalledWith('MyApp', '/path/to/build/storybook.app', mockLogStream);
   });

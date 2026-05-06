@@ -72,10 +72,15 @@ function validateOutputPath(outputPath: string) {
  *
  * @param outputPath The full file path where the built APK should be placed.
  * @param logStream The WriteStream to write build logs to.
+ * @param additionalArchitectures Additional Android architectures to include alongside x86_64.
  *
  * @returns The build duration in seconds.
  */
-export async function buildAndroid(outputPath: string, logStream: WriteStream) {
+export async function buildAndroid(
+  outputPath: string,
+  logStream: WriteStream,
+  additionalArchitectures: string[] = []
+) {
   validateOutputPath(outputPath);
 
   const start = new Date();
@@ -88,12 +93,13 @@ export async function buildAndroid(outputPath: string, logStream: WriteStream) {
     logStream
   );
 
-  logStream.write(
-    '\n[chromatic] Android build: ./gradlew assembleRelease -PreactNativeArchitectures=x86_64\n'
-  );
+  const architectures = [...new Set(['x86_64', ...additionalArchitectures])].join(',');
+  const architecturesFlag = `-PreactNativeArchitectures=${architectures}`;
+
+  logStream.write(`\n[chromatic] Android build: ./gradlew assembleRelease ${architecturesFlag}\n`);
   await execWithBuildEnvironment(
     './gradlew',
-    ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
+    ['assembleRelease', architecturesFlag],
     { cwd: path.resolve('android') },
     logStream
   );
