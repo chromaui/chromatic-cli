@@ -8,8 +8,8 @@ import { Context } from '../../types';
 import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
 import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../../ui/tasks/initialize';
+import { getRuntimeMetadata } from './getRuntimeMetadata';
 import { gatherEnvironment } from './gatherEnvironment';
-import { setRuntimeMetadata } from './setRuntimeMetadata';
 
 const AnnounceBuildMutation = `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
@@ -149,7 +149,7 @@ export default function main(_: Context) {
     steps: [
       transitionTo(pending),
       gatherEnvironment,
-      setRuntimeMetadata,
+      getRuntimeMetadata,
       initializeAnalytics,
       announceBuild,
       transitionTo(success, true),

@@ -226,6 +226,13 @@ export interface Storybook {
   refs?: Record<string, StorybookReference>;
 }
 
+export interface RuntimeMetadata {
+  nodePlatform: NodeJS.Platform;
+  nodeVersion: string;
+  packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  packageManagerVersion?: string;
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -308,12 +315,7 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
-  runtimeMetadata?: {
-    nodePlatform: NodeJS.Platform;
-    nodeVersion: string;
-    packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
-    packageManagerVersion?: string;
-  };
+  runtimeMetadata?: RuntimeMetadata;
   analytics?: AnalyticsClient;
   /** @deprecated Will be removed in the next major. */
   environment?: Record<string, string>;

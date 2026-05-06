@@ -1,8 +1,9 @@
 import { getCliCommand as getCliCommandDefault } from '@antfu/ni';
+import TestLogger from '@cli/testLogger';
 import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setRuntimeMetadata } from './setRuntimeMetadata';
+import { getRuntimeMetadata } from './getRuntimeMetadata';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {
@@ -15,28 +16,23 @@ vi.mock('execa', async (importOriginal) => {
 
 const execa = vi.mocked(execaDefault);
 const getCliCommand = vi.mocked(getCliCommandDefault);
+const log = new TestLogger();
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('setRuntimeMetadata', () => {
+describe('getRuntimeMetadata', () => {
   beforeEach(() => {
     execa.mockReturnValue(Promise.resolve({ stdout: '1.2.3' }) as any);
   });
 
-  it('sets the build command on the context', async () => {
+  it('supports npm', async () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm'));
 
-    const ctx = {
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.2.0' },
-      git: { changedFiles: ['./index.js'] },
-    } as any;
-    await setRuntimeMetadata(ctx);
+    const result = await getRuntimeMetadata({ log });
 
-    expect(ctx.runtimeMetadata).toEqual({
+    expect(result).toEqual({
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
       nodeVersion: process.versions.node,
       packageManager: 'npm',
@@ -47,15 +43,9 @@ describe('setRuntimeMetadata', () => {
   it('supports yarn', async () => {
     getCliCommand.mockReturnValue(Promise.resolve('yarn'));
 
-    const ctx = {
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: {},
-    } as any;
-    await setRuntimeMetadata(ctx);
+    const result = await getRuntimeMetadata({ log });
 
-    expect(ctx.runtimeMetadata).toEqual({
+    expect(result).toEqual({
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
       nodeVersion: process.versions.node,
       packageManager: 'yarn',
@@ -66,15 +56,9 @@ describe('setRuntimeMetadata', () => {
   it('supports pnpm', async () => {
     getCliCommand.mockReturnValue(Promise.resolve('pnpm'));
 
-    const ctx = {
-      sourceDir: './source-dir/',
-      options: { buildScriptName: 'build:storybook' },
-      storybook: { version: '6.1.0' },
-      git: {},
-    } as any;
-    await setRuntimeMetadata(ctx);
+    const result = await getRuntimeMetadata({ log });
 
-    expect(ctx.runtimeMetadata).toEqual({
+    expect(result).toEqual({
       nodePlatform: expect.stringMatching(/darwin|linux|win32/),
       nodeVersion: process.versions.node,
       packageManager: 'pnpm',
