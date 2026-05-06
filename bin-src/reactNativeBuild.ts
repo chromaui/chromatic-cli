@@ -4,6 +4,7 @@ import meow from 'meow';
 import os from 'os';
 import path from 'path';
 
+import { Configuration, getConfiguration } from '../node-src/lib/getConfiguration';
 import { openLogFileStream } from '../node-src/lib/logFile';
 import { buildAndroid, buildIos } from '../node-src/lib/react-native/build';
 import { ExpoConfig, readExpoConfig } from '../node-src/lib/react-native/expoConfig';
@@ -90,6 +91,16 @@ function parseFlags(argv: string[]) {
 }
 
 /**
+ * Read the Chromatic configuration file and extract React Native settings.
+ *
+ * @returns The React Native configuration block, or an empty object if the config file is missing or invalid.
+ */
+async function readReactNativeConfig() {
+  const configuration = await getConfiguration().catch((): Configuration => ({}));
+  return configuration.reactNative ?? {};
+}
+
+/**
  * Resolve the platforms to build by intersecting the Expo config with the requested platforms.
  *
  * @param config The Expo config.
@@ -136,6 +147,7 @@ Available platforms: ${configPlatforms.join(', ')}`);
  * @param appName The app name from Expo config, required for iOS builds.
  * @param artifactDirectory The directory to place build artifacts in.
  * @param logStream The WriteStream to write build logs to.
+ * @param androidBuildArchitectures Additional Android architectures to build for.
  *
  * @returns The list of build artifacts.
  */
@@ -143,7 +155,8 @@ async function buildPlatforms(
   platforms: string[],
   appName: string,
   artifactDirectory: string,
-  logStream: WriteStream
+  logStream: WriteStream,
+  androidBuildArchitectures?: string[]
 ) {
   const artifacts: { platform: string; path: string; duration: number }[] = [];
 
@@ -151,7 +164,7 @@ async function buildPlatforms(
     info(`Building for ${platformNames[platform]}`);
     if (platform === 'android') {
       const outputPath = path.join(artifactDirectory, 'storybook.apk');
-      const duration = await buildAndroid(outputPath, logStream);
+      const duration = await buildAndroid(outputPath, logStream, androidBuildArchitectures);
       artifacts.push({ platform: 'Android', path: outputPath, duration });
     } else if (platform === 'ios') {
       const outputPath = path.join(artifactDirectory, 'storybook.app');
@@ -170,6 +183,7 @@ async function buildPlatforms(
  */
 export async function main(argv: string[]) {
   const { requestedPlatforms, outputDir } = parseFlags(argv);
+  const { androidBuildArchitectures } = await readReactNativeConfig();
 
   warn(
     'Chromatic React Native Build is in alpha. Use with caution.',
@@ -202,7 +216,13 @@ export async function main(argv: string[]) {
 
   let artifacts: { platform: string; path: string; duration: number }[];
   try {
-    artifacts = await buildPlatforms(platforms, config.name, artifactDirectory, logStream);
+    artifacts = await buildPlatforms(
+      platforms,
+      config.name,
+      artifactDirectory,
+      logStream,
+      androidBuildArchitectures
+    );
     await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (err) {
     await new Promise<void>((resolve) => logStream.end(resolve));
