@@ -5,6 +5,7 @@ import Listr from 'listr';
 import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
 
+import getCommitAndBranch from './git/getCommitAndBranch';
 import {
   getBranch,
   getCommit,
@@ -21,9 +22,10 @@ import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
-import getOptions from './lib/getOptions';
+import getOptions, { getPartialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
+import matchesBranch from './lib/matchesBranch';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
@@ -42,6 +44,7 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 
 // Make keys of `T` outside of `R` optional.
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
@@ -192,7 +195,16 @@ export async function runAll(ctx: InitialContext) {
     ctx.configuration = await getConfiguration(
       ctx.extraOptions?.configFile || ctx.flags.configFile
     );
-    const options = getOptions(ctx);
+
+    const partialOptions = getPartialOptions(ctx);
+
+    if (await shouldSkipWithoutProjectToken(ctx, partialOptions)) {
+      ctx.log.warn(skipNoProjectToken());
+      setExitCode(ctx, exitCodes.OK);
+      return;
+    }
+
+    const options = getOptions(ctx, partialOptions);
     (ctx as Context).options = options;
     (ctx as Context).runtime = { forceRebuild: options.forceRebuild };
     ctx.log.setLogFile(options.logFile);
@@ -222,6 +234,47 @@ export async function runAll(ctx: InitialContext) {
 
   if (ctx.options.uploadMetadata) {
     await uploadMetadataFiles(ctx);
+  }
+}
+
+async function shouldSkipWithoutProjectToken(
+  ctx: InitialContext,
+  partialOptions: Partial<Options>
+) {
+  if (!partialOptions.skip) {
+    return false;
+  }
+
+  const hasProjectCredentials =
+    !!partialOptions.projectToken || !!(partialOptions.projectId && partialOptions.userToken);
+  if (hasProjectCredentials) {
+    return false;
+  }
+
+  const branch = await getBranchForSkip(ctx, partialOptions);
+  if (!branch) {
+    return false;
+  }
+
+  if (!matchesBranch(branch, partialOptions.skip)) {
+    return false;
+  }
+
+  return true;
+}
+
+async function getBranchForSkip(ctx: InitialContext, partialOptions: Partial<Options>) {
+  try {
+    const { branch } = await getCommitAndBranch(ctx, {
+      branchName: partialOptions.branchName,
+      patchBaseRef: partialOptions.patchBaseRef,
+      ci: partialOptions.fromCI,
+    });
+
+    return branch;
+  } catch (err) {
+    ctx.log.debug('Failed to determine branch while handling --skip without a project token', err);
+    return false;
   }
 }
 

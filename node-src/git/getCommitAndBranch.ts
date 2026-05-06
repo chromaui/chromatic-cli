@@ -44,7 +44,7 @@ function getBranchDetailsFromEnvironmentCI(log) {
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export default async function getCommitAndBranch(
-  ctx: Context,
+  ctx: Pick<Context, 'log'>,
   {
     branchName,
     patchBaseRef,

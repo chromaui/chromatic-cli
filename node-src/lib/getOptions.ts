@@ -56,8 +56,8 @@ const defaultUnlessSetOrFalse = (input: string | boolean | undefined, fallback: 
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
-export default function getOptions(ctx: InitialContext): Options {
-  const { argv, env, flags, extraOptions, configuration, log, packageJson, packagePath } = ctx;
+export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
+  const { argv, env, flags, extraOptions, configuration, log } = ctx;
 
   const defaultOptions = {
     projectToken: env.CHROMATIC_PROJECT_TOKEN,
@@ -186,7 +186,7 @@ export default function getOptions(ctx: InitialContext): Options {
     storybookLogFile: defaultUnlessSetOrFalse(storybookLogFile, DEFAULT_STORYBOOK_LOG_FILE),
   });
 
-  const potentialOptions: Partial<Options> = {
+  const partialOptions: Partial<Options> = {
     ...defaultOptions,
     ...configurationOptions,
     ...optionsFromFlags,
@@ -202,22 +202,15 @@ export default function getOptions(ctx: InitialContext): Options {
       process.env.NODE_ENV !== 'test',
   };
 
-  if (potentialOptions.debug) {
+  if (partialOptions.debug) {
     log.setLevel('debug');
     log.setInteractive(false);
   }
 
-  if (potentialOptions.debug || potentialOptions.uploadMetadata) {
+  if (partialOptions.debug || partialOptions.uploadMetadata) {
     // Implicitly enable these options unless they're already enabled or explicitly disabled
-    potentialOptions.logFile = potentialOptions.logFile ?? DEFAULT_LOG_FILE;
-    potentialOptions.diagnosticsFile = potentialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
-  }
-
-  if (
-    !potentialOptions.projectToken &&
-    !(potentialOptions.projectId && potentialOptions.userToken)
-  ) {
-    throw new Error(missingProjectToken());
+    partialOptions.logFile = partialOptions.logFile ?? DEFAULT_LOG_FILE;
+    partialOptions.diagnosticsFile = partialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
 
   if (repositoryOwner && (!repositoryName || rest.length > 0)) {
@@ -229,20 +222,17 @@ export default function getOptions(ctx: InitialContext): Options {
   }
 
   if (flags.patchBuild) {
-    if (!potentialOptions.patchHeadRef || !potentialOptions.patchBaseRef) {
+    if (!partialOptions.patchHeadRef || !partialOptions.patchBaseRef) {
       throw new Error(invalidPatchBuild());
     }
-    if (potentialOptions.patchHeadRef === potentialOptions.patchBaseRef) {
+    if (partialOptions.patchHeadRef === partialOptions.patchBaseRef) {
       throw new Error(duplicatePatchBuild());
     }
   }
 
-  if (potentialOptions.onlyStoryNames?.some((glob) => !/[\w*]\/[\w*]/.test(glob))) {
+  if (partialOptions.onlyStoryNames?.some((glob) => !/[\w*]\/[\w*]/.test(glob))) {
     throw new Error(invalidOnlyStoryNames());
   }
-
-  const { storybookBuildDir } = potentialOptions;
-  let { buildScriptName } = potentialOptions;
 
   // We can only have one of these arguments
   const singularOptions = {
@@ -252,7 +242,7 @@ export default function getOptions(ctx: InitialContext): Options {
     vitest: '--vitest',
   };
   const foundSingularOptions = Object.keys(singularOptions).filter(
-    (name) => !!potentialOptions[name]
+    (name) => !!partialOptions[name]
   );
 
   if (foundSingularOptions.length > 1) {
@@ -261,51 +251,76 @@ export default function getOptions(ctx: InitialContext): Options {
     );
   }
 
-  if (potentialOptions.onlyChanged && potentialOptions.onlyStoryFiles) {
+  if (partialOptions.onlyChanged && partialOptions.onlyStoryFiles) {
     throw new Error(invalidSingularOptions(['--only-changed', '--only-story-files']));
   }
-  if (potentialOptions.onlyChanged && potentialOptions.onlyStoryNames) {
+  if (partialOptions.onlyChanged && partialOptions.onlyStoryNames) {
     throw new Error(invalidSingularOptions(['--only-changed', '--only-story-names']));
   }
-  if (potentialOptions.onlyStoryNames && potentialOptions.onlyStoryFiles) {
+  if (partialOptions.onlyStoryNames && partialOptions.onlyStoryFiles) {
     throw new Error(invalidSingularOptions(['--only-story-files', '--only-story-names']));
   }
 
-  if (potentialOptions.untraced && !potentialOptions.onlyChanged) {
+  if (partialOptions.untraced && !partialOptions.onlyChanged) {
     throw new Error(dependentOption('--untraced', '--only-changed'));
   }
 
-  if (potentialOptions.externals && !potentialOptions.onlyChanged) {
+  if (partialOptions.externals && !partialOptions.onlyChanged) {
     throw new Error(dependentOption('--externals', '--only-changed'));
   }
 
-  if (potentialOptions.traceChanged && !potentialOptions.onlyChanged) {
+  if (partialOptions.traceChanged && !partialOptions.onlyChanged) {
     throw new Error(dependentOption('--trace-changed', '--only-changed'));
   }
 
-  if (potentialOptions.junitReport && potentialOptions.exitOnceUploaded) {
+  if (partialOptions.junitReport && partialOptions.exitOnceUploaded) {
     throw new Error(incompatibleOptions(['--junit-report', '--exit-once-uploaded']));
   }
 
-  if (potentialOptions.buildScriptName && potentialOptions.buildCommand) {
+  if (partialOptions.buildScriptName && partialOptions.buildCommand) {
     throw new Error(incompatibleOptions(['--build-script-name', '--build-command']));
   }
 
   // --build-command can put the built Storybook anywhere. Rather than reading through the value,
   // we require `--output-dir` to avoid the issue.
-  if (potentialOptions.buildCommand && !potentialOptions.outputDir) {
+  if (partialOptions.buildCommand && !partialOptions.outputDir) {
     throw new Error(dependentOption('--build-command', '--output-dir'));
   }
 
   if (
-    typeof potentialOptions.junitReport === 'string' &&
-    path.extname(potentialOptions.junitReport) !== '.xml'
+    typeof partialOptions.junitReport === 'string' &&
+    path.extname(partialOptions.junitReport) !== '.xml'
   ) {
     throw new Error(invalidReportPath());
   }
 
+  return partialOptions;
+};
+
+/**
+ * Parse options set when executing the CLI.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param partialOptions Precomputed partial options used during preflight checks.
+ *
+ * @returns An object containing parsed options
+ */
+// TODO: refactor this function
+// eslint-disable-next-line complexity
+export default function getOptions(
+  ctx: InitialContext,
+  partialOptions = getPartialOptions(ctx)
+): Options {
+  const { flags, log, packageJson, packagePath } = ctx;
+  const { storybookBuildDir } = partialOptions;
+  let { buildScriptName } = partialOptions;
+
+  if (!partialOptions.projectToken && !(partialOptions.projectId && partialOptions.userToken)) {
+    throw new Error(missingProjectToken());
+  }
+
   // All options are validated and can now be used
-  const options = potentialOptions as Options;
+  const options = partialOptions as Options;
 
   if (flags.preserveMissing) {
     log.info('');
@@ -317,7 +332,7 @@ export default function getOptions(ctx: InitialContext): Options {
     return options;
   }
 
-  if (potentialOptions.buildCommand) {
+  if (partialOptions.buildCommand) {
     return options;
   }
 
