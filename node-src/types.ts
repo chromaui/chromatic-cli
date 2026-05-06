@@ -248,6 +248,7 @@ export interface AnnouncedBuild {
   app: {
     id: string;
     turboSnapAvailability: string;
+    isOnboarding: boolean;
   };
 }
 

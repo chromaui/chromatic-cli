@@ -41,6 +41,7 @@ const AnnounceBuildMutation = `
       app {
         id
         turboSnapAvailability
+        isOnboarding
       }
     }
   }
