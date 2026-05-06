@@ -5127,7 +5127,6 @@ __metadata:
     react: "npm:^17.0.2"
     react-dom: "npm:^17.0.2"
     read-package-up: "npm:^11.0.0"
-    semver: "npm:^7.3.5"
     slash: "npm:^3.0.0"
     snyk-nodejs-lockfile-parser: "npm:^1.58.18"
     snyk-nodejs-plugin: "npm:^1.4.3"
