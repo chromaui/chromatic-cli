@@ -4,6 +4,10 @@ vi.mock('execa', () => ({
   execa: vi.fn(),
 }));
 
+vi.mock('../node-src/lib/getConfiguration', () => ({
+  getConfiguration: vi.fn(),
+}));
+
 vi.mock('../node-src/lib/logFile', () => ({
   openLogFileStream: vi.fn(),
 }));
@@ -36,6 +40,7 @@ vi.mock('fs', async () => {
 import { execa } from 'execa';
 import fs from 'fs';
 
+import { getConfiguration } from '../node-src/lib/getConfiguration';
 import { openLogFileStream } from '../node-src/lib/logFile';
 import { main } from './reactNativeBuild';
 
@@ -44,6 +49,7 @@ const mockedExistsSync = vi.mocked(fs.existsSync);
 const mockedMkdtempSync = vi.mocked(fs.mkdtempSync);
 const mockedMkdirSync = vi.mocked(fs.mkdirSync);
 const mockedRmSync = vi.mocked(fs.rmSync);
+const mockedGetConfiguration = vi.mocked(getConfiguration);
 const mockedOpenLogFileStream = vi.mocked(openLogFileStream);
 
 beforeEach(() => {
@@ -54,6 +60,7 @@ beforeEach(() => {
     throw new Error('process.exit');
   });
 
+  mockedGetConfiguration.mockResolvedValue({});
   mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-build-test' as any);
   mockedOpenLogFileStream.mockResolvedValue({
     write: vi.fn(),
@@ -258,6 +265,46 @@ describe('react-native-build', () => {
 
     await expect(main(['--output-dir', '/output'])).rejects.toThrow('process.exit');
     expect(mockedRmSync).not.toHaveBeenCalled();
+  });
+
+  it('passes androidBuildArchitectures from config to buildAndroid', async () => {
+    mockedGetConfiguration.mockResolvedValue({
+      reactNative: { androidBuildArchitectures: ['arm64-v8a'] },
+    });
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main([]);
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      './gradlew',
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64,arm64-v8a'],
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
+  });
+
+  it('falls back gracefully when config file read fails', async () => {
+    mockedGetConfiguration.mockRejectedValue(new Error('invalid config'));
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main([]);
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      './gradlew',
+      ['assembleRelease', '-PreactNativeArchitectures=x86_64'],
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
   });
 
   it('exits when android build fails', async () => {

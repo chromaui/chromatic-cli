@@ -52,6 +52,36 @@ const resolvePlatforms = (ctx: Context) => {
   );
 };
 
+const buildAndroidArtifact = async (ctx: Context, task: Task, logStream: WriteStream) => {
+  transitionTo(pendingAndroid)(ctx, task);
+  const { androidBuildCommand, androidBuildArchitectures } = ctx.options.reactNative ?? {};
+  ctx.log.debug({ androidBuildCommand }, 'Running Android build');
+  if (androidBuildCommand) {
+    if (androidBuildArchitectures?.length) {
+      ctx.log.debug('androidBuildArchitectures is ignored when androidBuildCommand is set');
+    }
+    await runPlatformCommand(ctx, androidBuildCommand, logStream);
+  } else {
+    await buildAndroid(
+      path.join(ctx.sourceDir, 'storybook.apk'),
+      logStream,
+      androidBuildArchitectures
+    );
+  }
+};
+
+const buildIosArtifact = async (ctx: Context, task: Task, logStream: WriteStream) => {
+  transitionTo(pendingIOS)(ctx, task);
+  const { iosBuildCommand } = ctx.options.reactNative ?? {};
+  ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
+  if (iosBuildCommand) {
+    await runPlatformCommand(ctx, iosBuildCommand, logStream);
+  } else {
+    const config = await readExpoConfig();
+    await buildIos(config.name, path.join(ctx.sourceDir, 'storybook.app'), logStream);
+  }
+};
+
 export const buildArtifacts = async (ctx: Context, task: Task) => {
   const platforms = resolvePlatforms(ctx);
   const needsAndroid = platforms.includes('android');
@@ -69,27 +99,8 @@ export const buildArtifacts = async (ctx: Context, task: Task) => {
   const logStream = await openLogFileStream(ctx.reactNativeBuildLogFile);
 
   try {
-    if (needsAndroid) {
-      transitionTo(pendingAndroid)(ctx, task);
-      const { androidBuildCommand } = ctx.options.reactNative ?? {};
-      ctx.log.debug({ androidBuildCommand }, 'Running Android build');
-      await (androidBuildCommand
-        ? runPlatformCommand(ctx, androidBuildCommand, logStream)
-        : buildAndroid(path.join(ctx.sourceDir, 'storybook.apk'), logStream));
-    }
-
-    if (needsIos) {
-      transitionTo(pendingIOS)(ctx, task);
-      const { iosBuildCommand } = ctx.options.reactNative ?? {};
-      ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
-      if (iosBuildCommand) {
-        await runPlatformCommand(ctx, iosBuildCommand, logStream);
-      } else {
-        const config = await readExpoConfig();
-        await buildIos(config.name, path.join(ctx.sourceDir, 'storybook.app'), logStream);
-      }
-    }
-
+    if (needsAndroid) await buildAndroidArtifact(ctx, task, logStream);
+    if (needsIos) await buildIosArtifact(ctx, task, logStream);
     await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (buildError) {
     setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
