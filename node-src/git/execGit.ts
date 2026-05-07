@@ -3,7 +3,7 @@ import { createInterface } from 'node:readline';
 import type { Options } from 'execa';
 
 import { runCommand } from '../lib/shell/shell';
-import { Context } from '../types';
+import { Deps } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
@@ -26,7 +26,7 @@ const defaultOptions: Options = {
  * @returns The result of the command from the terminal.
  */
 export async function execGitCommand(
-  { log }: Pick<Context, 'log'>,
+  { log }: Pick<Deps, 'log'>,
   command: string,
   options?: Options
 ) {
@@ -73,7 +73,7 @@ export async function execGitCommand(
  * @returns The first line of the command from the terminal.
  */
 export async function execGitCommandOneLine(
-  { log }: Pick<Context, 'log'>,
+  { log }: Pick<Deps, 'log'>,
   command: string,
   options?: Options
 ) {
@@ -119,7 +119,7 @@ export async function execGitCommandOneLine(
  * @returns The number of lines the command returned
  */
 export async function execGitCommandCountLines(
-  { log }: Pick<Context, 'log'>,
+  { log }: Pick<Deps, 'log'>,
   command: string,
   options?: Options
 ) {

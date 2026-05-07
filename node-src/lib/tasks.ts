@@ -20,8 +20,9 @@ type AdaptedTaskConfig<TInput, TOutput, TPartial = never> = ListrTaskExtras & {
   transitions?: {
     pending?: (ctx: Context) => Task;
     success?: (ctx: Context) => Task;
+    partial?: (ctx: Context, partial: TPartial) => Task;
   };
-  extractInput: (ctx: Context) => TInput;
+  extractInput: (ctx: Context, listrTask: Listr.ListrTaskWrapper<Context>) => TInput;
   applyOutput?: (ctx: Context, output: TOutput) => void;
   applyPartial?: (ctx: Context, output: TPartial) => void;
   run: TaskFunction<TInput, TOutput, Deps, TPartial>;
@@ -54,6 +55,10 @@ function applyAdaptedResult<TInput, TOutput, TPartial>(
       return;
     case 'partial':
       config.applyPartial?.(ctx, result.output);
+      if (config.transitions?.partial) {
+        const { title, output } = config.transitions.partial(ctx, result.output);
+        setTitle(title, output)(ctx, listrTask);
+      }
       ctx.skip = true;
       return;
     case 'skip':
@@ -71,7 +76,7 @@ async function runAdaptedTask<TInput, TOutput, TPartial>(
 ) {
   ctx.options.experimental_abortSignal?.throwIfAborted();
   if (config.transitions?.pending) transitionTo(config.transitions.pending)(ctx, listrTask);
-  const input = config.extractInput(ctx);
+  const input = config.extractInput(ctx, listrTask);
   const result = await config.run(buildDeps(ctx), input);
   applyAdaptedResult(config, ctx, listrTask, result);
 }

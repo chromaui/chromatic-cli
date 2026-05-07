@@ -1,3 +1,5 @@
+import type Listr from 'listr';
+
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import getCommitAndBranch from '../git/getCommitAndBranch';
@@ -18,7 +20,15 @@ import matchesBranch from '../lib/matchesBranch';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
-import { Context, Task } from '../types';
+import {
+  BaselineBuild,
+  Context,
+  Deps,
+  Git,
+  ProjectMetadata,
+  TaskResult,
+  TurboSnap,
+} from '../types';
 import gitUserEmailNotFound from '../ui/messages/errors/gitUserEmailNotFound';
 import forceRebuildHint from '../ui/messages/info/forceRebuildHint';
 import replacedBuild from '../ui/messages/info/replacedBuild';
@@ -35,6 +45,49 @@ import {
   skippingBuild,
   success,
 } from '../ui/tasks/gitInfo';
+
+export type GitInfoDeps = Pick<Deps, 'log' | 'client' | 'options' | 'runtime' | 'packageJson'>;
+
+export interface GitInfoInput {
+  branchName?: string;
+  ownerName?: string;
+  repositorySlug?: string;
+  patchBaseRef?: string;
+  fromCI: boolean;
+  interactive: boolean;
+  isLocalBuild: boolean;
+  skip: boolean | string;
+  ignoreLastBuildOnBranch?: string;
+  onlyChanged: boolean | string;
+  externals?: string[];
+  untraced?: string[];
+  onSkippingBuild: (git: Git) => void;
+}
+
+type LastBuild = NonNullable<Context['rebuildForBuild']>;
+
+export interface GitInfoOutput {
+  git: Git;
+  projectMetadata: ProjectMetadata;
+  isOnboarding: boolean;
+  turboSnap?: TurboSnap;
+  build?: BaselineBuild;
+  setForceRebuild: boolean;
+  rebuildForBuildId?: string;
+}
+
+export type GitInfoPartial =
+  | { phase: 'skip-commit'; git: Git; projectMetadata: ProjectMetadata }
+  | {
+      phase: 'rebuild-noop';
+      git: Git;
+      projectMetadata: ProjectMetadata;
+      isOnboarding: boolean;
+      rebuildForBuildId: string;
+      rebuildForBuild: LastBuild;
+      storybookUrl: string;
+      setForceRebuild: boolean;
+    };
 
 const UNDEFINED_BRANCH_PREFIX_REGEXP = /^undefined:/;
 
@@ -69,195 +122,241 @@ const LastBuildQuery = `
 interface LastBuildQueryResult {
   app: {
     isOnboarding: boolean;
-    lastBuild: {
-      id: string;
-      status: string;
-      storybookUrl: string;
-      webUrl: string;
-      specCount: number;
-      componentCount: number;
-      testCount: number;
-      changeCount: number;
-      errorCount: number;
-      actualTestCount: number;
-      actualCaptureCount: number;
-      inheritedCaptureCount: number;
-      interactionTestFailuresCount: number;
-    };
+    lastBuild: LastBuild;
   };
 }
 
-// TODO: refactor this function
+/**
+ * Gather all the git information needed for the build.
+ *
+ * @param deps Narrow set of cross-cutting dependencies the task needs.
+ * @param input Per-pipeline-run input extracted from Context at the seam.
+ *
+ * @returns A TaskResult conveying the produced git/projectMetadata/turboSnap
+ * state, or a partial outcome (skip-for-commit or rebuild-noop).
+ */
 // eslint-disable-next-line complexity, max-statements
-export const setGitInfo = async (ctx: Context, task: Task) => {
+export async function gatherGitInfo(
+  deps: GitInfoDeps,
+  input: GitInfoInput
+): Promise<TaskResult<GitInfoOutput, GitInfoPartial>> {
+  const { log, client, options, runtime, packageJson } = deps;
   const {
     branchName,
     ownerName,
     repositorySlug,
     patchBaseRef,
-    fromCI: ci,
+    fromCI,
     interactive,
     isLocalBuild,
-  } = ctx.options;
+    skip,
+    ignoreLastBuildOnBranch,
+    onlyChanged,
+    externals,
+    untraced,
+    onSkippingBuild,
+  } = input;
 
-  const version = await getVersion(ctx);
+  const version = await getVersion({ log });
+  const commitAndBranchInfo = await getCommitAndBranch(
+    { log },
+    { branchName, patchBaseRef, ci: fromCI }
+  );
 
-  const commitAndBranchInfo = await getCommitAndBranch(ctx, { branchName, patchBaseRef, ci });
-
-  ctx.git = {
+  const git: Git = {
     version,
-    gitUserEmail: await getUserEmail(ctx).catch((err) => {
-      ctx.log.debug('Failed to retrieve Git user email', err);
+    gitUserEmail: await getUserEmail({ log }).catch((err) => {
+      log.debug('Failed to retrieve Git user email', err);
       return undefined;
     }),
-    uncommittedHash: await getUncommittedHash(ctx).catch((err) => {
-      ctx.log.warn('Failed to retrieve uncommitted files hash', err);
+    uncommittedHash: await getUncommittedHash({ log }).catch((err) => {
+      log.warn('Failed to retrieve uncommitted files hash', err);
       return undefined;
     }),
-    rootPath: await getRepositoryRoot(ctx),
+    rootPath: await getRepositoryRoot({ log }),
     ...commitAndBranchInfo,
   };
 
+  let projectMetadata: ProjectMetadata = {};
   try {
-    ctx.projectMetadata = {
-      hasRouter: getHasRouter(ctx.packageJson),
-      creationDate: await getRepositoryCreationDate(ctx),
-      storybookCreationDate: await getStorybookCreationDate(ctx),
-      numberOfCommitters: await getNumberOfComitters(ctx),
+    projectMetadata = {
+      hasRouter: getHasRouter(packageJson),
+      creationDate: await getRepositoryCreationDate({ log }),
+      storybookCreationDate: await getStorybookCreationDate({ log, options }),
+      numberOfCommitters: await getNumberOfComitters({ log }),
       numberOfAppFiles: await getCommittedFileCount(
-        ctx,
+        { log },
         ['page', 'screen'],
         ['js', 'jsx', 'ts', 'tsx']
       ),
     };
   } catch (err) {
-    ctx.log.debug('Failed to gather project metadata', err);
+    log.debug('Failed to gather project metadata', err);
   }
 
-  if (isLocalBuild && !ctx.git.gitUserEmail) {
+  if (isLocalBuild && !git.gitUserEmail) {
     throw new Error(gitUserEmailNotFound());
   }
 
-  if (!ctx.git.slug) {
+  if (!git.slug) {
     try {
-      ctx.git.slug = await getSlug(ctx);
+      git.slug = await getSlug({ log });
     } catch (err) {
-      ctx.log.debug('Failed to retrieve Git repository slug', err);
+      log.debug('Failed to retrieve Git repository slug', err);
     }
   }
 
   if (ownerName) {
-    ctx.git.branch = ctx.git.branch.replace(/[^:]+:/, '');
-    ctx.git.slug = repositorySlug || ctx.git.slug?.replace(/[^/]+/, ownerName);
-  } else if (UNDEFINED_BRANCH_PREFIX_REGEXP.test(ctx.git.branch)) {
+    git.branch = git.branch.replace(/[^:]+:/, '');
+    git.slug = repositorySlug || git.slug?.replace(/[^/]+/, ownerName);
+  } else if (UNDEFINED_BRANCH_PREFIX_REGEXP.test(git.branch)) {
     // Strip off `undefined:` owner prefix that we have seen in some CI systems.
-    ctx.log.warn(undefinedBranchOwner());
-    ctx.git.branch = ctx.git.branch.replace(UNDEFINED_BRANCH_PREFIX_REGEXP, '');
+    log.warn(undefinedBranchOwner());
+    git.branch = git.branch.replace(UNDEFINED_BRANCH_PREFIX_REGEXP, '');
   }
 
-  const { branch, commit, slug } = ctx.git;
+  const { branch, commit, slug } = git;
 
-  ctx.git.matchesBranch = (glob: string | boolean) => matchesBranch(branch, glob);
+  git.matchesBranch = (glob: string | boolean) => matchesBranch(branch, glob);
 
-  if (ctx.git.matchesBranch?.(ctx.options.skip)) {
-    transitionTo(skippingBuild)(ctx, task);
+  if (git.matchesBranch(skip)) {
+    onSkippingBuild(git);
     // The SkipBuildMutation ensures the commit is tagged properly.
-    if (await ctx.client.runQuery(SkipBuildMutation, { commit, branch, slug })) {
-      ctx.skip = true;
-      transitionTo(skippedForCommit, true)(ctx, task);
-      setExitCode(ctx, exitCodes.OK);
-      return;
+    if (await client.runQuery(SkipBuildMutation, { commit, branch, slug })) {
+      return {
+        kind: 'partial',
+        output: { phase: 'skip-commit', git, projectMetadata },
+        reason: 'skipped-for-commit',
+      };
     }
     throw new Error(skipFailed().output);
   }
 
-  const parentCommits = await getParentCommits(ctx, {
-    ignoreLastBuildOnBranch: ctx.git.matchesBranch?.(ctx.options.ignoreLastBuildOnBranch || false),
-  });
-  ctx.git.parentCommits = parentCommits;
-  ctx.log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
+  const parentCommits = await getParentCommits(
+    { log, client, options },
+    {
+      git,
+      ignoreLastBuildOnBranch: git.matchesBranch(ignoreLastBuildOnBranch || false),
+    }
+  );
+  git.parentCommits = parentCommits;
+  log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
-  const result = await ctx.client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
+  const result = await client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
     commit,
     branch,
   });
-  ctx.isOnboarding = result.app.isOnboarding;
-  if (result.app.isOnboarding) {
-    ctx.runtime.forceRebuild = true;
-  }
+  const isOnboarding = result.app.isOnboarding;
+
   // If we're running against the same commit as the sole parent, then this is likely a rebuild (rerun of CI job).
   // If the MRA is all green, there's no need to rerun the build, we just want the CLI to exit 0 so the CI job succeeds.
   // This is especially relevant for (unlinked) projects that don't use --exit-zero-on-changes.
   // There's no need for a SkipBuildMutation because we don't have to tag the commit again.
+  let rebuildForBuildId: string | undefined;
   if (parentCommits.length === 1 && parentCommits[0] === commit) {
-    const mostRecentAncestor = result && result.app && result.app.lastBuild;
+    const mostRecentAncestor = result?.app?.lastBuild;
     if (mostRecentAncestor) {
-      ctx.rebuildForBuildId = mostRecentAncestor.id;
+      rebuildForBuildId = mostRecentAncestor.id;
       if (
         ['PASSED', 'ACCEPTED'].includes(mostRecentAncestor.status) &&
-        !ctx.git.matchesBranch(ctx.runtime.forceRebuild)
+        !git.matchesBranch(isOnboarding ? true : runtime.forceRebuild)
       ) {
-        ctx.skip = true;
-        ctx.rebuildForBuild = result.app.lastBuild;
-        ctx.storybookUrl = result.app.lastBuild.storybookUrl;
-        transitionTo(skippedRebuild, true)(ctx, task);
-        setExitCode(ctx, exitCodes.OK);
-        ctx.log.info(forceRebuildHint());
-        return;
+        log.info(forceRebuildHint());
+        return {
+          kind: 'partial',
+          output: {
+            phase: 'rebuild-noop',
+            git,
+            projectMetadata,
+            isOnboarding,
+            rebuildForBuildId,
+            rebuildForBuild: result.app.lastBuild,
+            storybookUrl: result.app.lastBuild.storybookUrl,
+            setForceRebuild: isOnboarding,
+          },
+          reason: 'rebuild-noop',
+        };
       }
     }
   }
 
-  ctx.turboSnap = ctx.git.matchesBranch(ctx.options.onlyChanged) ? {} : undefined;
+  const turboSnap: TurboSnap | undefined = git.matchesBranch(onlyChanged) ? {} : undefined;
+  let build: BaselineBuild | undefined;
 
   // Retrieve a list of changed file paths since the actual baseline commit(s), which will be used
   // to determine affected story files later.
   // In the unlikely scenario that this list is empty (and not a rebuild), we can skip the build
   // since we know for certain it wouldn't have any effect. We do want to tag the commit.
-  if (ctx.turboSnap) {
+  if (turboSnap) {
     if (parentCommits.length === 0) {
-      ctx.turboSnap.bailReason = { noAncestorBuild: true };
+      turboSnap.bailReason = { noAncestorBuild: true };
       // Log warning after checking for isOnboarding
-      transitionTo(success, true)(ctx, task);
-      return;
+      return {
+        kind: 'continue',
+        output: {
+          git,
+          projectMetadata,
+          isOnboarding,
+          turboSnap,
+          build,
+          setForceRebuild: isOnboarding,
+          rebuildForBuildId,
+        },
+      };
     }
 
-    if (ctx.rebuildForBuildId) {
-      ctx.turboSnap.bailReason = { rebuild: true };
-      ctx.log.warn(isRebuild());
-      transitionTo(success, true)(ctx, task);
-      return;
+    if (rebuildForBuildId) {
+      turboSnap.bailReason = { rebuild: true };
+      log.warn(isRebuild());
+      return {
+        kind: 'continue',
+        output: {
+          git,
+          projectMetadata,
+          isOnboarding,
+          turboSnap,
+          build,
+          setForceRebuild: isOnboarding,
+          rebuildForBuildId,
+        },
+      };
     }
 
-    const baselineBuilds = await getBaselineBuilds(ctx, { branch, parentCommits });
-    ctx.git.baselineCommits = baselineBuilds.map((build) => build.commit);
-    ctx.log.debug(`Found baselineCommits: ${ctx.git.baselineCommits.join(', ')}`);
+    const baselineBuilds = await getBaselineBuilds(
+      { options, client },
+      { branch, parentCommits, git }
+    );
+    git.baselineCommits = baselineBuilds.map((build) => build.commit);
+    log.debug(`Found baselineCommits: ${git.baselineCommits.join(', ')}`);
 
     // Use the most recent baseline to determine final CLI output if we end up skipping the build.
     // Note this will get overwritten if we end up not skipping the build.
-    ctx.build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0] as any;
+    build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0];
 
     try {
       // Map the baseline builds to their changed files, falling back to an earlier "replacement"
       // build if the baseline commit no longer exists or the baseline had uncommitted changes.
       const changedFilesWithInfo = await Promise.all(
         baselineBuilds.map(async (build) => {
-          const changedFilesWithReplacement = await getChangedFilesWithReplacement(ctx, build);
+          const changedFilesWithReplacement = await getChangedFilesWithReplacement(
+            { log, client },
+            build
+          );
           return { build, ...changedFilesWithReplacement };
         })
       );
 
       // Take the distinct union of changed files across all baselines.
-      ctx.git.changedFiles = [
+      git.changedFiles = [
         ...new Set(changedFilesWithInfo.flatMap(({ changedFiles }) => changedFiles)),
       ];
 
       // Track changed package manifest files along with the commit they were changed in.
-      const { untraced = [] } = ctx.options;
-      ctx.git.packageMetadataChanges = changedFilesWithInfo.flatMap(
+      const untracedList = untraced ?? [];
+      git.packageMetadataChanges = changedFilesWithInfo.flatMap(
         ({ build, changedFiles, replacementBuild }) => {
           const metadataFiles = changedFiles
-            .filter((f) => !untraced.some((glob) => matchesFile(glob, f)))
+            .filter((f) => !untracedList.some((glob) => matchesFile(glob, f)))
             .filter((f) => isPackageMetadataFile(f));
 
           return metadataFiles.length > 0
@@ -267,11 +366,11 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
       );
 
       // Track replacement build info to pass along when we create the new build later on.
-      ctx.git.replacementBuildIds = changedFilesWithInfo
+      git.replacementBuildIds = changedFilesWithInfo
         .filter((r) => !!r.replacementBuild)
         .map(({ build, replacementBuild }) => {
-          ctx.log.info('');
-          ctx.log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
+          log.info('');
+          log.info(replacedBuild({ replacedBuild: build, replacementBuild }));
           // `replacementBuild` is filtered above
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           return [build.id, replacementBuild!.id];
@@ -279,34 +378,96 @@ export const setGitInfo = async (ctx: Context, task: Task) => {
 
       if (!interactive) {
         const list =
-          ctx.git.changedFiles.length > 0
-            ? `:\n${ctx.git.changedFiles.map((f) => `  ${f}`).join('\n')}`
+          git.changedFiles.length > 0
+            ? `:\n${git.changedFiles.map((f) => `  ${f}`).join('\n')}`
             : '';
-        ctx.log.info(`Found ${ctx.git.changedFiles.length} changed files${list}`);
+        log.info(`Found ${git.changedFiles.length} changed files${list}`);
       }
     } catch (err) {
-      ctx.turboSnap.bailReason = { invalidChangedFiles: true };
-      delete ctx.git.changedFiles;
-      delete ctx.git.replacementBuildIds;
-      ctx.log.warn(invalidChangedFiles());
-      ctx.log.debug(err);
+      turboSnap.bailReason = { invalidChangedFiles: true };
+      git.changedFiles = undefined;
+      git.replacementBuildIds = undefined;
+      log.warn(invalidChangedFiles());
+      log.debug(err);
     }
 
-    if (ctx.options.externals && ctx.git.changedFiles && ctx.git.changedFiles.length > 0) {
-      for (const glob of ctx.options.externals) {
-        const matches = ctx.git.changedFiles.filter((filepath) => matchesFile(glob, filepath));
+    if (externals && git.changedFiles && git.changedFiles.length > 0) {
+      for (const glob of externals) {
+        const matches = git.changedFiles.filter((filepath) => matchesFile(glob, filepath));
         if (matches.length > 0) {
-          ctx.turboSnap.bailReason = { changedExternalFiles: matches };
-          ctx.log.warn(externalsChanged(matches));
-          delete ctx.git.changedFiles;
-          delete ctx.git.replacementBuildIds;
+          turboSnap.bailReason = { changedExternalFiles: matches };
+          log.warn(externalsChanged(matches));
+          git.changedFiles = undefined;
+          git.replacementBuildIds = undefined;
           break;
         }
       }
     }
   }
 
-  transitionTo(success, true)(ctx, task);
+  return {
+    kind: 'continue',
+    output: {
+      git,
+      projectMetadata,
+      isOnboarding,
+      turboSnap,
+      build,
+      setForceRebuild: isOnboarding,
+      rebuildForBuildId,
+    },
+  };
+}
+
+export const extractGitInfoInput = (
+  ctx: Context,
+  listrTask: Listr.ListrTaskWrapper<Context>
+): GitInfoInput => ({
+  branchName: ctx.options.branchName,
+  ownerName: ctx.options.ownerName,
+  repositorySlug: ctx.options.repositorySlug,
+  patchBaseRef: ctx.options.patchBaseRef,
+  fromCI: ctx.options.fromCI,
+  interactive: ctx.options.interactive,
+  isLocalBuild: ctx.options.isLocalBuild,
+  skip: ctx.options.skip,
+  ignoreLastBuildOnBranch: ctx.options.ignoreLastBuildOnBranch,
+  onlyChanged: ctx.options.onlyChanged,
+  externals: ctx.options.externals,
+  untraced: ctx.options.untraced,
+  onSkippingBuild: (git) => {
+    // Kind of a gross escape hatch here. The `skippingBuild` UI function needs `git` on the context to construct its message,
+    // so we have to mutate context in this callback. Can't put this in applyGitInfoPartial because it's an intermediate UI
+    // transition: it's called before running the GQL mutation that skips the build. Having one escape hatch here seemed better
+    // than abstracting it away at this stage, but if this keeps coming up, we should find a better pattern for this.
+    ctx.git = git;
+    transitionTo(skippingBuild)(ctx, listrTask);
+  },
+});
+
+export const applyGitInfoOutput = (ctx: Context, output: GitInfoOutput) => {
+  ctx.git = output.git;
+  ctx.projectMetadata = output.projectMetadata;
+  ctx.isOnboarding = output.isOnboarding;
+  if (output.turboSnap) ctx.turboSnap = output.turboSnap;
+  // Have to cast as unknown first here, as there's not enough overlap to direct cast. This value gets overwritten
+  // by the full build later in the pipeline. Could be worth a refactor to split out these types.
+  if (output.build) ctx.build = output.build as unknown as Context['build'];
+  if (output.rebuildForBuildId) ctx.rebuildForBuildId = output.rebuildForBuildId;
+  if (output.setForceRebuild) ctx.runtime.forceRebuild = true;
+};
+
+export const applyGitInfoPartial = (ctx: Context, partial: GitInfoPartial) => {
+  ctx.git = partial.git;
+  ctx.projectMetadata = partial.projectMetadata;
+  setExitCode(ctx, exitCodes.OK);
+  if (partial.phase === 'rebuild-noop') {
+    ctx.isOnboarding = partial.isOnboarding;
+    ctx.rebuildForBuildId = partial.rebuildForBuildId;
+    ctx.rebuildForBuild = partial.rebuildForBuild;
+    ctx.storybookUrl = partial.storybookUrl;
+    if (partial.setForceRebuild) ctx.runtime.forceRebuild = true;
+  }
 };
 
 /**
@@ -320,6 +481,15 @@ export default function main(_: Context) {
   return createTask({
     name: 'gitInfo',
     title: initial.title,
-    steps: [transitionTo(pending), setGitInfo],
+    transitions: {
+      pending,
+      success,
+      partial: (ctx, partial) =>
+        partial.phase === 'skip-commit' ? skippedForCommit(ctx) : skippedRebuild(),
+    },
+    extractInput: extractGitInfoInput,
+    applyOutput: applyGitInfoOutput,
+    applyPartial: applyGitInfoPartial,
+    run: gatherGitInfo,
   });
 }

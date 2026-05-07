@@ -1,6 +1,6 @@
 import envCi from 'env-ci';
 
-import { Context } from '../types';
+import { Deps } from '../types';
 import forksUnsupported from '../ui/messages/errors/forksUnsupported';
 import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
@@ -33,7 +33,7 @@ function getBranchDetailsFromEnvironmentCI(log) {
 /**
  *  Gather commit and branch information from Git and the local environment.
  *
- * @param ctx The context set when executing the CLI.
+ * @param deps Dependencies (logger).
  * @param options Some extra details about the repository.
  * @param options.branchName The name of the branch.
  * @param options.patchBaseRef The reference to the base side of a patch.
@@ -44,16 +44,16 @@ function getBranchDetailsFromEnvironmentCI(log) {
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export default async function getCommitAndBranch(
-  ctx: Pick<Context, 'log'>,
+  deps: Pick<Deps, 'log'>,
   {
     branchName,
     patchBaseRef,
     ci,
   }: { branchName?: string; patchBaseRef?: string; ci?: boolean } = {}
 ) {
-  const { log } = ctx;
-  let commit: CommitInfo = await getCommit(ctx);
-  let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch(ctx));
+  const { log } = deps;
+  let commit: CommitInfo = await getCommit(deps);
+  let branch = notHead(branchName) || notHead(patchBaseRef) || (await getBranch(deps));
   let slug;
 
   const {
@@ -89,7 +89,7 @@ export default async function getCommitAndBranch(
   const isGitHubAction = GITHUB_ACTIONS === 'true';
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
 
-  if (!(await hasPreviousCommit(ctx))) {
+  if (!(await hasPreviousCommit(deps))) {
     const message = gitOneCommit(isGitHubAction);
     if (isCi) {
       throw new Error(message);
@@ -99,7 +99,7 @@ export default async function getCommitAndBranch(
   }
 
   if (isFromEnvironmentVariable) {
-    commit = await getCommit(ctx, CHROMATIC_SHA).catch((err) => {
+    commit = await getCommit(deps, CHROMATIC_SHA).catch((err) => {
       log.warn(noCommitDetails({ sha: CHROMATIC_SHA, env: 'CHROMATIC_SHA' }));
       log.debug(err);
       return { commit: CHROMATIC_SHA, committedAt: Date.now() };
@@ -120,7 +120,7 @@ export default async function getCommitAndBranch(
     // Travis PR builds are weird, we want to ensure we mark build against the commit that was
     // merged from, rather than the resulting "ephemeral" merge commit that doesn't stick around in the
     // history of the project (so approvals will get lost). We also have to ensure we use the right branch.
-    commit = await getCommit(ctx, TRAVIS_PULL_REQUEST_SHA).catch((err) => {
+    commit = await getCommit(deps, TRAVIS_PULL_REQUEST_SHA).catch((err) => {
       log.warn(noCommitDetails({ sha: TRAVIS_PULL_REQUEST_SHA, env: 'TRAVIS_PULL_REQUEST_SHA' }));
       log.debug(err);
       return { commit: TRAVIS_PULL_REQUEST_SHA, committedAt: Date.now() };
@@ -145,7 +145,7 @@ export default async function getCommitAndBranch(
     // This does not apply to our GitHub Action, because it'll set CHROMATIC_SHA, -BRANCH and -SLUG.
     // We intentionally use the GITHUB_HEAD_REF (branch name) here, to retrieve the last commit on
     // the head branch rather than the merge commit (GITHUB_SHA).
-    commit = await getCommit(ctx, GITHUB_HEAD_REF).catch((err) => {
+    commit = await getCommit(deps, GITHUB_HEAD_REF).catch((err) => {
       log.warn(noCommitDetails({ ref: GITHUB_HEAD_REF, sha: GITHUB_SHA, env: 'GITHUB_HEAD_REF' }));
       log.debug(err);
       return { commit: GITHUB_SHA, committedAt: Date.now() };
@@ -161,7 +161,7 @@ export default async function getCommitAndBranch(
   // On certain CI systems, a branch is not checked out
   // (instead a detached head is used for the commit).
   if (!notHead(branch)) {
-    commit = await getCommit(ctx, ciCommit).catch((err) => {
+    commit = await getCommit(deps, ciCommit).catch((err) => {
       log.warn(noCommitDetails({ sha: ciCommit }));
       log.debug(err);
       return { commit: ciCommit, committedAt: Date.now() };

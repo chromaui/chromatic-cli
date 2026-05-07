@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { InitialContext } from '.';
 import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
@@ -163,6 +164,49 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+export interface Git {
+  version?: string;
+  /** The absolute location on disk of the git project */
+  rootPath?: string;
+  /** The current user's email as per git config */
+  gitUserEmail?: string;
+  branch: string;
+  commit: string;
+  committerEmail?: string;
+  committedAt: number;
+  slug?: string;
+  fromCI: boolean;
+  ciService?: string;
+  mergeCommit?: string;
+  uncommittedHash?: string;
+  parentCommits?: string[];
+  baselineCommits?: string[];
+  changedFiles?: string[];
+  changedDependencyNames?: string[];
+  replacementBuildIds?: [string, string][];
+  matchesBranch?: (glob: boolean | string) => boolean;
+  packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+}
+
+export interface ProjectMetadata {
+  hasRouter?: boolean;
+  creationDate?: Date;
+  storybookCreationDate?: Date;
+  numberOfCommitters?: number;
+  numberOfAppFiles?: number;
+}
+
+export interface BaselineBuild {
+  id: string;
+  number: number;
+  status: string;
+  commit: string;
+  committedAt: number;
+  uncommittedHash: string;
+  isLocalBuild: boolean;
+  changeCount: number;
+}
+
 export interface Storybook {
   version: string;
   baseDir?: string;
@@ -281,37 +325,9 @@ export interface Context {
   http: HTTPClient;
   client: GraphQLClient;
 
-  git: {
-    version?: string;
-    /** The absolute location on disk of the git project */
-    rootPath?: string;
-    /** The current user's email as pre git config */
-    gitUserEmail?: string;
-    branch: string;
-    commit: string;
-    committerEmail?: string;
-    committedAt: number;
-    slug?: string;
-    fromCI: boolean;
-    ciService?: string;
-    mergeCommit?: string;
-    uncommittedHash?: string;
-    parentCommits?: string[];
-    baselineCommits?: string[];
-    changedFiles?: string[];
-    changedDependencyNames?: string[];
-    replacementBuildIds?: [string, string][];
-    matchesBranch?: (glob: boolean | string) => boolean;
-    packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
-  };
+  git: Git;
   storybook: Storybook;
-  projectMetadata: {
-    hasRouter?: boolean;
-    creationDate?: Date;
-    storybookCreationDate?: Date;
-    numberOfCommitters?: number;
-    numberOfAppFiles?: number;
-  };
+  projectMetadata: ProjectMetadata;
   storybookUrl?: string;
   announcedBuild: {
     id: string;

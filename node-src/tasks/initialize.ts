@@ -154,7 +154,7 @@ function updateContextFromAnnouncedBuild(
 ) {
   ctx.announcedBuild = announcedBuild;
   ctx.isOnboarding =
-    // possibly set from LastBuildQuery in setGitInfo
+    // possibly set from LastBuildQuery in gatherGitInfo
     ctx.isOnboarding ||
     announcedBuild.number === 1 ||
     (announcedBuild.autoAcceptChanges && !input.autoAcceptChanges);
