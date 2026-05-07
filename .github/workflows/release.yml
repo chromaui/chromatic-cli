@@ -51,6 +51,7 @@ jobs:
   package-size:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/package-size.yml
+    needs: preflight
     permissions:
       contents: read
       issues: write
