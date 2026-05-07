@@ -25,6 +25,7 @@ jobs:
           buildScriptName: build-test-storybook
           exitZeroOnChanges: true
           forceRebuild: true
+          workingDir: test-fixtures/storybook-smoke
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

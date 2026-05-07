@@ -1,0 +1,19 @@
+{
+  "name": "storybook-smoke-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "yarn@4.2.2",
+  "scripts": {
+    "build-test-storybook": "storybook build -c .storybook -o test-storybook --stats-json"
+  },
+  "dependencies": {
+    "prop-types": "^15.8.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "^10.3.4",
+    "storybook": "^10.3.4",
+    "vite": "^8.0.3"
+  }
+}

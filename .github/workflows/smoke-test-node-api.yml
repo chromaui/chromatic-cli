@@ -25,10 +25,13 @@ jobs:
         with:
           node-version: 'lts/*'
       - run: yarn
+        working-directory: test-fixtures/storybook-smoke
       - name: install published canary
         run: yarn add chromatic@${{ inputs.version }}
+        working-directory: test-fixtures/storybook-smoke
       - name: run chromatic via node
         run: ./scripts/runViaNode.mjs
+        working-directory: test-fixtures/storybook-smoke
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

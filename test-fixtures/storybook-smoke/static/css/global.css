@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap');
+
+body {
+  background: paleturquoise;
+}
+
+.code-style {
+  background-color: #16242c;
+  color: #c0c4cd;
+  display: inline-block;
+  font-family: "Source Code Pro", monospace;
+  font-size: 12px;
+  line-height: 1rem;
+  margin: 0;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+
+.code-style * {
+  font-family: "Source Code Pro", monospace;
+}
+
+.html-style {
+  background-color: #f6f9fc;
+  color: #5c6870;
+  font-family: "Nunito Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1;
+  padding: 20px;
+}
+
+.html-style * {
+  font-family: "Nunito Sans", sans-serif;
+}

@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 22
       - run: yarn
+        working-directory: test-fixtures/storybook-smoke
       # `uses:` cannot evaluate `${{ inputs.* }}` (resolved at workflow load,
       # before runtime context exists). Clone the published canary at the
       # requested tag into a local path, then reference that path.
@@ -40,6 +41,7 @@ jobs:
           exitZeroOnChanges: true
           forceRebuild: true
           onlyChanged: true
+          workingDir: test-fixtures/storybook-smoke
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

@@ -25,7 +25,9 @@ jobs:
         with:
           node-version: 22
       - run: yarn
+        working-directory: test-fixtures/storybook-smoke
       - run: yarn dlx chromatic@${{ inputs.version }} chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+        working-directory: test-fixtures/storybook-smoke
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

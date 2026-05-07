@@ -24,13 +24,14 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 22
-      - run: rm -rf subdir # remove conflicting subproject
       - name: install
         run: yarn install
+        working-directory: test-fixtures/storybook-smoke
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
       - name: run chromatic
         run: npx -p chromatic@${{ inputs.version }} chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+        working-directory: test-fixtures/storybook-smoke
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
