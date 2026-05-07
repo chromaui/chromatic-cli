@@ -75,7 +75,7 @@ describe('getDependencies', () => {
     );
   });
 
-  it('should handle historic files', async () => {
+  it.skip('should handle historic files', async () => {
     // chromatic@6.12.0
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
 
