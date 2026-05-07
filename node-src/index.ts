@@ -98,10 +98,6 @@ async function setupContext(ctx: InitialContext, configFile?: string): Promise<C
     retries: 3,
   });
   ctx.configuration = await getConfiguration(configFile);
-  const options = getOptions(ctx);
-  (ctx as Context).options = options;
-  ctx.log.setLogFile(options.logFile);
-
   return ctx as Context;
 }
 
@@ -215,10 +211,9 @@ export async function runAll(initialContext: InitialContext) {
       return;
     }
 
-    const options = getOptions(ctx, partialOptions);
-    (ctx as Context).options = options;
-    (ctx as Context).runtime = { forceRebuild: options.forceRebuild };
-    ctx.log.setLogFile(options.logFile);
+    ctx.options = getOptions(ctx, partialOptions);
+    ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
+    ctx.log.setLogFile(ctx.options.logFile);
 
     setExitCode(ctx, exitCodes.OK);
   } catch (err) {
@@ -485,7 +480,10 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
     sessionId: uuid(),
   };
 
-  return setupContext(initialContext);
+  const ctx = await setupContext(initialContext);
+  ctx.options = getOptions(initialContext);
+  ctx.log.setLogFile(ctx.options.logFile);
+  return ctx;
 }
 
 async function runShareTasks(ctx: Context): Promise<void> {
