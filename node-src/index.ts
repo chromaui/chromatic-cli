@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import 'any-observable/register/zen';
 
 import * as Sentry from '@sentry/node';
@@ -6,6 +5,7 @@ import Listr from 'listr';
 import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
 
+import { setupContext } from './context';
 import getCommitAndBranch from './git/getCommitAndBranch';
 import {
   getBranch,
@@ -15,13 +15,10 @@ import {
   getUncommittedHash,
   getUserEmail,
 } from './git/git';
-import GraphQLClient from './io/graphqlClient';
-import HTTPClient from './io/httpClient';
 import checkForUpdates from './lib/checkForUpdates';
 import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
-import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
 import getOptions, { getPartialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
@@ -30,11 +27,10 @@ import matchesBranch from './lib/matchesBranch';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
-import { confirmShare, ConfirmShareStatus, reserveShareOnAPI } from './lib/share';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
-import getTasks, { runShareBuild } from './tasks';
+import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
@@ -85,21 +81,6 @@ export type InitialContext = Omit<
   >,
   'options' | 'runtime'
 >;
-
-async function setupContext(ctx: InitialContext, configFile?: string): Promise<Context> {
-  ctx.http = new HTTPClient(ctx);
-  ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
-    headers: {
-      'x-chromatic-session-id': ctx.sessionId,
-      'x-chromatic-cli-version': ctx.pkg.version,
-      'apollographql-client-name': 'chromatic-cli',
-      'apollographql-client-version': ctx.pkg.version,
-    },
-    retries: 3,
-  });
-  ctx.configuration = await getConfiguration(configFile);
-  return ctx as Context;
-}
 
 /**
  * Entry point for the CLI, GitHub Action, and Node API
@@ -360,150 +341,6 @@ async function runBuild(ctx: Context) {
   }
 }
 
-export interface ShareOptions {
-  userToken: string;
-  onUrl?: (url: string) => void;
-  onProgress?: (progress: number, total: number) => void;
-  onError?: (error: Error) => void;
-  abortSignal?: AbortSignal;
-}
-
-export interface ShareOutput {
-  shareUrl: string;
-  daysToExpire?: number;
-}
-
-/**
- * Share a Storybook without creating a full Chromatic build.
- * Reserves a share URL, runs the upload pipeline, and resolves when the upload is complete.
- *
- * @param shareOptions Options for the share operation.
- * @param shareOptions.userToken The user token for authentication.
- * @param shareOptions.onUrl Callback fired as soon as the share URL is reserved.
- * @param shareOptions.onProgress Callback reporting upload progress as (bytesUploaded, totalBytes).
- * @param shareOptions.onError Callback for errors. When provided, share() resolves instead of rejecting.
- * @param shareOptions.abortSignal An AbortSignal to cancel the share operation.
- *
- * @returns An object with the share URL.
- */
-// eslint-disable-next-line complexity
-export async function share(shareOptions: ShareOptions): Promise<ShareOutput> {
-  const { onUrl, onError } = shareOptions;
-
-  let ctx: Context;
-  try {
-    ctx = await setupShareContext(shareOptions);
-  } catch (error) {
-    if (onError) {
-      onError(error);
-      return { shareUrl: '' };
-    }
-    throw error;
-  }
-
-  let daysToExpire: number | undefined;
-  try {
-    ctx.share = await reserveShareOnAPI(ctx);
-    // TODO: refactor build/prepare so the share flow doesn't need to stub ctx.git.
-    // Today these tasks read ctx.git.changedFiles; empty values satisfy that without
-    // affecting behavior, but new reads of ctx.git would silently see empty strings.
-    ctx.git = { branch: '', commit: '', committedAt: 0, fromCI: false };
-
-    onUrl?.(ctx.share.shareUrl);
-
-    let status: ConfirmShareStatus = 'complete';
-    try {
-      await runShareTasks(ctx);
-    } catch (error) {
-      status = ctx.options.experimental_abortSignal?.aborted ? 'cancelled' : 'error';
-      throw error;
-    } finally {
-      daysToExpire = await reportShareStatus(ctx, status);
-    }
-  } catch (error) {
-    // If a callback was provided, use that then resolve
-    if (onError) {
-      onError(error);
-      return { shareUrl: ctx.share?.shareUrl ?? '', daysToExpire };
-    }
-    throw error;
-  }
-
-  return { shareUrl: ctx.share?.shareUrl ?? '', daysToExpire };
-}
-
-async function reportShareStatus(ctx: Context, status: ConfirmShareStatus) {
-  try {
-    const { daysToExpire } = await confirmShare(ctx, status);
-    return daysToExpire;
-  } catch (error) {
-    ctx.log.warn(`Failed to confirm share status (${status}): ${error.message}`);
-    return undefined;
-  }
-}
-
-async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
-  const { userToken, onProgress, abortSignal } = shareOptions;
-
-  const extraOptions: Partial<Options> = {
-    userToken,
-    ...(abortSignal && { experimental_abortSignal: abortSignal }),
-    ...(onProgress && {
-      experimental_onTaskProgress: (_ctx: Context, status: { progress: number; total: number }) => {
-        onProgress(status.progress, status.total);
-      },
-    }),
-  };
-  const config = {
-    ...parseArguments([]),
-    extraOptions,
-  };
-
-  const log = createLogger(config.flags, extraOptions);
-
-  const packageInfo = await readPackageUp({ cwd: process.cwd(), normalize: false });
-  if (!packageInfo) {
-    throw new Error('No package.json found');
-  }
-
-  const { path: packagePath, packageJson } = packageInfo;
-  const initialContext: InitialContext = {
-    ...config,
-    flags: {
-      ...config.flags,
-      interactive: false,
-    },
-    packagePath,
-    packageJson,
-    env: getEnvironment(),
-    log,
-    sessionId: uuid(),
-  };
-
-  const ctx = await setupContext(initialContext);
-  ctx.options = getOptions(initialContext);
-  ctx.log.setLogFile(ctx.options.logFile);
-  return ctx;
-}
-
-async function runShareTasks(ctx: Context): Promise<void> {
-  const listrOptions: any = {
-    log: ctx.log,
-    renderer: NonTTYRenderer,
-  };
-
-  try {
-    await new Listr(
-      runShareBuild.map((task) => task(ctx)),
-      listrOptions
-    ).run(ctx);
-    ctx.log.debug('Tasks completed');
-  } finally {
-    endActivity(ctx);
-    ctx.log.flush();
-  }
-}
-
 export interface GitInfo {
   slug: string;
   branch: string;
@@ -558,3 +395,4 @@ export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
 export { getConfiguration } from './lib/getConfiguration';
 export { createLogger } from './lib/log';
 export { type Logger } from './lib/log';
+export { share, type ShareOptions, type ShareOutput } from './share';

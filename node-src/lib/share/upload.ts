@@ -33,7 +33,7 @@ interface UploadShareResult {
  *
  * @returns Details about the share such as the URL and S3 upload credentials.
  */
-export async function reserveShareOnAPI(ctx: Context) {
+export async function reserveShare(ctx: Context) {
   const { uploadStorybookShare: result } = await ctx.client.runQuery<UploadShareResult>(
     UploadShareMutation,
     {},

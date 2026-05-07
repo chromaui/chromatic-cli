@@ -4,7 +4,7 @@ import { execa as execaDefault } from 'execa';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { share } from '.';
-import { confirmShare, reserveShareOnAPI } from './lib/share';
+import { confirmShare, reserveShare } from './lib/share';
 import { uploadFiles } from './lib/uploadFiles';
 
 vi.mock('execa', async (importOriginal) => {
@@ -41,7 +41,7 @@ vi.mock('node-fetch', () => ({
 
 vi.mock('./lib/share', () => ({
   confirmShare: vi.fn(async () => ({ status: 'received', daysToExpire: 7 })),
-  reserveShareOnAPI: vi.fn(async () => ({
+  reserveShare: vi.fn(async () => ({
     shareId: 'test-share-id',
     shareUrl: 'https://share.chromatic.com/test-share-id',
     target: {
@@ -90,7 +90,7 @@ vi.mock('fs', async (importOriginal) => {
 
 const execa = vi.mocked(execaDefault);
 const upload = vi.mocked(uploadFiles);
-const mockReserveShare = vi.mocked(reserveShareOnAPI);
+const mockReserveShare = vi.mocked(reserveShare);
 const mockConfirmShare = vi.mocked(confirmShare);
 
 let processEnvironment: NodeJS.ProcessEnv;
