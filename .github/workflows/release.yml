@@ -1,9 +1,9 @@
-name: Release
+name: Publish
 
 on:
-  # Pushes to main trigger the `latest` release on npm and publish the GitHub
+  # Pushes to main trigger the `latest` npm release and publish the GitHub
   # Action. To allow the occasional update to markdown and config files, only
-  # changes to actual source code trigger a release.
+  # changes to actual source code trigger a publish.
   push:
     branches:
       - main
@@ -15,38 +15,64 @@ on:
       - isChromatic.*
       - package.json
       - storybook-addon.*
-
-  # Per-PR canary publishing dispatches into this workflow via workflow_call so
-  # that npm trusted publishing (scoped to a single workflow file) covers both
-  # the canary and `latest` paths under one entry.
-  workflow_call:
-    outputs:
-      version:
-        description: Version published to npm and chromaui/action-canary.
-        value: ${{ jobs.release.outputs.version }}
-    secrets:
-      GH_TOKEN:
-        required: true
-      SLACK_WEBHOOK_URL:
-        required: false
-      SENTRY_AUTH_TOKEN:
-        required: false
+  # npm trusted publishing is scoped to a single workflow filename, so PR
+  # canaries must be published directly from this workflow rather than via
+  # workflow_call from another file.
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - action-src/**
+      - bin-src/**
+      - node-src/**
+      - action.yml
+      - isChromatic.*
+      - package.json
+      - storybook-addon.*
+  merge_group:
+    types:
+      - checks_requested
 
 permissions:
   id-token: write
   contents: write
   pull-requests: write
 
+# Cancel stale PR publish runs so we do not fan out smoke tests for canaries
+# that have already been superseded. Merge-queue and main publishes must run to
+# completion.
+concurrency:
+  group: publish-workflow-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  release:
+  preflight:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/lint-and-test.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  chromatic:
+    if: github.event_name != 'push'
+    needs: preflight
+    uses: ./.github/workflows/chromatic-prod.yml
+    secrets:
+      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+
+  publish:
+    if: always() && (github.event_name == 'push' || needs.preflight.result == 'success')
+    needs:
+      - preflight
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.release.outputs.version }}
+      version: ${{ steps.publish.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GH_TOKEN || github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -58,12 +84,25 @@ jobs:
         run: npm install -g npm@latest
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Create release
-        id: release
+      - name: Publish package and action
+        id: publish
         run: yarn ${{ github.event_name == 'push' && 'release' || 'release-canary' }}
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SENTRY_ORG: chromatic-lt
           SENTRY_PROJECT: cli
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      - name: Write published version artifact
+        if: github.event_name != 'push'
+        run: printf '%s\n' '${{ steps.publish.outputs.version }}' > published-version.txt
+      # The publish itself must stay in this workflow for npm trusted
+      # publishing, so we hand the canary version to pull-request-workflow via
+      # an artifact instead of workflow_call outputs.
+      - name: Upload published version artifact
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-version
+          path: published-version.txt
+          if-no-files-found: error

@@ -1,25 +1,20 @@
 name: Test PR
 
 on:
-  merge_group:
-    types:
-     - checks_requested
   pull_request:
     types:
       - opened
       - synchronize
       - reopened
+  workflow_run:
+    workflows:
+      - Publish
+    types:
+      - completed
 
 permissions:
+  actions: read
   contents: read
-
-# Cancel stale runs when a PR is pushed to in quick succession — otherwise we'd
-# pay for smoke tests against a canary that's already been superseded. The
-# cancel is gated to pull_request only so merge-queue runs are never interrupted
-# mid-flight (cancelling those would re-queue the PR and waste a full cycle).
-concurrency:
-  group: pr-workflow-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   package-size:
@@ -33,113 +28,123 @@ jobs:
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_API_KEY: ${{ secrets.UPSTASH_API_KEY }}
 
-  lint-and-test:
-    uses: ./.github/workflows/lint-and-test.yml
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  chromatic:
-    uses: ./.github/workflows/chromatic-prod.yml
-    needs: lint-and-test
-    secrets:
-      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-
-  publish-canary:
-    uses: ./.github/workflows/release.yml
-    needs: lint-and-test
-    permissions:
-      id-token: write
-      contents: write
-      pull-requests: write
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  resolve-version:
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Download published version artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: published-version
+          path: ./published-version
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Read published version
+        id: version
+        run: |
+          VERSION="$(tr -d '\n' < ./published-version/published-version.txt)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   smoke-test-action:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-action.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-api:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-node-api.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-20:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-node20.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-22:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-node22.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-24:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-node24.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-npx:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-npx.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-windows:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-windows.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-yarn.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn-berry:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-yarn-berry.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn-canary:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-yarn-canary.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn-classic:
+    if: needs.resolve-version.result == 'success'
     uses: ./.github/workflows/smoke-test-yarn-classic.yml
-    needs: publish-canary
+    needs: resolve-version
     with:
-      version: ${{ needs.publish-canary.outputs.version }}
+      version: ${{ needs.resolve-version.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
