@@ -40,17 +40,29 @@ export async function execWithBuildEnvironment(
       EXPO_PUBLIC_STORYBOOK_DISABLE_UI: 'true',
       STORYBOOK_DISABLE_UI: 'true',
 
+      EXPO_STORYBOOK_SERVER: 'false',
+      STORYBOOK_SERVER: 'false',
+
+      // The _WS_ are the current form of the variables expected by Storybook.
+      // The _WEBSOCKET_ are the legacy variables that were previously used by convention.
+
       EXPO_PUBLIC_STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
       STORYBOOK_WEBSOCKET_HOST: 'react-native.capture.chromatic.com',
+
+      EXPO_PUBLIC_STORYBOOK_WS_HOST: 'react-native.capture.chromatic.com',
+      STORYBOOK_WS_HOST: 'react-native.capture.chromatic.com',
 
       EXPO_PUBLIC_STORYBOOK_WEBSOCKET_PORT: '7007',
       STORYBOOK_WEBSOCKET_PORT: '7007',
 
+      EXPO_PUBLIC_STORYBOOK_WS_PORT: '7007',
+      STORYBOOK_WS_PORT: '7007',
+
       EXPO_PUBLIC_STORYBOOK_WEBSOCKET_SECURED: 'true',
       STORYBOOK_WEBSOCKET_SECURED: 'true',
 
-      EXPO_STORYBOOK_SERVER: 'false',
-      STORYBOOK_SERVER: 'false',
+      EXPO_PUBLIC_STORYBOOK_WS_SECURED: 'true',
+      STORYBOOK_WS_SECURED: 'true',
     },
   });
 }
