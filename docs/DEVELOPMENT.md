@@ -80,12 +80,14 @@ Additionally, a PR **may** have exactly one of these labels:
 We have two types of releases:
 
 - `latest` releases are the general audience production releases, used by most people. Automatically created when merging a PR with the `release` label.
-- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR, but does not auto-publish the GitHub Action.
+- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR, including a matching `chromaui/action-canary` tag so smoke tests exercise the same artifact users would install.
 
-> For GitHub Actions, we may manually publish `chromaui/action-canary`.
+> Ad-hoc canaries (without an open PR) can still be published manually by pushing to the `action-canary` branch or running the script below locally.
 
-A script is provided to manually publish the GitHub Action, though it's typically only necessary for `action-canary` releases:
+A script is provided to manually publish the GitHub Action, though it's typically only necessary for ad-hoc `action-canary` releases:
 
 ```sh
-yarn publish-action <canary|latest>
+yarn publish-action <canary|latest> [--append-sha]
 ```
+
+Pass `--append-sha` for `canary` to append the short HEAD sha to the version, ensuring repeated pushes of the same `package.json` version produce unique tags. The auto-driven per-PR canary publish does not pass this flag (its versions are already PR-scoped).

@@ -13,6 +13,14 @@ on:
 permissions:
   contents: read
 
+# Cancel stale runs when a PR is pushed to in quick succession — otherwise we'd
+# pay for smoke tests against a canary that's already been superseded. The
+# cancel is gated to pull_request only so merge-queue runs are never interrupted
+# mid-flight (cancelling those would re-queue the PR and waste a full cycle).
+concurrency:
+  group: pr-workflow-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   package-size:
     if: github.event_name == 'pull_request'
@@ -36,68 +44,102 @@ jobs:
     secrets:
       CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 
+  publish-canary:
+    uses: ./.github/workflows/release.yml
+    needs: lint-and-test
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
   smoke-test-action:
     uses: ./.github/workflows/smoke-test-action.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-api:
     uses: ./.github/workflows/smoke-test-node-api.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-20:
     uses: ./.github/workflows/smoke-test-node20.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-22:
     uses: ./.github/workflows/smoke-test-node22.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-node-24:
     uses: ./.github/workflows/smoke-test-node24.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-npx:
     uses: ./.github/workflows/smoke-test-npx.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-windows:
     uses: ./.github/workflows/smoke-test-windows.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn:
     uses: ./.github/workflows/smoke-test-yarn.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn-berry:
     uses: ./.github/workflows/smoke-test-yarn-berry.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn-canary:
     uses: ./.github/workflows/smoke-test-yarn-canary.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-yarn-classic:
     uses: ./.github/workflows/smoke-test-yarn-classic.yml
-    needs: lint-and-test
+    needs: publish-canary
+    with:
+      version: ${{ needs.publish-canary.outputs.version }}
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}

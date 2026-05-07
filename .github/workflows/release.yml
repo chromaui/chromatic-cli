@@ -1,14 +1,9 @@
 name: Release
 
 on:
-  # PRs have their own canary releases which always run but don't publish the GitHub Action.
-  # Types are configured so this also runs when labels are added or removed.
-  # To allow debugging the release process, this does not have a paths filter.
-  pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-
-  # Pushes to main trigger a release and publish the GitHub Action. To allow the occasional update
-  # to markdown and config files, only changes to actual source code trigger a release.
+  # Pushes to main trigger the `latest` release on npm and publish the GitHub
+  # Action. To allow the occasional update to markdown and config files, only
+  # changes to actual source code trigger a release.
   push:
     branches:
       - main
@@ -21,6 +16,22 @@ on:
       - package.json
       - storybook-addon.*
 
+  # Per-PR canary publishing dispatches into this workflow via workflow_call so
+  # that npm trusted publishing (scoped to a single workflow file) covers both
+  # the canary and `latest` paths under one entry.
+  workflow_call:
+    outputs:
+      version:
+        description: Version published to npm and chromaui/action-canary.
+        value: ${{ jobs.release.outputs.version }}
+    secrets:
+      GH_TOKEN:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+
 permissions:
   id-token: write
   contents: write
@@ -29,6 +40,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -40,13 +53,14 @@ jobs:
 
       - name: Prepare repository
         run: git fetch --unshallow --tags
-        # Update NPM since we're using trusted publishing and need a newer version
+      # Update NPM since we're using trusted publishing and need a newer version
       - name: Update NPM
         run: npm install -g npm@latest
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Create Release
-        run: yarn run release
+      - name: Create release
+        id: release
+        run: yarn ${{ github.event_name == 'push' && 'release' || 'release-canary' }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

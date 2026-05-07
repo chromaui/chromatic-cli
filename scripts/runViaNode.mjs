@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
+import { run } from 'chromatic/node';
 import process from 'process';
-
-import { run } from '../dist/node.cjs';
 
 run({
   flags: {

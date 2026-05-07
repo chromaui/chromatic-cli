@@ -1,22 +1,60 @@
 #!/usr/bin/env node
 
 import { $ } from 'execa';
+import { appendFileSync, readFileSync } from 'fs';
 
 import { main as publishAction } from './publishAction.mjs';
+
+async function computeNextVersion() {
+  if (process.env.GITHUB_EVENT_NAME === 'merge_group') {
+    // auto's canary versioning expects a PR number, which the merge-queue context
+    // does not provide. Produce a deterministic fallback keyed on the run ID.
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    const runId = process.env.GITHUB_RUN_ID || 'local';
+    return `${pkg.version}--canary.merge.${runId}`;
+  }
+
+  const { stdout } = await $`auto shipit --dry-run --quiet`;
+  return stdout.trim();
+}
+
+async function publishNpmCanary(nextVersion) {
+  if (process.env.GITHUB_EVENT_NAME === 'merge_group') {
+    await $`npm --no-git-tag-version version ${nextVersion}`;
+    await $({
+      stdout: 'inherit',
+      stderr: 'inherit',
+    })`auto canary --force --version ${nextVersion}`;
+  } else {
+    await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
+  }
+}
 
 async function main() {
   const { stdout: status } = await $`git status --porcelain`;
   if (status) {
     console.error(`❗️ Working directory is not clean:\n${status}`);
-    return;
+    process.exit(1);
   }
 
-  const { stdout: nextVersion } = await $`auto shipit --dry-run --quiet`;
+  const nextVersion = await computeNextVersion();
+  console.info(`📌 Computed canary version: ${nextVersion}`);
 
   await build(nextVersion);
-  await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
 
-  await publishAction('latest');
+  await publishNpmCanary(nextVersion);
+
+  console.info(`📌 Re-bumping version to '${nextVersion}' for action canary publish`);
+  await $`npm --no-git-tag-version version ${nextVersion}`;
+  await publishAction('canary');
+
+  console.info('🧹 Resetting changes');
+  await $`git reset --hard`;
+
+  if (process.env.GITHUB_OUTPUT) {
+    appendFileSync(process.env.GITHUB_OUTPUT, `version=${nextVersion}\n`);
+    console.info(`📤 Wrote version=${nextVersion} to $GITHUB_OUTPUT`);
+  }
 }
 
 async function build(nextVersion) {

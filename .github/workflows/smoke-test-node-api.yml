@@ -2,6 +2,11 @@ name: Smoke test via node api
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: Canary version to exercise (matches chromatic@<version> on npm).
+        required: true
+        type: string
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
         required: true
@@ -20,9 +25,10 @@ jobs:
         with:
           node-version: 'lts/*'
       - run: yarn
-      - run: yarn build
+      - name: install published canary
+        run: yarn add chromatic@${{ inputs.version }}
       - name: run chromatic via node
-        run: ./scripts/run-via-node.mjs
+        run: ./scripts/runViaNode.mjs
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

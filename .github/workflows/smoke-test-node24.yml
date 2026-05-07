@@ -2,6 +2,11 @@ name: Smoke test via Node 24
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: Canary version to exercise (matches chromaui/action-canary tag).
+        required: true
+        type: string
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
         required: true
@@ -20,8 +25,16 @@ jobs:
         with:
           node-version: 24
       - run: yarn
-      - run: yarn build
-      - uses: ./
+      # `uses:` cannot evaluate `${{ inputs.* }}` (resolved at workflow load,
+      # before runtime context exists). Clone the published canary at the
+      # requested tag into a local path, then reference that path.
+      - name: Checkout chromaui/action-canary@v${{ inputs.version }}
+        uses: actions/checkout@v5
+        with:
+          repository: chromaui/action-canary
+          ref: v${{ inputs.version }}
+          path: .action-canary
+      - uses: ./.action-canary
         with:
           buildScriptName: build-test-storybook
           exitZeroOnChanges: true

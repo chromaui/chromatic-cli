@@ -2,6 +2,11 @@ name: Smoke test via yarn
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: Canary version to exercise (matches chromatic@<version> on npm).
+        required: true
+        type: string
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
         required: true
@@ -20,8 +25,7 @@ jobs:
         with:
           node-version: 22
       - run: yarn
-      - run: yarn build
-      - run: yarn chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+      - run: yarn dlx chromatic@${{ inputs.version }} chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
         env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli

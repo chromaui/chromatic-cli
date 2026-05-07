@@ -66,7 +66,11 @@ const publishAction = async ({ major, version, repo }) => {
 
 export async function main(context) {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  const version = pkg.version;
+  let version = pkg.version;
+  if (context === 'canary' && process.argv.includes('--append-sha')) {
+    const { stdout: sha } = await $`git rev-parse --short HEAD`;
+    version += '-' + sha.trim();
+  }
   console.info(`📌 Using context arg: ${context}`);
   console.info(`📌 Using package.json version: ${version}`);
 
@@ -93,9 +97,15 @@ export async function main(context) {
 
 /**
  * For manual (local) use:
- *   yarn publish-action {context} [--dry-run]
- *   e.g. yarn publish-action canary
+ *   yarn publish-action {context} [--dry-run] [--append-sha]
+ *   e.g. yarn publish-action canary --append-sha
  *   or   yarn publish-action latest --dry-run
+ *
+ * --append-sha appends the short HEAD sha to the canary version, so repeated
+ * pushes of the same package.json version produce unique tags. The auto-driven
+ * PR canary path does not pass this flag — `auto`'s canary versioning already
+ * embeds the PR number and run ID, so the npm and action versions stay
+ * byte-identical.
  *
  * Make sure to build the action before publishing manually.
  */
