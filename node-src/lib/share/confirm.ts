@@ -4,6 +4,7 @@ const ConfirmShareMutation = `
   mutation ConfirmShare($shareId: ID!, $status: ShareStatus!) {
     confirmStorybookShare(shareId: $shareId, status: $status) {
       status
+      daysToExpire
     }
   }
 `;
@@ -11,6 +12,7 @@ const ConfirmShareMutation = `
 interface ConfirmShareResult {
   confirmStorybookShare: {
     status: string;
+    daysToExpire: number;
   };
 }
 

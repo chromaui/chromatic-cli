@@ -40,7 +40,7 @@ vi.mock('node-fetch', () => ({
 }));
 
 vi.mock('./lib/share', () => ({
-  confirmShare: vi.fn(async () => ({ status: 'received' })),
+  confirmShare: vi.fn(async () => ({ status: 'received', daysToExpire: 7 })),
   reserveShareOnAPI: vi.fn(async () => ({
     shareId: 'test-share-id',
     shareUrl: 'https://share.chromatic.com/test-share-id',
@@ -116,6 +116,14 @@ describe('share()', () => {
 
     expect(result.shareUrl).toBe('https://share.chromatic.com/test-share-id');
     expect(mockReserveShare).toHaveBeenCalled();
+  });
+
+  it('resolves with daysToExpire from confirmShare', async () => {
+    mockConfirmShare.mockResolvedValueOnce({ status: 'received', daysToExpire: 7 } as any);
+
+    const result = await share({ userToken: 'user-token' });
+
+    expect(result.daysToExpire).toBe(7);
   });
 
   it('calls onUrl as soon as the URL is reserved', async () => {

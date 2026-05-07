@@ -375,6 +375,7 @@ export interface ShareOptions {
 
 export interface ShareOutput {
   shareUrl: string;
+  daysToExpire?: number;
 }
 
 /**
@@ -405,6 +406,7 @@ export async function share(shareOptions: ShareOptions): Promise<ShareOutput> {
     throw error;
   }
 
+  let daysToExpire: number | undefined;
   try {
     ctx.share = await reserveShareOnAPI(ctx);
     // TODO: refactor build/prepare so the share flow doesn't need to stub ctx.git.
@@ -421,25 +423,27 @@ export async function share(shareOptions: ShareOptions): Promise<ShareOutput> {
       status = ctx.options.experimental_abortSignal?.aborted ? 'cancelled' : 'error';
       throw error;
     } finally {
-      await reportShareStatus(ctx, status);
+      daysToExpire = await reportShareStatus(ctx, status);
     }
   } catch (error) {
     // If a callback was provided, use that then resolve
     if (onError) {
       onError(error);
-      return { shareUrl: ctx.share?.shareUrl ?? '' };
+      return { shareUrl: ctx.share?.shareUrl ?? '', daysToExpire };
     }
     throw error;
   }
 
-  return { shareUrl: ctx.share?.shareUrl ?? '' };
+  return { shareUrl: ctx.share?.shareUrl ?? '', daysToExpire };
 }
 
 async function reportShareStatus(ctx: Context, status: ConfirmShareStatus) {
   try {
-    await confirmShare(ctx, status);
+    const { daysToExpire } = await confirmShare(ctx, status);
+    return daysToExpire;
   } catch (error) {
     ctx.log.warn(`Failed to confirm share status (${status}): ${error.message}`);
+    return undefined;
   }
 }
 
