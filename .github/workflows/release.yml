@@ -93,16 +93,105 @@ jobs:
           SENTRY_ORG: chromatic-lt
           SENTRY_PROJECT: cli
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      - name: Write published version artifact
-        if: github.event_name != 'push'
-        run: printf '%s\n' '${{ steps.publish.outputs.version }}' > published-version.txt
-      # The publish itself must stay in this workflow for npm trusted
-      # publishing, so we hand the canary version to pull-request-workflow via
-      # an artifact instead of workflow_call outputs.
-      - name: Upload published version artifact
-        if: github.event_name != 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: published-version
-          path: published-version.txt
-          if-no-files-found: error
+
+  # These smoke tests live in the trusted-publishing workflow on purpose: the
+  # canary must be published from this exact workflow file for npm OIDC to
+  # accept it, so the verification jobs need to fan out after publish here.
+  smoke-test-action:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-action.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-api:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-node-api.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-20:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-node20.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-22:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-node22.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-node-24:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-node24.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-npx:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-npx.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-windows:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-windows.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-yarn.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn-berry:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-yarn-berry.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn-canary:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-yarn-canary.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  smoke-test-yarn-classic:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/smoke-test-yarn-classic.yml
+    needs: publish
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
