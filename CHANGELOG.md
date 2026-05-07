@@ -1,3 +1,15 @@
+# v16.9.1 (Thu May 07 2026)
+
+#### 🐛 Bug Fix
+
+- Add additional environment variables to RN build [#1319](https://github.com/chromaui/chromatic-cli/pull/1319) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v16.9.0 (Wed May 06 2026)
 
 #### 🚀 Enhancement
