@@ -6,6 +6,13 @@ import { uploadFiles } from '../lib/uploadFiles';
 import { Context } from '../types';
 import { initial, starting, success } from '../ui/tasks/uploadShare';
 
+/**
+ * Upload Storybook files to the reserved share target. Non-`index.html` files are uploaded first in
+ * parallel, then `index.html` is uploaded last so the CDN only serves the share URL once all
+ * supporting assets are in place. Progress is reported across both phases without rewinding.
+ *
+ * @param ctx The context set when executing the CLI.
+ */
 export const uploadShareFiles = async (ctx: Context) => {
   const { paths = [], lengths = [] } = ctx.fileInfo ?? {};
 
@@ -83,11 +90,13 @@ export const uploadShareFiles = async (ctx: Context) => {
     );
   };
 
-  // Upload all non-index.html files in parallel, then index.html last — signals CDN readiness
+  // Upload all non-index.html files in parallel, then index.html last
   await uploadFiles(ctx, nonIndexTargets, onProgress);
   completedPhaseBytes += phaseProgress;
   phaseProgress = 0;
-  if (indexTarget) await uploadFiles(ctx, [indexTarget], onProgress);
+  if (indexTarget) {
+    await uploadFiles(ctx, [indexTarget], onProgress);
+  }
 };
 
 /**
