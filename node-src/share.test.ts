@@ -1,11 +1,9 @@
-import { Readable } from 'node:stream';
-
 import { execa as execaDefault } from 'execa';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { share } from '.';
 import { confirmShare, reserveShare } from './lib/share';
 import { uploadFiles } from './lib/uploadFiles';
+import { share } from './share';
 
 vi.mock('execa', async (importOriginal) => {
   const actual = await importOriginal<typeof import('execa')>();
@@ -14,30 +12,6 @@ vi.mock('execa', async (importOriginal) => {
     execa: vi.fn(() => Promise.resolve()),
   };
 });
-
-vi.mock('node-fetch', () => ({
-  default: vi.fn(async (_url, { body } = {} as any) => ({
-    ok: true,
-    json: async () => {
-      let query = '';
-      try {
-        const data = JSON.parse(body);
-        query = data.query;
-      } catch {
-        // Do nothing
-      }
-
-      if (query?.match('CreateAppTokenMutation')) {
-        return { data: { appToken: 'app-token' } };
-      }
-      if (query?.match('CreateCLITokenMutation')) {
-        return { data: { cliToken: 'cli-token' } };
-      }
-
-      throw new Error(query ? `Unknown query: ${query}` : `Unmocked request`);
-    },
-  })),
-}));
 
 vi.mock('./lib/share', () => ({
   confirmShare: vi.fn(async () => ({ status: 'received', daysToExpire: 7 })),
@@ -68,23 +42,13 @@ vi.mock('fs', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
   return {
     ...originalModule,
-    pathExists: async () => true,
     mkdirSync: vi.fn(),
-    readFileSync: originalModule.readFileSync,
-    writeFileSync: vi.fn(),
-    createReadStream: vi.fn(() => Readable.from([])),
-    createWriteStream: originalModule.createWriteStream,
     readdirSync: vi.fn(() => ['iframe.html', 'index.html']),
-    stat: originalModule.stat,
     statSync: vi.fn((path: string) => {
-      const fsStatSync = originalModule.statSync;
-      if (path.endsWith('package.json')) return fsStatSync(path);
+      if (path.endsWith('package.json')) return originalModule.statSync(path);
       return { isDirectory: () => false, size: 42 };
     }),
     existsSync: vi.fn(() => true),
-    access: vi.fn((_path: string, callback: (err: null) => void) =>
-      Promise.resolve(callback(null))
-    ),
   };
 });
 
@@ -93,21 +57,13 @@ const upload = vi.mocked(uploadFiles);
 const mockReserveShare = vi.mocked(reserveShare);
 const mockConfirmShare = vi.mocked(confirmShare);
 
-let processEnvironment: NodeJS.ProcessEnv;
-
 beforeEach(() => {
-  processEnvironment = process.env;
-  process.env = {
-    DISABLE_LOGGING: 'true',
-    CHROMATIC_PROJECT_TOKEN: undefined,
-  };
-  execa.mockReset();
+  vi.stubEnv('DISABLE_LOGGING', 'true');
   execa.mockResolvedValue({ all: '1.2.3' } as any);
 });
 
 afterEach(() => {
-  process.env = processEnvironment;
-  vi.clearAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('share()', () => {
@@ -204,7 +160,7 @@ describe('share()', () => {
     await expect(share({ userToken: 'user-token' })).rejects.toThrow();
   });
 
-  it('calls uploadShare with ctx containing the user token', async () => {
+  it('calls reserveShare with ctx containing the user token', async () => {
     await share({ userToken: 'my-user-token' });
 
     expect(mockReserveShare).toHaveBeenCalledWith(
