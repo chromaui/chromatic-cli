@@ -1,8 +1,8 @@
-import { Context } from '../../types';
+import { Deps } from '../../types';
 
-type GatherEnvironmentDeps = Pick<Context, 'env' | 'log'>;
+type GatherEnvironmentDeps = Pick<Deps, 'env' | 'log'>;
 
-export const setEnvironment = (deps: GatherEnvironmentDeps): Record<string, string> => {
+export const gatherEnvironment = (deps: GatherEnvironmentDeps): Record<string, string> => {
   const environment = {};
 
   // We send up all environment variables provided by these complicated systems.

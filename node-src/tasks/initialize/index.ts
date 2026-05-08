@@ -9,7 +9,7 @@ import { Context } from '../../types';
 import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
 import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
 import { initial, pending, success } from '../../ui/tasks/initialize';
-import { setEnvironment } from './setEnvironment';
+import { gatherEnvironment } from './gatherEnvironment';
 
 const AnnounceBuildMutation = `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
@@ -171,7 +171,7 @@ export default function main(_: Context) {
     skip: (ctx: Context) => ctx.skip,
     steps: [
       transitionTo(pending),
-      setEnvironment,
+      gatherEnvironment,
       setRuntimeMetadata,
       initializeAnalytics,
       announceBuild,
