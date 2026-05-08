@@ -1,6 +1,4 @@
 import * as turbosnap from '@cli/turbosnap';
-import AdmZip from 'adm-zip';
-import path from 'path';
 import semver from 'semver';
 
 import { getFileHashes } from '../../lib/getFileHashes';
@@ -13,45 +11,17 @@ import {
   hashing,
   initial,
   invalid,
-  invalidAndroidArtifact,
   success,
   traced,
   tracing,
   validating,
 } from '../../ui/tasks/prepare';
+import { validateAndroidArtifact } from './validateAndroidArtifact';
 import { validateFiles } from './validateFiles';
 
 // These are the special characters that need to be escaped in the filename
 // because they are used as special characters in picomatch
 const SPECIAL_CHARS_REGEXP = /([$()*+?[\]^])/g;
-
-/**
- * Validates that the Android APK artifact contains x86_64 native libraries if it contains
- * any native libraries at all. Chromatic only supports x86_64 Android emulators.
- *
- * @param ctx - The CLI context containing source directory and build info
- *
- * @throws {Error} if the APK contains native libraries without x86_64 support
- */
-export async function validateAndroidArtifact(ctx: Context) {
-  if (!ctx.announcedBuild?.browsers?.includes('android')) return;
-
-  const apkPath = path.join(ctx.sourceDir, 'storybook.apk');
-  const zip = new AdmZip(apkPath);
-  const entries = zip.getEntries();
-
-  const abiDirectories = new Set<string>();
-  for (const entry of entries) {
-    const match = entry.entryName.match(/^lib\/([^/]+)\//);
-    if (match) {
-      abiDirectories.add(match[1]);
-    }
-  }
-
-  if (abiDirectories.size > 0 && !abiDirectories.has('x86_64')) {
-    throw new Error(invalidAndroidArtifact(ctx).output);
-  }
-}
 
 /**
  * Traces which story files are affected by recent changes using TurboSnap.
