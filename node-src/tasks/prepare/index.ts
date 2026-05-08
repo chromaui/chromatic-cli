@@ -5,12 +5,12 @@ import path from 'path';
 import semver from 'semver';
 import slash from 'slash';
 
-import { getFileHashes } from '../lib/getFileHashes';
-import { createTask, transitionTo } from '../lib/tasks';
-import { rewriteErrorMessage } from '../lib/utilities';
-import { Context, Task } from '../types';
-import missingStatsFile from '../ui/messages/errors/missingStatsFile';
-import deviatingOutputDirectory from '../ui/messages/warnings/deviatingOutputDirectory';
+import { getFileHashes } from '../../lib/getFileHashes';
+import { createTask, transitionTo } from '../../lib/tasks';
+import { rewriteErrorMessage } from '../../lib/utilities';
+import { Context, Task } from '../../types';
+import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
+import deviatingOutputDirectory from '../../ui/messages/warnings/deviatingOutputDirectory';
 import {
   bailed,
   hashing,
@@ -22,7 +22,7 @@ import {
   traced,
   tracing,
   validating,
-} from '../ui/tasks/prepare';
+} from '../../ui/tasks/prepare';
 
 /**
  * Represents a file path specification with its content length.

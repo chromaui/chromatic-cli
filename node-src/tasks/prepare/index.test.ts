@@ -3,18 +3,18 @@ import AdmZip from 'adm-zip';
 import { access, readdirSync, readFileSync, statSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import TestLogger from '../lib/testLogger';
+import TestLogger from '../../lib/testLogger';
 import {
   calculateFileHashes,
   traceChangedFiles,
   validateAndroidArtifact,
   validateFiles,
-} from './prepare';
+} from './index';
 
 vi.mock('adm-zip', () => ({ default: vi.fn() }));
 vi.mock('fs');
 vi.mock('@cli/turbosnap');
-vi.mock('./readStatsFile', () => ({
+vi.mock('../readStatsFile', () => ({
   readStatsFile: () =>
     Promise.resolve({
       modules: [
@@ -26,7 +26,7 @@ vi.mock('./readStatsFile', () => ({
     }),
 }));
 
-vi.mock('../lib/getFileHashes', () => ({
+vi.mock('../../lib/getFileHashes', () => ({
   getFileHashes: (files: string[]) =>
     Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
 }));
