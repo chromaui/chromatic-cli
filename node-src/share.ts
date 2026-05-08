@@ -10,7 +10,7 @@ import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { confirmShare, ConfirmShareStatus, reserveShare } from './lib/share';
-import { runShareBuild } from './tasks';
+import { runShare } from './tasks';
 import { Context, Options } from './types';
 import { endActivity } from './ui/components/activity';
 
@@ -163,7 +163,7 @@ async function runShareTasks(ctx: Context): Promise<void> {
 
   try {
     await new Listr(
-      runShareBuild.map((task) => task(ctx)),
+      runShare.map((task) => task(ctx)),
       listrOptions
     ).run(ctx);
     ctx.log.debug('Tasks completed');
