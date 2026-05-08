@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../../lib/testLogger';
-import { calculateFileHashes } from './index';
+import { calculateFileHashes } from './calculateFileHashes';
 
 vi.mock('../../lib/getFileHashes', () => ({
   getFileHashes: (files: string[]) =>
