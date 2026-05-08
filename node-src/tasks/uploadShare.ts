@@ -3,10 +3,10 @@ import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import { uploadFiles } from '../lib/uploadFiles';
-import { Context, Task } from '../types';
+import { Context } from '../types';
 import { initial, starting, success } from '../ui/tasks/uploadShare';
 
-export const uploadShareFiles = async (ctx: Context, _task: Task) => {
+export const uploadShareFiles = async (ctx: Context) => {
   const { paths = [], lengths = [] } = ctx.fileInfo ?? {};
 
   if (!ctx.share) {

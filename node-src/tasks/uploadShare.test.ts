@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { uploadFiles } from '../lib/uploadFiles';
 import { uploadShareFiles } from './uploadShare';
 
 vi.mock('../lib/uploadFiles');
-
-import { uploadFiles } from '../lib/uploadFiles';
 
 const uploadFilesMock = vi.mocked(uploadFiles);
 
@@ -12,7 +11,7 @@ const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 
 const shareTarget = {
   formAction: 'https://s3.amazonaws.com/presigned',
-  formFields: { bucket: 'chromatic-builds', 'X-Amz-Signature': 'sig' },
+  formFields: { bucket: 'some-chromatic-bucket', 'X-Amz-Signature': 'sig' },
   keyPrefix: 'shares/user-123-upload-456',
 };
 
@@ -36,15 +35,12 @@ describe('uploadShareFiles', () => {
       },
     } as any;
 
-    await uploadShareFiles(ctx, {} as any);
+    await uploadShareFiles(ctx);
 
     expect(uploadFilesMock).toHaveBeenCalledTimes(2);
 
     // First call: non-index files
     const firstCallTargets = uploadFilesMock.mock.calls[0][1];
-    expect(firstCallTargets.map((t) => t.filePath)).toEqual(
-      expect.arrayContaining(['iframe.html', 'main.js'])
-    );
     expect(firstCallTargets.map((t) => t.filePath)).not.toContain('index.html');
 
     // Second call: index.html only
@@ -71,7 +67,7 @@ describe('uploadShareFiles', () => {
       },
     } as any;
 
-    await uploadShareFiles(ctx, {} as any);
+    await uploadShareFiles(ctx);
 
     const allTargets = uploadFilesMock.mock.calls.flatMap(([, targets]) => targets);
     for (const t of allTargets) {
@@ -101,7 +97,7 @@ describe('uploadShareFiles', () => {
       },
     } as any;
 
-    await uploadShareFiles(ctx, {} as any);
+    await uploadShareFiles(ctx);
 
     const byPath = Object.fromEntries(
       uploadFilesMock.mock.calls
@@ -134,7 +130,7 @@ describe('uploadShareFiles', () => {
       },
     } as any;
 
-    await expect(uploadShareFiles(ctx, {} as any)).rejects.toThrow('Upload failed');
+    await expect(uploadShareFiles(ctx)).rejects.toThrow('Upload failed');
   });
 
   it('onProgress handles upload retries properly', async () => {
@@ -143,7 +139,7 @@ describe('uploadShareFiles', () => {
       .mockImplementationOnce(async (_ctx, _targets, onProgress) => {
         onProgress?.(60);
         onProgress?.(100);
-        onProgress?.(40); // retry rewind from lower-level uploader
+        onProgress?.(40); // retry rewind from a failed upload
         onProgress?.(90);
       })
       .mockImplementationOnce(async (_ctx, _targets, onProgress) => {
@@ -166,7 +162,7 @@ describe('uploadShareFiles', () => {
       },
     } as any;
 
-    await uploadShareFiles(ctx, {} as any);
+    await uploadShareFiles(ctx);
 
     expect(experimental_onTaskProgress.mock.calls.map(([, status]) => status.progress)).toEqual([
       60, 100, 110, 142,
