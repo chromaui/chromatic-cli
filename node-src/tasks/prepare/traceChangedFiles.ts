@@ -1,77 +1,64 @@
-import * as turbosnap from '@cli/turbosnap';
-import semver from 'semver';
-
-import { transitionTo } from '../../lib/tasks';
-import { rewriteErrorMessage } from '../../lib/utilities';
-import { Context, Task } from '../../types';
-import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
-import { bailed, traced, tracing } from '../../ui/tasks/prepare';
+import type { Deps, FileInfo } from '../../types';
 
 // These are the special characters that need to be escaped in the filename
 // because they are used as special characters in picomatch
 const SPECIAL_CHARS_REGEXP = /([$()*+?[\]^])/g;
 
+type TraceChangedFilesDeps = Pick<Deps, 'log' | 'options'>;
+
+export interface TraceChangedFilesInput {
+  untracedFiles: string[] | undefined;
+  transitionToTracing: () => void;
+  transitionToTraced: () => void;
+  transitionToBailed: () => void;
+  statsPath: FileInfo['statsPath'];
+  runInnerTrace: (
+    statsPath: FileInfo['statsPath']
+  ) => Promise<Record<string, string[]> | undefined>;
+}
+
 /**
- * Traces which story files are affected by recent changes using TurboSnap.
- * Analyzes changed files to determine which stories need to be tested.
+ * Runs the TurboSnap inner trace and reports affected story files.
  *
- * @param ctx - The CLI context containing git info and TurboSnap configuration
- * @param task - The current Listr task for UI updates
+ * @param deps - The CLI dependencies containing logging and options
+ * @param input - The input containing trace callbacks and untraced file metadata
  *
- * @throws {Error} if stats file is missing or tracing fails
+ * @returns Escaped affected story file paths, or undefined if
+ *   the inner trace bailed (no affected files identified).
  */
-// TODO: refactor this function
-// eslint-disable-next-line complexity
-export async function traceChangedFiles(ctx: Context, task: Task) {
-  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
-  if (!ctx.git.changedFiles) return;
-  if (!ctx.fileInfo?.statsPath) {
-    // If we don't know the SB version, we should assume we don't support `--stats-json`
-    const nonLegacyStatsSupported =
-      ctx.storybook?.version &&
-      semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
+export async function traceChangedFiles(
+  deps: TraceChangedFilesDeps,
+  input: TraceChangedFilesInput
+): Promise<string[] | undefined> {
+  input.transitionToTracing();
 
-    ctx.turboSnap.bailReason = { missingStatsFile: true };
-    throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
+  const innerResult = await input.runInnerTrace(input.statsPath);
+  if (!innerResult) {
+    input.transitionToBailed();
+    return;
   }
 
-  transitionTo(tracing)(ctx, task);
+  // Escape special characters in the filename so it does not conflict with picomatch
+  const onlyStoryFiles = Object.keys(innerResult).map((key) =>
+    key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
+  );
 
-  const { statsPath } = ctx.fileInfo;
-  const { changedFiles } = ctx.git;
-
-  try {
-    const onlyStoryFiles = await turbosnap.traceChangedFiles(ctx);
-    if (onlyStoryFiles) {
-      // Escape special characters in the filename so it does not conflict with picomatch
-      ctx.onlyStoryFiles = Object.keys(onlyStoryFiles).map((key) =>
-        key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
+  if (!deps.options.interactive) {
+    if (!deps.options.traceChanged) {
+      deps.log.info(
+        `Found affected story files:\n${Object.entries(innerResult)
+          .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
+          .join('\n')}`
       );
-
-      if (!ctx.options.interactive) {
-        if (!ctx.options.traceChanged) {
-          ctx.log.info(
-            `Found affected story files:\n${Object.entries(onlyStoryFiles)
-              .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
-              .join('\n')}`
-          );
-        }
-        if (ctx.untracedFiles && ctx.untracedFiles.length > 0) {
-          ctx.log.info(
-            `Encountered ${ctx.untracedFiles.length} untraced files:\n${ctx.untracedFiles
-              .map((f) => `  ${f}`)
-              .join('\n')}`
-          );
-        }
-      }
-      transitionTo(traced)(ctx, task);
-    } else {
-      transitionTo(bailed)(ctx, task);
     }
-  } catch (err) {
-    if (!ctx.options.interactive) {
-      ctx.log.info('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+    if (input.untracedFiles && input.untracedFiles.length > 0) {
+      deps.log.info(
+        `Encountered ${input.untracedFiles.length} untraced files:\n${input.untracedFiles
+          .map((f) => `  ${f}`)
+          .join('\n')}`
+      );
     }
-    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n${err.message}`);
   }
+  input.transitionToTraced();
+  return onlyStoryFiles;
 }
