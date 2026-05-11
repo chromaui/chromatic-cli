@@ -1,7 +1,7 @@
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context } from '../../types';
+import { Context, FileInfo } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
@@ -9,11 +9,14 @@ import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
 
-// eslint-disable-next-line complexity
-export const traceChangedFiles = async (ctx: Context) => {
+export const traceChangedFiles = async (
+  ctx: Omit<Context, 'fileInfo'>,
+  statsPath: FileInfo['statsPath']
+  // eslint-disable-next-line complexity
+) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
-  if (!ctx.fileInfo?.statsPath) {
+  if (!statsPath) {
     // If we don't know the SB version, we should assume we don't support `--stats-json`
     const nonLegacyStatsSupported =
       ctx.storybook?.version &&
@@ -23,7 +26,6 @@ export const traceChangedFiles = async (ctx: Context) => {
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
-  const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageMetadataChanges } = ctx.git;
 
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
