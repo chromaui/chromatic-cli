@@ -85,12 +85,7 @@ async function runUploadAndConfirm(ctx: Context): Promise<number | undefined> {
     uploadError = error;
   }
 
-  let daysToExpire: number | undefined;
-  try {
-    daysToExpire = await reportShareStatus(ctx, status);
-  } catch (err) {
-    ctx.log.warn(`Failed to report share status (${status}): ${err.message}`);
-  }
+  const daysToExpire = await reportShareStatus(ctx, status);
 
   if (uploadError) {
     throw uploadError;
@@ -151,7 +146,7 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
   const ctx = await setupContext(initialContext);
   ctx.options = getOptions(initialContext);
   ctx.log.setLogFile(ctx.options.logFile);
-  ctx.runtime = { forceRebuild: ctx.options.forceRebuild }
+  ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
   return ctx;
 }
 
