@@ -18,9 +18,9 @@ const mockedSentrySetContext = vi.mocked(Sentry.setContext);
 const buildDeps = (overrides: Partial<StorybookInfoDeps> = {}): StorybookInfoDeps =>
   ({
     log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-    options: {},
+    options: { buildScriptName: 'build-storybook' },
     env: {},
-    packageJson: {},
+    packageJson: { scripts: { 'build-storybook': 'build-storybook' } },
     ...overrides,
   }) as StorybookInfoDeps;
 
@@ -30,7 +30,10 @@ describe('setStorybookInfo', () => {
     getStorybookInfo.mockResolvedValue(storybook);
     mockedGetStorybookBaseDirectory.mockReturnValue('');
 
-    const result = await setStorybookInfo(buildDeps(), { gitRootPath: '/some/git/root' });
+    const result = await setStorybookInfo(buildDeps(), {
+      gitRootPath: '/some/git/root',
+      isReactNativeApp: false,
+    });
 
     expect(result).toEqual({
       kind: 'continue',
@@ -42,9 +45,12 @@ describe('setStorybookInfo', () => {
     getStorybookInfo.mockResolvedValue({ version: '1.0.0', addons: [] });
     mockedGetStorybookBaseDirectory.mockReturnValue('packages/storybook');
 
-    await setStorybookInfo(buildDeps({ options: { storybookBaseDir: 'override' } as any }), {
-      gitRootPath: '/repo/root',
-    });
+    await setStorybookInfo(
+      buildDeps({
+        options: { buildScriptName: 'build-storybook', storybookBaseDir: 'override' } as any,
+      }),
+      { gitRootPath: '/repo/root', isReactNativeApp: false }
+    );
 
     expect(mockedGetStorybookBaseDirectory).toHaveBeenCalledWith({
       storybookBaseDir: 'override',
@@ -56,12 +62,39 @@ describe('setStorybookInfo', () => {
     getStorybookInfo.mockResolvedValue({});
     mockedGetStorybookBaseDirectory.mockReturnValue('.');
 
-    const result = await setStorybookInfo(buildDeps(), { gitRootPath: '/repo/root' });
+    const result = await setStorybookInfo(buildDeps(), {
+      gitRootPath: '/repo/root',
+      isReactNativeApp: false,
+    });
 
     expect(result).toEqual({
       kind: 'continue',
       output: { storybook: { baseDir: '.' } },
     });
+  });
+
+  it('skips the build script check for react-native apps', async () => {
+    getStorybookInfo.mockResolvedValue({});
+    mockedGetStorybookBaseDirectory.mockReturnValue('.');
+
+    await expect(
+      setStorybookInfo(buildDeps({ options: {} as any, packageJson: {} }), {
+        gitRootPath: '/repo/root',
+        isReactNativeApp: true,
+      })
+    ).resolves.not.toThrow();
+  });
+
+  it('throws missingBuildScriptName when the build script is absent and app is not react-native', async () => {
+    await expect(
+      setStorybookInfo(
+        buildDeps({
+          options: { buildScriptName: 'build-storybook' } as any,
+          packageJson: { scripts: {} },
+        }),
+        { gitRootPath: '/repo/root', isReactNativeApp: false }
+      )
+    ).rejects.toThrow(/build-storybook/);
   });
 });
 
