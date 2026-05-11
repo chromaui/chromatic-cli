@@ -315,7 +315,7 @@ export default function getOptions(
   const { storybookBuildDir } = partialOptions;
   let { buildScriptName } = partialOptions;
 
-  if (!partialOptions.projectToken && !(partialOptions.projectId && partialOptions.userToken)) {
+  if (!partialOptions.projectToken && !partialOptions.userToken) {
     throw new Error(missingProjectToken());
   }
 

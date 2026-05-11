@@ -2,6 +2,7 @@ import { createTask } from '../lib/tasks';
 import { Context, Deps, TaskFunction } from '../types';
 import invalidProjectId from '../ui/messages/errors/invalidProjectId';
 import invalidProjectToken from '../ui/messages/errors/invalidProjectToken';
+import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import { authenticated, authenticating, initial } from '../ui/tasks/auth';
 
 const CreateCLITokenMutation = `
@@ -99,6 +100,9 @@ export default function main(_: Context) {
       const { projectId, projectToken, userToken } = ctx.options;
       if (projectId && userToken) {
         return { mode: 'cli', projectId, userToken, projectToken };
+      }
+      if (!projectToken) {
+        throw new Error(missingProjectToken());
       }
       return { mode: 'app', projectToken };
     },

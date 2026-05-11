@@ -2853,6 +2853,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/mime-types@npm:^2.1.4":
+  version: 2.1.4
+  resolution: "@types/mime-types@npm:2.1.4"
+  checksum: 10c0/a10d57881d14a053556b3d09292de467968d965b0a06d06732c748da39b3aa569270b5b9f32529fd0e9ac1e5f3b91abb894f5b1996373254a65cb87903c86622
+  languageName: node
+  linkType: hard
+
 "@types/minimatch@npm:5.1.2":
   version: 5.1.2
   resolution: "@types/minimatch@npm:5.1.2"
@@ -5054,6 +5061,7 @@ __metadata:
     "@types/fs-extra": "npm:^9.0.13"
     "@types/jsonfile": "npm:^6.0.1"
     "@types/listr": "npm:^0.14.4"
+    "@types/mime-types": "npm:^2.1.4"
     "@types/node": "npm:18.x"
     "@types/path-browserify": "npm:^1"
     "@types/picomatch": "npm:^2.3.0"
@@ -5108,6 +5116,7 @@ __metadata:
     listr: "npm:0.14.3"
     listr-update-renderer: "npm:^0.5.0"
     meow: "npm:^9.0.0"
+    mime-types: "npm:^2.1.35"
     mock-fs: "npm:^5.1.2"
     no-proxy: "npm:^1.0.3"
     node-ask: "npm:^1.0.1"
@@ -10619,6 +10628,22 @@ __metadata:
     snapdragon: "npm:^0.8.1"
     to-regex: "npm:^3.0.2"
   checksum: 10c0/531a32e7ac92bef60657820202be71b63d0f945c08a69cc4c239c0b19372b751483d464a850a2e3a5ff6cc9060641e43d44c303af104c1a27493d137d8af017f
+  languageName: node
+  linkType: hard
+
+"mime-db@npm:1.52.0":
+  version: 1.52.0
+  resolution: "mime-db@npm:1.52.0"
+  checksum: 10c0/0557a01deebf45ac5f5777fe7740b2a5c309c6d62d40ceab4e23da9f821899ce7a900b7ac8157d4548ddbb7beffe9abc621250e6d182b0397ec7f10c7b91a5aa
+  languageName: node
+  linkType: hard
+
+"mime-types@npm:^2.1.35":
+  version: 2.1.35
+  resolution: "mime-types@npm:2.1.35"
+  dependencies:
+    mime-db: "npm:1.52.0"
+  checksum: 10c0/82fb07ec56d8ff1fc999a84f2f217aa46cb6ed1033fefaabd5785b9a974ed225c90dc72fff460259e66b95b73648596dbcc50d51ed69cdf464af2d237d3149b2
   languageName: node
   linkType: hard
 
