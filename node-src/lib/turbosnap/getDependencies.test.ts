@@ -128,7 +128,7 @@ describe('getDependencies', () => {
         // ...
       ])
     );
-  });
+  }, 15_000); // Increase test timeout to account for I/O in CI
 
   it('should bail if the lock file is too large to parse', async () => {
     statSync.mockReturnValue({ size: MAX_LOCK_FILE_SIZE + 1000 });
