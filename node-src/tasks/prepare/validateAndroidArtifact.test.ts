@@ -1,30 +1,16 @@
 import AdmZip from 'adm-zip';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import TestLogger from '../../lib/testLogger';
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 
 vi.mock('adm-zip', () => ({ default: vi.fn() }));
 
 const AdmZipMock = vi.mocked(AdmZip);
 
-const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
-const log = new TestLogger();
-const http = { fetch: vi.fn() };
-
 afterEach(() => {
   vi.restoreAllMocks();
   vi.resetAllMocks();
 });
-
-const makeContext = (browsers: string[]) =>
-  ({
-    env: environment,
-    log,
-    http,
-    sourceDir: '/static/',
-    announcedBuild: { browsers },
-  }) as any;
 
 const mockEntries = (entryNames: string[]) => {
   const entries = entryNames.map((entryName) => ({ entryName }));
@@ -34,38 +20,34 @@ const mockEntries = (entryNames: string[]) => {
 };
 
 describe('validateAndroidArtifact', () => {
-  it('skips when android is not in browsers', async () => {
-    const ctx = makeContext(['ios']);
-    await expect(validateAndroidArtifact(ctx)).resolves.toBeUndefined();
-    expect(AdmZipMock).not.toHaveBeenCalled();
-  });
-
-  it('passes when APK has no lib/ entries', async () => {
+  it('returns true when APK has no lib/ entries', async () => {
     mockEntries(['AndroidManifest.xml', 'classes.dex']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
+    await expect(validateAndroidArtifact('/static/')).resolves.toBe(true);
   });
 
-  it('passes when APK has only lib/x86_64/ entries', async () => {
+  it('returns true when APK has only lib/x86_64/ entries', async () => {
     mockEntries(['lib/x86_64/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
+    await expect(validateAndroidArtifact('/static/')).resolves.toBe(true);
   });
 
-  it('passes when APK has lib/x86_64/ alongside other ABIs', async () => {
+  it('returns true when APK has lib/x86_64/ alongside other ABIs', async () => {
     mockEntries(['lib/x86_64/libnative.so', 'lib/arm64-v8a/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).resolves.toBeUndefined();
+    await expect(validateAndroidArtifact('/static/')).resolves.toBe(true);
   });
 
-  it('throws when APK has only ARM ABI entries', async () => {
+  it('returns false when APK has only ARM ABI entries', async () => {
     mockEntries(['lib/armeabi-v7a/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).rejects.toThrow(
-      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
-    );
+    await expect(validateAndroidArtifact('/static/')).resolves.toBe(false);
   });
 
-  it('throws when APK has multiple ARM ABIs but no x86_64', async () => {
+  it('returns false when APK has multiple ARM ABIs but no x86_64', async () => {
     mockEntries(['lib/armeabi-v7a/libnative.so', 'lib/arm64-v8a/libnative.so']);
-    await expect(validateAndroidArtifact(makeContext(['android']))).rejects.toThrow(
-      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
-    );
+    await expect(validateAndroidArtifact('/static/')).resolves.toBe(false);
+  });
+
+  it('reads the APK from storybook.apk under the given source directory', async () => {
+    mockEntries([]);
+    await validateAndroidArtifact('/some/source/dir');
+    expect(AdmZipMock).toHaveBeenCalledWith('/some/source/dir/storybook.apk');
   });
 });

@@ -6,6 +6,7 @@ import {
   hashing,
   initial,
   invalid,
+  invalidAndroidArtifact,
   invalidReactNative,
   success,
   validating,
@@ -25,6 +26,7 @@ type PrepareDeps = Pick<Context, 'log' | 'env' | 'options' | 'packageJson'>;
 interface PrepareInput {
   sourceDir: string;
   validateFilesInput: ValidateFilesInput;
+  invalidAndroidArtifactError: Error;
   transitionToHashing: () => void;
 }
 
@@ -38,6 +40,13 @@ export async function runPrepare(
   input: PrepareInput
 ): Promise<TaskResult<PrepareOutput>> {
   const fileInfo = await validateFiles(deps, input.validateFilesInput);
+
+  if (input.validateFilesInput.browsers.includes('android')) {
+    const isValidAndroidArtifact = await validateAndroidArtifact(input.sourceDir);
+    if (!isValidAndroidArtifact) {
+      throw input.invalidAndroidArtifactError;
+    }
+  }
 
   let hashes: Record<string, string> | undefined;
   if (deps.options.fileHashing) {
@@ -91,6 +100,7 @@ export const extractPrepareInput = (
   return {
     sourceDir,
     validateFilesInput,
+    invalidAndroidArtifactError: new Error(invalidAndroidArtifact(ctx).output),
     transitionToHashing: () => transitionTo(hashing)(ctx, listrTask),
   };
 };
