@@ -3,6 +3,7 @@ import path from 'path';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import { uploadFiles } from '../lib/uploadFiles';
+import { throttle } from '../lib/utilities';
 import { Context } from '../types';
 import { initial, starting, success } from '../ui/tasks/uploadShare';
 
@@ -70,7 +71,9 @@ export const uploadShareFiles = async (ctx: Context) => {
   let completedPhaseBytes = 0;
   let phaseProgress = 0;
   let reportedProgress = -1;
-  const onProgress = (progress: number) => {
+
+  // Throttle the onProgress callback so we don't spam it with multiple tiny file uploads
+  const onProgress = throttle((progress: number) => {
     phaseProgress = Math.max(phaseProgress, progress);
     const totalProgress = completedPhaseBytes + phaseProgress;
 
@@ -88,7 +91,7 @@ export const uploadShareFiles = async (ctx: Context) => {
         unit: 'bytes',
       }
     );
-  };
+  }, ctx.env.CHROMATIC_SHARE_PROGRESS_INTERVAL);
 
   // Upload all non-index.html files in parallel, then index.html last
   await uploadFiles(ctx, nonIndexTargets, onProgress);

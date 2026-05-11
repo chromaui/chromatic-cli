@@ -7,7 +7,10 @@ vi.mock('../lib/uploadFiles');
 
 const uploadFilesMock = vi.mocked(uploadFiles);
 
-const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
+const environment = {
+  CHROMATIC_RETRIES: 2,
+  CHROMATIC_SHARE_PROGRESS_INTERVAL: 0,
+};
 
 const shareTarget = {
   formAction: 'https://s3.amazonaws.com/presigned',
