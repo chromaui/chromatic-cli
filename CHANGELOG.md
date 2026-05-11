@@ -1,3 +1,23 @@
+# v16.10.0 (Mon May 11 2026)
+
+#### 🚀 Enhancement
+
+- Add `share()` to Node API [#1284](https://github.com/chromaui/chromatic-cli/pull/1284) ([@codykaup](https://github.com/codykaup) [@katiebayes](https://github.com/katiebayes))
+
+#### 🐛 Bug Fix
+
+- Migrate `gitInfo` task to typed inputs and outputs [#1314](https://github.com/chromaui/chromatic-cli/pull/1314) ([@justin-thurman](https://github.com/justin-thurman))
+- Add config option for building multiple Android architectures [#1321](https://github.com/chromaui/chromatic-cli/pull/1321) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 4
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Katie Bayes ([@katiebayes](https://github.com/katiebayes))
+
+---
+
 # v16.9.1 (Thu May 07 2026)
 
 #### 🐛 Bug Fix
