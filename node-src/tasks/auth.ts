@@ -18,11 +18,30 @@ const CreateAppTokenMutation = `
   }
 `;
 
-export type AuthDeps = Pick<Deps, 'client' | 'env'>;
+// Pre-flight query to determine app type before the pipeline reaches storybookInfo.
+// This is placed here to avoid adding a new task to the pipeline, which was an accepted
+// tradeoff. Ideally this would live in a dedicated appInfo task between auth and
+// storybookInfo. The result is a best-effort early signal; announceBuild remains the
+// authoritative source for isReactNativeApp.
+const AppInfoQuery = `
+  query CLIAppInfo {
+    app {
+      features {
+        isReactNativeApp
+      }
+    }
+  }
+`;
+
+export type AuthDeps = Pick<Deps, 'client' | 'env' | 'log'>;
 
 export type AuthInput =
   | { mode: 'cli'; projectId: string; userToken: string; projectToken: string }
   | { mode: 'app'; projectToken: string };
+
+export interface AuthOutput {
+  isReactNativeApp: boolean;
+}
 
 /**
  * Retrieves an authentication token based on the specified mode.
@@ -67,7 +86,8 @@ const getToken = async (deps: AuthDeps, input: AuthInput): Promise<string> => {
   }
 };
 
-export const runAuth: TaskFunction<AuthInput, void, AuthDeps> = async (deps, input) => {
+/* eslint-disable-next-line complexity */
+export const runAuth: TaskFunction<AuthInput, AuthOutput, AuthDeps> = async (deps, input) => {
   try {
     const token = await getToken(deps, input);
     deps.client.setAuthorization(token);
@@ -81,7 +101,26 @@ export const runAuth: TaskFunction<AuthInput, void, AuthDeps> = async (deps, inp
     }
     throw errors;
   }
-  return { kind: 'continue', output: undefined };
+
+  // Pre-flight: fetch app type so storybookInfo can skip the build-storybook script
+  // check for react-native projects. Skip if projectToken is absent (e.g. cli mode
+  // without a project token). On any failure, soft-fail and assume a web storybook —
+  // announceBuild will make the authoritative determination.
+  let isReactNativeApp = false;
+  try {
+    const { app } = await deps.client.runQuery<{
+      app: { features: { isReactNativeApp: boolean } };
+    }>(AppInfoQuery, {});
+    isReactNativeApp = app?.features?.isReactNativeApp ?? false;
+  } catch {
+    deps.log.warn('Failed to fetch app info; assuming web storybook for build script check.');
+  }
+
+  return { kind: 'continue', output: { isReactNativeApp } };
+};
+
+export const applyAuthOutput = (ctx: Context, output: AuthOutput) => {
+  ctx.isReactNativeApp = output.isReactNativeApp;
 };
 
 /**
@@ -106,6 +145,7 @@ export default function main(_: Context) {
       }
       return { mode: 'app', projectToken };
     },
+    applyOutput: applyAuthOutput,
     run: runAuth,
   });
 }
