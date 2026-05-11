@@ -14,7 +14,10 @@ import { Context } from './types';
  * @returns The same context cast to a `Context`. Note that `options` and `runtime` are not set here
  * and must be assigned by the caller before the context is fully valid.
  */
-export async function setupContext(ctx: InitialContext, configFile?: string): Promise<Context> {
+export async function setupContext(
+  ctx: InitialContext,
+  configFile?: string
+): Promise<InitialContext> {
   ctx.http = new HTTPClient(ctx);
   ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
     headers: {

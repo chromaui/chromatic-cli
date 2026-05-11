@@ -130,7 +130,7 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
   }
 
   const { path: packagePath, packageJson } = packageInfo;
-  const initialContext: InitialContext = {
+  let initialContext: InitialContext = {
     ...config,
     flags: {
       ...config.flags,
@@ -143,7 +143,8 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
     sessionId: uuid(),
   };
 
-  const ctx = await setupContext(initialContext);
+  initialContext = await setupContext(initialContext);
+  const ctx = initialContext as Context;
   ctx.options = getOptions(initialContext);
   ctx.log.setLogFile(ctx.options.logFile);
   ctx.runtime = { forceRebuild: ctx.options.forceRebuild };

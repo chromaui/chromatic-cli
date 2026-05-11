@@ -179,19 +179,20 @@ export async function runAll(initialContext: InitialContext) {
 
   let ctx: Context;
   try {
-    ctx = await setupContext(
+    initialContext = await setupContext(
       initialContext,
       initialContext.extraOptions?.configFile || initialContext.flags.configFile
     );
 
-    const partialOptions = getPartialOptions(ctx);
+    const partialOptions = getPartialOptions(initialContext);
 
-    if (await shouldSkipWithoutProjectToken(ctx, partialOptions)) {
-      ctx.log.warn(skipNoProjectToken());
-      setExitCode(ctx, exitCodes.OK);
+    if (await shouldSkipWithoutProjectToken(initialContext, partialOptions)) {
+      initialContext.log.warn(skipNoProjectToken());
+      setExitCode(initialContext, exitCodes.OK);
       return;
     }
 
+    ctx = initialContext as Context;
     ctx.options = getOptions(ctx, partialOptions);
     ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
     ctx.log.setLogFile(ctx.options.logFile);
