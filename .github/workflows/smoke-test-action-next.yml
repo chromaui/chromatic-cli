@@ -19,12 +19,17 @@ jobs:
         run: yarn run release-next
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - run: yarn
+        working-directory: test-fixtures/storybook-smoke
+      - run: yarn build-test-storybook
+        working-directory: test-fixtures/storybook-smoke
       - name: Run build against action-next
         uses: chromaui/action-next@latest
         with:
-          buildScriptName: build-test-storybook
           exitZeroOnChanges: true
           forceRebuild: true
+          storybookBaseDir: test-fixtures/storybook-smoke
+          storybookBuildDir: test-storybook
           workingDir: test-fixtures/storybook-smoke
         env:
           LOG_LEVEL: debug
