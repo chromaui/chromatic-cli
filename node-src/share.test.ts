@@ -75,8 +75,6 @@ describe('share()', () => {
   });
 
   it('resolves with daysToExpire from confirmShare', async () => {
-    mockConfirmShare.mockResolvedValueOnce({ status: 'received', daysToExpire: 7 } as any);
-
     const result = await share({ userToken: 'user-token' });
 
     expect(result.daysToExpire).toBe(7);
