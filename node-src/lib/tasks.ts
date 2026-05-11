@@ -23,8 +23,8 @@ type AdaptedTaskConfig<TInput, TOutput, TPartial = never> = ListrTaskExtras & {
     partial?: (ctx: Context, partial: TPartial) => Task;
   };
   extractInput: (ctx: Context, listrTask: Listr.ListrTaskWrapper<Context>) => TInput;
-  applyOutput?: (ctx: Context, output: TOutput) => void;
-  applyPartial?: (ctx: Context, output: TPartial) => void;
+  applyOutput?: (ctx: Context, output: TOutput) => void | Promise<void>;
+  applyPartial?: (ctx: Context, output: TPartial) => void | Promise<void>;
   run: TaskFunction<TInput, TOutput, Deps, TPartial>;
 };
 
@@ -41,7 +41,7 @@ const buildDeps = (ctx: Context): Deps => ({
   packageJson: ctx.packageJson,
 });
 
-function applyAdaptedResult<TInput, TOutput, TPartial>(
+async function applyAdaptedResult<TInput, TOutput, TPartial>(
   config: AdaptedTaskConfig<TInput, TOutput, TPartial>,
   ctx: Context,
   listrTask: Listr.ListrTaskWrapper<Context>,
@@ -49,12 +49,12 @@ function applyAdaptedResult<TInput, TOutput, TPartial>(
 ) {
   switch (result.kind) {
     case 'continue':
-      config.applyOutput?.(ctx, result.output);
+      await config.applyOutput?.(ctx, result.output);
       if (config.transitions?.success)
         transitionTo(config.transitions.success, true)(ctx, listrTask);
       return;
     case 'partial':
-      config.applyPartial?.(ctx, result.output);
+      await config.applyPartial?.(ctx, result.output);
       if (config.transitions?.partial) {
         const { title, output } = config.transitions.partial(ctx, result.output);
         setTitle(title, output)(ctx, listrTask);
@@ -78,7 +78,7 @@ async function runAdaptedTask<TInput, TOutput, TPartial>(
   if (config.transitions?.pending) transitionTo(config.transitions.pending)(ctx, listrTask);
   const input = config.extractInput(ctx, listrTask);
   const result = await config.run(buildDeps(ctx), input);
-  applyAdaptedResult(config, ctx, listrTask, result);
+  await applyAdaptedResult(config, ctx, listrTask, result);
 }
 
 async function runLegacyTask(

@@ -226,6 +226,32 @@ export interface Storybook {
   refs?: Record<string, StorybookReference>;
 }
 
+export interface RuntimeMetadata {
+  nodePlatform: NodeJS.Platform;
+  nodeVersion: string;
+  packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  packageManagerVersion?: string;
+}
+
+export interface AnnouncedBuild {
+  id: string;
+  number: number;
+  browsers: string[];
+  status: string;
+  autoAcceptChanges: boolean;
+  reportToken: string;
+  features?: {
+    uiTests: boolean;
+    uiReview: boolean;
+    isReactNativeApp: boolean;
+  };
+  app: {
+    id: string;
+    turboSnapAvailability: string;
+    isOnboarding: boolean;
+  };
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -309,13 +335,9 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
-  runtimeMetadata?: {
-    nodePlatform: NodeJS.Platform;
-    nodeVersion: string;
-    packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
-    packageManagerVersion?: string;
-  };
+  runtimeMetadata?: RuntimeMetadata;
   analytics?: AnalyticsClient;
+  /** @deprecated Will be removed in the next major. */
   environment?: Record<string, string>;
   reportPath?: string;
   isPublishOnly?: boolean;
@@ -330,23 +352,7 @@ export interface Context {
   storybook: Storybook;
   projectMetadata: ProjectMetadata;
   storybookUrl?: string;
-  announcedBuild: {
-    id: string;
-    number: number;
-    browsers: string[];
-    status: string;
-    autoAcceptChanges: boolean;
-    reportToken: string;
-    features?: {
-      uiTests: boolean;
-      uiReview: boolean;
-      isReactNativeApp: boolean;
-    };
-    app: {
-      id: string;
-      turboSnapAvailability: string;
-    };
-  };
+  announcedBuild: AnnouncedBuild;
   build: {
     id: string;
     number: number;
