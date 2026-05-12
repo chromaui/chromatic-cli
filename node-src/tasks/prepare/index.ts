@@ -18,21 +18,14 @@ import {
   tracing,
   validating,
 } from '../../ui/tasks/prepare';
-import { calculateFileHashes, CalculateFileHashesInput } from './calculateFileHashes';
-import {
-  traceChangedFiles,
-  TraceChangedFilesInput,
-} from './traceChangedFiles';
+import { calculateFileHashes } from './calculateFileHashes';
+import { traceChangedFiles, TraceChangedFilesInput } from './traceChangedFiles';
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 import {
   isValidReactNativeStorybook,
   isValidStorybook,
   validateFiles,
   ValidateFilesInput,
-} from './validateFiles';
-
-
-} from '../../ui/tasks/prepare';
 } from './validateFiles';
 
 type PrepareDeps = Pick<Context, 'log' | 'env' | 'options' | 'packageJson'>;
@@ -44,7 +37,6 @@ type PrepareTraceInput = TraceChangedFilesInput & {
 };
 
 interface PrepareInput {
-  sourceDir: string;
   validateFilesInput: ValidateFilesInput;
   invalidAndroidArtifactError: Error;
   traceChangedFilesInput: Omit<PrepareTraceInput, 'statsPath'>;
@@ -52,6 +44,8 @@ interface PrepareInput {
 }
 
 interface PrepareOutput {
+  fileInfo: FileInfo;
+  sourceDir: string;
   hashes?: Record<string, string>;
   onlyStoryFiles?: string[];
 }
@@ -61,10 +55,10 @@ export async function runPrepare(
   deps: PrepareDeps,
   input: PrepareInput
 ): Promise<TaskResult<PrepareOutput>> {
-  const fileInfo = await validateFiles(deps, input.validateFilesInput);
+  const { fileInfo, sourceDir } = await validateFiles(deps, input.validateFilesInput);
 
   if (input.validateFilesInput.browsers.includes('android')) {
-    const isValidAndroidArtifact = await validateAndroidArtifact(input.sourceDir);
+    const isValidAndroidArtifact = await validateAndroidArtifact(sourceDir);
     if (!isValidAndroidArtifact) {
       throw input.invalidAndroidArtifactError;
     }
@@ -96,12 +90,9 @@ export async function runPrepare(
   let hashes: Record<string, string> | undefined;
   if (deps.options.fileHashing) {
     input.transitionToHashing();
-    const calculateFileHashesInput: CalculateFileHashesInput = {
-      fileInfo,
-      sourceDir: input.sourceDir,
-    };
+
     try {
-      hashes = await calculateFileHashes(deps, calculateFileHashesInput);
+      hashes = await calculateFileHashes(deps, { fileInfo, sourceDir });
     } catch (err) {
       deps.log.warn('Failed to calculate file hashes');
       deps.log.debug(err);
@@ -109,7 +100,7 @@ export async function runPrepare(
   }
   return {
     kind: 'continue',
-    output: { hashes, onlyStoryFiles },
+    output: { fileInfo, sourceDir, hashes, onlyStoryFiles },
   };
 }
 
@@ -117,8 +108,6 @@ export const extractPrepareInput = (
   ctx: Context,
   listrTask: Listr.ListrTaskWrapper<Context>
 ): PrepareInput => {
-  // eslint-disable-next-line unicorn/prevent-abbreviations
-  const sourceDir = ctx.sourceDir;
   const validateFilesInput: ValidateFilesInput = {
     browsers: ctx.announcedBuild?.browsers || [],
     buildLogFile: ctx.buildLogFile,
@@ -126,7 +115,7 @@ export const extractPrepareInput = (
       return new Error(invalid(ctx, err).output);
     },
     isReactNativeApp: ctx.isReactNativeApp || false,
-    sourceDir,
+    sourceDir: ctx.sourceDir,
     validationErrorBuilder(missingFiles: string[] | undefined): Error {
       return ctx.isReactNativeApp
         ? new Error(invalidReactNative(ctx, missingFiles).output)
@@ -164,12 +153,20 @@ export const extractPrepareInput = (
   };
 
   return {
-    sourceDir,
     validateFilesInput,
     invalidAndroidArtifactError: new Error(invalidAndroidArtifact(ctx).output),
     traceChangedFilesInput,
     transitionToHashing: () => transitionTo(hashing)(ctx, listrTask),
   };
+};
+
+export const applyPrepareOutput = (
+  ctx: Context,
+  { fileInfo, sourceDir, hashes, onlyStoryFiles }: PrepareOutput
+) => {
+  ctx.fileInfo = { ...fileInfo, hashes };
+  ctx.sourceDir = sourceDir;
+  ctx.onlyStoryFiles = onlyStoryFiles;
 };
 
 /**
@@ -186,13 +183,12 @@ export default function main(ctx: Context) {
     skip: (ctx: Context) => {
       return !!ctx.skip;
     },
-    steps: [
-      transitionTo(validating),
-      validateFiles,
-      validateAndroidArtifact,
-      traceChangedFiles,
-      calculateFileHashes,
-      transitionTo(success, true),
-    ],
+    transitions: {
+      pending: validating,
+      success,
+    },
+    extractInput: extractPrepareInput,
+    applyOutput: applyPrepareOutput,
+    run: runPrepare,
   });
 }

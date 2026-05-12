@@ -161,17 +161,19 @@ export const isValidReactNativeStorybook = (
  * @param deps - Dependencies for logging and file info retrieval
  * @param input - Input parameters for validation
  *
- * @returns File information object if validation succeeds, or throws an error
+ * @returns The validated fileInfo and the (possibly corrected) sourceDir.
  *
  * @throws {Error} if no valid Storybook build is found
  */
 export async function validateFiles(
   deps: ValidateFilesDeps,
   input: ValidateFilesInput
-): Promise<FileInfo> {
+): Promise<{ fileInfo: FileInfo; sourceDir: string }> {
+  // eslint-disable-next-line unicorn/prevent-abbreviations
+  let sourceDir = input.sourceDir;
   let fileInfo: FileInfo;
   try {
-    fileInfo = getFileInfo(input.sourceDir);
+    fileInfo = getFileInfo(sourceDir);
   } catch (err) {
     deps.log.debug(err);
     throw input.getFileInfoErrorBuilder(err);
@@ -181,12 +183,10 @@ export async function validateFiles(
     try {
       const buildLog = readFileSync(input.buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
-      if (outputDirectory && outputDirectory !== input.sourceDir) {
-        deps.log.warn(
-          deviatingOutputDirectory({ sourceDir: input.sourceDir, ...deps }, outputDirectory)
-        );
-        input.sourceDir = outputDirectory;
-        fileInfo = getFileInfo(input.sourceDir);
+      if (outputDirectory && outputDirectory !== sourceDir) {
+        deps.log.warn(deviatingOutputDirectory({ sourceDir, ...deps }, outputDirectory));
+        sourceDir = outputDirectory;
+        fileInfo = getFileInfo(sourceDir);
       }
     } catch (err) {
       deps.log.debug(err);
@@ -197,5 +197,5 @@ export async function validateFiles(
   if (!validatorResult.valid) {
     throw input.validationErrorBuilder(validatorResult.missingFiles);
   }
-  return fileInfo;
+  return { fileInfo, sourceDir };
 }

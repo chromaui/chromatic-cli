@@ -39,13 +39,14 @@ const makeInput = (overrides: Partial<ValidateFilesInput> = {}): ValidateFilesIn
 });
 
 describe('validateFiles', () => {
-  it('returns fileInfo for the source directory', async () => {
+  it('returns fileInfo and sourceDir for the source directory', async () => {
     readdirSyncMock.mockReturnValue(['iframe.html', 'index.html'] as any);
     statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
 
-    const fileInfo = await validateFiles(makeDeps(), makeInput());
+    const result = await validateFiles(makeDeps(), makeInput({ sourceDir: '/static/' }));
 
-    expect(fileInfo).toEqual(
+    expect(result.sourceDir).toBe('/static/');
+    expect(result.fileInfo).toEqual(
       expect.objectContaining({
         lengths: [
           { contentLength: 42, knownAs: 'iframe.html', pathname: 'iframe.html' },
@@ -67,7 +68,7 @@ describe('validateFiles', () => {
       return { isDirectory: () => false, size: 42 } as any;
     });
 
-    const fileInfo = await validateFiles(makeDeps(), makeInput({ sourceDir: '.' }));
+    const { fileInfo } = await validateFiles(makeDeps(), makeInput({ sourceDir: '.' }));
 
     expect(fileInfo).toEqual(
       expect.objectContaining({
@@ -118,7 +119,7 @@ describe('validateFiles', () => {
   });
 
   describe('with buildLogFile', () => {
-    it('retries using outputDir from build-storybook.log when initial validation fails', async () => {
+    it('returns the corrected sourceDir from build-storybook.log when initial validation fails', async () => {
       readdirSyncMock.mockReturnValueOnce([] as any);
       readdirSyncMock.mockReturnValueOnce(['iframe.html', 'index.html'] as any);
       statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
@@ -134,16 +135,25 @@ describe('validateFiles', () => {
         validator,
       });
 
-      const fileInfo = await validateFiles(makeDeps(), input);
+      const result = await validateFiles(makeDeps(), input);
 
       expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Unexpected build directory'));
-      expect(input.sourceDir).toBe('/var/storybook-static');
-      expect(fileInfo).toEqual(
+      expect(result.sourceDir).toBe('/var/storybook-static');
+      expect(result.fileInfo).toEqual(
         expect.objectContaining({
           paths: ['iframe.html', 'index.html'],
           total: 84,
         })
       );
+    });
+
+    it('returns the original sourceDir when no override happens', async () => {
+      readdirSyncMock.mockReturnValue(['iframe.html', 'index.html'] as any);
+      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+
+      const result = await validateFiles(makeDeps(), makeInput({ sourceDir: '/static/' }));
+
+      expect(result.sourceDir).toBe('/static/');
     });
 
     it('throws via validationErrorBuilder when retried validation still fails', async () => {
