@@ -101,8 +101,69 @@ describe('getBranch', () => {
 
 describe('getUncommittedHash', () => {
   it('returns the uncommitted hash', async () => {
-    execGitCommand.mockResolvedValue('1234567890');
+    execGitCommand
+      .mockResolvedValueOnce('src/a.ts\n') // staged
+      .mockResolvedValueOnce('src/b.ts\n') // unstaged
+      .mockResolvedValueOnce('src/c.ts\n') // untracked
+      .mockResolvedValueOnce('hash-a\nhash-b\nhash-c\n') // hash-object --stdin-paths
+      .mockResolvedValueOnce('1234567890\n'); // hash-object --stdin
+
     expect(await getUncommittedHash(ctx)).toEqual('1234567890');
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      1,
+      ctx,
+      'git diff --name-only --no-relative --diff-filter=d --cached'
+    );
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      2,
+      ctx,
+      'git diff --name-only --no-relative --diff-filter=d'
+    );
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      3,
+      ctx,
+      'git ls-files --others --exclude-standard'
+    );
+    expect(execGitCommand).toHaveBeenNthCalledWith(4, ctx, 'git hash-object --stdin-paths', {
+      input: 'src/a.ts\nsrc/b.ts\nsrc/c.ts\n',
+    });
+    expect(execGitCommand).toHaveBeenNthCalledWith(5, ctx, 'git hash-object --stdin', {
+      input: 'hash-a\nhash-b\nhash-c\n',
+    });
+  });
+
+  it('returns empty string when there are no uncommitted files', async () => {
+    execGitCommand.mockResolvedValueOnce('').mockResolvedValueOnce('').mockResolvedValueOnce('');
+
+    expect(await getUncommittedHash(ctx)).toEqual('');
+    // Should short-circuit without invoking hash-object.
+    expect(execGitCommand).toHaveBeenCalledTimes(3);
+  });
+
+  it('returns empty string for the well-known empty-blob hash', async () => {
+    execGitCommand
+      .mockResolvedValueOnce('src/a.ts\n')
+      .mockResolvedValueOnce('')
+      .mockResolvedValueOnce('')
+      .mockResolvedValueOnce('hash-a\n')
+      .mockResolvedValueOnce('e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\n');
+
+    expect(await getUncommittedHash(ctx)).toEqual('');
+  });
+
+  it('handles Windows CRLF line endings in file lists', async () => {
+    execGitCommand
+      .mockResolvedValueOnce('src/a.ts\r\nsrc/b.ts\r\n')
+      .mockResolvedValueOnce('')
+      .mockResolvedValueOnce('')
+      .mockResolvedValueOnce('hash-a\nhash-b\n')
+      .mockResolvedValueOnce('deadbeef\n');
+
+    expect(await getUncommittedHash(ctx)).toEqual('deadbeef');
+    expect(execGitCommand).toHaveBeenNthCalledWith(4, ctx, 'git hash-object --stdin-paths', {
+      input: 'src/a.ts\nsrc/b.ts\n',
+    });
   });
 });
 

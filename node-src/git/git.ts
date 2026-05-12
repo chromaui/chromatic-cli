@@ -108,30 +108,44 @@ export async function getBranch(deps: Pick<Deps, 'log'>) {
 /**
  * Retrieve the hash of all uncommitted files, which includes staged, unstaged, and untracked files,
  * excluding deleted files (which can't be hashed) and ignored files. There is no one single Git
- * command to reliably get this information, so we use a combination of commands grouped together.
+ * command to reliably get this information, so we run three list commands and feed the combined
+ * file list into `git hash-object` via stdin. Stdin is used (instead of shell pipes) so the
+ * implementation works on Windows `cmd.exe` as well as POSIX shells.
  *
  * @param deps Function dependencies.
  *
  * @returns The uncommited hash, if available.
  */
 export async function getUncommittedHash(deps: Pick<Deps, 'log'>) {
-  const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
-  const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
-  const listUntrackedFiles = 'git ls-files --others --exclude-standard';
-  const listUncommittedFiles = [listStagedFiles, listUnstagedFiles, listUntrackedFiles].join(';');
+  const [stagedFiles, unstagedFiles, untrackedFiles] = await Promise.all([
+    execGitCommand(deps, 'git diff --name-only --no-relative --diff-filter=d --cached'),
+    execGitCommand(deps, 'git diff --name-only --no-relative --diff-filter=d'),
+    execGitCommand(deps, 'git ls-files --others --exclude-standard'),
+  ]);
 
-  const uncommittedHashWithPadding = await execGitCommand(
-    deps,
-    // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
-    // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
-    // stdin to avoid the limit on command line arguments.
-    `(${listUncommittedFiles}) | git hash-object --stdin-paths | git hash-object --stdin`
-  );
-  const uncommittedHash = uncommittedHashWithPadding?.trim();
+  const files = [stagedFiles, unstagedFiles, untrackedFiles]
+    .filter(Boolean)
+    .flatMap((output) => (output as string).split(/\r?\n/))
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (files.length === 0) return '';
+
+  // Pipe file paths to `git hash-object --stdin-paths` via stdin to retrieve a list of hashes,
+  // then pipe that list to `git hash-object --stdin` to retrieve a single hash of all hashes.
+  const fileHashes = await execGitCommand(deps, 'git hash-object --stdin-paths', {
+    input: `${files.join('\n')}\n`,
+  });
+  if (!fileHashes?.trim()) return '';
+
+  const finalHash = await execGitCommand(deps, 'git hash-object --stdin', {
+    input: fileHashes,
+  });
+  const uncommittedHash = finalHash?.trim();
 
   // In case there are no uncommited changes (empty list), we always get this same hash.
   const noChangesHash = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391';
-  return uncommittedHash === noChangesHash ? '' : uncommittedHash;
+  return !uncommittedHash || uncommittedHash === noChangesHash ? '' : uncommittedHash;
 }
 
 /**
