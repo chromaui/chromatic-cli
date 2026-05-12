@@ -93,7 +93,7 @@ const parseRemoteOrigin = (remoteOriginUrl?: string): RepositoryDiagnostics['rem
       return {
         present: true,
         protocol: protocol as 'ssh' | 'https' | 'http' | 'file',
-        host: url.hostname,
+        host: url.hostname || undefined,
       };
     }
     return { present: true, protocol: 'other', host: url.hostname || undefined };

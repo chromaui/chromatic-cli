@@ -139,6 +139,32 @@ describe('getRepositoryDiagnostics', () => {
     });
     expect(JSON.stringify(diagnostics)).not.toContain('chromaui/chromatic-cli.git');
   });
+
+  it('omits empty host for file remote origin', async () => {
+    mockGitResults({
+      'git rev-parse --is-shallow-repository': 'true',
+      'git rev-list --count HEAD': '1',
+      'git rev-list --count --all': '1',
+      'git rev-parse --is-bare-repository': 'false',
+      'git rev-parse --abbrev-ref HEAD': 'main',
+      'git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"': 'origin/main',
+      'git config --get remote.origin.url': 'file:///Users/reuben/src/chromatic-cli',
+      'git config --get extensions.partialclone': new Error('missing config'),
+      'git config --get remote.origin.promisor': new Error('missing config'),
+      'git config --get remote.origin.partialclonefilter': new Error('missing config'),
+      'git rev-parse --git-path shallow': '.git/shallow',
+    });
+    readFileMock.mockRejectedValue(Object.assign(new Error('missing shallow'), { code: 'ENOENT' }));
+
+    const diagnostics = await getRepositoryDiagnostics(ctx);
+
+    expect(diagnostics.remoteOrigin).toEqual({
+      present: true,
+      protocol: 'file',
+      host: undefined,
+    });
+    expect(JSON.stringify(diagnostics)).not.toContain('/Users/reuben/src/chromatic-cli');
+  });
 });
 
 describe('enrichRepositoryDiagnostics', () => {
