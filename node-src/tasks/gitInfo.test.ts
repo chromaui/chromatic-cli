@@ -1,9 +1,11 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getBaselineBuilds as getBaselineBuildsUnmocked } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement as getChangedFilesWithReplacementUnmocked } from '../git/getChangedFilesWithReplacement';
 import * as getCommitInfo from '../git/getCommitAndBranch';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
+import * as repositoryDiagnostics from '../git/getRepositoryDiagnostics';
 import * as git from '../git/git';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
 import TestLogger from '../lib/testLogger';
@@ -37,6 +39,7 @@ function expectPhase<O extends { phase: string }, P extends O['phase']>(
 vi.mock('../git/getCommitAndBranch');
 vi.mock('../git/git');
 vi.mock('../git/getParentCommits');
+vi.mock('../git/getRepositoryDiagnostics');
 vi.mock('../git/getBaselineBuilds');
 vi.mock('../git/getChangedFilesWithReplacement');
 vi.mock('../lib/getHasRouter');
@@ -55,6 +58,9 @@ const getUncommittedHash = vi.mocked(git.getUncommittedHash);
 const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
 const getParentCommits = vi.mocked(getParentCommitsUnmocked);
 const getHasRouter = vi.mocked(getHasRouterUnmocked);
+const getRepositoryDiagnostics = vi.mocked(repositoryDiagnostics.getRepositoryDiagnostics);
+const enrichRepositoryDiagnostics = vi.mocked(repositoryDiagnostics.enrichRepositoryDiagnostics);
+const formatRepositoryDiagnostics = vi.mocked(repositoryDiagnostics.formatRepositoryDiagnostics);
 
 const log = new TestLogger();
 
@@ -87,6 +93,7 @@ const buildInput = (overrides: Partial<GitInfoInput> = {}): GitInfoInput => ({
   isLocalBuild: false,
   skip: false,
   onlyChanged: false,
+  onRepositoryDiagnostics: vi.fn(),
   onSkippingBuild: vi.fn(),
   ...overrides,
 });
@@ -106,6 +113,12 @@ beforeEach(() => {
   getNumberOfComitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
+  getRepositoryDiagnostics.mockResolvedValue({ version: 1, isShallowRepository: false });
+  enrichRepositoryDiagnostics.mockImplementation(async (_, diagnostics, input) => ({
+    ...diagnostics,
+    commitAvailability: [...(diagnostics.commitAvailability || []), { ...input, commits: [] }],
+  }));
+  formatRepositoryDiagnostics.mockReturnValue('summary');
 
   client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
@@ -121,7 +134,48 @@ describe('gatherGitInfo', () => {
       parentCommits: ['asd2344'],
       version: 'Git v1.0.0',
       slug: 'user/repo',
+      diagnostics: { version: 1, isShallowRepository: false },
     });
+  });
+
+  it('reports repository diagnostics before gathering commit info', async () => {
+    const onRepositoryDiagnostics = vi.fn();
+    await gatherGitInfo(buildDeps(), buildInput({ onRepositoryDiagnostics }));
+
+    expect(onRepositoryDiagnostics).toHaveBeenCalledWith({
+      version: 1,
+      isShallowRepository: false,
+    });
+    expect(getCommitAndBranch).toHaveBeenCalledWith(
+      { log },
+      expect.objectContaining({
+        repositoryDiagnostics: { version: 1, isShallowRepository: false },
+      })
+    );
+  });
+
+  it('enriches repository diagnostics when commit info fails due to one commit', async () => {
+    const enrichedDiagnostics = {
+      version: 1 as const,
+      commitAvailability: [{ reason: 'one-commit' as const, commits: [] }],
+    };
+    getCommitAndBranch.mockRejectedValue(new Error('Found only one commit'));
+    enrichRepositoryDiagnostics.mockResolvedValue(enrichedDiagnostics);
+    const onRepositoryDiagnostics = vi.fn();
+
+    await expect(
+      gatherGitInfo(buildDeps(), buildInput({ onRepositoryDiagnostics }))
+    ).rejects.toThrow('Found only one commit');
+
+    expect(enrichRepositoryDiagnostics).toHaveBeenCalledWith(
+      { log },
+      { version: 1, isShallowRepository: false },
+      {
+        reason: 'one-commit',
+        commits: [{ role: 'head-parent', reference: 'HEAD^' }],
+      }
+    );
+    expect(onRepositoryDiagnostics).toHaveBeenLastCalledWith(enrichedDiagnostics);
   });
 
   it('sets gitUserEmail to current user for local builds', async () => {
@@ -188,6 +242,63 @@ describe('gatherGitInfo', () => {
     );
     expectKind(result, 'continue');
     expect(result.output.git.changedFiles).toBeUndefined();
+  });
+
+  it('enriches diagnostics when no parent commits are found', async () => {
+    const enrichedDiagnostics = {
+      version: 1 as const,
+      commitAvailability: [{ reason: 'no-parent-commits' as const, commits: [] }],
+    };
+    getParentCommits.mockResolvedValue([]);
+    enrichRepositoryDiagnostics.mockResolvedValue(enrichedDiagnostics);
+    const onRepositoryDiagnostics = vi.fn();
+
+    const result = await gatherGitInfo(
+      buildDeps(),
+      buildInput({ onRepositoryDiagnostics, onlyChanged: true })
+    );
+
+    expectKind(result, 'continue');
+    expect(result.output.git.diagnostics).toBe(enrichedDiagnostics);
+    expect(result.output.turboSnap?.bailReason).toEqual({ noAncestorBuild: true });
+    expect(enrichRepositoryDiagnostics).toHaveBeenCalledWith(
+      { log },
+      { version: 1, isShallowRepository: false },
+      {
+        reason: 'no-parent-commits',
+        commits: [{ role: 'head-parent', reference: 'HEAD^' }],
+      }
+    );
+    expect(onRepositoryDiagnostics).toHaveBeenLastCalledWith(enrichedDiagnostics);
+  });
+
+  it('enriches diagnostics when changed file detection fails', async () => {
+    const enrichedDiagnostics = {
+      version: 1 as const,
+      commitAvailability: [{ reason: 'invalid-changed-files' as const, commits: [] }],
+    };
+    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes', number: 12 } as any]);
+    getChangedFilesWithReplacement.mockRejectedValue(new Error('fatal: bad object 012qwes'));
+    enrichRepositoryDiagnostics.mockResolvedValue(enrichedDiagnostics);
+    const onRepositoryDiagnostics = vi.fn();
+
+    const result = await gatherGitInfo(
+      buildDeps(),
+      buildInput({ onRepositoryDiagnostics, onlyChanged: true })
+    );
+
+    expectKind(result, 'continue');
+    expect(result.output.git.diagnostics).toBe(enrichedDiagnostics);
+    expect(result.output.turboSnap?.bailReason).toEqual({ invalidChangedFiles: true });
+    expect(enrichRepositoryDiagnostics).toHaveBeenCalledWith(
+      { log },
+      { version: 1, isShallowRepository: false },
+      {
+        reason: 'invalid-changed-files',
+        commits: [{ role: 'baseline', commit: '012qwes', buildNumber: 12 }],
+      }
+    );
+    expect(onRepositoryDiagnostics).toHaveBeenLastCalledWith(enrichedDiagnostics);
   });
 
   it('forces rebuild automatically if app is onboarding', async () => {
@@ -281,11 +392,12 @@ describe('gatherGitInfo', () => {
 describe('applyGitInfoPartial', () => {
   it('writes git, projectMetadata, and exit code on skip-commit', () => {
     const ctx = { runtime: {} } as any;
-    const git = { commit: 'abc' } as any;
+    const git = { commit: 'abc', diagnostics: { version: 1 } } as any;
     const projectMetadata = { hasRouter: true };
     applyGitInfoPartial(ctx, { phase: 'skip-commit', git, projectMetadata });
 
     expect(ctx.git).toBe(git);
+    expect(ctx.repositoryDiagnostics).toBe(git.diagnostics);
     expect(ctx.projectMetadata).toBe(projectMetadata);
     expect(ctx.exitCode).toBe(0);
     expect(ctx.rebuildForBuildId).toBeUndefined();
@@ -346,10 +458,12 @@ const baseOutput = (overrides: Partial<GitInfoOutput> = {}): GitInfoOutput => ({
 describe('applyGitInfoOutput', () => {
   it('writes git, projectMetadata, and isOnboarding on continue', () => {
     const ctx = { runtime: {} } as any;
-    const output = baseOutput({ isOnboarding: true });
+    const git = { commit: 'abc', diagnostics: { version: 1 } } as any;
+    const output = baseOutput({ git, isOnboarding: true });
     applyGitInfoOutput(ctx, output);
 
     expect(ctx.git).toBe(output.git);
+    expect(ctx.repositoryDiagnostics).toBe(git.diagnostics);
     expect(ctx.projectMetadata).toBe(output.projectMetadata);
     expect(ctx.isOnboarding).toBe(true);
   });

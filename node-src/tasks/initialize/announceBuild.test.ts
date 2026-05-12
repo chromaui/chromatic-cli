@@ -21,6 +21,10 @@ describe('announceBuild', () => {
   const input: AnnounceBuildInput = {
     git: {
       version: 'whatever',
+      diagnostics: {
+        version: 1,
+        isShallowRepository: true,
+      },
       matchesBranch: () => false,
       committedAt: 0,
       branch: 'branch',
@@ -89,6 +93,7 @@ describe('announceBuild', () => {
       },
       { retries: 3 }
     );
+    expect(client.runQuery.mock.calls[0][1].input).not.toHaveProperty('diagnostics');
     expect(result).toEqual(build);
   });
 

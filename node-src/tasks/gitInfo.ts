@@ -1,9 +1,15 @@
+/* eslint-disable max-lines */
 import type Listr from 'listr';
 
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
 import getCommitAndBranch from '../git/getCommitAndBranch';
 import { getParentCommits } from '../git/getParentCommits';
+import {
+  enrichRepositoryDiagnostics,
+  formatRepositoryDiagnostics,
+  getRepositoryDiagnostics,
+} from '../git/getRepositoryDiagnostics';
 import {
   getCommittedFileCount,
   getNumberOfComitters,
@@ -26,6 +32,7 @@ import {
   Deps,
   Git,
   ProjectMetadata,
+  RepositoryDiagnostics,
   TaskResult,
   TurboSnap,
 } from '../types';
@@ -61,6 +68,7 @@ export interface GitInfoInput {
   onlyChanged: boolean | string;
   externals?: string[];
   untraced?: string[];
+  onRepositoryDiagnostics: (diagnostics: RepositoryDiagnostics) => void;
   onSkippingBuild: (git: Git) => void;
 }
 
@@ -154,17 +162,35 @@ export async function gatherGitInfo(
     onlyChanged,
     externals,
     untraced,
+    onRepositoryDiagnostics,
     onSkippingBuild,
   } = input;
 
+  let repositoryDiagnostics = await getRepositoryDiagnostics({ log });
+  onRepositoryDiagnostics(repositoryDiagnostics);
+  log.debug(`Git diagnostics: ${formatRepositoryDiagnostics(repositoryDiagnostics)}`);
+
   const version = await getVersion({ log });
-  const commitAndBranchInfo = await getCommitAndBranch(
-    { log },
-    { branchName, patchBaseRef, ci: fromCI }
-  );
+  let commitAndBranchInfo;
+  try {
+    commitAndBranchInfo = await getCommitAndBranch(
+      { log },
+      { branchName, patchBaseRef, ci: fromCI, repositoryDiagnostics }
+    );
+  } catch (err) {
+    if (err.message.includes('Found only one commit')) {
+      repositoryDiagnostics = await enrichRepositoryDiagnostics({ log }, repositoryDiagnostics, {
+        reason: 'one-commit',
+        commits: [{ role: 'head-parent', reference: 'HEAD^' }],
+      });
+      onRepositoryDiagnostics(repositoryDiagnostics);
+    }
+    throw err;
+  }
 
   const git: Git = {
     version,
+    diagnostics: repositoryDiagnostics,
     gitUserEmail: await getUserEmail({ log }).catch((err) => {
       log.debug('Failed to retrieve Git user email', err);
       return undefined;
@@ -240,6 +266,20 @@ export async function gatherGitInfo(
     }
   );
   git.parentCommits = parentCommits;
+  if (parentCommits.length === 0) {
+    git.diagnostics = await enrichRepositoryDiagnostics(
+      { log },
+      git.diagnostics || repositoryDiagnostics,
+      {
+        reason: 'no-parent-commits',
+        commits: [
+          { role: 'head-parent', reference: 'HEAD^' },
+          ...(git.mergeCommit ? [{ role: 'merge-commit' as const, commit: git.mergeCommit }] : []),
+        ],
+      }
+    );
+    onRepositoryDiagnostics(git.diagnostics);
+  }
   log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
   const result = await client.runQuery<LastBuildQueryResult>(LastBuildQuery, {
@@ -387,7 +427,26 @@ export async function gatherGitInfo(
       turboSnap.bailReason = { invalidChangedFiles: true };
       git.changedFiles = undefined;
       git.replacementBuildIds = undefined;
-      log.warn(invalidChangedFiles());
+      git.diagnostics = await enrichRepositoryDiagnostics(
+        { log },
+        git.diagnostics || repositoryDiagnostics,
+        {
+          reason: 'invalid-changed-files',
+          commits: baselineBuilds.map((build) => ({
+            role: 'baseline',
+            commit: build.commit,
+            buildNumber: build.number,
+          })),
+        }
+      );
+      onRepositoryDiagnostics(git.diagnostics);
+      log.debug(
+        `Git commit availability: ${git.diagnostics.commitAvailability
+          ?.at(-1)
+          ?.commits.map(({ role, exists }) => `${role} ${exists ? 'present' : 'missing'}`)
+          .join(', ')}`
+      );
+      log.warn(invalidChangedFiles(git.diagnostics));
       log.debug(err);
     }
 
@@ -443,10 +502,14 @@ export const extractGitInfoInput = (
     ctx.git = git;
     transitionTo(skippingBuild)(ctx, listrTask);
   },
+  onRepositoryDiagnostics: (diagnostics) => {
+    ctx.repositoryDiagnostics = diagnostics;
+  },
 });
 
 export const applyGitInfoOutput = (ctx: Context, output: GitInfoOutput) => {
   ctx.git = output.git;
+  ctx.repositoryDiagnostics = output.git.diagnostics;
   ctx.projectMetadata = output.projectMetadata;
   ctx.isOnboarding = output.isOnboarding;
   if (output.turboSnap) ctx.turboSnap = output.turboSnap;
@@ -459,6 +522,7 @@ export const applyGitInfoOutput = (ctx: Context, output: GitInfoOutput) => {
 
 export const applyGitInfoPartial = (ctx: Context, partial: GitInfoPartial) => {
   ctx.git = partial.git;
+  ctx.repositoryDiagnostics = partial.git.diagnostics;
   ctx.projectMetadata = partial.projectMetadata;
   setExitCode(ctx, exitCodes.OK);
   if (partial.phase === 'rebuild-noop') {

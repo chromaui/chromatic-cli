@@ -186,6 +186,47 @@ export interface Git {
   replacementBuildIds?: [string, string][];
   matchesBranch?: (glob: boolean | string) => boolean;
   packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+  diagnostics?: RepositoryDiagnostics;
+}
+
+export interface RepositoryDiagnostics {
+  version: 1;
+  isShallowRepository?: boolean;
+  shallowBoundaryCount?: number;
+  shallowBoundaryCommits?: string[];
+  reachableCommitCountFromHead?: number;
+  reachableCommitCountAllRefs?: number;
+  isBareRepository?: boolean;
+  isDetachedHead?: boolean;
+  currentBranch?: string;
+  upstreamBranch?: string;
+  remoteOrigin?: {
+    present: boolean;
+    host?: string;
+    protocol?: 'ssh' | 'https' | 'http' | 'file' | 'other';
+  };
+  partialClone?: {
+    promisorRemote?: string;
+    remoteOriginPromisor?: boolean;
+    remoteOriginPartialCloneFilter?: string;
+  };
+  ciCheckoutEnvironment?: Record<string, string>;
+  commitAvailability?: CommitAvailabilityDiagnostics[];
+  probeErrors?: Record<string, string>;
+}
+
+export interface CommitAvailabilityDiagnostics {
+  reason: 'one-commit' | 'no-parent-commits' | 'invalid-changed-files' | 'missing-baseline-commit';
+  commits: CommitAvailabilityProbe[];
+}
+
+export interface CommitAvailabilityProbe {
+  role: 'head-parent' | 'merge-commit' | 'last-branch-build' | 'baseline' | 'replacement-baseline';
+  commit?: string;
+  reference?: string;
+  buildNumber?: number;
+  exists?: boolean;
+  error?: string;
 }
 
 export interface ProjectMetadata {
@@ -349,6 +390,7 @@ export interface Context {
   client: GraphQLClient;
 
   git: Git;
+  repositoryDiagnostics?: RepositoryDiagnostics;
   storybook: Storybook;
   projectMetadata: ProjectMetadata;
   storybookUrl?: string;

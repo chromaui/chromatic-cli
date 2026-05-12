@@ -63,6 +63,7 @@ const parseAnnounceBuildMutationInput = (deps: AnnounceBuildDeps, input: Announc
     baselineCommits,
     packageMetadataChanges,
     gitUserEmail,
+    diagnostics,
     rootPath,
     ...commitInfo
   } = input.git; // omit some fields;

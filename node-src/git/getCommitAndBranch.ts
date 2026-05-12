@@ -1,6 +1,6 @@
 import envCi from 'env-ci';
 
-import { Deps } from '../types';
+import { Deps, RepositoryDiagnostics } from '../types';
 import forksUnsupported from '../ui/messages/errors/forksUnsupported';
 import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
@@ -37,6 +37,7 @@ function getBranchDetailsFromEnvironmentCI(log) {
  * @param options Some extra details about the repository.
  * @param options.branchName The name of the branch.
  * @param options.patchBaseRef The reference to the base side of a patch.
+ * @param options.repositoryDiagnostics Observed local repository diagnostics.
  * @param options.ci If we're running in a CI pipeline or not.
  *
  * @returns Commit and branch information.
@@ -48,8 +49,14 @@ export default async function getCommitAndBranch(
   {
     branchName,
     patchBaseRef,
+    repositoryDiagnostics,
     ci,
-  }: { branchName?: string; patchBaseRef?: string; ci?: boolean } = {}
+  }: {
+    branchName?: string;
+    patchBaseRef?: string;
+    repositoryDiagnostics?: RepositoryDiagnostics;
+    ci?: boolean;
+  } = {}
 ) {
   const { log } = deps;
   let commit: CommitInfo = await getCommit(deps);
@@ -90,7 +97,7 @@ export default async function getCommitAndBranch(
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
 
   if (!(await hasPreviousCommit(deps))) {
-    const message = gitOneCommit(isGitHubAction);
+    const message = gitOneCommit(isGitHubAction, repositoryDiagnostics);
     if (isCi) {
       throw new Error(message);
     } else {

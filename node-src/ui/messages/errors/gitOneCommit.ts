@@ -1,11 +1,16 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
+import { RepositoryDiagnostics } from '../../../types';
 import { error, info } from '../../components/icons';
 import link from '../../components/link';
+import { getShallowRepositoryAdvice } from '../gitRepositoryAdvice';
 
-export default (isGithubAction = false) =>
-  isGithubAction
+export default (isGithubAction = false, diagnostics?: RepositoryDiagnostics) => {
+  const diagnosticAdvice = getShallowRepositoryAdvice(diagnostics);
+  const diagnosticLine = diagnosticAdvice ? `\n      ${diagnosticAdvice}` : '';
+
+  return isGithubAction
     ? dedent(chalk`
       ${error} {bold Found only one commit}
       This typically means you have ran into one of the following scenarios:
@@ -15,6 +20,7 @@ export default (isGithubAction = false) =>
         ${info} Read more at ${link('https://www.chromatic.com/docs/github-actions')}
       - You've only made a single commit so far. 
         Please make at least one additional commit in order for Chromatic to be able to detect what's changed. 
+      ${diagnosticLine}
     `)
     : dedent(chalk`
       ${error} {bold Found only one commit}
@@ -24,4 +30,6 @@ export default (isGithubAction = false) =>
         Refer to your CI provider's documentation for details.
       - You've only made a single commit so far.  
         Please make at least one additional commit in order for Chromatic to be able to detect what's changed.
+      ${diagnosticLine}
     `);
+};
