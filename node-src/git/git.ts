@@ -150,6 +150,18 @@ export async function hasPreviousCommit(deps: Pick<Deps, 'log'>) {
 }
 
 /**
+ * Determine if the repository is shallow.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns True if the repository is shallow.
+ */
+export async function isShallowRepository(deps: Pick<Deps, 'log'>) {
+  const isShallowRepository = await execGitCommand(deps, 'git rev-parse --is-shallow-repository');
+  return isShallowRepository?.trim() === 'true';
+}
+
+/**
  * Check if a commit exists in the repository
  *
  * @param deps Function dependencies.

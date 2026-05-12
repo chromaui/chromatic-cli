@@ -16,6 +16,7 @@ import {
   getUserEmail,
   getVersion,
   hasPreviousCommit,
+  isShallowRepository,
   NULL_BYTE,
 } from './git';
 
@@ -139,6 +140,18 @@ gpg: Can't check signature: No public key
 19b6c9c5b3d34d9fc55627fcaf8a85bd5d5e5b2a`.trim()
     );
     expect(await hasPreviousCommit(ctx)).toEqual(true);
+  });
+});
+
+describe('isShallowRepository', () => {
+  it('returns true for a shallow repository', async () => {
+    execGitCommand.mockResolvedValueOnce('true');
+    expect(await isShallowRepository(ctx)).toEqual(true);
+  });
+
+  it('returns false for a non-shallow repository', async () => {
+    execGitCommand.mockResolvedValueOnce('false');
+    expect(await isShallowRepository(ctx)).toEqual(false);
   });
 });
 

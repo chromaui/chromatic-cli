@@ -8,7 +8,7 @@ import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import customGitHubAction from '../ui/messages/info/customGitHubAction';
 import noCommitDetails from '../ui/messages/warnings/noCommitDetails';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
-import { getBranch, getCommit, hasPreviousCommit } from './git';
+import { getBranch, getCommit, hasPreviousCommit, isShallowRepository } from './git';
 
 const ORIGIN_PREFIX_REGEXP = /^origin\//;
 const notHead = (branch) => (branch && branch !== 'HEAD' ? branch : false);
@@ -90,6 +90,13 @@ export default async function getCommitAndBranch(
   const isGitHubPrBuild = GITHUB_EVENT_NAME === 'pull_request';
 
   if (!(await hasPreviousCommit(deps))) {
+    // Always throw if there's only 1 commit and it's a shallow clone to avoid confusion in
+    // baselines because this is likely NOT what the user intended and default behavior of their
+    // checkout step in CI.
+    if (await isShallowRepository(deps)) {
+      throw new Error(gitOneCommit(isGitHubAction));
+    }
+
     const message = gitOneCommit(isGitHubAction);
     if (isCi) {
       throw new Error(message);

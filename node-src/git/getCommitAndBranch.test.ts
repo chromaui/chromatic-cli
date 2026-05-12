@@ -12,6 +12,7 @@ vi.mock('./git');
 const getBranch = vi.mocked(git.getBranch);
 const getCommit = vi.mocked(git.getCommit);
 const hasPreviousCommit = vi.mocked(git.hasPreviousCommit);
+const isShallowRepository = vi.mocked(git.isShallowRepository);
 
 const log = new TestLogger();
 const ctx = { log } as unknown as Context;
@@ -54,13 +55,11 @@ beforeEach(() => {
     committerEmail: 'noreply@github.com',
   });
   hasPreviousCommit.mockResolvedValue(true);
+  isShallowRepository.mockResolvedValue(false);
 });
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  envCi.mockReset();
-  getBranch.mockReset();
-  getCommit.mockReset();
 });
 
 const commitInfo = {
@@ -147,6 +146,12 @@ describe('getCommitAndBranch', () => {
   it('throws when there is only one commit, CI', async () => {
     envCi.mockReturnValue({ isCi: true });
     hasPreviousCommit.mockResolvedValue(false);
+    await expect(getCommitAndBranch(ctx)).rejects.toThrow('Found only one commit');
+  });
+
+  it('throws when the checkout is a shallow clone with only one commit', async () => {
+    hasPreviousCommit.mockResolvedValue(false);
+    isShallowRepository.mockResolvedValue(true);
     await expect(getCommitAndBranch(ctx)).rejects.toThrow('Found only one commit');
   });
 
