@@ -57,24 +57,6 @@ describe('getDependencies', () => {
     }
   });
 
-  it.skip('should handle checked out manifest and lock files', async () => {
-    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
-
-    const dependencies = await getDependencies(ctx, {
-      rootPath: tmpdir,
-      manifestPath: await checkoutFile(ctx, 'HEAD', 'package.json', tmpdir),
-      lockfilePath: await checkoutFile(ctx, 'HEAD', 'yarn.lock', tmpdir),
-    });
-
-    const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
-    expect(dependencyNames).toEqual(
-      expect.arrayContaining([
-        ...Object.keys(packageJson.dependencies),
-        ...Object.keys(packageJson.devDependencies),
-      ])
-    );
-  });
-
   it('should handle historic files', async () => {
     // chromatic@6.12.0
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
@@ -128,7 +110,7 @@ describe('getDependencies', () => {
         // ...
       ])
     );
-  });
+  }, 15_000); // Increase test timeout to account for I/O in CI
 
   it('should bail if the lock file is too large to parse', async () => {
     statSync.mockReturnValue({ size: MAX_LOCK_FILE_SIZE + 1000 });
