@@ -143,6 +143,41 @@ describe('validateFiles', () => {
         })
       );
     });
+
+    it('retries using multiline outputDir from build-storybook.log', async () => {
+      readdirSyncMock.mockReturnValueOnce([]);
+      readdirSyncMock.mockReturnValueOnce(['iframe.html', 'index.html'] as any);
+      statSyncMock.mockReturnValue({ isDirectory: () => false, size: 42 } as any);
+      readFileSyncMock.mockReturnValue(`\u001B[32m◇\u001B[39m  Output directory:
+\u001B[90m│\u001B[39m  /var/storybook-static
+\u001B[90m│\u001B[39m
+\u001B[90m└\u001B[39m  Storybook build completed successfully
+`);
+
+      const ctx = {
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        buildLogFile: 'build-storybook.log',
+        options: {},
+        packageJson: {},
+      } as any;
+      await validateFiles(ctx);
+
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Unexpected build directory'));
+      expect(ctx.sourceDir).toBe('/var/storybook-static');
+      expect(ctx.fileInfo).toEqual(
+        expect.objectContaining({
+          lengths: [
+            { contentLength: 42, knownAs: 'iframe.html', pathname: 'iframe.html' },
+            { contentLength: 42, knownAs: 'index.html', pathname: 'index.html' },
+          ],
+          paths: ['iframe.html', 'index.html'],
+          total: 84,
+        })
+      );
+    });
   });
 
   describe('with isReactNativeApp', () => {
