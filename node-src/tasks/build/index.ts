@@ -25,6 +25,7 @@ import {
   success as reactNativeSuccess,
 } from '../../ui/tasks/buildReactNative';
 import { buildArtifacts, generateManifestStep } from '../buildReactNative';
+import { resolveE2EFramework } from './resolveE2EFramework';
 import { setSourceDirectory } from './setSourceDirectory';
 
 const isStatsFlagSupported = (ctx: Context) => {
@@ -265,14 +266,3 @@ export default function main(ctx: Context) {
   });
 }
 
-function resolveE2EFramework(ctx: Context) {
-  if (ctx.options.playwright) {
-    return 'playwright';
-  }
-
-  if (ctx.options.vitest) {
-    return 'vitest';
-  }
-
-  return 'cypress';
-}
