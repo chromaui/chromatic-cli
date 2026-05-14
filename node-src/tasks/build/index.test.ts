@@ -6,9 +6,9 @@ import { execa as execaDefault, parseCommandString } from 'execa';
 import { existsSync as existsSyncDefault } from 'fs';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import TestLogger from '../lib/testLogger';
-import { patchModulePath } from '../lib/testUtilities';
-import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './build';
+import TestLogger from '../../lib/testLogger';
+import { patchModulePath } from '../../lib/testUtilities';
+import buildTask, { buildStorybook, setBuildCommand, setSourceDirectory } from './index';
 
 vi.mock('@antfu/ni');
 vi.mock('execa', async (importOriginal) => {

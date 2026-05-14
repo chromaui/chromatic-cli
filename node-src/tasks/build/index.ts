@@ -5,27 +5,27 @@ import path from 'path';
 import semver from 'semver';
 import tmp from 'tmp-promise';
 
-import { sanitizeStackTrace } from '../lib/analytics/sanitization';
-import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../lib/e2e';
-import { isE2EBuild } from '../lib/e2eUtils';
-import { emailHash } from '../lib/emailHash';
-import { getPackageManagerRunCommand } from '../lib/getPackageManager';
-import { openLogFileStream } from '../lib/logFile';
-import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { runCommand } from '../lib/shell/shell';
-import { createTask, transitionTo } from '../lib/tasks';
-import { Context, Task } from '../types';
-import { endActivity, startActivity } from '../ui/components/activity';
-import { buildFailed } from '../ui/messages/errors/buildFailed';
-import e2eBuildFailed from '../ui/messages/errors/e2eBuildFailed';
-import missingDependency from '../ui/messages/errors/missingDependency';
-import { failed, initial, pending, skipped, success } from '../ui/tasks/build';
+import { sanitizeStackTrace } from '../../lib/analytics/sanitization';
+import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../../lib/e2e';
+import { isE2EBuild } from '../../lib/e2eUtils';
+import { emailHash } from '../../lib/emailHash';
+import { getPackageManagerRunCommand } from '../../lib/getPackageManager';
+import { openLogFileStream } from '../../lib/logFile';
+import { exitCodes, setExitCode } from '../../lib/setExitCode';
+import { runCommand } from '../../lib/shell/shell';
+import { createTask, transitionTo } from '../../lib/tasks';
+import { Context, Task } from '../../types';
+import { endActivity, startActivity } from '../../ui/components/activity';
+import { buildFailed } from '../../ui/messages/errors/buildFailed';
+import e2eBuildFailed from '../../ui/messages/errors/e2eBuildFailed';
+import missingDependency from '../../ui/messages/errors/missingDependency';
+import { failed, initial, pending, skipped, success } from '../../ui/tasks/build';
 import {
   pendingManifest,
   skipped as reactNativeSkipped,
   success as reactNativeSuccess,
-} from '../ui/tasks/buildReactNative';
-import { buildArtifacts, generateManifestStep } from './buildReactNative';
+} from '../../ui/tasks/buildReactNative';
+import { buildArtifacts, generateManifestStep } from '../buildReactNative';
 
 const isStatsFlagSupported = (ctx: Context) => {
   return ctx.storybook && ctx.storybook.version
