@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { exitCodes } from '../lib/setExitCode';
-import TestLogger from '../lib/testLogger';
-import { publishBuild, verifyBuild } from './verify';
+import { exitCodes } from '../../lib/setExitCode';
+import TestLogger from '../../lib/testLogger';
+import { publishBuild, verifyBuild } from './index';
 
 const environment = {
   CHROMATIC_POLL_INTERVAL: 10,
