@@ -2,13 +2,11 @@ import { AnalyticsEvent } from '@cli/analytics/events';
 import * as Sentry from '@sentry/node';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
-import semver from 'semver';
 
 import { sanitizeStackTrace } from '../../lib/analytics/sanitization';
-import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../../lib/e2e';
+import { buildBinName as e2eBuildBinName } from '../../lib/e2e';
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { emailHash } from '../../lib/emailHash';
-import { getPackageManagerRunCommand } from '../../lib/getPackageManager';
 import { openLogFileStream } from '../../lib/logFile';
 import { exitCodes, setExitCode } from '../../lib/setExitCode';
 import { runCommand } from '../../lib/shell/shell';
@@ -26,58 +24,8 @@ import {
 } from '../../ui/tasks/buildReactNative';
 import { buildArtifacts, generateManifestStep } from '../buildReactNative';
 import { resolveE2EFramework } from './resolveE2EFramework';
+import { setBuildCommand } from './setBuildCommand';
 import { setSourceDirectory } from './setSourceDirectory';
-
-const isStatsFlagSupported = (ctx: Context) => {
-  return ctx.storybook && ctx.storybook.version
-    ? semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '6.2.0')
-    : true;
-};
-
-// Storybook 8.0.0 deprecated --webpack-stats-json in favor of --stats-json.
-// However, the angular builder did not support it until 8.5.0
-const getStatsFlag = (ctx: Context) => {
-  return ctx?.storybook?.version &&
-    semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.5.0')
-    ? '--stats-json'
-    : '--webpack-stats-json';
-};
-
-export const setBuildCommand = async (ctx: Context) => {
-  const buildCommand = ctx.flags?.buildCommand || ctx.options.buildCommand;
-  const buildCommandOptions: string[] = [];
-
-  if (!buildCommand) {
-    buildCommandOptions.push(`--output-dir=${ctx.sourceDir}`);
-  }
-
-  if (ctx.git.changedFiles) {
-    if (isStatsFlagSupported(ctx)) {
-      buildCommandOptions.push(`${getStatsFlag(ctx)}=${ctx.sourceDir}`);
-    } else {
-      ctx.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
-    }
-  }
-
-  if (buildCommand) {
-    ctx.buildCommand = `${buildCommand} ${buildCommandOptions.join(' ')}`;
-    return;
-  }
-
-  if (isE2EBuild(ctx.options)) {
-    ctx.buildCommand = await getE2EBuildCommand(ctx, resolveE2EFramework(ctx), buildCommandOptions);
-    return;
-  }
-
-  if (!ctx.options.buildScriptName) {
-    throw new Error('Unable to determine build script');
-  }
-
-  ctx.buildCommand = await getPackageManagerRunCommand([
-    ctx.options.buildScriptName,
-    ...buildCommandOptions,
-  ]);
-};
 
 function isE2EBuildCommandNotFoundError(errorMessage: string) {
   // It's hard to know if this is the case as each package manager has a different type of
