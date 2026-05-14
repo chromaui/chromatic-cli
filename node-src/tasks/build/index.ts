@@ -3,7 +3,6 @@ import * as Sentry from '@sentry/node';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import semver from 'semver';
-import tmp from 'tmp-promise';
 
 import { sanitizeStackTrace } from '../../lib/analytics/sanitization';
 import { buildBinName as e2eBuildBinName, getE2EBuildCommand } from '../../lib/e2e';
@@ -26,6 +25,7 @@ import {
   success as reactNativeSuccess,
 } from '../../ui/tasks/buildReactNative';
 import { buildArtifacts, generateManifestStep } from '../buildReactNative';
+import { setSourceDirectory } from './setSourceDirectory';
 
 const isStatsFlagSupported = (ctx: Context) => {
   return ctx.storybook && ctx.storybook.version
@@ -40,22 +40,6 @@ const getStatsFlag = (ctx: Context) => {
     semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.5.0')
     ? '--stats-json'
     : '--webpack-stats-json';
-};
-
-export const setSourceDirectory = async (ctx: Context) => {
-  // do not overwrite if it is already set, for instance in
-  // the skip condition of the build task on React Native
-  if (ctx.sourceDir) return;
-
-  if (ctx.options.outputDir) {
-    ctx.sourceDir = ctx.options.outputDir;
-  } else if (ctx.storybook && ctx.storybook.version && semver.lt(ctx.storybook.version, '5.0.0')) {
-    // Storybook v4 doesn't support absolute paths like tmp.dir would yield
-    ctx.sourceDir = 'storybook-static';
-  } else {
-    const temporaryDirectory = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-` });
-    ctx.sourceDir = temporaryDirectory.path;
-  }
 };
 
 export const setBuildCommand = async (ctx: Context) => {
