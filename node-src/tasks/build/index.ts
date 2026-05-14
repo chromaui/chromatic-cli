@@ -10,7 +10,7 @@ import {
   skipped as reactNativeSkipped,
   success as reactNativeSuccess,
 } from '../../ui/tasks/buildReactNative';
-import { buildArtifacts, generateManifestStep } from '../buildReactNative';
+import { buildArtifacts, generateManifestStep } from './buildReactNative';
 import { buildStorybook } from './buildStorybook';
 import { setBuildCommand } from './setBuildCommand';
 import { setSourceDirectory } from './setSourceDirectory';

@@ -2,20 +2,20 @@ import { createReadStream, mkdirSync, type WriteStream } from 'fs';
 import path from 'path';
 import { createInterface } from 'readline';
 
-import { openLogFileStream } from '../lib/logFile';
-import { buildAndroid, buildIos, execWithBuildEnvironment } from '../lib/react-native/build';
-import { readExpoConfig } from '../lib/react-native/expoConfig';
-import { generateManifest } from '../lib/react-native/generateManifest';
-import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { transitionTo } from '../lib/tasks';
-import { Context, Task } from '../types';
-import { reactNativeBuildFailed } from '../ui/messages/errors/buildFailed';
+import { openLogFileStream } from '../../lib/logFile';
+import { buildAndroid, buildIos, execWithBuildEnvironment } from '../../lib/react-native/build';
+import { readExpoConfig } from '../../lib/react-native/expoConfig';
+import { generateManifest } from '../../lib/react-native/generateManifest';
+import { exitCodes, setExitCode } from '../../lib/setExitCode';
+import { transitionTo } from '../../lib/tasks';
+import { Context, Task } from '../../types';
+import { reactNativeBuildFailed } from '../../ui/messages/errors/buildFailed';
 import {
   failed,
   failedNoValidPlatforms,
   pendingAndroid,
   pendingIOS,
-} from '../ui/tasks/buildReactNative';
+} from '../../ui/tasks/buildReactNative';
 
 const MAX_REACT_NATIVE_LOG_LINES = 20;
 

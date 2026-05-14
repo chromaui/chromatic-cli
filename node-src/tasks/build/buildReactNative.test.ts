@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildAndroid as buildAndroidDefault,
   buildIos as buildIosDefault,
-} from '../lib/react-native/build';
-import { readExpoConfig as readExpoConfigDefault } from '../lib/react-native/expoConfig';
-import { generateManifest } from '../lib/react-native/generateManifest';
-import TestLogger from '../lib/testLogger';
+} from '../../lib/react-native/build';
+import { readExpoConfig as readExpoConfigDefault } from '../../lib/react-native/expoConfig';
+import { generateManifest } from '../../lib/react-native/generateManifest';
+import TestLogger from '../../lib/testLogger';
 import { buildArtifacts, generateManifestStep } from './buildReactNative';
 
 vi.mock('execa', async (importOriginal) => {
@@ -42,18 +42,18 @@ vi.mock('fs', async (importOriginal) => {
     createReadStream: vi.fn(() => Readable.from([mockLogLines])),
   };
 });
-vi.mock('../lib/react-native/build', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../lib/react-native/build')>();
+vi.mock('../../lib/react-native/build', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/react-native/build')>();
   return {
     ...actual,
     buildAndroid: vi.fn(() => Promise.resolve(1)),
     buildIos: vi.fn(() => Promise.resolve(1)),
   };
 });
-vi.mock('../lib/react-native/expoConfig', () => ({
+vi.mock('../../lib/react-native/expoConfig', () => ({
   readExpoConfig: vi.fn(() => Promise.resolve({ platforms: ['ios', 'android'], name: 'MyApp' })),
 }));
-vi.mock('../lib/react-native/generateManifest', () => ({
+vi.mock('../../lib/react-native/generateManifest', () => ({
   generateManifest: vi.fn(() => Promise.resolve()),
 }));
 
