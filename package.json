@@ -100,6 +100,7 @@
     "@types/minimatch": "5.1.2"
   },
   "dependencies": {
+    "@clack/prompts": "^1.4.0",
     "semver": "^7.3.5"
   },
   "devDependencies": {
