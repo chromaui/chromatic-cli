@@ -1,83 +1,22 @@
-import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { createTask, transitionTo } from '../lib/tasks';
-import { delay } from '../lib/utilities';
-import { Context, Task } from '../types';
-import { endActivity, startActivity } from '../ui/components/activity';
-import brokenStorybook from '../ui/messages/errors/brokenStorybook';
-import listingStories from '../ui/messages/info/listingStories';
-import storybookPublished from '../ui/messages/info/storybookPublished';
-import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
-import buildLimited from '../ui/messages/warnings/buildLimited';
-import paymentRequired from '../ui/messages/warnings/paymentRequired';
-import snapshotQuotaReached from '../ui/messages/warnings/snapshotQuotaReached';
-import turboSnapUnavailable from '../ui/messages/warnings/turboSnapUnavailable';
+import { exitCodes, setExitCode } from '../../lib/setExitCode';
+import { transitionTo } from '../../lib/tasks';
+import { delay } from '../../lib/utilities';
+import { Context, Task } from '../../types';
+import brokenStorybook from '../../ui/messages/errors/brokenStorybook';
+import listingStories from '../../ui/messages/info/listingStories';
+import storybookPublished from '../../ui/messages/info/storybookPublished';
+import turboSnapEnabled from '../../ui/messages/info/turboSnapEnabled';
+import buildLimited from '../../ui/messages/warnings/buildLimited';
+import paymentRequired from '../../ui/messages/warnings/paymentRequired';
+import snapshotQuotaReached from '../../ui/messages/warnings/snapshotQuotaReached';
+import turboSnapUnavailable from '../../ui/messages/warnings/turboSnapUnavailable';
 import {
   awaitingUpgrades,
-  dryRun,
-  initial,
-  pending,
   publishFailed,
   runOnlyFiles,
   runOnlyNames,
   success,
-} from '../ui/tasks/verify';
-
-const PublishBuildMutation = `
-  mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
-    publishBuild(id: $id, input: $input) {
-      # no need for legacy:false on PublishedBuild.status
-      status
-      storybookUrl
-    }
-  }
-`;
-
-interface PublishBuildMutationResult {
-  publishBuild: {
-    status: string;
-    storybookUrl: string;
-  };
-}
-
-export const publishBuild = async (ctx: Context) => {
-  const { turboSnap } = ctx;
-  const { id, reportToken } = ctx.announcedBuild;
-  const { replacementBuildIds } = ctx.git;
-  const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
-
-  let turboSnapBailReason;
-  let turboSnapStatus = 'UNUSED';
-  if (turboSnap) {
-    turboSnapBailReason = turboSnap.bailReason;
-    turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
-  }
-
-  const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
-    PublishBuildMutation,
-    {
-      id,
-      input: {
-        ...(onlyStoryFiles && { onlyStoryFiles }),
-        ...(onlyStoryNames && { onlyStoryNames: [onlyStoryNames].flat() }),
-        ...(replacementBuildIds && { replacementBuildIds }),
-        // GraphQL does not support union input types (yet), so we send an object
-        // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnapBailReason && { turboSnapBailReason }),
-        turboSnapStatus,
-      },
-    },
-    { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }
-  );
-
-  ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
-  ctx.storybookUrl = publishedBuild.storybookUrl;
-
-  // Queueing the extract may have failed
-  if (publishedBuild.status === 'FAILED') {
-    setExitCode(ctx, exitCodes.BUILD_FAILED, false);
-    throw new Error(publishFailed(ctx).output);
-  }
-};
+} from '../../ui/tasks/verify';
 
 const StartedBuildQuery = `
   query StartedBuildQuery($number: Int!) {
@@ -279,23 +218,3 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     ctx.skipSnapshots = true;
   }
 };
-
-/**
- * Sets up the Listr task for verifying the uploaded Storybook.
- *
- * @param ctx The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(ctx: Context) {
-  return createTask({
-    name: 'verify',
-    title: initial(ctx).title,
-    skip: (ctx: Context) => {
-      if (ctx.skip) return true;
-      if (ctx.options.dryRun) return dryRun(ctx).output;
-      return false;
-    },
-    steps: [transitionTo(pending), startActivity, publishBuild, verifyBuild, endActivity],
-  });
-}
