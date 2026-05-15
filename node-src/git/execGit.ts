@@ -32,13 +32,16 @@ export async function execGitCommand(
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
-    const { all } = await runCommand(command, { ...defaultOptions, ...options });
+    const { all, stdout } = await runCommand(command, { ...defaultOptions, ...options });
+    // If the caller sets `all: false`, then `stdout` will be the output. Otherwise, `all` will
+    // contain interleaved stdout and stderr.
+    const output = all ?? stdout;
 
-    if (all === undefined) {
+    if (output === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}'`);
     }
 
-    const result = all.toString();
+    const result = output.toString();
     log.debug(`execGitCommand result: '${result}'`);
     return result;
   } catch (error) {
