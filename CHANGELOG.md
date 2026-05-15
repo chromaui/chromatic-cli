@@ -1,3 +1,18 @@
+# v16.10.1 (Fri May 15 2026)
+
+#### 🐛 Bug Fix
+
+- Fix `getUncommittedHash` in Windows environments [#1332](https://github.com/chromaui/chromatic-cli/pull/1332) ([@codykaup](https://github.com/codykaup))
+- Increase flaky test timeout [#1326](https://github.com/chromaui/chromatic-cli/pull/1326) ([@codykaup](https://github.com/codykaup))
+- Refactor `initialize` task to use typed inputs and outputs [#1323](https://github.com/chromaui/chromatic-cli/pull/1323) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v16.10.0 (Mon May 11 2026)
 
 #### 🚀 Enhancement
