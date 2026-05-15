@@ -118,15 +118,37 @@ export async function getUncommittedHash(deps: Pick<Deps, 'log'>) {
   const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
   const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
   const listUntrackedFiles = 'git ls-files --others --exclude-standard';
-  const listUncommittedFiles = [listStagedFiles, listUnstagedFiles, listUntrackedFiles].join(';');
 
-  const uncommittedHashWithPadding = await execGitCommand(
-    deps,
-    // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
-    // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
-    // stdin to avoid the limit on command line arguments.
-    `(${listUncommittedFiles}) | git hash-object --stdin-paths | git hash-object --stdin`
-  );
+  // Use `all: false` so only stdout is captured and we can ignore stderr output that doesn't impact
+  // the result.
+  const stdoutOnly = { all: false };
+  const [stagedOutput, unstagedOutput, untrackedOutput] = await Promise.all([
+    execGitCommand(deps, listStagedFiles, stdoutOnly),
+    execGitCommand(deps, listUnstagedFiles, stdoutOnly),
+    execGitCommand(deps, listUntrackedFiles, stdoutOnly),
+  ]);
+
+  // Combine file listings into one path per line, stripping empty lines (including trailing
+  // newlines from each output).
+  const files = [stagedOutput, unstagedOutput, untrackedOutput]
+    .flatMap((output) => output?.split(newline) ?? [])
+    .filter(Boolean)
+    .join('\n');
+
+  if (!files) {
+    return '';
+  }
+
+  // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
+  // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
+  // stdin to avoid the limit on command line arguments.
+  const fileHashes = await execGitCommand(deps, 'git hash-object --stdin-paths', {
+    input: files,
+  });
+
+  const uncommittedHashWithPadding = await execGitCommand(deps, 'git hash-object --stdin', {
+    input: fileHashes,
+  });
   const uncommittedHash = uncommittedHashWithPadding?.trim();
 
   // In case there are no uncommited changes (empty list), we always get this same hash.
