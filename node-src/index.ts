@@ -16,6 +16,7 @@ import {
   getUserEmail,
 } from './git/git';
 import checkForUpdates from './lib/checkForUpdates';
+import checkNodeVersion from './lib/checkNodeVersion';
 import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
@@ -114,6 +115,8 @@ export async function run({
     env: environment = getEnvironment(),
     log = createLogger(config.flags, config.extraOptions),
   } = extraOptions || {};
+
+  checkNodeVersion(log, config.pkg.engines?.node);
 
   // We don't normalize because if the `version` field isn't a proper semver string, the process
   // silently exits.
