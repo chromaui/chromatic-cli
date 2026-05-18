@@ -48,12 +48,6 @@ jobs:
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
-  smoke-test-node-20:
-    uses: ./.github/workflows/smoke-test-node20.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
   smoke-test-node-22:
     uses: ./.github/workflows/smoke-test-node22.yml
     needs: lint-and-test
