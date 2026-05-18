@@ -247,6 +247,9 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "auto": {
     "baseBranch": "main",
     "canary": {
