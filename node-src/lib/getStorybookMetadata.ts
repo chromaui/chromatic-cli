@@ -10,6 +10,7 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
+import { posix } from './posix';
 import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
 
@@ -186,6 +187,30 @@ const findReferences = async (mainConfig, v7) => {
   return references ? { refs: references } : {};
 };
 
+export const findStaticDirectories = (
+  mainConfig: any,
+  v7: boolean,
+  configDirectory = '.storybook'
+): { staticDir?: string[] } => {
+  if (!mainConfig || !v7) return {};
+
+  const staticDirectories = mainConfig.getSafeFieldValue(['staticDirs']);
+  if (!Array.isArray(staticDirectories) || staticDirectories.length === 0) return {};
+
+  // staticDirs entries can be plain strings or { from, to } DirectoryMapping objects
+  const directories = staticDirectories
+    .map((entry: string | { from: string }) => (typeof entry === 'string' ? entry : entry?.from))
+    .filter(Boolean) as string[];
+
+  // Convert directories to posix for cross-platform consistency
+  const safeConfigDirectory = posix(configDirectory);
+  const resolvedDirectories = directories.map((directory) =>
+    path.posix.isAbsolute(directory) ? directory : path.posix.join(safeConfigDirectory, directory)
+  );
+
+  return resolvedDirectories.length > 0 ? { staticDir: resolvedDirectories } : {};
+};
+
 export const findStorybookConfigFile = async (
   storybookConfigDirectory: string | undefined,
   pattern: RegExp
@@ -196,8 +221,10 @@ export const findStorybookConfigFile = async (
   return configFile && path.join(configDirectory, configFile);
 };
 
+// TODO: refactor this function
 export const getStorybookMetadata = async (
   deps: StorybookInfoDeps
+  // eslint-disable-next-line complexity
 ): Promise<Partial<Storybook>> => {
   const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
 
@@ -234,16 +261,20 @@ export const getStorybookMetadata = async (
     findStorybookVersion(deps),
     findBuilder(mainConfig, v7),
     findReferences(mainConfig, v7),
+    findStaticDirectories(mainConfig, v7, configDirectory),
   ]);
 
   deps.log.debug(info);
-  let metadata = {};
+  let metadata: Record<string, any> = {};
   for (const sbItem of info) {
     if (sbItem.status === 'fulfilled') {
-      metadata = {
-        ...metadata,
-        ...(sbItem?.value as any),
-      };
+      const { staticDir: staticDirectories, ...rest } = sbItem?.value as any;
+      metadata = { ...metadata, ...rest };
+
+      // Merge static directories from multiple sources and remove duplicates
+      if (staticDirectories?.length) {
+        metadata.staticDir = [...new Set([...(metadata.staticDir ?? []), ...staticDirectories])];
+      }
     }
   }
   return metadata;
