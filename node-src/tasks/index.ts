@@ -1,7 +1,6 @@
 import Listr from 'listr';
 
 import { Context } from '../types';
-import auth from './auth';
 import build from './build';
 import gitInfo from './gitInfo';
 import initialize from './initialize';
@@ -18,7 +17,6 @@ import verify from './verify';
 export const runShare = [build, prepare, uploadShare];
 
 export const runUploadBuild = [
-  auth,
   gitInfo,
   storybookInfo,
   initialize,
