@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+/* eslint-disable max-lines, max-statements */
 import chalk from 'chalk';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -656,6 +656,62 @@ describe('getDependentStoryFiles', () => {
       expect.stringContaining(chalk`Found a static file change in {bold path/to/statics/image.png}`)
     );
   });
+
+  // A static asset nested under the Storybook config dir (e.g. an MSW
+  // auto-generated `mockServiceWorker.js`) must be categorized by its
+  // staticDir membership, not by its `.storybook/` prefix.
+  it('bails on changed static file nested inside Storybook config dir', async () => {
+    const changedFiles = ['src/foo.stories.js', '.storybook/static/foo.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ staticDir: ['.storybook/static'] });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStaticFiles: ['.storybook/static/foo.js'],
+    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(chalk`Found a static file change in {bold .storybook/static/foo.js}`)
+    );
+  });
+
+  it('falls back to Storybook config bail for files inside .storybook when no staticDirs configured', async () => {
+    const changedFiles = ['src/foo.stories.js', '.storybook/static/foo.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['.storybook/static/foo.js'],
+    });
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        chalk`Found a Storybook config change in {bold .storybook/static/foo.js}`
+      )
+    );
+  });
+
   it('ignores untraced files and dependencies with a glob pattern match', async () => {
     const changedFiles = ['src/stories/Button.jsx', 'src/stories/Page.jsx'];
     const modules = [

@@ -265,12 +265,16 @@ export async function getDependentStoryFiles(
   function shouldBail(moduleName: string) {
     if (!ctx.turboSnap) ctx.turboSnap = {};
 
-    if (isStorybookFile(moduleName)) {
-      ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
-      return true;
-    }
+    // Check staticDirs before the Storybook config dir so static assets
+    // nested under `.storybook/` (e.g. an MSW-generated mockServiceWorker.js
+    // inside a configured staticDir) aren't mis-categorized as config changes.
     if (isStaticFile(moduleName)) {
       ctx.turboSnap.bailReason = { changedStaticFiles: files(moduleName) };
+      return true;
+    }
+
+    if (isStorybookFile(moduleName)) {
+      ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
       return true;
     }
     return false;
