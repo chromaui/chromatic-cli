@@ -312,6 +312,7 @@ export interface Context {
     description: string;
     bugs: { url: string; email: string };
     docs: string;
+    engines?: { node?: string };
   };
   sessionId: string;
   packageJson: Record<string, any>;

@@ -13,7 +13,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
-          node-version: 22
+          node-version: "22.22.3"
       - run: yarn
       - name: Push to action-next
         run: yarn run release-next

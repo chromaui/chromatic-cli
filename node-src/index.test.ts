@@ -904,3 +904,29 @@ describe('parsing package.json', () => {
     expect(result.code).toBeDefined();
   });
 });
+
+describe('Node version warning', () => {
+  it('logs a warning when the current Node version is unsupported', async () => {
+    vi.spyOn(process, 'versions', 'get').mockReturnValue({
+      ...process.versions,
+      node: '18.0.0',
+    });
+    const log = new TestLogger();
+
+    await run({ flags: { dryRun: true }, options: { log } });
+
+    expect(log.warnings.some((w) => w.includes('Unsupported Node.js version'))).toBe(true);
+  });
+
+  it('does not log a warning when the current Node version is supported', async () => {
+    vi.spyOn(process, 'versions', 'get').mockReturnValue({
+      ...process.versions,
+      node: '22.0.0',
+    });
+    const log = new TestLogger();
+
+    await run({ flags: { dryRun: true }, options: { log } });
+
+    expect(log.warnings.some((w) => w.includes('Unsupported Node.js version'))).toBe(false);
+  });
+});
