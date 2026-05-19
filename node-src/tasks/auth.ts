@@ -123,6 +123,17 @@ export const applyAuthOutput = (ctx: Context, output: AuthOutput) => {
   ctx.isReactNativeApp = output.isReactNativeApp;
 };
 
+export const extractInput = (ctx: Context): AuthInput => {
+  const { projectId, projectToken, userToken } = ctx.options;
+  if (projectId && userToken) {
+    return { mode: 'cli', projectId, userToken, projectToken };
+  }
+  if (!projectToken) {
+    throw new Error(missingProjectToken());
+  }
+  return { mode: 'app', projectToken };
+};
+
 /**
  * Sets up the Listr task for authenticating with Chromatic.
  *
@@ -135,17 +146,8 @@ export default function main(_: Context) {
     name: 'auth',
     title: initial.title,
     transitions: { pending: authenticating, success: authenticated },
-    extractInput: (ctx): AuthInput => {
-      const { projectId, projectToken, userToken } = ctx.options;
-      if (projectId && userToken) {
-        return { mode: 'cli', projectId, userToken, projectToken };
-      }
-      if (!projectToken) {
-        throw new Error(missingProjectToken());
-      }
-      return { mode: 'app', projectToken };
-    },
-    applyOutput: applyAuthOutput,
+    extractInput,
     run: runAuth,
+    applyOutput: applyAuthOutput,
   });
 }
