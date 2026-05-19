@@ -1,3 +1,20 @@
+# v17.0.0 (Tue May 19 2026)
+
+#### 💥 Breaking Change
+
+- Drop support for Node 20 and define supported Node engines [#1334](https://github.com/chromaui/chromatic-cli/pull/1334) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Promotes `prepare`, `build`, and `verify` tasks to modules [#1331](https://github.com/chromaui/chromatic-cli/pull/1331) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v16.10.1 (Fri May 15 2026)
 
 #### 🐛 Bug Fix
