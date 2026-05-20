@@ -494,6 +494,18 @@ export interface TargetInfo {
   formFields: Record<string, string>;
 }
 
+export type TurboSnapBailDetail =
+  | {
+      reason: 'lockfileSizeExceeded';
+      lockfileKind?: string;
+      lockfileSizeBytes: number;
+      sentryEventId?: string;
+    }
+  | { reason: 'snykParseFailed'; lockfileKind?: string; sentryEventId?: string }
+  | { reason: 'baselineCheckoutFailed'; sentryEventId?: string }
+  | { reason: 'noNodeModulesInStats' }
+  | { reason: 'unknown'; sentryEventId?: string };
+
 export interface TurboSnap {
   unavailable?: boolean;
   rootPath?: string;
@@ -517,6 +529,7 @@ export interface TurboSnap {
     noAncestorBuild?: true;
     rebuild?: true;
   };
+  bailDetail?: TurboSnapBailDetail;
 }
 
 export { type Configuration } from './lib/getConfiguration';
