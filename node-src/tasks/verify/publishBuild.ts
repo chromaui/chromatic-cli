@@ -26,9 +26,11 @@ export const publishBuild = async (ctx: Context) => {
   const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
 
   let turboSnapBailReason;
+  let turboSnapBailDetail;
   let turboSnapStatus = 'UNUSED';
   if (turboSnap) {
     turboSnapBailReason = turboSnap.bailReason;
+    turboSnapBailDetail = turboSnap.bailDetail;
     turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
   }
 
@@ -43,6 +45,7 @@ export const publishBuild = async (ctx: Context) => {
         // GraphQL does not support union input types (yet), so we send an object
         // @see https://github.com/graphql/graphql-spec/issues/488
         ...(turboSnapBailReason && { turboSnapBailReason }),
+        ...(turboSnapBailDetail && { turboSnapBailDetail }),
         turboSnapStatus,
       },
     },
