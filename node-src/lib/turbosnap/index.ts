@@ -30,16 +30,12 @@ export const traceChangedFiles = async (ctx: Context) => {
 
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   let changedDependencyNames: void | string[] = [];
+  let pendingError: unknown;
   let pendingPatch: ChangedPackageFilesPatch | undefined;
   if (packageMetadataChanges?.length) {
     changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
-      const patch = classifyBailDetail(err);
-      const key = bailDetailKey(patch);
-      const sentryEventId = Sentry.captureException(err, {
-        tags: { bail_path: 'findChangedDependencies', bail_detail: key },
-        fingerprint: [key], // group all errors with the same bail primary key
-      });
-      pendingPatch = { ...patch, sentryEventId };
+      pendingError = err;
+      pendingPatch = classifyBailDetail(err);
 
       const { name, message, stack, code } = err;
       ctx.log.debug({ name, message, stack, code });
@@ -58,7 +54,21 @@ export const traceChangedFiles = async (ctx: Context) => {
 
       const changedPackageFiles = await findChangedPackageFiles(ctx, packageMetadataChanges);
       if (changedPackageFiles.length > 0) {
-        ctx.turboSnap.bailReason = { changedPackageFiles, ...pendingPatch };
+        // Capture original error from findChangedDependencies at the actual bail site. There could
+        // be times when findChangedDependencies fails but our fallback works. In those cases, we
+        // don't want to capture an error since we were able to recover and didn't bail.
+        if (pendingPatch && pendingError) {
+          const key = bailDetailKey(pendingPatch);
+          pendingPatch.sentryEventId = Sentry.captureException(pendingError, {
+            tags: { bail_path: 'findChangedDependencies', bail_detail: key },
+            fingerprint: [key], // group all errors with the same bail primary key
+          });
+        }
+
+        ctx.turboSnap.bailReason = {
+          changedPackageFiles,
+          ...pendingPatch,
+        };
         ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
         return;
       }

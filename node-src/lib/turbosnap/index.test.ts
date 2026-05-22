@@ -225,7 +225,7 @@ describe('traceChangedFiles', () => {
     expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
   });
 
-  it('does not set bailReason when findChangedDependencies fails but findChangedPackageFiles is empty', async () => {
+  it('does not set bailReason or capture to Sentry when findChangedDependencies fails but findChangedPackageFiles is empty', async () => {
     const error = new LockFileSizeExceededError('/tmp/x', 999);
     findChangedDependencies.mockRejectedValue(error);
     findChangedPackageFiles.mockResolvedValue([]);
@@ -245,11 +245,7 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx);
 
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(captureException).toHaveBeenCalledTimes(1);
-    expect(captureException).toHaveBeenCalledWith(error, {
-      tags: { bail_path: 'findChangedDependencies', bail_detail: 'lockfileSizeExceeded' },
-      fingerprint: ['lockfileSizeExceeded'],
-    });
+    expect(captureException).not.toHaveBeenCalled();
   });
 
   it('throws if stats file is not found', async () => {
