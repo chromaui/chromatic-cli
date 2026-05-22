@@ -6,6 +6,12 @@ export type ChangedPackageFilesPatch = Partial<
   Extract<TurboSnapBailReason, { changedPackageFiles: string[] }>
 >;
 
+export type BailDetailKey =
+  | 'lockfileSizeExceeded'
+  | 'lockfileParseFailed'
+  | 'baselineCheckoutFailed'
+  | 'unknown';
+
 /**
  * Detect which supported lockfile kind a given path corresponds to.
  *
@@ -36,7 +42,7 @@ export function classifyBailDetail(_err: unknown): ChangedPackageFilesPatch {
  *
  * @returns A short string key identifying the patch's primary key.
  */
-export function bailDetailKey(patch: ChangedPackageFilesPatch): string {
+export function bailDetailKey(patch: ChangedPackageFilesPatch): BailDetailKey {
   if (patch.lockfileSizeExceeded) return 'lockfileSizeExceeded';
   if (patch.lockfileParseFailed) return 'lockfileParseFailed';
   if (patch.baselineCheckoutFailed) return 'baselineCheckoutFailed';
