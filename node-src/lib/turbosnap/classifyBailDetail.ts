@@ -1,5 +1,5 @@
 import { TurboSnapBailReason } from '../../types';
-import { LockFileSizeExceededError } from './errors';
+import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 // Extract all bail detail fields related to changedPackageFiles
@@ -37,6 +37,12 @@ export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
       lockfileSizeExceeded: true,
       lockfileKind: detectLockfileKind(err.lockfilePath),
       lockfileSizeBytes: err.lockfileSizeBytes,
+    };
+  }
+  if (err instanceof LockFileParseFailedError) {
+    return {
+      lockfileParseFailed: true,
+      lockfileKind: detectLockfileKind(err.lockfilePath),
     };
   }
   return {};

@@ -3,7 +3,7 @@ import path from 'path';
 import { inspect } from 'snyk-nodejs-plugin';
 
 import { Context } from '../../types';
-import { LockFileSizeExceededError } from './errors';
+import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 
 export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 
@@ -33,13 +33,10 @@ export const getDependencies = async (
   ensureLockFileSize(ctx, absoluteLockfilePath);
 
   try {
-    const headGraph = await inspect(path.dirname(absoluteManifestPath), absoluteLockfilePath, {
-      dev: true, // Include dev dependencies
-      strictOutOfSync: false, // Don't throw an error if the lock file is out of sync
-    });
+    const headGraph = await inspectLockfile(absoluteManifestPath, absoluteLockfilePath);
 
     if (headGraph.scannedProjects.length !== 1 || !headGraph.scannedProjects[0].depGraph) {
-      throw new Error('Failed to parse dependency graph');
+      throw new LockFileParseFailedError(absoluteLockfilePath);
     }
 
     return headGraph.scannedProjects[0].depGraph;
@@ -48,6 +45,17 @@ export const getDependencies = async (
     throw err;
   }
 };
+
+async function inspectLockfile(absoluteManifestPath: string, absoluteLockfilePath: string) {
+  try {
+    return await inspect(path.dirname(absoluteManifestPath), absoluteLockfilePath, {
+      dev: true, // Include dev dependencies
+      strictOutOfSync: false, // Don't throw an error if the lock file is out of sync
+    });
+  } catch (error) {
+    throw new LockFileParseFailedError(absoluteLockfilePath, { cause: error });
+  }
+}
 
 function ensureLockFileSize(ctx: Context, fullPath: string) {
   const maxLockFileSize =

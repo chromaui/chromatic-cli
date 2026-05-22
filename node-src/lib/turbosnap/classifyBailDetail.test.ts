@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { bailDetailKey, classifyBailDetail, detectLockfileKind } from './classifyBailDetail';
-import { LockFileSizeExceededError } from './errors';
+import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 
 describe('classifyBailDetail', () => {
   it('returns {} for a generic Error', () => {
@@ -30,6 +30,16 @@ describe('classifyBailDetail', () => {
       lockfileSizeBytes: 12_000_000,
     });
   });
+
+  it('classifies LockFileParseFailedError with kind', () => {
+    const err = new LockFileParseFailedError('/tmp/checkout-abc/yarn.lock', {
+      cause: new Error('no lock file parse for you'),
+    });
+    expect(classifyBailDetail(err)).toEqual({
+      lockfileParseFailed: true,
+      lockfileKind: 'yarn.lock',
+    });
+  });
 });
 
 describe('bailDetailKey', () => {
@@ -39,6 +49,10 @@ describe('bailDetailKey', () => {
 
   it('returns "lockfileSizeExceeded" when the flag is set', () => {
     expect(bailDetailKey({ lockfileSizeExceeded: true })).toBe('lockfileSizeExceeded');
+  });
+
+  it('returns "lockfileParseFailed" when the flag is set', () => {
+    expect(bailDetailKey({ lockfileParseFailed: true })).toBe('lockfileParseFailed');
   });
 });
 
