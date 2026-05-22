@@ -1,16 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../../lib/testLogger';
+import { Deps, FileInfo } from '../../types';
 import { calculateFileHashes } from './calculateFileHashes';
 
 vi.mock('../../lib/getFileHashes', () => ({
   getFileHashes: (files: string[]) =>
-    Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
+    Promise.resolve(Object.fromEntries(files.map((f) => [f, `hash-${f}`]))),
 }));
 
-const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
-const http = { fetch: vi.fn() };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -18,30 +17,34 @@ afterEach(() => {
 });
 
 describe('calculateFileHashes', () => {
-  it('sets hashes on context.fileInfo', async () => {
-    const fileInfo = {
+  it('returns hashes', async () => {
+    const fileInfo: FileInfo = {
+      statsPath: '',
       lengths: [
-        { knownAs: 'iframe.html', contentLength: 42 },
-        { knownAs: 'index.html', contentLength: 42 },
+        {
+          knownAs: 'iframe.html',
+          contentLength: 42,
+          pathname: '',
+        },
+        {
+          knownAs: 'index.html',
+          contentLength: 42,
+          pathname: '',
+        },
       ],
       paths: ['iframe.html', 'index.html'],
       total: 84,
     };
-    const ctx = {
-      env: environment,
+    const deps = {
+      env: {} as Deps['env'],
       log,
-      http,
-      sourceDir: '/static/',
-      options: { fileHashing: true },
-      fileInfo,
-      announcedBuild: { id: '1' },
-    } as any;
+    };
 
-    await calculateFileHashes(ctx, {} as any);
+    const hashes = await calculateFileHashes(deps, { fileInfo, sourceDir: '/static/' });
 
-    expect(ctx.fileInfo.hashes).toMatchObject({
-      'iframe.html': 'hash',
-      'index.html': 'hash',
+    expect(hashes).toMatchObject({
+      'iframe.html': 'hash-iframe.html',
+      'index.html': 'hash-index.html',
     });
   });
 });

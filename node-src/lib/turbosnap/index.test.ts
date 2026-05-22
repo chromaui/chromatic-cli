@@ -52,11 +52,10 @@ describe('traceChangedFiles', () => {
       http,
       options: {},
       sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },
       turboSnap: {},
     } as any;
-    const onlyStoryFiles = await traceChangedFiles(ctx);
+    const onlyStoryFiles = await traceChangedFiles(ctx, '/static/preview-stats.json');
 
     expect(onlyStoryFiles).toStrictEqual(deps);
     expect(findChangedDependencies).not.toHaveBeenCalled();
@@ -74,11 +73,10 @@ describe('traceChangedFiles', () => {
       http,
       options: {},
       sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(ctx, '/static/preview-stats.json');
 
     expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
     expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
@@ -96,11 +94,10 @@ describe('traceChangedFiles', () => {
       http,
       options: {},
       sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(ctx, '/static/preview-stats.json');
 
     expect(ctx.git.changedDependencyNames).toEqual(['moment']);
   });
@@ -120,11 +117,10 @@ describe('traceChangedFiles', () => {
       http,
       options: { storybookBaseDir: '/wrong' },
       sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js'] },
       turboSnap: {},
     } as any;
-    await expect(traceChangedFiles(ctx)).rejects.toThrow();
+    await expect(traceChangedFiles(ctx, '/static/preview-stats.json')).rejects.toThrow();
     expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
@@ -141,11 +137,10 @@ describe('traceChangedFiles', () => {
       http,
       options: {},
       sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
-    const onlyStoryFiles = await traceChangedFiles(ctx);
+    const onlyStoryFiles = await traceChangedFiles(ctx, '/static/preview-stats.json');
 
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(onlyStoryFiles).toStrictEqual(deps);
@@ -164,7 +159,7 @@ describe('traceChangedFiles', () => {
       turboSnap: {},
     } as any;
 
-    await expect(traceChangedFiles(ctx)).rejects.toThrow();
+    await expect(traceChangedFiles(ctx, undefined as any)).rejects.toThrow();
     expect(ctx.turboSnap.bailReason).toEqual({ missingStatsFile: true });
   });
 });

@@ -196,6 +196,17 @@ export interface ProjectMetadata {
   numberOfAppFiles?: number;
 }
 
+export interface FileInfo {
+  paths: string[];
+  hashes?: Record<FilePath, string>;
+  statsPath: string;
+  lengths: {
+    knownAs: string;
+    pathname: string;
+    contentLength: number;
+  }[];
+  total: number;
+}
 export interface BaselineBuild {
   id: string;
   number: number;
@@ -428,17 +439,7 @@ export interface Context {
   buildCommand?: string;
   buildLogFile?: string;
   reactNativeBuildLogFile?: string;
-  fileInfo?: {
-    paths: string[];
-    hashes?: Record<FilePath, string>;
-    statsPath: string;
-    lengths: {
-      knownAs: string;
-      pathname: string;
-      contentLength: number;
-    }[];
-    total: number;
-  };
+  fileInfo?: FileInfo;
   share?: {
     shareId: string;
     shareUrl: string;

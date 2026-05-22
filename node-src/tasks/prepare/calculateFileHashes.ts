@@ -1,34 +1,34 @@
-import { getFileHashes } from '../../lib/getFileHashes';
-import { transitionTo } from '../../lib/tasks';
-import { Context, Task } from '../../types';
-import { hashing, invalid } from '../../ui/tasks/prepare';
+import { getFileHashes } from '@cli/getFileHashes';
+
+import type { Deps, FileInfo } from '../../types';
+
+type CalculateFileHashesDeps = Pick<Deps, 'log' | 'env'>;
+
+export interface CalculateFileHashesInput {
+  fileInfo: FileInfo;
+  sourceDir: string;
+}
 
 /**
  * Calculates file hashes for all files to be uploaded.
  * File hashes are used for deduplication and integrity checking during upload.
  * Skips calculation if file hashing is disabled or the task is being skipped.
  *
- * @param ctx - The CLI context containing file info and options
- * @param task - The current Listr task for UI updates
+ * @param deps - The CLI dependencies containing logging and environment access
+ * @param input - The input containing file information for hashing
+ *
+ * @returns A mapping of file paths to their calculated hashes.
  */
-export async function calculateFileHashes(ctx: Context, task: Task) {
-  if (ctx.skip || !ctx.options.fileHashing) return;
-  transitionTo(hashing)(ctx, task);
-
-  try {
-    if (!ctx.fileInfo) {
-      throw new Error(invalid(ctx).output);
-    }
-
-    const start = Date.now();
-    ctx.fileInfo.hashes = await getFileHashes(
-      ctx.fileInfo.paths,
-      ctx.sourceDir,
-      ctx.env.CHROMATIC_HASH_CONCURRENCY
-    );
-    ctx.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
-  } catch (err) {
-    ctx.log.warn('Failed to calculate file hashes');
-    ctx.log.debug(err);
-  }
+export async function calculateFileHashes(
+  deps: CalculateFileHashesDeps,
+  input: CalculateFileHashesInput
+): Promise<Record<string, string>> {
+  const start = Date.now();
+  const hashes = await getFileHashes(
+    input.fileInfo.paths,
+    input.sourceDir,
+    deps.env.CHROMATIC_HASH_CONCURRENCY
+  );
+  deps.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
+  return hashes;
 }
