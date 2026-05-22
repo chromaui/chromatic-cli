@@ -1,4 +1,6 @@
-/** Thrown when a lockfile exceeds the configured maximum size and parsing is skipped. */
+/**
+ * Error thrown when a lockfile exceeds the configured maximum size and parsing is skipped.
+ */
 export class LockFileSizeExceededError extends Error {
   constructor(
     public lockfilePath: string,
@@ -9,7 +11,9 @@ export class LockFileSizeExceededError extends Error {
   }
 }
 
-/** Thrown when the lockfile parser fails to produce a dependency graph. */
+/**
+ * Error thrown when the lockfile parser fails to produce a dependency graph.
+ */
 export class LockFileParseFailedError extends Error {
   constructor(
     public lockfilePath: string,
