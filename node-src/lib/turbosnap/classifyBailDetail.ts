@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { TurboSnapBailReason } from '../../types';
 import {
   BaselineCheckoutFailedError,
@@ -20,12 +22,13 @@ export type BailDetailKey =
 /**
  * Detect which supported lockfile kind a given path corresponds to.
  *
- * @param path The filesystem path to inspect.
+ * @param filePath The filesystem path to inspect.
  *
  * @returns The matching lockfile filename, or `undefined` if none match.
  */
-export function detectLockfileKind(path: string): string | undefined {
-  return SUPPORTED_LOCK_FILES.find((lockfile) => path.endsWith(lockfile));
+export function detectLockfileKind(filePath: string): string | undefined {
+  const basename = path.basename(filePath);
+  return SUPPORTED_LOCK_FILES.find((lockfile) => basename === lockfile);
 }
 
 /**

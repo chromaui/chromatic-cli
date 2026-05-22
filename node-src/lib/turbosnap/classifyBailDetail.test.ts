@@ -89,4 +89,9 @@ describe('detectLockfileKind', () => {
     expect(detectLockfileKind('/tmp/checkout-abc/package.json')).toBeUndefined();
     expect(detectLockfileKind('')).toBeUndefined();
   });
+
+  it('does not match a path whose basename only happens to end with a lockfile name', () => {
+    expect(detectLockfileKind('/tmp/checkout-abc/my.yarn.lock')).toBeUndefined();
+    expect(detectLockfileKind('/tmp/checkout-abc/old-package-lock.json')).toBeUndefined();
+  });
 });
