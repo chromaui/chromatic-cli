@@ -1001,6 +1001,30 @@ describe('getDependentStoryFiles', () => {
       nodeModulesMissingInStats: true,
     });
   });
+
+  it('does not set nodeModulesMissingInStats when there are no changed dependencies', async () => {
+    const changedFiles = ['package.json'];
+    const changedDependencies: string[] = [];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const rawContext = getContext();
+    const ctx = {
+      ...rawContext,
+      git: { ...rawContext.git, changedFiles: ['package.json'] },
+    };
+    await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles, changedDependencies);
+    expect(ctx.turboSnap.bailReason?.nodeModulesMissingInStats).toBeUndefined();
+  });
 });
 
 describe('normalizePath', () => {
