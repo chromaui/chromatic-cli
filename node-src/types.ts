@@ -513,7 +513,7 @@ export type TurboSnapBailReason =
       lockfileParseFailed?: boolean;
       lockfileSizeBytes?: number;
       lockfileSizeExceeded?: boolean;
-      noNodeModulesInStats?: boolean;
+      nodeModulesMissingInStats?: boolean;
       sentryEventId?: string;
     })
   // All remaining bail reasons
