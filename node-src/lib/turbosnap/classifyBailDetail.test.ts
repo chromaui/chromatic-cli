@@ -26,13 +26,14 @@ describe('classifyBailDetail', () => {
     });
   });
 
-  it('classifies LockFileSizeExceededError with undefined lockfileKind for an unrecognized path', () => {
+  it('classifies LockFileSizeExceededError without lockfileKind for an unrecognized path', () => {
     const err = new LockFileSizeExceededError('/tmp/weird-name', 12_000_000);
-    expect(classifyBailDetail(err)).toEqual({
+    const patch = classifyBailDetail(err);
+    expect(patch).toEqual({
       lockfileSizeExceeded: true,
-      lockfileKind: undefined,
       lockfileSizeBytes: 12_000_000,
     });
+    expect(patch).not.toHaveProperty('lockfileKind');
   });
 
   it('classifies LockFileParseFailedError with kind', () => {

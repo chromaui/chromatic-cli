@@ -37,16 +37,18 @@ export function detectLockfileKind(path: string): string | undefined {
  */
 export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
   if (err instanceof LockFileSizeExceededError) {
+    const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
       lockfileSizeExceeded: true,
-      lockfileKind: detectLockfileKind(err.lockfilePath),
+      ...(lockfileKind && { lockfileKind }),
       lockfileSizeBytes: err.lockfileSizeBytes,
     };
   }
   if (err instanceof LockFileParseFailedError) {
+    const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
       lockfileParseFailed: true,
-      lockfileKind: detectLockfileKind(err.lockfilePath),
+      ...(lockfileKind && { lockfileKind }),
     };
   }
   if (err instanceof BaselineCheckoutFailedError) {
