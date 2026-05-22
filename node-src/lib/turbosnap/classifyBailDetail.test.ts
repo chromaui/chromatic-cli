@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { bailDetailKey, classifyBailDetail, detectLockfileKind } from './classifyBailDetail';
+import { LockFileSizeExceededError } from './errors';
 
 describe('classifyBailDetail', () => {
   it('returns {} for a generic Error', () => {
@@ -11,11 +12,33 @@ describe('classifyBailDetail', () => {
     expect(classifyBailDetail('string')).toEqual({});
     expect(classifyBailDetail(undefined)).toEqual({});
   });
+
+  it('classifies LockFileSizeExceededError with kind + size', () => {
+    const err = new LockFileSizeExceededError('/tmp/checkout-abc/pnpm-lock.yaml', 12_000_000);
+    expect(classifyBailDetail(err)).toEqual({
+      lockfileSizeExceeded: true,
+      lockfileKind: 'pnpm-lock.yaml',
+      lockfileSizeBytes: 12_000_000,
+    });
+  });
+
+  it('classifies LockFileSizeExceededError with undefined lockfileKind for an unrecognized path', () => {
+    const err = new LockFileSizeExceededError('/tmp/weird-name', 12_000_000);
+    expect(classifyBailDetail(err)).toEqual({
+      lockfileSizeExceeded: true,
+      lockfileKind: undefined,
+      lockfileSizeBytes: 12_000_000,
+    });
+  });
 });
 
 describe('bailDetailKey', () => {
   it('returns "unknown" for an empty patch', () => {
     expect(bailDetailKey({})).toBe('unknown');
+  });
+
+  it('returns "lockfileSizeExceeded" when the flag is set', () => {
+    expect(bailDetailKey({ lockfileSizeExceeded: true })).toBe('lockfileSizeExceeded');
   });
 });
 

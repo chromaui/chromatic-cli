@@ -1,4 +1,5 @@
 import { TurboSnapBailReason } from '../../types';
+import { LockFileSizeExceededError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 // Extract all bail detail fields related to changedPackageFiles
@@ -26,11 +27,18 @@ export function detectLockfileKind(path: string): string | undefined {
 /**
  * Map an unknown thrown error into a partial `TurboSnapBailReason` patch.
  *
- * @param _err The thrown value to classify.
+ * @param err The thrown value to classify.
  *
  * @returns A partial patch object to merge into the bail reason.
  */
-export function classifyBailDetail(_err: unknown): ChangedPackageFilesPatch {
+export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
+  if (err instanceof LockFileSizeExceededError) {
+    return {
+      lockfileSizeExceeded: true,
+      lockfileKind: detectLockfileKind(err.lockfilePath),
+      lockfileSizeBytes: err.lockfileSizeBytes,
+    };
+  }
   return {};
 }
 

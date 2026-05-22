@@ -3,6 +3,7 @@ import path from 'path';
 import { inspect } from 'snyk-nodejs-plugin';
 
 import { Context } from '../../types';
+import { LockFileSizeExceededError } from './errors';
 
 export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 
@@ -55,6 +56,6 @@ function ensureLockFileSize(ctx: Context, fullPath: string) {
   const stats = statSync(fullPath);
   if (stats.size > maxLockFileSize) {
     ctx.log.warn({ fullPath }, 'Lock file too large to parse, skipping');
-    throw new Error('Lock file too large to parse');
+    throw new LockFileSizeExceededError(fullPath, stats.size);
   }
 }

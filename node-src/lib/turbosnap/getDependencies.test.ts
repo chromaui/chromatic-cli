@@ -8,6 +8,7 @@ import { describe, expect, it, Mock, vi } from 'vitest';
 import packageJson from '../../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../../git/git';
 import TestLogger from '../testLogger';
+import { LockFileSizeExceededError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
@@ -121,7 +122,7 @@ describe('getDependencies', () => {
         manifestPath: 'package.json',
         lockfilePath: 'yarn.lock',
       })
-    ).rejects.toThrowError();
+    ).rejects.toBeInstanceOf(LockFileSizeExceededError);
   });
 
   it('should use MAX_LOCK_FILE_SIZE environment variable, if set', async () => {
