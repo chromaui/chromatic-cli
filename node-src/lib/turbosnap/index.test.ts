@@ -1,15 +1,30 @@
+import * as Sentry from '@sentry/node';
 import { access } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { exitCodes } from '../setExitCode';
 import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
+import {
+  BaselineCheckoutFailedError,
+  LockFileParseFailedError,
+  LockFileSizeExceededError,
+} from './errors';
 import { findChangedDependencies as findChangedDependenciesDep } from './findChangedDependencies';
 import { findChangedPackageFiles as findChangedPackageFilesDep } from './findChangedPackageFiles';
 import { getDependentStoryFiles as getDependentStoryFilesDep } from './getDependentStoryFiles';
 
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(() => 'sentry-event-id'),
+}));
 vi.mock('fs');
-vi.mock('./findChangedDependencies');
+vi.mock('./findChangedDependencies', async (importOriginal) => {
+  const originalModule = await importOriginal<typeof import('./findChangedDependencies')>();
+  return {
+    ...originalModule,
+    findChangedDependencies: vi.fn(),
+  };
+});
 vi.mock('./findChangedPackageFiles');
 vi.mock('./getDependentStoryFiles');
 vi.mock('../../tasks/readStatsFile', () => ({
@@ -28,6 +43,7 @@ const getDependentStoryFiles = vi.mocked(getDependentStoryFilesDep);
 const findChangedPackageFiles = vi.mocked(findChangedPackageFilesDep);
 const findChangedDependencies = vi.mocked(findChangedDependenciesDep);
 const accessMock = vi.mocked(access);
+const captureException = vi.mocked(Sentry.captureException);
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
@@ -63,27 +79,84 @@ describe('traceChangedFiles', () => {
     expect(findChangedPackageFiles).not.toHaveBeenCalled();
   });
 
-  it('bails on package.json changes if it fails to retrieve lockfile changes (fallback scenario)', async () => {
-    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
-    findChangedPackageFiles.mockResolvedValue(['./package.json']);
+  const findChangedDependenciesFailureCases = [
+    {
+      name: 'lockfileSizeExceeded',
+      error: new LockFileSizeExceededError('/tmp/checkout-abc/pnpm-lock.yaml', 12_000_000),
+      expectedBailReason: {
+        changedPackageFiles: ['./package.json'],
+        lockfileSizeExceeded: true,
+        lockfileKind: 'pnpm-lock.yaml',
+        lockfileSizeBytes: 12_000_000,
+        sentryEventId: 'sentry-event-id',
+      },
+      expectedKey: 'lockfileSizeExceeded',
+    },
+    {
+      name: 'lockfileParseFailed',
+      error: new LockFileParseFailedError('/tmp/checkout-abc/yarn.lock', {
+        cause: new Error('inner'),
+      }),
+      expectedBailReason: {
+        changedPackageFiles: ['./package.json'],
+        lockfileParseFailed: true,
+        lockfileKind: 'yarn.lock',
+        sentryEventId: 'sentry-event-id',
+      },
+      expectedKey: 'lockfileParseFailed',
+    },
+    {
+      name: 'baselineCheckoutFailed',
+      error: new BaselineCheckoutFailedError('abc:package.json'),
+      expectedBailReason: {
+        changedPackageFiles: ['./package.json'],
+        baselineCheckoutFailed: true,
+        sentryEventId: 'sentry-event-id',
+      },
+      expectedKey: 'baselineCheckoutFailed',
+    },
+    {
+      name: 'unknown',
+      error: new Error('something else'),
+      expectedBailReason: {
+        changedPackageFiles: ['./package.json'],
+        sentryEventId: 'sentry-event-id',
+      },
+      expectedKey: 'unknown',
+    },
+  ];
 
-    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx);
+  for (const {
+    name,
+    error,
+    expectedBailReason,
+    expectedKey,
+  } of findChangedDependenciesFailureCases) {
+    it(`bails on package.json changes and tags bailReason as ${name}`, async () => {
+      findChangedDependencies.mockRejectedValue(error);
+      findChangedPackageFiles.mockResolvedValue(['./package.json']);
 
-    expect(ctx.turboSnap.bailReason).toEqual({ changedPackageFiles: ['./package.json'] });
-    expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
-    expect(getDependentStoryFiles).not.toHaveBeenCalled();
-  });
+      const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+      const ctx = {
+        env: environment,
+        log,
+        http,
+        options: {},
+        sourceDir: '/static/',
+        fileInfo: { statsPath: '/static/preview-stats.json' },
+        git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+        turboSnap: {},
+      } as any;
+      await traceChangedFiles(ctx);
+
+      expect(ctx.turboSnap.bailReason).toEqual(expectedBailReason);
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(error, {
+        tags: { bail_path: 'findChangedDependencies', bail_detail: expectedKey },
+        fingerprint: [expectedKey],
+      });
+    });
+  }
 
   it('stores dependency changes', async () => {
     findChangedDependencies.mockResolvedValue(['moment']);
@@ -150,6 +223,33 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(onlyStoryFiles).toStrictEqual(deps);
     expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
+  });
+
+  it('does not set bailReason when findChangedDependencies fails but findChangedPackageFiles is empty', async () => {
+    const error = new LockFileSizeExceededError('/tmp/x', 999);
+    findChangedDependencies.mockRejectedValue(error);
+    findChangedPackageFiles.mockResolvedValue([]);
+    getDependentStoryFiles.mockResolvedValue({});
+
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+    await traceChangedFiles(ctx);
+
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(captureException).toHaveBeenCalledTimes(1);
+    expect(captureException).toHaveBeenCalledWith(error, {
+      tags: { bail_path: 'findChangedDependencies', bail_detail: 'lockfileSizeExceeded' },
+      fingerprint: ['lockfileSizeExceeded'],
+    });
   });
 
   it('throws if stats file is not found', async () => {

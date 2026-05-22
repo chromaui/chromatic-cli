@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
@@ -5,6 +6,7 @@ import { Context } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
+import { bailDetailKey, ChangedPackageFilesPatch, classifyBailDetail } from './classifyBailDetail';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
@@ -28,8 +30,17 @@ export const traceChangedFiles = async (ctx: Context) => {
 
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   let changedDependencyNames: void | string[] = [];
+  let pendingPatch: ChangedPackageFilesPatch | undefined;
   if (packageMetadataChanges?.length) {
     changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
+      const patch = classifyBailDetail(err);
+      const key = bailDetailKey(patch);
+      const sentryEventId = Sentry.captureException(err, {
+        tags: { bail_path: 'findChangedDependencies', bail_detail: key },
+        fingerprint: [key], // group all errors with the same bail primary key
+      });
+      pendingPatch = { ...patch, sentryEventId };
+
       const { name, message, stack, code } = err;
       ctx.log.debug({ name, message, stack, code });
     });
@@ -47,7 +58,7 @@ export const traceChangedFiles = async (ctx: Context) => {
 
       const changedPackageFiles = await findChangedPackageFiles(ctx, packageMetadataChanges);
       if (changedPackageFiles.length > 0) {
-        ctx.turboSnap.bailReason = { changedPackageFiles };
+        ctx.turboSnap.bailReason = { changedPackageFiles, ...pendingPatch };
         ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
         return;
       }
