@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { bailDetailKey, classifyBailDetail, detectLockfileKind } from './classifyBailDetail';
-import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
+import {
+  BaselineCheckoutFailedError,
+  LockFileParseFailedError,
+  LockFileSizeExceededError,
+} from './errors';
 
 describe('classifyBailDetail', () => {
   it('returns {} for a generic Error', () => {
@@ -40,6 +44,13 @@ describe('classifyBailDetail', () => {
       lockfileKind: 'yarn.lock',
     });
   });
+
+  it('classifies BaselineCheckoutFailedError as { baselineCheckoutFailed: true }', () => {
+    const err = new BaselineCheckoutFailedError('abc123:package.json', {
+      cause: new Error('git show failed'),
+    });
+    expect(classifyBailDetail(err)).toEqual({ baselineCheckoutFailed: true });
+  });
 });
 
 describe('bailDetailKey', () => {
@@ -53,6 +64,10 @@ describe('bailDetailKey', () => {
 
   it('returns "lockfileParseFailed" when the flag is set', () => {
     expect(bailDetailKey({ lockfileParseFailed: true })).toBe('lockfileParseFailed');
+  });
+
+  it('returns "baselineCheckoutFailed" when the flag is set', () => {
+    expect(bailDetailKey({ baselineCheckoutFailed: true })).toBe('baselineCheckoutFailed');
   });
 });
 

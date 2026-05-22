@@ -19,8 +19,20 @@ export class LockFileParseFailedError extends Error {
     public lockfilePath: string,
     options?: { cause?: unknown }
   ) {
-    super('Failed to parse dependency graph');
+    super('Failed to parse dependency graph', options);
     this.name = 'LockFileParseFailedError';
-    if (options?.cause !== undefined) this.cause = options.cause;
+  }
+}
+
+/**
+ * Error thrown when checking out a baseline file via `git show` fails.
+ */
+export class BaselineCheckoutFailedError extends Error {
+  constructor(
+    public pathspec: string,
+    options?: { cause?: unknown }
+  ) {
+    super(`Failed to check out baseline file: ${pathspec}`, options);
+    this.name = 'BaselineCheckoutFailedError';
   }
 }

@@ -1,5 +1,9 @@
 import { TurboSnapBailReason } from '../../types';
-import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
+import {
+  BaselineCheckoutFailedError,
+  LockFileParseFailedError,
+  LockFileSizeExceededError,
+} from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 // Extract all bail detail fields related to changedPackageFiles
@@ -44,6 +48,9 @@ export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
       lockfileParseFailed: true,
       lockfileKind: detectLockfileKind(err.lockfilePath),
     };
+  }
+  if (err instanceof BaselineCheckoutFailedError) {
+    return { baselineCheckoutFailed: true };
   }
   return {};
 }
