@@ -61,7 +61,9 @@ export const traceChangedFiles = async (ctx: Context) => {
           const key = bailDetailKey(pendingPatch);
           pendingPatch.sentryEventId = Sentry.captureException(pendingError, {
             tags: { bail_path: 'findChangedDependencies', bail_detail: key },
-            fingerprint: [key], // group all errors with the same bail primary key
+            // group known bail reasons under one issue per key; let Sentry's default grouping
+            // handle unclassified errors so they don't all collapse into a single bucket
+            ...(key === 'unknown' ? {} : { fingerprint: [key] }),
           });
         }
 

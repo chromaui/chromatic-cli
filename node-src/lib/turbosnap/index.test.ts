@@ -91,6 +91,7 @@ describe('traceChangedFiles', () => {
         sentryEventId: 'sentry-event-id',
       },
       expectedKey: 'lockfileSizeExceeded',
+      expectFingerprint: true,
     },
     {
       name: 'lockfileParseFailed',
@@ -104,6 +105,7 @@ describe('traceChangedFiles', () => {
         sentryEventId: 'sentry-event-id',
       },
       expectedKey: 'lockfileParseFailed',
+      expectFingerprint: true,
     },
     {
       name: 'baselineCheckoutFailed',
@@ -114,6 +116,7 @@ describe('traceChangedFiles', () => {
         sentryEventId: 'sentry-event-id',
       },
       expectedKey: 'baselineCheckoutFailed',
+      expectFingerprint: true,
     },
     {
       name: 'unknown',
@@ -123,6 +126,7 @@ describe('traceChangedFiles', () => {
         sentryEventId: 'sentry-event-id',
       },
       expectedKey: 'unknown',
+      expectFingerprint: false,
     },
   ];
 
@@ -131,6 +135,7 @@ describe('traceChangedFiles', () => {
     error,
     expectedBailReason,
     expectedKey,
+    expectFingerprint,
   } of findChangedDependenciesFailureCases) {
     it(`bails on package.json changes and tags bailReason as ${name}`, async () => {
       findChangedDependencies.mockRejectedValue(error);
@@ -153,7 +158,7 @@ describe('traceChangedFiles', () => {
       expect(captureException).toHaveBeenCalledTimes(1);
       expect(captureException).toHaveBeenCalledWith(error, {
         tags: { bail_path: 'findChangedDependencies', bail_detail: expectedKey },
-        fingerprint: [expectedKey],
+        ...(expectFingerprint && { fingerprint: [expectedKey] }),
       });
     });
   }
