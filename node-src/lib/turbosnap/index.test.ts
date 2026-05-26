@@ -125,7 +125,7 @@ describe('traceChangedFiles', () => {
         changedPackageFiles: ['./package.json'],
         sentryEventId: 'sentry-event-id',
       },
-      expectedKey: 'unknown',
+      expectedKey: undefined,
       expectFingerprint: false,
     },
   ];

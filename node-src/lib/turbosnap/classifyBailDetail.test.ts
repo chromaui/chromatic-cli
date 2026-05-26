@@ -55,8 +55,8 @@ describe('classifyBailDetail', () => {
 });
 
 describe('bailDetailKey', () => {
-  it('returns "unknown" for an empty patch', () => {
-    expect(bailDetailKey({})).toBe('unknown');
+  it('returns undefined for an empty patch', () => {
+    expect(bailDetailKey({})).toBeUndefined();
   });
 
   it('returns "lockfileSizeExceeded" when the flag is set', () => {

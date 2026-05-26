@@ -16,8 +16,7 @@ export type ChangedPackageFilesPatch = Partial<
 export type BailDetailKey =
   | 'lockfileSizeExceeded'
   | 'lockfileParseFailed'
-  | 'baselineCheckoutFailed'
-  | 'unknown';
+  | 'baselineCheckoutFailed';
 
 /**
  * Detect which supported lockfile kind a given path corresponds to.
@@ -62,15 +61,15 @@ export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
 
 /**
  * Derive a short, primary key describing bail reason. Used for grouping related bail reasons in
- * Sentry. Returns `'unknown'` when no specific flag is set.
+ * Sentry. Returns `undefined` when no specific flag is set.
  *
  * @param patch The bail-detail patch to inspect.
  *
  * @returns A short string key identifying the patch's primary key.
  */
-export function bailDetailKey(patch: ChangedPackageFilesPatch): BailDetailKey {
+export function bailDetailKey(patch: ChangedPackageFilesPatch): BailDetailKey | undefined {
   if (patch.lockfileSizeExceeded) return 'lockfileSizeExceeded';
   if (patch.lockfileParseFailed) return 'lockfileParseFailed';
   if (patch.baselineCheckoutFailed) return 'baselineCheckoutFailed';
-  return 'unknown';
+  return;
 }

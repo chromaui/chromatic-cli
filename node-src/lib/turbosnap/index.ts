@@ -63,7 +63,7 @@ export const traceChangedFiles = async (ctx: Context) => {
             tags: { bail_path: 'findChangedDependencies', bail_detail: key },
             // group known bail reasons under one issue per key; let Sentry's default grouping
             // handle unclassified errors so they don't all collapse into a single bucket
-            ...(key === 'unknown' ? {} : { fingerprint: [key] }),
+            ...(key && { fingerprint: [key] }),
           });
         }
 
