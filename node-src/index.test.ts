@@ -94,6 +94,10 @@ vi.mock('node-fetch', () => ({
         return { data: { cliToken: 'token' } };
       }
 
+      if (query?.match('CLIAppInfo')) {
+        return { data: { app: { features: { isReactNativeApp: false } } } };
+      }
+
       if (query?.match('AnnounceBuildMutation')) {
         announcedBuild = variables.input;
         return {

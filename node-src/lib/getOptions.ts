@@ -11,7 +11,6 @@ import invalidPatchBuild from '../ui/messages/errors/invalidPatchBuild';
 import invalidReportPath from '../ui/messages/errors/invalidReportPath';
 import invalidRepositorySlug from '../ui/messages/errors/invalidRepositorySlug';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
-import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import { isE2EBuild } from './e2eUtils';
@@ -357,9 +356,11 @@ export default function getOptions(
     }
   }
 
-  if (scripts && buildScriptName && scripts[buildScriptName]) {
-    return { ...options, buildScriptName };
-  }
-
-  throw new Error(missingBuildScriptName(buildScriptName));
+  // The missingBuildScriptName throw that previously lived here has moved to
+  // storybookInfo.ts, where it is gated on !isReactNativeApp. It could not remain
+  // here because isReactNativeApp is only known after auth runs — too late for
+  // option parsing. The finding/defaulting logic above stays here because
+  // getStorybookMetadata reads options.buildScriptName during the storybookInfo task
+  // and needs the value resolved before that task runs.
+  return { ...options, buildScriptName };
 }
