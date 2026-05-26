@@ -1,3 +1,18 @@
+# v17.0.1 (Tue May 26 2026)
+
+#### 🐛 Bug Fix
+
+- Delay check of `build-storybook` script validation [#1327](https://github.com/chromaui/chromatic-cli/pull/1327) ([@jmhobbs](https://github.com/jmhobbs))
+- Force `es-toolkit` version to avoid bundle error in Yarn classic smoke test [#1347](https://github.com/chromaui/chromatic-cli/pull/1347) ([@codykaup](https://github.com/codykaup))
+- Fix TurboSnap mis-categorizing static assets as Storybook config changes [#1340](https://github.com/chromaui/chromatic-cli/pull/1340) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v17.0.0 (Tue May 19 2026)
 
 #### 💥 Breaking Change
