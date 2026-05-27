@@ -1,3 +1,15 @@
+# v17.1.0 (Wed May 27 2026)
+
+#### 🚀 Enhancement
+
+- Add additional bail details to `changedPackageFiles` [#1344](https://github.com/chromaui/chromatic-cli/pull/1344) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.0.1 (Tue May 26 2026)
 
 #### 🐛 Bug Fix
