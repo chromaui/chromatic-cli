@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+import * as Sentry from '@sentry/node';
 import type Listr from 'listr';
 
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
@@ -19,6 +21,10 @@ import { getHasRouter } from '../lib/getHasRouter';
 import matchesBranch from '../lib/matchesBranch';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
+import {
+  classifyInvalidChangedFilesDetail,
+  invalidChangedFilesDetailKey,
+} from '../lib/turbosnap/classifyInvalidChangedFilesDetail';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
 import {
   BaselineBuild,
@@ -384,7 +390,13 @@ export async function gatherGitInfo(
         log.info(`Found ${git.changedFiles.length} changed files${list}`);
       }
     } catch (err) {
-      turboSnap.bailReason = { invalidChangedFiles: true };
+      const patch = classifyInvalidChangedFilesDetail(err);
+      const key = invalidChangedFilesDetailKey(patch);
+      patch.sentryEventId = Sentry.captureException(err, {
+        tags: { bail_path: 'gitInfo.invalidChangedFiles', bail_detail: key },
+        ...(key && { fingerprint: [key] }),
+      });
+      turboSnap.bailReason = { invalidChangedFiles: true, ...patch };
       git.changedFiles = undefined;
       git.replacementBuildIds = undefined;
       log.warn(invalidChangedFiles());
