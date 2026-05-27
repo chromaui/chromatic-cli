@@ -1,13 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { BaselineCheckoutFailedError } from '../lib/turbosnap/errors';
+import {
+  AncestorMissingError,
+  BaselineCheckoutFailedError,
+  GitCommandError,
+} from '../lib/turbosnap/errors';
 import * as execGit from './execGit';
 import {
   checkoutFile,
   commitExists,
   findFilesFromRepositoryRoot,
   getBranch,
+  getChangedFiles,
   getCommit,
   getCommittedFileCount,
   getNumberOfCommitters,
@@ -158,6 +163,33 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
+  });
+});
+
+describe('getChangedFiles', () => {
+  it('returns the parsed list of changed files on success', async () => {
+    execGitCommand.mockResolvedValue('a.ts\nb.ts\n');
+    expect(await getChangedFiles(ctx, 'abc123')).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('throws AncestorMissingError when execGitCommand rejects with "bad object"', async () => {
+    const cause = new Error('fatal: bad object abc123');
+    execGitCommand.mockRejectedValueOnce(cause);
+
+    const promise = getChangedFiles(ctx, 'abc123');
+
+    await expect(promise).rejects.toBeInstanceOf(AncestorMissingError);
+    await expect(promise).rejects.toMatchObject({ commit: 'abc123', cause });
+  });
+
+  it('throws GitCommandError for any other execGitCommand rejection', async () => {
+    const cause = new Error('fatal: git is broken');
+    execGitCommand.mockRejectedValueOnce(cause);
+
+    const promise = getChangedFiles(ctx, 'abc123');
+
+    await expect(promise).rejects.toBeInstanceOf(GitCommandError);
+    await expect(promise).rejects.toMatchObject({ cause });
   });
 });
 
