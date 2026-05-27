@@ -4,6 +4,7 @@ import pLimit from 'p-limit';
 import path from 'path';
 import { file as temporaryFile } from 'tmp-promise';
 
+import { BaselineCheckoutFailedError } from '../lib/turbosnap/errors';
 import { Deps } from '../types';
 import { execGitCommand, execGitCommandCountLines, execGitCommandOneLine } from './execGit';
 
@@ -380,7 +381,11 @@ export async function checkoutFile(
     });
 
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
-    await execGitCommand(deps, `git show ${pathspec} > ${targetFileName}`);
+    try {
+      await execGitCommand(deps, `git show ${pathspec} > ${targetFileName}`);
+    } catch (error) {
+      throw new BaselineCheckoutFailedError(pathspec, { cause: error });
+    }
 
     return targetFileName;
   });

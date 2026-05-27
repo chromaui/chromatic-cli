@@ -967,6 +967,64 @@ describe('getDependentStoryFiles', () => {
       './src/foo.stories.js': ['src/foo.stories.js'],
     });
   });
+
+  it('bails with nodeModulesMissingInStats when the stats file has no node_modules entries', async () => {
+    const changedFiles = ['package.json'];
+    const changedDependencies = ['some-pkg'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const rawContext = getContext();
+    const ctx = {
+      ...rawContext,
+      git: { ...rawContext.git, changedFiles: ['package.json'] },
+    };
+    const result = await getDependentStoryFiles(
+      ctx,
+      { modules },
+      statsPath,
+      changedFiles,
+      changedDependencies
+    );
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedPackageFiles: ['package.json'],
+      nodeModulesMissingInStats: true,
+    });
+  });
+
+  it('does not set nodeModulesMissingInStats when there are no changed dependencies', async () => {
+    const changedFiles = ['package.json'];
+    const changedDependencies: string[] = [];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+      },
+    ];
+    const rawContext = getContext();
+    const ctx = {
+      ...rawContext,
+      git: { ...rawContext.git, changedFiles: ['package.json'] },
+    };
+    await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles, changedDependencies);
+    expect(ctx.turboSnap.bailReason?.nodeModulesMissingInStats).toBeUndefined();
+  });
 });
 
 describe('normalizePath', () => {

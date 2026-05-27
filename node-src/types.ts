@@ -494,6 +494,31 @@ export interface TargetInfo {
   formFields: Record<string, string>;
 }
 
+interface TurboSnapBailReasonBase {
+  changedStorybookFiles?: string[];
+  changedStaticFiles?: string[];
+  changedExternalFiles?: string[];
+  invalidChangedFiles?: true;
+  missingStatsFile?: true;
+  noAncestorBuild?: true;
+  rebuild?: true;
+}
+
+export type TurboSnapBailReason =
+  // All additional fields allowed for the changedPackageFiles bail reason
+  | (TurboSnapBailReasonBase & {
+      changedPackageFiles: string[];
+      baselineCheckoutFailed?: boolean;
+      lockfileKind?: string;
+      lockfileParseFailed?: boolean;
+      lockfileSizeBytes?: number;
+      lockfileSizeExceeded?: boolean;
+      nodeModulesMissingInStats?: boolean;
+      sentryEventId?: string;
+    })
+  // All remaining bail reasons
+  | (TurboSnapBailReasonBase & { changedPackageFiles?: never });
+
 export interface TurboSnap {
   unavailable?: boolean;
   rootPath?: string;
@@ -507,16 +532,7 @@ export interface TurboSnap {
   changedDependencyNames?: Set<string>;
   changedManifestFiles?: Set<string>;
   affectedModuleIds?: Set<string | number>;
-  bailReason?: {
-    changedPackageFiles?: string[];
-    changedStorybookFiles?: string[];
-    changedStaticFiles?: string[];
-    changedExternalFiles?: string[];
-    invalidChangedFiles?: true;
-    missingStatsFile?: true;
-    noAncestorBuild?: true;
-    rebuild?: true;
-  };
+  bailReason?: TurboSnapBailReason;
 }
 
 export { type Configuration } from './lib/getConfiguration';

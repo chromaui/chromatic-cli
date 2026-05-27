@@ -8,6 +8,7 @@ import { describe, expect, it, Mock, vi } from 'vitest';
 import packageJson from '../../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../../git/git';
 import TestLogger from '../testLogger';
+import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
@@ -121,7 +122,7 @@ describe('getDependencies', () => {
         manifestPath: 'package.json',
         lockfilePath: 'yarn.lock',
       })
-    ).rejects.toThrowError();
+    ).rejects.toBeInstanceOf(LockFileSizeExceededError);
   });
 
   it('should use MAX_LOCK_FILE_SIZE environment variable, if set', async () => {
@@ -165,5 +166,19 @@ describe('getDependencies', () => {
         lockfilePath: 'yarn.lock',
       })
     ).rejects.toThrowError();
+  });
+
+  it('wraps inspect rejection in LockFileParseFailedError with cause', async () => {
+    const cause = new Error('inspect blew up');
+    inspect.mockRejectedValueOnce(cause);
+
+    const promise = getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
+      manifestPath: 'package.json',
+      lockfilePath: 'yarn.lock',
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(LockFileParseFailedError);
+    await expect(promise).rejects.toMatchObject({ cause });
   });
 });
