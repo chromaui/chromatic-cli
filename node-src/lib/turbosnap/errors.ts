@@ -1,3 +1,5 @@
+import { HTTPClientError } from '../../io/httpClient';
+
 /**
  * Error thrown when a lockfile exceeds the configured maximum size and parsing is skipped.
  */
@@ -35,4 +37,103 @@ export class BaselineCheckoutFailedError extends Error {
     super(`Failed to check out baseline file: ${pathspec}`, options);
     this.name = 'BaselineCheckoutFailedError';
   }
+}
+
+/**
+ * Error thrown when the baseline commit can't be resolved locally (e.g. `git diff` rejects with
+ * "bad object").
+ */
+export class AncestorMissingError extends Error {
+  constructor(
+    public commit: string,
+    options?: { cause?: unknown }
+  ) {
+    super(`Baseline commit not resolvable locally: ${commit}`, options);
+    this.name = 'AncestorMissingError';
+  }
+}
+
+/**
+ * Error thrown when the baseline build was a local build with uncommitted changes, so its state
+ * can't be reproduced.
+ */
+export class BaselineDirtyError extends Error {
+  constructor(
+    public commit: string,
+    options?: { cause?: unknown }
+  ) {
+    super(`Baseline build had uncommitted changes: ${commit}`, options);
+    this.name = 'BaselineDirtyError';
+  }
+}
+
+/**
+ * Error thrown when looking up a replacement ancestor build fails for a non-network reason.
+ */
+export class ReplacementFailedError extends Error {
+  constructor(options?: { cause?: unknown }) {
+    super('Replacement build lookup failed', options);
+    this.name = 'ReplacementFailedError';
+  }
+}
+
+/**
+ * Error thrown when a network/transport failure occurred during a remote call.
+ */
+export class NetworkError extends Error {
+  constructor(options?: { cause?: unknown }) {
+    super('Network error', options);
+    this.name = 'NetworkError';
+  }
+}
+
+/**
+ * Error thrown when a `git` subprocess fails for a reason other than a missing commit.
+ */
+export class GitCommandError extends Error {
+  constructor(
+    public command: string,
+    options?: { cause?: unknown }
+  ) {
+    super(`Git command failed: ${command}`, options);
+    this.name = 'GitCommandError';
+  }
+}
+
+const NETWORK_ERROR_CODES = new Set([
+  'ENOTFOUND',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EAI_AGAIN',
+]);
+
+/**
+ * Determine whether an unknown thrown value represents a transport-layer network failure.
+ * Recognizes `HTTPClientError`, `FetchError`-shaped errors, and Node-style errors carrying a
+ * known DNS/connection error code (`ENOTFOUND`, `ECONNREFUSED`, `ECONNRESET`, `ETIMEDOUT`,
+ * `EAI_AGAIN`) either directly or on `err.cause`.
+ *
+ * @param err The thrown value to inspect.
+ *
+ * @returns True if the value looks like a network/transport failure.
+ */
+export function isNetworkError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') {
+    return false;
+  }
+  if (err instanceof HTTPClientError) {
+    return true;
+  }
+  if ('name' in err && err.name === 'FetchError') {
+    return true;
+  }
+
+  const statusCode = readCode(err) ?? readCode('cause' in err ? err.cause : undefined);
+  return typeof statusCode === 'string' && NETWORK_ERROR_CODES.has(statusCode);
+}
+
+function readCode(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return undefined;
+  return 'code' in value ? value.code : undefined;
 }
