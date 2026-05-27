@@ -1,14 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { HTTPClientError } from '../io/httpClient';
 import TestLogger from '../lib/testLogger';
+import { NetworkError, ReplacementFailedError } from '../lib/turbosnap/errors';
 import {
   AncestorBuildsQueryResult,
   findAncestorBuildWithCommit,
 } from './findAncestorBuildWithCommit';
+import * as gitModule from './git';
 
 vi.mock('./git', () => ({
-  commitExists: (_, hash) => hash.match(/exists/),
+  commitExists: vi.fn((_, hash) => hash.match(/exists/)),
 }));
+
+const commitExists = vi.mocked(gitModule.commitExists);
 
 const ctx = { log: new TestLogger() };
 
@@ -96,5 +101,55 @@ describe('findAncestorBuildWithCommit', () => {
       await findAncestorBuildWithCommit({ ...ctx, client }, 1, { page: 2, limit: 3 })
     ).toBeUndefined();
     expect(client.runQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+const buildContext = () => {
+  const runQuery = vi.fn();
+  return {
+    client: { runQuery },
+    log: new TestLogger(),
+  } as any;
+};
+
+describe('findAncestorBuildWithCommit error wrapping', () => {
+  beforeEach(() => {
+    commitExists.mockResolvedValue(false);
+  });
+
+  it('throws NetworkError when runQuery rejects with HTTPClientError', async () => {
+    const ctx = buildContext();
+    const cause = new HTTPClientError({ url: 'x', status: 500, statusText: 'x' } as any);
+    ctx.client.runQuery.mockRejectedValueOnce(cause);
+
+    const promise = findAncestorBuildWithCommit(ctx, 7);
+
+    await expect(promise).rejects.toBeInstanceOf(NetworkError);
+    await expect(promise).rejects.toMatchObject({ cause });
+  });
+
+  it('throws NetworkError when runQuery rejects with a FetchError-shaped error', async () => {
+    const ctx = buildContext();
+    const cause = Object.assign(new Error('fetch failed'), {
+      name: 'FetchError',
+      code: 'ENOTFOUND',
+    });
+    ctx.client.runQuery.mockRejectedValueOnce(cause);
+
+    const promise = findAncestorBuildWithCommit(ctx, 7);
+
+    await expect(promise).rejects.toBeInstanceOf(NetworkError);
+    await expect(promise).rejects.toMatchObject({ cause });
+  });
+
+  it('throws ReplacementFailedError for any other rejection', async () => {
+    const ctx = buildContext();
+    const cause = { message: 'GraphQL error', extensions: { code: 'BAD_USER_INPUT' } };
+    ctx.client.runQuery.mockRejectedValueOnce(cause);
+
+    const promise = findAncestorBuildWithCommit(ctx, 7);
+
+    await expect(promise).rejects.toBeInstanceOf(ReplacementFailedError);
+    await expect(promise).rejects.toMatchObject({ cause });
   });
 });
