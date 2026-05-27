@@ -498,7 +498,6 @@ interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
-  invalidChangedFiles?: true;
   missingStatsFile?: true;
   noAncestorBuild?: true;
   rebuild?: true;
@@ -514,13 +513,28 @@ export type TurboSnapBailReason =
   // All additional fields allowed for the changedPackageFiles bail reason
   | (TurboSnapBailReasonBase & {
       changedPackageFiles: string[];
+      invalidChangedFiles?: never;
       bailSubreason?: TurboSnapBailSubreason;
       lockfileKind?: string;
       lockfileSizeBytes?: number;
       sentryEventId?: string;
     })
+  // All additional fields allowed for the invalidChangedFiles bail reason
+  | (TurboSnapBailReasonBase & {
+      changedPackageFiles?: never;
+      invalidChangedFiles: true;
+      ancestorMissing?: true;
+      baselineDirty?: true;
+      replacementFailed?: true;
+      networkError?: true;
+      gitCommandFailed?: true;
+      sentryEventId?: string;
+    })
   // All remaining bail reasons
-  | (TurboSnapBailReasonBase & { changedPackageFiles?: never });
+  | (TurboSnapBailReasonBase & {
+      changedPackageFiles?: never;
+      invalidChangedFiles?: never;
+    });
 
 export interface TurboSnap {
   unavailable?: boolean;
