@@ -1,3 +1,4 @@
+import { AncestorMissingError, BaselineDirtyError } from '../lib/turbosnap/errors';
 import { Deps } from '../types';
 import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 import { getChangedFiles } from './git';
@@ -15,8 +16,9 @@ export interface BuildWithCommitInfo {
  * and the current commit.
  *
  * If the historical build's commit doesn't exist (for instance if it has been rebased and force-
- * pushed away), find the nearest ancestor build that *does* have a valid commit, and return
- * the differences, along with the two builds (for tracking purposes).
+ * pushed away) or the historical build had uncommitted changes, find the nearest ancestor build
+ * that *does* have a valid commit, and return the differences along with the two builds (for
+ * tracking purposes).
  *
  * @param deps Dependencies (log, client).
  * @param build The build details for gathering changed files.
@@ -29,7 +31,7 @@ export async function getChangedFilesWithReplacement(
 ): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommitInfo }> {
   try {
     if (build.isLocalBuild && build.uncommittedHash) {
-      throw new Error('Local build had uncommitted changes');
+      throw new BaselineDirtyError(build.commit);
     }
 
     const changedFiles = (await getChangedFiles(deps, build.commit)) || [];
@@ -39,7 +41,7 @@ export async function getChangedFilesWithReplacement(
       `Got error fetching commit for #${build.number}(${build.commit}): ${err.message}`
     );
 
-    if (/(bad object|uncommitted changes)/.test(err.message)) {
+    if (err instanceof AncestorMissingError || err instanceof BaselineDirtyError) {
       const replacementBuild = await findAncestorBuildWithCommit(deps, build.number);
 
       if (replacementBuild) {
@@ -52,7 +54,6 @@ export async function getChangedFilesWithReplacement(
       deps.log.debug(`Couldn't find replacement for #${build.number}(${build.commit})`);
     }
 
-    // If we can't find a replacement or the error doesn't match, just throw
     throw err;
   }
 }
