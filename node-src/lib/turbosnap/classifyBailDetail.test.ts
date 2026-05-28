@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { bailDetailKey, classifyBailDetail, detectLockfileKind } from './classifyBailDetail';
+import { classifyBailDetail, detectLockfileKind } from './classifyBailDetail';
 import {
   BaselineCheckoutFailedError,
   LockFileParseFailedError,
@@ -20,7 +20,7 @@ describe('classifyBailDetail', () => {
   it('classifies LockFileSizeExceededError with kind + size', () => {
     const err = new LockFileSizeExceededError('/tmp/checkout-abc/pnpm-lock.yaml', 12_000_000);
     expect(classifyBailDetail(err)).toEqual({
-      lockfileSizeExceeded: true,
+      bailSubreason: 'lockfileSizeExceeded',
       lockfileKind: 'pnpm-lock.yaml',
       lockfileSizeBytes: 12_000_000,
     });
@@ -30,7 +30,7 @@ describe('classifyBailDetail', () => {
     const err = new LockFileSizeExceededError('/tmp/weird-name', 12_000_000);
     const patch = classifyBailDetail(err);
     expect(patch).toEqual({
-      lockfileSizeExceeded: true,
+      bailSubreason: 'lockfileSizeExceeded',
       lockfileSizeBytes: 12_000_000,
     });
     expect(patch).not.toHaveProperty('lockfileKind');
@@ -41,34 +41,16 @@ describe('classifyBailDetail', () => {
       cause: new Error('no lock file parse for you'),
     });
     expect(classifyBailDetail(err)).toEqual({
-      lockfileParseFailed: true,
+      bailSubreason: 'lockfileParseFailed',
       lockfileKind: 'yarn.lock',
     });
   });
 
-  it('classifies BaselineCheckoutFailedError as { baselineCheckoutFailed: true }', () => {
+  it('classifies BaselineCheckoutFailedError as { bailSubreason: "baselineCheckoutFailed" }', () => {
     const err = new BaselineCheckoutFailedError('abc123:package.json', {
       cause: new Error('git show failed'),
     });
-    expect(classifyBailDetail(err)).toEqual({ baselineCheckoutFailed: true });
-  });
-});
-
-describe('bailDetailKey', () => {
-  it('returns undefined for an empty patch', () => {
-    expect(bailDetailKey({})).toBeUndefined();
-  });
-
-  it('returns "lockfileSizeExceeded" when the flag is set', () => {
-    expect(bailDetailKey({ lockfileSizeExceeded: true })).toBe('lockfileSizeExceeded');
-  });
-
-  it('returns "lockfileParseFailed" when the flag is set', () => {
-    expect(bailDetailKey({ lockfileParseFailed: true })).toBe('lockfileParseFailed');
-  });
-
-  it('returns "baselineCheckoutFailed" when the flag is set', () => {
-    expect(bailDetailKey({ baselineCheckoutFailed: true })).toBe('baselineCheckoutFailed');
+    expect(classifyBailDetail(err)).toEqual({ bailSubreason: 'baselineCheckoutFailed' });
   });
 });
 

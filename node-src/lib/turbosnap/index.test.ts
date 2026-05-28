@@ -85,7 +85,7 @@ describe('traceChangedFiles', () => {
       error: new LockFileSizeExceededError('/tmp/checkout-abc/pnpm-lock.yaml', 12_000_000),
       expectedBailReason: {
         changedPackageFiles: ['./package.json'],
-        lockfileSizeExceeded: true,
+        bailSubreason: 'lockfileSizeExceeded',
         lockfileKind: 'pnpm-lock.yaml',
         lockfileSizeBytes: 12_000_000,
         sentryEventId: 'sentry-event-id',
@@ -100,7 +100,7 @@ describe('traceChangedFiles', () => {
       }),
       expectedBailReason: {
         changedPackageFiles: ['./package.json'],
-        lockfileParseFailed: true,
+        bailSubreason: 'lockfileParseFailed',
         lockfileKind: 'yarn.lock',
         sentryEventId: 'sentry-event-id',
       },
@@ -112,7 +112,7 @@ describe('traceChangedFiles', () => {
       error: new BaselineCheckoutFailedError('abc:package.json'),
       expectedBailReason: {
         changedPackageFiles: ['./package.json'],
-        baselineCheckoutFailed: true,
+        bailSubreason: 'baselineCheckoutFailed',
         sentryEventId: 'sentry-event-id',
       },
       expectedKey: 'baselineCheckoutFailed',

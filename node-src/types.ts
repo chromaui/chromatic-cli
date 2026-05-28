@@ -504,16 +504,19 @@ interface TurboSnapBailReasonBase {
   rebuild?: true;
 }
 
+export type TurboSnapBailSubreason =
+  | 'baselineCheckoutFailed'
+  | 'lockfileParseFailed'
+  | 'lockfileSizeExceeded'
+  | 'nodeModulesMissingInStats';
+
 export type TurboSnapBailReason =
   // All additional fields allowed for the changedPackageFiles bail reason
   | (TurboSnapBailReasonBase & {
       changedPackageFiles: string[];
-      baselineCheckoutFailed?: boolean;
+      bailSubreason?: TurboSnapBailSubreason;
       lockfileKind?: string;
-      lockfileParseFailed?: boolean;
       lockfileSizeBytes?: number;
-      lockfileSizeExceeded?: boolean;
-      nodeModulesMissingInStats?: boolean;
       sentryEventId?: string;
     })
   // All remaining bail reasons

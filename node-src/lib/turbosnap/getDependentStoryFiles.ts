@@ -259,7 +259,7 @@ export async function getDependentStoryFiles(
         ...(ctx.git.changedFiles?.filter((file) => isPackageManifestFile(file)) || []),
         ...changedPackageLockFiles,
       ],
-      nodeModulesMissingInStats: true,
+      bailSubreason: 'nodeModulesMissingInStats',
     };
   }
 
