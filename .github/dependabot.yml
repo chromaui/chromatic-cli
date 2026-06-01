@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      # Semver-related labels (`major`, `minor`, `patch`) are added automatically.
+      - "skip-release"
+    exclude-paths:
+      - "subdir/**"
+      - "node-src/__mocks__/**"
