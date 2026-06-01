@@ -28,7 +28,7 @@ type AdaptedTaskConfig<TInput, TOutput, TPartial = never> = ListrTaskExtras & {
   run: TaskFunction<TInput, TOutput, Deps, TPartial>;
 };
 
-const buildDeps = (ctx: Context): Deps => ({
+export const buildDeps = (ctx: Context): Deps => ({
   log: ctx.log,
   client: ctx.client,
   http: ctx.http,

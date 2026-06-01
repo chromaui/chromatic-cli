@@ -31,6 +31,9 @@ import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import { intro } from './renderer';
+import { renderAuth } from './renderer/auth';
+import { error as clackError } from './renderer/engine/clack/log';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -42,7 +45,6 @@ import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
-import intro from './ui/messages/info/intro';
 import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 
 // Make keys of `T` outside of `R` optional.
@@ -166,13 +168,10 @@ export async function run({
  * @returns A promise that resolves when all steps are completed.
  */
 export async function runAll(initialContext: InitialContext) {
-  initialContext.log.info('');
-  initialContext.log.info(intro(initialContext));
-  initialContext.log.info('');
+  intro(initialContext);
 
   const onError = (err: Error | Error[]) => {
-    initialContext.log.info('');
-    initialContext.log.error(fatalError(initialContext, [err].flat()));
+    clackError(fatalError(initialContext, [err].flat()));
     initialContext.extraOptions?.experimental_onTaskError?.(initialContext, {
       formattedError: fatalError(initialContext, [err].flat()),
       originalError: err,
@@ -283,6 +282,7 @@ async function runBuild(ctx: Context) {
         // Queue up any non-Listr log messages while Listr is running
         ctx.log.queue();
       }
+      await renderAuth(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
@@ -335,8 +335,7 @@ async function runBuild(ctx: Context) {
     });
 
     if (!ctx.userError) {
-      ctx.log.info('');
-      ctx.log.error(formattedError);
+      clackError(formattedError);
     }
 
     if (!ctx.exitCode) {
