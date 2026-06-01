@@ -13,11 +13,6 @@ export type ChangedPackageFilesPatch = Partial<
   Extract<TurboSnapBailReason, { changedPackageFiles: string[] }>
 >;
 
-export type BailDetailKey =
-  | 'lockfileSizeExceeded'
-  | 'lockfileParseFailed'
-  | 'baselineCheckoutFailed';
-
 /**
  * Detect which supported lockfile kind a given path corresponds to.
  *
@@ -41,7 +36,7 @@ export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
   if (err instanceof LockFileSizeExceededError) {
     const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
-      lockfileSizeExceeded: true,
+      bailSubreason: 'lockfileSizeExceeded',
       ...(lockfileKind && { lockfileKind }),
       lockfileSizeBytes: err.lockfileSizeBytes,
     };
@@ -49,27 +44,12 @@ export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
   if (err instanceof LockFileParseFailedError) {
     const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
-      lockfileParseFailed: true,
+      bailSubreason: 'lockfileParseFailed',
       ...(lockfileKind && { lockfileKind }),
     };
   }
   if (err instanceof BaselineCheckoutFailedError) {
-    return { baselineCheckoutFailed: true };
+    return { bailSubreason: 'baselineCheckoutFailed' };
   }
   return {};
-}
-
-/**
- * Derive a short, primary key describing bail reason. Used for grouping related bail reasons in
- * Sentry. Returns `undefined` when no specific flag is set.
- *
- * @param patch The bail-detail patch to inspect.
- *
- * @returns A short string key identifying the patch's primary key.
- */
-export function bailDetailKey(patch: ChangedPackageFilesPatch): BailDetailKey | undefined {
-  if (patch.lockfileSizeExceeded) return 'lockfileSizeExceeded';
-  if (patch.lockfileParseFailed) return 'lockfileParseFailed';
-  if (patch.baselineCheckoutFailed) return 'baselineCheckoutFailed';
-  return;
 }
