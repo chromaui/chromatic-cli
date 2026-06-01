@@ -1,3 +1,15 @@
+# v17.2.0 (Mon Jun 01 2026)
+
+#### 🚀 Enhancement
+
+- Join individual bail subreasons into a single field [#1357](https://github.com/chromaui/chromatic-cli/pull/1357) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.1.0 (Wed May 27 2026)
 
 #### 🚀 Enhancement
