@@ -390,4 +390,22 @@ describe('reactNative config', () => {
     const config = await getConfiguration();
     expect(config.reactNative).toBeUndefined();
   });
+
+  it('accepts a configuration containing a gitTimeout', async () => {
+    mockedReadFile.mockReturnValue(
+      JSON.stringify({
+        gitTimeout: 30,
+      })
+    );
+
+    const config = await getConfiguration();
+    expect(config.gitTimeout).toBe(30);
+  });
+
+  it('leaves gitTimeout undefined when not specified in config', async () => {
+    mockedReadFile.mockReturnValue(JSON.stringify({ projectId: 'project-id' }));
+
+    const config = await getConfiguration();
+    expect(config.gitTimeout).toBeUndefined();
+  });
 });

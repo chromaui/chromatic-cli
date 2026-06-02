@@ -49,7 +49,7 @@ const getUserEmail = vi.mocked(git.getUserEmail);
 const getRepositoryCreationDate = vi.mocked(git.getRepositoryCreationDate);
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
-const getNumberOfComitters = vi.mocked(git.getNumberOfComitters);
+const getNumberOfCommitters = vi.mocked(git.getNumberOfCommitters);
 const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
 const getUncommittedHash = vi.mocked(git.getUncommittedHash);
 const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
@@ -103,7 +103,7 @@ beforeEach(() => {
   getRepositoryCreationDate.mockResolvedValue(new Date('2024-11-01'));
   getRepositoryRoot.mockResolvedValue('/path/to/project');
   getStorybookCreationDate.mockResolvedValue(new Date('2025-11-01'));
-  getNumberOfComitters.mockResolvedValue(17);
+  getNumberOfCommitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
 

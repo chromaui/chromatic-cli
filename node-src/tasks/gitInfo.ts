@@ -6,7 +6,7 @@ import getCommitAndBranch from '../git/getCommitAndBranch';
 import { getParentCommits } from '../git/getParentCommits';
 import {
   getCommittedFileCount,
-  getNumberOfComitters,
+  getNumberOfCommitters,
   getRepositoryCreationDate,
   getRepositoryRoot,
   getSlug,
@@ -157,23 +157,23 @@ export async function gatherGitInfo(
     onSkippingBuild,
   } = input;
 
-  const version = await getVersion({ log });
+  const version = await getVersion({ log, options });
   const commitAndBranchInfo = await getCommitAndBranch(
-    { log },
+    { log, options },
     { branchName, patchBaseRef, ci: fromCI }
   );
 
   const git: Git = {
     version,
-    gitUserEmail: await getUserEmail({ log }).catch((err) => {
+    gitUserEmail: await getUserEmail({ log, options }).catch((err) => {
       log.debug('Failed to retrieve Git user email', err);
       return undefined;
     }),
-    uncommittedHash: await getUncommittedHash({ log }).catch((err) => {
+    uncommittedHash: await getUncommittedHash({ log, options }).catch((err) => {
       log.warn('Failed to retrieve uncommitted files hash', err);
       return undefined;
     }),
-    rootPath: await getRepositoryRoot({ log }),
+    rootPath: await getRepositoryRoot({ log, options }),
     ...commitAndBranchInfo,
   };
 
@@ -181,11 +181,11 @@ export async function gatherGitInfo(
   try {
     projectMetadata = {
       hasRouter: getHasRouter(packageJson),
-      creationDate: await getRepositoryCreationDate({ log }),
+      creationDate: await getRepositoryCreationDate({ log, options }),
       storybookCreationDate: await getStorybookCreationDate({ log, options }),
-      numberOfCommitters: await getNumberOfComitters({ log }),
+      numberOfCommitters: await getNumberOfCommitters({ log, options }),
       numberOfAppFiles: await getCommittedFileCount(
-        { log },
+        { log, options },
         ['page', 'screen'],
         ['js', 'jsx', 'ts', 'tsx']
       ),
@@ -200,7 +200,7 @@ export async function gatherGitInfo(
 
   if (!git.slug) {
     try {
-      git.slug = await getSlug({ log });
+      git.slug = await getSlug({ log, options });
     } catch (err) {
       log.debug('Failed to retrieve Git repository slug', err);
     }

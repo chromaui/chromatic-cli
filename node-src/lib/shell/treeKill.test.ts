@@ -16,7 +16,7 @@ function pidIsAlive(pid: number) {
  * Spawns a Node parent process that itself spawns a `sleep 60` child.
  * Returns handles to both so we can assert on their lifecycle independently.
  *
- * @returns
+ * @returns Handles to the parent process and its child's PID.
  */
 function spawnTree(): Promise<{ parent: ChildProcess; childPid: number }> {
   return new Promise((resolve, reject) => {

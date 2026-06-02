@@ -10,7 +10,7 @@ import {
   getBranch,
   getCommit,
   getCommittedFileCount,
-  getNumberOfComitters,
+  getNumberOfCommitters,
   getRepositoryCreationDate,
   getSlug,
   getStorybookCreationDate,
@@ -238,7 +238,7 @@ describe('getStorybookCreationDate', () => {
 describe('getNumberOfComitters', () => {
   it('parses the count successfully', async () => {
     execGitCommandCountLines.mockResolvedValue(17);
-    expect(await getNumberOfComitters(ctx)).toEqual(17);
+    expect(await getNumberOfCommitters(ctx)).toEqual(17);
   });
 });
 
