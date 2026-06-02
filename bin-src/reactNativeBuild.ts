@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { mkdirSync, mkdtempSync, rmSync, type WriteStream } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, type WriteStream } from 'fs';
 import meow from 'meow';
 import os from 'os';
 import path from 'path';
@@ -68,6 +68,7 @@ function parseFlags(argv: string[]) {
         Options
           --platform    Platform to build (android, ios). Can be specified multiple times. Defaults to all platforms in Expo config.
           --output-dir  Directory to write build artifacts and log file to.
+          --overwrite   Overwrite existing output directory if it exists.
         `,
     {
       argv,
@@ -80,6 +81,10 @@ function parseFlags(argv: string[]) {
         outputDir: {
           type: 'string',
         },
+        overwrite: {
+          type: 'boolean',
+          default: false,
+        },
       },
     }
   );
@@ -87,7 +92,7 @@ function parseFlags(argv: string[]) {
   const requestedPlatforms =
     flags.platform && flags.platform.length > 0 ? flags.platform : undefined;
 
-  return { requestedPlatforms, outputDir: flags.outputDir };
+  return { requestedPlatforms, outputDir: flags.outputDir, overwrite: flags.overwrite };
 }
 
 /**
@@ -146,6 +151,7 @@ Available platforms: ${configPlatforms.join(', ')}`);
  * @param platforms The platforms to build.
  * @param appName The app name from Expo config, required for iOS builds.
  * @param artifactDirectory The directory to place build artifacts in.
+ * @param overwrite Whether to overwrite existing build artifacts if they exist.
  * @param logStream The WriteStream to write build logs to.
  * @param androidBuildArchitectures Additional Android architectures to build for.
  *
@@ -155,6 +161,7 @@ async function buildPlatforms(
   platforms: string[],
   appName: string,
   artifactDirectory: string,
+  overwrite: boolean,
   logStream: WriteStream,
   androidBuildArchitectures?: string[]
 ) {
@@ -164,10 +171,20 @@ async function buildPlatforms(
     info(`Building for ${platformNames[platform]}`);
     if (platform === 'android') {
       const outputPath = path.join(artifactDirectory, 'storybook.apk');
+      if (!overwrite && existsSync(outputPath)) {
+        throw new Error(
+          `Output file ${outputPath} already exists. Use --overwrite to overwrite existing files.`
+        );
+      }
       const duration = await buildAndroid(outputPath, logStream, androidBuildArchitectures);
       artifacts.push({ platform: 'Android', path: outputPath, duration });
     } else if (platform === 'ios') {
       const outputPath = path.join(artifactDirectory, 'storybook.app');
+      if (!overwrite && existsSync(outputPath)) {
+        throw new Error(
+          `Output file ${outputPath} already exists. Use --overwrite to overwrite existing files.`
+        );
+      }
       const duration = await buildIos(appName, outputPath, logStream);
       artifacts.push({ platform: 'iOS', path: outputPath, duration });
     }
@@ -182,7 +199,7 @@ async function buildPlatforms(
  * @param argv A list of arguments passed.
  */
 export async function main(argv: string[]) {
-  const { requestedPlatforms, outputDir } = parseFlags(argv);
+  const { requestedPlatforms, outputDir, overwrite } = parseFlags(argv);
   const { androidBuildArchitectures } = await readReactNativeConfig();
 
   warn(
@@ -220,6 +237,7 @@ export async function main(argv: string[]) {
       platforms,
       config.name,
       artifactDirectory,
+      overwrite,
       logStream,
       androidBuildArchitectures
     );
