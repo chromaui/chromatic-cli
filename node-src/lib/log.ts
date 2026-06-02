@@ -72,7 +72,7 @@ const createPrefixer =
   };
 
 type LogType = 'error' | 'warn' | 'info' | 'debug';
-type LogFunction = (...args: any[]) => void;
+export type LogFunction = (...args: any[]) => void;
 export interface Logger {
   error: LogFunction;
   warn: LogFunction;
