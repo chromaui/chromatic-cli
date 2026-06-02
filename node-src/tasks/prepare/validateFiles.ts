@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
+import { stripVTControlCharacters } from 'util';
 
 import { posix } from '../../lib/posix';
 import { Context } from '../../types';
@@ -55,7 +56,7 @@ function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = 
  * @returns The output directory path if found, undefined otherwise
  */
 function getOutputDirectory(buildLog: string) {
-  const cleanLog = buildLog.replaceAll(/\u001B\[[0-?]*[ -/]*[@-~]/g, '');
+  const cleanLog = stripVTControlCharacters(buildLog);
   const lines = cleanLog.split('\n');
 
   for (let i = lines.length - 1; i >= 0; i -= 1) {
