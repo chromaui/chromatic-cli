@@ -67,7 +67,8 @@ function getOutputDirectory(buildLog: string) {
     if (sameLineOutput) return sameLineOutput;
 
     for (let index_ = index + 1; index_ < lines.length; index_ += 1) {
-      const candidate = lines[index_].replace(/^[\s│└┌├┬┴─]+/, '').trim();
+      // Remove Box Drawing glyphs (U+2500–U+257F)
+      const candidate = lines[index_].replace(/^[\s\u2500-\u257F]+/u, '').trim();
       if (!candidate) continue;
       return candidate;
     }
