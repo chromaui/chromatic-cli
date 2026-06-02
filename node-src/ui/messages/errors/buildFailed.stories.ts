@@ -1,4 +1,4 @@
-import buildFailed from './buildFailed';
+import { buildFailed, reactNativeBuildFailed } from './buildFailed';
 
 export default {
   title: 'CLI/Messages/Errors',
@@ -48,6 +48,29 @@ WARN For more info visit https://webpack.js.org/guides/code-splitting/
 info => Output directory: /var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-10717MxArPfgMkIgp
 `;
 
+const reactNativeBuildLog = `
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:createBundleReleaseJsAndAssets'.
+> Process 'command 'node'' finished with non-zero exit value 7
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 17s
+578 actionable tasks: 47 executed, 531 up-to-date
+`;
+
 export const BuildFailed = () =>
   buildFailed(
     {
@@ -70,4 +93,15 @@ export const BuildFailedWithCommand = () =>
     } as any,
     { message: 'Command failed with exit code 1' },
     buildLog
+  );
+
+export const ReactNativeBuildFailed = () =>
+  reactNativeBuildFailed(
+    {
+      reactNativeBuildLogFile:
+        '/path/to/project/storybook-static/.chromatic/react-native-build.log',
+      runtimeMetadata,
+    } as any,
+    { message: 'Command failed with exit code 1' },
+    reactNativeBuildLog
   );

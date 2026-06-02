@@ -5,6 +5,8 @@ import Listr from 'listr';
 import { readPackageUp } from 'read-package-up';
 import { v4 as uuid } from 'uuid';
 
+import { setupContext } from './context';
+import getCommitAndBranch from './git/getCommitAndBranch';
 import {
   getBranch,
   getCommit,
@@ -13,17 +15,16 @@ import {
   getUncommittedHash,
   getUserEmail,
 } from './git/git';
-import GraphQLClient from './io/graphqlClient';
-import HTTPClient from './io/httpClient';
 import checkForUpdates from './lib/checkForUpdates';
+import checkNodeVersion from './lib/checkNodeVersion';
 import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
-import { getConfiguration } from './lib/getConfiguration';
 import getEnvironment from './lib/getEnvironment';
-import getOptions from './lib/getOptions';
+import getOptions, { getPartialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
+import matchesBranch from './lib/matchesBranch';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
@@ -42,6 +43,7 @@ import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
 import intro from './ui/messages/info/intro';
+import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 
 // Make keys of `T` outside of `R` optional.
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
@@ -78,10 +80,8 @@ export type InitialContext = Omit<
     | 'log'
     | 'sessionId'
   >,
-  'options'
+  'options' | 'runtime'
 >;
-
-const isContext = (ctx: InitialContext): ctx is Context => 'options' in ctx;
 
 /**
  * Entry point for the CLI, GitHub Action, and Node API
@@ -115,6 +115,8 @@ export async function run({
     env: environment = getEnvironment(),
     log = createLogger(config.flags, config.extraOptions),
   } = extraOptions || {};
+
+  checkNodeVersion(log, config.pkg.engines?.node);
 
   // We don't normalize because if the `version` field isn't a proper semver string, the process
   // silently exits.
@@ -159,50 +161,48 @@ export async function run({
 /**
  * Entry point for testing only (typically invoked via `run` above)
  *
- * @param ctx The context set when executing the CLI.
+ * @param initialContext The context set when executing the CLI.
  *
  * @returns A promise that resolves when all steps are completed.
  */
-export async function runAll(ctx: InitialContext) {
-  ctx.log.info('');
-  ctx.log.info(intro(ctx));
-  ctx.log.info('');
+export async function runAll(initialContext: InitialContext) {
+  initialContext.log.info('');
+  initialContext.log.info(intro(initialContext));
+  initialContext.log.info('');
 
   const onError = (err: Error | Error[]) => {
-    ctx.log.info('');
-    ctx.log.error(fatalError(ctx, [err].flat()));
-    ctx.extraOptions?.experimental_onTaskError?.(ctx, {
-      formattedError: fatalError(ctx, [err].flat()),
+    initialContext.log.info('');
+    initialContext.log.error(fatalError(initialContext, [err].flat()));
+    initialContext.extraOptions?.experimental_onTaskError?.(initialContext, {
+      formattedError: fatalError(initialContext, [err].flat()),
       originalError: err,
     });
-    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
+    setExitCode(initialContext, exitCodes.INVALID_OPTIONS, true);
   };
 
+  let ctx: Context;
   try {
-    ctx.http = new HTTPClient(ctx);
-    ctx.client = new GraphQLClient(ctx, `${ctx.env.CHROMATIC_INDEX_URL}/graphql`, {
-      headers: {
-        'x-chromatic-session-id': ctx.sessionId,
-        'x-chromatic-cli-version': ctx.pkg.version,
-        'apollographql-client-name': 'chromatic-cli',
-        'apollographql-client-version': ctx.pkg.version,
-      },
-      retries: 3,
-    });
-    ctx.configuration = await getConfiguration(
-      ctx.extraOptions?.configFile || ctx.flags.configFile
+    initialContext = await setupContext(
+      initialContext,
+      initialContext.extraOptions?.configFile || initialContext.flags.configFile
     );
-    const options = getOptions(ctx);
-    (ctx as Context).options = options;
-    ctx.log.setLogFile(options.logFile);
+
+    const partialOptions = getPartialOptions(initialContext);
+
+    if (await shouldSkipWithoutProjectToken(initialContext, partialOptions)) {
+      initialContext.log.warn(skipNoProjectToken());
+      setExitCode(initialContext, exitCodes.OK);
+      return;
+    }
+
+    ctx = initialContext as Context;
+    ctx.options = getOptions(ctx, partialOptions);
+    ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
+    ctx.log.setLogFile(ctx.options.logFile);
 
     setExitCode(ctx, exitCodes.OK);
   } catch (err) {
     return onError(err);
-  }
-
-  if (!isContext(ctx)) {
-    return onError(new Error('Invalid context'));
   }
 
   // Run these in parallel; neither should ever reject
@@ -221,6 +221,47 @@ export async function runAll(ctx: InitialContext) {
 
   if (ctx.options.uploadMetadata) {
     await uploadMetadataFiles(ctx);
+  }
+}
+
+async function shouldSkipWithoutProjectToken(
+  ctx: InitialContext,
+  partialOptions: Partial<Options>
+) {
+  if (!partialOptions.skip) {
+    return false;
+  }
+
+  const hasProjectCredentials =
+    !!partialOptions.projectToken || !!(partialOptions.projectId && partialOptions.userToken);
+  if (hasProjectCredentials) {
+    return false;
+  }
+
+  const branch = await getBranchForSkip(ctx, partialOptions);
+  if (!branch) {
+    return false;
+  }
+
+  if (!matchesBranch(branch, partialOptions.skip)) {
+    return false;
+  }
+
+  return true;
+}
+
+async function getBranchForSkip(ctx: InitialContext, partialOptions: Partial<Options>) {
+  try {
+    const { branch } = await getCommitAndBranch(ctx, {
+      branchName: partialOptions.branchName,
+      patchBaseRef: partialOptions.patchBaseRef,
+      ci: partialOptions.fromCI,
+    });
+
+    return branch;
+  } catch (err) {
+    ctx.log.debug('Failed to determine branch while handling --skip without a project token', err);
+    return false;
   }
 }
 
@@ -358,3 +399,4 @@ export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
 export { getConfiguration } from './lib/getConfiguration';
 export { createLogger } from './lib/log';
 export { type Logger } from './lib/log';
+export { share, type ShareOptions, type ShareOutput } from './share';

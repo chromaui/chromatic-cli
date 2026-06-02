@@ -1,3 +1,157 @@
+# v17.2.0 (Mon Jun 01 2026)
+
+#### 🚀 Enhancement
+
+- Join individual bail subreasons into a single field [#1357](https://github.com/chromaui/chromatic-cli/pull/1357) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.1.0 (Wed May 27 2026)
+
+#### 🚀 Enhancement
+
+- Add additional bail details to `changedPackageFiles` [#1344](https://github.com/chromaui/chromatic-cli/pull/1344) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.0.1 (Tue May 26 2026)
+
+#### 🐛 Bug Fix
+
+- Delay check of `build-storybook` script validation [#1327](https://github.com/chromaui/chromatic-cli/pull/1327) ([@jmhobbs](https://github.com/jmhobbs))
+- Force `es-toolkit` version to avoid bundle error in Yarn classic smoke test [#1347](https://github.com/chromaui/chromatic-cli/pull/1347) ([@codykaup](https://github.com/codykaup))
+- Fix TurboSnap mis-categorizing static assets as Storybook config changes [#1340](https://github.com/chromaui/chromatic-cli/pull/1340) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v17.0.0 (Tue May 19 2026)
+
+#### 💥 Breaking Change
+
+- Drop support for Node 20 and define supported Node engines [#1334](https://github.com/chromaui/chromatic-cli/pull/1334) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Promotes `prepare`, `build`, and `verify` tasks to modules [#1331](https://github.com/chromaui/chromatic-cli/pull/1331) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v16.10.1 (Fri May 15 2026)
+
+#### 🐛 Bug Fix
+
+- Fix `getUncommittedHash` in Windows environments [#1332](https://github.com/chromaui/chromatic-cli/pull/1332) ([@codykaup](https://github.com/codykaup))
+- Increase flaky test timeout [#1326](https://github.com/chromaui/chromatic-cli/pull/1326) ([@codykaup](https://github.com/codykaup))
+- Refactor `initialize` task to use typed inputs and outputs [#1323](https://github.com/chromaui/chromatic-cli/pull/1323) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v16.10.0 (Mon May 11 2026)
+
+#### 🚀 Enhancement
+
+- Add `share()` to Node API [#1284](https://github.com/chromaui/chromatic-cli/pull/1284) ([@codykaup](https://github.com/codykaup) [@katiebayes](https://github.com/katiebayes))
+
+#### 🐛 Bug Fix
+
+- Migrate `gitInfo` task to typed inputs and outputs [#1314](https://github.com/chromaui/chromatic-cli/pull/1314) ([@justin-thurman](https://github.com/justin-thurman))
+- Add config option for building multiple Android architectures [#1321](https://github.com/chromaui/chromatic-cli/pull/1321) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 4
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Katie Bayes ([@katiebayes](https://github.com/katiebayes))
+
+---
+
+# v16.9.1 (Thu May 07 2026)
+
+#### 🐛 Bug Fix
+
+- Add additional environment variables to RN build [#1319](https://github.com/chromaui/chromatic-cli/pull/1319) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v16.9.0 (Wed May 06 2026)
+
+#### 🚀 Enhancement
+
+- Allow skip without a project token [#1310](https://github.com/chromaui/chromatic-cli/pull/1310) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v16.8.0 (Tue May 05 2026)
+
+#### 🚀 Enhancement
+
+- Add test for external storybook config changes and TS [#1316](https://github.com/chromaui/chromatic-cli/pull/1316) ([@tmeasday](https://github.com/tmeasday))
+
+#### 🐛 Bug Fix
+
+- Move `xcodebuild` to shared executor [#1318](https://github.com/chromaui/chromatic-cli/pull/1318) ([@jmhobbs](https://github.com/jmhobbs))
+- Only build Android ABI for x86_64 [#1308](https://github.com/chromaui/chromatic-cli/pull/1308) ([@jmhobbs](https://github.com/jmhobbs))
+- Add output environment variable to RN builds [#1307](https://github.com/chromaui/chromatic-cli/pull/1307) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
+# v16.7.0 (Mon May 04 2026)
+
+#### 🚀 Enhancement
+
+- Add React Native build stage [#1297](https://github.com/chromaui/chromatic-cli/pull/1297) ([@jmhobbs](https://github.com/jmhobbs))
+- Make Storybook metadata output generic [#1311](https://github.com/chromaui/chromatic-cli/pull/1311) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Migrate `setStorybookInfo` task to typed inputs and outputs [#1306](https://github.com/chromaui/chromatic-cli/pull/1306) ([@justin-thurman](https://github.com/justin-thurman))
+- Scaffolding for removing `Context` from CLI task bodies [#1302](https://github.com/chromaui/chromatic-cli/pull/1302) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v16.6.3 (Wed Apr 29 2026)
 
 #### 🐛 Bug Fix

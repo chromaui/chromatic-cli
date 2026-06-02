@@ -94,6 +94,10 @@ vi.mock('node-fetch', () => ({
         return { data: { cliToken: 'token' } };
       }
 
+      if (query?.match('CLIAppInfo')) {
+        return { data: { app: { features: { isReactNativeApp: false } } } };
+      }
+
       if (query?.match('AnnounceBuildMutation')) {
         announcedBuild = variables.input;
         return {
@@ -306,7 +310,7 @@ vi.mock('fs', async (importOriginal) => {
 vi.mock('./git/git', () => ({
   hasPreviousCommit: () => Promise.resolve(true),
   getCommit: vi.fn(),
-  getBranch: () => Promise.resolve('branch'),
+  getBranch: vi.fn(() => Promise.resolve('branch')),
   getSlug: vi.fn(),
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
@@ -324,7 +328,15 @@ vi.mock('./git/getParentCommits', () => ({
 }));
 
 const getCommit = vi.mocked(git.getCommit);
+const getBranch = vi.mocked(git.getBranch);
 const getSlug = vi.mocked(git.getSlug);
+const expectSkipNoProjectToken = (ctx: ReturnType<typeof getContext>) => {
+  expect(ctx.exitCode).toBe(0);
+  expect(ctx.testLogger.warnings[0]).toMatch(
+    /Skipping Chromatic build locally because --skip is enabled, but no project token was available, so no build was reported to Chromatic. This may leave the Chromatic GitHub checks pending./
+  );
+  expect(ctx.testLogger.errors).toEqual([]);
+};
 
 vi.mock('./lib/emailHash');
 
@@ -366,6 +378,7 @@ beforeEach(() => {
     committerEmail: 'test@test.com',
     committerName: 'tester',
   });
+  getBranch.mockResolvedValue('branch');
   getSlug.mockResolvedValue('user/repo');
 });
 afterEach(() => {
@@ -398,6 +411,39 @@ const getContext = (argv: string[]): Context & { testLogger: TestLogger } => {
 
 it('fails on missing project token', async () => {
   const ctx = getContext([]);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(254);
+  expect(ctx.testLogger.errors[0]).toMatch(/Missing project token/);
+});
+
+it('returns 0 with a warning when skip is enabled and project token is missing', async () => {
+  const ctx = getContext(['--skip']);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runAll(ctx);
+  expectSkipNoProjectToken(ctx);
+});
+
+it('returns 0 with a warning when skip matches the current branch and project token is missing', async () => {
+  getBranch.mockResolvedValue('dependabot/npm-and-yarn/storybook-8');
+  const ctx = getContext(['--skip=dependabot/**']);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runAll(ctx);
+  expectSkipNoProjectToken(ctx);
+});
+
+it('fails on missing project token when skip does not match the current branch', async () => {
+  getBranch.mockResolvedValue('feature/my-branch');
+  const ctx = getContext(['--skip=dependabot/**']);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(254);
+  expect(ctx.testLogger.errors[0]).toMatch(/Missing project token/);
+});
+
+it('fails on missing project token when branch lookup fails during skip preflight', async () => {
+  getCommit.mockRejectedValueOnce(new Error('git failed'));
+  const ctx = getContext(['--skip=dependabot/**']);
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runAll(ctx);
   expect(ctx.exitCode).toBe(254);
@@ -860,5 +906,31 @@ describe('parsing package.json', () => {
 
     const result = await run({ flags: { dryRun: true } });
     expect(result.code).toBeDefined();
+  });
+});
+
+describe('Node version warning', () => {
+  it('logs a warning when the current Node version is unsupported', async () => {
+    vi.spyOn(process, 'versions', 'get').mockReturnValue({
+      ...process.versions,
+      node: '18.0.0',
+    });
+    const log = new TestLogger();
+
+    await run({ flags: { dryRun: true }, options: { log } });
+
+    expect(log.warnings.some((w) => w.includes('Unsupported Node.js version'))).toBe(true);
+  });
+
+  it('does not log a warning when the current Node version is supported', async () => {
+    vi.spyOn(process, 'versions', 'get').mockReturnValue({
+      ...process.versions,
+      node: '22.0.0',
+    });
+    const log = new TestLogger();
+
+    await run({ flags: { dryRun: true }, options: { log } });
+
+    expect(log.warnings.some((w) => w.includes('Unsupported Node.js version'))).toBe(false);
   });
 });

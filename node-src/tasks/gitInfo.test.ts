@@ -7,7 +7,32 @@ import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCo
 import * as git from '../git/git';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
 import TestLogger from '../lib/testLogger';
-import { setGitInfo } from './gitInfo';
+import {
+  applyGitInfoOutput,
+  applyGitInfoPartial,
+  extractGitInfoInput,
+  gatherGitInfo,
+  GitInfoDeps,
+  GitInfoInput,
+  GitInfoOutput,
+} from './gitInfo';
+
+// Helper that `expect`s a result kind and asserts on the kind to type narrow the result,
+// allowing later lines to access other result properties without casting
+function expectKind<R extends { kind: 'continue' | 'partial' | 'skip' }, K extends R['kind']>(
+  result: R,
+  kind: K
+): asserts result is Extract<R, { kind: K }> {
+  expect(result.kind).toBe(kind);
+}
+
+// Helper that narrows a discriminated `phase` field on a partial result output.
+function expectPhase<O extends { phase: string }, P extends O['phase']>(
+  output: O,
+  phase: P
+): asserts output is Extract<O, { phase: P }> {
+  expect(output.phase).toBe(phase);
+}
 
 vi.mock('../git/getCommitAndBranch');
 vi.mock('../git/git');
@@ -47,6 +72,25 @@ const commitInfo = {
 
 const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
 
+const buildDeps = (overrides: Partial<GitInfoDeps> = {}): GitInfoDeps => ({
+  log,
+  client: client as any,
+  options: {} as any,
+  runtime: {} as any,
+  packageJson: {},
+  ...overrides,
+});
+
+const buildInput = (overrides: Partial<GitInfoInput> = {}): GitInfoInput => ({
+  fromCI: false,
+  interactive: false,
+  isLocalBuild: false,
+  skip: false,
+  onlyChanged: false,
+  onSkippingBuild: vi.fn(),
+  ...overrides,
+});
+
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
   getUncommittedHash.mockResolvedValue('abc123');
@@ -66,11 +110,11 @@ beforeEach(() => {
   client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
 
-describe('setGitInfo', () => {
-  it('sets the git info on context', async () => {
-    const ctx = { log, options: {}, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git).toMatchObject({
+describe('gatherGitInfo', () => {
+  it('returns continue with the git info', async () => {
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git).toMatchObject({
       rootPath: '/path/to/project',
       commit: '123asdf',
       branch: 'something',
@@ -81,17 +125,15 @@ describe('setGitInfo', () => {
   });
 
   it('sets gitUserEmail to current user for local builds', async () => {
-    const ctx = { log, options: { isLocalBuild: true }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git).toMatchObject({
-      gitUserEmail: 'user@email.com',
-    });
+    const result = await gatherGitInfo(buildDeps(), buildInput({ isLocalBuild: true }));
+    expectKind(result, 'continue');
+    expect(result.output.git).toMatchObject({ gitUserEmail: 'user@email.com' });
   });
 
   it('supports overriding the owner name in the slug', async () => {
-    const ctx = { log, options: { ownerName: 'org' }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git).toMatchObject({ slug: 'org/repo' });
+    const result = await gatherGitInfo(buildDeps(), buildInput({ ownerName: 'org' }));
+    expectKind(result, 'continue');
+    expect(result.output.git).toMatchObject({ slug: 'org/repo' });
   });
 
   it('sets changedFiles', async () => {
@@ -99,25 +141,22 @@ describe('setGitInfo', () => {
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: true }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
-    expect(ctx.git.replacementBuildIds).toEqual([]);
+    const result = await gatherGitInfo(buildDeps(), buildInput({ onlyChanged: true }));
+    expectKind(result, 'continue');
+    expect(result.output.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
+    expect(result.output.git.replacementBuildIds).toEqual([]);
   });
 
   it('sets changedFiles on a branch name containing a slash', async () => {
-    getCommitAndBranch.mockResolvedValue({
-      ...commitInfo,
-      branch: 'something/else',
-    });
+    getCommitAndBranch.mockResolvedValue({ ...commitInfo, branch: 'something/else' });
     getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: '!(main)' }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
-    expect(ctx.git.replacementBuildIds).toEqual([]);
+    const result = await gatherGitInfo(buildDeps(), buildInput({ onlyChanged: '!(main)' }));
+    expectKind(result, 'continue');
+    expect(result.output.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
+    expect(result.output.git.replacementBuildIds).toEqual([]);
   });
 
   it('sets replacementBuildIds when found', async () => {
@@ -132,10 +171,10 @@ describe('setGitInfo', () => {
         isLocalBuild: false,
       },
     });
-    const ctx = { log, options: { onlyChanged: true }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
-    expect(ctx.git.replacementBuildIds).toEqual([['rebased', 'parent']]);
+    const result = await gatherGitInfo(buildDeps(), buildInput({ onlyChanged: true }));
+    expectKind(result, 'continue');
+    expect(result.output.git.changedFiles).toEqual(['styles/main.scss', 'lib/utils.js']);
+    expect(result.output.git.replacementBuildIds).toEqual([['rebased', 'parent']]);
   });
 
   it('drops changedFiles when matching --externals', async () => {
@@ -143,19 +182,37 @@ describe('setGitInfo', () => {
     getChangedFilesWithReplacement.mockResolvedValue({
       changedFiles: ['styles/main.scss', 'lib/utils.js'],
     });
-    const ctx = { log, options: { onlyChanged: true, externals: ['**/*.scss'] }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git.changedFiles).toBeUndefined();
+    const result = await gatherGitInfo(
+      buildDeps(),
+      buildInput({ onlyChanged: true, externals: ['**/*.scss'] })
+    );
+    expectKind(result, 'continue');
+    expect(result.output.git.changedFiles).toBeUndefined();
   });
 
   it('forces rebuild automatically if app is onboarding', async () => {
     client.runQuery.mockReturnValue({ app: { isOnboarding: true } });
-    const ctx = { log, options: { ownerName: 'org' }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.options.forceRebuild).toBe(true);
+    const result = await gatherGitInfo(buildDeps(), buildInput({ ownerName: 'org' }));
+    expectKind(result, 'continue');
+    expect(result.output.setForceRebuild).toBe(true);
+    expect(result.output.isOnboarding).toBe(true);
   });
 
-  it('sets storybookUrl and rebuildForBuild on skipped rebuild', async () => {
+  it('returns continue with rebuildForBuildId when force-rebuild prevents skip', async () => {
+    const lastBuild = { id: 'last-build-id', status: 'PASSED', storybookUrl: 'https://x' };
+    getParentCommits.mockResolvedValue([commitInfo.commit]);
+    client.runQuery.mockReturnValue({ app: { isOnboarding: false, lastBuild } });
+
+    const result = await gatherGitInfo(
+      buildDeps({ runtime: { forceRebuild: true } as any }),
+      buildInput()
+    );
+
+    expectKind(result, 'continue');
+    expect(result.output.rebuildForBuildId).toBe('last-build-id');
+  });
+
+  it('returns rebuild-noop partial when ancestor is fully passed', async () => {
     const lastBuild = {
       id: 'parent',
       status: 'ACCEPTED',
@@ -175,31 +232,198 @@ describe('setGitInfo', () => {
     getParentCommits.mockResolvedValue([commitInfo.commit]);
     client.runQuery.mockReturnValue({ app: { lastBuild } });
 
-    const ctx = { log, options: {}, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.rebuildForBuild).toEqual(lastBuild);
-    expect(ctx.storybookUrl).toEqual(lastBuild.storybookUrl);
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'partial');
+    expectPhase(result.output, 'rebuild-noop');
+    expect(result.output.rebuildForBuild).toEqual(lastBuild);
+    expect(result.output.storybookUrl).toEqual(lastBuild.storybookUrl);
+  });
+
+  it('returns skip-commit partial when skip matches branch and mutation succeeds', async () => {
+    client.runQuery.mockResolvedValue(true);
+    const onSkippingBuild = vi.fn();
+    const result = await gatherGitInfo(buildDeps(), buildInput({ skip: true, onSkippingBuild }));
+
+    expectKind(result, 'partial');
+    expectPhase(result.output, 'skip-commit');
+    expect(result.output.git.commit).toBe(commitInfo.commit);
+    expect(result.output.projectMetadata).toMatchObject({ hasRouter: true });
+    expect(onSkippingBuild).toHaveBeenCalledWith(result.output.git);
+  });
+
+  it('throws when skip matches branch but mutation returns falsy', async () => {
+    client.runQuery.mockResolvedValue(false);
+    await expect(gatherGitInfo(buildDeps(), buildInput({ skip: true }))).rejects.toThrow(
+      /Failed to skip build/
+    );
   });
 
   it('removes undefined owner prefix from branch', async () => {
-    const ctx = { log, options: {}, client } as any;
-    getCommitAndBranch.mockResolvedValue({
-      ...commitInfo,
-      branch: 'undefined:repo',
-    });
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.git.branch).toBe('repo');
+    getCommitAndBranch.mockResolvedValue({ ...commitInfo, branch: 'undefined:repo' });
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.branch).toBe('repo');
   });
 
-  it('sets projectMetadata on context', async () => {
-    const ctx = { log, options: { isLocalBuild: true }, client } as any;
-    await setGitInfo(ctx, {} as any);
-    expect(ctx.projectMetadata).toMatchObject({
+  it('returns projectMetadata', async () => {
+    const result = await gatherGitInfo(buildDeps(), buildInput({ isLocalBuild: true }));
+    expectKind(result, 'continue');
+    expect(result.output.projectMetadata).toMatchObject({
       hasRouter: true,
       creationDate: new Date('2024-11-01'),
       storybookCreationDate: new Date('2025-11-01'),
       numberOfCommitters: 17,
       numberOfAppFiles: 100,
     });
+  });
+});
+
+describe('applyGitInfoPartial', () => {
+  it('writes git, projectMetadata, and exit code on skip-commit', () => {
+    const ctx = { runtime: {} } as any;
+    const git = { commit: 'abc' } as any;
+    const projectMetadata = { hasRouter: true };
+    applyGitInfoPartial(ctx, { phase: 'skip-commit', git, projectMetadata });
+
+    expect(ctx.git).toBe(git);
+    expect(ctx.projectMetadata).toBe(projectMetadata);
+    expect(ctx.exitCode).toBe(0);
+    expect(ctx.rebuildForBuildId).toBeUndefined();
+    expect(ctx.rebuildForBuild).toBeUndefined();
+    expect(ctx.runtime.forceRebuild).toBeUndefined();
+  });
+
+  it('writes rebuild-noop fields including rebuildForBuildId, storybookUrl, and forceRebuild', () => {
+    const ctx = { runtime: {} } as any;
+    const partial = {
+      phase: 'rebuild-noop' as const,
+      git: { commit: 'abc' } as any,
+      projectMetadata: {},
+      isOnboarding: true,
+      rebuildForBuildId: 'b1',
+      rebuildForBuild: { id: 'b1' } as any,
+      storybookUrl: 'https://x',
+      setForceRebuild: true,
+    };
+    applyGitInfoPartial(ctx, partial);
+
+    expect(ctx.rebuildForBuildId).toBe('b1');
+    expect(ctx.rebuildForBuild).toBe(partial.rebuildForBuild);
+    expect(ctx.storybookUrl).toBe('https://x');
+    expect(ctx.isOnboarding).toBe(true);
+    expect(ctx.runtime.forceRebuild).toBe(true);
+    expect(ctx.exitCode).toBe(0);
+  });
+
+  it('does not toggle forceRebuild on rebuild-noop when setForceRebuild is false', () => {
+    const ctx = { runtime: {} } as any;
+    applyGitInfoPartial(ctx, {
+      phase: 'rebuild-noop',
+      git: {} as any,
+      projectMetadata: {},
+      isOnboarding: false,
+      rebuildForBuildId: 'b1',
+      rebuildForBuild: { id: 'b1' } as any,
+      storybookUrl: 'https://x',
+      setForceRebuild: false,
+    });
+
+    expect(ctx.runtime.forceRebuild).toBeUndefined();
+  });
+});
+
+const baseOutput = (overrides: Partial<GitInfoOutput> = {}): GitInfoOutput => ({
+  git: { commit: 'abc' } as any,
+  projectMetadata: { hasRouter: true },
+  isOnboarding: false,
+  turboSnap: undefined,
+  build: undefined,
+  setForceRebuild: false,
+  rebuildForBuildId: undefined,
+  ...overrides,
+});
+
+describe('applyGitInfoOutput', () => {
+  it('writes git, projectMetadata, and isOnboarding on continue', () => {
+    const ctx = { runtime: {} } as any;
+    const output = baseOutput({ isOnboarding: true });
+    applyGitInfoOutput(ctx, output);
+
+    expect(ctx.git).toBe(output.git);
+    expect(ctx.projectMetadata).toBe(output.projectMetadata);
+    expect(ctx.isOnboarding).toBe(true);
+  });
+
+  it('writes turboSnap, build, and rebuildForBuildId when provided', () => {
+    const ctx = { runtime: {} } as any;
+    const turboSnap = { bailReason: { rebuild: true as const } };
+    const build = { id: 'baseline' } as any;
+    applyGitInfoOutput(ctx, baseOutput({ turboSnap, build, rebuildForBuildId: 'r1' }));
+
+    expect(ctx.turboSnap).toBe(turboSnap);
+    expect(ctx.build).toBe(build);
+    expect(ctx.rebuildForBuildId).toBe('r1');
+  });
+
+  it('sets runtime.forceRebuild only when setForceRebuild is true', () => {
+    const ctx = { runtime: {} } as any;
+    applyGitInfoOutput(ctx, baseOutput({ setForceRebuild: true }));
+    expect(ctx.runtime.forceRebuild).toBe(true);
+
+    const ctx2 = { runtime: {} } as any;
+    applyGitInfoOutput(ctx2, baseOutput({ setForceRebuild: false }));
+    expect(ctx2.runtime.forceRebuild).toBeUndefined();
+  });
+});
+
+describe('extractGitInfoInput', () => {
+  it('sets expected fields on context', () => {
+    const ctx = {
+      runtime: {},
+      options: {
+        branchName: 'branch',
+        ownerName: 'owner',
+        repositorySlug: 'repo',
+        patchBaseRef: 'base',
+        fromCI: true,
+        interactive: false,
+        isLocalBuild: false,
+        skip: false,
+        ignoreLastBuildOnBranch: false,
+        onlyChanged: false,
+        externals: ['foo'],
+        untraced: ['bar'],
+      },
+    } as any;
+    const listrTask: any = {};
+
+    const input = extractGitInfoInput(ctx, listrTask);
+
+    expect(input).toMatchObject({
+      branchName: 'branch',
+      ownerName: 'owner',
+      repositorySlug: 'repo',
+      patchBaseRef: 'base',
+      fromCI: true,
+      interactive: false,
+      isLocalBuild: false,
+      skip: false,
+      ignoreLastBuildOnBranch: false,
+      onlyChanged: false,
+      externals: ['foo'],
+      untraced: ['bar'],
+    });
+  });
+
+  it('onSkippingBuild writes git to ctx and transitions the listr task title', () => {
+    const ctx = { options: {}, log } as any;
+    const listrTask: any = { title: 'initial' };
+
+    const input = extractGitInfoInput(ctx, listrTask);
+    const git = { commit: 'abc', branch: 'main' } as any;
+    input.onSkippingBuild(git);
+
+    expect(ctx.git).toBe(git);
+    expect(listrTask.title).not.toBe('initial');
   });
 });

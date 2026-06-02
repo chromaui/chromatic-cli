@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
+import { BaselineCheckoutFailedError } from '../lib/turbosnap/errors';
 import * as execGit from './execGit';
 import {
+  checkoutFile,
   commitExists,
   findFilesFromRepositoryRoot,
   getBranch,
@@ -20,6 +22,9 @@ import {
 } from './git';
 
 vi.mock('./execGit');
+vi.mock('tmp-promise', () => ({
+  file: vi.fn().mockResolvedValue({ path: '/tmp/fake-target' }),
+}));
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
@@ -177,6 +182,18 @@ describe('findFilesFromRepositoryRoot', () => {
       'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"'
     );
     expect(results).toEqual(filesFound);
+  });
+});
+
+describe('checkoutFile', () => {
+  it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {
+    const cause = new Error('git show failed');
+    execGitCommand.mockRejectedValueOnce(cause);
+
+    const promise = checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+
+    await expect(promise).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
+    await expect(promise).rejects.toMatchObject({ cause });
   });
 });
 

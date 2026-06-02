@@ -11,7 +11,6 @@ const storybook = {
   builder: { name: 'webpack4', packageVersion: '5.3.0' },
   addons: [],
 };
-const addons = [{ name: 'actions' }, { name: 'docs' }, { name: 'design-assets' }];
 
 const ctx = { options: {} } as any;
 
@@ -20,5 +19,3 @@ export const Initial = () => initial(ctx);
 export const Pending = () => pending(ctx);
 
 export const Success = () => success({ ...ctx, storybook } as any);
-
-export const WithAddons = () => success({ ...ctx, storybook: { ...storybook, addons } } as any);

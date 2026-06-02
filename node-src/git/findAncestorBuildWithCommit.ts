@@ -1,6 +1,6 @@
 import gql from 'fake-tag';
 
-import { Context } from '../types';
+import { Deps } from '../types';
 import { commitExists } from './git';
 
 const AncestorBuildsQuery = gql`
@@ -43,24 +43,22 @@ export interface AncestorBuildsQueryResult {
  *
  * The purpose here is to allow us to substitute a build with a known clean commit for TurboSnap.
  *
- * @param ctx The context set when executing the CLI.
- * @param ctx.client The GraphQL client within the context.
- * @param ctx.log The logger within the context.
- * @param buildNumber The build number to start searching from
- * @param options Page size and limit options
- * @param options.page How many builds to fetch each time
+ * @param deps Dependencies (client, log).
+ * @param buildNumber The build number to start searching from.
+ * @param options Page size and limit options.
+ * @param options.page How many builds to fetch each time.
  * @param options.limit How many builds to gather per query.
  *
  * @returns A build to be substituted
  */
 export async function findAncestorBuildWithCommit(
-  ctx: Pick<Context, 'client' | 'log'>,
+  deps: Pick<Deps, 'client' | 'log'>,
   buildNumber: number,
   { page = 10, limit = 80 } = {}
 ): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | undefined> {
   let skip = 0;
   while (skip < limit) {
-    const { app } = await ctx.client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
+    const { app } = await deps.client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
       buildNumber,
       skip,
       limit: Math.min(page, limit - skip),
@@ -68,7 +66,7 @@ export async function findAncestorBuildWithCommit(
 
     const results = await Promise.all(
       app.build.ancestorBuilds.map(async (build) => {
-        const exists = await commitExists(ctx, build.commit);
+        const exists = await commitExists(deps, build.commit);
         return [build, exists] as const;
       })
     );

@@ -1,0 +1,32 @@
+import { createTask, transitionTo } from '../../lib/tasks';
+import { Context } from '../../types';
+import { initial, success, validating } from '../../ui/tasks/prepare';
+import { calculateFileHashes } from './calculateFileHashes';
+import { traceChangedFiles } from './traceChangedFiles';
+import { validateAndroidArtifact } from './validateAndroidArtifact';
+import { validateFiles } from './validateFiles';
+
+/**
+ * Sets up the Listr task for preparing the built storybook for upload to Chromatic.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns A Listr task.
+ */
+export default function main(ctx: Context) {
+  return createTask({
+    name: 'prepare',
+    title: initial(ctx).title,
+    skip: (ctx: Context) => {
+      return !!ctx.skip;
+    },
+    steps: [
+      transitionTo(validating),
+      validateFiles,
+      validateAndroidArtifact,
+      traceChangedFiles,
+      calculateFileHashes,
+      transitionTo(success, true),
+    ],
+  });
+}

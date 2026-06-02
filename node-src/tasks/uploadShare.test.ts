@@ -1,0 +1,177 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { uploadFiles } from '../lib/uploadFiles';
+import { uploadShareFiles } from './uploadShare';
+
+vi.mock('../lib/uploadFiles');
+
+const uploadFilesMock = vi.mocked(uploadFiles);
+
+const environment = {
+  CHROMATIC_RETRIES: 2,
+  CHROMATIC_SHARE_PROGRESS_INTERVAL: 0,
+};
+
+const shareTarget = {
+  formAction: 'https://s3.amazonaws.com/presigned',
+  formFields: { bucket: 'some-chromatic-bucket', 'X-Amz-Signature': 'sig' },
+  keyPrefix: 'shares/user-123-upload-456',
+};
+
+describe('uploadShareFiles', () => {
+  it('uploads index.html in a separate phase after all other files', async () => {
+    uploadFilesMock.mockResolvedValue(undefined);
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['iframe.html', 'main.js', 'index.html'],
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'main.js', contentLength: 100 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 184,
+      },
+    } as any;
+
+    await uploadShareFiles(ctx);
+
+    expect(uploadFilesMock).toHaveBeenCalledTimes(2);
+
+    // First call: non-index files
+    const firstCallTargets = uploadFilesMock.mock.calls[0][1];
+    expect(firstCallTargets.map((t) => t.filePath)).not.toContain('index.html');
+
+    // Second call: index.html only
+    const secondCallTargets = uploadFilesMock.mock.calls[1][1];
+    expect(secondCallTargets).toHaveLength(1);
+    expect(secondCallTargets[0].filePath).toBe('index.html');
+  });
+
+  it('uses the shared formAction and sets per-file key in formFields', async () => {
+    uploadFilesMock.mockResolvedValue(undefined);
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['main.js', 'index.html'],
+        lengths: [
+          { knownAs: 'main.js', contentLength: 100 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 142,
+      },
+    } as any;
+
+    await uploadShareFiles(ctx);
+
+    const allTargets = uploadFilesMock.mock.calls.flatMap(([, targets]) => targets);
+    for (const t of allTargets) {
+      expect(t.formAction).toBe(shareTarget.formAction);
+      expect(t.formFields.key).toBe(`${shareTarget.keyPrefix}/${t.filePath}`);
+    }
+  });
+
+  it('sets Content-Type per file based on extension', async () => {
+    uploadFilesMock.mockResolvedValue(undefined);
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['main.js', 'styles.css', 'logo.svg', 'data.chromaticunknown', 'index.html'],
+        lengths: [
+          { knownAs: 'main.js', contentLength: 100 },
+          { knownAs: 'styles.css', contentLength: 50 },
+          { knownAs: 'logo.svg', contentLength: 20 },
+          { knownAs: 'data.chromaticunknown', contentLength: 10 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 222,
+      },
+    } as any;
+
+    await uploadShareFiles(ctx);
+
+    const byPath = Object.fromEntries(
+      uploadFilesMock.mock.calls
+        .flatMap(([, targets]) => targets)
+        .map((t) => [t.filePath, t.formFields['Content-Type']])
+    );
+
+    expect(byPath['main.js']).toMatch(/javascript/);
+    expect(byPath['styles.css']).toBe('text/css; charset=utf-8');
+    expect(byPath['logo.svg']).toBe('image/svg+xml');
+    expect(byPath['index.html']).toBe('text/html; charset=utf-8');
+    expect(byPath['data.chromaticunknown']).toBe('application/octet-stream');
+  });
+
+  it('rejects if a file upload fails', async () => {
+    uploadFilesMock.mockRejectedValue(new Error('Upload failed'));
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['iframe.html', 'index.html'],
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 42 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 84,
+      },
+    } as any;
+
+    await expect(uploadShareFiles(ctx)).rejects.toThrow('Upload failed');
+  });
+
+  it('onProgress handles upload retries properly', async () => {
+    const experimental_onTaskProgress = vi.fn();
+    uploadFilesMock
+      .mockImplementationOnce(async (_ctx, _targets, onProgress) => {
+        onProgress?.(60);
+        onProgress?.(100);
+        onProgress?.(40); // retry rewind from a failed upload
+        onProgress?.(90);
+      })
+      .mockImplementationOnce(async (_ctx, _targets, onProgress) => {
+        onProgress?.(10);
+        onProgress?.(42);
+      });
+
+    const ctx = {
+      share: { shareUrl: 'https://chromatic.com/share/abc', target: shareTarget },
+      env: environment,
+      options: { experimental_onTaskProgress },
+      sourceDir: '/static/',
+      fileInfo: {
+        paths: ['iframe.html', 'index.html'],
+        lengths: [
+          { knownAs: 'iframe.html', contentLength: 100 },
+          { knownAs: 'index.html', contentLength: 42 },
+        ],
+        total: 142,
+      },
+    } as any;
+
+    await uploadShareFiles(ctx);
+
+    expect(experimental_onTaskProgress.mock.calls.map(([, status]) => status.progress)).toEqual([
+      60, 100, 110, 142,
+    ]);
+    expect(experimental_onTaskProgress.mock.calls.map(([, status]) => status.total)).toEqual([
+      142, 142, 142, 142,
+    ]);
+  });
+});

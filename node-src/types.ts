@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { InitialContext } from '.';
 import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
@@ -163,6 +164,94 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+export interface Git {
+  version?: string;
+  /** The absolute location on disk of the git project */
+  rootPath?: string;
+  /** The current user's email as per git config */
+  gitUserEmail?: string;
+  branch: string;
+  commit: string;
+  committerEmail?: string;
+  committedAt: number;
+  slug?: string;
+  fromCI: boolean;
+  ciService?: string;
+  mergeCommit?: string;
+  uncommittedHash?: string;
+  parentCommits?: string[];
+  baselineCommits?: string[];
+  changedFiles?: string[];
+  changedDependencyNames?: string[];
+  replacementBuildIds?: [string, string][];
+  matchesBranch?: (glob: boolean | string) => boolean;
+  packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+}
+
+export interface ProjectMetadata {
+  hasRouter?: boolean;
+  creationDate?: Date;
+  storybookCreationDate?: Date;
+  numberOfCommitters?: number;
+  numberOfAppFiles?: number;
+}
+
+export interface BaselineBuild {
+  id: string;
+  number: number;
+  status: string;
+  commit: string;
+  committedAt: number;
+  uncommittedHash: string;
+  isLocalBuild: boolean;
+  changeCount: number;
+}
+
+export interface Storybook {
+  version: string;
+  baseDir?: string;
+  configDir: string;
+  staticDir: string[];
+  addons: {
+    name: string;
+    packageName?: string;
+    packageVersion?: string;
+  }[];
+  builder: {
+    name: string;
+    packageName?: string;
+    packageVersion?: string;
+  };
+  mainConfigFilePath?: string;
+  refs?: Record<string, StorybookReference>;
+}
+
+export interface RuntimeMetadata {
+  nodePlatform: NodeJS.Platform;
+  nodeVersion: string;
+  packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  packageManagerVersion?: string;
+}
+
+export interface AnnouncedBuild {
+  id: string;
+  number: number;
+  browsers: string[];
+  status: string;
+  autoAcceptChanges: boolean;
+  reportToken: string;
+  features?: {
+    uiTests: boolean;
+    uiReview: boolean;
+    isReactNativeApp: boolean;
+  };
+  app: {
+    id: string;
+    turboSnapAvailability: string;
+    isOnboarding: boolean;
+  };
+}
+
 export type TaskName =
   | 'auth'
   | 'gitInfo'
@@ -171,11 +260,48 @@ export type TaskName =
   | 'build'
   | 'prepare'
   | 'upload'
+  | 'share'
   | 'verify'
   | 'snapshot'
   | 'report'
   | 'prepareWorkspace'
   | 'restoreWorkspace';
+
+/**
+ * Mutable runtime state that overrides Options mid-pipeline. Tasks write
+ * Runtime; Options stays as the user's original spec and is treated as read-only.
+ *
+ * Each field is seeded from its Options counterpart at init time, then may be
+ * overridden later by tasks that need to change effective behavior.
+ */
+export type Runtime = Pick<Options, 'forceRebuild'>;
+
+/**
+ * Cross-cutting dependencies passed to every task. Individual tasks will
+ * `Pick` the dependencies they need.
+ */
+export interface Deps {
+  log: Logger;
+  client: GraphQLClient;
+  http: HTTPClient;
+  env: Environment;
+  options: Readonly<Options>;
+  runtime: Runtime;
+  analytics?: AnalyticsClient;
+  pkg: Context['pkg'];
+  sessionId: string;
+  packageJson: Record<string, any>;
+}
+
+export type TaskResult<TOutput, TPartial = never> =
+  | { kind: 'continue'; output: TOutput }
+  | { kind: 'partial'; output: TPartial; reason?: string }
+  | { kind: 'skip'; reason?: string };
+
+export type TaskFunction<TInput, TOutput, TDeps = Deps, TPartial = never> = (
+  deps: TDeps,
+  input: TInput
+) => Promise<TaskResult<TOutput, TPartial>>;
 
 export interface Context {
   env: Environment;
@@ -186,6 +312,7 @@ export interface Context {
     description: string;
     bugs: { url: string; email: string };
     docs: string;
+    engines?: { node?: string };
   };
   sessionId: string;
   packageJson: Record<string, any>;
@@ -196,6 +323,7 @@ export interface Context {
   extraOptions?: Partial<Options>;
   configuration: Configuration;
   options: Options;
+  runtime: Runtime;
   task: TaskName;
   title: string;
   skip?: boolean;
@@ -208,13 +336,9 @@ export interface Context {
   userError?: boolean;
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
-  runtimeMetadata?: {
-    nodePlatform: NodeJS.Platform;
-    nodeVersion: string;
-    packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
-    packageManagerVersion?: string;
-  };
+  runtimeMetadata?: RuntimeMetadata;
   analytics?: AnalyticsClient;
+  /** @deprecated Will be removed in the next major. */
   environment?: Record<string, string>;
   reportPath?: string;
   isPublishOnly?: boolean;
@@ -225,72 +349,11 @@ export interface Context {
   http: HTTPClient;
   client: GraphQLClient;
 
-  git: {
-    version?: string;
-    /** The absolute location on disk of the git project */
-    rootPath?: string;
-    /** The current user's email as pre git config */
-    gitUserEmail?: string;
-    branch: string;
-    commit: string;
-    committerEmail?: string;
-    committedAt: number;
-    slug?: string;
-    fromCI: boolean;
-    ciService?: string;
-    mergeCommit?: string;
-    uncommittedHash?: string;
-    parentCommits?: string[];
-    baselineCommits?: string[];
-    changedFiles?: string[];
-    changedDependencyNames?: string[];
-    replacementBuildIds?: [string, string][];
-    matchesBranch?: (glob: boolean | string) => boolean;
-    packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
-  };
-  storybook: {
-    version: string;
-    baseDir?: string;
-    configDir: string;
-    staticDir: string[];
-    addons: {
-      name: string;
-      packageName?: string;
-      packageVersion?: string;
-    }[];
-    builder: {
-      name: string;
-      packageName?: string;
-      packageVersion?: string;
-    };
-    mainConfigFilePath?: string;
-    refs?: Record<string, StorybookReference>;
-  };
-  projectMetadata: {
-    hasRouter?: boolean;
-    creationDate?: Date;
-    storybookCreationDate?: Date;
-    numberOfCommitters?: number;
-    numberOfAppFiles?: number;
-  };
+  git: Git;
+  storybook: Storybook;
+  projectMetadata: ProjectMetadata;
   storybookUrl?: string;
-  announcedBuild: {
-    id: string;
-    number: number;
-    browsers: string[];
-    status: string;
-    autoAcceptChanges: boolean;
-    reportToken: string;
-    features?: {
-      uiTests: boolean;
-      uiReview: boolean;
-      isReactNativeApp: boolean;
-    };
-    app: {
-      id: string;
-      turboSnapAvailability: string;
-    };
-  };
+  announcedBuild: AnnouncedBuild;
   build: {
     id: string;
     number: number;
@@ -364,6 +427,7 @@ export interface Context {
   sourceDir: string;
   buildCommand?: string;
   buildLogFile?: string;
+  reactNativeBuildLogFile?: string;
   fileInfo?: {
     paths: string[];
     hashes?: Record<FilePath, string>;
@@ -374,6 +438,15 @@ export interface Context {
       contentLength: number;
     }[];
     total: number;
+  };
+  share?: {
+    shareId: string;
+    shareUrl: string;
+    target: {
+      formAction: string;
+      formFields: Record<string, string>;
+      keyPrefix: string;
+    };
   };
   sentinelUrls?: string[];
   uploadedBytes?: number;
@@ -421,6 +494,34 @@ export interface TargetInfo {
   formFields: Record<string, string>;
 }
 
+interface TurboSnapBailReasonBase {
+  changedStorybookFiles?: string[];
+  changedStaticFiles?: string[];
+  changedExternalFiles?: string[];
+  invalidChangedFiles?: true;
+  missingStatsFile?: true;
+  noAncestorBuild?: true;
+  rebuild?: true;
+}
+
+export type TurboSnapBailSubreason =
+  | 'baselineCheckoutFailed'
+  | 'lockfileParseFailed'
+  | 'lockfileSizeExceeded'
+  | 'nodeModulesMissingInStats';
+
+export type TurboSnapBailReason =
+  // All additional fields allowed for the changedPackageFiles bail reason
+  | (TurboSnapBailReasonBase & {
+      changedPackageFiles: string[];
+      bailSubreason?: TurboSnapBailSubreason;
+      lockfileKind?: string;
+      lockfileSizeBytes?: number;
+      sentryEventId?: string;
+    })
+  // All remaining bail reasons
+  | (TurboSnapBailReasonBase & { changedPackageFiles?: never });
+
 export interface TurboSnap {
   unavailable?: boolean;
   rootPath?: string;
@@ -434,16 +535,7 @@ export interface TurboSnap {
   changedDependencyNames?: Set<string>;
   changedManifestFiles?: Set<string>;
   affectedModuleIds?: Set<string | number>;
-  bailReason?: {
-    changedPackageFiles?: string[];
-    changedStorybookFiles?: string[];
-    changedStaticFiles?: string[];
-    changedExternalFiles?: string[];
-    invalidChangedFiles?: true;
-    missingStatsFile?: true;
-    noAncestorBuild?: true;
-    rebuild?: true;
-  };
+  bailReason?: TurboSnapBailReason;
 }
 
 export { type Configuration } from './lib/getConfiguration';
