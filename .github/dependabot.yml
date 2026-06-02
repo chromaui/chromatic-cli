@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     labels:
-      # Semver-related labels (`major`, `minor`, `patch`) are added automatically.
+      - "patch"
       - "skip-release"
     exclude-paths:
       - "subdir/**"
