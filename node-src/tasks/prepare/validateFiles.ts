@@ -59,15 +59,15 @@ function getOutputDirectory(buildLog: string) {
   const cleanLog = stripVTControlCharacters(buildLog);
   const lines = cleanLog.split('\n');
 
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const outputIndex = lines[i].lastIndexOf('Output directory:');
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const outputIndex = lines[index].lastIndexOf('Output directory:');
     if (outputIndex === -1) continue;
 
-    const sameLineOutput = lines[i].slice(outputIndex + 'Output directory:'.length).trim();
+    const sameLineOutput = lines[index].slice(outputIndex + 'Output directory:'.length).trim();
     if (sameLineOutput) return sameLineOutput;
 
-    for (let j = i + 1; j < lines.length; j += 1) {
-      const candidate = lines[j].replace(/^[\s│└┌├┬┴─]+/, '').trim();
+    for (let index_ = index + 1; index_ < lines.length; index_ += 1) {
+      const candidate = lines[index_].replace(/^[\s│└┌├┬┴─]+/, '').trim();
       if (!candidate) continue;
       return candidate;
     }
