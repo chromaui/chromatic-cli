@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
 import slash from 'slash';
+import { stripVTControlCharacters } from 'util';
 
 import { Context } from '../../types';
 import deviatingOutputDirectory from '../../ui/messages/warnings/deviatingOutputDirectory';
@@ -55,7 +56,7 @@ function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = 
  * @returns The output directory path if found, undefined otherwise
  */
 function getOutputDirectory(buildLog: string) {
-  const cleanLog = buildLog.replaceAll(/\u001B\[[0-?]*[ -/]*[@-~]/g, '');
+  const cleanLog = stripVTControlCharacters(buildLog);
   const lines = cleanLog.split('\n');
 
   for (let i = lines.length - 1; i >= 0; i -= 1) {
