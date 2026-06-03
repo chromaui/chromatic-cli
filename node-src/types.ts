@@ -520,23 +520,27 @@ export type TurboSnapBailSubreason =
   | TurboSnapChangedPackageFilesSubreason
   | TurboSnapInvalidChangedFilesSubreason;
 
+// All additional fields allowed for the `changedPackageFiles` bail reason
+export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
+  changedPackageFiles: string[];
+  invalidChangedFiles?: never;
+  bailSubreason?: TurboSnapChangedPackageFilesSubreason;
+  lockfileKind?: string;
+  lockfileSizeBytes?: number;
+  sentryEventId?: string;
+};
+
+// All additional fields allowed for the `invalidChangedFiles` bail reason
+export type InvalidChangedFilesBailReason = TurboSnapBailReasonBase & {
+  changedPackageFiles?: never;
+  invalidChangedFiles: true;
+  bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
+  sentryEventId?: string;
+};
+
 export type TurboSnapBailReason =
-  // All additional fields allowed for the changedPackageFiles bail reason
-  | (TurboSnapBailReasonBase & {
-      changedPackageFiles: string[];
-      invalidChangedFiles?: never;
-      bailSubreason?: TurboSnapChangedPackageFilesSubreason;
-      lockfileKind?: string;
-      lockfileSizeBytes?: number;
-      sentryEventId?: string;
-    })
-  // All additional fields allowed for the invalidChangedFiles bail reason
-  | (TurboSnapBailReasonBase & {
-      changedPackageFiles?: never;
-      invalidChangedFiles: true;
-      bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
-      sentryEventId?: string;
-    })
+  | ChangedPackageFilesBailReason
+  | InvalidChangedFilesBailReason
   // All remaining bail reasons
   | (TurboSnapBailReasonBase & {
       changedPackageFiles?: never;

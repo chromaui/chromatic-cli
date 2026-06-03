@@ -1,17 +1,12 @@
 import path from 'path';
 
-import { TurboSnapBailReason } from '../../types';
+import { ChangedPackageFilesBailReason } from '../../types';
 import {
   BaselineCheckoutFailedError,
   LockFileParseFailedError,
   LockFileSizeExceededError,
 } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
-
-// Extract all bail detail fields related to changedPackageFiles
-export type ChangedPackageFilesPatch = Partial<
-  Extract<TurboSnapBailReason, { changedPackageFiles: string[] }>
->;
 
 /**
  * Detect which supported lockfile kind a given path corresponds to.
@@ -32,7 +27,7 @@ export function detectLockfileKind(filePath: string): string | undefined {
  *
  * @returns A partial patch object to merge into the bail reason.
  */
-export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
+export function classifyBailDetail(err: unknown): Partial<ChangedPackageFilesBailReason> {
   if (err instanceof LockFileSizeExceededError) {
     const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
