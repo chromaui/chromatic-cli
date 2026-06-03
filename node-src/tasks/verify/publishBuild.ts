@@ -1,6 +1,6 @@
 import { exitCodes, setExitCode } from '../../lib/setExitCode';
 import { Context } from '../../types';
-import { publishFailed } from '../../ui/tasks/verify';
+import { publishFailed, publishSkipped } from '../../ui/tasks/verify';
 
 const PublishBuildMutation = `
   mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
@@ -56,5 +56,9 @@ export const publishBuild = async (ctx: Context) => {
   if (publishedBuild.status === 'FAILED') {
     setExitCode(ctx, exitCodes.BUILD_FAILED, false);
     throw new Error(publishFailed(ctx).output);
+  }
+
+  if (publishedBuild.status === 'SKIPPED') {
+    ctx.skip = true;
   }
 };

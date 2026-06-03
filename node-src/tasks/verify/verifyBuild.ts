@@ -122,6 +122,10 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
   // It's not possible to set both --only-changed and --only-story-files and/or --only-story-names
   // onlyStoryFiles may be passed directly, or calculated via --only-changed
   if (onlyStoryFiles) {
+    if (onlyStoryFiles.length === 0) {
+      transitionTo(success, true)(ctx, task);
+      return;
+    }
     transitionTo(runOnlyFiles)(ctx, task);
   }
   if (onlyStoryNames) {

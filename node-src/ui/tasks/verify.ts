@@ -27,6 +27,12 @@ export const publishFailed = (ctx: Context) => ({
   output: 'Failed to publish build',
 });
 
+export const publishSkipped = (ctx: Context) => ({
+  status: 'error',
+  title: `Verifying your ${buildType(ctx)}`,
+  output: 'Build skipped, not publishing',
+});
+
 export const runOnlyFiles = (ctx: Context) => ({
   status: 'pending',
   title: 'Starting partial build',
