@@ -129,8 +129,8 @@ export function isNetworkError(err: unknown): boolean {
     return true;
   }
 
-  const statusCode = readCode(err) ?? readCode('cause' in err ? err.cause : undefined);
-  return typeof statusCode === 'string' && NETWORK_ERROR_CODES.has(statusCode);
+  const errorCode = readCode(err) ?? readCode('cause' in err ? err.cause : undefined);
+  return typeof errorCode === 'string' && NETWORK_ERROR_CODES.has(errorCode);
 }
 
 function readCode(value: unknown): unknown {
