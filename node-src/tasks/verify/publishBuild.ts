@@ -1,6 +1,6 @@
 import { exitCodes, setExitCode } from '../../lib/setExitCode';
 import { Context } from '../../types';
-import { publishFailed, publishSkipped } from '../../ui/tasks/verify';
+import { publishFailed } from '../../ui/tasks/verify';
 
 const PublishBuildMutation = `
   mutation PublishBuildMutation($id: ID!, $input: PublishBuildInput!) {
