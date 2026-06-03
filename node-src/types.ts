@@ -503,18 +503,29 @@ interface TurboSnapBailReasonBase {
   rebuild?: true;
 }
 
-export type TurboSnapBailSubreason =
+export type TurboSnapChangedPackageFilesSubreason =
   | 'baselineCheckoutFailed'
   | 'lockfileParseFailed'
   | 'lockfileSizeExceeded'
   | 'nodeModulesMissingInStats';
+
+export type TurboSnapInvalidChangedFilesSubreason =
+  | 'ancestorMissing'
+  | 'baselineDirty'
+  | 'replacementFailed'
+  | 'networkError'
+  | 'gitCommandFailed';
+
+export type TurboSnapBailSubreason =
+  | TurboSnapChangedPackageFilesSubreason
+  | TurboSnapInvalidChangedFilesSubreason;
 
 export type TurboSnapBailReason =
   // All additional fields allowed for the changedPackageFiles bail reason
   | (TurboSnapBailReasonBase & {
       changedPackageFiles: string[];
       invalidChangedFiles?: never;
-      bailSubreason?: TurboSnapBailSubreason;
+      bailSubreason?: TurboSnapChangedPackageFilesSubreason;
       lockfileKind?: string;
       lockfileSizeBytes?: number;
       sentryEventId?: string;
@@ -523,11 +534,7 @@ export type TurboSnapBailReason =
   | (TurboSnapBailReasonBase & {
       changedPackageFiles?: never;
       invalidChangedFiles: true;
-      ancestorMissing?: true;
-      baselineDirty?: true;
-      replacementFailed?: true;
-      networkError?: true;
-      gitCommandFailed?: true;
+      bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
       sentryEventId?: string;
     })
   // All remaining bail reasons

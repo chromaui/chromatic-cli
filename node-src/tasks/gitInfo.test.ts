@@ -294,23 +294,31 @@ describe('invalidChangedFiles bail detail', () => {
     getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
   });
 
-  const cases: { name: string; err: Error; flag: string }[] = [
+  const cases: { name: string; err: Error; subreason: string }[] = [
     {
       name: 'AncestorMissingError',
       err: new AncestorMissingError('012qwes'),
-      flag: 'ancestorMissing',
+      subreason: 'ancestorMissing',
     },
-    { name: 'BaselineDirtyError', err: new BaselineDirtyError('012qwes'), flag: 'baselineDirty' },
-    { name: 'NetworkError', err: new NetworkError(), flag: 'networkError' },
+    {
+      name: 'BaselineDirtyError',
+      err: new BaselineDirtyError('012qwes'),
+      subreason: 'baselineDirty',
+    },
+    { name: 'NetworkError', err: new NetworkError(), subreason: 'networkError' },
     {
       name: 'ReplacementFailedError',
       err: new ReplacementFailedError(),
-      flag: 'replacementFailed',
+      subreason: 'replacementFailed',
     },
-    { name: 'GitCommandError', err: new GitCommandError('git diff'), flag: 'gitCommandFailed' },
+    {
+      name: 'GitCommandError',
+      err: new GitCommandError('git diff'),
+      subreason: 'gitCommandFailed',
+    },
   ];
 
-  it.each(cases)('classifies $name into $flag', async ({ err, flag }) => {
+  it.each(cases)('classifies $name into $subreason', async ({ err, subreason }) => {
     getChangedFilesWithReplacement.mockRejectedValueOnce(err);
 
     const result = await gatherGitInfo(buildDeps(), buildInput({ onlyChanged: true }));
@@ -318,7 +326,7 @@ describe('invalidChangedFiles bail detail', () => {
 
     expect(result.output.turboSnap?.bailReason).toMatchObject({
       invalidChangedFiles: true,
-      [flag]: true,
+      bailSubreason: subreason,
       sentryEventId: 'fake-sentry-id',
     });
     expect(result.output.git.changedFiles).toBeUndefined();
@@ -327,13 +335,13 @@ describe('invalidChangedFiles bail detail', () => {
     expect(Sentry.captureException).toHaveBeenCalledWith(
       err,
       expect.objectContaining({
-        tags: { bail_path: 'gitInfo.invalidChangedFiles', bail_detail: flag },
-        fingerprint: [flag],
+        tags: { bail_path: 'gitInfo.invalidChangedFiles', bail_detail: subreason },
+        fingerprint: [subreason],
       })
     );
   });
 
-  it('leaves detail flags undefined and omits fingerprint for a generic error', async () => {
+  it('leaves bailSubreason undefined and omits fingerprint for a generic error', async () => {
     const err = new Error('something else');
     getChangedFilesWithReplacement.mockRejectedValueOnce(err);
 
