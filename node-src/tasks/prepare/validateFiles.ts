@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
-import slash from 'slash';
 
+import { posix } from '../../lib/posix';
 import { Context } from '../../types';
 import deviatingOutputDirectory from '../../ui/messages/warnings/deviatingOutputDirectory';
 import { invalid, invalidReactNative } from '../../ui/tasks/prepare';
@@ -76,7 +76,7 @@ function getOutputDirectory(buildLog: string) {
 function getFileInfo(ctx: Context, sourceDirectory: string) {
   const lengths = getPathSpecsInDirectory(ctx, sourceDirectory).map((o) => ({
     ...o,
-    knownAs: slash(o.pathname),
+    knownAs: posix(o.pathname),
   }));
   const total = lengths.map(({ contentLength }) => contentLength).reduce((a, b) => a + b, 0);
   const paths: string[] = [];
