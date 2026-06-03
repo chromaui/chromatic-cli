@@ -14,6 +14,7 @@ const config: StorybookConfig = {
   viteFinal: async (config) => {
     config.resolve = {
       ...config.resolve,
+      conditions: ['node'],
       alias: {
         ...config.resolve?.alias,
         os: fileURLToPath(import.meta.resolve('os-browserify/browser')),
