@@ -39,6 +39,11 @@ export const buildDeps = (ctx: Context): Deps => ({
   pkg: ctx.pkg,
   sessionId: ctx.sessionId,
   packageJson: ctx.packageJson,
+  // No-op by default; the new engine's `runTask` overrides this with a renderer-aware reporter.
+  // Under Listr there is no reporter: legacy tasks mutate the Listr task object directly, and
+  // adapted tasks have no mid-task channel here — so a task must not adopt `deps.report` until it
+  // has been migrated off Listr onto `runTask`, where the override makes it live.
+  report: () => {},
 });
 
 async function applyAdaptedResult<TInput, TOutput, TPartial>(
