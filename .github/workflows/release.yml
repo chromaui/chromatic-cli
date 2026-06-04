@@ -21,6 +21,12 @@ on:
       - package.json
       - storybook-addon.*
 
+# Opening a PR and attaching labels can trigger multiple action runs at the same time. Instead, we
+# group them together by the pull request ref so only 1 runs at a time.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   id-token: write
   contents: write
