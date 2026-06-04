@@ -181,4 +181,111 @@ describe('runTask', () => {
     const fail = calls.find((c) => c.hook === 'fail');
     expect(fail?.state.title).toBe('Authentication failed');
   });
+
+  describe('deps.report (mid-task updates)', () => {
+    it('routes a textual update to renderer.update without calling onTaskProgress', async () => {
+      const onTaskProgress = vi.fn();
+      const ctx = fakeContext({ options: { experimental_onTaskProgress: onTaskProgress } as any });
+      const { renderer, calls } = recordingRenderer();
+
+      const config: TaskConfig<unknown, unknown> = {
+        name: 'gitInfo',
+        title: 'Retrieving git information',
+        transitions,
+        extractInput: () => ({}),
+        run: async (deps) => {
+          deps.report({ title: 'Skipping build', output: 'no changes since last build' });
+          return { kind: 'continue', output: {} };
+        },
+      };
+
+      await runTask(ctx, config, renderer);
+
+      const update = calls.find((c) => c.hook === 'update');
+      expect(update?.state.title).toBe('Skipping build');
+      expect(update?.state.output).toBe('no changes since last build');
+      expect(update?.state.progress).toBeUndefined();
+      expect(onTaskProgress).not.toHaveBeenCalled();
+    });
+
+    it('fans a numeric update out to both renderer.update and the public onTaskProgress hook', async () => {
+      const onTaskProgress = vi.fn();
+      const ctx = fakeContext({ options: { experimental_onTaskProgress: onTaskProgress } as any });
+      const { renderer, calls } = recordingRenderer();
+
+      const config: TaskConfig<unknown, unknown> = {
+        name: 'upload',
+        title: 'Uploading',
+        transitions,
+        extractInput: () => ({}),
+        run: async (deps) => {
+          deps.report({
+            output: 'uploading',
+            progress: { progress: 512, total: 1024, unit: 'bytes' },
+          });
+          return { kind: 'continue', output: {} };
+        },
+      };
+
+      await runTask(ctx, config, renderer);
+
+      const update = calls.find((c) => c.hook === 'update');
+      expect(update?.state.progress).toEqual({ progress: 512, total: 1024, unit: 'bytes' });
+      // No textual report preceded this one, so the update inherits the task's starting title.
+      expect(update?.state.title).toBe('Uploading');
+
+      expect(onTaskProgress).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
+        progress: 512,
+        total: 1024,
+        unit: 'bytes',
+      });
+    });
+
+    it('passes a numeric-only report through with no output', async () => {
+      const ctx = fakeContext({ options: {} as any });
+      const { renderer, calls } = recordingRenderer();
+
+      const config: TaskConfig<unknown, unknown> = {
+        name: 'upload',
+        title: 'Uploading',
+        transitions,
+        extractInput: () => ({}),
+        run: async (deps) => {
+          deps.report({ progress: { progress: 512, total: 1024, unit: 'bytes' } });
+          return { kind: 'continue', output: {} };
+        },
+      };
+
+      await runTask(ctx, config, renderer);
+
+      const update = calls.find((c) => c.hook === 'update');
+      expect(update?.state.output).toBeUndefined();
+      expect(update?.state.progress).toEqual({ progress: 512, total: 1024, unit: 'bytes' });
+    });
+
+    it('makes a textual update sticky: a later title-less report inherits the current title', async () => {
+      const ctx = fakeContext({ options: {} as any });
+      const { renderer, calls } = recordingRenderer();
+
+      const config: TaskConfig<unknown, unknown> = {
+        name: 'upload',
+        title: 'Uploading',
+        transitions,
+        extractInput: () => ({}),
+        run: async (deps) => {
+          deps.report({ title: 'Finalizing' });
+          deps.report({ progress: { progress: 512, total: 1024, unit: 'bytes' } });
+          return { kind: 'continue', output: {} };
+        },
+      };
+
+      await runTask(ctx, config, renderer);
+
+      const updates = calls.filter((c) => c.hook === 'update');
+      expect(updates[0].state.title).toBe('Finalizing');
+      // The numeric-only report carries no title of its own, so it renders with the title set by
+      // the preceding textual report.
+      expect(updates[1].state.title).toBe('Finalizing');
+    });
+  });
 });
