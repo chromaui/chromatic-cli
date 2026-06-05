@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "22.22.3"
-      - run: rm -rf subdir # remove conflicting subproject
       - run: yarn set version 1.22.22
       - run: yarn install --ignore-engines
       - name: run chromatic

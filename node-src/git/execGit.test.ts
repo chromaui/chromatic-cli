@@ -3,6 +3,7 @@ import { PassThrough, Transform } from 'node:stream';
 import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as shell from '../lib/shell/shell';
 import TestLogger from '../lib/testLogger';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
@@ -21,7 +22,7 @@ vi.mock('execa', async (importOriginal) => {
 });
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('execGitCommand', () => {
@@ -69,6 +70,36 @@ describe('execGitCommand', () => {
     execa.mockRejectedValue(new Error('something random'));
     await expect(execGitCommand(ctx, 'some command')).rejects.toThrow('something random');
   });
+
+  it('uses a default timeout of 20 seconds when none is specified', async () => {
+    const runCommand = vi
+      .spyOn(shell, 'runCommand')
+      .mockReturnValue(Promise.resolve({ all: Buffer.from('output') }) as any);
+
+    await execGitCommand(ctx, 'some command');
+
+    expect(runCommand).toHaveBeenCalledWith(
+      'some command',
+      expect.objectContaining({ timeout: 20_000 })
+    );
+  });
+
+  it('overrides the default timeout when a custom one is provided', async () => {
+    const runCommand = vi
+      .spyOn(shell, 'runCommand')
+      .mockReturnValue(Promise.resolve({ all: Buffer.from('output') }) as any);
+
+    await execGitCommand(ctx, 'some command', { timeout: 60_000 });
+
+    expect(runCommand).toHaveBeenCalledWith(
+      'some command',
+      expect.objectContaining({ timeout: 60_000 })
+    );
+    expect(runCommand).not.toHaveBeenCalledWith(
+      'some command',
+      expect.objectContaining({ timeout: 20_000 })
+    );
+  });
 });
 
 function createExecaStreamer() {
@@ -113,7 +144,7 @@ describe('execGitCommandOneLine', () => {
     expect(await promise).toEqual('First line');
   });
 
-  it('Return an error if the command has no ouput', async () => {
+  it('Return an error if the command has no output', async () => {
     const streamer = createExecaStreamer();
     execa.mockReturnValue(streamer as any);
 

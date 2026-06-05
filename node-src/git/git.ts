@@ -4,9 +4,18 @@ import pLimit from 'p-limit';
 import path from 'path';
 import { file as temporaryFile } from 'tmp-promise';
 
-import { BaselineCheckoutFailedError } from '../lib/turbosnap/errors';
-import { Deps } from '../types';
-import { execGitCommand, execGitCommandCountLines, execGitCommandOneLine } from './execGit';
+import {
+  AncestorMissingError,
+  BaselineCheckoutFailedError,
+  GitCommandError,
+} from '../lib/turbosnap/errors';
+import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
+import {
+  execGitCommand,
+  execGitCommandCountLines,
+  execGitCommandOneLine,
+  GitDeps,
+} from './execGit';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
@@ -18,7 +27,7 @@ export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` wit
  *
  * @returns The Git version.
  */
-export async function getVersion(deps: Pick<Deps, 'log'>) {
+export async function getVersion(deps: GitDeps) {
   const result = await execGitCommand(deps, `git --version`);
   return result?.replace('git version ', '').replace(/\s*\(.*\)/, '');
 }
@@ -30,7 +39,7 @@ export async function getVersion(deps: Pick<Deps, 'log'>) {
  *
  * @returns The user's email.
  */
-export async function getUserEmail(deps: Pick<Deps, 'log'>) {
+export async function getUserEmail(deps: GitDeps) {
   return execGitCommand(deps, `git config user.email`);
 }
 
@@ -43,7 +52,7 @@ export async function getUserEmail(deps: Pick<Deps, 'log'>) {
  *
  * @returns The slug of the remote URL.
  */
-export async function getSlug(deps: Pick<Deps, 'log'>) {
+export async function getSlug(deps: GitDeps) {
   const result = await execGitCommand(deps, `git config --get remote.origin.url`);
   const downcasedResult = result?.toLowerCase() || '';
   const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
@@ -62,7 +71,7 @@ export async function getSlug(deps: Pick<Deps, 'log'>) {
  *
  * @returns Commit details from Git.
  */
-export async function getCommit(deps: Pick<Deps, 'log'>, revision = '') {
+export async function getCommit(deps: GitDeps, revision = '') {
   const result = await execGitCommand(
     deps,
     // Technically this yields the author info, not committer info
@@ -85,7 +94,7 @@ export async function getCommit(deps: Pick<Deps, 'log'>, revision = '') {
  *
  * @returns The branch name from Git.
  */
-export async function getBranch(deps: Pick<Deps, 'log'>) {
+export async function getBranch(deps: GitDeps) {
   try {
     // Git v2.22 and above
     // Yields an empty string when in detached HEAD state
@@ -115,7 +124,7 @@ export async function getBranch(deps: Pick<Deps, 'log'>) {
  *
  * @returns The uncommited hash, if available.
  */
-export async function getUncommittedHash(deps: Pick<Deps, 'log'>) {
+export async function getUncommittedHash(deps: GitDeps) {
   const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
   const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
   const listUntrackedFiles = 'git ls-files --others --exclude-standard';
@@ -164,7 +173,7 @@ export async function getUncommittedHash(deps: Pick<Deps, 'log'>) {
  *
  * @returns True if the current commit has at least one parent.
  */
-export async function hasPreviousCommit(deps: Pick<Deps, 'log'>) {
+export async function hasPreviousCommit(deps: GitDeps) {
   const result = await execGitCommand(deps, `git --no-pager log -n 1 --skip=1 --format="%H"`);
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
@@ -180,7 +189,7 @@ export async function hasPreviousCommit(deps: Pick<Deps, 'log'>) {
  *
  * @returns True if the commit exists.
  */
-export async function commitExists(deps: Pick<Deps, 'log'>, commit: string) {
+export async function commitExists(deps: GitDeps, commit: string) {
   try {
     await execGitCommand(deps, `git cat-file -e "${commit}^{commit}"`);
     return true;
@@ -198,17 +207,18 @@ export async function commitExists(deps: Pick<Deps, 'log'>, commit: string) {
  *
  * @returns The list of changed files of a single commit or between two commits.
  */
-export async function getChangedFiles(
-  deps: Pick<Deps, 'log'>,
-  baseCommit: string,
-  headCommit = ''
-) {
+export async function getChangedFiles(deps: GitDeps, baseCommit: string, headCommit = '') {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
-  const files = await execGitCommand(
-    deps,
-    `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`
-  );
-  return files?.split(newline).filter(Boolean);
+  const command = `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`;
+  try {
+    const files = await execGitCommand(deps, command);
+    return files?.split(newline).filter(Boolean);
+  } catch (error) {
+    if (/bad object/.test(error.message)) {
+      throw new AncestorMissingError(baseCommit, { cause: error });
+    }
+    throw new GitCommandError(command, { cause: error });
+  }
 }
 
 /**
@@ -219,7 +229,7 @@ export async function getChangedFiles(
  *
  * @returns True if the workspace is up-to-date.
  */
-export async function isUpToDate(deps: Pick<Deps, 'log'>) {
+export async function isUpToDate(deps: GitDeps) {
   const { log } = deps;
 
   try {
@@ -257,7 +267,7 @@ export async function isUpToDate(deps: Pick<Deps, 'log'>) {
  *
  * @returns True if the workspace has no changes.
  */
-export async function isClean(deps: Pick<Deps, 'log'>) {
+export async function isClean(deps: GitDeps) {
   const status = await execGitCommand(deps, 'git status --porcelain');
   return status === '';
 }
@@ -270,7 +280,7 @@ export async function isClean(deps: Pick<Deps, 'log'>) {
  *
  * @returns A message indicating how far behind the branch is from the remote.
  */
-export async function getUpdateMessage(deps: Pick<Deps, 'log'>) {
+export async function getUpdateMessage(deps: GitDeps) {
   const status = await execGitCommand(deps, 'git status');
   return status
     ?.split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
@@ -313,11 +323,7 @@ export async function getUpdateMessage(deps: Pick<Deps, 'log'>) {
  *
  * @returns The best common ancestor commit between the two provided.
  */
-export async function findMergeBase(
-  deps: Pick<Deps, 'log'>,
-  headReference: string,
-  baseReference: string
-) {
+export async function findMergeBase(deps: GitDeps, headReference: string, baseReference: string) {
   const result = await execGitCommand(
     deps,
     `git merge-base --all ${headReference} ${baseReference}`
@@ -349,7 +355,7 @@ export async function findMergeBase(
  *
  * @returns The result of the Git checkout call in the terminal.
  */
-export async function checkout(deps: Pick<Deps, 'log'>, reference: string) {
+export async function checkout(deps: GitDeps, reference: string) {
   return execGitCommand(deps, `git checkout ${reference}`);
 }
 
@@ -367,7 +373,7 @@ const limitConcurrency = pLimit(10);
  * @returns The temporary file path of the checked out file.
  */
 export async function checkoutFile(
-  deps: Pick<Deps, 'log'>,
+  deps: GitDeps,
   reference: string,
   fileName: string,
   tmpdir: string
@@ -398,7 +404,7 @@ export async function checkoutFile(
  *
  * @returns The result of the `git checkout` command in the terminal.
  */
-export async function checkoutPrevious(deps: Pick<Deps, 'log'>) {
+export async function checkoutPrevious(deps: GitDeps) {
   return execGitCommand(deps, `git checkout -`);
 }
 
@@ -409,7 +415,7 @@ export async function checkoutPrevious(deps: Pick<Deps, 'log'>) {
  *
  * @returns The result of the `git reset` command in the terminal.
  */
-export async function discardChanges(deps: Pick<Deps, 'log'>) {
+export async function discardChanges(deps: GitDeps) {
   return execGitCommand(deps, `git reset --hard`);
 }
 
@@ -420,7 +426,7 @@ export async function discardChanges(deps: Pick<Deps, 'log'>) {
  *
  * @returns The root directory of the Git repository.
  */
-export async function getRepositoryRoot(deps: Pick<Deps, 'log'>) {
+export async function getRepositoryRoot(deps: GitDeps) {
   return execGitCommand(deps, `git rev-parse --show-toplevel`);
 }
 
@@ -434,7 +440,7 @@ export async function getRepositoryRoot(deps: Pick<Deps, 'log'>) {
  * @returns A list of files matching the pattern.
  */
 export async function findFilesFromRepositoryRoot(
-  deps: Pick<Deps, 'log'>,
+  deps: GitDeps,
   repoRoot: string,
   ...patterns: string[]
 ) {
@@ -457,15 +463,21 @@ export async function findFilesFromRepositoryRoot(
  *
  * @param deps Function dependencies.
  *
- * @returns Date The date the repository was created
+ *  NOTE: This function is not necessary for the build. It provides metadata to the build, and will return `undefined`
+ *       if the command fails or times out.
+ *
+ * @returns Date The date the repository was created, or `undefined` if the command fails or times out.
  */
-export async function getRepositoryCreationDate(deps: Pick<Deps, 'log'>) {
+export async function getRepositoryCreationDate(deps: GitDeps) {
   try {
     const dateString = await execGitCommandOneLine(
       deps,
       `git log --reverse --format=%cd --date=iso`,
       {
-        timeout: 5000,
+        timeout: Math.min(
+          deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
+          DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
+        ),
       }
     );
 
@@ -482,21 +494,25 @@ export async function getRepositoryCreationDate(deps: Pick<Deps, 'log'>) {
  * @param deps.options Object standard context options
  * @param deps.options.storybookConfigDir Configured Storybook config dir, if set
  *
- * @returns Date The date the storybook was added
+ *  NOTE: This function is not necessary for the build. It provides metadata to the build, and will return `undefined`
+ *       if the command fails or times out.
+ *
+ * @returns Date The date the storybook was added, or `undefined` if the command fails or times out.
  */
 export async function getStorybookCreationDate(
-  deps: Pick<Deps, 'log'> & {
-    options: {
-      storybookConfigDir?: Deps['options']['storybookConfigDir'];
-    };
-  }
+  deps: GitDeps & { options?: { storybookConfigDir?: string } }
 ) {
   try {
-    const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
+    const configDirectory = deps.options?.storybookConfigDir ?? '.storybook';
     const dateString = await execGitCommandOneLine(
       deps,
       `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory}`,
-      { timeout: 5000 }
+      {
+        timeout: Math.min(
+          deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
+          DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
+        ),
+      }
     );
     return new Date(dateString);
   } catch {
@@ -509,12 +525,20 @@ export async function getStorybookCreationDate(
  *
  * @param deps Function dependencies.
  *
- * @returns number The number of committers
+ *  NOTE: This function is not necessary for the build. It provides metadata to the build, and will return `undefined`
+ *       if the command fails or times out.
+ *
+ * @returns number The number of committers, or `undefined` if the command fails or times out.
  */
-export async function getNumberOfComitters(deps: Pick<Deps, 'log'>) {
+export async function getNumberOfCommitters(deps: GitDeps) {
   try {
+    // Note that this timeout is explicitly less than the default because this command is not necessary and was
+    // previously causing builds to fail collecting metadata.
     return await execGitCommandCountLines(deps, `git shortlog -sn --all --since="6 months ago"`, {
-      timeout: 5000,
+      timeout: Math.min(
+        deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
+        DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
+      ),
     });
   } catch {
     return undefined;
@@ -528,10 +552,13 @@ export async function getNumberOfComitters(deps: Pick<Deps, 'log'>) {
  * @param nameMatches The names to match - will be matched with upper and lowercase first letter
  * @param extensions The filetypes to match
  *
- * @returns The number of files matching the above
+ * NOTE: This function is not necessary for the build. It provides metadata to the build, and will return `undefined`
+ *       if the command fails or times out.
+ *
+ * @returns The number of files matching the above, or `undefined` if the command fails
  */
 export async function getCommittedFileCount(
-  deps: Pick<Deps, 'log'>,
+  deps: GitDeps,
   nameMatches: string[],
   extensions: string[]
 ) {
@@ -544,9 +571,13 @@ export async function getCommittedFileCount(
     const globs = bothCasesNameMatches.flatMap((match) =>
       extensions.map((extension) => `"*${match}*.${extension}"`)
     );
-
+    // Note that this timeout is explicitly less than the default because this command is not necessary and was
+    // previously causing builds to fail collecting metadata.
     return await execGitCommandCountLines(deps, `git ls-files -- ${globs.join(' ')}`, {
-      timeout: 5000,
+      timeout: Math.min(
+        deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
+        DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
+      ),
     });
   } catch {
     return undefined;

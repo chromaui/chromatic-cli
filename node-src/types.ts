@@ -498,26 +498,54 @@ interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
-  invalidChangedFiles?: true;
   missingStatsFile?: true;
   noAncestorBuild?: true;
   rebuild?: true;
 }
 
+export type TurboSnapChangedPackageFilesSubreason =
+  | 'baselineCheckoutFailed'
+  | 'lockfileParseFailed'
+  | 'lockfileSizeExceeded'
+  | 'nodeModulesMissingInStats';
+
+export type TurboSnapInvalidChangedFilesSubreason =
+  | 'ancestorMissing'
+  | 'baselineDirty'
+  | 'replacementFailed'
+  | 'networkError'
+  | 'gitCommandFailed';
+
+export type TurboSnapBailSubreason =
+  | TurboSnapChangedPackageFilesSubreason
+  | TurboSnapInvalidChangedFilesSubreason;
+
+// All additional fields allowed for the `changedPackageFiles` bail reason
+export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
+  changedPackageFiles: string[];
+  invalidChangedFiles?: never;
+  bailSubreason?: TurboSnapChangedPackageFilesSubreason;
+  lockfileKind?: string;
+  lockfileSizeBytes?: number;
+  sentryEventId?: string;
+};
+
+// All additional fields allowed for the `invalidChangedFiles` bail reason
+export type InvalidChangedFilesBailReason = TurboSnapBailReasonBase & {
+  changedPackageFiles?: never;
+  invalidChangedFiles: true;
+  bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
+  sentryEventId?: string;
+};
+
 export type TurboSnapBailReason =
-  // All additional fields allowed for the changedPackageFiles bail reason
-  | (TurboSnapBailReasonBase & {
-      changedPackageFiles: string[];
-      baselineCheckoutFailed?: boolean;
-      lockfileKind?: string;
-      lockfileParseFailed?: boolean;
-      lockfileSizeBytes?: number;
-      lockfileSizeExceeded?: boolean;
-      nodeModulesMissingInStats?: boolean;
-      sentryEventId?: string;
-    })
+  | ChangedPackageFilesBailReason
+  | InvalidChangedFilesBailReason
   // All remaining bail reasons
-  | (TurboSnapBailReasonBase & { changedPackageFiles?: never });
+  | (TurboSnapBailReasonBase & {
+      changedPackageFiles?: never;
+      invalidChangedFiles?: never;
+    });
 
 export interface TurboSnap {
   unavailable?: boolean;

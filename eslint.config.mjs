@@ -23,7 +23,6 @@ export default [
       'storybook-static/**',
       'storybook-out/**',
       'coverage/**',
-      'subdir/**',
     ],
   },
   // eslint core + overrides

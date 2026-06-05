@@ -1,16 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { BaselineCheckoutFailedError } from '../lib/turbosnap/errors';
+import {
+  AncestorMissingError,
+  BaselineCheckoutFailedError,
+  GitCommandError,
+} from '../lib/turbosnap/errors';
 import * as execGit from './execGit';
 import {
   checkoutFile,
   commitExists,
   findFilesFromRepositoryRoot,
   getBranch,
+  getChangedFiles,
   getCommit,
   getCommittedFileCount,
-  getNumberOfComitters,
+  getNumberOfCommitters,
   getRepositoryCreationDate,
   getSlug,
   getStorybookCreationDate,
@@ -161,6 +166,43 @@ describe('commitExists', () => {
   });
 });
 
+describe('getChangedFiles', () => {
+  it('returns the parsed list of changed files on success', async () => {
+    execGitCommand.mockResolvedValue('a.ts\nb.ts\n');
+    expect(await getChangedFiles(ctx, 'abc123')).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('throws AncestorMissingError when execGitCommand rejects with "bad object"', async () => {
+    const cause = new Error('fatal: bad object abc123');
+    execGitCommand.mockRejectedValueOnce(cause);
+
+    let err;
+    try {
+      await getChangedFiles(ctx, 'abc123');
+    } catch (error) {
+      err = error;
+    }
+
+    expect(err).toBeInstanceOf(AncestorMissingError);
+    expect(err).toMatchObject({ commit: 'abc123', cause });
+  });
+
+  it('throws GitCommandError for any other execGitCommand rejection', async () => {
+    const cause = new Error('fatal: git is broken');
+    execGitCommand.mockRejectedValueOnce(cause);
+
+    let err;
+    try {
+      await getChangedFiles(ctx, 'abc123');
+    } catch (error) {
+      err = error;
+    }
+
+    expect(err).toBeInstanceOf(GitCommandError);
+    expect(err).toMatchObject({ cause });
+  });
+});
+
 describe('findFilesFromRepositoryRoot', () => {
   it('finds files relative to the repository root', async () => {
     const filesFound = ['package.json', 'another/package/package.json'];
@@ -190,10 +232,15 @@ describe('checkoutFile', () => {
     const cause = new Error('git show failed');
     execGitCommand.mockRejectedValueOnce(cause);
 
-    const promise = checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+    let err;
+    try {
+      await checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
-    await expect(promise).rejects.toMatchObject({ cause });
+    expect(err).toBeInstanceOf(BaselineCheckoutFailedError);
+    expect(err).toMatchObject({ cause });
   });
 });
 
@@ -238,7 +285,7 @@ describe('getStorybookCreationDate', () => {
 describe('getNumberOfComitters', () => {
   it('parses the count successfully', async () => {
     execGitCommandCountLines.mockResolvedValue(17);
-    expect(await getNumberOfComitters(ctx)).toEqual(17);
+    expect(await getNumberOfCommitters(ctx)).toEqual(17);
   });
 });
 

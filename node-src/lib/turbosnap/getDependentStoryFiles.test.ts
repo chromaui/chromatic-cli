@@ -968,7 +968,7 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('bails with nodeModulesMissingInStats when the stats file has no node_modules entries', async () => {
+  it('bails with bailSubreason "nodeModulesMissingInStats" when the stats file has no node_modules entries', async () => {
     const changedFiles = ['package.json'];
     const changedDependencies = ['some-pkg'];
     const modules = [
@@ -998,11 +998,11 @@ describe('getDependentStoryFiles', () => {
     expect(result).toBeUndefined();
     expect(ctx.turboSnap.bailReason).toEqual({
       changedPackageFiles: ['package.json'],
-      nodeModulesMissingInStats: true,
+      bailSubreason: 'nodeModulesMissingInStats',
     });
   });
 
-  it('does not set nodeModulesMissingInStats when there are no changed dependencies', async () => {
+  it('does not set bailSubreason when there are no changed dependencies', async () => {
     const changedFiles = ['package.json'];
     const changedDependencies: string[] = [];
     const modules = [
@@ -1023,7 +1023,7 @@ describe('getDependentStoryFiles', () => {
       git: { ...rawContext.git, changedFiles: ['package.json'] },
     };
     await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles, changedDependencies);
-    expect(ctx.turboSnap.bailReason?.nodeModulesMissingInStats).toBeUndefined();
+    expect(ctx.turboSnap.bailReason?.bailSubreason).toBeUndefined();
   });
 });
 
