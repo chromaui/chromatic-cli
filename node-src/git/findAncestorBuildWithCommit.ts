@@ -1,5 +1,6 @@
 import gql from 'fake-tag';
 
+import { isNetworkError, NetworkError, ReplacementFailedError } from '../lib/turbosnap/errors';
 import { Deps } from '../types';
 import { commitExists } from './git';
 
@@ -58,11 +59,19 @@ export async function findAncestorBuildWithCommit(
 ): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | undefined> {
   let skip = 0;
   while (skip < limit) {
-    const { app } = await deps.client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
-      buildNumber,
-      skip,
-      limit: Math.min(page, limit - skip),
-    });
+    let app: AncestorBuildsQueryResult['app'];
+    try {
+      ({ app } = await deps.client.runQuery<AncestorBuildsQueryResult>(AncestorBuildsQuery, {
+        buildNumber,
+        skip,
+        limit: Math.min(page, limit - skip),
+      }));
+    } catch (error) {
+      if (isNetworkError(error)) {
+        throw new NetworkError({ cause: error });
+      }
+      throw new ReplacementFailedError({ cause: error });
+    }
 
     const results = await Promise.all(
       app.build.ancestorBuilds.map(async (build) => {

@@ -1,6 +1,5 @@
 import envCi from 'env-ci';
 
-import { Deps } from '../types';
 import forksUnsupported from '../ui/messages/errors/forksUnsupported';
 import gitOneCommit from '../ui/messages/errors/gitOneCommit';
 import missingGitHubInfo from '../ui/messages/errors/missingGitHubInfo';
@@ -8,6 +7,7 @@ import missingTravisInfo from '../ui/messages/errors/missingTravisInfo';
 import customGitHubAction from '../ui/messages/info/customGitHubAction';
 import noCommitDetails from '../ui/messages/warnings/noCommitDetails';
 import travisInternalBuild from '../ui/messages/warnings/travisInternalBuild';
+import { GitDeps } from './execGit';
 import { getBranch, getCommit, hasPreviousCommit } from './git';
 
 const ORIGIN_PREFIX_REGEXP = /^origin\//;
@@ -44,7 +44,7 @@ function getBranchDetailsFromEnvironmentCI(log) {
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export default async function getCommitAndBranch(
-  deps: Pick<Deps, 'log'>,
+  deps: GitDeps,
   {
     branchName,
     patchBaseRef,

@@ -65,4 +65,8 @@ Sentry.init({
   },
   beforeSend: filterErrorEvent,
   beforeBreadcrumb: filterBreadcrumb,
+  // Increase max message length to prevent truncation of long error messages
+  // Default is 250
+  // Max is 8192
+  maxValueLength: 500,
 });

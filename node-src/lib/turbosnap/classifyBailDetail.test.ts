@@ -1,26 +1,35 @@
 import { describe, expect, it } from 'vitest';
 
-import { bailDetailKey, classifyBailDetail, detectLockfileKind } from './classifyBailDetail';
 import {
+  classifyChangedPackageFilesDetail,
+  classifyInvalidChangedFilesDetail,
+  detectLockfileKind,
+} from './classifyBailDetail';
+import {
+  AncestorMissingError,
   BaselineCheckoutFailedError,
+  BaselineDirtyError,
+  GitCommandError,
   LockFileParseFailedError,
   LockFileSizeExceededError,
+  NetworkError,
+  ReplacementFailedError,
 } from './errors';
 
-describe('classifyBailDetail', () => {
+describe('classifyChangedPackageFilesDetail', () => {
   it('returns {} for a generic Error', () => {
-    expect(classifyBailDetail(new Error('whatever'))).toEqual({});
+    expect(classifyChangedPackageFilesDetail(new Error('whatever'))).toEqual({});
   });
 
   it('returns {} for a non-Error value', () => {
-    expect(classifyBailDetail('string')).toEqual({});
-    expect(classifyBailDetail(undefined)).toEqual({});
+    expect(classifyChangedPackageFilesDetail('string')).toEqual({});
+    expect(classifyChangedPackageFilesDetail(undefined)).toEqual({});
   });
 
   it('classifies LockFileSizeExceededError with kind + size', () => {
     const err = new LockFileSizeExceededError('/tmp/checkout-abc/pnpm-lock.yaml', 12_000_000);
-    expect(classifyBailDetail(err)).toEqual({
-      lockfileSizeExceeded: true,
+    expect(classifyChangedPackageFilesDetail(err)).toEqual({
+      bailSubreason: 'lockfileSizeExceeded',
       lockfileKind: 'pnpm-lock.yaml',
       lockfileSizeBytes: 12_000_000,
     });
@@ -28,9 +37,9 @@ describe('classifyBailDetail', () => {
 
   it('classifies LockFileSizeExceededError without lockfileKind for an unrecognized path', () => {
     const err = new LockFileSizeExceededError('/tmp/weird-name', 12_000_000);
-    const patch = classifyBailDetail(err);
+    const patch = classifyChangedPackageFilesDetail(err);
     expect(patch).toEqual({
-      lockfileSizeExceeded: true,
+      bailSubreason: 'lockfileSizeExceeded',
       lockfileSizeBytes: 12_000_000,
     });
     expect(patch).not.toHaveProperty('lockfileKind');
@@ -40,35 +49,19 @@ describe('classifyBailDetail', () => {
     const err = new LockFileParseFailedError('/tmp/checkout-abc/yarn.lock', {
       cause: new Error('no lock file parse for you'),
     });
-    expect(classifyBailDetail(err)).toEqual({
-      lockfileParseFailed: true,
+    expect(classifyChangedPackageFilesDetail(err)).toEqual({
+      bailSubreason: 'lockfileParseFailed',
       lockfileKind: 'yarn.lock',
     });
   });
 
-  it('classifies BaselineCheckoutFailedError as { baselineCheckoutFailed: true }', () => {
+  it('classifies BaselineCheckoutFailedError as { bailSubreason: "baselineCheckoutFailed" }', () => {
     const err = new BaselineCheckoutFailedError('abc123:package.json', {
       cause: new Error('git show failed'),
     });
-    expect(classifyBailDetail(err)).toEqual({ baselineCheckoutFailed: true });
-  });
-});
-
-describe('bailDetailKey', () => {
-  it('returns undefined for an empty patch', () => {
-    expect(bailDetailKey({})).toBeUndefined();
-  });
-
-  it('returns "lockfileSizeExceeded" when the flag is set', () => {
-    expect(bailDetailKey({ lockfileSizeExceeded: true })).toBe('lockfileSizeExceeded');
-  });
-
-  it('returns "lockfileParseFailed" when the flag is set', () => {
-    expect(bailDetailKey({ lockfileParseFailed: true })).toBe('lockfileParseFailed');
-  });
-
-  it('returns "baselineCheckoutFailed" when the flag is set', () => {
-    expect(bailDetailKey({ baselineCheckoutFailed: true })).toBe('baselineCheckoutFailed');
+    expect(classifyChangedPackageFilesDetail(err)).toEqual({
+      bailSubreason: 'baselineCheckoutFailed',
+    });
   });
 });
 
@@ -93,5 +86,46 @@ describe('detectLockfileKind', () => {
   it('does not match a path whose basename only happens to end with a lockfile name', () => {
     expect(detectLockfileKind('/tmp/checkout-abc/my.yarn.lock')).toBeUndefined();
     expect(detectLockfileKind('/tmp/checkout-abc/old-package-lock.json')).toBeUndefined();
+  });
+});
+
+describe('classifyInvalidChangedFilesDetail', () => {
+  it('returns {} for a generic Error', () => {
+    expect(classifyInvalidChangedFilesDetail(new Error('whatever'))).toEqual({});
+  });
+
+  it('returns {} for non-Error values', () => {
+    expect(classifyInvalidChangedFilesDetail('string')).toEqual({});
+    expect(classifyInvalidChangedFilesDetail(undefined)).toEqual({});
+  });
+
+  it('classifies AncestorMissingError', () => {
+    expect(classifyInvalidChangedFilesDetail(new AncestorMissingError('abc123'))).toEqual({
+      bailSubreason: 'ancestorMissing',
+    });
+  });
+
+  it('classifies BaselineDirtyError', () => {
+    expect(classifyInvalidChangedFilesDetail(new BaselineDirtyError('abc123'))).toEqual({
+      bailSubreason: 'baselineDirty',
+    });
+  });
+
+  it('classifies NetworkError', () => {
+    expect(classifyInvalidChangedFilesDetail(new NetworkError())).toEqual({
+      bailSubreason: 'networkError',
+    });
+  });
+
+  it('classifies ReplacementFailedError', () => {
+    expect(classifyInvalidChangedFilesDetail(new ReplacementFailedError())).toEqual({
+      bailSubreason: 'replacementFailed',
+    });
+  });
+
+  it('classifies GitCommandError', () => {
+    expect(classifyInvalidChangedFilesDetail(new GitCommandError('git diff'))).toEqual({
+      bailSubreason: 'gitCommandFailed',
+    });
   });
 });
