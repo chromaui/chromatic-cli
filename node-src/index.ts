@@ -34,7 +34,7 @@ import {
   removeChromaticDiagnostics,
   writeChromaticDiagnostics,
 } from './lib/writeChromaticDiagnostics';
-import { intro } from './renderer';
+import { intro as clackIntro } from './renderer';
 import { renderAuth } from './renderer/auth';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
@@ -47,6 +47,7 @@ import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
+import intro from './ui/messages/info/intro';
 import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 
 // Make keys of `T` outside of `R` optional.
@@ -172,8 +173,6 @@ export async function run({
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export async function runAll(initialContext: InitialContext) {
-  intro(initialContext);
-
   const onError = (err: Error | Error[]) => {
     initialContext.log.info('');
     initialContext.log.error(fatalError(initialContext, [err].flat()));
@@ -192,6 +191,12 @@ export async function runAll(initialContext: InitialContext) {
     );
 
     const partialOptions = getPartialOptions(initialContext);
+    if (partialOptions.interactive) {
+      clackIntro(initialContext);
+      initialContext.log.file(intro(initialContext)); // noop if file logging not enabled
+    } else {
+      initialContext.log.info(intro(initialContext));
+    }
 
     if (await shouldSkipWithoutProjectToken(initialContext, partialOptions)) {
       initialContext.log.warn(skipNoProjectToken());
