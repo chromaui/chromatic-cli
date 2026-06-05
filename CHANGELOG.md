@@ -1,3 +1,27 @@
+# v17.3.0 (Fri Jun 05 2026)
+
+#### 🚀 Enhancement
+
+- :wrench: Add a configuration parameter that controls git timeout. [#1371](https://github.com/chromaui/chromatic-cli/pull/1371) ([@jwir3](https://github.com/jwir3))
+
+#### 🐛 Bug Fix
+
+- Remove unused `subdir` directory [#1381](https://github.com/chromaui/chromatic-cli/pull/1381) ([@codykaup](https://github.com/codykaup))
+- Increase Sentry message length [#1380](https://github.com/chromaui/chromatic-cli/pull/1380) ([@codykaup](https://github.com/codykaup))
+- Bump `typescript-eslint` to fix TypeScript warning [#1373](https://github.com/chromaui/chromatic-cli/pull/1373) ([@codykaup](https://github.com/codykaup))
+- Drop `slash` dependency for internal helper [#1374](https://github.com/chromaui/chromatic-cli/pull/1374) ([@codykaup](https://github.com/codykaup))
+- `react-native-build`: Don't overwrite artifacts without permission. [#1364](https://github.com/chromaui/chromatic-cli/pull/1364) ([@jmhobbs](https://github.com/jmhobbs))
+- Set `patch` label for Dependabot PRs [#1370](https://github.com/chromaui/chromatic-cli/pull/1370) ([@codykaup](https://github.com/codykaup))
+- Update Dependabot to skip test fixture dependencies [#1363](https://github.com/chromaui/chromatic-cli/pull/1363) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v17.2.0 (Mon Jun 01 2026)
 
 #### 🚀 Enhancement
