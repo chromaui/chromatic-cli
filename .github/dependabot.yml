@@ -8,5 +8,4 @@ updates:
       - "patch"
       - "skip-release"
     exclude-paths:
-      - "subdir/**"
       - "node-src/__mocks__/**"
