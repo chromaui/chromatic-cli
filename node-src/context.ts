@@ -1,4 +1,5 @@
 import { InitialContext } from '.';
+import { DEFAULT_GIT_TIMEOUT_SECONDS } from './git/constants';
 import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
 import { getConfiguration } from './lib/getConfiguration';
@@ -29,5 +30,14 @@ export async function setupContext(
     retries: 3,
   });
   ctx.configuration = await getConfiguration(configFile);
+  if (
+    ctx.configuration.gitTimeout &&
+    ctx.configuration.gitTimeout !== DEFAULT_GIT_TIMEOUT_SECONDS
+  ) {
+    ctx.log.debug(
+      `git timeout was set to ${ctx.configuration.gitTimeout}, which is different than the default ${DEFAULT_GIT_TIMEOUT_SECONDS} seconds`
+    );
+  }
+
   return ctx as Context;
 }

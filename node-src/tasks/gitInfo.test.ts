@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getBaselineBuilds as getBaselineBuildsUnmocked } from '../git/getBaselineBuilds';
@@ -7,6 +9,13 @@ import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCo
 import * as git from '../git/git';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
 import TestLogger from '../lib/testLogger';
+import {
+  AncestorMissingError,
+  BaselineDirtyError,
+  GitCommandError,
+  NetworkError,
+  ReplacementFailedError,
+} from '../lib/turbosnap/errors';
 import {
   applyGitInfoOutput,
   applyGitInfoPartial,
@@ -34,6 +43,9 @@ function expectPhase<O extends { phase: string }, P extends O['phase']>(
   expect(output.phase).toBe(phase);
 }
 
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(() => 'fake-sentry-id'),
+}));
 vi.mock('../git/getCommitAndBranch');
 vi.mock('../git/git');
 vi.mock('../git/getParentCommits');
@@ -49,7 +61,7 @@ const getUserEmail = vi.mocked(git.getUserEmail);
 const getRepositoryCreationDate = vi.mocked(git.getRepositoryCreationDate);
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
-const getNumberOfComitters = vi.mocked(git.getNumberOfComitters);
+const getNumberOfCommitters = vi.mocked(git.getNumberOfCommitters);
 const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
 const getUncommittedHash = vi.mocked(git.getUncommittedHash);
 const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
@@ -103,7 +115,7 @@ beforeEach(() => {
   getRepositoryCreationDate.mockResolvedValue(new Date('2024-11-01'));
   getRepositoryRoot.mockResolvedValue('/path/to/project');
   getStorybookCreationDate.mockResolvedValue(new Date('2025-11-01'));
-  getNumberOfComitters.mockResolvedValue(17);
+  getNumberOfCommitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
 
@@ -275,6 +287,81 @@ describe('gatherGitInfo', () => {
       numberOfCommitters: 17,
       numberOfAppFiles: 100,
     });
+  });
+});
+
+describe('invalidChangedFiles bail detail', () => {
+  beforeEach(() => {
+    getBaselineBuilds.mockResolvedValue([{ commit: '012qwes' } as any]);
+  });
+
+  const cases: { name: string; err: Error; subreason: string }[] = [
+    {
+      name: 'AncestorMissingError',
+      err: new AncestorMissingError('012qwes'),
+      subreason: 'ancestorMissing',
+    },
+    {
+      name: 'BaselineDirtyError',
+      err: new BaselineDirtyError('012qwes'),
+      subreason: 'baselineDirty',
+    },
+    { name: 'NetworkError', err: new NetworkError(), subreason: 'networkError' },
+    {
+      name: 'ReplacementFailedError',
+      err: new ReplacementFailedError(),
+      subreason: 'replacementFailed',
+    },
+    {
+      name: 'GitCommandError',
+      err: new GitCommandError('git diff'),
+      subreason: 'gitCommandFailed',
+    },
+  ];
+
+  it.each(cases)('classifies $name into $subreason', async ({ err, subreason }) => {
+    getChangedFilesWithReplacement.mockRejectedValueOnce(err);
+
+    const result = await gatherGitInfo(buildDeps(), buildInput({ onlyChanged: true }));
+    expectKind(result, 'continue');
+
+    expect(result.output.turboSnap?.bailReason).toMatchObject({
+      invalidChangedFiles: true,
+      bailSubreason: subreason,
+      sentryEventId: 'fake-sentry-id',
+    });
+    expect(result.output.git.changedFiles).toBeUndefined();
+    expect(result.output.git.replacementBuildIds).toBeUndefined();
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      err,
+      expect.objectContaining({
+        tags: { bail_path: 'gitInfo.invalidChangedFiles', bail_detail: subreason },
+        fingerprint: [subreason],
+      })
+    );
+  });
+
+  it('leaves bailSubreason undefined and omits fingerprint for a generic error', async () => {
+    const err = new Error('something else');
+    getChangedFilesWithReplacement.mockRejectedValueOnce(err);
+
+    const result = await gatherGitInfo(buildDeps(), buildInput({ onlyChanged: true }));
+    expectKind(result, 'continue');
+
+    expect(result.output.turboSnap?.bailReason).toEqual({
+      invalidChangedFiles: true,
+      sentryEventId: 'fake-sentry-id',
+    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      err,
+      expect.objectContaining({
+        tags: { bail_path: 'gitInfo.invalidChangedFiles' },
+      })
+    );
+    const captureContext = vi.mocked(Sentry.captureException).mock.calls.at(-1)?.[1] as any;
+    expect(captureContext.tags).not.toHaveProperty('bail_detail');
+    expect(captureContext).not.toHaveProperty('fingerprint');
   });
 });
 

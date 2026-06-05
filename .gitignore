@@ -15,7 +15,6 @@ node_modules
 !.yarn/versions
 
 storybook-static
-subdir-static
 test-storybook
 chromatic-build-*.xml
 chromatic-diagnostics.json

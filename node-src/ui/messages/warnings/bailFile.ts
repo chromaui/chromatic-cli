@@ -33,9 +33,19 @@ export default ({ turboSnap }: { turboSnap: Context['turboSnap'] }) => {
       .map((f) => chalk.bold(f))
       .join(chalk`\n{dim →} `)}`;
 
+  // When the changed file isn't the bailed file itself but something it imports (directly or
+  // indirectly), show the import chain so it's obvious which file in the `git diff` led here.
+  let trace = '';
+  const bailPath = turboSnap?.bailPath;
+  if (bailPath && bailPath.length > 1) {
+    const [origin] = bailPath;
+    const chain = bailPath.map((f) => chalk`{dim →} {bold ${f}}`).join('\n');
+    trace = chalk`\nThis was triggered by a change to {bold ${origin}}, which is imported by {bold ${firstFile}}:\n${chain}`;
+  }
+
   return dedent(chalk`
     ${warning} {bold TurboSnap disabled due to file change}
-    Found a ${type} change in {bold ${firstFile}}${siblings}
+    Found a ${type} change in {bold ${firstFile}}${siblings}${trace}
     A full build is required because this file cannot be linked to any specific stories.
     ${info} Read more at ${link(docsUrl)}
   `);

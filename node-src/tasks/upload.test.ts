@@ -1,12 +1,16 @@
 /* eslint-disable max-lines */
+import * as Sentry from '@sentry/node';
 import { FormData } from 'formdata-node';
 import { createReadStream } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
-import { uploadStorybook, waitForSentinels } from './upload';
+import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
+import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
+import { finishUpload, uploadStorybook, waitForSentinels } from './upload';
 
+vi.mock('@sentry/node');
 vi.mock('form-data');
 vi.mock('fs');
 vi.mock('../lib/compress');
@@ -87,6 +91,7 @@ describe('uploadStorybook', () => {
         { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
         { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
       ],
+      turboSnapStatus: 'UNUSED',
     });
     expect(http.fetch).toHaveBeenCalledWith(
       'https://s3.amazonaws.com/presigned?iframe.html',
@@ -237,10 +242,12 @@ describe('uploadStorybook', () => {
         contentLength: index,
         filePath: `${index}.js`,
       })),
+      turboSnapStatus: 'UNUSED',
     });
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
       files: [{ contentHash: undefined, contentLength: 1000, filePath: `1000.js` }], // 0-based index makes this file #1001
+      turboSnapStatus: 'UNUSED',
     });
 
     expect(http.fetch).toHaveBeenCalledWith(
@@ -265,6 +272,327 @@ describe('uploadStorybook', () => {
     );
     expect(ctx.uploadedBytes).toBe(500_500);
     expect(ctx.uploadedFiles).toBe(1001);
+  });
+
+  it('sends the TurboSnap onlyStoryFiles list to the uploadBuild mutation', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      turboSnap: {},
+      onlyStoryFiles: ['src/Button.stories.js'],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
+      onlyStoryFiles: ['src/Button.stories.js'],
+      turboSnapStatus: 'APPLIED',
+    });
+  });
+
+  it('does not send onlyStoryFiles when TurboSnap did not run', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      // onlyStoryFiles passed via the --only-story-files flag rather than computed by TurboSnap
+      options: { onlyStoryFiles: ['src/Button.stories.js'] },
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
+      turboSnapStatus: 'UNUSED',
+    });
+  });
+
+  it('skips uploading and sets ctx.skip when the build is SKIPPED', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockResolvedValue({
+      uploadBuild: {
+        build: { id: '2', status: 'SKIPPED' },
+        userErrors: [],
+      },
+    });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.skip).toBe(true);
+    expect(http.fetch).not.toHaveBeenCalled();
+    expect(ctx.uploadedFiles).toBe(0);
+    expect(ctx.uploadedBytes).toBe(0);
+  });
+
+  it('prepares the skipped build so stats carry over from its ancestor', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockResolvedValue({
+      uploadBuild: {
+        build: { id: '2', status: 'SKIPPED' },
+        userErrors: [],
+      },
+    });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      // Use a different build ID so we know it uses the ID from the `uploadBuild` mutation
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/PrepareBuild/),
+      {
+        buildId: '2',
+        runtimeSpecs: [],
+        skipped: true,
+      },
+      { retries: 3 }
+    );
+  });
+
+  it('captures the ancestor build details when the build is SKIPPED', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockResolvedValue({
+      uploadBuild: {
+        build: {
+          id: '2',
+          status: 'SKIPPED',
+          ancestorBuilds: [
+            {
+              status: 'PASSED',
+              webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
+              snapshotCount: 54,
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.ancestorBuild).toEqual({
+      status: 'PASSED',
+      webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
+      snapshotCount: 54,
+    });
+  });
+
+  it('still skips and reports to Sentry when preparing the skipped build fails', async () => {
+    const error = new Error('prepare failed');
+    const client = { runQuery: vi.fn() };
+    client.runQuery
+      .mockResolvedValueOnce({
+        uploadBuild: {
+          build: { id: '2', status: 'SKIPPED' },
+          userErrors: [],
+        },
+      })
+      .mockRejectedValueOnce(error);
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.skip).toBe(true);
+    expect(log.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to prepare skipped build 2'),
+      error
+    );
+    expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledWith(error);
+    expect(http.fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not prepare the build when it is not skipped', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.skip).toBeFalsy();
+    expect(client.runQuery).not.toHaveBeenCalledWith(
+      expect.stringMatching(/PrepareBuild/),
+      expect.anything()
+    );
+  });
+
+  describe('finishUpload', () => {
+    it('logs the skipped-build messages and skips the task when the build is SKIPPED', () => {
+      const ctx = { skip: true, log, options: {} } as any;
+      const task = { skip: vi.fn() } as any;
+
+      finishUpload(ctx, task);
+
+      expect(log.info).toHaveBeenCalledWith(turboSnapEnabled(ctx));
+      expect(log.info).toHaveBeenCalledWith(buildFullyTurboSnapped(ctx));
+      expect(task.skip).toHaveBeenCalledWith('');
+    });
+
+    it('does not log the skipped-build messages when the build was uploaded', () => {
+      const ctx = { skip: false, log, options: {} } as any;
+      const task = { skip: vi.fn() } as any;
+
+      finishUpload(ctx, task);
+
+      expect(log.info).not.toHaveBeenCalledWith(buildFullyTurboSnapped(ctx));
+      expect(task.skip).not.toHaveBeenCalled();
+    });
   });
 
   describe('with file hashes', () => {
@@ -318,6 +646,7 @@ describe('uploadStorybook', () => {
           { contentHash: 'index', contentLength: 42, filePath: 'index.html' },
         ],
         zip: false,
+        turboSnapStatus: 'UNUSED',
       });
       expect(http.fetch).not.toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?iframe.html',
@@ -397,6 +726,7 @@ describe('uploadStorybook', () => {
           { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
         ],
         zip: true,
+        turboSnapStatus: 'UNUSED',
       });
       expect(http.fetch).toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?storybook.zip',
@@ -946,6 +1276,7 @@ describe('uploadStorybook', () => {
             { contentHash: 'hash1', contentLength: 42, filePath: 'iframe.html' },
             { contentHash: 'hash2', contentLength: 42, filePath: 'index.html' },
           ],
+          turboSnapStatus: 'UNUSED',
         }
       );
 
@@ -959,6 +1290,7 @@ describe('uploadStorybook', () => {
             { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
             { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
           ],
+          turboSnapStatus: 'UNUSED',
         }
       );
 

@@ -1,22 +1,17 @@
 import path from 'path';
 
-import { TurboSnapBailReason } from '../../types';
+import { ChangedPackageFilesBailReason, InvalidChangedFilesBailReason } from '../../types';
 import {
+  AncestorMissingError,
   BaselineCheckoutFailedError,
+  BaselineDirtyError,
+  GitCommandError,
   LockFileParseFailedError,
   LockFileSizeExceededError,
+  NetworkError,
+  ReplacementFailedError,
 } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
-
-// Extract all bail detail fields related to changedPackageFiles
-export type ChangedPackageFilesPatch = Partial<
-  Extract<TurboSnapBailReason, { changedPackageFiles: string[] }>
->;
-
-export type BailDetailKey =
-  | 'lockfileSizeExceeded'
-  | 'lockfileParseFailed'
-  | 'baselineCheckoutFailed';
 
 /**
  * Detect which supported lockfile kind a given path corresponds to.
@@ -37,11 +32,13 @@ export function detectLockfileKind(filePath: string): string | undefined {
  *
  * @returns A partial patch object to merge into the bail reason.
  */
-export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
+export function classifyChangedPackageFilesDetail(
+  err: unknown
+): Partial<ChangedPackageFilesBailReason> {
   if (err instanceof LockFileSizeExceededError) {
     const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
-      lockfileSizeExceeded: true,
+      bailSubreason: 'lockfileSizeExceeded',
       ...(lockfileKind && { lockfileKind }),
       lockfileSizeBytes: err.lockfileSizeBytes,
     };
@@ -49,27 +46,30 @@ export function classifyBailDetail(err: unknown): ChangedPackageFilesPatch {
   if (err instanceof LockFileParseFailedError) {
     const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
-      lockfileParseFailed: true,
+      bailSubreason: 'lockfileParseFailed',
       ...(lockfileKind && { lockfileKind }),
     };
   }
   if (err instanceof BaselineCheckoutFailedError) {
-    return { baselineCheckoutFailed: true };
+    return { bailSubreason: 'baselineCheckoutFailed' };
   }
   return {};
 }
 
 /**
- * Derive a short, primary key describing bail reason. Used for grouping related bail reasons in
- * Sentry. Returns `undefined` when no specific flag is set.
+ * Map an unknown thrown error to its `invalidChangedFiles` bail subreason, if recognized.
  *
- * @param patch The bail-detail patch to inspect.
+ * @param err The thrown value to classify.
  *
- * @returns A short string key identifying the patch's primary key.
+ * @returns The matching subreason, or an empty object for an unclassified error.
  */
-export function bailDetailKey(patch: ChangedPackageFilesPatch): BailDetailKey | undefined {
-  if (patch.lockfileSizeExceeded) return 'lockfileSizeExceeded';
-  if (patch.lockfileParseFailed) return 'lockfileParseFailed';
-  if (patch.baselineCheckoutFailed) return 'baselineCheckoutFailed';
-  return;
+export function classifyInvalidChangedFilesDetail(
+  err: unknown
+): Partial<InvalidChangedFilesBailReason> {
+  if (err instanceof AncestorMissingError) return { bailSubreason: 'ancestorMissing' };
+  if (err instanceof BaselineDirtyError) return { bailSubreason: 'baselineDirty' };
+  if (err instanceof NetworkError) return { bailSubreason: 'networkError' };
+  if (err instanceof ReplacementFailedError) return { bailSubreason: 'replacementFailed' };
+  if (err instanceof GitCommandError) return { bailSubreason: 'gitCommandFailed' };
+  return {};
 }

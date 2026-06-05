@@ -48,9 +48,9 @@ describe('publishBuild', () => {
 
     const bailReason = {
       changedPackageFiles: ['./package.json'],
+      bailSubreason: 'lockfileSizeExceeded',
       lockfileKind: 'yarn.lock',
       lockfileSizeBytes: 12_000_000,
-      lockfileSizeExceeded: true,
       sentryEventId: 'sentry-event-id',
     };
 

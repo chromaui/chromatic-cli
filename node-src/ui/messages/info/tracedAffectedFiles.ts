@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import pluralize from 'pluralize';
 
+import { groupUntracedFilesByGlob } from '../../../lib/utilities';
 import { Context, Module, TurboSnap } from '../../../types';
 import { info } from '../../components/icons';
 
@@ -66,7 +67,7 @@ export default (
         ? `${chalk.magenta(
             `We detected some untraced files, this may affect your traced changes as 
     the untraced flag instructs TurboSnap to not trace dependencies for the files:`
-          )} \n  ${ctx.untracedFiles.join(',')}\n\n\n`
+          )} \n${groupUntracedFilesByGlob(ctx.untracedFiles)}\n\n\n`
         : '';
     directoryDebug = `${rootPath}${basePath}${storybookPath}${bailReason}${untracedNotice}${traceSuggestions}`;
   }

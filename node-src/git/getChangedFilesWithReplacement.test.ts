@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
+import { AncestorMissingError, BaselineDirtyError, GitCommandError } from '../lib/turbosnap/errors';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
+import * as gitModule from './git';
 
 vi.mock('./git', () => ({
-  getChangedFiles: (_, hash) => {
+  getChangedFiles: vi.fn((_: unknown, hash: string) => {
     if (/exists/.test(hash)) return ['changed', 'files'];
-    throw new Error(`fatal: bad object ${hash}`);
-  },
-  commitExists: (_, hash) => hash.match(/exists/),
+    throw new AncestorMissingError(hash, { cause: new Error(`fatal: bad object ${hash}`) });
+  }),
+  commitExists: vi.fn((_: unknown, hash: string) => /exists/.test(hash)),
 }));
+
+const mockedGetChangedFiles = vi.mocked(gitModule.getChangedFiles);
 
 describe('getChangedFilesWithReplacements', () => {
   const client = { runQuery: vi.fn() } as any;
@@ -106,7 +110,7 @@ describe('getChangedFilesWithReplacements', () => {
     });
   });
 
-  it('throws if there is no replacement', async () => {
+  it('throws AncestorMissingError if there is no replacement', async () => {
     const replacementBuild = {
       id: 'replacement',
       number: 2,
@@ -115,14 +119,62 @@ describe('getChangedFilesWithReplacements', () => {
     };
     client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
 
-    await expect(
-      getChangedFilesWithReplacement(context, {
+    let err;
+    try {
+      await getChangedFilesWithReplacement(context, {
         id: 'id',
         number: 3,
         commit: 'missing',
         uncommittedHash: '',
         isLocalBuild: false,
-      })
-    ).rejects.toThrow(/fatal: bad object missing/);
+      });
+    } catch (error) {
+      err = error;
+    }
+
+    expect(err).toBeInstanceOf(AncestorMissingError);
+    expect(err).toMatchObject({ commit: 'missing' });
+  });
+
+  it('throws BaselineDirtyError when a local build with uncommitted changes has no replacement', async () => {
+    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [] } } });
+
+    let err;
+    try {
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: 'abcdef',
+        isLocalBuild: true,
+      });
+    } catch (error) {
+      err = error;
+    }
+
+    expect(err).toBeInstanceOf(BaselineDirtyError);
+    expect(err).toMatchObject({ commit: 'exists' });
+  });
+
+  it('rethrows unknown errors', async () => {
+    mockedGetChangedFiles.mockImplementationOnce(() => {
+      throw new GitCommandError('git diff', { cause: new Error('git broken') });
+    });
+
+    let err;
+    try {
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: '',
+        isLocalBuild: false,
+      });
+    } catch (error) {
+      err = error;
+    }
+
+    expect(err).toBeInstanceOf(GitCommandError);
+    expect(client.runQuery).not.toHaveBeenCalled();
   });
 });

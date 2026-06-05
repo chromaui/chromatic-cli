@@ -1,8 +1,13 @@
+import * as Sentry from '@sentry/node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from './testLogger';
 import { uploadFiles } from './uploadFiles';
 import { uploadMetadataFiles } from './uploadMetadataFiles';
+
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(),
+}));
 
 vi.mock('fs', () => ({
   stat: vi.fn().mockImplementation((_path, callback) => callback(null, { size: 100 })),
@@ -77,5 +82,35 @@ describe('uploadMetadataFiles', () => {
 
     expect(logPauseCallOrder).toBeLessThan(uploadFilesCallOrder);
     expect(logResumeCallOrder).toBeGreaterThan(uploadFilesCallOrder);
+  });
+
+  it('does not throw when the upload fails, reporting to Sentry and resuming the log', async () => {
+    vi.mocked(uploadFiles).mockRejectedValueOnce(new Error('network boom'));
+
+    const target = {
+      contentLength: 100,
+      filePath: 'chromatic.log',
+      formAction: 'https://s3.amazonaws.com',
+      formFields: {},
+      localPath: 'chromatic.log',
+    };
+    const ctx = {
+      ...baseContext,
+      options: { logFile: target.localPath },
+      announcedBuild: { id: '1' },
+      build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
+      client: {
+        runQuery: vi.fn().mockResolvedValue({
+          uploadMetadata: { info: { targets: [target] }, userErrors: [] },
+        }),
+      },
+    } as any;
+
+    await expect(uploadMetadataFiles(ctx)).resolves.toBeUndefined();
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+      fingerprint: ['UploadMetadataFilesError'],
+    });
+    expect(ctx.log.resume).toHaveBeenCalled();
   });
 });

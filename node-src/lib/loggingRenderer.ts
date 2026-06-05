@@ -21,7 +21,7 @@ export default class LoggingRenderer {
       let lastData;
       task.subscribe((event) => {
         if (event.type === 'TITLE') this.options.log.file(`${task.title}`);
-        if (event.type === 'DATA' && lastData !== event.data) {
+        if (event.type === 'DATA' && event.data && lastData !== event.data) {
           lastData = event.data;
           this.options.log.file(`    → ${event.data}`);
         }

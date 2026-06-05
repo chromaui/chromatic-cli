@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import debug from 'debug';
-import { createWriteStream, mkdirSync, rm } from 'fs';
+import { createWriteStream, mkdirSync, rm, rmSync } from 'fs';
 import path from 'path';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
@@ -88,11 +88,13 @@ export interface Logger {
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
   setLogFile: (path: string | undefined) => void;
+  removeLogFile: () => void;
 }
 
 const fileLogger = {
   queue: [] as string[],
   stream: undefined as ReturnType<typeof createWriteStream> | undefined,
+  filepath: undefined as string | undefined,
   paused: false,
   append(...messages: string[]) {
     this.queue.push(...messages, '\n');
@@ -100,6 +102,19 @@ const fileLogger = {
   disable() {
     this.append = () => {};
     this.queue = [];
+    this.stream?.end();
+    this.stream = undefined;
+  },
+  remove() {
+    this.disable();
+    if (this.filepath) {
+      try {
+        rmSync(this.filepath, { force: true });
+      } catch {
+        // Swallow any errors
+      }
+      this.filepath = undefined;
+    }
   },
   pause() {
     if (this.stream && !this.paused) {
@@ -123,6 +138,7 @@ const fileLogger = {
         mkdirSync(path.dirname(filepath), { recursive: true });
 
         this.stream = createWriteStream(filepath, { flags: 'a' });
+        this.filepath = filepath;
         this.append = (...messages: string[]) => {
           this.stream?.write(
             messages
@@ -130,7 +146,7 @@ const fileLogger = {
               .trim() + '\n'
           );
         };
-        this.append(...this.queue);
+        if (this.queue.length > 0) this.append(...this.queue);
         this.queue = [];
       }
     });
@@ -151,6 +167,10 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     level = 'silent';
   }
 
+  // The log file always captures debug-level logs, independent of the UI level (except when
+  // logging is fully disabled).
+  const fileLevel: keyof typeof LOG_LEVELS = DISABLE_LOGGING === 'true' ? 'silent' : 'debug';
+
   let interactive =
     (options?.interactive || flags?.interactive) && !(options?.debug || flags?.debug);
   let enqueue = false;
@@ -162,11 +182,17 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
   const log =
     (type: LogType, logFileOnly?: boolean) =>
     (...args: any[]) => {
-      if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
-
       const logs = logVerbose(type, args);
-      fileLogger.append(...filePrefixer(logs));
+
+      // Always capture debug-level logs in the file, independent of the console level.
+      if (LOG_LEVELS[fileLevel] >= LOG_LEVELS[type]) {
+        fileLogger.append(...filePrefixer(logs));
+      }
+
       if (logFileOnly) return;
+
+      // The console only shows messages at or above the configured level.
+      if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
       const messages = interactive ? logInteractive(args) : logPrefixer(logs);
       if (messages.length === 0) return;
@@ -190,6 +216,9 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     setLogFile(path: string | undefined) {
       if (path) fileLogger.initialize(path, log('error'));
       else fileLogger.disable();
+    },
+    removeLogFile() {
+      fileLogger.remove();
     },
     pause: () => {
       fileLogger.pause();

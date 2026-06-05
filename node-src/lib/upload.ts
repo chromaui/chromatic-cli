@@ -1,4 +1,6 @@
-import { Context, FileDesc, TargetInfo } from '../types';
+import * as Sentry from '@sentry/node';
+
+import { Context, FileDesc, TargetInfo, TurboSnapStatus } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 import { uploadFailed } from '../ui/messages/errors/uploadFailed';
@@ -10,8 +12,20 @@ import { uploadZip } from './uploadZip';
 const MAX_FILES_PER_REQUEST = 1000;
 
 const UploadBuildMutation = `
-  mutation UploadBuildMutation($buildId: ObjID!, $files: [FileUploadInput!]!, $zip: Boolean) {
-    uploadBuild(buildId: $buildId, files: $files, zip: $zip) {
+  mutation UploadBuildMutation(
+    $buildId: ObjID!
+    $files: [FileUploadInput!]!
+    $zip: Boolean
+    $onlyStoryFiles: [String!]
+    $turboSnapStatus: TurboSnapStatus
+  ) {
+    uploadBuild(
+      buildId: $buildId
+      files: $files
+      zip: $zip
+      onlyStoryFiles: $onlyStoryFiles
+      turboSnapStatus: $turboSnapStatus
+    ) {
       info {
         sentinelUrls
         targets {
@@ -27,6 +41,15 @@ const UploadBuildMutation = `
           filePath
           formAction
           formFields
+        }
+      }
+      build {
+        id
+        status
+        ancestorBuilds {
+          status
+          webUrl
+          snapshotCount
         }
       }
       userErrors {
@@ -47,12 +70,31 @@ const UploadBuildMutation = `
   }
 `;
 
+const PrepareSkippedBuildMutation = `
+mutation PrepareBuild(
+  $buildId: ObjID!
+  $runtimeSpecs: [RuntimeSpecInput!]!
+  $skipped: Boolean
+) {
+  prepareBuild(id: $buildId, runtimeSpecs: $runtimeSpecs, skipped: $skipped)
+}
+`;
+
 interface UploadBuildMutationResult {
   uploadBuild: {
     info?: {
       sentinelUrls: string[];
       targets: TargetInfo[];
       zipTarget?: TargetInfo;
+    };
+    build?: {
+      id: string;
+      status: string;
+      ancestorBuilds?: {
+        status: string;
+        webUrl: string;
+        snapshotCount: number;
+      }[];
     };
     userErrors: (
       | {
@@ -137,6 +179,11 @@ export async function uploadBuild(
   ctx.uploadedBytes = 0;
   ctx.uploadedFiles = 0;
 
+  let turboSnapStatus: TurboSnapStatus = 'UNUSED';
+  if (ctx.turboSnap) {
+    turboSnapStatus = ctx.turboSnap.bailReason ? 'BAILED' : 'APPLIED';
+  }
+
   const targets: (TargetInfo & FileDesc)[] = [];
   let zipTarget: TargetInfo | undefined;
 
@@ -169,6 +216,8 @@ export async function uploadBuild(
           filePath: targetPath,
         })),
         zip: ctx.options.zip,
+        onlyStoryFiles: ctx.onlyStoryFiles,
+        turboSnapStatus,
       }
     );
 
@@ -183,6 +232,40 @@ export async function uploadBuild(
         }
       }
       return options.onError?.(new Error('Upload rejected due to user error'));
+    }
+
+    // The index service may decide this build can be skipped (e.g. TurboSnap determined no story
+    // files were affected). In that case, we don't need to upload anything and can skip the
+    // remainder of the build tasks.
+    if (uploadBuild.build?.status === 'SKIPPED') {
+      ctx.log.debug(
+        `Build ${uploadBuild.build.id} skipped via TurboSnap, not uploading build files`
+      );
+
+      // Ensure we're preparing the skipped build so all build stats carry over from its
+      // ancestor
+      await ctx.client
+        .runQuery(
+          PrepareSkippedBuildMutation,
+          {
+            buildId: uploadBuild.build.id,
+            runtimeSpecs: [], // Required by the API contract but we won't have any runtime specs
+            skipped: true,
+          },
+          { retries: 3 }
+        )
+        .catch((err) => {
+          ctx.log.error(
+            `Failed to prepare skipped build ${uploadBuild.build?.id}, continuing`,
+            err
+          );
+          Sentry.captureException(err);
+        });
+
+      // In this case, we should only have a single ancestor build
+      ctx.ancestorBuild = uploadBuild.build.ancestorBuilds?.[0];
+      ctx.skip = true;
+      return;
     }
 
     ctx.sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));

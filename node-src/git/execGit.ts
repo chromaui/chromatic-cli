@@ -7,32 +7,47 @@ import { Deps } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
+import { DEFAULT_GIT_TIMEOUT_SECONDS } from './constants';
+
+export type GitDeps = Pick<Deps, 'log'> & { options?: { gitTimeout?: number } };
 
 const defaultOptions: Options = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-  timeout: 20_000, // 20 seconds
   all: true, // interleave stdout and stderr
   shell: true, // we'll deal with escaping ourselves (for now)
 };
 
 /**
+ * Retrieve the git timeout in milliseconds.
+ *
+ * @param depOptions The options object for the Git command (this contains the `gitTimeout` property if it's set).
+ *
+ @returns the git timeout in milliseconds, defaulting to `DEFAULT_GIT_TIMEOUT_SECONDS` if not set.
+ */
+function getGitTimeout(depOptions: GitDeps['options']): number {
+  return depOptions?.gitTimeout ?? DEFAULT_GIT_TIMEOUT_SECONDS * 1000;
+}
+
+/**
  * Execute a Git command in the local terminal.
  *
- * @param context Standard context object.
- * @param context.log Standard context logger.
+ * @param deps Standard context object.
+ * @param deps.log Standard context logger.
+ * @param deps.options Options object for the Git command.
  * @param command The command to execute.
  * @param options Execa options
  *
  * @returns The result of the command from the terminal.
  */
 export async function execGitCommand(
-  { log }: Pick<Deps, 'log'>,
+  { log, options: depOptions }: GitDeps,
   command: string,
   options?: Options
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
-    const { all, stdout } = await runCommand(command, { ...defaultOptions, ...options });
+    const timeout = getGitTimeout(depOptions);
+    const { all, stdout } = await runCommand(command, { timeout, ...defaultOptions, ...options });
     // If the caller sets `all: false`, then `stdout` will be the output. Otherwise, `all` will
     // contain interleaved stdout and stderr.
     const output = all ?? stdout;
@@ -68,20 +83,23 @@ export async function execGitCommand(
 /**
  * Execute a Git command in the local terminal and just get the first line.
  *
- * @param context Standard context object.
- * @param context.log Standard context logger.
+ * @param deps Standard context object.
+ * @param deps.log Standard context logger.
+ * @param deps.options Options object for the Git command.
  * @param command The command to execute.
  * @param options Execa options
  *
  * @returns The first line of the command from the terminal.
  */
 export async function execGitCommandOneLine(
-  { log }: Pick<Deps, 'log'>,
+  { log, options: depOptions }: GitDeps,
   command: string,
   options?: Options
 ) {
   log.debug(`execGitCommandOneLine: ${command}`);
+  const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {
+    timeout,
     ...defaultOptions,
     buffer: false,
     ...options,
@@ -114,20 +132,23 @@ export async function execGitCommandOneLine(
 /**
  * Execute a Git command in the local terminal and count the lines in the result
  *
- * @param context Standard context object.
- * @param context.log Standard context logger.
+ * @param deps Standard context object.
+ * @param deps.log Standard context logger.
+ * @param deps.options Options object for the Git command.
  * @param command The command to execute.
  * @param options Execa options
  *
  * @returns The number of lines the command returned
  */
 export async function execGitCommandCountLines(
-  { log }: Pick<Deps, 'log'>,
+  { log, options: depOptions }: GitDeps,
   command: string,
   options?: Options
 ) {
   log.debug(`execGitCommandCountLines: ${command}`);
+  const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {
+    timeout,
     ...defaultOptions,
     buffer: false,
     ...options,

@@ -15,6 +15,12 @@ import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import { isE2EBuild } from './e2eUtils';
 
+export const DEFAULT_LOG_FILE = 'chromatic.log';
+export const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
+const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
+const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';
+const DEFAULT_E2E_LOG_FILE = 'build-archive.log';
+
 const takeLast = (input?: string | string[]) => (Array.isArray(input) ? input.at(-1) : input);
 
 const ensureArray = (input?: string | string[]) => {
@@ -115,12 +121,6 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
 
-  const DEFAULT_LOG_FILE = 'chromatic.log';
-  const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
-  const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
-  const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';
-  const DEFAULT_E2E_LOG_FILE = 'build-archive.log';
-
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
     projectToken: takeLast(flags.projectToken),
@@ -206,9 +206,19 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     log.setInteractive(false);
   }
 
+  // Write a log file by default. A custom path (flag or config) is respected; disable with
+  // `--no-log-file`. An explicitly configured path (or `--debug`) is persistent and kept once the
+  // run is completed. The default is temporary and cleaned up after the run.
+  partialOptions.persistLogFile =
+    typeof partialOptions.logFile === 'string' || !!partialOptions.debug;
+  partialOptions.logFile ??= DEFAULT_LOG_FILE;
+
+  // The diagnostics file follows the same persistence rules above but with `--diagnostics-file`
+  // instead.
+  partialOptions.persistDiagnosticsFile =
+    typeof partialOptions.diagnosticsFile === 'string' || !!partialOptions.debug;
   if (partialOptions.debug || partialOptions.uploadMetadata) {
-    // Implicitly enable these options unless they're already enabled or explicitly disabled
-    partialOptions.logFile = partialOptions.logFile ?? DEFAULT_LOG_FILE;
+    // Implicitly enable the diagnostics file unless it's already enabled or explicitly disabled.
     partialOptions.diagnosticsFile = partialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
 

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'fs';
 import JSON5 from 'json5';
 import { z, ZodError } from 'zod';
 
+import { MINIMUM_GIT_TIMEOUT_SECONDS } from '../git/constants';
 import { invalidConfigurationFile } from '../ui/messages/errors/invalidConfigurationFile';
 import { missingConfigurationFile } from '../ui/messages/errors/missingConfigurationFile';
 import { unparseableConfigurationFile } from '../ui/messages/errors/unparseableConfigurationFile';
@@ -28,6 +29,7 @@ const configurationSchema = z
     exitZeroOnChanges: z.union([z.string(), z.boolean()]),
     exitOnceUploaded: z.union([z.string(), z.boolean()]),
     ignoreLastBuildOnBranch: z.string(),
+    gitTimeout: z.number().min(MINIMUM_GIT_TIMEOUT_SECONDS).optional(),
 
     buildScriptName: z.string(),
     buildCommand: z.string(),
@@ -76,7 +78,7 @@ function resolveConfigFileName(configFile?: string): string {
  * @param configFile The path to a custom config file (outside of the normal chromatic.config.json
  * file)
  *
- * @returns A parsed configration object from the local config file.
+ * @returns A parsed configuration object from the local config file.
  */
 export async function getConfiguration(
   configFile?: string

@@ -1,3 +1,143 @@
+# v17.8.0 (Mon Jun 29 2026)
+
+#### 🚀 Enhancement
+
+- Include ancestor build details on a fully TurboSnapped build [#1406](https://github.com/chromaui/chromatic-cli/pull/1406) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.7.2 (Fri Jun 26 2026)
+
+#### 🐛 Bug Fix
+
+- Only upload metadata files with a valid S3 path [#1408](https://github.com/chromaui/chromatic-cli/pull/1408) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.7.1 (Thu Jun 25 2026)
+
+#### 🐛 Bug Fix
+
+- React Native: Parse build command from config file [#1405](https://github.com/chromaui/chromatic-cli/pull/1405) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.7.0 (Thu Jun 25 2026)
+
+#### 🚀 Enhancement
+
+- Skip upload, verify, and snapshot tasks when detecting no changes from TurboSnap [#1394](https://github.com/chromaui/chromatic-cli/pull/1394) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.6.0 (Wed Jun 24 2026)
+
+#### 🚀 Enhancement
+
+- Automatically upload metadata files on TurboSnap bails [#1400](https://github.com/chromaui/chromatic-cli/pull/1400) ([@codykaup](https://github.com/codykaup))
+- Log untraced files and its matching glob [#1403](https://github.com/chromaui/chromatic-cli/pull/1403) ([@codykaup](https://github.com/codykaup))
+- Show full trace path to bail file reason [#1401](https://github.com/chromaui/chromatic-cli/pull/1401) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.5.0 (Wed Jun 17 2026)
+
+#### 🚀 Enhancement
+
+- Add context around file adds/moves in `BaselineCheckoutFailedError` bails [#1391](https://github.com/chromaui/chromatic-cli/pull/1391) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.4.1 (Thu Jun 11 2026)
+
+#### 🐛 Bug Fix
+
+- fix: e2e build command ignores arguments when used with npm [#1385](https://github.com/chromaui/chromatic-cli/pull/1385) ([@sentience](https://github.com/sentience) [@AriPerkkio](https://github.com/AriPerkkio) [@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 3
+
+- Ari Perkkiö ([@AriPerkkio](https://github.com/AriPerkkio))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Kevin Yank ([@sentience](https://github.com/sentience))
+
+---
+
+# v17.4.0 (Tue Jun 09 2026)
+
+#### 🚀 Enhancement
+
+- Add additional bail details to `invalidChangedFiles` [#1355](https://github.com/chromaui/chromatic-cli/pull/1355) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Update Codecov to fix GPG issue [#1387](https://github.com/chromaui/chromatic-cli/pull/1387) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.3.0 (Fri Jun 05 2026)
+
+#### 🚀 Enhancement
+
+- :wrench: Add a configuration parameter that controls git timeout. [#1371](https://github.com/chromaui/chromatic-cli/pull/1371) ([@jwir3](https://github.com/jwir3))
+
+#### 🐛 Bug Fix
+
+- Remove unused `subdir` directory [#1381](https://github.com/chromaui/chromatic-cli/pull/1381) ([@codykaup](https://github.com/codykaup))
+- Increase Sentry message length [#1380](https://github.com/chromaui/chromatic-cli/pull/1380) ([@codykaup](https://github.com/codykaup))
+- Bump `typescript-eslint` to fix TypeScript warning [#1373](https://github.com/chromaui/chromatic-cli/pull/1373) ([@codykaup](https://github.com/codykaup))
+- Drop `slash` dependency for internal helper [#1374](https://github.com/chromaui/chromatic-cli/pull/1374) ([@codykaup](https://github.com/codykaup))
+- `react-native-build`: Don't overwrite artifacts without permission. [#1364](https://github.com/chromaui/chromatic-cli/pull/1364) ([@jmhobbs](https://github.com/jmhobbs))
+- Set `patch` label for Dependabot PRs [#1370](https://github.com/chromaui/chromatic-cli/pull/1370) ([@codykaup](https://github.com/codykaup))
+- Update Dependabot to skip test fixture dependencies [#1363](https://github.com/chromaui/chromatic-cli/pull/1363) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
+# v17.2.0 (Mon Jun 01 2026)
+
+#### 🚀 Enhancement
+
+- Join individual bail subreasons into a single field [#1357](https://github.com/chromaui/chromatic-cli/pull/1357) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.1.0 (Wed May 27 2026)
 
 #### 🚀 Enhancement

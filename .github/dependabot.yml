@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "patch"
+      - "skip-release"
+    exclude-paths:
+      - "node-src/__mocks__/**"

@@ -1,6 +1,18 @@
+import { createWriteStream, rmSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
 
 import { createLogger } from './log';
+
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    createWriteStream: vi.fn(),
+    mkdirSync: vi.fn(),
+    rm: vi.fn((_path: string, _options: unknown, callback: (err: null) => void) => callback(null)),
+    rmSync: vi.fn(),
+  };
+});
 
 let consoleError: MockInstance<typeof console.error>;
 let consoleWarn: MockInstance<typeof console.warn>;
@@ -165,3 +177,71 @@ it('stringifies non-primitive values', () => {
     JSON.stringify({ key: 'value' })
   );
 });
+
+describe('log file', () => {
+  it('writes debug-level logs to the file even when the console level is info', () => {
+    const writes = captureFileWrites();
+    const logger = createLogger({ logLevel: 'info' });
+    logger.setLogFile('chromatic.log');
+
+    logger.debug('turbosnap detail');
+
+    expect(consoleDebug).not.toHaveBeenCalled();
+    expect(writes.join('')).toContain('turbosnap detail');
+  });
+
+  it('writes info logs to the file even when the console level is higher', () => {
+    const writes = captureFileWrites();
+    const logger = createLogger({ logLevel: 'warn' });
+    logger.setLogFile('chromatic.log');
+
+    logger.info('still logged to file');
+
+    expect(consoleInfo).not.toHaveBeenCalled();
+    expect(writes.join('')).toContain('still logged to file');
+  });
+
+  it('does not write to the file when DISABLE_LOGGING is set', () => {
+    process.env.DISABLE_LOGGING = 'true';
+    const writes = captureFileWrites();
+    const logger = createLogger();
+    logger.setLogFile('chromatic.log');
+
+    logger.error('boom');
+    logger.debug('detail');
+
+    expect(writes.join('')).toBe('');
+  });
+
+  it('removeLogFile ends the stream and deletes the file', () => {
+    const end = vi.fn();
+    vi.mocked(createWriteStream).mockReturnValue({
+      write: () => true,
+      cork: () => undefined,
+      uncork: () => undefined,
+      end,
+    } as any);
+
+    const logger = createLogger();
+    logger.setLogFile('chromatic.log');
+
+    logger.removeLogFile();
+
+    expect(end).toHaveBeenCalled();
+    expect(rmSync).toHaveBeenCalledWith('chromatic.log', { force: true });
+  });
+});
+
+function captureFileWrites() {
+  const writes: string[] = [];
+  vi.mocked(createWriteStream).mockReturnValue({
+    write: (chunk: string) => {
+      writes.push(chunk);
+      return true;
+    },
+    cork: () => undefined,
+    uncork: () => undefined,
+    end: () => undefined,
+  } as any);
+  return writes;
+}

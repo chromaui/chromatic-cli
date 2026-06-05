@@ -21,7 +21,7 @@ import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import getEnvironment from './lib/getEnvironment';
-import getOptions, { getPartialOptions } from './lib/getOptions';
+import getOptions, { DEFAULT_DIAGNOSTICS_FILE, getPartialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import matchesBranch from './lib/matchesBranch';
@@ -30,7 +30,12 @@ import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
-import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import {
+  removeChromaticDiagnostics,
+  writeChromaticDiagnostics,
+} from './lib/writeChromaticDiagnostics';
+import { intro } from './renderer';
+import { renderAuth } from './renderer/auth';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -42,7 +47,6 @@ import missingStories from './ui/messages/errors/missingStories';
 import noPackageJson from './ui/messages/errors/noPackageJson';
 import runtimeError from './ui/messages/errors/runtimeError';
 import taskError from './ui/messages/errors/taskError';
-import intro from './ui/messages/info/intro';
 import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 
 // Make keys of `T` outside of `R` optional.
@@ -165,10 +169,10 @@ export async function run({
  *
  * @returns A promise that resolves when all steps are completed.
  */
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export async function runAll(initialContext: InitialContext) {
-  initialContext.log.info('');
-  initialContext.log.info(intro(initialContext));
-  initialContext.log.info('');
+  intro(initialContext);
 
   const onError = (err: Error | Error[]) => {
     initialContext.log.info('');
@@ -211,17 +215,67 @@ export async function runAll(initialContext: InitialContext) {
     onError(error);
   });
 
-  if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
-    await checkPackageJson(ctx);
-  }
-
-  if (ctx.options.diagnosticsFile) {
+  if (shouldWriteDiagnosticsFile(ctx)) {
+    // Ensure we set the diagnostic file output location (in the case of `uploadMetadata` but no
+    // diagnostic file was set)
+    ctx.options.diagnosticsFile ??= DEFAULT_DIAGNOSTICS_FILE;
     await writeChromaticDiagnostics(ctx);
   }
 
-  if (ctx.options.uploadMetadata) {
+  if (shouldUploadMetadata(ctx)) {
+    if (ctx.options.uploadMetadata === undefined && isTurboSnapEnabled(ctx)) {
+      ctx.log.info('Uploading metadata files automatically because TurboSnap was enabled');
+    }
     await uploadMetadataFiles(ctx);
   }
+
+  cleanupTemporaryFiles(ctx);
+
+  if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
+    await checkPackageJson(ctx);
+  }
+}
+
+/**
+ * Remove the log and diagnostics files we wrote during the run, unless they were explicitly
+ * configured (or persisted via --debug). This avoids leaving behind files we only created to
+ * upload as metadata.
+ *
+ * @param ctx The context set when executing the CLI.
+ */
+function cleanupTemporaryFiles(ctx: Context) {
+  if (ctx.options.logFile && !ctx.options.persistLogFile) {
+    ctx.log.removeLogFile();
+  }
+  if (ctx.options.diagnosticsFile && !ctx.options.persistDiagnosticsFile) {
+    removeChromaticDiagnostics(ctx);
+  }
+}
+
+function shouldWriteDiagnosticsFile(ctx: Context): boolean {
+  return !!ctx.options.diagnosticsFile || shouldUploadMetadata(ctx);
+}
+
+/**
+ * Decide whether to upload metadata files. An explicit --upload-metadata /
+ * --no-upload-metadata always wins. Otherwise we default to uploading when
+ * TurboSnap was enabled.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns True if metadata files should be uploaded.
+ */
+export function shouldUploadMetadata(ctx: Context): boolean {
+  // Don't upload if we don't have a valid URL to S3
+  if (!ctx.build?.storybookUrl) {
+    return false;
+  }
+
+  return ctx.options.uploadMetadata ?? isTurboSnapEnabled(ctx);
+}
+
+function isTurboSnapEnabled(ctx: Context): boolean {
+  return !!ctx.turboSnap;
 }
 
 async function shouldSkipWithoutProjectToken(
@@ -283,6 +337,7 @@ async function runBuild(ctx: Context) {
         // Queue up any non-Listr log messages while Listr is running
         ctx.log.queue();
       }
+      await renderAuth(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {

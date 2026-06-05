@@ -1,3 +1,4 @@
+import { parseCommandString } from 'execa';
 import { createReadStream, mkdirSync, type WriteStream } from 'fs';
 import path from 'path';
 import { createInterface } from 'readline';
@@ -35,9 +36,10 @@ async function readLastLines(filePath: string, lineCount: number): Promise<strin
 const runPlatformCommand = async (ctx: Context, command: string, logStream: WriteStream) => {
   ctx.log.debug('Running React Native build command:', command);
   try {
+    const [cmd, ...args] = parseCommandString(command);
     await execWithBuildEnvironment(
-      command,
-      [],
+      cmd,
+      args,
       { env: { CHROMATIC_ARTIFACT_DIRECTORY: ctx.sourceDir } },
       logStream
     );
