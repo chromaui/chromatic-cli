@@ -42,6 +42,17 @@ vi.mock('fs', async (importOriginal) => {
   const originalModule = (await importOriginal()) as any;
   return {
     ...originalModule,
+    // Return a fake stream so neither the file logger nor the Storybook build log writes a real
+    // file during tests.
+    createWriteStream: vi.fn(() => ({
+      on: (event: string, callback: () => void) => {
+        if (event === 'open') callback();
+      },
+      write: vi.fn(),
+      end: vi.fn(),
+      cork: vi.fn(),
+      uncork: vi.fn(),
+    })),
     mkdirSync: vi.fn(),
     readdirSync: vi.fn(() => ['iframe.html', 'index.html']),
     statSync: vi.fn((path: string) => {
@@ -226,5 +237,23 @@ describe('share()', () => {
     mockConfirmShare.mockRejectedValueOnce(new Error('Confirm failed'));
 
     await expect(share({ userToken: 'user-token' })).rejects.toThrow('S3 upload failed');
+  });
+
+  describe('log file', () => {
+    it('does not configure a log file by default', async () => {
+      await share({ userToken: 'user-token' });
+
+      expect(mockReserveShare).toHaveBeenCalledWith(
+        expect.objectContaining({ options: expect.objectContaining({ logFile: undefined }) })
+      );
+    });
+
+    it('uses the log file path provided by the caller', async () => {
+      await share({ userToken: 'user-token', logFile: 'custom.log' });
+
+      expect(mockReserveShare).toHaveBeenCalledWith(
+        expect.objectContaining({ options: expect.objectContaining({ logFile: 'custom.log' }) })
+      );
+    });
   });
 });

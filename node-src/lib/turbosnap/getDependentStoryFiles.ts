@@ -210,8 +210,9 @@ export async function getDependentStoryFiles(
 
   function untrace(filepath: string) {
     filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
-    if (untraced.some((glob) => matchesFile(glob, filepath))) {
-      ctx.untracedFiles?.push(filepath);
+    const matchedGlob = untraced.find((glob) => matchesFile(glob, filepath));
+    if (matchedGlob) {
+      ctx.untracedFiles?.push({ filepath, glob: matchedGlob });
       return false;
     }
     return true;
@@ -259,11 +260,19 @@ export async function getDependentStoryFiles(
         ...(ctx.git.changedFiles?.filter((file) => isPackageManifestFile(file)) || []),
         ...changedPackageLockFiles,
       ],
-      nodeModulesMissingInStats: true,
+      bailSubreason: 'nodeModulesMissingInStats',
     };
   }
 
-  function shouldBail(moduleName: string) {
+  // Build the chain of files leading from the originally changed file (as it appears in
+  // `git diff`) to the Storybook config or static file that triggered the bail. The trace
+  // path holds the module IDs visited on the way here.
+  function buildBailPath(moduleName: string, tracePath: string[]): string[] {
+    const tracedNames = tracePath.flatMap((moduleId) => namesById.get(moduleId) ?? []);
+    return [...tracedNames, moduleName];
+  }
+
+  function shouldBail(moduleName: string, tracePath: string[] = []) {
     if (!ctx.turboSnap) ctx.turboSnap = {};
 
     // Check staticDirs before the Storybook config dir so static assets
@@ -271,11 +280,13 @@ export async function getDependentStoryFiles(
     // inside a configured staticDir) aren't mis-categorized as config changes.
     if (isStaticFile(moduleName)) {
       ctx.turboSnap.bailReason = { changedStaticFiles: files(moduleName) };
+      ctx.turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
     }
 
     if (isStorybookFile(moduleName)) {
       ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
+      ctx.turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
     }
     return false;
@@ -285,12 +296,12 @@ export async function getDependentStoryFiles(
   // eslint-disable-next-line complexity
   function traceName(name: string, tracePath: string[] = []) {
     if (ctx.turboSnap?.bailReason || isCsfGlob(name)) return;
-    if (shouldBail(name)) return;
+    if (shouldBail(name, tracePath)) return;
     const { id } = modulesByName.get(name) || {};
     // eslint-disable-next-line unicorn/no-null
     const normalizedName = namesById.get(id || null);
     if (!normalizedName) return;
-    if (shouldBail(normalizedName)) return;
+    if (shouldBail(normalizedName, tracePath)) return;
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing

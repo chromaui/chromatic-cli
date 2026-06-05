@@ -15,7 +15,7 @@ const quote = (argument: string) =>
 // We should probably PR this up to ni
 const parseNexec = ((agent, args) => {
   const map: Record<keyof typeof AGENTS, string> = {
-    npm: 'npm exec {0}',
+    npm: 'npm exec -- {0}',
     yarn: 'yarn {0}',
     'yarn@berry': 'yarn {0}',
     pnpm: 'pnpm exec {0}',

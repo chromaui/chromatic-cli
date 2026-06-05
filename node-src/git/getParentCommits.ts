@@ -2,7 +2,7 @@ import gql from 'fake-tag';
 
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Deps, Git } from '../types';
-import { execGitCommand } from './execGit';
+import { execGitCommand, GitDeps } from './execGit';
 import { commitExists } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
@@ -89,7 +89,7 @@ function commitsForCLI(commits: string[]) {
 // `commitsWithBuilds`.
 //
 async function nextCommits(
-  deps: Pick<Deps, 'log'>,
+  deps: Pick<Deps, 'options' | 'log'>,
   limit: number,
   {
     firstCommittedAtSeconds,
@@ -144,11 +144,15 @@ async function step(
   log.debug(`step: commitsWithBuilds: ${commitsWithBuilds}`);
   log.debug(`step: commitsWithoutBuilds: ${commitsWithoutBuilds}`);
 
-  const { candidateCommits, visitedCommitsWithoutBuilds } = await nextCommits({ log }, limit, {
-    firstCommittedAtSeconds,
-    commitsWithBuilds,
-    commitsWithoutBuilds,
-  });
+  const { candidateCommits, visitedCommitsWithoutBuilds } = await nextCommits(
+    { options, log },
+    limit,
+    {
+      firstCommittedAtSeconds,
+      commitsWithBuilds,
+      commitsWithoutBuilds,
+    }
+  );
 
   log.debug(
     `step: candidateCommits: ${candidateCommits}, visitedCommitsWithoutBuilds: ${visitedCommitsWithoutBuilds}`
@@ -181,7 +185,7 @@ async function step(
 
 // Which of the listed commits are "maximally descendent":
 // ie c in commits such that there are no descendents of c in commits.
-async function maximallyDescendentCommits(deps: Pick<Deps, 'log'>, commits: string[]) {
+async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
   if (commits.length === 0) {
     return commits;
   }

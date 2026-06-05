@@ -1,10 +1,14 @@
-import { mkdirSync } from 'fs';
+import { mkdirSync, rmSync } from 'fs';
 import jsonfile from 'jsonfile';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createLogger } from './log';
-import { getDiagnostics, writeChromaticDiagnostics } from './writeChromaticDiagnostics';
+import {
+  getDiagnostics,
+  removeChromaticDiagnostics,
+  writeChromaticDiagnostics,
+} from './writeChromaticDiagnostics';
 
 vi.mock('jsonfile');
 vi.mock('fs');
@@ -50,5 +54,24 @@ describe('writeChromaticDiagnostics', () => {
       expect.any(Object),
       expect.any(Object)
     );
+  });
+});
+
+describe('removeChromaticDiagnostics', () => {
+  it('removes the configured diagnostics file', () => {
+    const ctx = {
+      log: createLogger(),
+      options: { diagnosticsFile: 'chromatic-diagnostics.json' },
+    };
+    removeChromaticDiagnostics(ctx as any);
+
+    expect(rmSync).toHaveBeenCalledWith('chromatic-diagnostics.json', { force: true });
+  });
+
+  it('does nothing when no diagnostics file is configured', () => {
+    const ctx = { log: createLogger(), options: {} };
+    removeChromaticDiagnostics(ctx as any);
+
+    expect(rmSync).not.toHaveBeenCalled();
   });
 });

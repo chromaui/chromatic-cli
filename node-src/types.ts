@@ -71,6 +71,11 @@ export interface Options extends Configuration {
 
   configFile?: Flags['configFile'];
   logFile?: Flags['logFile'];
+  /**
+   * Whether the log file should be kept after the run (true when a path was explicitly
+   * configured or --debug is set).
+   */
+  persistLogFile?: boolean;
   logLevel?: Flags['logLevel'];
   logPrefix?: Flags['logPrefix'];
   onlyChanged: boolean | string;
@@ -87,6 +92,11 @@ export interface Options extends Configuration {
   forceRebuild: boolean | string;
   debug: boolean;
   diagnosticsFile?: Flags['diagnosticsFile'];
+  /**
+   * Whether the diagnostics file should be kept after the run (true when a path was explicitly
+   * configured or --debug is set).
+   */
+  persistDiagnosticsFile?: boolean;
   fileHashing: Flags['fileHashing'];
   interactive: boolean;
   junitReport?: Flags['junitReport'];
@@ -454,7 +464,7 @@ export interface Context {
   turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
-  untracedFiles?: string[];
+  untracedFiles?: { filepath: string; glob: string }[];
   rebuildForBuildId?: string;
 }
 
@@ -498,26 +508,54 @@ interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
-  invalidChangedFiles?: true;
   missingStatsFile?: true;
   noAncestorBuild?: true;
   rebuild?: true;
 }
 
+export type TurboSnapChangedPackageFilesSubreason =
+  | 'baselineCheckoutFailed'
+  | 'lockfileParseFailed'
+  | 'lockfileSizeExceeded'
+  | 'nodeModulesMissingInStats';
+
+export type TurboSnapInvalidChangedFilesSubreason =
+  | 'ancestorMissing'
+  | 'baselineDirty'
+  | 'replacementFailed'
+  | 'networkError'
+  | 'gitCommandFailed';
+
+export type TurboSnapBailSubreason =
+  | TurboSnapChangedPackageFilesSubreason
+  | TurboSnapInvalidChangedFilesSubreason;
+
+// All additional fields allowed for the `changedPackageFiles` bail reason
+export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
+  changedPackageFiles: string[];
+  invalidChangedFiles?: never;
+  bailSubreason?: TurboSnapChangedPackageFilesSubreason;
+  lockfileKind?: string;
+  lockfileSizeBytes?: number;
+  sentryEventId?: string;
+};
+
+// All additional fields allowed for the `invalidChangedFiles` bail reason
+export type InvalidChangedFilesBailReason = TurboSnapBailReasonBase & {
+  changedPackageFiles?: never;
+  invalidChangedFiles: true;
+  bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
+  sentryEventId?: string;
+};
+
 export type TurboSnapBailReason =
-  // All additional fields allowed for the changedPackageFiles bail reason
-  | (TurboSnapBailReasonBase & {
-      changedPackageFiles: string[];
-      baselineCheckoutFailed?: boolean;
-      lockfileKind?: string;
-      lockfileParseFailed?: boolean;
-      lockfileSizeBytes?: number;
-      lockfileSizeExceeded?: boolean;
-      nodeModulesMissingInStats?: boolean;
-      sentryEventId?: string;
-    })
+  | ChangedPackageFilesBailReason
+  | InvalidChangedFilesBailReason
   // All remaining bail reasons
-  | (TurboSnapBailReasonBase & { changedPackageFiles?: never });
+  | (TurboSnapBailReasonBase & {
+      changedPackageFiles?: never;
+      invalidChangedFiles?: never;
+    });
 
 export interface TurboSnap {
   unavailable?: boolean;
@@ -529,10 +567,16 @@ export interface TurboSnap {
   modules?: string[];
   tracedFiles?: string[];
   tracedPaths?: Set<string>;
+  // The chain of files from the changed file (as it appears in `git diff`) to the Storybook
+  // config or static file that triggered the bail.
+  bailPath?: string[];
   changedDependencyNames?: Set<string>;
   changedManifestFiles?: Set<string>;
   affectedModuleIds?: Set<string | number>;
   bailReason?: TurboSnapBailReason;
 }
+
+// Mirrors the TurboSnap status values defined by the backend.
+export type TurboSnapStatus = 'APPLIED' | 'BAILED' | 'UNAVAILABLE' | 'UNUSED';
 
 export { type Configuration } from './lib/getConfiguration';

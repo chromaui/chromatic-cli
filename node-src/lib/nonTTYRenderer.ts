@@ -16,7 +16,7 @@ export default class NonTTYRenderer {
       let lastData;
       task.subscribe((event) => {
         if (event.type === 'TITLE') this.options.log.info(`${task.title}`);
-        if (event.type === 'DATA' && lastData !== event.data) {
+        if (event.type === 'DATA' && event.data && lastData !== event.data) {
           lastData = event.data;
           this.options.log.info(`    → ${event.data}`);
         }

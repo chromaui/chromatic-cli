@@ -1,3 +1,4 @@
+import { type PathLike } from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('execa', () => ({
@@ -66,6 +67,14 @@ beforeEach(() => {
     write: vi.fn(),
     end: vi.fn((callback: () => void) => callback()),
   } as any);
+  // Default: output artifacts don't exist yet (clean build), but parent dirs and
+  // intermediate build outputs do exist (so validateOutputPath passes).
+  mockedExistsSync.mockImplementation((filePath: PathLike) => {
+    if (String(filePath).endsWith('storybook.apk') || String(filePath).endsWith('storybook.app')) {
+      return false;
+    }
+    return true;
+  });
 });
 
 describe('react-native-build', () => {
@@ -76,7 +85,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main([]);
 
@@ -103,7 +111,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main([]);
 
@@ -171,7 +178,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main(['--output-dir', '/output']);
 
@@ -185,7 +191,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main(['--output-dir', '/output']);
 
@@ -203,7 +208,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main(['--output-dir', '/output']);
 
@@ -217,7 +221,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main([]);
 
@@ -238,7 +241,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await expect(main([])).rejects.toThrow('process.exit');
     expect(mockedRmSync).toHaveBeenCalledWith('/tmp/chromatic-rn-build-test', {
@@ -261,7 +263,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await expect(main(['--output-dir', '/output'])).rejects.toThrow('process.exit');
     expect(mockedRmSync).not.toHaveBeenCalled();
@@ -277,7 +278,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main([]);
 
@@ -296,7 +296,6 @@ describe('react-native-build', () => {
       }
       return Promise.resolve({}) as any;
     });
-    mockedExistsSync.mockReturnValue(true);
 
     await main([]);
 
@@ -324,5 +323,38 @@ describe('react-native-build', () => {
 
     await expect(main([])).rejects.toThrow('process.exit');
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('gradle failed'));
+  });
+
+  it('exits with error when output artifact exists and --overwrite is not passed', async () => {
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await expect(main([])).rejects.toThrow('process.exit');
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('already exists. Use --overwrite')
+    );
+  });
+
+  it('proceeds with build when --overwrite is passed and artifact exists', async () => {
+    mockedExeca.mockImplementation((command: any, args: any) => {
+      if (command === 'npx' && args?.[0] === 'expo' && args?.[1] === 'config') {
+        return { stdout: JSON.stringify({ platforms: ['android'], name: 'MyApp' }) } as any;
+      }
+      return Promise.resolve({}) as any;
+    });
+    mockedExistsSync.mockReturnValue(true);
+
+    await main(['--overwrite']);
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      './gradlew',
+      expect.arrayContaining(['assembleRelease']),
+      expect.objectContaining({ cwd: expect.stringContaining('android') })
+    );
   });
 });
