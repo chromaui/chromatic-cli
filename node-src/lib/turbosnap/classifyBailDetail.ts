@@ -1,10 +1,15 @@
 import path from 'path';
 
-import { ChangedPackageFilesBailReason } from '../../types';
+import { ChangedPackageFilesBailReason, InvalidChangedFilesBailReason } from '../../types';
 import {
+  AncestorMissingError,
   BaselineCheckoutFailedError,
+  BaselineDirtyError,
+  GitCommandError,
   LockFileParseFailedError,
   LockFileSizeExceededError,
+  NetworkError,
+  ReplacementFailedError,
 } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
@@ -27,7 +32,9 @@ export function detectLockfileKind(filePath: string): string | undefined {
  *
  * @returns A partial patch object to merge into the bail reason.
  */
-export function classifyBailDetail(err: unknown): Partial<ChangedPackageFilesBailReason> {
+export function classifyChangedPackageFilesDetail(
+  err: unknown
+): Partial<ChangedPackageFilesBailReason> {
   if (err instanceof LockFileSizeExceededError) {
     const lockfileKind = detectLockfileKind(err.lockfilePath);
     return {
@@ -46,5 +53,23 @@ export function classifyBailDetail(err: unknown): Partial<ChangedPackageFilesBai
   if (err instanceof BaselineCheckoutFailedError) {
     return { bailSubreason: 'baselineCheckoutFailed' };
   }
+  return {};
+}
+
+/**
+ * Map an unknown thrown error to its `invalidChangedFiles` bail subreason, if recognized.
+ *
+ * @param err The thrown value to classify.
+ *
+ * @returns The matching subreason, or an empty object for an unclassified error.
+ */
+export function classifyInvalidChangedFilesDetail(
+  err: unknown
+): Partial<InvalidChangedFilesBailReason> {
+  if (err instanceof AncestorMissingError) return { bailSubreason: 'ancestorMissing' };
+  if (err instanceof BaselineDirtyError) return { bailSubreason: 'baselineDirty' };
+  if (err instanceof NetworkError) return { bailSubreason: 'networkError' };
+  if (err instanceof ReplacementFailedError) return { bailSubreason: 'replacementFailed' };
+  if (err instanceof GitCommandError) return { bailSubreason: 'gitCommandFailed' };
   return {};
 }

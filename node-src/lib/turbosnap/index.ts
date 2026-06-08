@@ -6,7 +6,7 @@ import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
 import { captureBailException } from './captureBailException';
-import { classifyBailDetail } from './classifyBailDetail';
+import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
@@ -35,7 +35,7 @@ export const traceChangedFiles = async (ctx: Context) => {
   if (packageMetadataChanges?.length) {
     changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
       pendingError = err;
-      pendingPatch = classifyBailDetail(err);
+      pendingPatch = classifyChangedPackageFilesDetail(err);
 
       const { name, message, stack, code } = err;
       ctx.log.debug({ name, message, stack, code });
