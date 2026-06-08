@@ -5150,6 +5150,7 @@ __metadata:
     globals: "npm:^15.3.0"
     https-proxy-agent: "npm:^7.0.2"
     husky: "npm:^7.0.0"
+    jiti: "npm:^2.7.0"
     json5: "npm:^2.2.3"
     jsonfile: "npm:^6.0.1"
     junit-report-builder: "npm:3.1.0"
@@ -9036,6 +9037,15 @@ __metadata:
   version: 1.0.2
   resolution: "java-properties@npm:1.0.2"
   checksum: 10c0/be0f58c83b5a852f313de2ea57f7b8b7d46dc062b2ffe487d58838e7034d4660f4d22f2a96aae4daa622af6d734726c0d08b01396e59666ededbcfdc25a694d6
+  languageName: node
+  linkType: hard
+
+"jiti@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "jiti@npm:2.7.0"
+  bin:
+    jiti: lib/jiti-cli.mjs
+  checksum: 10c0/1b1e2310a490dce1aeea3da5f5dfe18273516c20ce48be2e98eb8ea452d5f3dcc8fd0cfd6d28b4052a24c5dbab6e3089b2d7e79f0bce7915b10d750929563c42
   languageName: node
   linkType: hard
 
