@@ -12,13 +12,6 @@ vi.mock('@clack/prompts', () => ({
   })),
 }));
 
-// we're mocking the `CLI_COLORS` helper directly rather than picocolors because picocolors
-// strips color for non-TTY environments, and this happens at module load time, so local mocks
-// can't bypass it. I didn't figure it was worth a global mock.
-vi.mock('./colors', () => ({
-  CLI_COLORS: { muted: (text: string) => `<muted>${text}</muted>` },
-}));
-
 const taskLogFactory = vi.mocked(clackTaskLog);
 
 interface TaskLogStub {
@@ -31,10 +24,6 @@ interface TaskLogStub {
 // closed over and never returned, so we can't access it directly
 function lastInstance(): TaskLogStub {
   return taskLogFactory.mock.results.at(-1)?.value;
-}
-
-function muted(text: string): string {
-  return `<muted>${text}</muted>`;
 }
 
 function startedRenderer(title: string): ReturnType<typeof clackTaskLogRenderer> {
@@ -68,11 +57,11 @@ describe('clackTaskLogRenderer', () => {
       });
     });
 
-    it('emits the output muted, without repeating the title (already in the header)', () => {
+    it('emits the output, without repeating the title (already in the header)', () => {
       clackTaskLogRenderer().start({ title: 'Authenticating', output: 'doing some work' });
 
       const message = lastInstance().message.mock.calls[0][0];
-      expect(message).toContain(muted('doing some work'));
+      expect(message).toContain('doing some work');
       expect(message).not.toContain('Authenticating');
     });
 
@@ -127,11 +116,11 @@ describe('clackTaskLogRenderer', () => {
       expect(formatted).toBe('Done');
     });
 
-    it('renders the title and the muted output', () => {
+    it('renders the title and the output', () => {
       const formatted = formatVia('update', { title: 'Building', output: 'compiling' });
 
       expect(formatted).toContain('Building');
-      expect(formatted).toContain(muted('compiling'));
+      expect(formatted).toContain('compiling');
     });
 
     it('wraps long output across multiple lines', () => {
