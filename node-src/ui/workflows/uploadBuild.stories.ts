@@ -1,9 +1,10 @@
+import { environment, options } from '../../renderer/storybook/fixtures';
 import task from '../components/task';
 import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
 import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassed.stories';
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublished.stories';
-import * as auth from '../tasks/auth.stories';
+import { authenticated, authenticating, initial } from '../tasks/auth';
 import * as build from '../tasks/build.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
 import * as initialize from '../tasks/initialize.stories';
@@ -13,6 +14,14 @@ import * as upload from '../tasks/upload.stories';
 import * as verify from '../tasks/verify.stories';
 
 const steps = (...steps) => steps.map((step) => task(step())).join('\n');
+
+// Build the auth states from the raw task source: auth.stories now returns rendered ANSI strings
+// (Clack capture), which the old task() path can't consume.
+const auth = {
+  Initial: () => initial,
+  Authenticating: () => authenticating({ env: environment } as any),
+  Authenticated: () => authenticated({ env: environment, options } as any),
+};
 
 export default {
   title: 'CLI/Workflows/UploadBuild',
