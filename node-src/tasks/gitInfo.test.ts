@@ -356,11 +356,12 @@ describe('invalidChangedFiles bail detail', () => {
     expect(Sentry.captureException).toHaveBeenCalledWith(
       err,
       expect.objectContaining({
-        tags: { bail_path: 'gitInfo.invalidChangedFiles', bail_detail: undefined },
+        tags: { bail_path: 'gitInfo.invalidChangedFiles' },
       })
     );
-    const call = vi.mocked(Sentry.captureException).mock.calls.at(-1);
-    expect(call?.[1]).not.toHaveProperty('fingerprint');
+    const captureContext = vi.mocked(Sentry.captureException).mock.calls.at(-1)?.[1] as any;
+    expect(captureContext.tags).not.toHaveProperty('bail_detail');
+    expect(captureContext).not.toHaveProperty('fingerprint');
   });
 });
 

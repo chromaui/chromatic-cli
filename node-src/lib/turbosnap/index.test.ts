@@ -157,7 +157,10 @@ describe('traceChangedFiles', () => {
       expect(ctx.turboSnap.bailReason).toEqual(expectedBailReason);
       expect(captureException).toHaveBeenCalledTimes(1);
       expect(captureException).toHaveBeenCalledWith(error, {
-        tags: { bail_path: 'findChangedDependencies', bail_detail: expectedKey },
+        tags: {
+          bail_path: 'findChangedDependencies',
+          ...(expectedKey && { bail_detail: expectedKey }),
+        },
         ...(expectFingerprint && { fingerprint: [expectedKey] }),
       });
     });

@@ -19,7 +19,7 @@ export function captureBailException(
   { bailSubreason, bailPath }: { bailSubreason: string | undefined; bailPath: string }
 ): string {
   return Sentry.captureException(error, {
-    tags: { bail_path: bailPath, bail_detail: bailSubreason },
+    tags: { bail_path: bailPath, ...(bailSubreason && { bail_detail: bailSubreason }) },
     ...(bailSubreason && { fingerprint: [bailSubreason] }),
   });
 }
