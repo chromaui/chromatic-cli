@@ -25,6 +25,14 @@ describe('isNetworkError', () => {
     expect(isNetworkError(err)).toBe(true);
   });
 
+  it('returns the err.code value even if there is an err.cause', () => {
+    const err = Object.assign(new Error('boom'), {
+      code: 'ENOTFOUND',
+      cause: new Error('inner'),
+    });
+    expect(isNetworkError(err)).toBe(true);
+  });
+
   it('returns false for a generic Error', () => {
     expect(isNetworkError(new Error('whatever'))).toBe(false);
   });

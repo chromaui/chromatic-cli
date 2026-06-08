@@ -128,11 +128,23 @@ export function isNetworkError(err: unknown): boolean {
     return true;
   }
 
-  const errorCode = readCode(err) ?? readCode('cause' in err ? err.cause : undefined);
+  const errorCode = readCode(err);
   return typeof errorCode === 'string' && NETWORK_ERROR_CODES.has(errorCode);
 }
 
-function readCode(value: unknown): unknown {
-  if (!value || typeof value !== 'object') return undefined;
-  return 'code' in value ? value.code : undefined;
+function readCode(value: unknown): undefined | string {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  if ('code' in value && typeof value.code === 'string') {
+    return value.code;
+  }
+
+  // Unwrap `cause` in case it holds the error code
+  if ('cause' in value) {
+    return readCode(value.cause);
+  }
+
+  return undefined;
 }
