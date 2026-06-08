@@ -23,7 +23,7 @@ export function clackTaskLogRenderer(output?: Writable): TaskRenderer {
       taskLog = clackTaskLog({ title: state.title, spacing: 0, output });
       // The title is already rendered in the task log header, so the initial message is just the
       // (muted, wrapped) output rather than the full title+output formatting used elsewhere.
-      if (state.output) taskLog.message(wrapTextForClack(CLI_COLORS.muted(state.output)));
+      if (state.output) taskLog.message(wrapTextForClack(state.output));
     },
     update: (state: Task) => {
       taskLog.message(taskMessageFormatter(state));
