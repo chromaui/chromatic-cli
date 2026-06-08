@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", 550] */
 import type Listr from 'listr';
 
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
@@ -19,7 +20,8 @@ import { getHasRouter } from '../lib/getHasRouter';
 import matchesBranch from '../lib/matchesBranch';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { createTask, transitionTo } from '../lib/tasks';
-import { invalidChangedFilesBailReason } from '../lib/turbosnap/classifyInvalidChangedFilesDetail';
+import { captureBailException } from '../lib/turbosnap/captureBailException';
+import { classifyInvalidChangedFilesDetail } from '../lib/turbosnap/classifyBailDetail';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
 import {
   BaselineBuild,
@@ -385,7 +387,12 @@ export async function gatherGitInfo(
         log.info(`Found ${git.changedFiles.length} changed files${list}`);
       }
     } catch (err) {
-      turboSnap.bailReason = invalidChangedFilesBailReason(err);
+      const { bailSubreason } = classifyInvalidChangedFilesDetail(err);
+      const sentryEventId = captureBailException(err, {
+        bailSubreason,
+        bailPath: 'gitInfo.invalidChangedFiles',
+      });
+      turboSnap.bailReason = { invalidChangedFiles: true, bailSubreason, sentryEventId };
       git.changedFiles = undefined;
       git.replacementBuildIds = undefined;
       log.warn(invalidChangedFiles());
