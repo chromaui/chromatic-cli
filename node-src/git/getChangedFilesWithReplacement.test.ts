@@ -119,31 +119,41 @@ describe('getChangedFilesWithReplacements', () => {
     };
     client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
 
-    const promise = getChangedFilesWithReplacement(context, {
-      id: 'id',
-      number: 3,
-      commit: 'missing',
-      uncommittedHash: '',
-      isLocalBuild: false,
-    });
+    let err;
+    try {
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'missing',
+        uncommittedHash: '',
+        isLocalBuild: false,
+      });
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(AncestorMissingError);
-    await expect(promise).rejects.toMatchObject({ commit: 'missing' });
+    expect(err).toBeInstanceOf(AncestorMissingError);
+    expect(err).toMatchObject({ commit: 'missing' });
   });
 
   it('throws BaselineDirtyError when a local build with uncommitted changes has no replacement', async () => {
     client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [] } } });
 
-    const promise = getChangedFilesWithReplacement(context, {
-      id: 'id',
-      number: 3,
-      commit: 'exists',
-      uncommittedHash: 'abcdef',
-      isLocalBuild: true,
-    });
+    let err;
+    try {
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: 'abcdef',
+        isLocalBuild: true,
+      });
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(BaselineDirtyError);
-    await expect(promise).rejects.toMatchObject({ commit: 'exists' });
+    expect(err).toBeInstanceOf(BaselineDirtyError);
+    expect(err).toMatchObject({ commit: 'exists' });
   });
 
   it('rethrows unknown errors', async () => {
@@ -151,15 +161,20 @@ describe('getChangedFilesWithReplacements', () => {
       throw new GitCommandError('git diff', { cause: new Error('git broken') });
     });
 
-    const promise = getChangedFilesWithReplacement(context, {
-      id: 'id',
-      number: 3,
-      commit: 'exists',
-      uncommittedHash: '',
-      isLocalBuild: false,
-    });
+    let err;
+    try {
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'exists',
+        uncommittedHash: '',
+        isLocalBuild: false,
+      });
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(GitCommandError);
+    expect(err).toBeInstanceOf(GitCommandError);
     expect(client.runQuery).not.toHaveBeenCalled();
   });
 });

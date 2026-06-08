@@ -122,10 +122,15 @@ describe('findAncestorBuildWithCommit error wrapping', () => {
     const cause = new HTTPClientError({ url: 'x', status: 500, statusText: 'x' } as any);
     ctx.client.runQuery.mockRejectedValueOnce(cause);
 
-    const promise = findAncestorBuildWithCommit(ctx, 7);
+    let err;
+    try {
+      await findAncestorBuildWithCommit(ctx, 7);
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(NetworkError);
-    await expect(promise).rejects.toMatchObject({ cause });
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err).toMatchObject({ cause });
   });
 
   it('throws NetworkError when runQuery rejects with a FetchError-shaped error', async () => {
@@ -136,10 +141,15 @@ describe('findAncestorBuildWithCommit error wrapping', () => {
     });
     ctx.client.runQuery.mockRejectedValueOnce(cause);
 
-    const promise = findAncestorBuildWithCommit(ctx, 7);
+    let err;
+    try {
+      await findAncestorBuildWithCommit(ctx, 7);
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(NetworkError);
-    await expect(promise).rejects.toMatchObject({ cause });
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err).toMatchObject({ cause });
   });
 
   it('throws ReplacementFailedError for any other rejection', async () => {
@@ -147,9 +157,14 @@ describe('findAncestorBuildWithCommit error wrapping', () => {
     const cause = { message: 'GraphQL error', extensions: { code: 'BAD_USER_INPUT' } };
     ctx.client.runQuery.mockRejectedValueOnce(cause);
 
-    const promise = findAncestorBuildWithCommit(ctx, 7);
+    let err;
+    try {
+      await findAncestorBuildWithCommit(ctx, 7);
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(ReplacementFailedError);
-    await expect(promise).rejects.toMatchObject({ cause });
+    expect(err).toBeInstanceOf(ReplacementFailedError);
+    expect(err).toMatchObject({ cause });
   });
 });

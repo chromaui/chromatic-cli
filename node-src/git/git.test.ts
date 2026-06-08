@@ -176,20 +176,30 @@ describe('getChangedFiles', () => {
     const cause = new Error('fatal: bad object abc123');
     execGitCommand.mockRejectedValueOnce(cause);
 
-    const promise = getChangedFiles(ctx, 'abc123');
+    let err;
+    try {
+      await getChangedFiles(ctx, 'abc123');
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(AncestorMissingError);
-    await expect(promise).rejects.toMatchObject({ commit: 'abc123', cause });
+    expect(err).toBeInstanceOf(AncestorMissingError);
+    expect(err).toMatchObject({ commit: 'abc123', cause });
   });
 
   it('throws GitCommandError for any other execGitCommand rejection', async () => {
     const cause = new Error('fatal: git is broken');
     execGitCommand.mockRejectedValueOnce(cause);
 
-    const promise = getChangedFiles(ctx, 'abc123');
+    let err;
+    try {
+      await getChangedFiles(ctx, 'abc123');
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(GitCommandError);
-    await expect(promise).rejects.toMatchObject({ cause });
+    expect(err).toBeInstanceOf(GitCommandError);
+    expect(err).toMatchObject({ cause });
   });
 });
 
@@ -222,10 +232,15 @@ describe('checkoutFile', () => {
     const cause = new Error('git show failed');
     execGitCommand.mockRejectedValueOnce(cause);
 
-    const promise = checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+    let err;
+    try {
+      await checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+    } catch (error) {
+      err = error;
+    }
 
-    await expect(promise).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
-    await expect(promise).rejects.toMatchObject({ cause });
+    expect(err).toBeInstanceOf(BaselineCheckoutFailedError);
+    expect(err).toMatchObject({ cause });
   });
 });
 
