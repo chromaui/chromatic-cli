@@ -54,8 +54,7 @@ export class AncestorMissingError extends Error {
 }
 
 /**
- * Error thrown when the baseline build was a local build with uncommitted changes, so its state
- * can't be reproduced.
+ * Error thrown when the baseline build was a local build with uncommitted changes.
  */
 export class BaselineDirtyError extends Error {
   constructor(
@@ -68,7 +67,7 @@ export class BaselineDirtyError extends Error {
 }
 
 /**
- * Error thrown when looking up a replacement ancestor build fails for a non-network reason.
+ * Error thrown when looking up a replacement ancestor build fails for an unknown reason.
  */
 export class ReplacementFailedError extends Error {
   constructor(options?: { cause?: unknown }) {
@@ -78,7 +77,7 @@ export class ReplacementFailedError extends Error {
 }
 
 /**
- * Error thrown when a network/transport failure occurred during a remote call.
+ * Error thrown when a network/transport failure occurred during a network call.
  */
 export class NetworkError extends Error {
   constructor(options?: { cause?: unknown }) {
@@ -88,7 +87,7 @@ export class NetworkError extends Error {
 }
 
 /**
- * Error thrown when a `git` subprocess fails for a reason other than a missing commit.
+ * Error thrown when a `git` subprocess fails for an unknown reason.
  */
 export class GitCommandError extends Error {
   constructor(
