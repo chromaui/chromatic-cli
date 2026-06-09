@@ -1,3 +1,5 @@
+import { Writable } from 'node:stream';
+
 import { Context } from '../types';
 import { CLI_COLORS } from './engine/clack/colors';
 import { intro as clackIntro, log } from './engine/clack/log';
@@ -9,8 +11,10 @@ import { intro as clackIntro, log } from './engine/clack/log';
  *
  * @param ctx The CLI context (or a subset containing `pkg`).
  * @param ctx.pkg The package metadata used to render the version banner and docs link.
+ * @param output Stream Clack writes to. Defaults to `process.stdout`; the Storybook capture
+ * harness injects an in-memory sink instead.
  */
-export function intro({ pkg }: Pick<Context, 'pkg'>): void {
-  clackIntro(`Chromatic CLI v${pkg.version}`);
-  log(CLI_COLORS.muted(pkg.docs));
+export function intro({ pkg }: Pick<Context, 'pkg'>, output?: Writable): void {
+  clackIntro(`Chromatic CLI v${pkg.version}`, output);
+  log(CLI_COLORS.muted(pkg.docs), output);
 }
