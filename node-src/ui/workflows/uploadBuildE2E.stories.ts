@@ -1,9 +1,10 @@
+import { environment, options } from '../../renderer/storybook/fixtures';
 import task from '../components/task';
 import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
 import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassedE2E.stories';
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublishedE2E.stories';
-import * as auth from '../tasks/auth.stories';
+import { authenticated, authenticating, initial } from '../tasks/auth';
 import * as build from '../tasks/buildE2E.stories';
 import * as gitInfo from '../tasks/gitInfo.stories';
 import * as initialize from '../tasks/initialize.stories';
@@ -14,6 +15,14 @@ import * as verify from '../tasks/verifyE2E.stories';
 
 const ctx = { options: { playwright: true } } as any;
 const steps = (...steps) => steps.map((step) => task(step(ctx))).join('\n');
+
+// Build the auth states from the raw task source: auth.stories now returns rendered ANSI strings
+// (Clack capture), which the old task() path can't consume.
+const auth = {
+  Initial: () => initial,
+  Authenticating: () => authenticating({ env: environment } as any),
+  Authenticated: () => authenticated({ env: environment, options } as any),
+};
 
 export default {
   title: 'CLI/Workflows/UploadBuildE2E',
