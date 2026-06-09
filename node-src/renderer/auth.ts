@@ -3,6 +3,7 @@ import { Context } from '../types';
 import { authenticated, authenticating } from '../ui/tasks/auth';
 import { runTask } from './engine';
 import { clackTaskLogRenderer } from './engine/clack/renderer';
+import { getRenderer } from './engine/getRenderer';
 
 /**
  * Render the auth task.
@@ -20,6 +21,6 @@ export async function renderAuth(ctx: Context): Promise<void> {
       run: runAuth,
       applyOutput: applyAuthOutput,
     },
-    clackTaskLogRenderer()
+    getRenderer(ctx, clackTaskLogRenderer)
   );
 }
