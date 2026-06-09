@@ -1,3 +1,19 @@
+# v17.4.0 (Tue Jun 09 2026)
+
+#### 🚀 Enhancement
+
+- Add additional bail details to `invalidChangedFiles` [#1355](https://github.com/chromaui/chromatic-cli/pull/1355) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Update Codecov to fix GPG issue [#1387](https://github.com/chromaui/chromatic-cli/pull/1387) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.3.0 (Fri Jun 05 2026)
 
 #### 🚀 Enhancement
