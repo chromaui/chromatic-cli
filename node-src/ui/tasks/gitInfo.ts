@@ -31,7 +31,7 @@ export const pending = () => ({
 });
 
 export const skippingBuild = (git: Context['git']) => ({
-  status: 'pending',
+  status: 'updating',
   title: 'Skipping build',
   output: `Skipping build for commit ${git.commit.slice(0, 7)}`,
 });
