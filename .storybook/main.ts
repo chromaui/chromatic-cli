@@ -1,6 +1,8 @@
 import { StorybookConfig } from '@storybook/html-vite';
 import { fileURLToPath } from 'node:url';
 
+import { clackCapture } from './clackCapture';
+
 const config: StorybookConfig = {
   stories: ['../node-src/**/*.@(mdx|stories.*)'],
   addons: ['@storybook/addon-docs'],
@@ -20,6 +22,7 @@ const config: StorybookConfig = {
         path: "path-browserify",
       },
     };
+    config.plugins = [...(config.plugins ?? []), clackCapture()];
     return config;
   },
   previewHead: (head) => {
