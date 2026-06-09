@@ -30,10 +30,10 @@ export const pending = () => ({
   title: 'Retrieving git information',
 });
 
-export const skippingBuild = (ctx: Context) => ({
+export const skippingBuild = (git: Context['git']) => ({
   status: 'pending',
   title: 'Skipping build',
-  output: `Skipping build for commit ${ctx.git.commit.slice(0, 7)}`,
+  output: `Skipping build for commit ${git.commit.slice(0, 7)}`,
 });
 
 export const skippedForCommit = (ctx: Context) => ({
