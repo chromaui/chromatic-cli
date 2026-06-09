@@ -6,7 +6,12 @@ export default defineConfig({
     clearMocks: true, // Clear all mocks between each test
     coverage: {
       include: ['{bin,node}-src/**/*.{ts,tsx}', 'isChromatic.{mjs,js}'],
-      exclude: ['**/*.stories.{t,j}s', '**/lib/{testLogger,testUtilities}.ts', '**/__mocks__/**'],
+      exclude: [
+        '**/*.stories.{t,j}s',
+        '**/*.frames.{t,j}s',
+        '**/lib/{testLogger,testUtilities}.ts',
+        '**/__mocks__/**',
+      ],
     },
   },
   plugins: [tsconfigPaths() as Plugin],
