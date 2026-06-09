@@ -1,12 +1,12 @@
-import * as Sentry from '@sentry/node';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context } from '../../types';
+import { ChangedPackageFilesBailReason, Context } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
-import { ChangedPackageFilesPatch, classifyBailDetail } from './classifyBailDetail';
+import { captureBailException } from './captureBailException';
+import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
@@ -31,11 +31,11 @@ export const traceChangedFiles = async (ctx: Context) => {
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   let changedDependencyNames: void | string[] = [];
   let pendingError: unknown;
-  let pendingPatch: ChangedPackageFilesPatch | undefined;
+  let pendingPatch: Partial<ChangedPackageFilesBailReason> | undefined;
   if (packageMetadataChanges?.length) {
     changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
       pendingError = err;
-      pendingPatch = classifyBailDetail(err);
+      pendingPatch = classifyChangedPackageFilesDetail(err);
 
       const { name, message, stack, code } = err;
       ctx.log.debug({ name, message, stack, code });
@@ -58,12 +58,9 @@ export const traceChangedFiles = async (ctx: Context) => {
         // be times when findChangedDependencies fails but our fallback works. In those cases, we
         // don't want to capture an error since we were able to recover and didn't bail.
         if (pendingPatch && pendingError) {
-          const { bailSubreason } = pendingPatch;
-          pendingPatch.sentryEventId = Sentry.captureException(pendingError, {
-            tags: { bail_path: 'findChangedDependencies', bail_detail: bailSubreason },
-            // group known bail reasons under one issue per key; let Sentry's default grouping
-            // handle unclassified errors so they don't all collapse into a single bucket
-            ...(bailSubreason && { fingerprint: [bailSubreason] }),
+          pendingPatch.sentryEventId = captureBailException(pendingError, {
+            bailSubreason: pendingPatch.bailSubreason,
+            bailPath: 'findChangedDependencies',
           });
         }
 

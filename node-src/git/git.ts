@@ -4,7 +4,11 @@ import pLimit from 'p-limit';
 import path from 'path';
 import { file as temporaryFile } from 'tmp-promise';
 
-import { BaselineCheckoutFailedError } from '../lib/turbosnap/errors';
+import {
+  AncestorMissingError,
+  BaselineCheckoutFailedError,
+  GitCommandError,
+} from '../lib/turbosnap/errors';
 import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
   execGitCommand,
@@ -205,11 +209,16 @@ export async function commitExists(deps: GitDeps, commit: string) {
  */
 export async function getChangedFiles(deps: GitDeps, baseCommit: string, headCommit = '') {
   // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
-  const files = await execGitCommand(
-    deps,
-    `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`
-  );
-  return files?.split(newline).filter(Boolean);
+  const command = `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`;
+  try {
+    const files = await execGitCommand(deps, command);
+    return files?.split(newline).filter(Boolean);
+  } catch (error) {
+    if (/bad object/.test(error.message)) {
+      throw new AncestorMissingError(baseCommit, { cause: error });
+    }
+    throw new GitCommandError(command, { cause: error });
+  }
 }
 
 /**
