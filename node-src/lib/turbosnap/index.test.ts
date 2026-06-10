@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exitCodes } from '../setExitCode';
 import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
-import { classifyBaselineCheckoutFailure as classifyBaselineCheckoutFailureDep } from './classifyBailRootCause';
+import { classifyTagsFromError as classifyTagsFromErrorDep } from './classifyBailRootCause';
 import {
   BaselineCheckoutFailedError,
   LockFileParseFailedError,
@@ -44,7 +44,7 @@ vi.mock('../../tasks/readStatsFile', () => ({
 const getDependentStoryFiles = vi.mocked(getDependentStoryFilesDep);
 const findChangedPackageFiles = vi.mocked(findChangedPackageFilesDep);
 const findChangedDependencies = vi.mocked(findChangedDependenciesDep);
-const classifyBaselineCheckoutFailure = vi.mocked(classifyBaselineCheckoutFailureDep);
+const classifyTagsFromError = vi.mocked(classifyTagsFromErrorDep);
 const accessMock = vi.mocked(access);
 const captureException = vi.mocked(Sentry.captureException);
 
@@ -145,8 +145,10 @@ describe('traceChangedFiles', () => {
     it(`bails on package.json changes and tags bailReason as ${name}`, async () => {
       findChangedDependencies.mockRejectedValue(error);
       findChangedPackageFiles.mockResolvedValue(['./package.json']);
-      classifyBaselineCheckoutFailure.mockImplementation(async (_deps, err) =>
-        err instanceof BaselineCheckoutFailedError ? 'baselineManifestMoved' : undefined
+      classifyTagsFromError.mockImplementation(async (_deps, err) =>
+        err instanceof BaselineCheckoutFailedError
+          ? { baseline_failure_kind: 'baselineManifestMoved' }
+          : undefined
       );
 
       const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
@@ -171,7 +173,7 @@ describe('traceChangedFiles', () => {
           ...(expectedFailureKind && { baseline_failure_kind: expectedFailureKind }),
         },
         ...(expectFingerprint && {
-          fingerprint: expectedFailureKind ? [expectedKey, expectedFailureKind] : [expectedKey],
+          fingerprint: [expectedKey],
         }),
       });
     });

@@ -7,8 +7,7 @@ import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
-import { classifyBaselineCheckoutFailure } from './classifyBailRootCause';
-import { BaselineCheckoutFailedError } from './errors';
+import { classifyTagsFromError } from './classifyBailRootCause';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
@@ -61,23 +60,17 @@ export const traceChangedFiles = async (ctx: Context) => {
         // don't want to capture an error since we were able to recover and didn't bail.
         if (pendingPatch && pendingError) {
           const { bailSubreason } = pendingPatch;
-          // TODO: make this better
-          const baselineFailureKind =
-            pendingError instanceof BaselineCheckoutFailedError
-              ? await classifyBaselineCheckoutFailure(ctx, pendingError)
-              : undefined;
+          const additionalTags = await classifyTagsFromError(ctx, pendingError);
           pendingPatch.sentryEventId = Sentry.captureException(pendingError, {
             tags: {
               bail_path: 'findChangedDependencies',
               bail_detail: bailSubreason,
-              ...(baselineFailureKind && { baseline_failure_kind: baselineFailureKind }),
+              ...additionalTags,
             },
             // group known bail reasons under one issue per key; let Sentry's default grouping
             // handle unclassified errors so they don't all collapse into a single bucket
             ...(bailSubreason && {
-              fingerprint: baselineFailureKind
-                ? [bailSubreason, baselineFailureKind]
-                : [bailSubreason],
+              fingerprint: [bailSubreason],
             }),
           });
         }

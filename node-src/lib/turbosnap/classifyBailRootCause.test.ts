@@ -2,19 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { getChangedFilesWithStatus as getChangedFilesWithStatusDep } from '../../git/git';
 import TestLogger from '../testLogger';
-import { classifyBaselineCheckoutFailure } from './classifyBailRootCause';
-import { BaselineCheckoutFailedError, LockFileParseFailedError } from './errors';
+import { classifyTagsFromError } from './classifyBailRootCause';
+import { BaselineCheckoutFailedError } from './errors';
 
 vi.mock('../../git/git');
 const getChangedFilesWithStatus = vi.mocked(getChangedFilesWithStatusDep);
 
 const deps = { log: new TestLogger(), options: {} } as any;
 
-describe('classifyBaselineCheckoutFailure', () => {
-  it('returns undefined for a non-BaselineCheckoutFailedError', async () => {
-    const result = await classifyBaselineCheckoutFailure(
+describe('classifyTagsFromError', () => {
+  it('returns undefined for an error that is not classified yet', async () => {
+    const result = await classifyTagsFromError(
       deps,
-      new LockFileParseFailedError('/tmp/checkout-abc/yarn.lock')
+      new Error("some random error which won't have special handling")
     );
 
     expect(result).toBeUndefined();
@@ -27,26 +27,26 @@ describe('classifyBaselineCheckoutFailure', () => {
         { status: 'renamed', fromPath: 'libs/old/package.json', path: 'libs/app/package.json' },
       ]);
 
-    const result = await classifyBaselineCheckoutFailure(
-      deps,
-      new BaselineCheckoutFailedError('abc123:libs/app/package.json')
-    );
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/package.json')
+      );
 
-    expect(result).toBe('baselineManifestMoved');
-  });
+      expect(result).toEqual({ baseline_failure_kind: 'baselineManifestMoved' });
+    });
 
     it('classifies a file add as "baselineManifestAdded"', async () => {
       getChangedFilesWithStatus.mockResolvedValue([
         { status: 'added', path: 'libs/app/package.json' },
       ]);
 
-    const result = await classifyBaselineCheckoutFailure(
-      deps,
-      new BaselineCheckoutFailedError('abc123:libs/app/package.json')
-    );
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/package.json')
+      );
 
-    expect(result).toBe('baselineManifestAdded');
-  });
+      expect(result).toEqual({ baseline_failure_kind: 'baselineManifestAdded' });
+    });
 
     it('classifies a file rename as "baselineManifestMoved" over "baselineManifestAdded" when the diff has both rows', async () => {
       getChangedFilesWithStatus.mockResolvedValue([
@@ -54,35 +54,36 @@ describe('classifyBaselineCheckoutFailure', () => {
         { status: 'renamed', fromPath: 'libs/old/package.json', path: 'libs/app/package.json' },
       ]);
 
-    const result = await classifyBaselineCheckoutFailure(
-      deps,
-      new BaselineCheckoutFailedError('abc123:libs/app/package.json')
-    );
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/package.json')
+      );
 
-    expect(result).toBe('baselineManifestMoved');
-  });
+      expect(result).toEqual({ baseline_failure_kind: 'baselineManifestMoved' });
+    });
 
     it('returns "unknownBaselineCheckoutFailure" when we cannot classify the change', async () => {
       getChangedFilesWithStatus.mockResolvedValue([
         { status: 'modified', path: 'some/other/package.json' },
       ]);
 
-    const result = await classifyBaselineCheckoutFailure(
-      deps,
-      new BaselineCheckoutFailedError('abc123:libs/app/package.json')
-    );
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/package.json')
+      );
 
-    expect(result).toBe('unknownBaselineCheckoutFailure');
-  });
+      expect(result).toEqual({ baseline_failure_kind: 'unknownBaselineCheckoutFailure' });
+    });
 
     it('returns "unknownBaselineCheckoutFailure" when a git command throws unexpectedly', async () => {
       getChangedFilesWithStatus.mockRejectedValue(new Error('git diff blew up'));
 
-    const result = await classifyBaselineCheckoutFailure(
-      deps,
-      new BaselineCheckoutFailedError('abc123:libs/app/package.json')
-    );
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/package.json')
+      );
 
-    expect(result).toBe('unknownBaselineCheckoutFailure');
+      expect(result).toEqual({ baseline_failure_kind: 'unknownBaselineCheckoutFailure' });
+    });
   });
 });

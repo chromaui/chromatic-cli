@@ -6,6 +6,26 @@ import { ChangedFileWithStatus, getChangedFilesWithStatus } from '../../git/git'
 import { BaselineCheckoutFailedError } from './errors';
 
 /**
+ * Classify an error captured at the TurboSnap bail site into additional Sentry tags describing its
+ * root cause.
+ *
+ * @param deps Function dependencies.
+ * @param error The error captured at the bail site.
+ *
+ * @returns A map of Sentry tags, or `undefined` when the error type is not recognized.
+ */
+export async function classifyTagsFromError(
+  deps: GitDeps,
+  error: unknown
+): Promise<Record<string, string> | undefined> {
+  if (error instanceof BaselineCheckoutFailedError) {
+    return classifyBaselineCheckoutFailureTags(deps, error);
+  }
+
+  return undefined;
+}
+
+/**
  * Refined root-cause kinds for a BaselineCheckoutFailedError.
  *
  * These exist for Sentry ONLY and are not sent to the backend.
@@ -24,10 +44,10 @@ export type BaselineCheckoutFailureKind =
  * @returns The refined failure kind or `undefined` when `error` is not a
  * `BaselineCheckoutFailedError`.
  */
-export async function classifyBaselineCheckoutFailure(
+async function classifyBaselineCheckoutFailureTags(
   deps: GitDeps,
   error: unknown
-): Promise<BaselineCheckoutFailureKind | undefined> {
+): Promise<Record<'baseline_failure_kind', BaselineCheckoutFailureKind> | undefined> {
   if (!(error instanceof BaselineCheckoutFailedError)) {
     return undefined;
   }
@@ -48,7 +68,7 @@ export async function classifyBaselineCheckoutFailure(
       // `top` anchors the response to the root of the repository (so we can catch cross-directory changes)
       `:(glob,top)**/${basename}`
     );
-    return classifyRenameDiff(changes, fileName);
+    return { baseline_failure_kind: classifyRenameDiff(changes, fileName) };
   } catch (err) {
     // We capture the exception higher in the stack so we can simply attach the error context here.
     Sentry.addBreadcrumb({
@@ -60,7 +80,7 @@ export async function classifyBaselineCheckoutFailure(
       },
     });
 
-    return 'unknownBaselineCheckoutFailure';
+    return { baseline_failure_kind: 'unknownBaselineCheckoutFailure' };
   }
 }
 
