@@ -85,5 +85,18 @@ describe('classifyTagsFromError', () => {
 
       expect(result).toEqual({ baseline_failure_kind: 'unknownBaselineCheckoutFailure' });
     });
+
+    it('splits the pathspec on the first colon so a filename containing colons still matches', async () => {
+      getChangedFilesWithStatus.mockResolvedValue([
+        { status: 'renamed', fromPath: 'libs/old/a:b.json', path: 'libs/app/a:b.json' },
+      ]);
+
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/a:b.json')
+      );
+
+      expect(result).toEqual({ baseline_failure_kind: 'baselineManifestMoved' });
+    });
   });
 });
