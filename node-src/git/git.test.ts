@@ -13,6 +13,7 @@ import {
   findFilesFromRepositoryRoot,
   getBranch,
   getChangedFiles,
+  getChangedFilesWithStatus,
   getCommit,
   getCommittedFileCount,
   getNumberOfCommitters,
@@ -200,6 +201,63 @@ describe('getChangedFiles', () => {
 
     expect(err).toBeInstanceOf(GitCommandError);
     expect(err).toMatchObject({ cause });
+  });
+});
+
+describe('getChangedFilesWithStatus', () => {
+  it('parses single-path rows (added, modified, deleted) into status objects', async () => {
+    execGitCommand.mockResolvedValue(
+      ['A\tpackage.json', 'M\tsrc/index.ts', 'D\told.ts'].join('\n')
+    );
+
+    const result = await getChangedFilesWithStatus(ctx, 'abc123', 'HEAD');
+
+    expect(result).toEqual([
+      { status: 'added', path: 'package.json' },
+      { status: 'modified', path: 'src/index.ts' },
+      { status: 'deleted', path: 'old.ts' },
+    ]);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git diff --name-status --find-renames=20% abc123 HEAD'
+    );
+  });
+
+  it('parses a rename row into a renamed status carrying both paths', async () => {
+    execGitCommand.mockResolvedValue('R097\tlibs/old/package.json\tlibs/app/package.json\n');
+
+    const result = await getChangedFilesWithStatus(ctx, 'abc123', 'HEAD');
+
+    expect(result).toEqual([
+      { status: 'renamed', fromPath: 'libs/old/package.json', path: 'libs/app/package.json' },
+    ]);
+  });
+
+  it('maps an unrecognized status code to unknown', async () => {
+    execGitCommand.mockResolvedValue('X\tweird.txt\n');
+
+    const result = await getChangedFilesWithStatus(ctx, 'abc123', 'HEAD');
+
+    expect(result).toEqual([{ status: 'unknown', path: 'weird.txt' }]);
+  });
+
+  it('returns an empty array when there are no changes', async () => {
+    execGitCommand.mockResolvedValue('');
+
+    const result = await getChangedFilesWithStatus(ctx, 'abc123', 'HEAD');
+
+    expect(result).toEqual([]);
+  });
+
+  it('appends a quoted pathspec when one is provided', async () => {
+    execGitCommand.mockResolvedValue('');
+
+    await getChangedFilesWithStatus(ctx, 'abc123', 'HEAD', ':(glob,top)**/pnpm-lock.yaml');
+
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git diff --name-status --find-renames=20% abc123 HEAD -- ":(glob,top)**/pnpm-lock.yaml"'
+    );
   });
 });
 
