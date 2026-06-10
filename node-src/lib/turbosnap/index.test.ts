@@ -169,12 +169,10 @@ describe('traceChangedFiles', () => {
       expect(captureException).toHaveBeenCalledWith(error, {
         tags: {
           bail_path: 'findChangedDependencies',
-          bail_detail: expectedKey,
+          ...(expectedKey && { bail_detail: expectedKey }),
           ...(expectedFailureKind && { baseline_failure_kind: expectedFailureKind }),
         },
-        ...(expectFingerprint && {
-          fingerprint: [expectedKey],
-        }),
+        ...(expectFingerprint && { fingerprint: [expectedKey] }),
       });
     });
   }
