@@ -1,3 +1,4 @@
+import { fallbackFailureState } from '../../renderer/engine';
 import { captureTask } from '../../renderer/storybook/captureTask';
 import {
   pending,
@@ -34,4 +35,7 @@ export const Skipped = () => captureTask(skippedForCommit({ git } as any));
 
 export const SkippedRebuild = () => captureTask(skippedRebuild());
 
-export const SkipFailed = () => captureTask(skipFailed());
+// gitInfo registers no `failure` transition, so a skip failure renders the engine's fallback
+// failure state, built from the pending title and the error gatherGitInfo throws.
+export const SkipFailed = () =>
+  captureTask(fallbackFailureState(pending().title, new Error(skipFailed().output)));
