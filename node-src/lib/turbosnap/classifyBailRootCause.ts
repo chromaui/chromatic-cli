@@ -41,17 +41,12 @@ export type BaselineCheckoutFailureKind =
  * @param deps Function dependencies.
  * @param error The error captured at the bail site.
  *
- * @returns The refined failure kind or `undefined` when `error` is not a
- * `BaselineCheckoutFailedError`.
+ * @returns The refined failure kind.
  */
 async function classifyBaselineCheckoutFailureTags(
   deps: GitDeps,
-  error: unknown
-): Promise<Record<'baseline_failure_kind', BaselineCheckoutFailureKind> | undefined> {
-  if (!(error instanceof BaselineCheckoutFailedError)) {
-    return undefined;
-  }
-
+  error: BaselineCheckoutFailedError
+): Promise<Record<'baseline_failure_kind', BaselineCheckoutFailureKind>> {
   const { reference, fileName } = parsePathspec(error.pathspec);
 
   try {
