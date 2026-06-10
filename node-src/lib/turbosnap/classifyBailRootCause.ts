@@ -68,7 +68,7 @@ async function classifyBaselineCheckoutFailureTags(
       // `top` anchors the response to the root of the repository (so we can catch cross-directory changes)
       `:(glob,top)**/${basename}`
     );
-    return { baseline_failure_kind: classifyRenameDiff(changes, fileName) };
+    return { baseline_failure_kind: classifyManifestChange(changes, fileName) };
   } catch (err) {
     // We capture the exception higher in the stack so we can simply attach the error context here.
     Sentry.addBreadcrumb({
@@ -92,7 +92,7 @@ async function classifyBaselineCheckoutFailureTags(
  *
  * @returns The matching manifest failure kind.
  */
-function classifyRenameDiff(
+function classifyManifestChange(
   changes: ChangedFileWithStatus[],
   fileName: string
 ): BaselineCheckoutFailureKind {
