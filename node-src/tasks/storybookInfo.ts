@@ -3,10 +3,8 @@ import * as Sentry from '@sentry/node';
 import { isE2EBuild } from '../lib/e2eUtils';
 import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
 import getStorybookInfo from '../lib/getStorybookInfo';
-import { createTask } from '../lib/tasks';
 import { Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
-import { initial, pending, success } from '../ui/tasks/storybookInfo';
 
 export type StorybookInfoDeps = Pick<Deps, 'log' | 'options' | 'env' | 'packageJson'>;
 
@@ -14,6 +12,12 @@ export interface StorybookInfoInput {
   gitRootPath?: string;
   isReactNativeApp: boolean;
 }
+
+export const extractStorybookInfoInput = (ctx: Context): StorybookInfoInput => ({
+  // git.rootPath is truly optional here, so we don't need to verify that it's present
+  gitRootPath: ctx.git?.rootPath,
+  isReactNativeApp: ctx.isReactNativeApp ?? false,
+});
 
 export interface StorybookInfoOutput {
   storybook: Storybook;
@@ -63,26 +67,3 @@ export const applyStorybookInfoOutput = (ctx: Context, { storybook }: StorybookI
   }
   Sentry.setContext('storybook', { ...storybook });
 };
-
-/**
- * Sets up the Listr task for gathering Storybook information.
- *
- * @param ctx The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(ctx: Context) {
-  return createTask({
-    name: 'storybookInfo',
-    title: initial(ctx).title,
-    skip: (ctx: Context) => ctx.skip,
-    transitions: { pending, success },
-    extractInput: (ctx): StorybookInfoInput => ({
-      // git.rootPath is truly optional here, so we don't need to verify that it's present
-      gitRootPath: ctx.git?.rootPath,
-      isReactNativeApp: ctx.isReactNativeApp ?? false,
-    }),
-    applyOutput: applyStorybookInfoOutput,
-    run: setStorybookInfo,
-  });
-}
