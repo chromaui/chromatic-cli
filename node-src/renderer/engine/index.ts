@@ -62,6 +62,12 @@ export async function runTask<TInput, TOutput, TPartial = never>(
   config: TaskConfig<TInput, TOutput, TPartial>,
   renderer: TaskRenderer
 ): Promise<void> {
+  // An upstream task decided to short-circuit the pipeline, so downstream tasks bail
+  if (ctx.skip) {
+    ctx.log.debug(`Skipping task '${config.name}' due to upstream skip`);
+    return;
+  }
+
   ctx.task = config.name;
   ctx.title = config.title;
   ctx.startedAt = Number.isInteger(ctx.now) ? (ctx.now as number) : Date.now();
