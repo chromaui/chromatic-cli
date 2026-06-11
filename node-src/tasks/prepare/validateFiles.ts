@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
+import { stripVTControlCharacters } from 'util';
 
 import { posix } from '../../lib/posix';
 import { Context } from '../../types';
@@ -55,13 +56,25 @@ function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = 
  * @returns The output directory path if found, undefined otherwise
  */
 function getOutputDirectory(buildLog: string) {
-  const outputString = 'Output directory: ';
-  const outputIndex = buildLog.lastIndexOf(outputString);
-  if (outputIndex === -1) return undefined;
-  const remainingLog = buildLog.slice(outputIndex + outputString.length);
-  const newlineIndex = remainingLog.indexOf('\n');
-  const outputDirectory = newlineIndex === -1 ? remainingLog : remainingLog.slice(0, newlineIndex);
-  return outputDirectory.trim();
+  const cleanLog = stripVTControlCharacters(buildLog);
+  const lines = cleanLog.split('\n');
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const outputIndex = lines[index].lastIndexOf('Output directory:');
+    if (outputIndex === -1) continue;
+
+    const sameLineOutput = lines[index].slice(outputIndex + 'Output directory:'.length).trim();
+    if (sameLineOutput) return sameLineOutput;
+
+    for (let index_ = index + 1; index_ < lines.length; index_ += 1) {
+      // Remove Box Drawing glyphs (U+2500–U+257F)
+      const candidate = lines[index_].replace(/^[\s\u2500-\u257F]+/u, '').trim();
+      if (!candidate) continue;
+      return candidate;
+    }
+  }
+
+  return undefined;
 }
 
 /**
