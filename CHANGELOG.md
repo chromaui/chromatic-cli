@@ -1,3 +1,17 @@
+# v17.4.1 (Thu Jun 11 2026)
+
+#### 🐛 Bug Fix
+
+- fix: e2e build command ignores arguments when used with npm [#1385](https://github.com/chromaui/chromatic-cli/pull/1385) ([@sentience](https://github.com/sentience) [@AriPerkkio](https://github.com/AriPerkkio) [@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 3
+
+- Ari Perkkiö ([@AriPerkkio](https://github.com/AriPerkkio))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Kevin Yank ([@sentience](https://github.com/sentience))
+
+---
+
 # v17.4.0 (Tue Jun 09 2026)
 
 #### 🚀 Enhancement
