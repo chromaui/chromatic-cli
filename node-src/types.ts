@@ -139,10 +139,7 @@ export interface Options extends Configuration {
   ) => void;
 
   /** A callback that is called during tasks that have incremental progress */
-  experimental_onTaskProgress?: (
-    ctx: Context,
-    status: { progress: number; total: number; unit: string }
-  ) => void;
+  experimental_onTaskProgress?: (ctx: Context, status: TaskProgress) => void;
 
   /** A callback that is called at the completion of each task */
   experimental_onTaskComplete?: (ctx: Context) => void;
@@ -301,6 +298,12 @@ export interface Deps {
   pkg: Context['pkg'];
   sessionId: string;
   packageJson: Record<string, any>;
+  /**
+   * Push a mid-task UI update from inside the task body. The base `buildDeps` provides a no-op;
+   * `runTask` overrides it with a renderer-aware reporter that fans out to the active renderer and
+   * the public `experimental_onTaskProgress` hook.
+   */
+  report: TaskReporter;
 }
 
 export type TaskResult<TOutput, TPartial = never> =
@@ -477,7 +480,32 @@ export interface Task {
   status?: string;
   title: string;
   output?: string;
+  /**
+   * Optional numeric progress. Renderers that can draw a progress bar (e.g. the Clack progress-bar
+   * renderer) consume this; renderers that can't simply ignore it and render the text.
+   */
+  progress?: TaskProgress;
 }
+
+export interface TaskProgress {
+  progress: number;
+  total: number;
+  unit: string;
+}
+
+/**
+ * A mid-task update pushed from inside a task body via `deps.report`. This is the channel for any
+ * UI change that happens *during* the business logic (a textual phase change like gitInfo's
+ * "skipping build", or numeric progress like upload bytes / snapshot counts) — as opposed to the
+ * `start`/`succeed`/`fail` brackets the engine drives on its own.
+ */
+export interface TaskUpdate {
+  title?: string;
+  output?: string;
+  progress?: TaskProgress;
+}
+
+export type TaskReporter = (update: TaskUpdate) => void;
 
 export interface Reason {
   moduleName: string;
