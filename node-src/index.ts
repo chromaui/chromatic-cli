@@ -36,6 +36,7 @@ import {
 } from './lib/writeChromaticDiagnostics';
 import { intro as clackIntro } from './renderer';
 import { renderAuth } from './renderer/auth';
+import { renderGitInfo } from './renderer/gitInfo';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -343,6 +344,7 @@ async function runBuild(ctx: Context) {
         ctx.log.queue();
       }
       await renderAuth(ctx);
+      await renderGitInfo(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {

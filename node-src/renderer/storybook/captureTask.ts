@@ -18,10 +18,13 @@ const CAPTURE_WIDTH = 80;
  * task leaves the frame open.
  *
  * @param state The `Task` state to render (`pending`, `success`, or `error`).
+ * @param startingState The `Task` to render as the initial state. `success` and `error` tasks
+ * overwrite the starting state, but the `update` task inherits the starting state's title.
+ * Defaults to a generic "Starting task..." state.
  *
  * @returns The settled ANSI frame.
  */
-export function captureTask(state: Task): string {
+export function captureTask(state: Task, startingState?: Task): string {
   const { sink, read } = createSink();
 
   // Clack drops transient `.message()` output in non-TTY mode, gated on `process.env.CI === 'true'`.
@@ -33,7 +36,7 @@ export function captureTask(state: Task): string {
   process.stdout.columns = CAPTURE_WIDTH;
   try {
     intro({ pkg } as Pick<Context, 'pkg'>, sink);
-    drive(clackTaskLogRenderer(sink), state);
+    drive(clackTaskLogRenderer(sink), state, startingState);
   } finally {
     process.stdout.columns = previousColumns;
     // `process.env.CI = undefined` would coerce to the string "undefined" (truthy), so unset
@@ -45,7 +48,18 @@ export function captureTask(state: Task): string {
   return settle(read());
 }
 
-function drive(renderer: ReturnType<typeof clackTaskLogRenderer>, state: Task): void {
+function drive(
+  renderer: ReturnType<typeof clackTaskLogRenderer>,
+  state: Task,
+  startingState?: Task
+): void {
+  if (!startingState) {
+    startingState = {
+      status: 'pending',
+      title: 'Generic starting state',
+      output: 'Starting task...',
+    };
+  }
   // clack's taskLog requires starting before rendering success/error hooks, so we call `start`
   // first on success/error hooks
   switch (state.status) {
@@ -53,13 +67,18 @@ function drive(renderer: ReturnType<typeof clackTaskLogRenderer>, state: Task): 
       renderer.start(state);
       return;
     }
+    case 'updating': {
+      renderer.start(startingState);
+      renderer.update(state);
+      return;
+    }
     case 'success': {
-      renderer.start({ title: state.title });
+      renderer.start(startingState);
       renderer.succeed(state);
       return;
     }
     case 'error': {
-      renderer.start({ title: state.title });
+      renderer.start(startingState);
       renderer.fail(state);
       return;
     }

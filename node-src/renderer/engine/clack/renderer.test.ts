@@ -1,5 +1,5 @@
 import { taskLog as clackTaskLog } from '@clack/prompts';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, test, vi } from 'vitest';
 
 import { Task } from '../../../types';
 import { clackTaskLogRenderer } from './renderer';
@@ -116,18 +116,39 @@ describe('clackTaskLogRenderer', () => {
       expect(formatted).toBe('Done');
     });
 
-    it('renders the title and the output', () => {
-      const formatted = formatVia('update', { title: 'Building', output: 'compiling' });
-
+    test.for(['succeed', 'fail'])('%s transition renders title and output', (transition) => {
+      const formatted = formatVia(transition as keyof typeof TRANSITION_METHOD, {
+        title: 'Building',
+        output: 'compiling',
+      });
       expect(formatted).toContain('Building');
       expect(formatted).toContain('compiling');
     });
 
-    it('wraps long output across multiple lines', () => {
+    it('update renders only output', () => {
+      const formatted = formatVia('update', { title: 'Building', output: 'compiling' });
+
+      expect(formatted).not.toContain('Building');
+      expect(formatted).toContain('compiling');
+    });
+
+    it('update renders title when there is no output', () => {
+      const formatted = formatVia('update', { title: 'Building' });
+      expect(formatted).toContain('Building');
+    });
+
+    it('wraps long terminal-state output across multiple lines', () => {
+      const longOutput = 'foo'.repeat(40);
+      const formatted = formatVia('succeed', { title: 'Building', output: longOutput });
+
+      expect(formatted.split('\n').length).toBeGreaterThan(2);
+    });
+
+    it('wraps long update output across multiple lines', () => {
       const longOutput = 'foo'.repeat(40);
       const formatted = formatVia('update', { title: 'Building', output: longOutput });
 
-      expect(formatted.split('\n').length).toBeGreaterThan(2);
+      expect(formatted.split('\n').length).toBeGreaterThan(1);
     });
   });
 });
