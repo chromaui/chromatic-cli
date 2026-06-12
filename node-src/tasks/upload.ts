@@ -7,6 +7,7 @@ import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
+import buildTurboSkipped from '../ui/messages/info/buildTurboSkipped';
 import deduplicationFailed from '../ui/messages/warnings/deduplicationFailed';
 import {
   dryRun,
@@ -104,6 +105,8 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
 export const finishUpload = (ctx: Context, task: Task) => {
   // The build may have been marked SKIPPED from the backend detecting no changes from TurboSnap.
   if (ctx.skip) {
+    ctx.log.info(buildTurboSkipped());
+
     // Render as ↓ [skipped] rather than a ✔ checkmark to make it look like we never entered this step.
     setOutput('')(ctx, task); // Clear the "Starting publish" output so no subtitle shows
 

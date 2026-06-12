@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
-import { uploadStorybook, waitForSentinels } from './upload';
+import buildTurboSkipped from '../ui/messages/info/buildTurboSkipped';
+import { finishUpload, uploadStorybook, waitForSentinels } from './upload';
 
 vi.mock('form-data');
 vi.mock('fs');
@@ -397,6 +398,28 @@ describe('uploadStorybook', () => {
     expect(http.fetch).not.toHaveBeenCalled();
     expect(ctx.uploadedFiles).toBe(0);
     expect(ctx.uploadedBytes).toBe(0);
+  });
+
+  describe('finishUpload', () => {
+    it('logs the build skipped message and skips the task when the build is SKIPPED', () => {
+      const ctx = { skip: true, log, options: {} } as any;
+      const task = { skip: vi.fn() } as any;
+
+      finishUpload(ctx, task);
+
+      expect(log.info).toHaveBeenCalledWith(buildTurboSkipped());
+      expect(task.skip).toHaveBeenCalledWith('');
+    });
+
+    it('does not log the build skipped message when the build was uploaded', () => {
+      const ctx = { skip: false, log, options: {} } as any;
+      const task = { skip: vi.fn() } as any;
+
+      finishUpload(ctx, task);
+
+      expect(log.info).not.toHaveBeenCalledWith(buildTurboSkipped());
+      expect(task.skip).not.toHaveBeenCalled();
+    });
   });
 
   describe('with file hashes', () => {
