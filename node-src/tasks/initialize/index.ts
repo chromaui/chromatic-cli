@@ -1,11 +1,9 @@
 import { createAnalyticsClient } from '@cli/analytics';
 import { validateStorybookReactNativeVersion } from '@cli/react-native/validateStorybookVersion';
-import { createTask } from '@cli/tasks';
 
 import { AnnouncedBuild, Context, Deps, RuntimeMetadata, TaskResult } from '../../types';
 import turboSnapNotAvailableForReactNative from '../../ui/messages/errors/turboSnapNotAvailableForReactNative';
 import noAncestorBuild from '../../ui/messages/warnings/noAncestorBuild';
-import { initial, pending, success } from '../../ui/tasks/initialize';
 import { announceBuild, AnnounceBuildInput } from './announceBuild';
 import { gatherEnvironment } from './gatherEnvironment';
 import { getRuntimeMetadata } from './getRuntimeMetadata';
@@ -85,25 +83,3 @@ export const applyInitializeOutput = async (ctx: Context, output: InitializeOutp
     ctx.log.warn(noAncestorBuild(ctx));
   }
 };
-
-/**
- * Sets up the Listr task for announcing a new build on Chromatic.
- *
- * @param _ The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(_: Context) {
-  return createTask({
-    name: 'initialize',
-    title: initial.title,
-    skip: (ctx: Context) => ctx.skip,
-    transitions: {
-      pending,
-      success,
-    },
-    extractInput: extractInitializeInput,
-    applyOutput: applyInitializeOutput,
-    run: initialize,
-  });
-}
