@@ -1,5 +1,4 @@
 /* eslint max-lines: ["error", 550] */
-import type Listr from 'listr';
 
 import { getBaselineBuilds } from '../git/getBaselineBuilds';
 import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplacement';
@@ -19,7 +18,6 @@ import {
 import { getHasRouter } from '../lib/getHasRouter';
 import matchesBranch from '../lib/matchesBranch';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { createTask, transitionTo } from '../lib/tasks';
 import { captureBailException } from '../lib/turbosnap/captureBailException';
 import { classifyInvalidChangedFilesDetail } from '../lib/turbosnap/classifyBailDetail';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
@@ -39,17 +37,12 @@ import externalsChanged from '../ui/messages/warnings/externalsChanged';
 import invalidChangedFiles from '../ui/messages/warnings/invalidChangedFiles';
 import isRebuild from '../ui/messages/warnings/isRebuild';
 import undefinedBranchOwner from '../ui/messages/warnings/undefinedBranchOwner';
-import {
-  initial,
-  pending,
-  skipFailed,
-  skippedForCommit,
-  skippedRebuild,
-  skippingBuild,
-  success,
-} from '../ui/tasks/gitInfo';
+import { skipFailed, skippingBuild } from '../ui/tasks/gitInfo';
 
-export type GitInfoDeps = Pick<Deps, 'log' | 'client' | 'options' | 'runtime' | 'packageJson'>;
+export type GitInfoDeps = Pick<
+  Deps,
+  'log' | 'client' | 'options' | 'runtime' | 'packageJson' | 'report'
+>;
 
 export interface GitInfoInput {
   branchName?: string;
@@ -64,7 +57,6 @@ export interface GitInfoInput {
   onlyChanged: boolean | string;
   externals?: string[];
   untraced?: string[];
-  onSkippingBuild: (git: Git) => void;
 }
 
 type LastBuild = NonNullable<Context['rebuildForBuild']>;
@@ -143,7 +135,7 @@ export async function gatherGitInfo(
   deps: GitInfoDeps,
   input: GitInfoInput
 ): Promise<TaskResult<GitInfoOutput, GitInfoPartial>> {
-  const { log, client, options, runtime, packageJson } = deps;
+  const { log, client, options, runtime, packageJson, report } = deps;
   const {
     branchName,
     ownerName,
@@ -157,7 +149,6 @@ export async function gatherGitInfo(
     onlyChanged,
     externals,
     untraced,
-    onSkippingBuild,
   } = input;
 
   const version = await getVersion({ log, options });
@@ -223,7 +214,8 @@ export async function gatherGitInfo(
   git.matchesBranch = (glob: string | boolean) => matchesBranch(branch, glob);
 
   if (git.matchesBranch(skip)) {
-    onSkippingBuild(git);
+    const { title, output } = skippingBuild(git);
+    report({ title, output });
     // The SkipBuildMutation ensures the commit is tagged properly.
     if (await client.runQuery(SkipBuildMutation, { commit, branch, slug })) {
       return {
@@ -427,10 +419,7 @@ export async function gatherGitInfo(
   };
 }
 
-export const extractGitInfoInput = (
-  ctx: Context,
-  listrTask: Listr.ListrTaskWrapper<Context>
-): GitInfoInput => ({
+export const extractGitInfoInput = (ctx: Context): GitInfoInput => ({
   branchName: ctx.options.branchName,
   ownerName: ctx.options.ownerName,
   repositorySlug: ctx.options.repositorySlug,
@@ -443,14 +432,6 @@ export const extractGitInfoInput = (
   onlyChanged: ctx.options.onlyChanged,
   externals: ctx.options.externals,
   untraced: ctx.options.untraced,
-  onSkippingBuild: (git) => {
-    // Kind of a gross escape hatch here. The `skippingBuild` UI function needs `git` on the context to construct its message,
-    // so we have to mutate context in this callback. Can't put this in applyGitInfoPartial because it's an intermediate UI
-    // transition: it's called before running the GQL mutation that skips the build. Having one escape hatch here seemed better
-    // than abstracting it away at this stage, but if this keeps coming up, we should find a better pattern for this.
-    ctx.git = git;
-    transitionTo(skippingBuild)(ctx, listrTask);
-  },
 });
 
 export const applyGitInfoOutput = (ctx: Context, output: GitInfoOutput) => {
@@ -477,27 +458,3 @@ export const applyGitInfoPartial = (ctx: Context, partial: GitInfoPartial) => {
     if (partial.setForceRebuild) ctx.runtime.forceRebuild = true;
   }
 };
-
-/**
- * Sets up the Listr task for gathering information from Git.
- *
- * @param _ The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(_: Context) {
-  return createTask({
-    name: 'gitInfo',
-    title: initial.title,
-    transitions: {
-      pending,
-      success,
-      partial: (ctx, partial) =>
-        partial.phase === 'skip-commit' ? skippedForCommit(ctx) : skippedRebuild(),
-    },
-    extractInput: extractGitInfoInput,
-    applyOutput: applyGitInfoOutput,
-    applyPartial: applyGitInfoPartial,
-    run: gatherGitInfo,
-  });
-}

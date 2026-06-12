@@ -174,11 +174,19 @@ function failureState<TInput, TOutput, TPartial>(
   error: Error,
   pendingTitle: string
 ): Task {
-  const configuredFailureState = config.transitions.failure?.(ctx, error);
-  if (configuredFailureState) {
-    return configuredFailureState;
-  }
+  return config.transitions.failure?.(ctx, error) ?? fallbackFailureState(pendingTitle, error);
+}
 
+/**
+ * The failure state `runTask` derives when a task supplies no explicit `failure` transition.
+ * Exported so Storybook frames can render the exact state the runtime would produce.
+ *
+ * @param pendingTitle The title of the task's `pending` transition.
+ * @param error The thrown error whose message becomes the failure body.
+ *
+ * @returns The `Task` state describing the failure for the renderer.
+ */
+export function fallbackFailureState(pendingTitle: string, error: Error): Task {
   return {
     status: 'error',
     title: `${pendingTitle} failed`,
