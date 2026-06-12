@@ -6,7 +6,11 @@ import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublishedE2E.stories';
 import { authenticated, authenticating, initial } from '../tasks/auth';
 import * as build from '../tasks/buildE2E.stories';
-import * as gitInfo from '../tasks/gitInfo.stories';
+import {
+  initial as gitInfoInitial,
+  pending as gitInfoPending,
+  success as gitInfoSuccess,
+} from '../tasks/gitInfo';
 import * as initialize from '../tasks/initialize.stories';
 import * as snapshot from '../tasks/snapshotE2E.stories';
 import * as storybookInfo from '../tasks/storybookInfoE2E.stories';
@@ -22,6 +26,15 @@ const auth = {
   Initial: () => initial,
   Authenticating: () => authenticating({ env: environment } as any),
   Authenticated: () => authenticated({ env: environment, options } as any),
+};
+
+// gitInfo.stories now returns rendered ANSI strings (Clack capture), which the old task() path
+// can't consume, so rebuild the states the workflow needs from the raw task source.
+const git = { commit: 'a32af7e265aa08e4a16d', branch: 'feat/new-ui', parentCommits: ['a', 'b'] };
+const gitInfo = {
+  Initial: () => gitInfoInitial,
+  Pending: () => gitInfoPending(),
+  Success: () => gitInfoSuccess({ git, options } as any),
 };
 
 export default {
