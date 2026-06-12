@@ -1,6 +1,7 @@
+import Listr from 'listr';
 import path from 'path';
 
-import { createTask, transitionTo } from '../lib/tasks';
+import { createTask, setOutput, transitionTo } from '../lib/tasks';
 import { uploadBuild } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
@@ -100,6 +101,21 @@ export const waitForSentinels = async (ctx: Context, task: Task) => {
   }
 };
 
+export const finishUpload = (ctx: Context, task: Task) => {
+  // The build may have been marked SKIPPED from the backend detecting no changes from TurboSnap.
+  if (ctx.skip) {
+    // Render as ↓ [skipped] rather than a ✔ checkmark to make it look like we never entered this step.
+    setOutput('')(ctx, task); // Clear the "Starting publish" output so no subtitle shows
+
+    // Cast as a real Listr `Task` object which all have a `.skip(message)` method. This allows you
+    // to skip after a task has started.
+    (task as Listr.ListrTaskWrapper<Context>).skip('');
+    return;
+  }
+
+  transitionTo(success, true)(ctx, task);
+};
+
 /**
  * Sets up the Listr task for uploading the build assets to Chromatic.
  *
@@ -116,6 +132,6 @@ export default function main(ctx: Context) {
       if (ctx.options.dryRun) return dryRun(ctx).output;
       return false;
     },
-    steps: [transitionTo(starting), uploadStorybook, transitionTo(success, true)],
+    steps: [transitionTo(starting), uploadStorybook, finishUpload],
   });
 }

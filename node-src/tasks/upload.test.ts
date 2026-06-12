@@ -87,6 +87,7 @@ describe('uploadStorybook', () => {
         { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
         { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
       ],
+      turboSnapStatus: 'UNUSED',
     });
     expect(http.fetch).toHaveBeenCalledWith(
       'https://s3.amazonaws.com/presigned?iframe.html',
@@ -237,10 +238,12 @@ describe('uploadStorybook', () => {
         contentLength: index,
         filePath: `${index}.js`,
       })),
+      turboSnapStatus: 'UNUSED',
     });
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
       files: [{ contentHash: undefined, contentLength: 1000, filePath: `1000.js` }], // 0-based index makes this file #1001
+      turboSnapStatus: 'UNUSED',
     });
 
     expect(http.fetch).toHaveBeenCalledWith(
@@ -265,6 +268,135 @@ describe('uploadStorybook', () => {
     );
     expect(ctx.uploadedBytes).toBe(500_500);
     expect(ctx.uploadedFiles).toBe(1001);
+  });
+
+  it('sends the TurboSnap onlyStoryFiles list to the uploadBuild mutation', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      turboSnap: {},
+      onlyStoryFiles: ['src/Button.stories.js'],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
+      onlyStoryFiles: ['src/Button.stories.js'],
+      turboSnapStatus: 'APPLIED',
+    });
+  });
+
+  it('does not send onlyStoryFiles when TurboSnap did not run', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      // onlyStoryFiles passed via the --only-story-files flag rather than computed by TurboSnap
+      options: { onlyStoryFiles: ['src/Button.stories.js'] },
+      fileInfo,
+      announcedBuild: { id: '1' },
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+      buildId: '1',
+      files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
+      turboSnapStatus: 'UNUSED',
+    });
+  });
+
+  it('skips uploading and sets ctx.skip when the build is SKIPPED', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        build: { status: 'SKIPPED' },
+        userErrors: [],
+      },
+    });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.skip).toBe(true);
+    expect(http.fetch).not.toHaveBeenCalled();
+    expect(ctx.uploadedFiles).toBe(0);
+    expect(ctx.uploadedBytes).toBe(0);
   });
 
   describe('with file hashes', () => {
@@ -318,6 +450,7 @@ describe('uploadStorybook', () => {
           { contentHash: 'index', contentLength: 42, filePath: 'index.html' },
         ],
         zip: false,
+        turboSnapStatus: 'UNUSED',
       });
       expect(http.fetch).not.toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?iframe.html',
@@ -397,6 +530,7 @@ describe('uploadStorybook', () => {
           { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
         ],
         zip: true,
+        turboSnapStatus: 'UNUSED',
       });
       expect(http.fetch).toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?storybook.zip',
@@ -946,6 +1080,7 @@ describe('uploadStorybook', () => {
             { contentHash: 'hash1', contentLength: 42, filePath: 'iframe.html' },
             { contentHash: 'hash2', contentLength: 42, filePath: 'index.html' },
           ],
+          turboSnapStatus: 'UNUSED',
         }
       );
 
@@ -959,6 +1094,7 @@ describe('uploadStorybook', () => {
             { contentHash: undefined, contentLength: 42, filePath: 'iframe.html' },
             { contentHash: undefined, contentLength: 42, filePath: 'index.html' },
           ],
+          turboSnapStatus: 'UNUSED',
         }
       );
 
