@@ -32,7 +32,7 @@ export function clackTaskLogRenderer(output?: Writable): TaskRenderer {
       taskLog.success(taskMessageFormatter(state));
     },
     fail: (state: Task) => {
-      taskLog.error(taskMessageFormatter(state), { showLog: false });
+      taskLog.error(wrapTextForClack(state.title), { showLog: false });
     },
   };
 }

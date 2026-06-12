@@ -1,5 +1,5 @@
 import { taskLog as clackTaskLog } from '@clack/prompts';
-import { describe, expect, it, test, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Task } from '../../../types';
 import { clackTaskLogRenderer } from './renderer';
@@ -116,13 +116,22 @@ describe('clackTaskLogRenderer', () => {
       expect(formatted).toBe('Done');
     });
 
-    test.for(['succeed', 'fail'])('%s transition renders title and output', (transition) => {
-      const formatted = formatVia(transition as keyof typeof TRANSITION_METHOD, {
+    it('succeed transition renders title and output', () => {
+      const formatted = formatVia('succeed', {
         title: 'Building',
         output: 'compiling',
       });
       expect(formatted).toContain('Building');
       expect(formatted).toContain('compiling');
+    });
+
+    it('fail transition renders only title ', () => {
+      const formatted = formatVia('fail', {
+        title: 'Building',
+        output: 'compiling',
+      });
+      expect(formatted).toContain('Building');
+      expect(formatted).not.toContain('compiling');
     });
 
     it('update renders only output', () => {
