@@ -26,7 +26,7 @@ export function clackTaskLogRenderer(output?: Writable): TaskRenderer {
       if (state.output) taskLog.message(wrapTextForClack(state.output));
     },
     update: (state: Task) => {
-      taskLog.message(taskMessageFormatter(state));
+      taskLog.message(wrapTextForClack(state.output || state.title));
     },
     succeed: (state: Task) => {
       taskLog.success(taskMessageFormatter(state));

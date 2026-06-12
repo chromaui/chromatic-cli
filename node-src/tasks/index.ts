@@ -2,7 +2,6 @@ import Listr from 'listr';
 
 import { Context } from '../types';
 import build from './build';
-import gitInfo from './gitInfo';
 import initialize from './initialize';
 import prepare from './prepare';
 import prepareWorkspace from './prepareWorkspace';
@@ -16,16 +15,7 @@ import verify from './verify';
 
 export const runShare = [build, prepare, uploadShare];
 
-export const runUploadBuild = [
-  gitInfo,
-  storybookInfo,
-  initialize,
-  build,
-  prepare,
-  upload,
-  verify,
-  snapshot,
-];
+export const runUploadBuild = [storybookInfo, initialize, build, prepare, upload, verify, snapshot];
 
 export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 
