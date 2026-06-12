@@ -3,7 +3,7 @@
 // alone for now to avoid a noisy diff.
 import { buildDeps } from '@cli/tasks';
 
-import { Context, Deps, Task, TaskFunction, TaskName, TaskResult } from '../../types';
+import { Context, Deps, Task, TaskFunction, TaskName, TaskReporter, TaskResult } from '../../types';
 
 /**
  * A `TaskRenderer` consumes the `Task` state objects emitted by a task's
@@ -15,7 +15,10 @@ import { Context, Deps, Task, TaskFunction, TaskName, TaskResult } from '../../t
 export interface TaskRenderer {
   /** Task has begun. `state` is the `pending` transition. */
   start: (state: Task) => void;
-  /** Progress update while the task body runs. `state.output` contains the message. */
+  /**
+   * Progress update while the task body runs, pushed via `deps.report`. `state.output` carries the
+   * message; `state.progress` carries optional numeric progress for renderers that draw a bar.
+   */
   update: (state: Task) => void;
   /** Task finished successfully. `state` is the `success` or `partial` transition. */
   succeed: (state: Task) => void;
@@ -70,7 +73,8 @@ export async function runTask<TInput, TOutput, TPartial = never>(
 
   try {
     const input = config.extractInput(ctx);
-    const result = await config.run(buildDeps(ctx), input);
+    const deps = { ...buildDeps(ctx), report: makeReporter(ctx, renderer) };
+    const result = await config.run(deps, input);
     await applyResult(ctx, config, result, renderer);
   } catch (error) {
     renderer.fail(failureState(ctx, config, error as Error, pending.title));
@@ -78,6 +82,32 @@ export async function runTask<TInput, TOutput, TPartial = never>(
   }
 
   ctx.options.experimental_onTaskComplete?.({ ...ctx });
+}
+
+/**
+ * Build the reporter injected as `deps.report`, used to enable mid-task UI updates through the
+ * renderer's `update` hook. These updates are also fanned out to `experimental_onTaskProgress`
+ * (this callback only accepts numeric progress, not textual updates).
+ *
+ * @param ctx The CLI context (its `title` is updated when a textual update arrives).
+ * @param renderer The active renderer for the running task.
+ *
+ * @returns A `TaskReporter` closed over the current task's renderer.
+ */
+function makeReporter(ctx: Context, renderer: TaskRenderer): TaskReporter {
+  return (update) => {
+    if (update.title !== undefined) ctx.title = update.title;
+
+    renderer.update({
+      title: ctx.title,
+      output: update.output,
+      progress: update.progress,
+    });
+
+    if (update.progress) {
+      ctx.options.experimental_onTaskProgress?.({ ...ctx }, update.progress);
+    }
+  };
 }
 
 /**
