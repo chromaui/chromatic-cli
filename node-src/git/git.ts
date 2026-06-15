@@ -272,7 +272,7 @@ export async function getChangedFilesWithStatus(
   const pathspecArgument = pathspec ? ` -- "${pathspec}"` : '';
   const output = await execGitCommand(
     deps,
-    `git diff --name-status --find-renames=20% ${baseCommit} ${headCommit}${pathspecArgument}`
+    `git --no-pager diff --name-status --no-relative --find-renames=20% ${baseCommit} ${headCommit}${pathspecArgument}`
   );
 
   return output

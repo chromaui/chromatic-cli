@@ -219,7 +219,7 @@ describe('getChangedFilesWithStatus', () => {
     ]);
     expect(execGitCommand).toHaveBeenCalledWith(
       ctx,
-      'git diff --name-status --find-renames=20% abc123 HEAD'
+      'git --no-pager diff --name-status --no-relative --find-renames=20% abc123 HEAD'
     );
   });
 
@@ -256,7 +256,7 @@ describe('getChangedFilesWithStatus', () => {
 
     expect(execGitCommand).toHaveBeenCalledWith(
       ctx,
-      'git diff --name-status --find-renames=20% abc123 HEAD -- ":(glob,top)**/pnpm-lock.yaml"'
+      'git --no-pager diff --name-status --no-relative --find-renames=20% abc123 HEAD -- ":(glob,top)**/pnpm-lock.yaml"'
     );
   });
 });
