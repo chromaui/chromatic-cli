@@ -8,14 +8,13 @@ import prepareWorkspace from './prepareWorkspace';
 import report from './report';
 import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
-import storybookInfo from './storybookInfo';
 import upload from './upload';
 import uploadShare from './uploadShare';
 import verify from './verify';
 
 export const runShare = [build, prepare, uploadShare];
 
-export const runUploadBuild = [storybookInfo, initialize, build, prepare, upload, verify, snapshot];
+export const runUploadBuild = [initialize, build, prepare, upload, verify, snapshot];
 
 export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 
