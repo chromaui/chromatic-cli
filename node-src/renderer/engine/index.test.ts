@@ -21,9 +21,10 @@ function recordingRenderer() {
 }
 
 // Minimal Context. `run` ignores its deps in these tests, so most fields can stay empty; we only
-// need `options` to exist (the engine reads experimental_* hooks off it) and `now` for the timer.
+// need `options` to exist (the engine reads experimental_* hooks off it), `log` (the skip guard
+// logs), and `now` for the timer.
 function fakeContext(overrides: Partial<Context> = {}): Context {
-  return { options: {}, ...overrides } as Context;
+  return { options: {}, log: { debug: vi.fn() }, ...overrides } as unknown as Context;
 }
 
 const transitions = {
@@ -130,6 +131,27 @@ describe('runTask', () => {
     // start still fires — the engine can't know it'll skip until after run() returns.
     expect(calls.map((c) => c.hook)).toEqual(['start', 'succeed']);
     expect(ctx.skip).toBe(true);
+  });
+
+  it('renders nothing and skips the task when an upstream task set ctx.skip', async () => {
+    const ctx = fakeContext({ skip: true });
+    const { renderer, calls } = recordingRenderer();
+    const run = vi.fn(async () => ({ kind: 'continue' as const, output: {} }));
+
+    await runTask(
+      ctx,
+      {
+        name: 'storybookInfo',
+        title: 'Collect metadata',
+        transitions,
+        extractInput: () => ({}),
+        run,
+      },
+      renderer
+    );
+
+    expect(run).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
   });
 
   it('falls back to a generic failure headline when no failure transition is provided', async () => {
