@@ -1,12 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getChangedFilesWithStatus as getChangedFilesWithStatusDep } from '../../git/git';
+import {
+  commitExists as commitExistsDep,
+  getChangedFilesWithStatus as getChangedFilesWithStatusDep,
+} from '../../git/git';
 import TestLogger from '../testLogger';
 import { classifyTagsFromError } from './classifyBailRootCause';
 import { BaselineCheckoutFailedError } from './errors';
 
 vi.mock('../../git/git');
 const getChangedFilesWithStatus = vi.mocked(getChangedFilesWithStatusDep);
+const commitExists = vi.mocked(commitExistsDep);
 
 const deps = { log: new TestLogger(), options: {} } as any;
 
@@ -22,6 +26,22 @@ describe('classifyTagsFromError', () => {
   });
 
   describe('BaselineCheckoutFailedError', () => {
+    beforeEach(() => {
+      commitExists.mockResolvedValue(true);
+    });
+
+    it('classifies a missing baseline commit as "baselineCommitMissing" without diffing', async () => {
+      commitExists.mockResolvedValue(false);
+
+      const result = await classifyTagsFromError(
+        deps,
+        new BaselineCheckoutFailedError('abc123:libs/app/package.json')
+      );
+
+      expect(result).toEqual({ baseline_failure_kind: 'baselineCommitMissing' });
+      expect(getChangedFilesWithStatus).not.toHaveBeenCalled();
+    });
+
     it('classifies a file rename as "baselineManifestMoved"', async () => {
       getChangedFilesWithStatus.mockResolvedValue([
         { status: 'renamed', fromPath: 'libs/old/package.json', path: 'libs/app/package.json' },

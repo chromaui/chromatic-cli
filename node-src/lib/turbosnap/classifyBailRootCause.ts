@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import path from 'path';
 
 import { GitDeps } from '../../git/execGit';
-import { ChangedFileWithStatus, getChangedFilesWithStatus } from '../../git/git';
+import { ChangedFileWithStatus, commitExists, getChangedFilesWithStatus } from '../../git/git';
 import { BaselineCheckoutFailedError } from './errors';
 
 /**
@@ -33,6 +33,7 @@ export async function classifyTagsFromError(
 export type BaselineCheckoutFailureKind =
   | 'baselineManifestMoved'
   | 'baselineManifestAdded'
+  | 'baselineCommitMissing'
   | 'unknownBaselineCheckoutFailure';
 
 /**
@@ -50,6 +51,11 @@ async function classifyBaselineCheckoutFailureTags(
   const { reference, fileName } = parsePathspec(error.pathspec);
 
   try {
+    // In a shallow clone or rebase/squash merge the baseline commit may not be present locally.
+    if (!(await commitExists(deps, reference))) {
+      return { baseline_failure_kind: 'baselineCommitMissing' };
+    }
+
     // Determine how the file changed between the baseline and HEAD (such as if it was added, moved,
     // renamed, etc).
     const basename = path.basename(fileName);
