@@ -70,9 +70,7 @@ async function classifyBaselineCheckoutFailureTags(
       level: 'error',
       category: 'classifyBaselineCheckoutFailure',
       message: 'Error classifying baseline checkout failure',
-      data: {
-        error: err,
-      },
+      data: { name: err.name, message: err.message, stack: err.stack },
     });
 
     return { baseline_failure_kind: 'unknownBaselineCheckoutFailure' };
