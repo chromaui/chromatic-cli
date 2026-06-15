@@ -2,7 +2,7 @@ import { applyAuthOutput, extractInput, runAuth } from '../tasks/auth';
 import { Context } from '../types';
 import { authenticated, authenticating } from '../ui/tasks/auth';
 import { runTask } from './engine';
-import { clackTaskLogRenderer } from './engine/clack/renderer';
+import { clackTaskLogRenderer } from './engine/clack/taskLogRenderer';
 import { getRenderer } from './engine/getRenderer';
 
 /**

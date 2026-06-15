@@ -1,7 +1,7 @@
 import { Writable } from 'node:stream';
 
 import { Context, Task } from '../../types';
-import { clackTaskLogRenderer } from '../engine/clack/renderer';
+import { clackTaskLogRenderer } from '../engine/clack/taskLogRenderer';
 import { intro } from '../index';
 import { pkg } from './fixtures';
 import { settle } from './settle';
