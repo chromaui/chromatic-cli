@@ -2,7 +2,6 @@ import Listr from 'listr';
 
 import { Context } from '../types';
 import build from './build';
-import initialize from './initialize';
 import prepare from './prepare';
 import prepareWorkspace from './prepareWorkspace';
 import report from './report';
@@ -14,7 +13,7 @@ import verify from './verify';
 
 export const runShare = [build, prepare, uploadShare];
 
-export const runUploadBuild = [initialize, build, prepare, upload, verify, snapshot];
+export const runUploadBuild = [build, prepare, upload, verify, snapshot];
 
 export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 
