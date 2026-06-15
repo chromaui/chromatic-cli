@@ -13,7 +13,11 @@ import {
 } from '../tasks/gitInfo';
 import * as initialize from '../tasks/initialize.stories';
 import * as snapshot from '../tasks/snapshot.stories';
-import * as storybookInfo from '../tasks/storybookInfo.stories';
+import {
+  initial as storybookInfoInitial,
+  pending as storybookInfoPending,
+  success as storybookInfoSuccess,
+} from '../tasks/storybookInfo';
 import * as upload from '../tasks/upload.stories';
 import * as verify from '../tasks/verify.stories';
 
@@ -34,6 +38,15 @@ const gitInfo = {
   Initial: () => gitInfoInitial,
   Pending: () => gitInfoPending(),
   Success: () => gitInfoSuccess({ git, options } as any),
+};
+
+// storybookInfo.stories now returns rendered ANSI strings (Clack capture), which the old task()
+// path can't consume, so rebuild the states the workflow needs from the raw task source.
+const storybookInfoContext = { options: {} } as any;
+const storybookInfo = {
+  Initial: () => storybookInfoInitial(storybookInfoContext),
+  Pending: () => storybookInfoPending(storybookInfoContext),
+  Success: () => storybookInfoSuccess(storybookInfoContext),
 };
 
 export default {
