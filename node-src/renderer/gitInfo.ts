@@ -7,7 +7,7 @@ import {
 import { Context } from '../types';
 import { pending, skippedForCommit, skippedRebuild, success } from '../ui/tasks/gitInfo';
 import { runTask } from './engine';
-import { clackTaskLogRenderer } from './engine/clack/renderer';
+import { clackTaskLogRenderer } from './engine/clack/taskLogRenderer';
 import { getRenderer } from './engine/getRenderer';
 
 /**
