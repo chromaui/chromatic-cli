@@ -1,9 +1,11 @@
 import { Writable } from 'node:stream';
 
 import { Context, Task } from '../../types';
-import { clackTaskLogRenderer } from '../engine/clack/renderer';
+import { TaskRenderer } from '../engine';
+import { clackTaskLogRenderer } from '../engine/clack/taskLogRenderer';
 import { intro } from '../index';
 import { pkg } from './fixtures';
+import { withOneTick } from './oneTick';
 import { settle } from './settle';
 
 // `wrap.ts` reads `process.stdout.columns` directly (independent of the sink), so line wrapping must
@@ -21,10 +23,16 @@ const CAPTURE_WIDTH = 80;
  * @param startingState The `Task` to render as the initial state. `success` and `error` tasks
  * overwrite the starting state, but the `update` task inherits the starting state's title.
  * Defaults to a generic "Starting task..." state.
+ * @param makeRenderer Factory for the renderer to drive. Defaults to `clackTaskLogRenderer`;
+ * animated renderers (e.g. `clackProgressBarRenderer`) pass their own factory.
  *
  * @returns The settled ANSI frame.
  */
-export function captureTask(state: Task, startingState?: Task): string {
+export function captureTask(
+  state: Task,
+  startingState?: Task,
+  makeRenderer: (sink: Writable) => TaskRenderer = clackTaskLogRenderer
+): string {
   const { sink, read } = createSink();
 
   // Clack drops transient `.message()` output in non-TTY mode, gated on `process.env.CI === 'true'`.
@@ -36,7 +44,9 @@ export function captureTask(state: Task, startingState?: Task): string {
   process.stdout.columns = CAPTURE_WIDTH;
   try {
     intro({ pkg } as Pick<Context, 'pkg'>, sink);
-    drive(clackTaskLogRenderer(sink), state, startingState);
+    // Fire animated renderers' interval once inside the same sync window, so a single bar/spinner
+    // frame is captured deterministically (no real timer ever fires in this await-free drive).
+    withOneTick(() => drive(makeRenderer(sink), state, startingState));
   } finally {
     process.stdout.columns = previousColumns;
     // `process.env.CI = undefined` would coerce to the string "undefined" (truthy), so unset
@@ -48,11 +58,7 @@ export function captureTask(state: Task, startingState?: Task): string {
   return settle(read());
 }
 
-function drive(
-  renderer: ReturnType<typeof clackTaskLogRenderer>,
-  state: Task,
-  startingState?: Task
-): void {
+function drive(renderer: TaskRenderer, state: Task, startingState?: Task): void {
   if (!startingState) {
     startingState = {
       status: 'pending',
