@@ -2,7 +2,7 @@ import { applyInitializeOutput, extractInitializeInput, initialize } from '../ta
 import { Context } from '../types';
 import { initial, pending, success } from '../ui/tasks/initialize';
 import { runTask } from './engine';
-import { clackTaskLogRenderer } from './engine/clack/renderer';
+import { clackTaskLogRenderer } from './engine/clack/taskLogRenderer';
 import { getRenderer } from './engine/getRenderer';
 
 /**

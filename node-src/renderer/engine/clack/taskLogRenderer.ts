@@ -4,7 +4,7 @@ import { taskLog as clackTaskLog } from '@clack/prompts';
 
 import { Task } from '../../../types';
 import { TaskRenderer } from '../index';
-import { CLI_COLORS } from './colors';
+import { taskMessageFormatter } from './taskMessageFormatter';
 import { wrapTextForClack } from './wrap';
 
 /**
@@ -35,9 +35,4 @@ export function clackTaskLogRenderer(output?: Writable): TaskRenderer {
       taskLog.error(wrapTextForClack(state.title), { showLog: false });
     },
   };
-}
-
-function taskMessageFormatter(state: Task) {
-  const message = state.output ? state.title + '\n' + CLI_COLORS.muted(state.output) : state.title;
-  return wrapTextForClack(message);
 }
