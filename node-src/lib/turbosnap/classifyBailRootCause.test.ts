@@ -53,6 +53,7 @@ describe('classifyTagsFromError', () => {
       );
 
       expect(result).toEqual({ baseline_failure_kind: 'baselineManifestMoved' });
+      expectBaselineDiffWasRun('abc123', 'package.json');
     });
 
     it('classifies a file add as "baselineManifestAdded"', async () => {
@@ -117,6 +118,23 @@ describe('classifyTagsFromError', () => {
       );
 
       expect(result).toEqual({ baseline_failure_kind: 'baselineManifestMoved' });
+      // The basename is extracted after splitting on the first colon, so the glob keeps the colon.
+      expectBaselineDiffWasRun('abc123', 'a:b.json');
     });
   });
 });
+
+// Assert we're running the exact git command. We don't normally add these to tests since it mimics
+// the implementation. However, we opted to add this one because it's more stable than running it
+// against a real repo.
+//
+// If you change the git command and the tests fail, be sure to think about the test behavior here before updating.
+function expectBaselineDiffWasRun(reference: string, basename: string) {
+  expect(commitExists).toHaveBeenCalledWith(deps, reference);
+  expect(getChangedFilesWithStatus).toHaveBeenCalledWith(
+    deps,
+    reference,
+    'HEAD',
+    `:(glob,top)**/${basename}`
+  );
+}
