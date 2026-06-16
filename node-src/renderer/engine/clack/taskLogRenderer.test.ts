@@ -2,7 +2,7 @@ import { taskLog as clackTaskLog } from '@clack/prompts';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Task } from '../../../types';
-import { clackTaskLogRenderer } from './renderer';
+import { clackTaskLogRenderer } from './taskLogRenderer';
 
 vi.mock('@clack/prompts', () => ({
   taskLog: vi.fn(() => ({
