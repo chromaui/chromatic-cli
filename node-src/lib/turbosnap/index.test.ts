@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exitCodes } from '../setExitCode';
 import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
+import { classifyTagsFromError as classifyTagsFromErrorDep } from './classifyBailRootCause';
 import {
   BaselineCheckoutFailedError,
   LockFileParseFailedError,
@@ -27,6 +28,7 @@ vi.mock('./findChangedDependencies', async (importOriginal) => {
 });
 vi.mock('./findChangedPackageFiles');
 vi.mock('./getDependentStoryFiles');
+vi.mock('./classifyBailRootCause');
 vi.mock('../../tasks/readStatsFile', () => ({
   readStatsFile: () =>
     Promise.resolve({
@@ -42,6 +44,7 @@ vi.mock('../../tasks/readStatsFile', () => ({
 const getDependentStoryFiles = vi.mocked(getDependentStoryFilesDep);
 const findChangedPackageFiles = vi.mocked(findChangedPackageFilesDep);
 const findChangedDependencies = vi.mocked(findChangedDependenciesDep);
+const classifyTagsFromError = vi.mocked(classifyTagsFromErrorDep);
 const accessMock = vi.mocked(access);
 const captureException = vi.mocked(Sentry.captureException);
 
@@ -116,6 +119,7 @@ describe('traceChangedFiles', () => {
         sentryEventId: 'sentry-event-id',
       },
       expectedKey: 'baselineCheckoutFailed',
+      expectedFailureKind: 'baselineManifestMoved',
       expectFingerprint: true,
     },
     {
@@ -135,11 +139,17 @@ describe('traceChangedFiles', () => {
     error,
     expectedBailReason,
     expectedKey,
+    expectedFailureKind,
     expectFingerprint,
   } of findChangedDependenciesFailureCases) {
     it(`bails on package.json changes and tags bailReason as ${name}`, async () => {
       findChangedDependencies.mockRejectedValue(error);
       findChangedPackageFiles.mockResolvedValue(['./package.json']);
+      classifyTagsFromError.mockImplementation(async (_deps, err) =>
+        err instanceof BaselineCheckoutFailedError
+          ? { baseline_failure_kind: 'baselineManifestMoved' }
+          : undefined
+      );
 
       const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
       const ctx = {
@@ -160,6 +170,7 @@ describe('traceChangedFiles', () => {
         tags: {
           bail_path: 'findChangedDependencies',
           ...(expectedKey && { bail_detail: expectedKey }),
+          ...(expectedFailureKind && { baseline_failure_kind: expectedFailureKind }),
         },
         ...(expectFingerprint && { fingerprint: [expectedKey] }),
       });

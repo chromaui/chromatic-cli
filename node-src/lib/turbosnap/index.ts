@@ -7,6 +7,7 @@ import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
 import { captureBailException } from './captureBailException';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
+import { classifyTagsFromError } from './classifyBailRootCause';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
@@ -61,6 +62,7 @@ export const traceChangedFiles = async (ctx: Context) => {
           pendingPatch.sentryEventId = captureBailException(pendingError, {
             bailSubreason: pendingPatch.bailSubreason,
             bailPath: 'findChangedDependencies',
+            additionalTags: await classifyTagsFromError(ctx, pendingError),
           });
         }
 
