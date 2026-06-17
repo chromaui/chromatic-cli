@@ -1,3 +1,15 @@
+# v17.5.0 (Wed Jun 17 2026)
+
+#### 🚀 Enhancement
+
+- Add context around file adds/moves in `BaselineCheckoutFailedError` bails [#1391](https://github.com/chromaui/chromatic-cli/pull/1391) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.4.1 (Thu Jun 11 2026)
 
 #### 🐛 Bug Fix
