@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { exitCodes, TaskFailure } from '../../lib/setExitCode';
 import { Context, Task } from '../../types';
 import { runTask, TaskConfig, TaskRenderer } from './index';
 
@@ -202,6 +203,50 @@ describe('runTask', () => {
 
     const fail = calls.find((c) => c.hook === 'fail');
     expect(fail?.state.title).toBe('Authentication failed');
+  });
+
+  it('applies the exit code from a TaskFailure before failing', async () => {
+    const ctx = fakeContext();
+    const { renderer, calls } = recordingRenderer();
+
+    const config: TaskConfig<unknown, unknown> = {
+      name: 'build',
+      title: 'Build',
+      transitions,
+      extractInput: () => ({}),
+      run: async () => {
+        throw new TaskFailure('Command failed', {
+          exitCode: exitCodes.NPM_BUILD_STORYBOOK_FAILED,
+          userError: true,
+        });
+      },
+    };
+
+    await expect(runTask(ctx, config, renderer)).rejects.toThrow('Command failed');
+
+    expect(ctx.exitCode).toBe(exitCodes.NPM_BUILD_STORYBOOK_FAILED);
+    expect(ctx.exitCodeKey).toBe('NPM_BUILD_STORYBOOK_FAILED');
+    expect(ctx.userError).toBe(true);
+    expect(calls.some((c) => c.hook === 'fail')).toBe(true);
+  });
+
+  it('leaves the exit code untouched for a plain Error', async () => {
+    const ctx = fakeContext();
+    const { renderer } = recordingRenderer();
+
+    const config: TaskConfig<unknown, unknown> = {
+      name: 'build',
+      title: 'Build',
+      transitions,
+      extractInput: () => ({}),
+      run: async () => {
+        throw new Error('boom');
+      },
+    };
+
+    await expect(runTask(ctx, config, renderer)).rejects.toThrow('boom');
+
+    expect(ctx.exitCode).toBeUndefined();
   });
 
   describe('deps.report (mid-task updates)', () => {

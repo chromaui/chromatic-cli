@@ -1,6 +1,7 @@
 // NOTE: buildDeps currently lives in lib/tasks.ts (the Listr engine). It isn't Listr-specific —
 // it just projects Context into Deps — so when Listr is deleted it should move here. Leaving it
 // alone for now to avoid a noisy diff.
+import { setExitCode, TaskFailure } from '@cli/setExitCode';
 import { buildDeps } from '@cli/tasks';
 
 import { Context, Deps, Task, TaskFunction, TaskName, TaskReporter, TaskResult } from '../../types';
@@ -83,6 +84,9 @@ export async function runTask<TInput, TOutput, TPartial = never>(
     const result = await config.run(deps, input);
     await applyResult(ctx, config, result, renderer);
   } catch (error) {
+    if (error instanceof TaskFailure) {
+      setExitCode(ctx, error.exitCode, error.userError);
+    }
     renderer.fail(failureState(ctx, config, error as Error, pending.title));
     throw error;
   }
