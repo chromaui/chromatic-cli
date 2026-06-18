@@ -79,7 +79,22 @@ export default function main(ctx: Context) {
           );
           transitionTo(pending)(ctx, task);
           await startActivity(ctx, task);
-          await buildStorybook(ctx);
+          const builtStorybook = await buildStorybook(
+            {
+              options: ctx.options,
+              log: ctx.log,
+              env: ctx.env,
+              analytics: ctx.analytics,
+              pkg: ctx.pkg,
+            },
+            {
+              buildCommand: ctx.buildCommand,
+              runtimeMetadata: ctx.runtimeMetadata,
+              storybook: ctx.storybook,
+              git: ctx.git,
+            }
+          );
+          ctx.buildLogFile = builtStorybook.buildLogFile;
           endActivity(ctx);
           transitionTo(success, true)(ctx, task);
         }
