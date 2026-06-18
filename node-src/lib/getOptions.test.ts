@@ -50,7 +50,7 @@ describe('getOptions', () => {
       externals: undefined,
       traceChanged: undefined,
       list: undefined,
-      logFile: undefined,
+      logFile: 'chromatic.log',
       skip: undefined,
       forceRebuild: undefined,
       junitReport: undefined,
@@ -224,6 +224,20 @@ describe('getOptions', () => {
       diagnosticsFile: 'chromatic-diagnostics.json',
       logFile: 'chromatic.log',
       uploadMetadata: true,
+    });
+  });
+
+  it('writes a log file by default, but allows a custom path or disabling it', async () => {
+    expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
+      logFile: 'chromatic.log',
+    });
+    expect(
+      getOptions(getContext(['--project-token', 'cli-code', '--log-file', 'custom.log']))
+    ).toMatchObject({
+      logFile: 'custom.log',
+    });
+    expect(getOptions(getContext(['--project-token', 'cli-code', '--no-log-file']))).toMatchObject({
+      logFile: false,
     });
   });
 
