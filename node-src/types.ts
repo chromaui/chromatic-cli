@@ -557,6 +557,9 @@ export interface TurboSnap {
   modules?: string[];
   tracedFiles?: string[];
   tracedPaths?: Set<string>;
+  // The chain of files from the changed file (as it appears in `git diff`) to the Storybook
+  // config or static file that triggered the bail.
+  bailPath?: string[];
   changedDependencyNames?: Set<string>;
   changedManifestFiles?: Set<string>;
   affectedModuleIds?: Set<string | number>;
