@@ -25,9 +25,3 @@ export const skipped = (ctx: Context) => ({
   title: `Build ${buildType(ctx)} [skipped]`,
   output: `Using prebuilt ${buildType(ctx)} at ${ctx.options.storybookBuildDir}`,
 });
-
-export const failed = (ctx: Context) => ({
-  status: 'error',
-  title: `Building your ${buildType(ctx)}`,
-  output: `Command failed: ${ctx.buildCommand}`,
-});

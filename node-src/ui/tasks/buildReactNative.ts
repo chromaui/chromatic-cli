@@ -13,13 +13,13 @@ export const pending = () => ({
 });
 
 export const pendingManifest = () => ({
-  status: 'pending',
+  status: 'updating',
   title: 'Generating story manifest',
   output: 'Generating manifest.json file for React Native build',
 });
 
 export const pendingAndroid = (reactNative?: Context['options']['reactNative']) => ({
-  status: 'pending',
+  status: 'updating',
   title: 'Building your React Native Storybook',
   output: reactNative?.androidBuildCommand
     ? `Running command: ${reactNative.androidBuildCommand}`
@@ -27,7 +27,7 @@ export const pendingAndroid = (reactNative?: Context['options']['reactNative']) 
 });
 
 export const pendingIOS = (reactNative?: Context['options']['reactNative']) => ({
-  status: 'pending',
+  status: 'updating',
   title: 'Building your React Native Storybook',
   output: reactNative?.iosBuildCommand
     ? `Running command: ${reactNative.iosBuildCommand}`
