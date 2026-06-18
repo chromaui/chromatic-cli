@@ -41,7 +41,7 @@ function e2eBuildErrorMessage(
   workingDirectory: string,
   ctx: Context
 ): { exitCode: number; message: string } {
-  const flag = resolveE2EFramework(ctx);
+  const flag = resolveE2EFramework(ctx.options);
   const errorMessage = err.message;
 
   // If we tried to run the E2E package's bin directly (due to being in the action)

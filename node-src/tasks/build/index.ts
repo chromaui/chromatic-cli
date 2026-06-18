@@ -68,7 +68,15 @@ export default function main(ctx: Context) {
           endActivity(ctx);
           transitionTo(reactNativeSuccess, true)(ctx, task);
         } else {
-          await setBuildCommand(ctx);
+          ctx.buildCommand = await setBuildCommand(
+            { options: ctx.options, log: ctx.log },
+            {
+              sourceDir: ctx.sourceDir,
+              flags: ctx.flags,
+              storybook: ctx.storybook,
+              changedFiles: ctx.git.changedFiles,
+            }
+          );
           transitionTo(pending)(ctx, task);
           await startActivity(ctx, task);
           await buildStorybook(ctx);
