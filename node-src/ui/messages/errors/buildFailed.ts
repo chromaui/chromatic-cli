@@ -43,7 +43,10 @@ export const buildFailed = (
 };
 
 export const reactNativeBuildFailed = (
-  { reactNativeBuildLogFile, runtimeMetadata }: Context,
+  {
+    reactNativeBuildLogFile,
+    runtimeMetadata,
+  }: Pick<Context, 'reactNativeBuildLogFile' | 'runtimeMetadata'>,
   { message },
   buildLog?: string
 ) => {
