@@ -33,6 +33,7 @@ import { rewriteErrorMessage } from './lib/utilities';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
 import { intro as clackIntro } from './renderer';
 import { renderAuth } from './renderer/auth';
+import { renderBuild } from './renderer/build';
 import { renderGitInfo } from './renderer/gitInfo';
 import { renderInitialize } from './renderer/initialize';
 import { renderStorybookInfo } from './renderer/storybookInfo';
@@ -294,6 +295,7 @@ async function runBuild(ctx: Context) {
       await renderGitInfo(ctx);
       await renderStorybookInfo(ctx);
       await renderInitialize(ctx);
+      await renderBuild(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
