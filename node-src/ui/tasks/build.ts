@@ -10,7 +10,8 @@ export const initial = (ctx: Context) => ({
 export const pending = (ctx: Context) => ({
   status: 'pending',
   title: `Building your ${buildType(ctx)}`,
-  output: `Running command: ${ctx.buildCommand}`,
+  // buildCommand isn't known until the task body computes it; the task reports it mid-run.
+  output: ctx.buildCommand ? `Running command: ${ctx.buildCommand}` : undefined,
 });
 
 export const success = (ctx: Context) => ({
