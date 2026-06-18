@@ -48,7 +48,12 @@ export default function main(ctx: Context) {
       return false;
     },
     steps: [
-      setSourceDirectory,
+      async (ctx: Context) => {
+        ctx.sourceDir = await setSourceDirectory(
+          { options: ctx.options },
+          { sourceDir: ctx.sourceDir, storybook: ctx.storybook }
+        );
+      },
       // to avoid duplicated UI, we handle both paths of the build process in one task
       async (ctx: Context, task: Task) => {
         if (ctx.isReactNativeApp) {
