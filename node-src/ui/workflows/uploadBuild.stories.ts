@@ -5,7 +5,11 @@ import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassed.stor
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublished.stories';
 import { authenticated, authenticating, initial } from '../tasks/auth';
-import * as build from '../tasks/build.stories';
+import {
+  initial as buildInitial,
+  pending as buildPending,
+  success as buildSuccess,
+} from '../tasks/build';
 import {
   initial as gitInfoInitial,
   pending as gitInfoPending,
@@ -51,6 +55,22 @@ const storybookInfo = {
   Initial: () => storybookInfoInitial(storybookInfoContext),
   Pending: () => storybookInfoPending(storybookInfoContext),
   Success: () => storybookInfoSuccess(storybookInfoContext),
+};
+
+// build.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source.
+const buildContext = { options: {} } as any;
+const buildCommand = 'yarn run build-storybook -o storybook-static';
+const build = {
+  Initial: () => buildInitial(buildContext),
+  Building: () => buildPending({ ...buildContext, buildCommand } as any),
+  Built: () =>
+    buildSuccess({
+      ...buildContext,
+      now: 0,
+      startedAt: -32_100,
+      buildLogFile: '/users/me/project/build-storybook.log',
+    } as any),
 };
 
 // initialize.stories now returns rendered ANSI strings (Clack capture), which the old task() path
