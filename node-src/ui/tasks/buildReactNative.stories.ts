@@ -1,52 +1,14 @@
-import task from '../components/task';
-import {
-  failed,
-  failedNoValidPlatforms,
-  initial,
-  pending,
-  pendingAndroid,
-  pendingIOS,
-  pendingManifest,
-  skipped,
-  success,
-} from './buildReactNative';
+import frames from './buildReactNative.frames?clack';
 
-export default {
-  title: 'CLI/Tasks/Build/React Native',
-  decorators: [(storyFunction) => task(storyFunction())],
-};
+export default { title: 'CLI/Tasks/Build/React Native' };
 
-const ctx = { options: {} } as any;
-
-export const Initial = () => initial();
-
-export const Building = () => pending();
-
-export const BuildingAndroid = () => pendingAndroid();
-
-export const BuildingAndroidWithCommand = () =>
-  pendingAndroid({ androidBuildCommand: 'my-android-build' });
-
-export const BuildingIOS = () => pendingIOS();
-
-export const BuildingIOSWithCommand = () => pendingIOS({ iosBuildCommand: 'my-ios-build' });
-
-export const GeneratingManifest = () => pendingManifest();
-
-export const Built = () =>
-  success({
-    ...ctx,
-    now: 0,
-    startedAt: -32_100,
-    reactNativeBuildLogFile: '/users/me/project/storybook-static/.chromatic/react-native-build.log',
-  } as any);
-
-export const Skipped = () => skipped();
-
-export const NoValidPlatforms = () => failedNoValidPlatforms();
-
-export const Failed = () =>
-  failed({
-    ...ctx,
-    reactNativeBuildLogFile: '/users/me/project/storybook-static/.chromatic/react-native-build.log',
-  } as any);
+export const Building = () => frames.Building;
+export const BuildingAndroid = () => frames.BuildingAndroid;
+export const BuildingAndroidWithCommand = () => frames.BuildingAndroidWithCommand;
+export const BuildingIOS = () => frames.BuildingIOS;
+export const BuildingIOSWithCommand = () => frames.BuildingIOSWithCommand;
+export const GeneratingManifest = () => frames.GeneratingManifest;
+export const Built = () => frames.Built;
+export const Skipped = () => frames.Skipped;
+export const NoValidPlatforms = () => frames.NoValidPlatforms;
+export const Failed = () => frames.Failed;

@@ -78,7 +78,10 @@ function drive(renderer: TaskRenderer, state: Task, startingState?: Task): void 
       renderer.update(state);
       return;
     }
-    case 'success': {
+    // `skipped` renders identically to `success` at runtime: build's `transitions.success` returns a
+    // `skipped`-status state and `runTask` drives it through `renderer.succeed`.
+    case 'success':
+    case 'skipped': {
       renderer.start(startingState);
       renderer.succeed(state);
       return;
