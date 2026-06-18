@@ -39,7 +39,7 @@ export interface TaskConfig<TInput, TOutput, TPartial = never> {
   title: string;
   transitions: {
     pending: (ctx: Context) => Task;
-    success: (ctx: Context) => Task;
+    success: (ctx: Context, output?: TOutput) => Task;
     partial?: (ctx: Context, partial: TPartial) => Task;
     failure?: (ctx: Context, error: Error) => Task;
   };
@@ -138,7 +138,7 @@ async function applyResult<TInput, TOutput, TPartial>(
   switch (result.kind) {
     case 'continue': {
       await config.applyOutput?.(ctx, result.output);
-      const success = config.transitions.success(ctx);
+      const success = config.transitions.success(ctx, result.output);
       ctx.title = success.title;
       renderer.succeed(success);
       return;
