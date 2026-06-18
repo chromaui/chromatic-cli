@@ -1,112 +1,153 @@
 import { existsSync } from 'fs';
 import path from 'path';
 
-import { createTask, transitionTo } from '../../lib/tasks';
-import { Context, Task } from '../../types';
-import { endActivity, startActivity } from '../../ui/components/activity';
-import { initial, pending, skipped, success } from '../../ui/tasks/build';
-import {
-  pendingManifest,
-  skipped as reactNativeSkipped,
-  success as reactNativeSuccess,
-} from '../../ui/tasks/buildReactNative';
+import { Context, Deps, TaskResult } from '../../types';
+import { pendingManifest } from '../../ui/tasks/buildReactNative';
 import { buildArtifacts, generateManifestStep } from './buildReactNative';
 import { buildStorybook } from './buildStorybook';
 import { setBuildCommand } from './setBuildCommand';
 import { setSourceDirectory } from './setSourceDirectory';
 
-/**
- * Sets up the Listr task for building the user's Storybook or E2E project.
- *
- * @param ctx The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(ctx: Context) {
-  return createTask({
-    name: 'build',
-    title: initial(ctx).title,
-    skip: async (ctx) => {
-      if (ctx.skip) return true;
-
-      if (ctx.isReactNativeApp) {
-        // react native build can be skipped if the user has provided build artifacts AND included a manifest
-        if (ctx.options.storybookBuildDir) {
-          ctx.sourceDir = ctx.options.storybookBuildDir;
-          if (existsSync(path.resolve(ctx.options.storybookBuildDir, 'manifest.json'))) {
-            return reactNativeSkipped().output;
-          }
-          return false;
-        }
-      } else {
-        // web build can be skipped if the user has already built their storybook and provided the output directory
-        if (ctx.options.storybookBuildDir) {
-          ctx.sourceDir = ctx.options.storybookBuildDir;
-          return skipped(ctx).output;
-        }
-      }
-      return false;
-    },
-    steps: [
-      async (ctx: Context) => {
-        ctx.sourceDir = await setSourceDirectory(
-          { options: ctx.options },
-          { sourceDir: ctx.sourceDir, storybook: ctx.storybook }
-        );
-      },
-      // to avoid duplicated UI, we handle both paths of the build process in one task
-      async (ctx: Context, task: Task) => {
-        if (ctx.isReactNativeApp) {
-          // Mid-run reports are inert in the legacy phase (buildDeps supplies a no-op `report`);
-          // runTask wires the real renderer-aware reporter once the build task swaps onto it.
-          const deps = { options: ctx.options, log: ctx.log, report: () => {} };
-          transitionTo(pending)(ctx, task);
-          await startActivity(ctx, task);
-          // if the user has not provided build artifacts, we need to build them ourselves
-          if (!ctx.options.storybookBuildDir) {
-            const artifacts = await buildArtifacts(deps, {
-              sourceDir: ctx.sourceDir,
-              browsers: ctx.announcedBuild?.browsers,
-              runtimeMetadata: ctx.runtimeMetadata,
-            });
-            ctx.reactNativeBuildLogFile = artifacts.reactNativeBuildLogFile;
-          }
-          transitionTo(pendingManifest)(ctx, task);
-          await generateManifestStep(deps, { sourceDir: ctx.sourceDir });
-          endActivity(ctx);
-          transitionTo(reactNativeSuccess, true)(ctx, task);
-        } else {
-          ctx.buildCommand = await setBuildCommand(
-            { options: ctx.options, log: ctx.log },
-            {
-              sourceDir: ctx.sourceDir,
-              flags: ctx.flags,
-              storybook: ctx.storybook,
-              changedFiles: ctx.git.changedFiles,
-            }
-          );
-          transitionTo(pending)(ctx, task);
-          await startActivity(ctx, task);
-          const builtStorybook = await buildStorybook(
-            {
-              options: ctx.options,
-              log: ctx.log,
-              env: ctx.env,
-              analytics: ctx.analytics,
-              pkg: ctx.pkg,
-            },
-            {
-              buildCommand: ctx.buildCommand,
-              runtimeMetadata: ctx.runtimeMetadata,
-              storybook: ctx.storybook,
-              git: ctx.git,
-            }
-          );
-          ctx.buildLogFile = builtStorybook.buildLogFile;
-          endActivity(ctx);
-          transitionTo(success, true)(ctx, task);
-        }
-      },
-    ],
-  });
+export interface BuildInput {
+  isReactNativeApp: boolean;
+  sourceDir?: string;
+  storybook?: Context['storybook'];
+  flags: Context['flags'];
+  browsers?: string[];
+  runtimeMetadata?: Context['runtimeMetadata'];
+  git: Context['git'];
 }
+
+export interface BuildOutput {
+  sourceDir: string;
+  // The user provided prebuilt artifacts (and, for React Native, a manifest), so no build ran.
+  skippedWithPrebuilt: boolean;
+  buildCommand?: string;
+  buildLogFile?: string;
+  reactNativeBuildLogFile?: string;
+}
+
+async function buildReactNativeProject(
+  deps: Deps,
+  input: BuildInput
+): Promise<TaskResult<BuildOutput>> {
+  const { storybookBuildDir } = deps.options;
+
+  if (storybookBuildDir && existsSync(path.resolve(storybookBuildDir, 'manifest.json'))) {
+    return {
+      kind: 'continue',
+      output: { sourceDir: storybookBuildDir, skippedWithPrebuilt: true },
+    };
+  }
+
+  const sourceDir = await setSourceDirectory(
+    { options: deps.options },
+    { sourceDir: storybookBuildDir ?? input.sourceDir, storybook: input.storybook }
+  );
+
+  let reactNativeBuildLogFile: string | undefined;
+  // If the user has not provided build artifacts, we need to build them ourselves.
+  if (!storybookBuildDir) {
+    const artifacts = await buildArtifacts(
+      { options: deps.options, log: deps.log, report: deps.report },
+      { sourceDir, browsers: input.browsers, runtimeMetadata: input.runtimeMetadata }
+    );
+    reactNativeBuildLogFile = artifacts.reactNativeBuildLogFile;
+  }
+
+  const { title, output } = pendingManifest();
+  deps.report({ title, output });
+  await generateManifestStep({ options: deps.options, log: deps.log }, { sourceDir });
+
+  return {
+    kind: 'continue',
+    output: { sourceDir, skippedWithPrebuilt: false, reactNativeBuildLogFile },
+  };
+}
+
+async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResult<BuildOutput>> {
+  const { storybookBuildDir } = deps.options;
+
+  // The user has already built their Storybook and provided the output directory.
+  if (storybookBuildDir) {
+    return {
+      kind: 'continue',
+      output: { sourceDir: storybookBuildDir, skippedWithPrebuilt: true },
+    };
+  }
+
+  const sourceDir = await setSourceDirectory(
+    { options: deps.options },
+    { sourceDir: input.sourceDir, storybook: input.storybook }
+  );
+
+  const buildCommand = await setBuildCommand(
+    { options: deps.options, log: deps.log },
+    {
+      sourceDir,
+      flags: input.flags,
+      storybook: input.storybook,
+      changedFiles: input.git.changedFiles,
+    }
+  );
+
+  deps.report({ output: `Running command: ${buildCommand}` });
+
+  const { buildLogFile } = await buildStorybook(
+    {
+      options: deps.options,
+      log: deps.log,
+      env: deps.env,
+      analytics: deps.analytics,
+      pkg: deps.pkg,
+    },
+    {
+      buildCommand,
+      runtimeMetadata: input.runtimeMetadata,
+      storybook: input.storybook,
+      git: input.git,
+    }
+  );
+
+  return {
+    kind: 'continue',
+    output: { sourceDir, skippedWithPrebuilt: false, buildCommand, buildLogFile },
+  };
+}
+
+/**
+ * Build the user's Storybook, E2E, or React Native project, or skip when prebuilt artifacts were
+ * provided.
+ *
+ * @param deps Narrow set of cross-cutting dependencies the task needs.
+ * @param input Per-pipeline-run input extracted from Context at the seam.
+ *
+ * @returns A TaskResult conveying the build artifacts (or the prebuilt skip).
+ */
+export async function buildProject(
+  deps: Deps,
+  input: BuildInput
+): Promise<TaskResult<BuildOutput>> {
+  return input.isReactNativeApp
+    ? buildReactNativeProject(deps, input)
+    : buildWebProject(deps, input);
+}
+
+export const extractBuildInput = (ctx: Context): BuildInput => ({
+  isReactNativeApp: !!ctx.isReactNativeApp,
+  sourceDir: ctx.sourceDir,
+  storybook: ctx.storybook,
+  flags: ctx.flags,
+  browsers: ctx.announcedBuild?.browsers,
+  runtimeMetadata: ctx.runtimeMetadata,
+  git: ctx.git,
+});
+
+export const applyBuildOutput = (ctx: Context, output: BuildOutput) => {
+  ctx.sourceDir = output.sourceDir;
+  if (output.buildCommand) ctx.buildCommand = output.buildCommand;
+  if (output.buildLogFile) ctx.buildLogFile = output.buildLogFile;
+  if (output.reactNativeBuildLogFile) {
+    ctx.reactNativeBuildLogFile = output.reactNativeBuildLogFile;
+  }
+};
