@@ -21,7 +21,7 @@ import checkPackageJson from './lib/checkPackageJson';
 import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import getEnvironment from './lib/getEnvironment';
-import getOptions, { getPartialOptions } from './lib/getOptions';
+import getOptions, { DEFAULT_DIAGNOSTICS_FILE, getPartialOptions } from './lib/getOptions';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import matchesBranch from './lib/matchesBranch';
@@ -215,13 +215,36 @@ export async function runAll(initialContext: InitialContext) {
     await checkPackageJson(ctx);
   }
 
-  if (ctx.options.diagnosticsFile) {
+  if (shouldWriteDiagnosticsFile(ctx)) {
+    // Ensure we set the diagnostic file output location (in the case of `uploadMetadata` but no
+    // diagnostic file was set)
+    ctx.options.diagnosticsFile ??= DEFAULT_DIAGNOSTICS_FILE;
     await writeChromaticDiagnostics(ctx);
   }
 
-  if (ctx.options.uploadMetadata) {
+  if (shouldUploadMetadata(ctx)) {
     await uploadMetadataFiles(ctx);
   }
+}
+
+function shouldWriteDiagnosticsFile(ctx: Context): boolean {
+  return (
+    !!ctx.options.diagnosticsFile ||
+    (ctx.options.diagnosticsFile === undefined && shouldUploadMetadata(ctx))
+  );
+}
+
+/**
+ * Decide whether to upload metadata files. An explicit --upload-metadata /
+ * --no-upload-metadata always wins. Otherwise we default to uploading only when
+ * TurboSnap bailed.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns True if metadata files should be uploaded.
+ */
+export function shouldUploadMetadata(ctx: Context): boolean {
+  return ctx.options.uploadMetadata ?? !!ctx.turboSnap?.bailReason;
 }
 
 async function shouldSkipWithoutProjectToken(

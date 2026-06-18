@@ -15,6 +15,12 @@ import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import { isE2EBuild } from './e2eUtils';
 
+export const DEFAULT_LOG_FILE = 'chromatic.log';
+export const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
+const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
+const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';
+const DEFAULT_E2E_LOG_FILE = 'build-archive.log';
+
 const takeLast = (input?: string | string[]) => (Array.isArray(input) ? input.at(-1) : input);
 
 const ensureArray = (input?: string | string[]) => {
@@ -114,12 +120,6 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     .filter(Boolean);
   const [branchName, branchOwner] = (flags.branchName || '').split(':').reverse();
   const [repositoryOwner, repositoryName, ...rest] = flags.repositorySlug?.split('/') || [];
-
-  const DEFAULT_LOG_FILE = 'chromatic.log';
-  const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
-  const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
-  const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';
-  const DEFAULT_E2E_LOG_FILE = 'build-archive.log';
 
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({

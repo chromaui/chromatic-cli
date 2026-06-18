@@ -8,7 +8,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { getGitInfo, run, runAll } from '.';
+import { getGitInfo, run, runAll, shouldUploadMetadata } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
@@ -863,6 +863,31 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
       },
     ])
   );
+});
+
+describe('shouldUploadMetadata', () => {
+  it('uploads when --upload-metadata is explicitly enabled', () => {
+    const ctx = { options: { uploadMetadata: true }, turboSnap: undefined } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('does not upload when --upload-metadata is explicitly disabled, even if TurboSnap bailed', () => {
+    const ctx = {
+      options: { uploadMetadata: false },
+      turboSnap: { bailReason: { rebuild: true } },
+    } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(false);
+  });
+
+  it('uploads by default when TurboSnap bailed and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: { bailReason: { rebuild: true } } } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('does not upload by default when TurboSnap did not bail and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: {} } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(false);
+  });
 });
 
 describe('getGitInfo', () => {
