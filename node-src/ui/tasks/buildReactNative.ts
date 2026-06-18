@@ -18,19 +18,19 @@ export const pendingManifest = () => ({
   output: 'Generating manifest.json file for React Native build',
 });
 
-export const pendingAndroid = (ctx: Context) => ({
+export const pendingAndroid = (reactNative?: Context['options']['reactNative']) => ({
   status: 'pending',
   title: 'Building your React Native Storybook',
-  output: ctx.options?.reactNative?.androidBuildCommand
-    ? `Running command: ${ctx.options.reactNative.androidBuildCommand}`
+  output: reactNative?.androidBuildCommand
+    ? `Running command: ${reactNative.androidBuildCommand}`
     : 'Building Android',
 });
 
-export const pendingIOS = (ctx: Context) => ({
+export const pendingIOS = (reactNative?: Context['options']['reactNative']) => ({
   status: 'pending',
   title: 'Building your React Native Storybook',
-  output: ctx.options?.reactNative?.iosBuildCommand
-    ? `Running command: ${ctx.options.reactNative.iosBuildCommand}`
+  output: reactNative?.iosBuildCommand
+    ? `Running command: ${reactNative.iosBuildCommand}`
     : 'Building iOS',
 });
 

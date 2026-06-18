@@ -22,21 +22,14 @@ export const Initial = () => initial();
 
 export const Building = () => pending();
 
-export const BuildingAndroid = () => pendingAndroid(ctx);
+export const BuildingAndroid = () => pendingAndroid();
 
 export const BuildingAndroidWithCommand = () =>
-  pendingAndroid({
-    ...ctx,
-    options: { reactNative: { androidBuildCommand: 'my-android-build' } },
-  } as any);
+  pendingAndroid({ androidBuildCommand: 'my-android-build' });
 
-export const BuildingIOS = () => pendingIOS(ctx);
+export const BuildingIOS = () => pendingIOS();
 
-export const BuildingIOSWithCommand = () =>
-  pendingIOS({
-    ...ctx,
-    options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
-  } as any);
+export const BuildingIOSWithCommand = () => pendingIOS({ iosBuildCommand: 'my-ios-build' });
 
 export const GeneratingManifest = () => pendingManifest();
 

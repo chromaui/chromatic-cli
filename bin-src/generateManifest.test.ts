@@ -34,8 +34,8 @@ describe('generate-manifest', () => {
         options: expect.objectContaining({
           storybookConfigDir: '.rnstorybook', // default
         }),
-        sourceDir: expect.stringContaining('.storybook-static'),
-      })
+      }),
+      { sourceDir: expect.stringContaining('.storybook-static') }
     );
   });
 
@@ -47,8 +47,8 @@ describe('generate-manifest', () => {
         options: expect.objectContaining({
           storybookConfigDir: './custom-config',
         }),
-        sourceDir: expect.stringContaining('.storybook-static'),
-      })
+      }),
+      { sourceDir: expect.stringContaining('.storybook-static') }
     );
   });
 
