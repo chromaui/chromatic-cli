@@ -40,14 +40,15 @@ const existsFileSync = vi.mocked(fs.existsSync);
 
 const sourceDirectory = '/tmp/chromatic';
 
-function getContext(overrides: Record<string, any> = {}) {
+function getDeps(overrides: Record<string, any> = {}) {
   return {
-    sourceDir: sourceDirectory,
     log: new TestLogger(),
     options: {},
     ...overrides,
   } as any;
 }
+
+const input = { sourceDir: sourceDirectory };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -69,8 +70,7 @@ describe('generateManifest', () => {
       },
     });
 
-    const ctx = getContext();
-    await generateManifest(ctx);
+    await generateManifest(getDeps(), input);
 
     const content = writeFileSync.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
@@ -93,8 +93,7 @@ describe('generateManifest', () => {
   it('uses default config path when storybookConfigDir is unset', async () => {
     mockBuildIndex.mockResolvedValue({ entries: {} });
 
-    const ctx = getContext();
-    await generateManifest(ctx);
+    await generateManifest(getDeps(), input);
 
     expect(mockBuildIndex).toHaveBeenCalledWith({ configPath: '.rnstorybook' });
   });
@@ -102,10 +101,7 @@ describe('generateManifest', () => {
   it('uses custom storybookConfigDir when provided', async () => {
     mockBuildIndex.mockResolvedValue({ entries: {} });
 
-    const ctx = getContext({
-      options: { storybookConfigDir: 'custom-dir' },
-    });
-    await generateManifest(ctx);
+    await generateManifest(getDeps({ options: { storybookConfigDir: 'custom-dir' } }), input);
 
     expect(mockBuildIndex).toHaveBeenCalledWith({ configPath: 'custom-dir' });
   });
@@ -113,8 +109,7 @@ describe('generateManifest', () => {
   it('empty index produces empty arrays', async () => {
     mockBuildIndex.mockResolvedValue({ entries: {} });
 
-    const ctx = getContext();
-    await generateManifest(ctx);
+    await generateManifest(getDeps(), input);
 
     const content = writeFileSync.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
@@ -141,8 +136,7 @@ describe('generateManifest', () => {
       },
     });
 
-    const ctx = getContext();
-    await generateManifest(ctx);
+    await generateManifest(getDeps(), input);
 
     const content = writeFileSync.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
@@ -192,8 +186,7 @@ describe('generateManifest', () => {
       },
     });
 
-    const ctx = getContext();
-    await generateManifest(ctx);
+    await generateManifest(getDeps(), input);
 
     const content = writeFileSync.mock.calls[0][1] as string;
     const manifest = JSON.parse(content);
@@ -245,8 +238,7 @@ describe('generateManifest', () => {
   it('should throw if the config directory does not exist', async () => {
     existsFileSync.mockReturnValue(false);
 
-    const ctx = getContext();
-    await expect(() => generateManifest(ctx)).rejects.toThrow(
+    await expect(() => generateManifest(getDeps(), input)).rejects.toThrow(
       /React Native Storybook config directory not found at ".*\.rnstorybook"\. Please specify the correct path with --storybook-config-dir\./
     );
   });

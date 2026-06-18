@@ -57,14 +57,22 @@ export default function main(ctx: Context) {
       // to avoid duplicated UI, we handle both paths of the build process in one task
       async (ctx: Context, task: Task) => {
         if (ctx.isReactNativeApp) {
+          // Mid-run reports are inert in the legacy phase (buildDeps supplies a no-op `report`);
+          // runTask wires the real renderer-aware reporter once the build task swaps onto it.
+          const deps = { options: ctx.options, log: ctx.log, report: () => {} };
           transitionTo(pending)(ctx, task);
           await startActivity(ctx, task);
           // if the user has not provided build artifacts, we need to build them ourselves
           if (!ctx.options.storybookBuildDir) {
-            await buildArtifacts(ctx, task);
+            const artifacts = await buildArtifacts(deps, {
+              sourceDir: ctx.sourceDir,
+              browsers: ctx.announcedBuild?.browsers,
+              runtimeMetadata: ctx.runtimeMetadata,
+            });
+            ctx.reactNativeBuildLogFile = artifacts.reactNativeBuildLogFile;
           }
           transitionTo(pendingManifest)(ctx, task);
-          await generateManifestStep(ctx);
+          await generateManifestStep(deps, { sourceDir: ctx.sourceDir });
           endActivity(ctx);
           transitionTo(reactNativeSuccess, true)(ctx, task);
         } else {

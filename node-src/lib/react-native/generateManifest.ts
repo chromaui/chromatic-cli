@@ -3,7 +3,13 @@ import { createRequire } from 'module';
 import path from 'path';
 import { pathToFileURL } from 'url';
 
-import { Context } from '../../types';
+import { Deps } from '../../types';
+
+type GenerateManifestDeps = Pick<Deps, 'options' | 'log'>;
+
+interface GenerateManifestInput {
+  sourceDir: string;
+}
 
 interface StoryIndex {
   entries: Record<string, StoryEntry>;
@@ -32,16 +38,17 @@ interface Story {
 /**
  * Builds a story manifest for React Native Storybook and writes it to manifest.json in the source directory.
  *
- * @param ctx - Build context with options and source directory
+ * @param deps - Cross-cutting dependencies (options and logger).
+ * @param input - The source directory the manifest is written to.
  */
-export async function generateManifest(ctx: Context) {
-  const index = await buildStoryIndex(ctx);
-  const { stories, entries } = parseStoryIndex(ctx, index);
-  writeManifest(ctx, JSON.stringify({ stories, json: entries }, undefined, 2));
+export async function generateManifest(deps: GenerateManifestDeps, input: GenerateManifestInput) {
+  const index = await buildStoryIndex(deps);
+  const { stories, entries } = parseStoryIndex(deps, index);
+  writeManifest(deps, input.sourceDir, JSON.stringify({ stories, json: entries }, undefined, 2));
 }
 
-async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
-  const configPath = ctx.options.storybookConfigDir ?? '.rnstorybook';
+async function buildStoryIndex(deps: GenerateManifestDeps): Promise<StoryIndex> {
+  const configPath = deps.options.storybookConfigDir ?? '.rnstorybook';
   const fullConfigPath = path.join(process.cwd(), configPath);
 
   if (!existsSync(fullConfigPath)) {
@@ -66,10 +73,10 @@ async function buildStoryIndex(ctx: Context): Promise<StoryIndex> {
 }
 
 function parseStoryIndex(
-  ctx: Context,
+  deps: GenerateManifestDeps,
   index: StoryIndex
 ): { stories: Story[]; entries: StoryEntry[] } {
-  ctx.log.debug('Building story manifest');
+  deps.log.debug('Building story manifest');
 
   const entries = Object.values(index.entries).filter((entry) => entry.type === 'story');
   const stories = entries.map((entry) => ({
@@ -84,16 +91,16 @@ function parseStoryIndex(
     },
   }));
 
-  ctx.log.debug(`Found ${stories.length} stories`);
+  deps.log.debug(`Found ${stories.length} stories`);
   return { stories, entries };
 }
 
-function writeManifest(ctx: Context, storyData: string) {
-  const outputFile = path.resolve(ctx.sourceDir, 'manifest.json');
-  ctx.log.debug(`Writing manifest to file at "${outputFile}"`);
+function writeManifest(deps: GenerateManifestDeps, sourceDirectory: string, storyData: string) {
+  const outputFile = path.resolve(sourceDirectory, 'manifest.json');
+  deps.log.debug(`Writing manifest to file at "${outputFile}"`);
 
-  mkdirSync(ctx.sourceDir, { recursive: true });
+  mkdirSync(sourceDirectory, { recursive: true });
   writeFileSync(outputFile, storyData);
 
-  ctx.log.debug('Manifest generation complete');
+  deps.log.debug('Manifest generation complete');
 }
