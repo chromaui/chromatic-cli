@@ -228,10 +228,7 @@ export async function runAll(initialContext: InitialContext) {
 }
 
 function shouldWriteDiagnosticsFile(ctx: Context): boolean {
-  return (
-    !!ctx.options.diagnosticsFile ||
-    (ctx.options.diagnosticsFile === undefined && shouldUploadMetadata(ctx))
-  );
+  return !!ctx.options.diagnosticsFile || shouldUploadMetadata(ctx);
 }
 
 /**
