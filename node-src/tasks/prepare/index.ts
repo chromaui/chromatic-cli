@@ -35,7 +35,12 @@ export default function main(ctx: Context) {
         ctx.fileInfo = fileInfo;
         ctx.sourceDir = sourceDir;
       },
-      validateAndroidArtifact,
+      async (ctx: Context) => {
+        await validateAndroidArtifact({
+          sourceDir: ctx.sourceDir,
+          browsers: ctx.announcedBuild?.browsers,
+        });
+      },
       traceChangedFiles,
       calculateFileHashes,
       transitionTo(success, true),
