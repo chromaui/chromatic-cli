@@ -1,79 +1,72 @@
-import { createTask, transitionTo } from '../../lib/tasks';
-import { Context } from '../../types';
-import { initial, success, validating } from '../../ui/tasks/prepare';
+import { Context, Deps, TaskResult } from '../../types';
 import { calculateFileHashes } from './calculateFileHashes';
 import { traceChangedFiles } from './traceChangedFiles';
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 import { validateFiles } from './validateFiles';
 
-/**
- * Sets up the Listr task for preparing the built storybook for upload to Chromatic.
- *
- * @param ctx The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(ctx: Context) {
-  return createTask({
-    name: 'prepare',
-    title: initial(ctx).title,
-    skip: (ctx: Context) => {
-      return !!ctx.skip;
-    },
-    steps: [
-      transitionTo(validating),
-      async (ctx: Context) => {
-        const { fileInfo, sourceDir } = await validateFiles(
-          { log: ctx.log, options: ctx.options, packageJson: ctx.packageJson },
-          {
-            isReactNativeApp: !!ctx.isReactNativeApp,
-            sourceDir: ctx.sourceDir,
-            buildLogFile: ctx.buildLogFile,
-            browsers: ctx.announcedBuild?.browsers,
-          }
-        );
-        ctx.fileInfo = fileInfo;
-        ctx.sourceDir = sourceDir;
-      },
-      async (ctx: Context) => {
-        await validateAndroidArtifact({
-          sourceDir: ctx.sourceDir,
-          browsers: ctx.announcedBuild?.browsers,
-        });
-      },
-      async (ctx: Context) => {
-        const { onlyStoryFiles } = await traceChangedFiles(
-          { log: ctx.log, options: ctx.options, report: () => {} },
-          {
-            turboSnapContext: {
-              log: ctx.log,
-              options: ctx.options,
-              env: ctx.env,
-              storybook: ctx.storybook,
-              git: ctx.git,
-              turboSnap: ctx.turboSnap,
-              fileInfo: ctx.fileInfo,
-              untracedFiles: ctx.untracedFiles,
-            },
-          }
-        );
-        if (onlyStoryFiles) {
-          ctx.onlyStoryFiles = onlyStoryFiles;
-        }
-      },
-      async (ctx: Context) => {
-        if (!ctx.fileInfo) {
-          return;
-        }
-        const { hashes } = await calculateFileHashes(
-          { log: ctx.log, options: ctx.options, env: ctx.env, report: () => {} },
-          { fileInfo: ctx.fileInfo, sourceDir: ctx.sourceDir }
-        );
-        if (hashes) {
-          ctx.fileInfo.hashes = hashes;
-        }
-      },
-      transitionTo(success, true),
-    ],
-  });
+export interface PrepareInput {
+  isReactNativeApp: boolean;
+  sourceDir: string;
+  buildLogFile?: string;
+  browsers?: string[];
+  // Context threaded for the still-ctx-coupled TurboSnap subsystem (see traceChangedFiles).
+  turboSnapContext: Context;
 }
+
+export interface PrepareOutput {
+  fileInfo: NonNullable<Context['fileInfo']>;
+  sourceDir: string;
+  onlyStoryFiles?: string[];
+}
+
+/**
+ * Validate the built Storybook (or E2E/React Native) artifacts, trace which specs are affected by
+ * recent changes via TurboSnap, and hash the files for deduplicated upload.
+ *
+ * @param deps Narrow set of cross-cutting dependencies the task needs.
+ * @param input Per-pipeline-run input extracted from Context at the seam.
+ *
+ * @returns A TaskResult conveying the validated file info, source directory and affected specs.
+ */
+export async function prepareProject(
+  deps: Deps,
+  input: PrepareInput
+): Promise<TaskResult<PrepareOutput>> {
+  const { fileInfo, sourceDir } = await validateFiles(deps, {
+    isReactNativeApp: input.isReactNativeApp,
+    sourceDir: input.sourceDir,
+    buildLogFile: input.buildLogFile,
+    browsers: input.browsers,
+  });
+
+  await validateAndroidArtifact({ sourceDir, browsers: input.browsers });
+
+  // TurboSnap reads the freshly-validated stats file; validateFiles may have corrected the directory.
+  input.turboSnapContext.fileInfo = fileInfo;
+  const { onlyStoryFiles } = await traceChangedFiles(deps, {
+    turboSnapContext: input.turboSnapContext,
+  });
+
+  const { hashes } = await calculateFileHashes(deps, { fileInfo, sourceDir });
+  if (hashes) {
+    fileInfo.hashes = hashes;
+  }
+
+  return { kind: 'continue', output: { fileInfo, sourceDir, onlyStoryFiles } };
+}
+
+export const extractPrepareInput = (ctx: Context): PrepareInput => ({
+  isReactNativeApp: !!ctx.isReactNativeApp,
+  sourceDir: ctx.sourceDir,
+  buildLogFile: ctx.buildLogFile,
+  browsers: ctx.announcedBuild?.browsers,
+  turboSnapContext: ctx,
+});
+
+export const applyPrepareOutput = (ctx: Context, output: PrepareOutput) => {
+  ctx.fileInfo = output.fileInfo;
+  ctx.sourceDir = output.sourceDir;
+  if (output.onlyStoryFiles) {
+    ctx.onlyStoryFiles = output.onlyStoryFiles;
+  }
+};
