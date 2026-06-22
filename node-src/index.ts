@@ -211,10 +211,6 @@ export async function runAll(initialContext: InitialContext) {
     onError(error);
   });
 
-  if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
-    await checkPackageJson(ctx);
-  }
-
   if (shouldWriteDiagnosticsFile(ctx)) {
     // Ensure we set the diagnostic file output location (in the case of `uploadMetadata` but no
     // diagnostic file was set)
@@ -224,6 +220,10 @@ export async function runAll(initialContext: InitialContext) {
 
   if (shouldUploadMetadata(ctx)) {
     await uploadMetadataFiles(ctx);
+  }
+
+  if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
+    await checkPackageJson(ctx);
   }
 }
 
