@@ -96,7 +96,7 @@ export const tracing = (ctx: Pick<Context, 'git' | 'options'>) => {
   const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
 
   return {
-    status: 'pending',
+    status: 'updating',
     title: `Retrieving ${testType} files affected by recent changes`,
     output: `Traversing dependencies for ${files} that changed since the last build`,
   };
@@ -120,7 +120,7 @@ export const bailed = (ctx: Pick<Context, 'turboSnap'>) => {
   if (otherFiles.length === 1) output += ' or its sibling';
   if (otherFiles.length > 1) output += ` or one of its ${siblings}`;
   return {
-    status: 'pending',
+    status: 'updating',
     title: 'TurboSnap disabled',
     output,
   };
@@ -131,14 +131,14 @@ export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
   const files = pluralize(`${testType} file`, ctx.onlyStoryFiles?.length, true);
 
   return {
-    status: 'pending',
+    status: 'updating',
     title: `Retrieved ${testType} files affected by recent changes`,
     output: `Found ${files} affected by recent changes`,
   };
 };
 
 export const hashing = (ctx: Pick<Context, 'options'>) => ({
-  status: 'pending',
+  status: 'updating',
   title: `Prepare your built ${buildType(ctx)}`,
   output: `Calculating file hashes`,
 });
