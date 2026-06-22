@@ -1,11 +1,11 @@
 import { Context } from '../../types';
 
-export function resolveE2EFramework(ctx: Context) {
-  if (ctx.options.playwright) {
+export function resolveE2EFramework(options: Context['options']) {
+  if (options.playwright) {
     return 'playwright';
   }
 
-  if (ctx.options.vitest) {
+  if (options.vitest) {
     return 'vitest';
   }
 

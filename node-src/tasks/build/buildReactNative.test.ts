@@ -8,6 +8,7 @@ import {
 } from '../../lib/react-native/build';
 import { readExpoConfig as readExpoConfigDefault } from '../../lib/react-native/expoConfig';
 import { generateManifest } from '../../lib/react-native/generateManifest';
+import { exitCodes } from '../../lib/setExitCode';
 import TestLogger from '../../lib/testLogger';
 import { buildArtifacts, generateManifestStep } from './buildReactNative';
 
@@ -62,7 +63,9 @@ const buildAndroid = vi.mocked(buildAndroidDefault);
 const buildIos = vi.mocked(buildIosDefault);
 const readExpoConfig = vi.mocked(readExpoConfigDefault);
 
-const baseContext = { options: {}, flags: {} } as any;
+function makeDeps(overrides = {}) {
+  return { options: {}, log: new TestLogger(), report: vi.fn(), ...overrides } as any;
+}
 
 beforeEach(() => {
   execa.mockClear();
@@ -72,8 +75,6 @@ beforeEach(() => {
 });
 
 describe('buildArtifacts', () => {
-  const task = { title: '', output: '' } as any;
-
   beforeEach(() => {
     mockLogStream.write.mockClear();
     mockLogStream.end.mockClear();
@@ -84,41 +85,32 @@ describe('buildArtifacts', () => {
   });
 
   it('throws when no valid platforms are in browsers', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: [] },
-      log: new TestLogger(),
-    } as any;
-    await expect(buildArtifacts(ctx, task)).rejects.toThrow(
-      'Unable to build for React Native, your project does not include any supported platforms'
-    );
+    await expect(
+      buildArtifacts(makeDeps(), { sourceDir: '/path/to/build', browsers: [] })
+    ).rejects.toMatchObject({
+      name: 'TaskFailure',
+      exitCode: exitCodes.NPM_BUILD_STORYBOOK_FAILED,
+      message:
+        'Unable to build for React Native, your project does not include any supported platforms',
+    });
     expect(buildAndroid).not.toHaveBeenCalled();
     expect(buildIos).not.toHaveBeenCalled();
   });
 
-  it('sets ctx.reactNativeBuildLogFile and creates the .chromatic directory', async () => {
+  it('returns reactNativeBuildLogFile and creates the .chromatic directory', async () => {
     const { mkdirSync } = await import('fs');
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
+    const { reactNativeBuildLogFile } = await buildArtifacts(makeDeps(), {
       sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+      browsers: ['android'],
+    });
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith('/path/to/build/.chromatic', {
       recursive: true,
     });
-    expect(ctx.reactNativeBuildLogFile).toBe('/path/to/build/.chromatic/react-native-build.log');
+    expect(reactNativeBuildLogFile).toBe('/path/to/build/.chromatic/react-native-build.log');
   });
 
   it('calls buildAndroid with output path when android is in browsers', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    await buildArtifacts(makeDeps(), { sourceDir: '/path/to/build', browsers: ['android'] });
     expect(buildAndroid).toHaveBeenCalledWith(
       '/path/to/build/storybook.apk',
       mockLogStream,
@@ -127,41 +119,26 @@ describe('buildArtifacts', () => {
   });
 
   it('passes androidBuildArchitectures to buildAndroid', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
+    const deps = makeDeps({
       options: { reactNative: { androidBuildArchitectures: ['arm64-v8a'] } },
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    });
+    await buildArtifacts(deps, { sourceDir: '/path/to/build', browsers: ['android'] });
     expect(buildAndroid).toHaveBeenCalledWith('/path/to/build/storybook.apk', mockLogStream, [
       'arm64-v8a',
     ]);
   });
 
   it('reads expo config and calls buildIos with output path when ios is in browsers', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['ios'] },
-      log: new TestLogger(),
-      options: {},
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    await buildArtifacts(makeDeps(), { sourceDir: '/path/to/build', browsers: ['ios'] });
     expect(readExpoConfig).toHaveBeenCalled();
     expect(buildIos).toHaveBeenCalledWith('MyApp', '/path/to/build/storybook.app', mockLogStream);
   });
 
   it('uses androidBuildCommand when set and does not call buildAndroid', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
+    const deps = makeDeps({
       options: { reactNative: { androidBuildCommand: 'my-android-build' } },
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    });
+    await buildArtifacts(deps, { sourceDir: '/path/to/build', browsers: ['android'] });
     expect(buildAndroid).not.toHaveBeenCalled();
     const [cmd, ...args] = parseCommandString('my-android-build');
     expect(execa).toHaveBeenCalledWith(
@@ -174,35 +151,24 @@ describe('buildArtifacts', () => {
   });
 
   it('ignores androidBuildArchitectures when androidBuildCommand is set and logs debug message', async () => {
-    const log = new TestLogger();
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log,
+    const deps = makeDeps({
       options: {
         reactNative: {
           androidBuildCommand: 'my-android-build',
           androidBuildArchitectures: ['arm64-v8a'],
         },
       },
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    });
+    await buildArtifacts(deps, { sourceDir: '/path/to/build', browsers: ['android'] });
     expect(buildAndroid).not.toHaveBeenCalled();
-    expect(log.debug).toHaveBeenCalledWith(
+    expect(deps.log.debug).toHaveBeenCalledWith(
       'androidBuildArchitectures is ignored when androidBuildCommand is set'
     );
   });
 
   it('uses iosBuildCommand when set and does not call buildIos or readExpoConfig', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['ios'] },
-      log: new TestLogger(),
-      options: { reactNative: { iosBuildCommand: 'my-ios-build' } },
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    const deps = makeDeps({ options: { reactNative: { iosBuildCommand: 'my-ios-build' } } });
+    await buildArtifacts(deps, { sourceDir: '/path/to/build', browsers: ['ios'] });
     expect(buildIos).not.toHaveBeenCalled();
     expect(readExpoConfig).not.toHaveBeenCalled();
     const [cmd, ...args] = parseCommandString('my-ios-build');
@@ -216,14 +182,10 @@ describe('buildArtifacts', () => {
   });
 
   it('calls buildAndroid and buildIos when both are in browsers', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android', 'ios'] },
-      log: new TestLogger(),
-      options: {},
+    await buildArtifacts(makeDeps(), {
       sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+      browsers: ['android', 'ios'],
+    });
     expect(buildAndroid).toHaveBeenCalledWith(
       '/path/to/build/storybook.apk',
       mockLogStream,
@@ -234,38 +196,23 @@ describe('buildArtifacts', () => {
   });
 
   it('closes the log stream after a successful build', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    await buildArtifacts(makeDeps(), { sourceDir: '/path/to/build', browsers: ['android'] });
     expect(mockLogStream.end).toHaveBeenCalled();
   });
 
   it('closes the log stream and includes a truncated tail on build error', async () => {
     buildAndroid.mockRejectedValueOnce(new Error('Gradle build failed'));
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
-      sourceDir: '/path/to/build',
-    } as any;
-    await expect(buildArtifacts(ctx, task)).rejects.toThrow(
-      'Build failed, see logs at /path/to/build/.chromatic/react-native-build.log'
-    );
+    await expect(
+      buildArtifacts(makeDeps(), { sourceDir: '/path/to/build', browsers: ['android'] })
+    ).rejects.toThrow('Build failed, see logs at /path/to/build/.chromatic/react-native-build.log');
     expect(mockLogStream.end).toHaveBeenCalled();
   });
 });
 
 describe('generateManifestStep', () => {
   it('generates manifest', async () => {
-    const ctx = {
-      ...baseContext,
-      log: { debug: vi.fn() },
-    } as any;
-    await generateManifestStep(ctx);
-    expect(generateManifest).toHaveBeenCalledWith(ctx);
+    const deps = { log: { debug: vi.fn() }, options: {} } as any;
+    await generateManifestStep(deps, { sourceDir: '/path/to/build' });
+    expect(generateManifest).toHaveBeenCalledWith(deps, { sourceDir: '/path/to/build' });
   });
 });

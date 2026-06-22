@@ -10,7 +10,8 @@ export const initial = (ctx: Context) => ({
 export const pending = (ctx: Context) => ({
   status: 'pending',
   title: `Building your ${buildType(ctx)}`,
-  output: `Running command: ${ctx.buildCommand}`,
+  // buildCommand isn't known until the task body computes it; the task reports it mid-run.
+  output: ctx.buildCommand ? `Running command: ${ctx.buildCommand}` : undefined,
 });
 
 export const success = (ctx: Context) => ({
@@ -23,10 +24,4 @@ export const skipped = (ctx: Context) => ({
   status: 'skipped',
   title: `Build ${buildType(ctx)} [skipped]`,
   output: `Using prebuilt ${buildType(ctx)} at ${ctx.options.storybookBuildDir}`,
-});
-
-export const failed = (ctx: Context) => ({
-  status: 'error',
-  title: `Building your ${buildType(ctx)}`,
-  output: `Command failed: ${ctx.buildCommand}`,
 });

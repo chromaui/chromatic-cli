@@ -73,7 +73,7 @@ export async function main(argv: string[]) {
 
   try {
     await validateStorybookReactNativeVersion(ctx);
-    await generateManifest(ctx);
+    await generateManifest(ctx, { sourceDir: ctx.sourceDir });
   } catch (err) {
     log.error(`Error: ${err.message}`);
     process.exit(1);
