@@ -42,6 +42,7 @@ const UploadBuildMutation = `
         }
       }
       build {
+        id
         status
       }
       userErrors {
@@ -62,6 +63,12 @@ const UploadBuildMutation = `
   }
 `;
 
+const PrepareSkippedBuildMutation = `
+mutation PrepareBuild($buildId: ObjID!, $skipped: Boolean) {
+  prepareBuild(id: $buildId, skipped: $skipped)
+}
+`;
+
 interface UploadBuildMutationResult {
   uploadBuild: {
     info?: {
@@ -70,6 +77,7 @@ interface UploadBuildMutationResult {
       zipTarget?: TargetInfo;
     };
     build?: {
+      id: string;
       status: string;
     };
     userErrors: (
@@ -215,6 +223,14 @@ export async function uploadBuild(
     // remainder of the build tasks.
     if (uploadBuild.build?.status === 'SKIPPED') {
       ctx.log.debug('Build skipped TurboSnap, not uploading build files');
+
+      // Ensure we're preparing the skipped build so all build stats carry over from its
+      // ancestor
+      await ctx.client.runQuery(PrepareSkippedBuildMutation, {
+        buildId: uploadBuild.build.id,
+        skipped: true,
+      });
+
       ctx.skip = true;
       return;
     }

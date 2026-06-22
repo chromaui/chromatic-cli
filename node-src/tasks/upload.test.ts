@@ -371,7 +371,7 @@ describe('uploadStorybook', () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       uploadBuild: {
-        build: { status: 'SKIPPED' },
+        build: { id: '2', status: 'SKIPPED' },
         userErrors: [],
       },
     });
@@ -398,6 +398,40 @@ describe('uploadStorybook', () => {
     expect(http.fetch).not.toHaveBeenCalled();
     expect(ctx.uploadedFiles).toBe(0);
     expect(ctx.uploadedBytes).toBe(0);
+  });
+
+  it('prepares the skipped build so stats carry over from its ancestor', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        build: { id: '2', status: 'SKIPPED' },
+        userErrors: [],
+      },
+    });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      // Use a different build ID so we know it uses the ID from the `uploadBuild` mutation
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/PrepareBuild/), {
+      buildId: '2',
+      skipped: true,
+    });
   });
 
   describe('finishUpload', () => {
