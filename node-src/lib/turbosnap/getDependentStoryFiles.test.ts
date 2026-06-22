@@ -597,9 +597,63 @@ describe('getDependentStoryFiles', () => {
     expect(ctx.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
+    expect(ctx.turboSnap.bailPath).toEqual(['src/styles.js', 'path/to/storybook-config/file.js']);
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
         chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
+      )
+    );
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        chalk`This was triggered by a change to {bold src/styles.js}, which is imported by {bold path/to/storybook-config/file.js}`
+      )
+    );
+  });
+
+  it('traces the full import chain when a deeply nested dependency of a config file changes', async () => {
+    const changedFiles = ['src/theme.js'];
+    const modules = [
+      {
+        id: './src/theme.js',
+        name: './src/theme.js',
+        reasons: [{ moduleName: './src/tokens.js' }],
+      },
+      {
+        id: './src/tokens.js',
+        name: './src/tokens.js',
+        reasons: [{ moduleName: './path/to/storybook-config/preview.js' }],
+      },
+      {
+        id: './path/to/storybook-config/preview.js',
+        name: './path/to/storybook-config/preview.js',
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result).toBeUndefined();
+    expect(ctx.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+    });
+    expect(ctx.turboSnap.bailPath).toEqual([
+      'src/theme.js',
+      'src/tokens.js',
+      'path/to/storybook-config/preview.js',
+    ]);
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        chalk`This was triggered by a change to {bold src/theme.js}, which is imported by {bold path/to/storybook-config/preview.js}`
+      )
+    );
+    // The full import chain is rendered, including the intermediate file (src/tokens.js).
+    expect(ctx.log.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        chalk`{dim →} {bold src/theme.js}\n{dim →} {bold src/tokens.js}\n{dim →} {bold path/to/storybook-config/preview.js}`
       )
     );
   });

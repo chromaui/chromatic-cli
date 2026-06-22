@@ -33,6 +33,14 @@ export const BailTwoFiles = () =>
     },
   });
 
+export const BailStorybookFileImportedDependency = () =>
+  bailFile({
+    turboSnap: {
+      bailReason: { changedStorybookFiles: ['.storybook/preview.js'] },
+      bailPath: ['src/theme.js', 'src/tokens.js', '.storybook/preview.js'],
+    },
+  });
+
 export const BailThreeFiles = () =>
   bailFile({
     turboSnap: {
