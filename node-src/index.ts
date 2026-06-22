@@ -165,6 +165,8 @@ export async function run({
  *
  * @returns A promise that resolves when all steps are completed.
  */
+// TODO: refactor this function
+// eslint-disable-next-line complexity
 export async function runAll(initialContext: InitialContext) {
   initialContext.log.info('');
   initialContext.log.info(intro(initialContext));
@@ -219,6 +221,9 @@ export async function runAll(initialContext: InitialContext) {
   }
 
   if (shouldUploadMetadata(ctx)) {
+    if (ctx.turboSnap?.bailReason) {
+      ctx.log.info('Uploading metadata files automatically due to TurboSnap bail');
+    }
     await uploadMetadataFiles(ctx);
   }
 
