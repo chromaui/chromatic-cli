@@ -100,6 +100,8 @@ const fileLogger = {
   disable() {
     this.append = () => {};
     this.queue = [];
+    this.stream?.end();
+    this.stream = undefined;
   },
   pause() {
     if (this.stream && !this.paused) {
@@ -130,7 +132,7 @@ const fileLogger = {
               .trim() + '\n'
           );
         };
-        this.append(...this.queue);
+        if (this.queue.length > 0) this.append(...this.queue);
         this.queue = [];
       }
     });
@@ -151,6 +153,10 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     level = 'silent';
   }
 
+  // The log file always captures debug-level logs, independent of the UI level (except when
+  // logging is fully disabled).
+  const fileLevel: keyof typeof LOG_LEVELS = DISABLE_LOGGING === 'true' ? 'silent' : 'debug';
+
   let interactive =
     (options?.interactive || flags?.interactive) && !(options?.debug || flags?.debug);
   let enqueue = false;
@@ -162,11 +168,17 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
   const log =
     (type: LogType, logFileOnly?: boolean) =>
     (...args: any[]) => {
-      if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
-
       const logs = logVerbose(type, args);
-      fileLogger.append(...filePrefixer(logs));
+
+      // Always capture debug-level logs in the file, independent of the console level.
+      if (LOG_LEVELS[fileLevel] >= LOG_LEVELS[type]) {
+        fileLogger.append(...filePrefixer(logs));
+      }
+
       if (logFileOnly) return;
+
+      // The console only shows messages at or above the configured level.
+      if (LOG_LEVELS[level] < LOG_LEVELS[type]) return;
 
       const messages = interactive ? logInteractive(args) : logPrefixer(logs);
       if (messages.length === 0) return;
