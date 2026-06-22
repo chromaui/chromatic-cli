@@ -91,7 +91,7 @@ export const invalidReactNative = (
   };
 };
 
-export const tracing = (ctx: Context) => {
+export const tracing = (ctx: Pick<Context, 'git' | 'options'>) => {
   const files = pluralize('file', ctx.git.changedFiles?.length, true);
   const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
 
@@ -102,7 +102,7 @@ export const tracing = (ctx: Context) => {
   };
 };
 
-export const bailed = (ctx: Context) => {
+export const bailed = (ctx: Pick<Context, 'turboSnap'>) => {
   const { changedPackageFiles, changedStorybookFiles, changedStaticFiles } =
     ctx.turboSnap?.bailReason || {};
   const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
@@ -126,7 +126,7 @@ export const bailed = (ctx: Context) => {
   };
 };
 
-export const traced = (ctx: Context) => {
+export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
   const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
   const files = pluralize(`${testType} file`, ctx.onlyStoryFiles?.length, true);
 
