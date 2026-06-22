@@ -454,7 +454,7 @@ export interface Context {
   turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
-  untracedFiles?: string[];
+  untracedFiles?: { filepath: string; glob: string }[];
   rebuildForBuildId?: string;
 }
 
