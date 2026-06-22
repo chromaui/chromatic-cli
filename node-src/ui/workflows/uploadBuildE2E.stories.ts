@@ -5,7 +5,11 @@ import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassedE2E.s
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublishedE2E.stories';
 import { authenticated, authenticating, initial } from '../tasks/auth';
-import * as build from '../tasks/buildE2E.stories';
+import {
+  initial as buildInitial,
+  pending as buildPending,
+  success as buildSuccess,
+} from '../tasks/build';
 import {
   initial as gitInfoInitial,
   pending as gitInfoPending,
@@ -51,6 +55,22 @@ const storybookInfo = {
   Initial: () => storybookInfoInitial(ctx),
   Pending: () => storybookInfoPending(ctx),
   Success: () => storybookInfoSuccess(ctx),
+};
+
+// build.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source. The file-level `ctx`
+// (playwright) is forwarded by the `steps()` helper.
+const buildCommand = 'yarn build-archive-storybook';
+const build = {
+  Initial: () => buildInitial(ctx),
+  Building: () => buildPending({ ...ctx, buildCommand } as any),
+  Built: () =>
+    buildSuccess({
+      ...ctx,
+      now: 0,
+      startedAt: -32_100,
+      buildLogFile: '/users/me/project/build-archive.log',
+    } as any),
 };
 
 // initialize.stories now returns rendered ANSI strings (Clack capture), which the old task() path

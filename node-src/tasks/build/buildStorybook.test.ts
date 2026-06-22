@@ -4,6 +4,7 @@ import { execa as execaDefault, parseCommandString } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../../lib/testLogger';
+import { exitCodes, TaskFailure } from '../../lib/setExitCode';
 import { buildStorybook } from './buildStorybook';
 
 vi.mock('execa', async (importOriginal) => {
@@ -28,57 +29,74 @@ vi.mock('@sentry/node', () => ({
 
 const execa = vi.mocked(execaDefault);
 
-const baseContext = { options: {}, flags: {} } as any;
+const baseInput = { git: {} } as any;
 
 beforeEach(() => {
   execa.mockClear();
 });
 
 describe('buildStorybook', () => {
-  it('runs the build command', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
+  it('runs the build command and returns the build log file', async () => {
+    const deps = {
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: new TestLogger(),
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
-    await buildStorybook(ctx);
-    expect(ctx.buildLogFile).toMatch(/build-storybook\.log$/);
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    const input = { ...baseInput, buildCommand: 'npm run build:storybook --script-args' };
+
+    const { buildLogFile } = await buildStorybook(deps, input);
+
+    expect(buildLogFile).toMatch(/build-storybook\.log$/);
+    const [cmd, ...args] = parseCommandString(input.buildCommand);
     expect(execa).toHaveBeenCalledWith(
       cmd,
       args,
       expect.objectContaining({ stdio: expect.any(Array) })
     );
-    expect(ctx.log.debug).toHaveBeenCalledWith('Running build command:', ctx.buildCommand);
+    expect(deps.log.debug).toHaveBeenCalledWith('Running build command:', input.buildCommand);
   });
 
   it('fails when build times out', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
+    const deps = {
       options: { buildScriptName: '' },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
       log: new TestLogger(),
     } as any;
+    const input = { ...baseInput, buildCommand: 'npm run build:storybook --script-args' };
+
     execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
-    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-    expect(ctx.log.error).toHaveBeenCalledWith(
+    await expect(buildStorybook(deps, input)).rejects.toThrow('Command failed');
+    expect(deps.log.error).toHaveBeenCalledWith(
       expect.stringContaining('Command timed out after 0ms')
     );
   });
 
+  it('throws a TaskFailure carrying the NPM_BUILD_STORYBOOK_FAILED exit code', async () => {
+    const deps = {
+      options: {},
+      env: { STORYBOOK_BUILD_TIMEOUT: 0 },
+      log: new TestLogger(),
+    } as any;
+    const input = { ...baseInput, buildCommand: 'npm run build:storybook' };
+
+    execa.mockRejectedValueOnce(new Error('build failed'));
+    await expect(buildStorybook(deps, input)).rejects.toMatchObject({
+      name: 'TaskFailure',
+      exitCode: exitCodes.NPM_BUILD_STORYBOOK_FAILED,
+      userError: true,
+    });
+  });
+
   it('passes NODE_ENV=production', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
+    const deps = {
       env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
       log: new TestLogger(),
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
-    await buildStorybook(ctx);
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    const input = { ...baseInput, buildCommand: 'npm run build:storybook --script-args' };
+
+    await buildStorybook(deps, input);
+    const [cmd, ...args] = parseCommandString(input.buildCommand);
     expect(execa).toHaveBeenCalledWith(
       cmd,
       args,
@@ -89,15 +107,15 @@ describe('buildStorybook', () => {
   });
 
   it('allows overriding NODE_ENV with STORYBOOK_NODE_ENV', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm run build:storybook --script-args',
+    const deps = {
       env: { STORYBOOK_BUILD_TIMEOUT: 1000, STORYBOOK_NODE_ENV: 'test' },
       log: { debug: vi.fn() },
       options: { storybookLogFile: 'build-storybook.log' },
     } as any;
-    await buildStorybook(ctx);
-    const [cmd, ...args] = parseCommandString(ctx.buildCommand);
+    const input = { ...baseInput, buildCommand: 'npm run build:storybook --script-args' };
+
+    await buildStorybook(deps, input);
+    const [cmd, ...args] = parseCommandString(input.buildCommand);
     expect(execa).toHaveBeenCalledWith(
       cmd,
       args,
@@ -128,73 +146,79 @@ describe('buildStorybook E2E', () => {
   it.each(missingDependencyErrorMessages)(
     'fails with missing dependency error when error message is $name',
     async ({ error }) => {
-      const ctx = {
-        ...baseContext,
-        buildCommand: 'npm exec build-archive-storybook',
+      const deps = {
         options: { buildScriptName: '', playwright: true },
         env: { STORYBOOK_BUILD_TIMEOUT: 0 },
         log: { debug: vi.fn(), error: vi.fn() },
       } as any;
+      const input = { ...baseInput, buildCommand: 'npm exec build-archive-storybook' };
 
       execa.mockRejectedValueOnce(new Error(error));
-      await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-      expect(ctx.log.error).toHaveBeenCalledWith(
+      await expect(buildStorybook(deps, input)).rejects.toMatchObject({
+        name: 'TaskFailure',
+        exitCode: exitCodes.MISSING_DEPENDENCY,
+      });
+      expect(deps.log.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to import `@chromatic-com/playwright`')
       );
 
-      ctx.log.error.mockClear();
+      deps.log.error.mockClear();
     }
   );
 
   it('fails with generic error message when not missing dependency error', async () => {
-    const ctx = {
-      ...baseContext,
-      buildCommand: 'npm exec build-archive-storybook',
+    const deps = {
       options: { buildScriptName: '', playwright: true },
       env: { STORYBOOK_BUILD_TIMEOUT: 0 },
       log: { debug: vi.fn(), error: vi.fn() },
     } as any;
+    const input = { ...baseInput, buildCommand: 'npm exec build-archive-storybook' };
 
     const errorMessage =
       'Command failed with exit code 1: npm exec build-archive-storybook --output-dir /tmp/chromatic--4210-0cyodqfYZabe\n\nMore error message lines\n\nAnd more';
     execa.mockRejectedValueOnce(new Error(errorMessage));
-    await expect(buildStorybook(ctx)).rejects.toThrow('Command failed');
-    expect(ctx.log.error).not.toHaveBeenCalledWith(
+    await expect(buildStorybook(deps, input)).rejects.toMatchObject({
+      name: 'TaskFailure',
+      exitCode: exitCodes.E2E_BUILD_FAILED,
+    });
+    expect(deps.log.error).not.toHaveBeenCalledWith(
       expect.stringContaining('Failed to import `@chromatic-com/playwright`')
     );
-    expect(ctx.log.error).toHaveBeenCalledWith(
+    expect(deps.log.error).toHaveBeenCalledWith(
       expect.stringContaining('Failed to run `chromatic --playwright`')
     );
-    expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+    expect(deps.log.error).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
   });
 });
 
-function makeAnalyticsContext(overrides = {}) {
+function makeAnalyticsDeps(overrides = {}) {
   return {
-    ...baseContext,
-    buildCommand: 'npm run build:storybook',
+    options: {},
     env: { STORYBOOK_BUILD_TIMEOUT: 0 },
     log: new TestLogger(),
     pkg: { version: '1.0.0' },
+    analytics: { trackEvent: vi.fn(), shutdown: vi.fn() },
+    ...overrides,
+  } as any;
+}
+
+function makeAnalyticsInput(overrides = {}) {
+  return {
+    buildCommand: 'npm run build:storybook',
     storybook: { version: '8.0.0' },
     git: { gitUserEmail: 'test@example.com', ciService: 'github-actions' },
-    announcedBuild: { app: { id: 'app-123', account: { id: 'account-456' } } },
-    analytics: { trackEvent: vi.fn(), shutdown: vi.fn() },
     ...overrides,
   } as any;
 }
 
 describe('buildStorybook analytics', () => {
   it('tracks storybook_build_failed on build failure', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext();
+    const deps = makeAnalyticsDeps();
     execa.mockRejectedValueOnce(new Error('build failed'));
 
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
+    await expect(buildStorybook(deps, makeAnalyticsInput())).rejects.toThrow();
 
-    // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(deps.analytics.trackEvent).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({
         errorCategory: 'storybook_build_failed',
@@ -210,67 +234,55 @@ describe('buildStorybook analytics', () => {
   });
 
   it('tracks e2e_missing_dependency when E2E dependency is not found', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext({ options: { playwright: true, buildScriptName: '' } });
+    const deps = makeAnalyticsDeps({ options: { playwright: true, buildScriptName: '' } });
     execa.mockRejectedValueOnce(new Error('Command not found: build-archive-storybook'));
 
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
+    await expect(buildStorybook(deps, makeAnalyticsInput())).rejects.toThrow();
 
-    // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(deps.analytics.trackEvent).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({ errorCategory: 'e2e_missing_dependency' })
     );
   });
 
   it('tracks e2e_build_failed on generic E2E build failure', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext({ options: { playwright: true, buildScriptName: '' } });
+    const deps = makeAnalyticsDeps({ options: { playwright: true, buildScriptName: '' } });
     const error = 'Command failed with exit code 1: build-archive-storybook\n\nMultiple lines';
     execa.mockRejectedValueOnce(new Error(`${error}\n\nOf error`));
 
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
+    await expect(buildStorybook(deps, makeAnalyticsInput())).rejects.toThrow();
 
-    // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(deps.analytics.trackEvent).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({ errorCategory: 'e2e_build_failed' })
     );
   });
 
   it('tracks aborted when build is cancelled via abort signal', async () => {
-    // arrange
     const controller = new AbortController();
     controller.abort();
-    const ctx = makeAnalyticsContext({
+    const deps = makeAnalyticsDeps({
       options: { experimental_abortSignal: controller.signal, buildScriptName: '' },
     });
     execa.mockRejectedValueOnce(new Error('aborted'));
 
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
+    await expect(buildStorybook(deps, makeAnalyticsInput())).rejects.toThrow();
 
-    // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(deps.analytics.trackEvent).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({ errorCategory: 'aborted' })
     );
   });
 
   it('sanitizes the stack trace before sending', async () => {
-    // arrange
-    const ctx = makeAnalyticsContext();
+    const deps = makeAnalyticsDeps();
     const err = new Error('build failed');
     err.stack = 'Error: build failed\n    at x (/Users/user/secret/project/file.js:1:1)';
     execa.mockRejectedValueOnce(err);
 
-    // act
-    await expect(buildStorybook(ctx)).rejects.toThrow();
+    await expect(buildStorybook(deps, makeAnalyticsInput())).rejects.toThrow();
 
-    // assert
-    expect(ctx.analytics.trackEvent).toHaveBeenCalledWith(
+    expect(deps.analytics.trackEvent).toHaveBeenCalledWith(
       AnalyticsEvent.CLI_STORYBOOK_BUILD_FAILED,
       expect.objectContaining({
         stackTrace: 'Error: build failed\n    at x (<path>/file.js:1:1)',
@@ -279,10 +291,9 @@ describe('buildStorybook analytics', () => {
   });
 
   it('reports to Sentry and still throws the build failure when analytics throws', async () => {
-    // arrange
     vi.mocked(Sentry.captureException).mockClear();
     const analyticsError = new Error('analytics exploded');
-    const ctx = makeAnalyticsContext({
+    const deps = makeAnalyticsDeps({
       analytics: {
         trackEvent: vi.fn(() => {
           throw analyticsError;
@@ -292,11 +303,10 @@ describe('buildStorybook analytics', () => {
     });
     execa.mockRejectedValueOnce(new Error('build failed'));
 
-    // act
-    const thrown = await buildStorybook(ctx).catch((err) => err);
+    const thrown = await buildStorybook(deps, makeAnalyticsInput()).catch((err) => err);
 
     // assert: outer throw is the build failure, not the analytics failure
-    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).toBeInstanceOf(TaskFailure);
     expect(thrown).not.toBe(analyticsError);
     expect(Sentry.captureException).toHaveBeenCalledWith(analyticsError);
   });

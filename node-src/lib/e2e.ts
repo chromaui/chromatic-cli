@@ -1,9 +1,8 @@
 import { AGENTS, getCliCommand, Runner } from '@antfu/ni';
 
-import { Context } from '../types';
+import { Deps } from '../types';
 import missingDependency from '../ui/messages/errors/missingDependency';
-import { failed } from '../ui/tasks/build';
-import { exitCodes, setExitCode } from './setExitCode';
+import { exitCodes, TaskFailure } from './setExitCode';
 
 export const buildBinName = 'build-archive-storybook';
 
@@ -29,20 +28,20 @@ const parseNexec = ((agent, args) => {
 
 /**
  *
- * @param ctx The context set when executing the CLI.
+ * @param deps The cross-cutting dependencies the build command resolution needs.
  * @param flag The E2E testing tool used for the build.
  * @param buildCommandOptions Options to pass to the build command (such as --output-dir).
  *
  * @returns The command for building the E2E project.
  */
 export async function getE2EBuildCommand(
-  ctx: Context,
+  deps: Pick<Deps, 'options' | 'log'>,
   flag: 'playwright' | 'cypress' | 'vitest',
   buildCommandOptions: string[]
 ) {
   // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec
   // the binary directly.
-  if (ctx.options.inAction) {
+  if (deps.options.inAction) {
     return await getCliCommand(parseNexec, [buildBinName, ...buildCommandOptions], {
       programmatic: true,
     });
@@ -58,9 +57,11 @@ export async function getE2EBuildCommand(
     ].join(' ');
   } catch (err) {
     if (err.code === 'MODULE_NOT_FOUND') {
-      ctx.log.error(missingDependency({ dependencyName, flag }));
-      setExitCode(ctx, exitCodes.MISSING_DEPENDENCY, true);
-      throw new Error(failed(ctx).output);
+      deps.log.error(missingDependency({ dependencyName, flag }));
+      throw new TaskFailure(missingDependency({ dependencyName, flag }), {
+        exitCode: exitCodes.MISSING_DEPENDENCY,
+        userError: true,
+      });
     }
 
     throw err;
