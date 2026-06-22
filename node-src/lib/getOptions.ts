@@ -132,7 +132,7 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     externals: undefinedIfEmpty(ensureArray(flags.externals)),
     traceChanged: trueIfSet(flags.traceChanged),
     list: flags.list,
-    logFile: defaultUnlessSet(flags.logFile, DEFAULT_LOG_FILE),
+    logFile: defaultIfSet(flags.logFile, DEFAULT_LOG_FILE),
     fromCI: flags.ci,
     skip: trueIfSet(flags.skip),
     dryRun: flags.dryRun,
@@ -206,9 +206,12 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     log.setInteractive(false);
   }
 
+  // Write a log file by default. A custom path (flag or config) is respected; disable with
+  // `--no-log-file`.
+  partialOptions.logFile ??= DEFAULT_LOG_FILE;
+
   if (partialOptions.debug || partialOptions.uploadMetadata) {
     // Implicitly enable the diagnostics file unless it's already enabled or explicitly disabled.
-    // The log file is always enabled by default (see DEFAULT_LOG_FILE above).
     partialOptions.diagnosticsFile = partialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
   }
 
