@@ -17,7 +17,10 @@ export const validating = (ctx: Context) => ({
   output: `Validating ${buildType(ctx)} files`,
 });
 
-export const invalid = (ctx: Context, error?: Error) => {
+export const invalid = (
+  ctx: Pick<Context, 'sourceDir' | 'buildLogFile' | 'options'>,
+  error?: Error
+) => {
   let output = `Invalid ${buildType(ctx)} build at ${ctx.sourceDir}`;
   if (ctx.buildLogFile) output += ' (check the build log)';
   if (error) output += `: ${error.message}`;
@@ -35,7 +38,10 @@ export const invalidAndroidArtifact = (_ctx: Context) => ({
     'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.',
 });
 
-export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) => {
+export const invalidReactNative = (
+  ctx: Pick<Context, 'sourceDir'>,
+  missingFiles: string[] = []
+) => {
   const lines: string[] = [];
 
   if (missingFiles.length > 0) {
