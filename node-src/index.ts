@@ -222,6 +222,11 @@ export async function runAll(initialContext: InitialContext) {
     await uploadMetadataFiles(ctx);
   }
 
+  // Clean up the temporary log file now that it has been uploaded.
+  if (ctx.options.logFile && !ctx.options.persistLogFile) {
+    ctx.log.removeLogFile();
+  }
+
   if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
   }

@@ -207,7 +207,9 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
   }
 
   // Write a log file by default. A custom path (flag or config) is respected; disable with
-  // `--no-log-file`.
+  // `--no-log-file`. An explicitly configured path is persistent and kept; the default is
+  // temporary and cleaned up after the run.
+  partialOptions.persistLogFile = typeof partialOptions.logFile === 'string';
   partialOptions.logFile ??= DEFAULT_LOG_FILE;
 
   if (partialOptions.debug || partialOptions.uploadMetadata) {

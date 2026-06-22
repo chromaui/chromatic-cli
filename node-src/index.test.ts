@@ -865,6 +865,25 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
   );
 });
 
+describe('log file cleanup', () => {
+  it('removes the temporary log file after uploading metadata', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--upload-metadata', '--only-changed']);
+    await runAll(ctx);
+    expect(ctx.testLogger.removeLogFile).toHaveBeenCalled();
+  });
+
+  it('keeps an explicitly configured log file after uploading metadata', async () => {
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--upload-metadata',
+      '--only-changed',
+      '--log-file=custom.log',
+    ]);
+    await runAll(ctx);
+    expect(ctx.testLogger.removeLogFile).not.toHaveBeenCalled();
+  });
+});
+
 describe('shouldUploadMetadata', () => {
   it('uploads when --upload-metadata is explicitly enabled', () => {
     const ctx = { options: { uploadMetadata: true }, turboSnap: undefined } as any;

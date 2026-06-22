@@ -71,6 +71,8 @@ export interface Options extends Configuration {
 
   configFile?: Flags['configFile'];
   logFile?: Flags['logFile'];
+  /** Whether the log file should be kept after the run (true when a path was explicitly configured). */
+  persistLogFile?: boolean;
   logLevel?: Flags['logLevel'];
   logPrefix?: Flags['logPrefix'];
   onlyChanged: boolean | string;

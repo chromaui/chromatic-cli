@@ -249,6 +249,39 @@ describe('getOptions', () => {
     expect(getOptions(ctx)).toMatchObject({ logFile: 'config.log' });
   });
 
+  it('marks an explicitly configured log file as persistent, but not the default', () => {
+    // The default log file is temporary (cleaned up after the run)
+    expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
+      logFile: 'chromatic.log',
+      persistLogFile: false,
+    });
+
+    // An explicit path is persistent (kept after the run)
+    expect(
+      getOptions(getContext(['--project-token', 'cli-code', '--log-file', 'custom.log']))
+    ).toMatchObject({
+      logFile: 'custom.log',
+      persistLogFile: true,
+    });
+
+    // A path from the config file is persistent
+    expect(
+      getOptions({
+        ...getContext(['--project-token', 'cli-code']),
+        configuration: { logFile: 'config.log' },
+      })
+    ).toMatchObject({
+      logFile: 'config.log',
+      persistLogFile: true,
+    });
+
+    // Disabling the log file leaves nothing to persist
+    expect(getOptions(getContext(['--project-token', 'cli-code', '--no-log-file']))).toMatchObject({
+      logFile: false,
+      persistLogFile: false,
+    });
+  });
+
   it('allows you to specify a diagnostics file name', async () => {
     expect(getOptions(getContext(['--diagnostics-file', 'output.json']))).toMatchObject({
       diagnosticsFile: 'output.json',

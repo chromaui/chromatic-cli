@@ -88,11 +88,13 @@ export interface Logger {
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
   setLogFile: (path: string | undefined) => void;
+  removeLogFile: () => void;
 }
 
 const fileLogger = {
   queue: [] as string[],
   stream: undefined as ReturnType<typeof createWriteStream> | undefined,
+  filepath: undefined as string | undefined,
   paused: false,
   append(...messages: string[]) {
     this.queue.push(...messages, '\n');
@@ -102,6 +104,15 @@ const fileLogger = {
     this.queue = [];
     this.stream?.end();
     this.stream = undefined;
+  },
+  remove(onError: LogFunction) {
+    this.disable();
+    if (this.filepath) {
+      rm(this.filepath, { force: true }, (err) => {
+        if (err) onError(err);
+      });
+      this.filepath = undefined;
+    }
   },
   pause() {
     if (this.stream && !this.paused) {
@@ -125,6 +136,7 @@ const fileLogger = {
         mkdirSync(path.dirname(filepath), { recursive: true });
 
         this.stream = createWriteStream(filepath, { flags: 'a' });
+        this.filepath = filepath;
         this.append = (...messages: string[]) => {
           this.stream?.write(
             messages
@@ -202,6 +214,9 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     setLogFile(path: string | undefined) {
       if (path) fileLogger.initialize(path, log('error'));
       else fileLogger.disable();
+    },
+    removeLogFile() {
+      fileLogger.remove(log('error'));
     },
     pause: () => {
       fileLogger.pause();
