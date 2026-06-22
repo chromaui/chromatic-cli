@@ -22,7 +22,19 @@ export default function main(ctx: Context) {
     },
     steps: [
       transitionTo(validating),
-      validateFiles,
+      async (ctx: Context) => {
+        const { fileInfo, sourceDir } = await validateFiles(
+          { log: ctx.log, options: ctx.options, packageJson: ctx.packageJson },
+          {
+            isReactNativeApp: !!ctx.isReactNativeApp,
+            sourceDir: ctx.sourceDir,
+            buildLogFile: ctx.buildLogFile,
+            browsers: ctx.announcedBuild?.browsers,
+          }
+        );
+        ctx.fileInfo = fileInfo;
+        ctx.sourceDir = sourceDir;
+      },
       validateAndroidArtifact,
       traceChangedFiles,
       calculateFileHashes,
