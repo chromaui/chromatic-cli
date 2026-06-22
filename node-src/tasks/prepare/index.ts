@@ -41,7 +41,26 @@ export default function main(ctx: Context) {
           browsers: ctx.announcedBuild?.browsers,
         });
       },
-      traceChangedFiles,
+      async (ctx: Context) => {
+        const { onlyStoryFiles } = await traceChangedFiles(
+          { log: ctx.log, options: ctx.options, report: () => {} },
+          {
+            turboSnapContext: {
+              log: ctx.log,
+              options: ctx.options,
+              env: ctx.env,
+              storybook: ctx.storybook,
+              git: ctx.git,
+              turboSnap: ctx.turboSnap,
+              fileInfo: ctx.fileInfo,
+              untracedFiles: ctx.untracedFiles,
+            },
+          }
+        );
+        if (onlyStoryFiles) {
+          ctx.onlyStoryFiles = onlyStoryFiles;
+        }
+      },
       calculateFileHashes,
       transitionTo(success, true),
     ],
