@@ -61,7 +61,18 @@ export default function main(ctx: Context) {
           ctx.onlyStoryFiles = onlyStoryFiles;
         }
       },
-      calculateFileHashes,
+      async (ctx: Context) => {
+        if (!ctx.fileInfo) {
+          return;
+        }
+        const { hashes } = await calculateFileHashes(
+          { log: ctx.log, options: ctx.options, env: ctx.env, report: () => {} },
+          { fileInfo: ctx.fileInfo, sourceDir: ctx.sourceDir }
+        );
+        if (hashes) {
+          ctx.fileInfo.hashes = hashes;
+        }
+      },
       transitionTo(success, true),
     ],
   });
