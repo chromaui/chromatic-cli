@@ -31,7 +31,7 @@ export const invalid = (
   };
 };
 
-export const invalidAndroidArtifact = (_ctx: Context) => ({
+export const invalidAndroidArtifact = (_ctx?: Context) => ({
   status: 'error',
   title: 'Preparing your built React Native Storybook',
   output:
