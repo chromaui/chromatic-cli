@@ -137,7 +137,7 @@ export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
   };
 };
 
-export const hashing = (ctx: Context) => ({
+export const hashing = (ctx: Pick<Context, 'options'>) => ({
   status: 'pending',
   title: `Prepare your built ${buildType(ctx)}`,
   output: `Calculating file hashes`,
