@@ -27,7 +27,7 @@ export async function uploadMetadataFiles(ctx: Context) {
   }
 
   try {
-    return withPausedLog(ctx, async () => {
+    return await withPausedLog(ctx, async () => {
       const metadataFiles = [
         ctx.options.logFile,
         ctx.options.diagnosticsFile,
