@@ -11,6 +11,7 @@ import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { confirmShare, ConfirmShareStatus, reserveShare } from './lib/share';
 import { renderBuild } from './renderer/build';
+import { renderPrepare } from './renderer/prepare';
 import { runShare } from './tasks';
 import { Context, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -165,6 +166,7 @@ async function runShareTasks(ctx: Context): Promise<void> {
 
   try {
     await renderBuild(ctx);
+    await renderPrepare(ctx);
     await new Listr(
       runShare.map((task) => task(ctx)),
       listrOptions
