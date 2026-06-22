@@ -241,6 +241,14 @@ describe('getOptions', () => {
     });
   });
 
+  it('respects a logFile path from the config file when no flag is passed', () => {
+    const ctx = {
+      ...getContext(['--project-token', 'cli-code']),
+      configuration: { logFile: 'config.log' },
+    };
+    expect(getOptions(ctx)).toMatchObject({ logFile: 'config.log' });
+  });
+
   it('allows you to specify a diagnostics file name', async () => {
     expect(getOptions(getContext(['--diagnostics-file', 'output.json']))).toMatchObject({
       diagnosticsFile: 'output.json',
