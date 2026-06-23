@@ -22,26 +22,29 @@ const sourceDirectory =
   '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/chromatic-20036LMP9FAlLEjpu';
 const buildLogFile = '/var/folders/h3/ff9kk23958l99z2qbzfjdlxc0000gn/T/build-storybook.log';
 
-// prepare registers no `failure` transition, so a thrown validation error renders the engine's
-// fallback failure state, built from the pending (validating) title and the error message.
+// prepare's `failure` transition forks on `ctx.isReactNativeApp`, passing an RN-specific or generic
+// title to the engine's fallback failure state (the error body is logged, not shown in the frame).
 const failure = (output: string) =>
   captureTask(fallbackFailureState(validating(ctx).title, new Error(output)));
+
+const rnFailure = (output: string) =>
+  captureTask(fallbackFailureState('Prepare your built React Native Storybook', new Error(output)));
 
 export const Validating = () => captureTask(validating(ctx));
 
 export const Invalid = () =>
   failure(invalid({ ...ctx, sourceDir: sourceDirectory, buildLogFile }).output);
 
-export const InvalidAndroidArtifact = () => failure(invalidAndroidArtifact().output);
+export const InvalidAndroidArtifact = () => rnFailure(invalidAndroidArtifact().output);
 
 export const InvalidReactNativeAndroidMissing = () =>
-  failure(invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.apk']).output);
+  rnFailure(invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.apk']).output);
 
 export const InvalidReactNativeIosMissing = () =>
-  failure(invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.app']).output);
+  rnFailure(invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.app']).output);
 
 export const InvalidReactNativeBothMissing = () =>
-  failure(
+  rnFailure(
     invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.apk', 'storybook.app']).output
   );
 
