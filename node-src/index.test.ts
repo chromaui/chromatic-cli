@@ -890,12 +890,17 @@ describe('shouldUploadMetadata', () => {
     expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
-  it('does not upload when --upload-metadata is explicitly disabled, even if TurboSnap bailed', () => {
+  it('does not upload when --upload-metadata is explicitly disabled, even if TurboSnap is requested', () => {
     const ctx = {
       options: { uploadMetadata: false },
-      turboSnap: { bailReason: { rebuild: true } },
+      turboSnap: {},
     } as any;
     expect(shouldUploadMetadata(ctx)).toBe(false);
+  });
+
+  it('uploads by default when TurboSnap is requested and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: {} } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
   it('uploads by default when TurboSnap bailed and the flag is unset', () => {
@@ -903,8 +908,13 @@ describe('shouldUploadMetadata', () => {
     expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
-  it('does not upload by default when TurboSnap did not bail and the flag is unset', () => {
-    const ctx = { options: {}, turboSnap: {} } as any;
+  it('uploads by default when TurboSnap is unavailable and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: { unavailable: true } } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('does not upload by default when TurboSnap is disabled and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: undefined } as any;
     expect(shouldUploadMetadata(ctx)).toBe(false);
   });
 });

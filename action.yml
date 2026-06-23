@@ -114,7 +114,7 @@ inputs:
     description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
     required: false
   uploadMetadata:
-    description: 'Upload Chromatic metadata files as part of the published Storybook. Defaults to enabled when TurboSnap bails.'
+    description: 'Upload Chromatic metadata files as part of the published Storybook. Defaults to enabled when TurboSnap is requested.'
     required: false
   vitest:
     description: 'Run build against `@chromatic-com/vitest` test archives'

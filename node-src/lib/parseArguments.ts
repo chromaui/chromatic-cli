@@ -63,7 +63,7 @@ export default function parseArguments(argv: string[]) {
       --no-interactive                 Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
       --storybook-log-file [filepath]  Write Storybook build output to a file. Disable via --no-storybook-log-file. [storybook-build.log]
       --trace-changed [mode]           Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
-      --upload-metadata                Upload Chromatic metadata files as part of the published Storybook. Includes diagnostics and log files, among others. This option enables --diagnostics-file, --log-file and --storybook-log-file, unless explicitly disabled via the 'no-' prefix. Defaults to enabled when TurboSnap bails.
+      --upload-metadata                Upload Chromatic metadata files as part of the published Storybook. Includes diagnostics and log files, among others. This option enables --diagnostics-file, --log-file and --storybook-log-file, unless explicitly disabled via the 'no-' prefix. Defaults to enabled when running with TurboSnap.
 
     Deprecated options
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.

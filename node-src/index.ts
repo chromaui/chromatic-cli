@@ -221,8 +221,8 @@ export async function runAll(initialContext: InitialContext) {
   }
 
   if (shouldUploadMetadata(ctx)) {
-    if (ctx.turboSnap?.bailReason) {
-      ctx.log.info('Uploading metadata files automatically due to TurboSnap bail');
+    if (ctx.options.uploadMetadata === undefined && isTurboSnapEnabled(ctx)) {
+      ctx.log.info('Uploading metadata files automatically because TurboSnap was enabled');
     }
     await uploadMetadataFiles(ctx);
   }
@@ -243,15 +243,19 @@ function shouldWriteDiagnosticsFile(ctx: Context): boolean {
 
 /**
  * Decide whether to upload metadata files. An explicit --upload-metadata /
- * --no-upload-metadata always wins. Otherwise we default to uploading only when
- * TurboSnap bailed.
+ * --no-upload-metadata always wins. Otherwise we default to uploading when
+ * TurboSnap was enabled.
  *
  * @param ctx The context set when executing the CLI.
  *
  * @returns True if metadata files should be uploaded.
  */
 export function shouldUploadMetadata(ctx: Context): boolean {
-  return ctx.options.uploadMetadata ?? !!ctx.turboSnap?.bailReason;
+  return ctx.options.uploadMetadata ?? isTurboSnapEnabled(ctx);
+}
+
+function isTurboSnapEnabled(ctx: Context): boolean {
+  return !!ctx.turboSnap;
 }
 
 async function shouldSkipWithoutProjectToken(
