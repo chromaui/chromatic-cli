@@ -105,13 +105,13 @@ const fileLogger = {
     this.stream?.end();
     this.stream = undefined;
   },
-  remove(onError: LogFunction) {
+  remove() {
     this.disable();
     if (this.filepath) {
       try {
         rmSync(this.filepath, { force: true });
-      } catch (err) {
-        onError(err);
+      } catch {
+        // Swallow any errors
       }
       this.filepath = undefined;
     }
@@ -218,7 +218,7 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
       else fileLogger.disable();
     },
     removeLogFile() {
-      fileLogger.remove(log('error'));
+      fileLogger.remove();
     },
     pause: () => {
       fileLogger.pause();
