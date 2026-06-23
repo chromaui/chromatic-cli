@@ -430,6 +430,7 @@ describe('uploadStorybook', () => {
 
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/PrepareBuild/), {
       buildId: '2',
+      runtimeSpecs: [],
       skipped: true,
     });
   });

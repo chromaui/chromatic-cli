@@ -64,8 +64,12 @@ const UploadBuildMutation = `
 `;
 
 const PrepareSkippedBuildMutation = `
-mutation PrepareBuild($buildId: ObjID!, $skipped: Boolean) {
-  prepareBuild(id: $buildId, skipped: $skipped)
+mutation PrepareBuild(
+  $buildId: ObjID!
+  $runtimeSpecs: [RuntimeSpecInput!]!
+  $skipped: Boolean
+) {
+  prepareBuild(id: $buildId, runtimeSpecs: $runtimeSpecs, skipped: $skipped)
 }
 `;
 
@@ -228,6 +232,7 @@ export async function uploadBuild(
       // ancestor
       await ctx.client.runQuery(PrepareSkippedBuildMutation, {
         buildId: uploadBuild.build.id,
+        runtimeSpecs: [], // Required by the API contract but we won't have any runtime specs
         skipped: true,
       });
 
