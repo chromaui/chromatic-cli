@@ -134,6 +134,58 @@ describe('runTask', () => {
     expect(ctx.skip).toBe(true);
   });
 
+  it('succeeds without halting the pipeline on a skip-self result', async () => {
+    const ctx = fakeContext();
+    const { renderer, calls } = recordingRenderer();
+
+    await runTask(
+      ctx,
+      {
+        name: 'upload',
+        title: 'Publish',
+        transitions: {
+          ...transitions,
+          skipped: () => ({
+            status: 'skipped',
+            title: 'Skipped',
+            output: 'Skipped due to --dry-run',
+          }),
+        },
+        extractInput: () => ({}),
+        run: async () => ({ kind: 'skip-self' }),
+      },
+      renderer
+    );
+
+    expect(calls.map((c) => c.hook)).toEqual(['start', 'succeed']);
+    expect(calls[1].state.output).toBe('Skipped due to --dry-run');
+    // The pipeline continues: ctx.skip stays unset so downstream tasks still run.
+    expect(ctx.skip).toBeUndefined();
+    expect(ctx.title).toBe('Skipped');
+  });
+
+  it('falls back to the pending state with the reason when skip-self has no skipped transition', async () => {
+    const ctx = fakeContext();
+    const { renderer, calls } = recordingRenderer();
+
+    await runTask(
+      ctx,
+      {
+        name: 'upload',
+        title: 'Publish',
+        transitions,
+        extractInput: () => ({}),
+        run: async () => ({ kind: 'skip-self', reason: 'nothing to do' }),
+      },
+      renderer
+    );
+
+    expect(calls.map((c) => c.hook)).toEqual(['start', 'succeed']);
+    expect(calls[1].state.title).toBe('Doing the thing');
+    expect(calls[1].state.output).toBe('nothing to do');
+    expect(ctx.skip).toBeUndefined();
+  });
+
   it('renders nothing and skips the task when an upstream task set ctx.skip', async () => {
     const ctx = fakeContext({ skip: true });
     const { renderer, calls } = recordingRenderer();
