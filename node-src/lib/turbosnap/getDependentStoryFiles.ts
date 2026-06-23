@@ -210,8 +210,9 @@ export async function getDependentStoryFiles(
 
   function untrace(filepath: string) {
     filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
-    if (untraced.some((glob) => matchesFile(glob, filepath))) {
-      ctx.untracedFiles?.push(filepath);
+    const matchedGlob = untraced.find((glob) => matchesFile(glob, filepath));
+    if (matchedGlob) {
+      ctx.untracedFiles?.push({ filepath, glob: matchedGlob });
       return false;
     }
     return true;

@@ -1,4 +1,7 @@
+import chalk from 'chalk';
 import picomatch, { Matcher } from 'picomatch';
+
+import { Context } from '../types';
 
 export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.slice(1)}`;
 
@@ -51,6 +54,21 @@ const fileMatchers: Record<string, Matcher> = {};
 export const matchesFile = (glob: string, filepath: string) => {
   if (!fileMatchers[glob]) fileMatchers[glob] = picomatch(glob, { dot: true });
   return fileMatchers[glob](filepath.replace(/^\.\//, ''));
+};
+
+export const groupUntracedFilesByGlob = (untracedFiles: NonNullable<Context['untracedFiles']>) => {
+  const filesByGlob = new Map<string, string[]>();
+  for (const { filepath, glob } of untracedFiles) {
+    const files = filesByGlob.get(glob) ?? [];
+    files.push(filepath);
+    filesByGlob.set(glob, files);
+  }
+  return [...filesByGlob.entries()]
+    .map(
+      ([glob, files]) =>
+        chalk`Files matching {bold ${glob}}:\n{dim →} ${files.join(chalk`\n{dim →} `)}`
+    )
+    .join('\n');
 };
 
 export const isPackageManifestFile = (filePath: string) =>
