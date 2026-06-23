@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
-import buildTurboSkipped from '../ui/messages/info/buildTurboSkipped';
+import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
 import { finishUpload, uploadStorybook, waitForSentinels } from './upload';
 
 vi.mock('form-data');

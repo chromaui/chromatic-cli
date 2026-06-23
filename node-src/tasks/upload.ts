@@ -7,7 +7,7 @@ import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, FileDesc, Task } from '../types';
 import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
-import buildTurboSkipped from '../ui/messages/info/buildTurboSkipped';
+import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
 import deduplicationFailed from '../ui/messages/warnings/deduplicationFailed';
 import {
   dryRun,
