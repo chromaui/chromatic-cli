@@ -20,6 +20,8 @@ export interface ShareOptions {
   onProgress?: (progress: number, total: number) => void;
   onError?: (error: Error) => void;
   abortSignal?: AbortSignal;
+  /** Path to write a debug log file. Disabled by default so share() leaves no file behind. */
+  logFile?: string;
 }
 
 export interface ShareOutput {
@@ -38,6 +40,7 @@ export interface ShareOutput {
  * @param shareOptions.onError Callback for errors. When provided, share() resolves instead of
  * rejecting.
  * @param shareOptions.abortSignal An AbortSignal to cancel the share operation.
+ * @param shareOptions.logFile Path to write a debug log file. Disabled by default.
  *
  * @returns An object with the share URL.
  */
@@ -106,7 +109,7 @@ async function reportShareStatus(ctx: Context, status: ConfirmShareStatus) {
 }
 
 async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
-  const { userToken, onProgress, abortSignal } = shareOptions;
+  const { userToken, onProgress, abortSignal, logFile } = shareOptions;
 
   const extraOptions: Partial<Options> = {
     userToken,
@@ -146,6 +149,7 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
   initialContext = await setupContext(initialContext);
   const ctx = initialContext as Context;
   ctx.options = getOptions(initialContext);
+  ctx.options.logFile = logFile;
   ctx.log.setLogFile(ctx.options.logFile);
   ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
   return ctx;
