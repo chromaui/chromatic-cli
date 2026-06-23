@@ -20,6 +20,7 @@ const ctx = { options: {} } as any;
 export const Initial = () => initial(ctx);
 
 export const DryRun = () => dryRun(ctx);
+export const TurboSkipped = () => frames.TurboSkipped;
 
 export const Invalid = () =>
   invalid({

@@ -41,6 +41,7 @@ import { renderGitInfo } from './renderer/gitInfo';
 import { renderInitialize } from './renderer/initialize';
 import { renderPrepare } from './renderer/prepare';
 import { renderStorybookInfo } from './renderer/storybookInfo';
+import { renderUpload } from './renderer/upload';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -353,6 +354,7 @@ async function runBuild(ctx: Context) {
       await renderInitialize(ctx);
       await renderBuild(ctx);
       await renderPrepare(ctx);
+      await renderUpload(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
