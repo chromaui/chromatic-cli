@@ -124,13 +124,15 @@ describe('runTask', () => {
         title: 'Authenticate',
         transitions,
         extractInput: () => ({}),
-        run: async () => ({ kind: 'skip' }),
+        run: async () => ({ kind: 'skip', reason: 'fully turbosnapped' }),
       },
       renderer
     );
 
     // start still fires — the engine can't know it'll skip until after run() returns.
     expect(calls.map((c) => c.hook)).toEqual(['start', 'succeed']);
+    // The reason renders as output under the pending title (mirrors skip-self).
+    expect(calls[1].state.output).toBe('fully turbosnapped');
     expect(ctx.skip).toBe(true);
   });
 

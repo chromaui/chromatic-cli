@@ -159,9 +159,10 @@ async function applyResult<TInput, TOutput, TPartial>(
       return;
     }
     case 'skip': {
-      // Note we're using the pending transition here. The task succeeded, hence the `renderer.success` call,
-      // but didn't complete, so the messaging reflects pending.
-      renderer.succeed(config.transitions.pending(ctx));
+      // The task succeeded (hence `renderer.succeed`) but halted the pipeline rather than
+      // completing, so the messaging reflects pending. Render the skip `reason` as output (mirrors
+      // skip-self) so the frame explains why instead of showing a bare "Starting…" subtitle.
+      renderer.succeed({ ...config.transitions.pending(ctx), output: result.reason });
       ctx.skip = true;
       return;
     }
