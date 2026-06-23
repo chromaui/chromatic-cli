@@ -1,7 +1,7 @@
 import { applyPrepareOutput, extractPrepareInput, prepareProject } from '../tasks/prepare';
 import { Context } from '../types';
 import { initial, success, validating } from '../ui/tasks/prepare';
-import { runTask } from './engine';
+import { fallbackFailureState, runTask } from './engine';
 import { clackTaskLogRenderer } from './engine/clack/taskLogRenderer';
 import { getRenderer } from './engine/getRenderer';
 
@@ -16,7 +16,17 @@ export async function renderPrepare(ctx: Context): Promise<void> {
     {
       name: 'prepare',
       title: initial(ctx).title,
-      transitions: { pending: validating, success },
+      transitions: {
+        pending: validating,
+        success,
+        failure: (context: Context, error: Error) =>
+          fallbackFailureState(
+            context.isReactNativeApp
+              ? 'Prepare your built React Native Storybook'
+              : validating(context).title,
+            error
+          ),
+      },
       extractInput: extractPrepareInput,
       run: prepareProject,
       applyOutput: applyPrepareOutput,
