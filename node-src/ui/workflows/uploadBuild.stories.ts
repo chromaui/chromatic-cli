@@ -26,7 +26,11 @@ import {
   pending as storybookInfoPending,
   success as storybookInfoSuccess,
 } from '../tasks/storybookInfo';
-import * as upload from '../tasks/upload.stories';
+import {
+  initial as uploadInitial,
+  success as uploadSuccess,
+  uploading as uploadUploading,
+} from '../tasks/upload';
 import * as verify from '../tasks/verify.stories';
 
 const steps = (...steps) => steps.map((step) => task(step())).join('\n');
@@ -80,6 +84,22 @@ const initialize = {
   Initial: () => initializeInitial,
   Pending: () => initializePending(),
   Success: () => initializeSuccess({ announcedBuild } as any),
+};
+
+// upload.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source.
+const upload = {
+  Initial: () => uploadInitial(buildContext),
+  Uploading: () => uploadUploading(buildContext, { percentage: 42 }),
+  Success: () =>
+    uploadSuccess({
+      ...buildContext,
+      now: 0,
+      startedAt: -54_321,
+      uploadedBytes: 1_234_567,
+      uploadedFiles: 42,
+      fileInfo: { paths: { length: 42 } },
+    } as any),
 };
 
 export default {
