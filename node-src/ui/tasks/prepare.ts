@@ -17,7 +17,10 @@ export const validating = (ctx: Context) => ({
   output: `Validating ${buildType(ctx)} files`,
 });
 
-export const invalid = (ctx: Context, error?: Error) => {
+export const invalid = (
+  ctx: Pick<Context, 'sourceDir' | 'buildLogFile' | 'options'>,
+  error?: Error
+) => {
   let output = `Invalid ${buildType(ctx)} build at ${ctx.sourceDir}`;
   if (ctx.buildLogFile) output += ' (check the build log)';
   if (error) output += `: ${error.message}`;
@@ -28,14 +31,17 @@ export const invalid = (ctx: Context, error?: Error) => {
   };
 };
 
-export const invalidAndroidArtifact = (_ctx: Context) => ({
+export const invalidAndroidArtifact = (_ctx?: Context) => ({
   status: 'error',
   title: 'Preparing your built React Native Storybook',
   output:
     'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.',
 });
 
-export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) => {
+export const invalidReactNative = (
+  ctx: Pick<Context, 'sourceDir'>,
+  missingFiles: string[] = []
+) => {
   const lines: string[] = [];
 
   if (missingFiles.length > 0) {
@@ -85,18 +91,18 @@ export const invalidReactNative = (ctx: Context, missingFiles: string[] = []) =>
   };
 };
 
-export const tracing = (ctx: Context) => {
+export const tracing = (ctx: Pick<Context, 'git' | 'options'>) => {
   const files = pluralize('file', ctx.git.changedFiles?.length, true);
   const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
 
   return {
-    status: 'pending',
+    status: 'updating',
     title: `Retrieving ${testType} files affected by recent changes`,
     output: `Traversing dependencies for ${files} that changed since the last build`,
   };
 };
 
-export const bailed = (ctx: Context) => {
+export const bailed = (ctx: Pick<Context, 'turboSnap'>) => {
   const { changedPackageFiles, changedStorybookFiles, changedStaticFiles } =
     ctx.turboSnap?.bailReason || {};
   const changedFiles = changedPackageFiles || changedStorybookFiles || changedStaticFiles;
@@ -114,25 +120,25 @@ export const bailed = (ctx: Context) => {
   if (otherFiles.length === 1) output += ' or its sibling';
   if (otherFiles.length > 1) output += ` or one of its ${siblings}`;
   return {
-    status: 'pending',
+    status: 'updating',
     title: 'TurboSnap disabled',
     output,
   };
 };
 
-export const traced = (ctx: Context) => {
+export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
   const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
   const files = pluralize(`${testType} file`, ctx.onlyStoryFiles?.length, true);
 
   return {
-    status: 'pending',
+    status: 'updating',
     title: `Retrieved ${testType} files affected by recent changes`,
     output: `Found ${files} affected by recent changes`,
   };
 };
 
-export const hashing = (ctx: Context) => ({
-  status: 'pending',
+export const hashing = (ctx: Pick<Context, 'options'>) => ({
+  status: 'updating',
   title: `Prepare your built ${buildType(ctx)}`,
   output: `Calculating file hashes`,
 });

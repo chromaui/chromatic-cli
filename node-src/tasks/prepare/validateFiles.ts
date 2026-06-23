@@ -3,9 +3,23 @@ import path from 'path';
 import { stripVTControlCharacters } from 'util';
 
 import { posix } from '../../lib/posix';
-import { Context } from '../../types';
+import { Context, Deps } from '../../types';
 import deviatingOutputDirectory from '../../ui/messages/warnings/deviatingOutputDirectory';
 import { invalid, invalidReactNative } from '../../ui/tasks/prepare';
+
+type ValidateFilesDeps = Pick<Deps, 'log' | 'options' | 'packageJson'>;
+
+export interface ValidateFilesInput {
+  isReactNativeApp: boolean;
+  sourceDir: string;
+  buildLogFile?: string;
+  browsers?: string[];
+}
+
+export interface ValidateFilesOutput {
+  fileInfo: NonNullable<Context['fileInfo']>;
+  sourceDir: string;
+}
 
 /**
  * Represents a file path specification with its content length.
@@ -21,13 +35,19 @@ interface PathSpec {
  * paths will be like iframe.html rather than storybook-static/iframe.html).
  * Excludes the .chromatic directory which is reserved for internal use.
  *
- * @param ctx - The CLI context for logging
+ * @param deps - The narrowed dependencies (logger, options) for error messaging
  * @param rootDirectory - The root directory to scan
+ * @param buildLogFile - The build log file path, surfaced in the failure message
  * @param dirname - The current subdirectory being scanned (relative to rootDirectory)
  *
  * @returns Array of path specifications with pathname and content length
  */
-function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = '.'): PathSpec[] {
+function getPathSpecsInDirectory(
+  deps: Pick<Deps, 'log' | 'options'>,
+  rootDirectory: string,
+  buildLogFile: string | undefined,
+  dirname = '.'
+): PathSpec[] {
   // .chromatic is a special directory reserved for internal use and should not be uploaded
   if (dirname === '.chromatic') {
     return [];
@@ -38,12 +58,14 @@ function getPathSpecsInDirectory(ctx: Context, rootDirectory: string, dirname = 
       const pathname = path.join(dirname, p);
       const stats = statSync(path.join(rootDirectory, pathname));
       return stats.isDirectory()
-        ? getPathSpecsInDirectory(ctx, rootDirectory, pathname)
+        ? getPathSpecsInDirectory(deps, rootDirectory, buildLogFile, pathname)
         : [{ pathname, contentLength: stats.size }];
     });
   } catch (err) {
-    ctx.log.debug(err);
-    throw new Error(invalid({ ...ctx, sourceDir: rootDirectory }, err).output);
+    deps.log.debug(err);
+    throw new Error(
+      invalid({ sourceDir: rootDirectory, buildLogFile, options: deps.options }, err).output
+    );
   }
 }
 
@@ -81,13 +103,18 @@ function getOutputDirectory(buildLog: string) {
  * Analyzes a directory to extract file information needed for upload.
  * Processes all files to calculate total size, collect paths, and locate stats files.
  *
- * @param ctx - The CLI context for logging
+ * @param deps - The narrowed dependencies (logger, options) for error messaging
  * @param sourceDirectory - The directory to analyze
+ * @param buildLogFile - The build log file path, surfaced in the failure message
  *
  * @returns Object containing file lengths, paths, stats path, and total size
  */
-function getFileInfo(ctx: Context, sourceDirectory: string) {
-  const lengths = getPathSpecsInDirectory(ctx, sourceDirectory).map((o) => ({
+function getFileInfo(
+  deps: Pick<Deps, 'log' | 'options'>,
+  sourceDirectory: string,
+  buildLogFile: string | undefined
+) {
+  const lengths = getPathSpecsInDirectory(deps, sourceDirectory, buildLogFile).map((o) => ({
     ...o,
     knownAs: posix(o.pathname),
   }));
@@ -164,36 +191,50 @@ const isValidReactNativeStorybook = (
  * If validation fails and a build log is available, attempts to find the
  * correct output directory from the log and retries validation.
  *
- * @param ctx - The CLI context containing source directory and build log info
+ * @param deps - The narrowed dependencies (logger, options, package manifest)
+ * @param input - Source directory, build type and build log info
+ *
+ * @returns The validated file info and the (possibly corrected) source directory
  *
  * @throws {Error} if no valid Storybook build is found
  */
-export async function validateFiles(ctx: Context) {
-  const validator = ctx.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
-  const browsers = ctx.announcedBuild?.browsers;
+export async function validateFiles(
+  deps: ValidateFilesDeps,
+  input: ValidateFilesInput
+): Promise<ValidateFilesOutput> {
+  const validator = input.isReactNativeApp ? isValidReactNativeStorybook : isValidStorybook;
+  const { browsers, buildLogFile } = input;
+  let { sourceDir } = input;
 
-  ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
+  let fileInfo = getFileInfo(deps, sourceDir, buildLogFile);
 
-  if (!validator(ctx.fileInfo, browsers).valid && ctx.buildLogFile) {
+  if (!validator(fileInfo, browsers).valid && buildLogFile) {
     try {
-      const buildLog = readFileSync(ctx.buildLogFile, 'utf8');
+      const buildLog = readFileSync(buildLogFile, 'utf8');
       const outputDirectory = getOutputDirectory(buildLog);
-      if (outputDirectory && outputDirectory !== ctx.sourceDir) {
-        ctx.log.warn(deviatingOutputDirectory(ctx, outputDirectory));
-        ctx.sourceDir = outputDirectory;
-        ctx.fileInfo = getFileInfo(ctx, ctx.sourceDir);
+      if (outputDirectory && outputDirectory !== sourceDir) {
+        deps.log.warn(
+          deviatingOutputDirectory(
+            { sourceDir, options: deps.options, packageJson: deps.packageJson },
+            outputDirectory
+          )
+        );
+        sourceDir = outputDirectory;
+        fileInfo = getFileInfo(deps, sourceDir, buildLogFile);
       }
     } catch (err) {
-      ctx.log.debug(err);
+      deps.log.debug(err);
     }
   }
 
-  const validatorResult = validator(ctx.fileInfo, browsers);
+  const validatorResult = validator(fileInfo, browsers);
   if (!validatorResult.valid) {
     throw new Error(
-      ctx.isReactNativeApp
-        ? invalidReactNative(ctx, validatorResult.missingFiles).output
-        : invalid(ctx).output
+      input.isReactNativeApp
+        ? invalidReactNative({ sourceDir }, validatorResult.missingFiles).output
+        : invalid({ sourceDir, buildLogFile, options: deps.options }).output
     );
   }
+
+  return { fileInfo, sourceDir };
 }

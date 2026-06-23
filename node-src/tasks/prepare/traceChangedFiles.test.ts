@@ -24,7 +24,18 @@ const accessMock = vi.mocked(access);
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
-const http = { fetch: vi.fn() };
+
+const deps = () => ({ log, options: {}, report: vi.fn() }) as any;
+
+const turboSnapContext = () =>
+  ({
+    env: environment,
+    log,
+    options: {},
+    fileInfo: { statsPath: '/static/preview-stats.json' },
+    git: { changedFiles: ['./example.js'] },
+    turboSnap: {},
+  }) as any;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -36,27 +47,17 @@ describe('traceChangedFiles', () => {
     accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(null)));
   });
 
-  it('sets onlyStoryFiles on context', async () => {
-    const deps = { 123: ['./example.stories.js'] };
-    traceChangedFilesTurbosnap.mockResolvedValue(deps);
+  it('returns onlyStoryFiles', async () => {
+    const traced = { 123: ['./example.stories.js'] };
+    traceChangedFilesTurbosnap.mockResolvedValue(traced);
 
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
+    const result = await traceChangedFiles(deps(), { turboSnapContext: turboSnapContext() });
 
-    expect(ctx.onlyStoryFiles).toStrictEqual(Object.keys(deps));
+    expect(result.onlyStoryFiles).toStrictEqual(Object.keys(traced));
   });
 
-  it('escapes special characters on context', async () => {
-    const deps = {
+  it('escapes special characters', async () => {
+    const traced = {
       './$example-new.stories.js': ['./$example-new.stories.js'],
       './+example-new.stories.js': ['./+example-new.stories.js'],
       './example-(new).stories.js': ['./example-(new).stories.js'],
@@ -65,21 +66,11 @@ describe('traceChangedFiles', () => {
         '[./example/[account]/[id]/[unit]/language/example.stories.tsx]',
       ],
     };
-    traceChangedFilesTurbosnap.mockResolvedValue(deps);
+    traceChangedFilesTurbosnap.mockResolvedValue(traced);
 
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      options: {},
-      sourceDir: '/static/',
-      fileInfo: { statsPath: '/static/preview-stats.json' },
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
-    await traceChangedFiles(ctx, {} as any);
+    const result = await traceChangedFiles(deps(), { turboSnapContext: turboSnapContext() });
 
-    expect(ctx.onlyStoryFiles).toStrictEqual([
+    expect(result.onlyStoryFiles).toStrictEqual([
       String.raw`./\$example-new.stories.js`,
       String.raw`./\+example-new.stories.js`,
       String.raw`./example-\(new\).stories.js`,
