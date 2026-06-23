@@ -10,7 +10,6 @@ vi.mock('../../lib/getFileHashes', () => ({
 
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
-const http = { fetch: vi.fn() };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -18,30 +17,33 @@ afterEach(() => {
 });
 
 describe('calculateFileHashes', () => {
-  it('sets hashes on context.fileInfo', async () => {
-    const fileInfo = {
-      lengths: [
-        { knownAs: 'iframe.html', contentLength: 42 },
-        { knownAs: 'index.html', contentLength: 42 },
-      ],
-      paths: ['iframe.html', 'index.html'],
-      total: 84,
-    };
-    const ctx = {
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: { fileHashing: true },
-      fileInfo,
-      announcedBuild: { id: '1' },
-    } as any;
+  const fileInfo = {
+    lengths: [
+      { knownAs: 'iframe.html', contentLength: 42 },
+      { knownAs: 'index.html', contentLength: 42 },
+    ],
+    paths: ['iframe.html', 'index.html'],
+    total: 84,
+  };
 
-    await calculateFileHashes(ctx, {} as any);
+  it('returns hashes for the file paths', async () => {
+    const { hashes } = await calculateFileHashes(
+      { log, env: environment, options: { fileHashing: true }, report: vi.fn() } as any,
+      { fileInfo: fileInfo as any, sourceDir: '/static/' }
+    );
 
-    expect(ctx.fileInfo.hashes).toMatchObject({
+    expect(hashes).toMatchObject({
       'iframe.html': 'hash',
       'index.html': 'hash',
     });
+  });
+
+  it('returns nothing when file hashing is disabled', async () => {
+    const { hashes } = await calculateFileHashes(
+      { log, env: environment, options: { fileHashing: false }, report: vi.fn() } as any,
+      { fileInfo: fileInfo as any, sourceDir: '/static/' }
+    );
+
+    expect(hashes).toBeUndefined();
   });
 });
