@@ -30,7 +30,10 @@ import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
-import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
+import {
+  removeChromaticDiagnostics,
+  writeChromaticDiagnostics,
+} from './lib/writeChromaticDiagnostics';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -227,13 +230,26 @@ export async function runAll(initialContext: InitialContext) {
     await uploadMetadataFiles(ctx);
   }
 
-  // Clean up the temporary log file now that it has been uploaded.
-  if (ctx.options.logFile && !ctx.options.persistLogFile) {
-    ctx.log.removeLogFile();
-  }
+  cleanupTemporaryFiles(ctx);
 
   if (!isE2EBuild(ctx.options) && [0, 1].includes(ctx.exitCode)) {
     await checkPackageJson(ctx);
+  }
+}
+
+/**
+ * Remove the log and diagnostics files we wrote during the run, unless they were explicitly
+ * configured (or persisted via --debug). This avoids leaving behind files we only created to
+ * upload as metadata.
+ *
+ * @param ctx The context set when executing the CLI.
+ */
+function cleanupTemporaryFiles(ctx: Context) {
+  if (ctx.options.logFile && !ctx.options.persistLogFile) {
+    ctx.log.removeLogFile();
+  }
+  if (ctx.options.diagnosticsFile && !ctx.options.persistDiagnosticsFile) {
+    removeChromaticDiagnostics(ctx);
   }
 }
 

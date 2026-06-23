@@ -249,14 +249,22 @@ describe('getOptions', () => {
     expect(getOptions(ctx)).toMatchObject({ logFile: 'config.log' });
   });
 
-  it('marks an explicitly configured log file as persistent, but not the default', () => {
+  it('does not persist the log file when it is not explicitly configured', () => {
     // The default log file is temporary (cleaned up after the run)
     expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       logFile: 'chromatic.log',
       persistLogFile: false,
     });
 
-    // An explicit path is persistent (kept after the run)
+    // Disabling the log file leaves nothing to persist
+    expect(getOptions(getContext(['--project-token', 'cli-code', '--no-log-file']))).toMatchObject({
+      logFile: false,
+      persistLogFile: false,
+    });
+  });
+
+  it('persists an explicitly configured log file', () => {
+    // An explicit path is kept after the run
     expect(
       getOptions(getContext(['--project-token', 'cli-code', '--log-file', 'custom.log']))
     ).toMatchObject({
@@ -264,7 +272,7 @@ describe('getOptions', () => {
       persistLogFile: true,
     });
 
-    // A path from the config file is persistent
+    // A path from the config file is kept
     expect(
       getOptions({
         ...getContext(['--project-token', 'cli-code']),
@@ -274,11 +282,50 @@ describe('getOptions', () => {
       logFile: 'config.log',
       persistLogFile: true,
     });
+  });
 
-    // Disabling the log file leaves nothing to persist
-    expect(getOptions(getContext(['--project-token', 'cli-code', '--no-log-file']))).toMatchObject({
-      logFile: false,
-      persistLogFile: false,
+  it('does not persist the diagnostics file when it is not explicitly configured', () => {
+    // No diagnostics file is enabled by default, so there is nothing to persist
+    expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
+      persistDiagnosticsFile: false,
+    });
+
+    // The diagnostics file implicitly enabled by --upload-metadata is temporary
+    expect(
+      getOptions(getContext(['--project-token', 'cli-code', '--upload-metadata']))
+    ).toMatchObject({
+      diagnosticsFile: 'chromatic-diagnostics.json',
+      persistDiagnosticsFile: false,
+    });
+  });
+
+  it('persists an explicitly configured diagnostics file', () => {
+    // An explicit path is kept after the run
+    expect(
+      getOptions(getContext(['--project-token', 'cli-code', '--diagnostics-file', 'custom.json']))
+    ).toMatchObject({
+      diagnosticsFile: 'custom.json',
+      persistDiagnosticsFile: true,
+    });
+
+    // A path from the config file is kept
+    expect(
+      getOptions({
+        ...getContext(['--project-token', 'cli-code']),
+        configuration: { diagnosticsFile: 'config.json' },
+      })
+    ).toMatchObject({
+      diagnosticsFile: 'config.json',
+      persistDiagnosticsFile: true,
+    });
+  });
+
+  it('keeps the default log and diagnostics files when --debug is set', () => {
+    expect(getOptions(getContext(['--project-token', 'cli-code', '--debug']))).toMatchObject({
+      logFile: 'chromatic.log',
+      persistLogFile: true,
+      diagnosticsFile: 'chromatic-diagnostics.json',
+      persistDiagnosticsFile: true,
     });
   });
 

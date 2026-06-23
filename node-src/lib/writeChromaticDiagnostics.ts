@@ -1,4 +1,4 @@
-import { mkdirSync } from 'fs';
+import { mkdirSync, rmSync } from 'fs';
 import jsonfile from 'jsonfile';
 import path from 'path';
 
@@ -24,6 +24,24 @@ export async function writeChromaticDiagnostics(ctx: Context) {
 
     await writeFile(ctx.options.diagnosticsFile, getDiagnostics(ctx), { spaces: 2 });
     ctx.log.info(wroteReport(ctx.options.diagnosticsFile, 'Chromatic diagnostics'));
+  } catch (error) {
+    ctx.log.error(error);
+  }
+}
+
+/**
+ * Remove the diagnostics file we wrote during the run. Used to clean up a diagnostics file that
+ * was enabled implicitly (e.g. for metadata upload) rather than requested by the user.
+ *
+ * @param ctx The context set when executing the CLI.
+ */
+export function removeChromaticDiagnostics(ctx: Context) {
+  if (!ctx.options.diagnosticsFile) {
+    return;
+  }
+
+  try {
+    rmSync(ctx.options.diagnosticsFile, { force: true });
   } catch (error) {
     ctx.log.error(error);
   }

@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import dns from 'dns';
 import { execa as execaDefault, parseCommandString } from 'execa';
+import { rmSync } from 'fs';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
@@ -289,6 +290,7 @@ vi.mock('fs', async (importOriginal) => {
   return {
     pathExists: async () => true,
     mkdirSync: vi.fn(),
+    rmSync: vi.fn(),
     readFileSync: originalModule.readFileSync,
     writeFileSync: vi.fn(),
     createReadStream: vi.fn(() => mockStatsFile),
@@ -880,6 +882,32 @@ describe('log file cleanup', () => {
       '--log-file=custom.log',
     ]);
     await runAll(ctx);
+    expect(ctx.testLogger.removeLogFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('diagnostics file cleanup', () => {
+  it('removes the temporary diagnostics file after uploading metadata', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--upload-metadata', '--only-changed']);
+    await runAll(ctx);
+    expect(rmSync).toHaveBeenCalledWith('chromatic-diagnostics.json', { force: true });
+  });
+
+  it('keeps an explicitly configured diagnostics file after uploading metadata', async () => {
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--upload-metadata',
+      '--only-changed',
+      '--diagnostics-file=custom.json',
+    ]);
+    await runAll(ctx);
+    expect(rmSync).not.toHaveBeenCalled();
+  });
+
+  it('keeps the default log and diagnostics files when --debug is set', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--debug', '--only-changed']);
+    await runAll(ctx);
+    expect(rmSync).not.toHaveBeenCalled();
     expect(ctx.testLogger.removeLogFile).not.toHaveBeenCalled();
   });
 });

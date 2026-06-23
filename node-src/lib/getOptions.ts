@@ -207,11 +207,16 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
   }
 
   // Write a log file by default. A custom path (flag or config) is respected; disable with
-  // `--no-log-file`. An explicitly configured path is persistent and kept; the default is
-  // temporary and cleaned up after the run.
-  partialOptions.persistLogFile = typeof partialOptions.logFile === 'string';
+  // `--no-log-file`. An explicitly configured path (or `--debug`) is persistent and kept once the
+  // run is completed. The default is temporary and cleaned up after the run.
+  partialOptions.persistLogFile =
+    typeof partialOptions.logFile === 'string' || !!partialOptions.debug;
   partialOptions.logFile ??= DEFAULT_LOG_FILE;
 
+  // The diagnostics file follows the same persistence rules above but with `--diagnostics-file`
+  // instead.
+  partialOptions.persistDiagnosticsFile =
+    typeof partialOptions.diagnosticsFile === 'string' || !!partialOptions.debug;
   if (partialOptions.debug || partialOptions.uploadMetadata) {
     // Implicitly enable the diagnostics file unless it's already enabled or explicitly disabled.
     partialOptions.diagnosticsFile = partialOptions.diagnosticsFile ?? DEFAULT_DIAGNOSTICS_FILE;
