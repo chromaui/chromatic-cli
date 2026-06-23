@@ -1,4 +1,4 @@
-import { createWriteStream, rm } from 'fs';
+import { createWriteStream, rmSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
 
 import { createLogger } from './log';
@@ -10,6 +10,7 @@ vi.mock('fs', async (importOriginal) => {
     createWriteStream: vi.fn(),
     mkdirSync: vi.fn(),
     rm: vi.fn((_path: string, _options: unknown, callback: (err: null) => void) => callback(null)),
+    rmSync: vi.fn(),
   };
 });
 
@@ -224,13 +225,10 @@ describe('log file', () => {
     const logger = createLogger();
     logger.setLogFile('chromatic.log');
 
-    // setLogFile deletes any pre-existing file during initialization; only assert the removal
-    // triggered by removeLogFile itself.
-    vi.mocked(rm).mockClear();
     logger.removeLogFile();
 
     expect(end).toHaveBeenCalled();
-    expect(rm).toHaveBeenCalledWith('chromatic.log', { force: true }, expect.any(Function));
+    expect(rmSync).toHaveBeenCalledWith('chromatic.log', { force: true });
   });
 });
 

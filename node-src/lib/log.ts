@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import debug from 'debug';
-import { createWriteStream, mkdirSync, rm } from 'fs';
+import { createWriteStream, mkdirSync, rm, rmSync } from 'fs';
 import path from 'path';
 import stripAnsi from 'strip-ansi';
 import { format } from 'util';
@@ -108,9 +108,11 @@ const fileLogger = {
   remove(onError: LogFunction) {
     this.disable();
     if (this.filepath) {
-      rm(this.filepath, { force: true }, (err) => {
-        if (err) onError(err);
-      });
+      try {
+        rmSync(this.filepath, { force: true });
+      } catch (err) {
+        onError(err);
+      }
       this.filepath = undefined;
     }
   },
