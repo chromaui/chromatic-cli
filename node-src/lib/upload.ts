@@ -230,11 +230,15 @@ export async function uploadBuild(
 
       // Ensure we're preparing the skipped build so all build stats carry over from its
       // ancestor
-      await ctx.client.runQuery(PrepareSkippedBuildMutation, {
-        buildId: uploadBuild.build.id,
-        runtimeSpecs: [], // Required by the API contract but we won't have any runtime specs
-        skipped: true,
-      });
+      await ctx.client.runQuery(
+        PrepareSkippedBuildMutation,
+        {
+          buildId: uploadBuild.build.id,
+          runtimeSpecs: [], // Required by the API contract but we won't have any runtime specs
+          skipped: true,
+        },
+        { retries: 3 }
+      );
 
       ctx.skip = true;
       return;

@@ -428,11 +428,15 @@ describe('uploadStorybook', () => {
     } as any;
     await uploadStorybook(ctx, {} as any);
 
-    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/PrepareBuild/), {
-      buildId: '2',
-      runtimeSpecs: [],
-      skipped: true,
-    });
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/PrepareBuild/),
+      {
+        buildId: '2',
+        runtimeSpecs: [],
+        skipped: true,
+      },
+      { retries: 3 }
+    );
   });
 
   it('does not prepare the build when it is not skipped', async () => {
