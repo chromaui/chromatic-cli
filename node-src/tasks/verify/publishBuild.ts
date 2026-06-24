@@ -1,5 +1,5 @@
 import { exitCodes, setExitCode } from '../../lib/setExitCode';
-import { Context } from '../../types';
+import { Context, TurboSnapStatus } from '../../types';
 import { publishFailed } from '../../ui/tasks/verify';
 
 const PublishBuildMutation = `
@@ -26,7 +26,7 @@ export const publishBuild = async (ctx: Context) => {
   const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
 
   let turboSnapBailReason;
-  let turboSnapStatus = 'UNUSED';
+  let turboSnapStatus: TurboSnapStatus = 'UNUSED';
   if (turboSnap) {
     turboSnapBailReason = turboSnap.bailReason;
     turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';

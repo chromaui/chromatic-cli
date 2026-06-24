@@ -1,4 +1,4 @@
-import { Context, FileDesc, TargetInfo } from '../types';
+import { Context, FileDesc, TargetInfo, TurboSnapStatus } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 import { uploadFailed } from '../ui/messages/errors/uploadFailed';
@@ -167,7 +167,7 @@ export async function uploadBuild(
   ctx.uploadedBytes = 0;
   ctx.uploadedFiles = 0;
 
-  let turboSnapStatus = 'UNUSED';
+  let turboSnapStatus: TurboSnapStatus = 'UNUSED';
   if (ctx.turboSnap) {
     turboSnapStatus = ctx.turboSnap.bailReason ? 'BAILED' : 'APPLIED';
   }

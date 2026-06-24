@@ -566,4 +566,7 @@ export interface TurboSnap {
   bailReason?: TurboSnapBailReason;
 }
 
+// Mirrors the TurboSnap status values defined by the backend.
+export type TurboSnapStatus = 'APPLIED' | 'BAILED' | 'UNAVAILABLE' | 'UNUSED';
+
 export { type Configuration } from './lib/getConfiguration';
