@@ -228,7 +228,9 @@ export async function uploadBuild(
     // files were affected). In that case, we don't need to upload anything and can skip the
     // remainder of the build tasks.
     if (uploadBuild.build?.status === 'SKIPPED') {
-      ctx.log.debug(`Build ${uploadBuild.build.id} skipped TurboSnap, not uploading build files`);
+      ctx.log.debug(
+        `Build ${uploadBuild.build.id} skipped via TurboSnap, not uploading build files`
+      );
 
       // Ensure we're preparing the skipped build so all build stats carry over from its
       // ancestor
