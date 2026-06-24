@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+
 import { Context, FileDesc, TargetInfo, TurboSnapStatus } from '../types';
 import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded';
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
@@ -230,15 +232,23 @@ export async function uploadBuild(
 
       // Ensure we're preparing the skipped build so all build stats carry over from its
       // ancestor
-      await ctx.client.runQuery(
-        PrepareSkippedBuildMutation,
-        {
-          buildId: uploadBuild.build.id,
-          runtimeSpecs: [], // Required by the API contract but we won't have any runtime specs
-          skipped: true,
-        },
-        { retries: 3 }
-      );
+      await ctx.client
+        .runQuery(
+          PrepareSkippedBuildMutation,
+          {
+            buildId: uploadBuild.build.id,
+            runtimeSpecs: [], // Required by the API contract but we won't have any runtime specs
+            skipped: true,
+          },
+          { retries: 3 }
+        )
+        .catch((err) => {
+          ctx.log.error(
+            `Failed to prepare skipped build ${uploadBuild.build?.id}, continuing`,
+            err
+          );
+          Sentry.captureException(err);
+        });
 
       ctx.skip = true;
       return;

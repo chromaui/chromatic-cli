@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import * as Sentry from '@sentry/node';
 import { FormData } from 'formdata-node';
 import { createReadStream } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +9,7 @@ import TestLogger from '../lib/testLogger';
 import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
 import { finishUpload, uploadStorybook, waitForSentinels } from './upload';
 
+vi.mock('@sentry/node');
 vi.mock('form-data');
 vi.mock('fs');
 vi.mock('../lib/compress');
@@ -369,7 +371,7 @@ describe('uploadStorybook', () => {
 
   it('skips uploading and sets ctx.skip when the build is SKIPPED', async () => {
     const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({
+    client.runQuery.mockResolvedValue({
       uploadBuild: {
         build: { id: '2', status: 'SKIPPED' },
         userErrors: [],
@@ -402,7 +404,7 @@ describe('uploadStorybook', () => {
 
   it('prepares the skipped build so stats carry over from its ancestor', async () => {
     const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({
+    client.runQuery.mockResolvedValue({
       uploadBuild: {
         build: { id: '2', status: 'SKIPPED' },
         userErrors: [],
@@ -437,6 +439,45 @@ describe('uploadStorybook', () => {
       },
       { retries: 3 }
     );
+  });
+
+  it('still skips and reports to Sentry when preparing the skipped build fails', async () => {
+    const error = new Error('prepare failed');
+    const client = { runQuery: vi.fn() };
+    client.runQuery
+      .mockResolvedValueOnce({
+        uploadBuild: {
+          build: { id: '2', status: 'SKIPPED' },
+          userErrors: [],
+        },
+      })
+      .mockRejectedValueOnce(error);
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.skip).toBe(true);
+    expect(log.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to prepare skipped build 2'),
+      error
+    );
+    expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledWith(error);
+    expect(http.fetch).not.toHaveBeenCalled();
   });
 
   it('does not prepare the build when it is not skipped', async () => {
