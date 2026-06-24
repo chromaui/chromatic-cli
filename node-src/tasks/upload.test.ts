@@ -435,6 +435,53 @@ describe('uploadStorybook', () => {
     });
   });
 
+  it('does not prepare the build when it is not skipped', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.skip).toBeFalsy();
+    expect(client.runQuery).not.toHaveBeenCalledWith(
+      expect.stringMatching(/PrepareBuild/),
+      expect.anything()
+    );
+  });
+
   describe('finishUpload', () => {
     it('logs the build skipped message and skips the task when the build is SKIPPED', () => {
       const ctx = { skip: true, log, options: {} } as any;
