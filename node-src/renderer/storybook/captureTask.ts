@@ -49,6 +49,12 @@ export function captureTask(
     withOneTick(() => drive(makeRenderer(sink), state, startingState));
   } finally {
     process.stdout.columns = previousColumns;
+    // In-progress (`pending`/`updating`) frames never reach `succeed`/`fail`, so the spinner/progress
+    // renderer's `clear()` never runs to detach the readline Clack's `start()` opened on `process.stdin`.
+    // That lingering stdin handle keeps the `build-storybook` process's event loop alive, so the build
+    // hangs to the CLI's 600s timeout and reports a false failure. `unref` lets the process exit while
+    // the handle is still attached. The capture never reads stdin, so this is safe.
+    process.stdin.unref();
     // `process.env.CI = undefined` would coerce to the string "undefined" (truthy), so unset
     // explicitly when CI was absent to start with.
     if (previousCI === undefined) delete process.env.CI;
