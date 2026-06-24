@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { stat, writeFileSync } from 'fs';
 import path from 'path';
 import { withFile } from 'tmp-promise';
@@ -25,51 +26,58 @@ export async function uploadMetadataFiles(ctx: Context) {
     return;
   }
 
-  return withPausedLog(ctx, async () => {
-    const metadataFiles = [
-      ctx.options.logFile,
-      ctx.options.diagnosticsFile,
-      ctx.options.storybookLogFile,
-      await findStorybookConfigFile(ctx.options.storybookConfigDir, /^main\.[jt]sx?$/).catch(
-        () => undefined
-      ),
-      await findStorybookConfigFile(ctx.options.storybookConfigDir, /^preview\.[jt]sx?$/).catch(
-        () => undefined
-      ),
-      ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
-    ].filter((m): m is string => !!m);
+  try {
+    return await withPausedLog(ctx, async () => {
+      const metadataFiles = [
+        ctx.options.logFile,
+        ctx.options.diagnosticsFile,
+        ctx.options.storybookLogFile,
+        await findStorybookConfigFile(ctx.options.storybookConfigDir, /^main\.[jt]sx?$/).catch(
+          () => undefined
+        ),
+        await findStorybookConfigFile(ctx.options.storybookConfigDir, /^preview\.[jt]sx?$/).catch(
+          () => undefined
+        ),
+        ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
+      ].filter((m): m is string => !!m);
 
-    const unfilteredFiles = await Promise.all(
-      metadataFiles.map(async (localPath) => {
-        const contentLength = await fileSize(localPath);
-        const targetPath = `.chromatic/${path.basename(localPath)}`;
-        return contentLength && { contentLength, localPath, targetPath };
-      })
-    );
-    const files = unfilteredFiles
-      .filter((f): f is FileDesc => !!f)
-      .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }));
+      const unfilteredFiles = await Promise.all(
+        metadataFiles.map(async (localPath) => {
+          const contentLength = await fileSize(localPath);
+          const targetPath = `.chromatic/${path.basename(localPath)}`;
+          return contentLength && { contentLength, localPath, targetPath };
+        })
+      );
+      const files = unfilteredFiles
+        .filter((f): f is FileDesc => !!f)
+        .sort((a, b) => a.targetPath.localeCompare(b.targetPath, 'en', { numeric: true }));
 
-    if (files.length === 0) {
-      ctx.log.warn('No metadata files found, skipping metadata upload.');
-      return;
-    }
+      if (files.length === 0) {
+        ctx.log.warn('No metadata files found, skipping metadata upload.');
+        return;
+      }
 
-    await withFile(async ({ path }) => {
-      const html = metadataHtml(ctx, files);
-      writeFileSync(path, html);
-      files.push({
-        contentLength: html.length,
-        localPath: path,
-        targetPath: '.chromatic/index.html',
+      await withFile(async ({ path }) => {
+        const html = metadataHtml(ctx, files);
+        writeFileSync(path, html);
+        files.push({
+          contentLength: html.length,
+          localPath: path,
+          targetPath: '.chromatic/index.html',
+        });
+
+        const directoryUrl = `${ctx.build.storybookUrl}.chromatic/`;
+        ctx.log.info(uploadingMetadata(directoryUrl, files));
+
+        await uploadMetadata(ctx, files);
       });
-
-      const directoryUrl = `${ctx.build.storybookUrl}.chromatic/`;
-      ctx.log.info(uploadingMetadata(directoryUrl, files));
-
-      await uploadMetadata(ctx, files);
     });
-  });
+  } catch (err) {
+    // Log the error but don't rethrow to fail upwards. This step is a best-effort stage and
+    // shouldn't impact the build pipeline.
+    ctx.log.debug('Failed to upload metadata files to Chromatic', err);
+    Sentry.captureException(err, { fingerprint: ['UploadMetadataFilesError'] });
+  }
 }
 
 /**

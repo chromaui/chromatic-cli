@@ -202,7 +202,7 @@ async function run() {
         storybookLogFile: maybe(storybookLogFile),
         traceChanged: maybe(traceChanged),
         untraced: maybe(untraced),
-        uploadMetadata: maybe(uploadMetadata, false),
+        uploadMetadata: maybe(uploadMetadata),
         vitest: maybe(vitest),
         zip: maybe(zip, false),
         junitReport: maybe(junitReport),
