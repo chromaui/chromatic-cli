@@ -1,3 +1,17 @@
+# v17.6.0 (Wed Jun 24 2026)
+
+#### 🚀 Enhancement
+
+- Automatically upload metadata files on TurboSnap bails [#1400](https://github.com/chromaui/chromatic-cli/pull/1400) ([@codykaup](https://github.com/codykaup))
+- Log untraced files and its matching glob [#1403](https://github.com/chromaui/chromatic-cli/pull/1403) ([@codykaup](https://github.com/codykaup))
+- Show full trace path to bail file reason [#1401](https://github.com/chromaui/chromatic-cli/pull/1401) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.5.0 (Wed Jun 17 2026)
 
 #### 🚀 Enhancement
