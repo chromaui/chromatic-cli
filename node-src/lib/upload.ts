@@ -46,6 +46,11 @@ const UploadBuildMutation = `
       build {
         id
         status
+        ancestorBuild {
+          status
+          webUrl
+          snapshotCount
+        }
       }
       userErrors {
         __typename
@@ -85,6 +90,11 @@ interface UploadBuildMutationResult {
     build?: {
       id: string;
       status: string;
+      ancestorBuild?: {
+        status: string;
+        webUrl: string;
+        snapshotCount: number;
+      };
     };
     userErrors: (
       | {
@@ -252,6 +262,7 @@ export async function uploadBuild(
           Sentry.captureException(err);
         });
 
+      ctx.ancestorBuild = uploadBuild.build.ancestorBuild;
       ctx.skip = true;
       return;
     }
