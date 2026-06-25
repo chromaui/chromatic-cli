@@ -1,3 +1,15 @@
+# v17.7.0 (Thu Jun 25 2026)
+
+#### 🚀 Enhancement
+
+- Skip upload, verify, and snapshot tasks when detecting no changes from TurboSnap [#1394](https://github.com/chromaui/chromatic-cli/pull/1394) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.6.0 (Wed Jun 24 2026)
 
 #### 🚀 Enhancement
