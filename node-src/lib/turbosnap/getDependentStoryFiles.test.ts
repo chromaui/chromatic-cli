@@ -838,6 +838,10 @@ describe('getDependentStoryFiles', () => {
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result).toEqual({});
+    expect(ctx.untracedFiles).toEqual([
+      { filepath: 'src/stories/Button.jsx', glob: '**/stories/**' },
+      { filepath: 'src/stories/Page.jsx', glob: '**/stories/**' },
+    ]);
   });
 
   it.each(['./src/foo.js', './src/foo.js + 1 module', './src/foo.js + 2 modules'])(

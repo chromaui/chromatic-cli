@@ -71,6 +71,11 @@ export interface Options extends Configuration {
 
   configFile?: Flags['configFile'];
   logFile?: Flags['logFile'];
+  /**
+   * Whether the log file should be kept after the run (true when a path was explicitly
+   * configured or --debug is set).
+   */
+  persistLogFile?: boolean;
   logLevel?: Flags['logLevel'];
   logPrefix?: Flags['logPrefix'];
   onlyChanged: boolean | string;
@@ -87,6 +92,11 @@ export interface Options extends Configuration {
   forceRebuild: boolean | string;
   debug: boolean;
   diagnosticsFile?: Flags['diagnosticsFile'];
+  /**
+   * Whether the diagnostics file should be kept after the run (true when a path was explicitly
+   * configured or --debug is set).
+   */
+  persistDiagnosticsFile?: boolean;
   fileHashing: Flags['fileHashing'];
   interactive: boolean;
   junitReport?: Flags['junitReport'];
@@ -454,7 +464,7 @@ export interface Context {
   turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
-  untracedFiles?: string[];
+  untracedFiles?: { filepath: string; glob: string }[];
   rebuildForBuildId?: string;
 }
 

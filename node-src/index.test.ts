@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import dns from 'dns';
 import { execa as execaDefault, parseCommandString } from 'execa';
+import { rmSync } from 'fs';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
@@ -8,7 +9,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { getGitInfo, run, runAll } from '.';
+import { getGitInfo, run, runAll, shouldUploadMetadata } from '.';
 import * as git from './git/git';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
@@ -289,6 +290,7 @@ vi.mock('fs', async (importOriginal) => {
   return {
     pathExists: async () => true,
     mkdirSync: vi.fn(),
+    rmSync: vi.fn(),
     readFileSync: originalModule.readFileSync,
     writeFileSync: vi.fn(),
     createReadStream: vi.fn(() => mockStatsFile),
@@ -863,6 +865,86 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
       },
     ])
   );
+});
+
+describe('log file cleanup', () => {
+  it('removes the temporary log file after uploading metadata', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--upload-metadata', '--only-changed']);
+    await runAll(ctx);
+    expect(ctx.testLogger.removeLogFile).toHaveBeenCalled();
+  });
+
+  it('keeps an explicitly configured log file after uploading metadata', async () => {
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--upload-metadata',
+      '--only-changed',
+      '--log-file=custom.log',
+    ]);
+    await runAll(ctx);
+    expect(ctx.testLogger.removeLogFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('diagnostics file cleanup', () => {
+  it('removes the temporary diagnostics file after uploading metadata', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--upload-metadata', '--only-changed']);
+    await runAll(ctx);
+    expect(rmSync).toHaveBeenCalledWith('chromatic-diagnostics.json', { force: true });
+  });
+
+  it('keeps an explicitly configured diagnostics file after uploading metadata', async () => {
+    const ctx = getContext([
+      '--project-token=asdf1234',
+      '--upload-metadata',
+      '--only-changed',
+      '--diagnostics-file=custom.json',
+    ]);
+    await runAll(ctx);
+    expect(rmSync).not.toHaveBeenCalled();
+  });
+
+  it('keeps the default log and diagnostics files when --debug is set', async () => {
+    const ctx = getContext(['--project-token=asdf1234', '--debug', '--only-changed']);
+    await runAll(ctx);
+    expect(rmSync).not.toHaveBeenCalled();
+    expect(ctx.testLogger.removeLogFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('shouldUploadMetadata', () => {
+  it('uploads when --upload-metadata is explicitly enabled', () => {
+    const ctx = { options: { uploadMetadata: true }, turboSnap: undefined } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('does not upload when --upload-metadata is explicitly disabled, even if TurboSnap is requested', () => {
+    const ctx = {
+      options: { uploadMetadata: false },
+      turboSnap: {},
+    } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(false);
+  });
+
+  it('uploads by default when TurboSnap is requested and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: {} } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('uploads by default when TurboSnap bailed and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: { bailReason: { rebuild: true } } } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('uploads by default when TurboSnap is unavailable and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: { unavailable: true } } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(true);
+  });
+
+  it('does not upload by default when TurboSnap is disabled and the flag is unset', () => {
+    const ctx = { options: {}, turboSnap: undefined } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(false);
+  });
 });
 
 describe('getGitInfo', () => {

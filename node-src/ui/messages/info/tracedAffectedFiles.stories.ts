@@ -85,6 +85,25 @@ export const TracedAffectedFilesExpanded = () =>
     }
   );
 
+export const TracedAffectedFilesExpandedUntraced = () =>
+  tracedAffectedFiles(
+    {
+      options: { traceChanged: 'expanded' },
+      turboSnap: { rootPath, tracedPaths: new Set(tracedPaths) },
+      untracedFiles: [
+        { filepath: 'src/stories/Button.jsx', glob: '**/stories/**' },
+        { filepath: 'src/stories/Page.jsx', glob: '**/stories/**' },
+        { filepath: 'package.json', glob: '**/package.json' },
+      ],
+    } as any,
+    {
+      changedFiles: ['src/app/dashboard/index.ts'],
+      affectedModules,
+      modulesByName,
+      normalize: (f) => f,
+    }
+  );
+
 export const TracedAffectedFilesExpandedBailed = () =>
   tracedAffectedFiles(
     {
