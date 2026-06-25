@@ -14,6 +14,7 @@ import {
 import { findChangedDependencies as findChangedDependenciesDep } from './findChangedDependencies';
 import { findChangedPackageFiles as findChangedPackageFilesDep } from './findChangedPackageFiles';
 import { getDependentStoryFiles as getDependentStoryFilesDep } from './getDependentStoryFiles';
+import { getPackageFilesInBuild as getPackageFilesInBuildDep } from './getPackageFilesInBuild';
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(() => 'sentry-event-id'),
@@ -28,6 +29,7 @@ vi.mock('./findChangedDependencies', async (importOriginal) => {
 });
 vi.mock('./findChangedPackageFiles');
 vi.mock('./getDependentStoryFiles');
+vi.mock('./getPackageFilesInBuild');
 vi.mock('./classifyBailRootCause');
 vi.mock('../../tasks/readStatsFile', () => ({
   readStatsFile: () =>
@@ -44,6 +46,7 @@ vi.mock('../../tasks/readStatsFile', () => ({
 const getDependentStoryFiles = vi.mocked(getDependentStoryFilesDep);
 const findChangedPackageFiles = vi.mocked(findChangedPackageFilesDep);
 const findChangedDependencies = vi.mocked(findChangedDependenciesDep);
+const getPackageFilesInBuild = vi.mocked(getPackageFilesInBuildDep);
 const classifyTagsFromError = vi.mocked(classifyTagsFromErrorDep);
 const accessMock = vi.mocked(access);
 const captureException = vi.mocked(Sentry.captureException);
@@ -145,6 +148,7 @@ describe('traceChangedFiles', () => {
     it(`bails on package.json changes and tags bailReason as ${name}`, async () => {
       findChangedDependencies.mockRejectedValue(error);
       findChangedPackageFiles.mockResolvedValue(['./package.json']);
+      getPackageFilesInBuild.mockReturnValue(['./package.json']);
       classifyTagsFromError.mockImplementation(async (_deps, err) =>
         err instanceof BaselineCheckoutFailedError
           ? { baseline_failure_kind: 'baselineManifestMoved' }
@@ -242,6 +246,37 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(onlyStoryFiles).toStrictEqual(deps);
     expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
+  });
+
+  it('does not bail when changed package files are not part of the Storybook build', async () => {
+    const deps = { 123: ['./example.stories.js'] };
+    findChangedDependencies.mockRejectedValue(new BaselineCheckoutFailedError('abc:package.json'));
+    findChangedPackageFiles.mockResolvedValue(['packages/unrelated/package.json']);
+    // The changed package.json lives in a monorepo package that isn't part of the build.
+    getPackageFilesInBuild.mockReturnValue([]);
+    getDependentStoryFiles.mockResolvedValue(deps);
+
+    const packageMetadataChanges = [
+      { changedFiles: ['packages/unrelated/package.json'], commit: 'abcdef' },
+    ];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: {
+        changedFiles: ['./example.js', 'packages/unrelated/package.json'],
+        packageMetadataChanges,
+      },
+      turboSnap: {},
+    } as any;
+    const onlyStoryFiles = await traceChangedFiles(ctx);
+
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(onlyStoryFiles).toStrictEqual(deps);
+    expect(captureException).not.toHaveBeenCalled();
   });
 
   it('does not set bailReason or capture to Sentry when findChangedDependencies fails but findChangedPackageFiles is empty', async () => {

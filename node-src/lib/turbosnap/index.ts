@@ -11,8 +11,9 @@ import { classifyTagsFromError } from './classifyBailRootCause';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
+import { getPackageFilesInBuild } from './getPackageFilesInBuild';
 
-// eslint-disable-next-line complexity
+// eslint-disable-next-line complexity, max-statements
 export const traceChangedFiles = async (ctx: Context) => {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
   if (!ctx.git.changedFiles) return;
@@ -33,6 +34,11 @@ export const traceChangedFiles = async (ctx: Context) => {
   let changedDependencyNames: void | string[] = [];
   let pendingError: unknown;
   let pendingPatch: Partial<ChangedPackageFilesBailReason> | undefined;
+  // Package files whose dependency changes we couldn't resolve from the lockfiles. We don't bail on
+  // these immediately because a changed (or newly added) package.json may belong to a monorepo
+  // package that isn't part of the Storybook build. Instead we defer the decision until we've read
+  // the stats file, then only bail if one of these files is actually relevant to the build.
+  let unresolvedPackageFiles: string[] = [];
   if (packageMetadataChanges?.length) {
     changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
       pendingError = err;
@@ -52,33 +58,44 @@ export const traceChangedFiles = async (ctx: Context) => {
       }
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
-
-      const changedPackageFiles = await findChangedPackageFiles(ctx, packageMetadataChanges);
-      if (changedPackageFiles.length > 0) {
-        // Capture original error from findChangedDependencies at the actual bail site. There could
-        // be times when findChangedDependencies fails but our fallback works. In those cases, we
-        // don't want to capture an error since we were able to recover and didn't bail.
-        if (pendingPatch && pendingError) {
-          pendingPatch.sentryEventId = captureBailException(pendingError, {
-            bailSubreason: pendingPatch.bailSubreason,
-            bailPath: 'findChangedDependencies',
-            additionalTags: await classifyTagsFromError(ctx, pendingError),
-          });
-        }
-
-        ctx.turboSnap.bailReason = {
-          changedPackageFiles,
-          ...pendingPatch,
-        };
-        ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-        return;
-      }
+      unresolvedPackageFiles = await findChangedPackageFiles(ctx, packageMetadataChanges);
     }
   }
 
   const stats = await readStatsFile(statsPath);
 
   await checkStorybookBaseDirectory(ctx, stats);
+
+  if (unresolvedPackageFiles.length > 0) {
+    // Only bail on package files that actually map to modules included in the Storybook build.
+    // Unrelated package files (e.g. an added package.json in a sibling monorepo package) are
+    // ignored so they don't take down the whole build.
+    const changedPackageFiles = getPackageFilesInBuild(ctx, stats, unresolvedPackageFiles);
+    if (changedPackageFiles.length > 0) {
+      // Capture original error from findChangedDependencies at the actual bail site. There could
+      // be times when findChangedDependencies fails but our fallback works. In those cases, we
+      // don't want to capture an error since we were able to recover and didn't bail.
+      if (pendingPatch && pendingError) {
+        pendingPatch.sentryEventId = captureBailException(pendingError, {
+          bailSubreason: pendingPatch.bailSubreason,
+          bailPath: 'findChangedDependencies',
+          additionalTags: await classifyTagsFromError(ctx, pendingError),
+        });
+      }
+
+      ctx.turboSnap.bailReason = {
+        changedPackageFiles,
+        ...pendingPatch,
+      };
+      ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
+      return;
+    }
+
+    ctx.log.debug(
+      { unresolvedPackageFiles },
+      'Ignoring changed package files that are not part of the Storybook build'
+    );
+  }
 
   return await getDependentStoryFiles(
     ctx,
