@@ -42,6 +42,8 @@ export interface TaskConfig<TInput, TOutput, TPartial = never> {
     success: (ctx: Context, output?: TOutput) => Task;
     partial?: (ctx: Context, partial: TPartial) => Task;
     failure?: (ctx: Context, error: Error) => Task;
+    // Rendered when `run` returns `skip-self`. Falls back to the pending state (reason as output).
+    skipped?: (ctx: Context) => Task;
   };
   extractInput: (ctx: Context) => TInput;
   run: TaskFunction<TInput, TOutput, Deps, TPartial>;
@@ -129,6 +131,7 @@ function makeReporter(ctx: Context, renderer: TaskRenderer): TaskReporter {
  * @param result The result of the called task.
  * @param renderer The renderer to drive.
  */
+// eslint-disable-next-line complexity
 async function applyResult<TInput, TOutput, TPartial>(
   ctx: Context,
   config: TaskConfig<TInput, TOutput, TPartial>,
@@ -156,10 +159,22 @@ async function applyResult<TInput, TOutput, TPartial>(
       return;
     }
     case 'skip': {
-      // Note we're using the pending transition here. The task succeeded, hence the `renderer.success` call,
-      // but didn't complete, so the messaging reflects pending.
-      renderer.succeed(config.transitions.pending(ctx));
+      // The task succeeded (hence `renderer.succeed`) but halted the pipeline rather than
+      // completing, so the messaging reflects pending. Render the skip `reason` as output (mirrors
+      // skip-self) so the frame explains why instead of showing a bare "Starting…" subtitle.
+      renderer.succeed({ ...config.transitions.pending(ctx), output: result.reason });
       ctx.skip = true;
+      return;
+    }
+    case 'skip-self': {
+      // The task skipped itself but the pipeline continues, so we do NOT set ctx.skip. Prefer an
+      // explicit `skipped` transition; otherwise fall back to the pending state with the reason.
+      const skipped = config.transitions.skipped?.(ctx) ?? {
+        ...config.transitions.pending(ctx),
+        output: result.reason,
+      };
+      ctx.title = skipped.title;
+      renderer.succeed(skipped);
       return;
     }
     default:

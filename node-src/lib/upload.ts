@@ -140,6 +140,13 @@ function filterBundleFilesByBrowser(files: FileDesc[], browsers: string[] = []):
   });
 }
 
+export interface UploadBuildResult {
+  sentinelUrls: string[];
+  uploadedBytes: number;
+  uploadedFiles: number;
+  skippedByTurboSnap?: boolean;
+}
+
 /**
  * Upload build files to Chromatic.
  *
@@ -151,7 +158,7 @@ function filterBundleFilesByBrowser(files: FileDesc[], browsers: string[] = []):
  * @param options.onComplete A callback for when the build upload completes.
  * @param options.onError A callback for when the build upload errors.
  *
- * @returns A promise that resolves when the build is uploaded to Chromatic.
+ * @returns The upload tallies.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
@@ -164,10 +171,10 @@ export async function uploadBuild(
     onComplete?: (uploadedBytes: number, uploadedFiles: number, sentinelUrls: string[]) => void;
     onError?: (error: Error, path?: string) => void;
   } = {}
-) {
-  ctx.sentinelUrls = [];
-  ctx.uploadedBytes = 0;
-  ctx.uploadedFiles = 0;
+): Promise<UploadBuildResult> {
+  const sentinelUrls: string[] = [];
+  let uploadedBytes = 0;
+  let uploadedFiles = 0;
 
   let turboSnapStatus: TurboSnapStatus = 'UNUSED';
   if (ctx.turboSnap) {
@@ -221,7 +228,8 @@ export async function uploadBuild(
           ctx.log.error(err.message);
         }
       }
-      return options.onError?.(new Error('Upload rejected due to user error'));
+      options.onError?.(new Error('Upload rejected due to user error'));
+      return { sentinelUrls, uploadedBytes, uploadedFiles };
     }
 
     // The index service may decide this build can be skipped (e.g. TurboSnap determined no story
@@ -232,8 +240,7 @@ export async function uploadBuild(
         `Build ${uploadBuild.build.id} skipped via TurboSnap, not uploading build files`
       );
 
-      // Ensure we're preparing the skipped build so all build stats carry over from its
-      // ancestor
+      // Ensure we're preparing the skipped build so all build stats carry over from its ancestor.
       await ctx.client
         .runQuery(
           PrepareSkippedBuildMutation,
@@ -252,11 +259,10 @@ export async function uploadBuild(
           Sentry.captureException(err);
         });
 
-      ctx.skip = true;
-      return;
+      return { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap: true };
     }
 
-    ctx.sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));
+    sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));
     targets.push(
       ...(uploadBuild.info?.targets.map((target) => {
         const file = batch.find((f) => f.targetPath === target.filePath);
@@ -273,7 +279,7 @@ export async function uploadBuild(
 
   if (targets.length === 0) {
     ctx.log.debug('No new files to upload, continuing');
-    return;
+    return { sentinelUrls, uploadedBytes, uploadedFiles };
   }
 
   // Uploading zero-length files is valid, so this might add up to 0.
@@ -287,9 +293,9 @@ export async function uploadBuild(
 
       const target = { ...zipTarget, contentLength: size, localPath: path };
       await uploadZip(ctx, target, (progress) => options.onProgress?.(progress, size));
-      ctx.uploadedBytes += size;
-      ctx.uploadedFiles += targets.length;
-      return;
+      uploadedBytes += size;
+      uploadedFiles += targets.length;
+      return { sentinelUrls, uploadedBytes, uploadedFiles };
     } catch (err) {
       ctx.log.debug({ err }, 'Error uploading zip, falling back to uploading individual files');
     }
@@ -297,13 +303,15 @@ export async function uploadBuild(
 
   try {
     await uploadFiles(ctx, targets, (progress) => options.onProgress?.(progress, totalBytes));
-    ctx.uploadedBytes += totalBytes;
-    ctx.uploadedFiles += targets.length;
+    uploadedBytes += totalBytes;
+    uploadedFiles += targets.length;
   } catch (err) {
     const target = targets.find((target) => target.localPath === err.message);
     if (target) ctx.log.error(uploadFailed({ target }, ctx.log.getLevel() === 'debug'));
-    return options.onError?.(err, target?.localPath);
+    options.onError?.(err, target?.localPath);
   }
+
+  return { sentinelUrls, uploadedBytes, uploadedFiles };
 }
 
 const UploadMetadataMutation = `

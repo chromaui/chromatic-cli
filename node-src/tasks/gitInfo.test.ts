@@ -28,10 +28,10 @@ import {
 
 // Helper that `expect`s a result kind and asserts on the kind to type narrow the result,
 // allowing later lines to access other result properties without casting
-function expectKind<R extends { kind: 'continue' | 'partial' | 'skip' }, K extends R['kind']>(
-  result: R,
-  kind: K
-): asserts result is Extract<R, { kind: K }> {
+function expectKind<
+  R extends { kind: 'continue' | 'partial' | 'skip' | 'skip-self' },
+  K extends R['kind'],
+>(result: R, kind: K): asserts result is Extract<R, { kind: K }> {
   expect(result.kind).toBe(kind);
 }
 
