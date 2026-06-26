@@ -913,8 +913,14 @@ describe('diagnostics file cleanup', () => {
 });
 
 describe('shouldUploadMetadata', () => {
+  const publishedBuild = { storybookUrl: 'https://sample-storybook.dev-chromatic.com' };
+
   it('uploads when --upload-metadata is explicitly enabled', () => {
-    const ctx = { options: { uploadMetadata: true }, turboSnap: undefined } as any;
+    const ctx = {
+      options: { uploadMetadata: true },
+      turboSnap: undefined,
+      build: publishedBuild,
+    } as any;
     expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
@@ -922,27 +928,39 @@ describe('shouldUploadMetadata', () => {
     const ctx = {
       options: { uploadMetadata: false },
       turboSnap: {},
+      build: publishedBuild,
     } as any;
     expect(shouldUploadMetadata(ctx)).toBe(false);
   });
 
   it('uploads by default when TurboSnap is requested and the flag is unset', () => {
-    const ctx = { options: {}, turboSnap: {} } as any;
+    const ctx = { options: {}, turboSnap: {}, build: publishedBuild } as any;
     expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
   it('uploads by default when TurboSnap bailed and the flag is unset', () => {
-    const ctx = { options: {}, turboSnap: { bailReason: { rebuild: true } } } as any;
+    const ctx = {
+      options: {},
+      turboSnap: { bailReason: { rebuild: true } },
+      build: publishedBuild,
+    } as any;
     expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
   it('uploads by default when TurboSnap is unavailable and the flag is unset', () => {
-    const ctx = { options: {}, turboSnap: { unavailable: true } } as any;
+    const ctx = { options: {}, turboSnap: { unavailable: true }, build: publishedBuild } as any;
     expect(shouldUploadMetadata(ctx)).toBe(true);
   });
 
   it('does not upload by default when TurboSnap is disabled and the flag is unset', () => {
-    const ctx = { options: {}, turboSnap: undefined } as any;
+    const ctx = { options: {}, turboSnap: undefined, build: publishedBuild } as any;
+    expect(shouldUploadMetadata(ctx)).toBe(false);
+  });
+
+  it('does not upload for an unpublished build, even if --upload-metadata is enabled', () => {
+    // A build that never got published (e.g. `prepare` failed) doesn't have a storybookUrl, so
+    // there's no valid location to host the metadata files.
+    const ctx = { options: { uploadMetadata: true }, turboSnap: {}, build: { id: '1' } } as any;
     expect(shouldUploadMetadata(ctx)).toBe(false);
   });
 });

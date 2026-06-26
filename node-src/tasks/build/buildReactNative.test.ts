@@ -173,6 +173,24 @@ describe('buildArtifacts', () => {
     );
   });
 
+  it('splits androidBuildCommand into executable and arguments before spawning', async () => {
+    const ctx = {
+      ...baseContext,
+      announcedBuild: { browsers: ['android'] },
+      log: new TestLogger(),
+      options: { reactNative: { androidBuildCommand: 'yarn android -t remote -m release' } },
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildArtifacts(ctx, task);
+    expect(execa).toHaveBeenCalledWith(
+      'yarn',
+      ['android', '-t', 'remote', '-m', 'release'],
+      expect.objectContaining({
+        env: expect.objectContaining({ CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' }),
+      })
+    );
+  });
+
   it('ignores androidBuildArchitectures when androidBuildCommand is set and logs debug message', async () => {
     const log = new TestLogger();
     const ctx = {
@@ -209,6 +227,24 @@ describe('buildArtifacts', () => {
     expect(execa).toHaveBeenCalledWith(
       cmd,
       args,
+      expect.objectContaining({
+        env: expect.objectContaining({ CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' }),
+      })
+    );
+  });
+
+  it('splits iosBuildCommand into executable and arguments before spawning', async () => {
+    const ctx = {
+      ...baseContext,
+      announcedBuild: { browsers: ['ios'] },
+      log: new TestLogger(),
+      options: { reactNative: { iosBuildCommand: 'yarn ios -t remote -m release' } },
+      sourceDir: '/path/to/build',
+    } as any;
+    await buildArtifacts(ctx, task);
+    expect(execa).toHaveBeenCalledWith(
+      'yarn',
+      ['ios', '-t', 'remote', '-m', 'release'],
       expect.objectContaining({
         env: expect.objectContaining({ CHROMATIC_ARTIFACT_DIRECTORY: '/path/to/build' }),
       })

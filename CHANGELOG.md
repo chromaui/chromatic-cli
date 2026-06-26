@@ -1,3 +1,27 @@
+# v17.7.2 (Fri Jun 26 2026)
+
+#### 🐛 Bug Fix
+
+- Only upload metadata files with a valid S3 path [#1408](https://github.com/chromaui/chromatic-cli/pull/1408) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v17.7.1 (Thu Jun 25 2026)
+
+#### 🐛 Bug Fix
+
+- React Native: Parse build command from config file [#1405](https://github.com/chromaui/chromatic-cli/pull/1405) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.7.0 (Thu Jun 25 2026)
 
 #### 🚀 Enhancement
