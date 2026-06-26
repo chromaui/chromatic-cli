@@ -12,7 +12,8 @@ const make = (state: Task, starting?: Task) =>
 
 const starting: Task = { status: 'pending', title: 'Uploading', output: '0%' };
 
-// pending → drive calls start() only; one fake tick renders the 0% bar labeled with the title.
+// pending → drive calls start() only; the title sits in the task-log header and one fake tick
+// renders the 0% bar beneath it.
 export const Start = () => make({ status: 'pending', title: 'Uploading' });
 
 // updating → drive calls start(starting) then update(); one fake tick renders the bar at ~53% fill.
@@ -27,12 +28,14 @@ export const InProgress = () =>
     starting
   );
 
-// success → drive calls start(starting) then succeed(); clear() removes the bar and log.success() writes the success line
+// success → drive calls start(starting) then succeed(); clear() removes the bar and closing the
+// task log collapses the header into the success line.
 export const Success = () =>
   make(
     { status: 'success', title: 'Publish complete', output: 'Uploaded 5 files (8.0 MB)' },
     starting
   );
 
-// failure -> drive calls start(starting) then fail(); clear() removes the bar and log.error() writes the failure line
+// failure -> drive calls start(starting) then fail(); clear() removes the bar and closing the task
+// log collapses the header into the failure line.
 export const Failure = () => make({ status: 'error', title: 'Publish failed' }, starting);
