@@ -1,3 +1,15 @@
+# v17.7.2 (Fri Jun 26 2026)
+
+#### 🐛 Bug Fix
+
+- Only upload metadata files with a valid S3 path [#1408](https://github.com/chromaui/chromatic-cli/pull/1408) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.7.1 (Thu Jun 25 2026)
 
 #### 🐛 Bug Fix
