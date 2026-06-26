@@ -462,6 +462,11 @@ export interface Context {
   uploadedBytes?: number;
   uploadedFiles?: number;
   turboSnap?: TurboSnap;
+  ancestorBuild?: {
+    status: string;
+    webUrl: string;
+    snapshotCount: number;
+  };
   mergeBase?: string;
   onlyStoryFiles?: string[];
   untracedFiles?: { filepath: string; glob: string }[];
