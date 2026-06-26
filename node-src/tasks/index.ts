@@ -1,33 +1,16 @@
 import Listr from 'listr';
 
 import { Context } from '../types';
-import auth from './auth';
-import build from './build';
-import gitInfo from './gitInfo';
-import initialize from './initialize';
-import prepare from './prepare';
 import prepareWorkspace from './prepareWorkspace';
 import report from './report';
 import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
-import storybookInfo from './storybookInfo';
-import upload from './upload';
 import uploadShare from './uploadShare';
 import verify from './verify';
 
-export const runShare = [build, prepare, uploadShare];
+export const runShare = [uploadShare];
 
-export const runUploadBuild = [
-  auth,
-  gitInfo,
-  storybookInfo,
-  initialize,
-  build,
-  prepare,
-  upload,
-  verify,
-  snapshot,
-];
+export const runUploadBuild = [verify, snapshot];
 
 export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 

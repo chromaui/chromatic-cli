@@ -2,7 +2,6 @@ import { filesize } from 'filesize';
 import pluralize from 'pluralize';
 
 import { getDuration } from '../../lib/tasks';
-import { progressBar } from '../../lib/utilities';
 import { Context } from '../../types';
 import { buildType } from './utilities';
 
@@ -37,7 +36,7 @@ export const starting = (ctx: Context) => ({
 export const uploading = (ctx: Context, { percentage }: { percentage: number }) => ({
   status: 'pending',
   title: `Publishing your built ${buildType(ctx)}`,
-  output: `${progressBar(percentage)} ${percentage}%`,
+  output: `${percentage}%`,
 });
 
 export const finalizing = (ctx: Context) => ({

@@ -7,7 +7,12 @@ import { info } from '../../components/icons';
 import link from '../../components/link';
 
 export const buildFailed = (
-  { options, buildCommand, buildLogFile, runtimeMetadata }: Context,
+  {
+    options,
+    buildCommand,
+    buildLogFile,
+    runtimeMetadata,
+  }: Pick<Context, 'options' | 'buildCommand' | 'buildLogFile' | 'runtimeMetadata'>,
   { message },
   buildLog?: string
 ) => {
@@ -38,7 +43,10 @@ export const buildFailed = (
 };
 
 export const reactNativeBuildFailed = (
-  { reactNativeBuildLogFile, runtimeMetadata }: Context,
+  {
+    reactNativeBuildLogFile,
+    runtimeMetadata,
+  }: Pick<Context, 'reactNativeBuildLogFile' | 'runtimeMetadata'>,
   { message },
   buildLog?: string
 ) => {

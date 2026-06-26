@@ -1,9 +1,7 @@
-import { createTask } from '../lib/tasks';
 import { Context, Deps, TaskFunction } from '../types';
 import invalidProjectId from '../ui/messages/errors/invalidProjectId';
 import invalidProjectToken from '../ui/messages/errors/invalidProjectToken';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
-import { authenticated, authenticating, initial } from '../ui/tasks/auth';
 
 const CreateCLITokenMutation = `
   mutation CreateCLITokenMutation($projectId: String!) {
@@ -123,29 +121,13 @@ export const applyAuthOutput = (ctx: Context, output: AuthOutput) => {
   ctx.isReactNativeApp = output.isReactNativeApp;
 };
 
-/**
- * Sets up the Listr task for authenticating with Chromatic.
- *
- * @param _ The context set when executing the CLI.
- *
- * @returns A Listr task.
- */
-export default function main(_: Context) {
-  return createTask({
-    name: 'auth',
-    title: initial.title,
-    transitions: { pending: authenticating, success: authenticated },
-    extractInput: (ctx): AuthInput => {
-      const { projectId, projectToken, userToken } = ctx.options;
-      if (projectId && userToken) {
-        return { mode: 'cli', projectId, userToken, projectToken };
-      }
-      if (!projectToken) {
-        throw new Error(missingProjectToken());
-      }
-      return { mode: 'app', projectToken };
-    },
-    applyOutput: applyAuthOutput,
-    run: runAuth,
-  });
-}
+export const extractInput = (ctx: Context): AuthInput => {
+  const { projectId, projectToken, userToken } = ctx.options;
+  if (projectId && userToken) {
+    return { mode: 'cli', projectId, userToken, projectToken };
+  }
+  if (!projectToken) {
+    throw new Error(missingProjectToken());
+  }
+  return { mode: 'app', projectToken };
+};
