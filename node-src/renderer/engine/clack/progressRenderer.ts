@@ -1,6 +1,6 @@
 import { Writable } from 'node:stream';
 
-import { log as clackLog, progress as clackProgress } from '@clack/prompts';
+import { progress as clackProgress, taskLog as clackTaskLog } from '@clack/prompts';
 
 import { Task } from '../../../types';
 import { TaskRenderer } from '../index';
@@ -20,6 +20,10 @@ import { wrapTextForClack } from './wrap';
  * @returns A `TaskRenderer` that renders via a Clack progress bar.
  */
 export function clackProgressBarRenderer(output?: Writable): TaskRenderer {
+  // A task log holds the title as a persistent header above the bar (Clack's progress bar renders
+  // the label inline with the bar, so the title can't live there). Closing the task log on
+  // succeed/fail collapses the header into the single completion line.
+  let taskLog: ReturnType<typeof clackTaskLog>;
   let bar: ReturnType<typeof clackProgress>;
   // Clack's `advance(step)` is relative (`n = min(max, n + step)`), but our progress data is
   // absolute. We normalize to a 0–100 percent and advance by the delta since the last update.
@@ -31,8 +35,11 @@ export function clackProgressBarRenderer(output?: Writable): TaskRenderer {
   return {
     start: (state: Task) => {
       lastPercent = 0;
-      bar = clackProgress({ output, style: 'heavy', max: 100 });
-      bar.start(state.title);
+      taskLog = clackTaskLog({ title: state.title, spacing: 0, output });
+      // `withGuide: false` suppresses the bar's own leading gutter line; otherwise `bar.clear()`
+      // orphans it (the bar only erases its own line) and the completion frame gains a stray gutter.
+      bar = clackProgress({ output, style: 'heavy', max: 100, withGuide: false });
+      bar.start('0%');
     },
     update: (state: Task) => {
       const label = state.output || state.title;
@@ -47,18 +54,15 @@ export function clackProgressBarRenderer(output?: Writable): TaskRenderer {
       bar.advance(percent - lastPercent, label);
       lastPercent = percent;
     },
-    // Clack's `bar.stop`/`error` write their own terminal line with a hardcoded hollow `◇` and no
-    // per-line gutter, so a multi-line message diverges from the taskLog-backed tasks (filled `◆`
-    // + `│  ` gutter). `clear()` tears the bar down without writing anything, so the completed line
-    // can go through `clack.log.*` — the same path `clackTaskLogRenderer` uses — for an identical
-    // frame. `spacing: 0` because the bar's lifecycle already emits the leading blank gutter line.
+    // `clear()` tears the bar down without writing a completion line, then closing the task log
+    // collapses its header and renders the final line.
     succeed: (state: Task) => {
       bar.clear();
-      clackLog.success(taskMessageFormatter(state), { output, spacing: 0 });
+      taskLog.success(taskMessageFormatter(state));
     },
     fail: (state: Task) => {
       bar.clear();
-      clackLog.error(wrapTextForClack(state.title), { output, spacing: 0 });
+      taskLog.error(wrapTextForClack(state.title), { showLog: false });
     },
   };
 }
