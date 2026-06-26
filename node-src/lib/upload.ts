@@ -46,7 +46,7 @@ const UploadBuildMutation = `
       build {
         id
         status
-        ancestorBuild {
+        ancestorBuilds {
           status
           webUrl
           snapshotCount
@@ -90,11 +90,11 @@ interface UploadBuildMutationResult {
     build?: {
       id: string;
       status: string;
-      ancestorBuild?: {
+      ancestorBuilds?: {
         status: string;
         webUrl: string;
         snapshotCount: number;
-      };
+      }[];
     };
     userErrors: (
       | {
@@ -262,7 +262,8 @@ export async function uploadBuild(
           Sentry.captureException(err);
         });
 
-      ctx.ancestorBuild = uploadBuild.build.ancestorBuild;
+      // In this case, we should only have a single ancestor build
+      ctx.ancestorBuild = uploadBuild.build.ancestorBuilds?.[0];
       ctx.skip = true;
       return;
     }

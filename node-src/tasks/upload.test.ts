@@ -449,11 +449,13 @@ describe('uploadStorybook', () => {
         build: {
           id: '2',
           status: 'SKIPPED',
-          ancestorBuild: {
-            status: 'PASSED',
-            webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
-            snapshotCount: 54,
-          },
+          ancestorBuilds: [
+            {
+              status: 'PASSED',
+              webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
+              snapshotCount: 54,
+            },
+          ],
         },
         userErrors: [],
       },
