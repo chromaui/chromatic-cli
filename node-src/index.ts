@@ -267,6 +267,11 @@ function shouldWriteDiagnosticsFile(ctx: Context): boolean {
  * @returns True if metadata files should be uploaded.
  */
 export function shouldUploadMetadata(ctx: Context): boolean {
+  // Don't upload if we don't have a valid URL to S3
+  if (!ctx.build?.storybookUrl) {
+    return false;
+  }
+
   return ctx.options.uploadMetadata ?? isTurboSnapEnabled(ctx);
 }
 
