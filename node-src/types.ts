@@ -309,7 +309,10 @@ export interface Deps {
 export type TaskResult<TOutput, TPartial = never> =
   | { kind: 'continue'; output: TOutput }
   | { kind: 'partial'; output: TPartial; reason?: string }
-  | { kind: 'skip'; reason?: string };
+  // Halts the pipeline: every downstream task is skipped too (sets ctx.skip).
+  | { kind: 'skip'; reason?: string }
+  // Skips only this task; the pipeline continues (does not set ctx.skip).
+  | { kind: 'skip-self'; reason?: string };
 
 export type TaskFunction<TInput, TOutput, TDeps = Deps, TPartial = never> = (
   deps: TDeps,

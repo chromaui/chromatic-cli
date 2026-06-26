@@ -1,4 +1,4 @@
-import { log as clackLog, progress as clackProgress } from '@clack/prompts';
+import { progress as clackProgress, taskLog as clackTaskLog } from '@clack/prompts';
 import { describe, expect, it, vi } from 'vitest';
 
 import { clackProgressBarRenderer } from './progressRenderer';
@@ -8,26 +8,32 @@ vi.mock('@clack/prompts', () => ({
     start: vi.fn(),
     advance: vi.fn(),
     message: vi.fn(),
-    stop: vi.fn(),
-    error: vi.fn(),
     clear: vi.fn(),
   })),
-  log: {
+  taskLog: vi.fn(() => ({
+    message: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
-  },
+  })),
 }));
 
 const progressFactory = vi.mocked(clackProgress);
+const taskLogFactory = vi.mocked(clackTaskLog);
 
 function lastBar() {
   return progressFactory.mock.results.at(-1)?.value as {
     start: ReturnType<typeof vi.fn>;
     advance: ReturnType<typeof vi.fn>;
     message: ReturnType<typeof vi.fn>;
-    stop: ReturnType<typeof vi.fn>;
-    error: ReturnType<typeof vi.fn>;
     clear: ReturnType<typeof vi.fn>;
+  };
+}
+
+function lastTaskLog() {
+  return taskLogFactory.mock.results.at(-1)?.value as {
+    message: ReturnType<typeof vi.fn>;
+    success: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -38,13 +44,16 @@ function started(title = 'Uploading') {
 }
 
 describe('clackProgressBarRenderer', () => {
-  it('starts a percent-based bar and labels it with the task title', () => {
+  it('holds the title in a task log header and starts the bar at 0%', () => {
     started('Uploading');
 
-    expect(progressFactory).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ max: 100, style: 'heavy' })
+    expect(taskLogFactory).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ title: 'Uploading' })
     );
-    expect(lastBar().start).toHaveBeenCalledExactlyOnceWith('Uploading');
+    expect(progressFactory).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ max: 100, style: 'heavy', withGuide: false })
+    );
+    expect(lastBar().start).toHaveBeenCalledExactlyOnceWith('0%');
   });
 
   it('advances by the delta percent between absolute progress updates', () => {
@@ -100,31 +109,27 @@ describe('clackProgressBarRenderer', () => {
     expect(lastBar().advance).not.toHaveBeenCalled();
   });
 
-  // Clack's `stop`/`error` hardcode a hollow `◇` and skip the per-line gutter, so the terminal
-  // frame is emitted through `clack.log.*` (matching `clackTaskLogRenderer`) after `clear()` tears
-  // the bar down without writing — never through the bar's own `stop`/`error`.
-  it('clears the bar and emits a guttered success line through the log path on success', () => {
+  // The bar's own `clear()` tears it down without writing; the completion line is rendered by
+  // closing the task log, so the frame matches `clackTaskLogRenderer` (filled `◆` + gutter).
+  it('clears the bar and renders success by closing the task log', () => {
     const renderer = started('Uploading');
 
     renderer.succeed({ title: 'Publish complete', output: 'Uploaded 5 files (8.0 MB)' });
 
     expect(lastBar().clear).toHaveBeenCalledOnce();
-    expect(lastBar().stop).not.toHaveBeenCalled();
-    const [message, options] = vi.mocked(clackLog.success).mock.calls.at(-1) ?? [];
+    const [message] = lastTaskLog().success.mock.calls.at(-1) ?? [];
     expect(message).toContain('Publish complete');
     expect(message).toContain('Uploaded 5 files (8.0 MB)');
-    expect(options).toMatchObject({ spacing: 0 });
   });
 
-  it('clears the bar and emits the failure title through the log path on failure', () => {
+  it('clears the bar and renders the failure title by closing the task log', () => {
     const renderer = started('Uploading');
 
     renderer.fail({ title: 'Upload failed' });
 
     expect(lastBar().clear).toHaveBeenCalledOnce();
-    expect(lastBar().error).not.toHaveBeenCalled();
-    const [message, options] = vi.mocked(clackLog.error).mock.calls.at(-1) ?? [];
+    const [message, options] = lastTaskLog().error.mock.calls.at(-1) ?? [];
     expect(message).toContain('Upload failed');
-    expect(options).toMatchObject({ spacing: 0 });
+    expect(options).toMatchObject({ showLog: false });
   });
 });

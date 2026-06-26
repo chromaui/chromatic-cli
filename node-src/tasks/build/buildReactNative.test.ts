@@ -151,14 +151,10 @@ describe('buildArtifacts', () => {
   });
 
   it('splits androidBuildCommand into executable and arguments before spawning', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['android'] },
-      log: new TestLogger(),
+    const deps = makeDeps({
       options: { reactNative: { androidBuildCommand: 'yarn android -t remote -m release' } },
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    });
+    await buildArtifacts(deps, { sourceDir: '/path/to/build', browsers: ['android'] });
     expect(execa).toHaveBeenCalledWith(
       'yarn',
       ['android', '-t', 'remote', '-m', 'release'],
@@ -200,14 +196,10 @@ describe('buildArtifacts', () => {
   });
 
   it('splits iosBuildCommand into executable and arguments before spawning', async () => {
-    const ctx = {
-      ...baseContext,
-      announcedBuild: { browsers: ['ios'] },
-      log: new TestLogger(),
+    const deps = makeDeps({
       options: { reactNative: { iosBuildCommand: 'yarn ios -t remote -m release' } },
-      sourceDir: '/path/to/build',
-    } as any;
-    await buildArtifacts(ctx, task);
+    });
+    await buildArtifacts(deps, { sourceDir: '/path/to/build', browsers: ['ios'] });
     expect(execa).toHaveBeenCalledWith(
       'yarn',
       ['ios', '-t', 'remote', '-m', 'release'],

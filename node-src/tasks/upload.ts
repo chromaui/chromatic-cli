@@ -1,25 +1,26 @@
-import Listr from 'listr';
 import path from 'path';
 
-import { createTask, setOutput, transitionTo } from '../lib/tasks';
 import { uploadBuild } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
-import { Context, FileDesc, Task } from '../types';
-import sentinelFileErrors from '../ui/messages/errors/sentinelFileErrors';
-import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
-import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
+import { Context, Deps, FileDesc, TaskResult } from '../types';
+import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
 import deduplicationFailed from '../ui/messages/warnings/deduplicationFailed';
-import {
-  dryRun,
-  failed,
-  finalizing,
-  initial,
-  invalid,
-  starting,
-  success,
-  uploading,
-} from '../ui/tasks/upload';
+import { failed, finalizing, invalid, uploading } from '../ui/tasks/upload';
+
+export interface UploadInput {
+  // `uploadBuild`, `waitForSentinel`, and `buildFileList` all reach deep into Context, and that
+  // subtree (uploadFiles/uploadZip/compress) is too large to refactor proportionately. So we thread
+  // the live Context through `input` Refactoring this library to not rely on Context is a larger project.
+  uploadContext: Context;
+}
+
+export interface UploadOutput {
+  sentinelUrls: string[];
+  uploadedBytes: number;
+  uploadedFiles: number;
+  skippedByTurboSnap?: boolean;
+}
 
 const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
   const files = ctx.fileInfo?.paths.map<FileDesc>((filePath) => ({
@@ -37,106 +38,92 @@ const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
   return files;
 };
 
-const runUploadAndWaitForSentinels = async (ctx: Context, task: Task, files: FileDesc[]) => {
-  await uploadBuild(ctx, files, {
-    onProgress: throttle(
-      (progress, total) => {
-        const percentage = Math.round((progress / total) * 100);
-        task.output = uploading(ctx, { percentage }).output;
-        ctx.options.experimental_onTaskProgress?.({ ...ctx }, { progress, total, unit: 'bytes' });
+const uploadAndWaitForSentinels = async (
+  deps: Deps,
+  ctx: Context,
+  files: FileDesc[]
+): Promise<UploadOutput> => {
+  const { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap } = await uploadBuild(
+    ctx,
+    files,
+    {
+      onProgress: throttle(
+        (progress, total) => {
+          const percentage = Math.round((progress / total) * 100);
+          deps.report({
+            output: uploading(ctx, { percentage }).output,
+            progress: { progress, total, unit: 'bytes' },
+          });
+        },
+        // Avoid spamming the logs with progress updates in non-interactive mode
+        ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
+      ),
+      onError: (error: Error, path?: string) => {
+        throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
       },
-      // Avoid spamming the logs with progress updates in non-interactive mode
-      ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
-    ),
-    onError: (error: Error, path?: string) => {
-      throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
-    },
-  });
+    }
+  );
 
-  if (!ctx.sentinelUrls?.length) return;
+  // A TurboSnap-skipped build uploads nothing and has no sentinels to wait for.
+  if (skippedByTurboSnap || sentinelUrls.length === 0) {
+    return { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap };
+  }
 
-  transitionTo(finalizing)(ctx, task);
+  deps.report({ output: finalizing(ctx).output });
 
   // Dedupe sentinels, ignoring query params
   const sentinels = Object.fromEntries(
-    ctx.sentinelUrls.map((url) => {
+    sentinelUrls.map((url) => {
       const { host, pathname } = new URL(url);
       return [host + pathname, { name: pathname.split('/').at(-1) || '', url }];
     })
   );
 
   await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
-};
 
-export const uploadStorybook = async (ctx: Context, task: Task) => {
-  if (ctx.skip) return;
-
-  try {
-    await runUploadAndWaitForSentinels(ctx, task, buildFileList(ctx, true));
-  } catch {
-    ctx.log.warn(deduplicationFailed());
-    // Retry without file deduplication ensuring we reset fields for a new upload
-    ctx.sentinelUrls = [];
-    ctx.uploadedBytes = 0;
-    ctx.uploadedFiles = 0;
-    await runUploadAndWaitForSentinels(ctx, task, buildFileList(ctx, false));
-  }
-};
-
-export const waitForSentinels = async (ctx: Context, task: Task) => {
-  if (ctx.skip || !ctx.sentinelUrls?.length) return;
-  transitionTo(finalizing)(ctx, task);
-
-  // Dedupe sentinels, ignoring query params
-  const sentinels = Object.fromEntries(
-    ctx.sentinelUrls.map((url) => {
-      const { host, pathname } = new URL(url);
-      return [host + pathname, { name: pathname.split('/').at(-1) || '', url }];
-    })
-  );
-
-  try {
-    await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
-  } catch (err) {
-    ctx.log.error(sentinelFileErrors());
-    throw err;
-  }
-};
-
-export const finishUpload = (ctx: Context, task: Task) => {
-  // The build may have been marked SKIPPED from the backend detecting no changes from TurboSnap.
-  if (ctx.skip) {
-    ctx.log.info(turboSnapEnabled(ctx));
-    ctx.log.info(buildFullyTurboSnapped(ctx));
-
-    // Render as ↓ [skipped] rather than a ✔ checkmark to make it look like we never entered this step.
-    setOutput('')(ctx, task); // Clear the "Starting publish" output so no subtitle shows
-
-    // Cast as a real Listr `Task` object which all have a `.skip(message)` method. This allows you
-    // to skip after a task has started.
-    (task as Listr.ListrTaskWrapper<Context>).skip('');
-    return;
-  }
-
-  transitionTo(success, true)(ctx, task);
+  return { sentinelUrls, uploadedBytes, uploadedFiles };
 };
 
 /**
- * Sets up the Listr task for uploading the build assets to Chromatic.
+ * Publish the built project's files to Chromatic and wait for the upload to finalize.
  *
- * @param ctx The context set when executing the CLI.
+ * @param deps Narrow set of cross-cutting dependencies the task needs.
+ * @param input Per-pipeline-run input extracted from Context at the seam.
  *
- * @returns A Listr task.
+ * @returns A TaskResult conveying the upload tallies, or a self-skip for `--dry-run`.
  */
-export default function main(ctx: Context) {
-  return createTask({
-    name: 'upload',
-    title: initial(ctx).title,
-    skip: (ctx: Context) => {
-      if (ctx.skip) return true;
-      if (ctx.options.dryRun) return dryRun(ctx).output;
-      return false;
-    },
-    steps: [transitionTo(starting), uploadStorybook, finishUpload],
-  });
+export async function uploadProject(
+  deps: Deps,
+  input: UploadInput
+): Promise<TaskResult<UploadOutput>> {
+  const ctx = input.uploadContext;
+
+  if (ctx.options.dryRun) {
+    return { kind: 'skip-self' };
+  }
+
+  try {
+    const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, true));
+    if (output.skippedByTurboSnap) {
+      return { kind: 'skip', reason: buildTurboSkipped() };
+    }
+    return { kind: 'continue', output };
+  } catch {
+    deps.log.warn(deduplicationFailed());
+    // Retry without file deduplication. uploadBuild returns fresh tallies, so the failed attempt's
+    // results are discarded simply by running again.
+    const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, false));
+    if (output.skippedByTurboSnap) {
+      return { kind: 'skip', reason: buildTurboSkipped() };
+    }
+    return { kind: 'continue', output };
+  }
 }
+
+export const extractUploadInput = (ctx: Context): UploadInput => ({ uploadContext: ctx });
+
+export const applyUploadOutput = (ctx: Context, output: UploadOutput) => {
+  ctx.sentinelUrls = output.sentinelUrls;
+  ctx.uploadedBytes = output.uploadedBytes;
+  ctx.uploadedFiles = output.uploadedFiles;
+};

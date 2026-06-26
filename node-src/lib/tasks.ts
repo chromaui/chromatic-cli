@@ -46,6 +46,7 @@ export const buildDeps = (ctx: Context): Deps => ({
   report: () => {},
 });
 
+// eslint-disable-next-line complexity
 async function applyAdaptedResult<TInput, TOutput, TPartial>(
   config: AdaptedTaskConfig<TInput, TOutput, TPartial>,
   ctx: Context,
@@ -68,6 +69,9 @@ async function applyAdaptedResult<TInput, TOutput, TPartial>(
       return;
     case 'skip':
       ctx.skip = true;
+      return;
+    case 'skip-self':
+      // Self-skip without halting the pipeline, so we leave ctx.skip unset.
       return;
     default:
       result satisfies never;

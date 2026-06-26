@@ -6,9 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
-import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
-import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
-import { finishUpload, uploadStorybook, waitForSentinels } from './upload';
+import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
+import { applyUploadOutput, extractUploadInput, uploadProject } from './upload';
 
 vi.mock('@sentry/node');
 vi.mock('form-data');
@@ -36,7 +35,24 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('uploadStorybook', () => {
+// Drive uploadProject the way the render engine would: build input from ctx, fan progress reports
+// out to experimental_onTaskProgress (as makeReporter does), and fold a continue result back onto
+// ctx via applyUploadOutput.
+const runUpload = async (ctx: any) => {
+  const report = vi.fn((update: { progress?: unknown }) => {
+    if (update.progress) {
+      ctx.options.experimental_onTaskProgress?.({ ...ctx }, update.progress);
+    }
+  });
+  const deps = { log: ctx.log, report } as any;
+  const result = await uploadProject(deps, extractUploadInput(ctx));
+  if (result.kind === 'continue') {
+    applyUploadOutput(ctx, result.output);
+  }
+  return result;
+};
+
+describe('uploadProject', () => {
   it('retrieves the upload locations and uploads the files', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
@@ -83,7 +99,7 @@ describe('uploadStorybook', () => {
       fileInfo,
       announcedBuild: { id: '1' },
     } as any;
-    await uploadStorybook(ctx, {} as any);
+    await runUpload(ctx);
 
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
       buildId: '1',
@@ -153,7 +169,7 @@ describe('uploadStorybook', () => {
       fileInfo,
       announcedBuild: { id: '1' },
     } as any;
-    await uploadStorybook(ctx, {} as any);
+    await runUpload(ctx);
 
     expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledTimes(4);
     expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
@@ -232,7 +248,7 @@ describe('uploadStorybook', () => {
       fileInfo,
       announcedBuild: { id: '1' },
     } as any;
-    await uploadStorybook(ctx, {} as any);
+    await runUpload(ctx);
 
     expect(client.runQuery).toHaveBeenCalledTimes(2);
     expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
@@ -274,9 +290,8 @@ describe('uploadStorybook', () => {
     expect(ctx.uploadedFiles).toBe(1001);
   });
 
-  it('sends the TurboSnap onlyStoryFiles list to the uploadBuild mutation', async () => {
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({
+  describe('TurboSnap', () => {
+    const targetsResponse = {
       uploadBuild: {
         info: {
           sentinelUrls: [],
@@ -291,307 +306,174 @@ describe('uploadStorybook', () => {
         },
         userErrors: [],
       },
-    });
-
-    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
-    http.fetch.mockReturnValue({ ok: true });
+    };
 
     const fileInfo = {
       lengths: [{ knownAs: 'index.html', contentLength: 42 }],
       paths: ['index.html'],
       total: 42,
     };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: {},
-      fileInfo,
-      announcedBuild: { id: '1' },
-      turboSnap: {},
-      onlyStoryFiles: ['src/Button.stories.js'],
-    } as any;
-    await uploadStorybook(ctx, {} as any);
 
-    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
-      buildId: '1',
-      files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
-      onlyStoryFiles: ['src/Button.stories.js'],
-      turboSnapStatus: 'APPLIED',
-    });
-  });
+    it('sends the onlyStoryFiles list and an APPLIED status when TurboSnap ran', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue(targetsResponse);
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
 
-  it('does not send onlyStoryFiles when TurboSnap did not run', async () => {
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({
-      uploadBuild: {
-        info: {
-          sentinelUrls: [],
-          targets: [
-            {
-              contentType: 'text/html',
-              filePath: 'index.html',
-              formAction: 'https://s3.amazonaws.com/presigned?index.html',
-              formFields: {},
-            },
-          ],
-        },
-        userErrors: [],
-      },
+      const ctx = {
+        client,
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+        turboSnap: {},
+        onlyStoryFiles: ['src/Button.stories.js'],
+      } as any;
+      await runUpload(ctx);
+
+      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+        buildId: '1',
+        files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
+        onlyStoryFiles: ['src/Button.stories.js'],
+        turboSnapStatus: 'APPLIED',
+      });
     });
 
-    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
-    http.fetch.mockReturnValue({ ok: true });
+    it('does not send onlyStoryFiles when TurboSnap did not run', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue(targetsResponse);
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
 
-    const fileInfo = {
-      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
-      paths: ['index.html'],
-      total: 42,
-    };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      // onlyStoryFiles passed via the --only-story-files flag rather than computed by TurboSnap
-      options: { onlyStoryFiles: ['src/Button.stories.js'] },
-      fileInfo,
-      announcedBuild: { id: '1' },
-    } as any;
-    await uploadStorybook(ctx, {} as any);
+      const ctx = {
+        client,
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        // onlyStoryFiles passed via the --only-story-files flag rather than computed by TurboSnap
+        options: { onlyStoryFiles: ['src/Button.stories.js'] },
+        fileInfo,
+        announcedBuild: { id: '1' },
+      } as any;
+      await runUpload(ctx);
 
-    expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
-      buildId: '1',
-      files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
-      turboSnapStatus: 'UNUSED',
-    });
-  });
-
-  it('skips uploading and sets ctx.skip when the build is SKIPPED', async () => {
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockResolvedValue({
-      uploadBuild: {
-        build: { id: '2', status: 'SKIPPED' },
-        userErrors: [],
-      },
+      expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
+        buildId: '1',
+        files: [{ contentHash: undefined, contentLength: 42, filePath: 'index.html' }],
+        turboSnapStatus: 'UNUSED',
+      });
     });
 
-    const fileInfo = {
-      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
-      paths: ['index.html'],
-      total: 42,
-    };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: {},
-      fileInfo,
-      announcedBuild: { id: '1' },
-      onlyStoryFiles: [],
-    } as any;
-    await uploadStorybook(ctx, {} as any);
+    it('skips the task without uploading when the build is SKIPPED', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockResolvedValue({
+        uploadBuild: { build: { id: '2', status: 'SKIPPED' }, userErrors: [] },
+      });
 
-    expect(ctx.skip).toBe(true);
-    expect(http.fetch).not.toHaveBeenCalled();
-    expect(ctx.uploadedFiles).toBe(0);
-    expect(ctx.uploadedBytes).toBe(0);
-  });
+      const ctx = {
+        client,
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+        onlyStoryFiles: [],
+      } as any;
+      const result = await runUpload(ctx);
 
-  it('prepares the skipped build so stats carry over from its ancestor', async () => {
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockResolvedValue({
-      uploadBuild: {
-        build: { id: '2', status: 'SKIPPED' },
-        userErrors: [],
-      },
+      expect(result).toEqual({ kind: 'skip', reason: buildTurboSkipped() });
+      expect(http.fetch).not.toHaveBeenCalled();
     });
 
-    const fileInfo = {
-      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
-      paths: ['index.html'],
-      total: 42,
-    };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: {},
-      fileInfo,
-      // Use a different build ID so we know it uses the ID from the `uploadBuild` mutation
-      announcedBuild: { id: '1' },
-      onlyStoryFiles: [],
-    } as any;
-    await uploadStorybook(ctx, {} as any);
+    it('prepares the skipped build so stats carry over from its ancestor', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockResolvedValue({
+        uploadBuild: { build: { id: '2', status: 'SKIPPED' }, userErrors: [] },
+      });
 
-    expect(client.runQuery).toHaveBeenCalledWith(
-      expect.stringMatching(/PrepareBuild/),
-      {
-        buildId: '2',
-        runtimeSpecs: [],
-        skipped: true,
-      },
-      { retries: 3 }
-    );
-  });
+      const ctx = {
+        client,
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        // Use a different build ID so we know it uses the ID from the `uploadBuild` mutation
+        announcedBuild: { id: '1' },
+        onlyStoryFiles: [],
+      } as any;
+      await runUpload(ctx);
 
-  it('captures the ancestor build details when the build is SKIPPED', async () => {
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockResolvedValue({
-      uploadBuild: {
-        build: {
-          id: '2',
-          status: 'SKIPPED',
-          ancestorBuilds: [
-            {
-              status: 'PASSED',
-              webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
-              snapshotCount: 54,
-            },
-          ],
-        },
-        userErrors: [],
-      },
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/PrepareBuild/),
+        { buildId: '2', runtimeSpecs: [], skipped: true },
+        { retries: 3 }
+      );
     });
 
-    const fileInfo = {
-      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
-      paths: ['index.html'],
-      total: 42,
-    };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: {},
-      fileInfo,
-      announcedBuild: { id: '1' },
-      onlyStoryFiles: [],
-    } as any;
-    await uploadStorybook(ctx, {} as any);
+    it('still skips and reports to Sentry when preparing the skipped build fails', async () => {
+      const error = new Error('prepare failed');
+      const skipLogger = new TestLogger();
+      const client = { runQuery: vi.fn() };
+      client.runQuery
+        .mockResolvedValueOnce({
+          uploadBuild: { build: { id: '2', status: 'SKIPPED' }, userErrors: [] },
+        })
+        .mockRejectedValueOnce(error);
 
-    expect(ctx.ancestorBuild).toEqual({
-      status: 'PASSED',
-      webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
-      snapshotCount: 54,
-    });
-  });
+      const ctx = {
+        client,
+        env: environment,
+        log: skipLogger,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+        onlyStoryFiles: [],
+      } as any;
+      const result = await runUpload(ctx);
 
-  it('still skips and reports to Sentry when preparing the skipped build fails', async () => {
-    const error = new Error('prepare failed');
-    const client = { runQuery: vi.fn() };
-    client.runQuery
-      .mockResolvedValueOnce({
-        uploadBuild: {
-          build: { id: '2', status: 'SKIPPED' },
-          userErrors: [],
-        },
-      })
-      .mockRejectedValueOnce(error);
-
-    const fileInfo = {
-      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
-      paths: ['index.html'],
-      total: 42,
-    };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: {},
-      fileInfo,
-      announcedBuild: { id: '1' },
-      onlyStoryFiles: [],
-    } as any;
-    await uploadStorybook(ctx, {} as any);
-
-    expect(ctx.skip).toBe(true);
-    expect(log.error).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to prepare skipped build 2'),
-      error
-    );
-    expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledWith(error);
-    expect(http.fetch).not.toHaveBeenCalled();
-  });
-
-  it('does not prepare the build when it is not skipped', async () => {
-    const client = { runQuery: vi.fn() };
-    client.runQuery.mockReturnValue({
-      uploadBuild: {
-        info: {
-          sentinelUrls: [],
-          targets: [
-            {
-              contentType: 'text/html',
-              filePath: 'index.html',
-              formAction: 'https://s3.amazonaws.com/presigned?index.html',
-              formFields: {},
-            },
-          ],
-        },
-        userErrors: [],
-      },
+      expect(result).toEqual({ kind: 'skip', reason: buildTurboSkipped() });
+      expect(skipLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to prepare skipped build 2'),
+        error
+      );
+      expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledWith(error);
+      expect(http.fetch).not.toHaveBeenCalled();
     });
 
-    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
-    http.fetch.mockReturnValue({ ok: true });
+    it('does not prepare the build when it is not skipped', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue(targetsResponse);
+      createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+      http.fetch.mockReturnValue({ ok: true });
 
-    const fileInfo = {
-      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
-      paths: ['index.html'],
-      total: 42,
-    };
-    const ctx = {
-      client,
-      env: environment,
-      log,
-      http,
-      sourceDir: '/static/',
-      options: {},
-      fileInfo,
-      announcedBuild: { id: '1' },
-      onlyStoryFiles: [],
-    } as any;
-    await uploadStorybook(ctx, {} as any);
+      const ctx = {
+        client,
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+        onlyStoryFiles: [],
+      } as any;
+      await runUpload(ctx);
 
-    expect(ctx.skip).toBeFalsy();
-    expect(client.runQuery).not.toHaveBeenCalledWith(
-      expect.stringMatching(/PrepareBuild/),
-      expect.anything()
-    );
-  });
-
-  describe('finishUpload', () => {
-    it('logs the skipped-build messages and skips the task when the build is SKIPPED', () => {
-      const ctx = { skip: true, log, options: {} } as any;
-      const task = { skip: vi.fn() } as any;
-
-      finishUpload(ctx, task);
-
-      expect(log.info).toHaveBeenCalledWith(turboSnapEnabled(ctx));
-      expect(log.info).toHaveBeenCalledWith(buildFullyTurboSnapped(ctx));
-      expect(task.skip).toHaveBeenCalledWith('');
-    });
-
-    it('does not log the skipped-build messages when the build was uploaded', () => {
-      const ctx = { skip: false, log, options: {} } as any;
-      const task = { skip: vi.fn() } as any;
-
-      finishUpload(ctx, task);
-
-      expect(log.info).not.toHaveBeenCalledWith(buildFullyTurboSnapped(ctx));
-      expect(task.skip).not.toHaveBeenCalled();
+      expect(client.runQuery).not.toHaveBeenCalledWith(
+        expect.stringMatching(/PrepareBuild/),
+        expect.anything(),
+        expect.anything()
+      );
     });
   });
 
@@ -637,7 +519,7 @@ describe('uploadStorybook', () => {
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
         buildId: '1',
@@ -717,7 +599,7 @@ describe('uploadStorybook', () => {
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(expect.stringMatching(/UploadBuildMutation/), {
         buildId: '1',
@@ -809,7 +691,7 @@ describe('uploadStorybook', () => {
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(http.fetch).toHaveBeenCalledWith(
         'https://s3.amazonaws.com/presigned?storybook.zip',
@@ -878,7 +760,7 @@ describe('uploadStorybook', () => {
         announcedBuild: { id: '1', browsers: ['android'] },
         isReactNativeApp: true,
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(
         expect.stringMatching(/UploadBuildMutation/),
@@ -939,7 +821,7 @@ describe('uploadStorybook', () => {
         announcedBuild: { id: '1', browsers: ['ios'] },
         isReactNativeApp: true,
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(
         expect.stringMatching(/UploadBuildMutation/),
@@ -1006,7 +888,7 @@ describe('uploadStorybook', () => {
         announcedBuild: { id: '1', browsers: ['android', 'ios'] },
         isReactNativeApp: true,
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(
         expect.stringMatching(/UploadBuildMutation/),
@@ -1067,7 +949,7 @@ describe('uploadStorybook', () => {
         announcedBuild: { id: '1' },
         isReactNativeApp: false,
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(
         expect.stringMatching(/UploadBuildMutation/),
@@ -1122,7 +1004,7 @@ describe('uploadStorybook', () => {
         announcedBuild: { id: '1', browsers: [] },
         isReactNativeApp: true,
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(
         expect.stringMatching(/UploadBuildMutation/),
@@ -1196,7 +1078,7 @@ describe('uploadStorybook', () => {
         announcedBuild: { id: '1', browsers: ['android', 'ios'] },
         isReactNativeApp: true,
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       expect(client.runQuery).toHaveBeenCalledWith(
         expect.stringMatching(/UploadBuildMutation/),
@@ -1264,7 +1146,7 @@ describe('uploadStorybook', () => {
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       // First attempt uses hashes
       expect(client.runQuery).toHaveBeenNthCalledWith(
@@ -1338,7 +1220,7 @@ describe('uploadStorybook', () => {
         fileInfo,
         announcedBuild: { id: '1' },
       } as any;
-      await uploadStorybook(ctx, {} as any);
+      await runUpload(ctx);
 
       // After fallback completes, counts reflect the retry upload only
       expect(ctx.uploadedFiles).toBe(1);
@@ -1347,26 +1229,46 @@ describe('uploadStorybook', () => {
   });
 });
 
-describe('waitForSentinels', () => {
+describe('sentinel handling', () => {
   it('dedupes sentinel URLs before awaiting them', async () => {
-    const client = { runQuery: vi.fn() };
-    http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
-
     const sentinelUrls = [
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/files-copied.txt?foo',
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/zip-unpacked.txt?bar',
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/zip-unpacked.txt?baz',
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/files-copied.txt?baz',
     ];
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls,
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    http.fetch.mockReturnValue({ ok: true, text: () => Promise.resolve('OK') });
+
     const ctx = {
       client,
       env: environment,
       log,
       http,
+      sourceDir: '/static/',
       options: {},
-      sentinelUrls,
+      fileInfo: { lengths: [{ knownAs: 'index.html', contentLength: 42 }], paths: ['index.html'] },
+      announcedBuild: { id: '1' },
     } as any;
-    await waitForSentinels(ctx, {} as any);
+    await runUpload(ctx);
 
     // Last one wins
     expect(http.fetch).not.toHaveBeenCalledWith(
