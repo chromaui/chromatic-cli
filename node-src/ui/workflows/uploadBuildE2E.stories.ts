@@ -20,7 +20,13 @@ import {
   pending as initializePending,
   success as initializeSuccess,
 } from '../tasks/initialize';
-import * as snapshot from '../tasks/snapshotE2E.stories';
+import {
+  buildComplete as snapshotBuildComplete,
+  buildPassed as snapshotBuildPassed,
+  initial as snapshotInitial,
+  pending as snapshotPending,
+  skipped as snapshotSkipped,
+} from '../tasks/snapshot';
 import {
   initial as storybookInfoInitial,
   pending as storybookInfoPending,
@@ -119,6 +125,41 @@ const verify = {
   Initial: () => verifyInitial(ctx),
   Pending: () => verifyPending(ctx),
   Published: () => verifySuccess({ ...ctx, isPublishOnly: true, build: verifiedBuild } as any),
+};
+
+// snapshot.stories now returns rendered ANSI strings (Clack capture), which the old task() path
+// can't consume, so rebuild the states the workflow needs from the raw task source. The file-level
+// `ctx` (playwright) is forwarded by the `steps()` helper.
+const snapshotBuild = {
+  number: 42,
+  errorCount: 1,
+  changeCount: 2,
+  testCount: 10,
+  actualTestCount: 10,
+  actualCaptureCount: 20,
+  componentCount: 5,
+  specCount: 8,
+  features: { uiTests: true },
+};
+const snapshot = {
+  Initial: () => snapshotInitial(ctx),
+  Pending: () =>
+    snapshotPending({ ...ctx, build: snapshotBuild } as any, {
+      cursor: 6,
+      label: 'Snapshot #1 w1280h720',
+    }),
+  BuildPassed: () =>
+    snapshotBuildPassed({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
+  BuildComplete: () =>
+    snapshotBuildComplete({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
+  BuildAutoAccepted: () =>
+    snapshotBuildComplete({
+      ...ctx,
+      build: { ...snapshotBuild, autoAcceptChanges: true },
+      now: 0,
+      startedAt: -123_456,
+    } as any),
+  SkippedPublishOnly: () => snapshotSkipped({ ...ctx, isPublishOnly: true } as any),
 };
 
 export default {
