@@ -5,7 +5,7 @@ import { Context } from '../../../types';
 import { error } from '../../components/icons';
 import link from '../../components/link';
 
-export default (ctx: Context, { failureReason, storybookUrl }) => {
+export default (ctx: Pick<Context, 'isReactNativeApp'>, { failureReason, storybookUrl }) => {
   const visitStorybookLine = ctx.isReactNativeApp
     ? ''
     : `\n    Visit your published Storybook at ${link(storybookUrl)}`;
