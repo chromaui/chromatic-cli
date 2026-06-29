@@ -6,11 +6,10 @@ import report from './report';
 import restoreWorkspace from './restoreWorkspace';
 import snapshot from './snapshot';
 import uploadShare from './uploadShare';
-import verify from './verify';
 
 export const runShare = [uploadShare];
 
-export const runUploadBuild = [verify, snapshot];
+export const runUploadBuild = [snapshot];
 
 export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 

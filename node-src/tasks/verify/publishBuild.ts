@@ -1,5 +1,5 @@
-import { exitCodes, setExitCode } from '../../lib/setExitCode';
-import { Context, TurboSnapStatus } from '../../types';
+import { exitCodes, TaskFailure } from '../../lib/setExitCode';
+import { Context, Deps, TurboSnapStatus } from '../../types';
 import { publishFailed } from '../../ui/tasks/verify';
 
 const PublishBuildMutation = `
@@ -19,11 +19,27 @@ interface PublishBuildMutationResult {
   };
 }
 
-export const publishBuild = async (ctx: Context) => {
-  const { turboSnap } = ctx;
-  const { id, reportToken } = ctx.announcedBuild;
-  const { replacementBuildIds } = ctx.git;
-  const { onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
+export interface PublishBuildInput {
+  announcedBuild: Context['announcedBuild'];
+  options: Context['options'];
+  replacementBuildIds?: Context['git']['replacementBuildIds'];
+  onlyStoryFiles?: string[];
+  turboSnap?: Context['turboSnap'];
+}
+
+export interface PublishBuildResult {
+  announcedBuild: Context['announcedBuild'];
+  storybookUrl: string;
+}
+
+export const publishBuild = async (
+  deps: Deps,
+  input: PublishBuildInput
+): Promise<PublishBuildResult> => {
+  const { client } = deps;
+  const { announcedBuild, replacementBuildIds, turboSnap } = input;
+  const { id, reportToken } = announcedBuild;
+  const { onlyStoryNames, onlyStoryFiles = input.onlyStoryFiles } = input.options;
 
   let turboSnapBailReason;
   let turboSnapStatus: TurboSnapStatus = 'UNUSED';
@@ -32,7 +48,7 @@ export const publishBuild = async (ctx: Context) => {
     turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
   }
 
-  const { publishBuild: publishedBuild } = await ctx.client.runQuery<PublishBuildMutationResult>(
+  const { publishBuild: publishedBuild } = await client.runQuery<PublishBuildMutationResult>(
     PublishBuildMutation,
     {
       id,
@@ -49,12 +65,13 @@ export const publishBuild = async (ctx: Context) => {
     { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }
   );
 
-  ctx.announcedBuild = { ...ctx.announcedBuild, ...publishedBuild };
-  ctx.storybookUrl = publishedBuild.storybookUrl;
-
   // Queueing the extract may have failed
   if (publishedBuild.status === 'FAILED') {
-    setExitCode(ctx, exitCodes.BUILD_FAILED, false);
-    throw new Error(publishFailed(ctx).output);
+    throw new TaskFailure(publishFailed(input).output, { exitCode: exitCodes.BUILD_FAILED });
   }
+
+  return {
+    announcedBuild: { ...announcedBuild, ...publishedBuild },
+    storybookUrl: publishedBuild.storybookUrl,
+  };
 };
