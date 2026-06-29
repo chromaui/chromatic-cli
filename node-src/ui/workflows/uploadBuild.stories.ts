@@ -31,7 +31,11 @@ import {
   success as uploadSuccess,
   uploading as uploadUploading,
 } from '../tasks/upload';
-import * as verify from '../tasks/verify.stories';
+import {
+  initial as verifyInitial,
+  pending as verifyPending,
+  success as verifySuccess,
+} from '../tasks/verify';
 
 const steps = (...steps) => steps.map((step) => task(step())).join('\n');
 
@@ -100,6 +104,20 @@ const upload = {
       uploadedFiles: 42,
       fileInfo: { paths: { length: 42 } },
     } as any),
+};
+
+// verify.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source.
+const verifiedBuild = {
+  number: 42,
+  webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+  app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
+};
+const verify = {
+  Initial: () => verifyInitial(buildContext),
+  Pending: () => verifyPending(buildContext),
+  Published: () =>
+    verifySuccess({ ...buildContext, isPublishOnly: true, build: verifiedBuild } as any),
 };
 
 export default {

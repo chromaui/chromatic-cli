@@ -1,67 +1,14 @@
-/* eslint-disable unicorn/no-null -- GraphQL returns `null` if a value doesn't exist */
-import task from '../components/task';
-import {
-  awaitingUpgrades,
-  dryRun,
-  failed,
-  initial,
-  pending,
-  publishFailed,
-  runOnlyFiles,
-  runOnlyNames,
-  success,
-} from './verify';
+import frames from './verify.frames?clack';
 
-export default {
-  title: 'CLI/Tasks/Verify',
-  decorators: [(storyFunction: any) => task(storyFunction())],
-};
+export default { title: 'CLI/Tasks/Verify' };
 
-const build = {
-  number: 42,
-  webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
-  app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
-};
-
-const ctx = { options: {} } as any;
-
-export const Initial = () => initial(ctx);
-
-export const DryRun = () => dryRun(ctx);
-
-export const Pending = () => pending(ctx);
-
-export const PublishFailed = () => publishFailed(ctx);
-
-export const RunOnlyChangedFiles = () =>
-  runOnlyFiles({
-    ...ctx,
-    onlyStoryFiles: Array.from({ length: 12 }),
-    options: {},
-  } as any);
-
-export const RunOnlyFiles = () =>
-  runOnlyFiles({
-    ...ctx,
-    options: { ...ctx.options, onlyStoryFiles: ['./src/**/*.stories.js'] },
-  } as any);
-
-export const RunOnlyNames = () =>
-  runOnlyNames({
-    ...ctx,
-    options: { ...ctx.options, onlyStoryNames: ['MyComponent/**'] },
-  } as any);
-
-export const AwaitingUpgrades = () =>
-  awaitingUpgrades(ctx, [{ completedAt: 123 }, { completedAt: null }]);
-
-export const Started = () => success({ ...ctx, build } as any);
-
-export const Published = () => success({ ...ctx, isPublishOnly: true, build } as any);
-
-export const ContinueSetup = () => success({ ...ctx, isOnboarding: true, build } as any);
-
-export const NoStories = () => failed({ ...ctx, options: {} } as any);
-
-export const NoMatches = () =>
-  failed({ ...ctx, options: { ...ctx.options, onlyStoryNames: ['MyComponent/MyStory'] } } as any);
+export const Pending = () => frames.Pending;
+export const RunOnlyChangedFiles = () => frames.RunOnlyChangedFiles;
+export const RunOnlyFiles = () => frames.RunOnlyFiles;
+export const RunOnlyNames = () => frames.RunOnlyNames;
+export const AwaitingUpgrades = () => frames.AwaitingUpgrades;
+export const Started = () => frames.Started;
+export const Published = () => frames.Published;
+export const ContinueSetup = () => frames.ContinueSetup;
+export const DryRun = () => frames.DryRun;
+export const Failed = () => frames.Failed;
