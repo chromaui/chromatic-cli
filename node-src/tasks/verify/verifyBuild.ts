@@ -1,7 +1,6 @@
-import { exitCodes, setExitCode } from '../../lib/setExitCode';
-import { transitionTo } from '../../lib/tasks';
+import { exitCodes, TaskFailure } from '../../lib/setExitCode';
 import { delay } from '../../lib/utilities';
-import { Context, Task } from '../../types';
+import { Context, Deps } from '../../types';
 import brokenStorybook from '../../ui/messages/errors/brokenStorybook';
 import listingStories from '../../ui/messages/info/listingStories';
 import storybookPublished from '../../ui/messages/info/storybookPublished';
@@ -10,13 +9,7 @@ import buildLimited from '../../ui/messages/warnings/buildLimited';
 import paymentRequired from '../../ui/messages/warnings/paymentRequired';
 import snapshotQuotaReached from '../../ui/messages/warnings/snapshotQuotaReached';
 import turboSnapUnavailable from '../../ui/messages/warnings/turboSnapUnavailable';
-import {
-  awaitingUpgrades,
-  publishFailed,
-  runOnlyFiles,
-  runOnlyNames,
-  success,
-} from '../../ui/tasks/verify';
+import { awaitingUpgrades, publishFailed, runOnlyFiles, runOnlyNames } from '../../ui/tasks/verify';
 
 const StartedBuildQuery = `
   query StartedBuildQuery($number: Int!) {
@@ -112,51 +105,77 @@ interface VerifyBuildQueryResult {
   };
 }
 
+export interface VerifyBuildInput {
+  announcedBuild: Context['announcedBuild'];
+  build: Context['build'];
+  storybookUrl?: string;
+  options: Context['options'];
+  onlyStoryFiles?: string[];
+  matchesBranch?: Context['git']['matchesBranch'];
+  turboSnap?: Context['turboSnap'];
+  isReactNativeApp?: boolean;
+}
+
+export interface VerifyBuildResult {
+  build: Context['build'];
+  isPublishOnly: boolean;
+  skipSnapshots: boolean;
+  // A non-throwing exit code set when the build was limited (quota/payment/other), applied to ctx
+  // in `applyVerifyOutput`. `run` has no ctx to call `setExitCode` directly.
+  limitExitCode?: { code: number; userError: boolean };
+}
+
 // TODO: refactor this function
-// eslint-disable-next-line complexity, max-statements
-export const verifyBuild = async (ctx: Context, task: Task) => {
-  const { client } = ctx;
-  const { list, onlyStoryNames, onlyStoryFiles = ctx.onlyStoryFiles } = ctx.options;
-  const { matchesBranch } = ctx.git;
+/* eslint-disable complexity, max-statements */
+export const verifyBuild = async (
+  deps: Deps,
+  input: VerifyBuildInput
+): Promise<VerifyBuildResult> => {
+  const { client, env, log, report } = deps;
+  const { announcedBuild, storybookUrl, turboSnap, matchesBranch } = input;
+  const { list, onlyStoryNames, onlyStoryFiles = input.onlyStoryFiles } = input.options;
 
   // It's not possible to set both --only-changed and --only-story-files and/or --only-story-names
   // onlyStoryFiles may be passed directly, or calculated via --only-changed
   if (onlyStoryFiles) {
-    transitionTo(runOnlyFiles)(ctx, task);
+    report(runOnlyFiles(input));
   }
   if (onlyStoryNames) {
-    transitionTo(runOnlyNames)(ctx, task);
+    report(runOnlyNames(input));
   }
 
+  let build = input.build;
   let timeoutStart = Date.now();
   const waitForBuildToStart = async () => {
-    const { storybookUrl } = ctx;
-    const { number, reportToken } = ctx.announcedBuild;
+    const { number, reportToken } = announcedBuild;
     const variables = { number };
     const options = { headers: { Authorization: `Bearer ${reportToken}` } };
 
     const {
-      app: { build },
+      app: { build: startedInfo },
     } = await client.runQuery<StartedBuildQueryResult>(StartedBuildQuery, variables, options);
 
-    if (build.failureReason) {
-      ctx.log.warn(brokenStorybook(ctx, { failureReason: build.failureReason, storybookUrl }));
-      setExitCode(ctx, exitCodes.STORYBOOK_BROKEN, true);
-      throw new Error(publishFailed(ctx).output);
+    if (startedInfo.failureReason) {
+      log.warn(brokenStorybook(input, { failureReason: startedInfo.failureReason, storybookUrl }));
+      throw new TaskFailure(publishFailed(input).output, {
+        exitCode: exitCodes.STORYBOOK_BROKEN,
+        userError: true,
+      });
     }
 
-    if (!build.startedAt) {
+    if (!startedInfo.startedAt) {
       // Upgrade builds can take a long time to complete, so we can't apply a hard timeout yet,
       // instead we only timeout on the actual build verification, after upgrades are complete.
-      if (build.upgradeBuilds?.some((upgrade) => !upgrade.completedAt)) {
-        task.output = awaitingUpgrades(ctx, build.upgradeBuilds).output;
-        timeoutStart = Date.now() + ctx.env.CHROMATIC_POLL_INTERVAL;
-      } else if (Date.now() - timeoutStart > ctx.env.STORYBOOK_VERIFY_TIMEOUT) {
-        setExitCode(ctx, exitCodes.VERIFICATION_TIMEOUT);
-        throw new Error('Build verification timed out');
+      if (startedInfo.upgradeBuilds?.some((upgrade) => !upgrade.completedAt)) {
+        report({ output: awaitingUpgrades(input, startedInfo.upgradeBuilds).output });
+        timeoutStart = Date.now() + env.CHROMATIC_POLL_INTERVAL;
+      } else if (Date.now() - timeoutStart > env.STORYBOOK_VERIFY_TIMEOUT) {
+        throw new TaskFailure('Build verification timed out', {
+          exitCode: exitCodes.VERIFICATION_TIMEOUT,
+        });
       }
 
-      await delay(ctx.env.CHROMATIC_POLL_INTERVAL);
+      await delay(env.CHROMATIC_POLL_INTERVAL);
       await waitForBuildToStart();
       return;
     }
@@ -164,7 +183,7 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     const {
       app: { build: startedBuild },
     } = await client.runQuery<VerifyBuildQueryResult>(VerifyBuildQuery, variables, options);
-    ctx.build = { ...ctx.announcedBuild, ...ctx.build, ...startedBuild };
+    build = { ...announcedBuild, ...build, ...startedBuild };
   };
 
   await Promise.race([
@@ -172,49 +191,61 @@ export const verifyBuild = async (ctx: Context, task: Task) => {
     new Promise((_, reject) =>
       setTimeout(
         reject,
-        ctx.env.CHROMATIC_UPGRADE_TIMEOUT,
+        env.CHROMATIC_UPGRADE_TIMEOUT,
         new Error('Timed out waiting for upgrade builds to complete')
       )
     ),
   ]);
 
-  ctx.isPublishOnly = !ctx.build.features?.uiReview && !ctx.build.features?.uiTests;
+  const isPublishOnly = !build.features?.uiReview && !build.features?.uiTests;
 
-  if (list && ctx.build.tests) {
-    ctx.log.info(listingStories(ctx.build.tests));
+  if (list && build.tests) {
+    log.info(listingStories(build.tests));
   }
 
-  if (ctx.turboSnap) {
-    if (ctx.turboSnap.unavailable) {
-      ctx.log.warn(turboSnapUnavailable(ctx));
-    } else if (ctx.build.turboSnapEnabled) {
-      ctx.log.info(turboSnapEnabled(ctx));
+  if (turboSnap) {
+    if (turboSnap.unavailable) {
+      log.warn(turboSnapUnavailable({ build }));
+    } else if (build.turboSnapEnabled) {
+      log.info(turboSnapEnabled({ build, options: input.options }));
     }
   }
 
-  if (ctx.build.wasLimited) {
-    const { account } = ctx.build.app;
+  let limitExitCode: VerifyBuildResult['limitExitCode'];
+  if (build.wasLimited) {
+    const { account } = build.app;
     if (account?.exceededThreshold) {
-      ctx.log.warn(snapshotQuotaReached(account));
-      setExitCode(ctx, exitCodes.ACCOUNT_QUOTA_REACHED, true);
+      log.warn(snapshotQuotaReached(account));
+      limitExitCode = { code: exitCodes.ACCOUNT_QUOTA_REACHED, userError: true };
     } else if (account?.paymentRequired) {
-      ctx.log.warn(paymentRequired(account));
-      setExitCode(ctx, exitCodes.ACCOUNT_PAYMENT_REQUIRED, true);
+      log.warn(paymentRequired(account));
+      limitExitCode = { code: exitCodes.ACCOUNT_PAYMENT_REQUIRED, userError: true };
     } else {
       // Future proofing for reasons we aren't aware of
-      if (account) ctx.log.warn(buildLimited(account));
-      setExitCode(ctx, exitCodes.BUILD_WAS_LIMITED, true);
+      if (account) {
+        log.warn(buildLimited(account));
+      }
+      limitExitCode = { code: exitCodes.BUILD_WAS_LIMITED, userError: true };
     }
   }
 
-  if (ctx.build && ctx.storybookUrl) {
-    ctx.log.info(storybookPublished(ctx));
+  if (build && storybookUrl) {
+    log.info(
+      storybookPublished({
+        storybookUrl,
+        build,
+        options: input.options,
+        isReactNativeApp: input.isReactNativeApp,
+      })
+    );
   }
 
-  transitionTo(success, true)(ctx, task);
+  const skipSnapshots = !!(
+    list ||
+    isPublishOnly ||
+    matchesBranch?.(input.options.exitOnceUploaded)
+  );
 
-  if (list || ctx.isPublishOnly || matchesBranch?.(ctx.options.exitOnceUploaded)) {
-    setExitCode(ctx, exitCodes.OK);
-    ctx.skipSnapshots = true;
-  }
+  return { build, isPublishOnly, skipSnapshots, limitExitCode };
 };
+/* eslint-enable complexity, max-statements */

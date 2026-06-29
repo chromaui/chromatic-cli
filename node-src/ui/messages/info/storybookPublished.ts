@@ -8,7 +8,7 @@ import link from '../../components/link';
 import { stats } from '../../tasks/snapshot';
 import { buildType, capitalize } from '../../tasks/utilities';
 
-export default (ctx: Context) => {
+export default (ctx: Pick<Context, 'storybookUrl' | 'build' | 'options' | 'isReactNativeApp'>) => {
   if (!ctx.storybookUrl) {
     throw new Error('No Storybook URL provided');
   }

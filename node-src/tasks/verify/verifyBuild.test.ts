@@ -11,18 +11,16 @@ const environment = {
 };
 const log = new TestLogger();
 
-describe('verifyBuild', () => {
-  const defaultContext = {
-    env: environment,
-    log,
-    options: {},
-    environment: ':environment',
-    git: { version: 'whatever', matchesBranch: () => false },
-    pkg: { version: '1.0.0' },
-    storybook: { version: '2.0.0', addons: [] },
-    announcedBuild: { number: 1, reportToken: 'report-token' },
-  };
+const buildDeps = (client: { runQuery: ReturnType<typeof vi.fn> }) =>
+  ({ client, env: environment, log, report: vi.fn() }) as any;
 
+const defaultInput = {
+  options: {},
+  matchesBranch: () => false,
+  announcedBuild: { number: 1, reportToken: 'report-token' },
+} as any;
+
+describe('verifyBuild', () => {
   it('waits for the build to start', async () => {
     const build = {
       status: 'IN_PROGRESS',
@@ -38,8 +36,7 @@ describe('verifyBuild', () => {
       .mockReturnValueOnce({ app: { build: publishedBuild } })
       .mockReturnValue({ app: { build } });
 
-    const ctx = { client, ...defaultContext } as any;
-    await verifyBuild(ctx, {} as any);
+    const result = await verifyBuild(buildDeps(client), defaultInput);
 
     expect(client.runQuery).toHaveBeenNthCalledWith(
       1,
@@ -66,9 +63,9 @@ describe('verifyBuild', () => {
       { headers: { Authorization: `Bearer report-token` } }
     );
     expect(client.runQuery).toHaveBeenCalledTimes(4);
-    expect(ctx.build).toMatchObject(build);
-    expect(ctx.exitCode).toBe(undefined);
-    expect(ctx.skipSnapshots).toBe(undefined);
+    expect(result.build).toMatchObject(build);
+    expect(result.limitExitCode).toBe(undefined);
+    expect(result.skipSnapshots).toBe(false);
   });
 
   it('times out if build takes too long to start', async () => {
@@ -82,10 +79,9 @@ describe('verifyBuild', () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ app: { build: publishedBuild } });
 
-    const ctx = { client, ...defaultContext } as any;
-    await expect(verifyBuild(ctx, {} as any)).rejects.toThrow('Build verification timed out');
-
-    expect(ctx.exitCode).toBe(exitCodes.VERIFICATION_TIMEOUT);
+    const error = await verifyBuild(buildDeps(client), defaultInput).catch((error_) => error_);
+    expect(error.message).toBe('Build verification timed out');
+    expect(error.exitCode).toBe(exitCodes.VERIFICATION_TIMEOUT);
   });
 
   it('waits for upgrade builds before starting verification timeout', async () => {
@@ -111,11 +107,10 @@ describe('verifyBuild', () => {
       .mockReturnValueOnce({ app: { build: { ...publishedBuild, upgradeBuilds: completed } } })
       .mockReturnValue({ app: { build } });
 
-    const ctx = { client, ...defaultContext } as any;
-    await verifyBuild(ctx, {} as any);
+    const result = await verifyBuild(buildDeps(client), defaultInput);
 
-    expect(ctx.build).toMatchObject(build);
-    expect(ctx.exitCode).toBe(undefined);
+    expect(result.build).toMatchObject(build);
+    expect(result.limitExitCode).toBe(undefined);
   });
 
   it('times out if upgrade builds take too long to complete', async () => {
@@ -130,13 +125,12 @@ describe('verifyBuild', () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({ app: { build: publishedBuild } });
 
-    const ctx = { client, ...defaultContext } as any;
-    await expect(verifyBuild(ctx, {} as any)).rejects.toThrow(
+    await expect(verifyBuild(buildDeps(client), defaultInput)).rejects.toThrow(
       'Timed out waiting for upgrade builds to complete'
     );
   });
 
-  it('sets exitCode to 5 if build was limited', async () => {
+  it('reports a limit exit code of 5 if build was limited', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
@@ -152,12 +146,11 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
-    await verifyBuild(ctx, {} as any);
-    expect(ctx.exitCode).toBe(5);
+    const result = await verifyBuild(buildDeps(client), defaultInput);
+    expect(result.limitExitCode?.code).toBe(exitCodes.BUILD_WAS_LIMITED);
   });
 
-  it('sets exitCode to 11 if snapshot quota was reached', async () => {
+  it('reports a limit exit code of 11 if snapshot quota was reached', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
@@ -173,12 +166,11 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
-    await verifyBuild(ctx, {} as any);
-    expect(ctx.exitCode).toBe(11);
+    const result = await verifyBuild(buildDeps(client), defaultInput);
+    expect(result.limitExitCode?.code).toBe(exitCodes.ACCOUNT_QUOTA_REACHED);
   });
 
-  it('sets exitCode to 12 if payment is required', async () => {
+  it('reports a limit exit code of 12 if payment is required', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
@@ -194,12 +186,11 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
-    await verifyBuild(ctx, {} as any);
-    expect(ctx.exitCode).toBe(12);
+    const result = await verifyBuild(buildDeps(client), defaultInput);
+    expect(result.limitExitCode?.code).toBe(exitCodes.ACCOUNT_PAYMENT_REQUIRED);
   });
 
-  it('sets exitCode to 0 and skips snapshotting for publish-only builds', async () => {
+  it('skips snapshotting for publish-only builds', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       app: {
@@ -215,9 +206,8 @@ describe('verifyBuild', () => {
       },
     });
 
-    const ctx = { client, ...defaultContext } as any;
-    await verifyBuild(ctx, {} as any);
-    expect(ctx.exitCode).toBe(0);
-    expect(ctx.skipSnapshots).toBe(true);
+    const result = await verifyBuild(buildDeps(client), defaultInput);
+    expect(result.isPublishOnly).toBe(true);
+    expect(result.skipSnapshots).toBe(true);
   });
 });
