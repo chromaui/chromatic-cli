@@ -4,7 +4,8 @@ import { uploadBuild } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, Deps, FileDesc, TaskResult } from '../types';
-import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
+import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
+import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import deduplicationFailed from '../ui/messages/warnings/deduplicationFailed';
 import { failed, finalizing, invalid, uploading } from '../ui/tasks/upload';
 
@@ -20,6 +21,7 @@ export interface UploadOutput {
   uploadedBytes: number;
   uploadedFiles: number;
   skippedByTurboSnap?: boolean;
+  ancestorBuild?: Context['ancestorBuild'];
 }
 
 const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
@@ -43,10 +45,8 @@ const uploadAndWaitForSentinels = async (
   ctx: Context,
   files: FileDesc[]
 ): Promise<UploadOutput> => {
-  const { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap } = await uploadBuild(
-    ctx,
-    files,
-    {
+  const { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap, ancestorBuild } =
+    await uploadBuild(ctx, files, {
       onProgress: throttle(
         (progress, total) => {
           const percentage = Math.round((progress / total) * 100);
@@ -61,12 +61,11 @@ const uploadAndWaitForSentinels = async (
       onError: (error: Error, path?: string) => {
         throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
       },
-    }
-  );
+    });
 
   // A TurboSnap-skipped build uploads nothing and has no sentinels to wait for.
   if (skippedByTurboSnap || sentinelUrls.length === 0) {
-    return { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap };
+    return { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap, ancestorBuild };
   }
 
   deps.report({ output: finalizing(ctx).output });
@@ -82,6 +81,19 @@ const uploadAndWaitForSentinels = async (
   await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
 
   return { sentinelUrls, uploadedBytes, uploadedFiles };
+};
+
+// A fully-TurboSnapped build halts the pipeline (kind:'skip'). The upload frame renders bare; the
+// two TurboSnap success messages are logged here so they flush as free-standing blocks below the
+// task frames (verify/snapshot never run to log them themselves).
+const skipTurboSnapped = (
+  deps: Deps,
+  ctx: Context,
+  ancestorBuild: UploadOutput['ancestorBuild']
+): TaskResult<UploadOutput> => {
+  deps.log.info(turboSnapEnabled({ ...ctx, skip: true, ancestorBuild }));
+  deps.log.info(buildFullyTurboSnapped({ ancestorBuild }));
+  return { kind: 'skip' };
 };
 
 /**
@@ -105,7 +117,7 @@ export async function uploadProject(
   try {
     const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, true));
     if (output.skippedByTurboSnap) {
-      return { kind: 'skip', reason: buildTurboSkipped() };
+      return skipTurboSnapped(deps, ctx, output.ancestorBuild);
     }
     return { kind: 'continue', output };
   } catch {
@@ -114,7 +126,7 @@ export async function uploadProject(
     // results are discarded simply by running again.
     const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, false));
     if (output.skippedByTurboSnap) {
-      return { kind: 'skip', reason: buildTurboSkipped() };
+      return skipTurboSnapped(deps, ctx, output.ancestorBuild);
     }
     return { kind: 'continue', output };
   }

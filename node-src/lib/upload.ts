@@ -155,6 +155,11 @@ export interface UploadBuildResult {
   uploadedBytes: number;
   uploadedFiles: number;
   skippedByTurboSnap?: boolean;
+  ancestorBuild?: {
+    status: string;
+    webUrl: string;
+    snapshotCount: number;
+  };
 }
 
 /**
@@ -269,7 +274,14 @@ export async function uploadBuild(
           Sentry.captureException(err);
         });
 
-      return { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap: true };
+      return {
+        sentinelUrls,
+        uploadedBytes,
+        uploadedFiles,
+        skippedByTurboSnap: true,
+        // In this case, we should only have a single ancestor build.
+        ancestorBuild: uploadBuild.build.ancestorBuilds?.[0],
+      };
     }
 
     sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));
