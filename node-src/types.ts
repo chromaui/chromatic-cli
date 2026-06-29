@@ -467,12 +467,12 @@ export interface Context {
   sentinelUrls?: string[];
   uploadedBytes?: number;
   uploadedFiles?: number;
-  turboSnap?: TurboSnap;
   ancestorBuild?: {
     status: string;
     webUrl: string;
     snapshotCount: number;
   };
+  turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
   untracedFiles?: { filepath: string; glob: string }[];

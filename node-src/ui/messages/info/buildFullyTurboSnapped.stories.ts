@@ -11,8 +11,8 @@ const ancestorBuild = {
   snapshotCount: 54,
 };
 
-// When a build is skipped, the CLI prints turboSnapEnabled() and buildFullyTurboSnapped()
-// back-to-back (see tasks/upload.ts finishUpload), so we render them together here.
+// When a build is skipped, the CLI logs turboSnapEnabled() and buildFullyTurboSnapped() back-to-back
+// (see `skipTurboSnapped` in tasks/upload.ts), so we render them together here.
 const buildSkipped = (ctx: any) => {
   const skipContext = { ...ctx, skip: true };
   return `${turboSnapEnabled(skipContext)}\n\n${buildFullyTurboSnapped(skipContext)}`;
