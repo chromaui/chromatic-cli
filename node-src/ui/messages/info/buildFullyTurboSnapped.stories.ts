@@ -1,7 +1,8 @@
 import buildFullyTurboSnapped from './buildFullyTurboSnapped';
+import turboSnapEnabled from './turboSnapEnabled';
 
 export default {
-  title: 'CLI/Messages/Info',
+  title: 'CLI/Messages/Info/Build Skipped',
 };
 
 const ancestorBuild = {
@@ -10,17 +11,23 @@ const ancestorBuild = {
   snapshotCount: 54,
 };
 
-export const BuildFullyTurboSnappedAncestorPending = () =>
-  buildFullyTurboSnapped({ ancestorBuild } as any);
+// When a build is skipped, the CLI prints turboSnapEnabled() and buildFullyTurboSnapped()
+// back-to-back (see tasks/upload.ts finishUpload), so we render them together here.
+const buildSkipped = (ctx: any) => {
+  const skipContext = { ...ctx, skip: true };
+  return `${turboSnapEnabled(skipContext)}\n\n${buildFullyTurboSnapped(skipContext)}`;
+};
 
-export const BuildFullyTurboSnappedAncestorPassed = () =>
-  buildFullyTurboSnapped({ ancestorBuild: { ...ancestorBuild, status: 'PASSED' } } as any);
+export const BuildSkippedAncestorPending = () => buildSkipped({ ancestorBuild });
 
-export const BuildFullyTurboSnappedAncestorAccepted = () =>
-  buildFullyTurboSnapped({ ancestorBuild: { ...ancestorBuild, status: 'ACCEPTED' } } as any);
+export const BuildSkippedAncestorPassed = () =>
+  buildSkipped({ ancestorBuild: { ...ancestorBuild, status: 'PASSED' } });
 
-export const BuildFullyTurboSnappedAncestorDenied = () =>
-  buildFullyTurboSnapped({ ancestorBuild: { ...ancestorBuild, status: 'DENIED' } } as any);
+export const BuildSkippedAncestorAccepted = () =>
+  buildSkipped({ ancestorBuild: { ...ancestorBuild, status: 'ACCEPTED' } });
 
-export const BuildFullyTurboSnappedAncestorOther = () =>
-  buildFullyTurboSnapped({ ancestorBuild: { ...ancestorBuild, status: 'BROKEN' } } as any);
+export const BuildSkippedAncestorDenied = () =>
+  buildSkipped({ ancestorBuild: { ...ancestorBuild, status: 'DENIED' } });
+
+export const BuildSkippedAncestorOther = () =>
+  buildSkipped({ ancestorBuild: { ...ancestorBuild, status: 'BROKEN' } });
