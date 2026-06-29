@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
-import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
+import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
+import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { finishUpload, uploadStorybook, waitForSentinels } from './upload';
 
 vi.mock('@sentry/node');
@@ -441,6 +442,50 @@ describe('uploadStorybook', () => {
     );
   });
 
+  it('captures the ancestor build details when the build is SKIPPED', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockResolvedValue({
+      uploadBuild: {
+        build: {
+          id: '2',
+          status: 'SKIPPED',
+          ancestorBuilds: [
+            {
+              status: 'PASSED',
+              webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
+              snapshotCount: 54,
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+
+    const fileInfo = {
+      lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+      paths: ['index.html'],
+      total: 42,
+    };
+    const ctx = {
+      client,
+      env: environment,
+      log,
+      http,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo,
+      announcedBuild: { id: '1' },
+      onlyStoryFiles: [],
+    } as any;
+    await uploadStorybook(ctx, {} as any);
+
+    expect(ctx.ancestorBuild).toEqual({
+      status: 'PASSED',
+      webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
+      snapshotCount: 54,
+    });
+  });
+
   it('still skips and reports to Sentry when preparing the skipped build fails', async () => {
     const error = new Error('prepare failed');
     const client = { runQuery: vi.fn() };
@@ -528,23 +573,24 @@ describe('uploadStorybook', () => {
   });
 
   describe('finishUpload', () => {
-    it('logs the build skipped message and skips the task when the build is SKIPPED', () => {
+    it('logs the skipped-build messages and skips the task when the build is SKIPPED', () => {
       const ctx = { skip: true, log, options: {} } as any;
       const task = { skip: vi.fn() } as any;
 
       finishUpload(ctx, task);
 
-      expect(log.info).toHaveBeenCalledWith(buildTurboSkipped());
+      expect(log.info).toHaveBeenCalledWith(turboSnapEnabled(ctx));
+      expect(log.info).toHaveBeenCalledWith(buildFullyTurboSnapped(ctx));
       expect(task.skip).toHaveBeenCalledWith('');
     });
 
-    it('does not log the build skipped message when the build was uploaded', () => {
+    it('does not log the skipped-build messages when the build was uploaded', () => {
       const ctx = { skip: false, log, options: {} } as any;
       const task = { skip: vi.fn() } as any;
 
       finishUpload(ctx, task);
 
-      expect(log.info).not.toHaveBeenCalledWith(buildTurboSkipped());
+      expect(log.info).not.toHaveBeenCalledWith(buildFullyTurboSnapped(ctx));
       expect(task.skip).not.toHaveBeenCalled();
     });
   });
