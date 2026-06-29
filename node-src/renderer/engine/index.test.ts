@@ -362,6 +362,36 @@ describe('runTask', () => {
       });
     });
 
+    it('writes a reported build onto ctx so the onTaskProgress snapshot is live', async () => {
+      const seen: Context[] = [];
+      const onTaskProgress = vi.fn((ctxSnapshot: Context) => seen.push(ctxSnapshot));
+      const ctx = fakeContext({
+        build: { number: 1 } as any,
+        options: { experimental_onTaskProgress: onTaskProgress } as any,
+      });
+      const { renderer } = recordingRenderer();
+
+      const polledBuild = { number: 1, status: 'IN_PROGRESS' } as any;
+      const config: TaskConfig<unknown, unknown> = {
+        name: 'snapshot',
+        title: 'Snapshotting',
+        transitions,
+        extractInput: () => ({}),
+        run: async (deps) => {
+          deps.report({
+            progress: { progress: 1, total: 5, unit: 'snapshots' },
+            build: polledBuild,
+          });
+          return { kind: 'continue', output: {} };
+        },
+      };
+
+      await runTask(ctx, config, renderer);
+
+      expect(ctx.build).toBe(polledBuild);
+      expect(seen[0].build).toBe(polledBuild);
+    });
+
     it('passes a numeric-only report through with no output', async () => {
       const ctx = fakeContext({ options: {} as any });
       const { renderer, calls } = recordingRenderer();

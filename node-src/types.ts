@@ -506,6 +506,11 @@ export interface TaskUpdate {
   title?: string;
   output?: string;
   progress?: TaskProgress;
+  // A mid-task ctx mutation, not UI: `makeReporter` writes this onto `ctx.build` so the `{ ...ctx }`
+  // snapshot handed to `experimental_onTaskProgress` carries the live (polled) build. If we add more
+  // fields like this, refactor to a more extensible mid-task ctx-update channel rather than growing
+  // the UI-update payload with model-sync fields.
+  build?: Context['build'];
 }
 
 export type TaskReporter = (update: TaskUpdate) => void;
