@@ -1,3 +1,15 @@
+# v17.8.0 (Mon Jun 29 2026)
+
+#### 🚀 Enhancement
+
+- Include ancestor build details on a fully TurboSnapped build [#1406](https://github.com/chromaui/chromatic-cli/pull/1406) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v17.7.2 (Fri Jun 26 2026)
 
 #### 🐛 Bug Fix
