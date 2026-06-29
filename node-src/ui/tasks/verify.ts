@@ -21,13 +21,13 @@ export const pending = (ctx: Context) => ({
   output: 'This may take a few minutes',
 });
 
-export const publishFailed = (ctx: Context) => ({
+export const publishFailed = (ctx: Pick<Context, 'options'>) => ({
   status: 'error',
   title: `Verifying your ${buildType(ctx)}`,
   output: 'Failed to publish build',
 });
 
-export const runOnlyFiles = (ctx: Context) => ({
+export const runOnlyFiles = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => ({
   status: 'pending',
   title: 'Starting partial build',
   output: ctx.options.onlyStoryFiles
@@ -37,7 +37,7 @@ export const runOnlyFiles = (ctx: Context) => ({
     : `Snapshots will be limited to ${ctx.onlyStoryFiles?.length} story files affected by recent changes`,
 });
 
-export const runOnlyNames = (ctx: Context) => {
+export const runOnlyNames = (ctx: Pick<Context, 'options'>) => {
   const testType = isE2EBuild(ctx.options) ? 'tests' : 'stories';
 
   return {
@@ -50,7 +50,7 @@ export const runOnlyNames = (ctx: Context) => {
 };
 
 export const awaitingUpgrades = (
-  ctx: Context,
+  ctx: Pick<Context, 'options'>,
   upgradeBuilds: { completedAt?: number | null }[]
 ) => {
   const pending = upgradeBuilds.filter((upgrade) => !upgrade.completedAt).length;
