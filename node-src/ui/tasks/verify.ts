@@ -71,15 +71,3 @@ export const success = (ctx: Context) => ({
     ? `Continue setup at ${ctx.build.app.setupUrl}`
     : `View build details at ${ctx.build.webUrl}`,
 });
-
-export const failed = (ctx: Context) => {
-  const testType = isE2EBuild(ctx.options) ? 'tests' : 'stories';
-
-  return {
-    status: 'error',
-    title: `Verifying your ${buildType(ctx)}`,
-    output: ctx.options.onlyStoryNames
-      ? `Cannot run a build with no ${testType}. Change or omit the --only-story-names predicate.`
-      : `Cannot run a build with no ${testType}. Please add some ${testType}!`,
-  };
-};
