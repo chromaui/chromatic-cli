@@ -20,7 +20,13 @@ import {
   pending as initializePending,
   success as initializeSuccess,
 } from '../tasks/initialize';
-import * as snapshot from '../tasks/snapshot.stories';
+import {
+  buildComplete as snapshotBuildComplete,
+  buildPassed as snapshotBuildPassed,
+  initial as snapshotInitial,
+  pending as snapshotPending,
+  skipped as snapshotSkipped,
+} from '../tasks/snapshot';
 import {
   initial as storybookInfoInitial,
   pending as storybookInfoPending,
@@ -118,6 +124,50 @@ const verify = {
   Pending: () => verifyPending(buildContext),
   Published: () =>
     verifySuccess({ ...buildContext, isPublishOnly: true, build: verifiedBuild } as any),
+};
+
+// snapshot.stories now returns rendered ANSI strings (Clack capture), which the old task() path
+// can't consume, so rebuild the states the workflow needs from the raw task source.
+const snapshotBuild = {
+  number: 42,
+  errorCount: 1,
+  changeCount: 2,
+  testCount: 10,
+  actualTestCount: 10,
+  actualCaptureCount: 20,
+  componentCount: 5,
+  specCount: 8,
+  features: { uiTests: true },
+};
+const snapshot = {
+  Initial: () => snapshotInitial(buildContext),
+  Pending: () =>
+    snapshotPending({ ...buildContext, build: snapshotBuild } as any, {
+      cursor: 6,
+      label: 'ComponentName › StoryName',
+    }),
+  BuildPassed: () =>
+    snapshotBuildPassed({
+      ...buildContext,
+      build: snapshotBuild,
+      now: 0,
+      startedAt: -123_456,
+    } as any),
+  BuildComplete: () =>
+    snapshotBuildComplete({
+      ...buildContext,
+      build: snapshotBuild,
+      now: 0,
+      startedAt: -123_456,
+    } as any),
+  BuildAutoAccepted: () =>
+    snapshotBuildComplete({
+      ...buildContext,
+      build: { ...snapshotBuild, autoAcceptChanges: true },
+      now: 0,
+      startedAt: -123_456,
+    } as any),
+  SkippedPublishOnly: () => snapshotSkipped({ ...buildContext, isPublishOnly: true } as any),
 };
 
 export default {

@@ -109,6 +109,7 @@ export async function runTask<TInput, TOutput, TPartial = never>(
 function makeReporter(ctx: Context, renderer: TaskRenderer): TaskReporter {
   return (update) => {
     if (update.title !== undefined) ctx.title = update.title;
+    if (update.build !== undefined) ctx.build = update.build;
 
     renderer.update({
       title: ctx.title,

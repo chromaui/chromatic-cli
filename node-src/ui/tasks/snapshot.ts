@@ -2,7 +2,6 @@ import pluralize from 'pluralize';
 
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { getDuration } from '../../lib/tasks';
-import { progressBar } from '../../lib/utilities';
 import { Context } from '../../types';
 
 const testType = (ctx: Context) => (isE2EBuild(ctx.options) ? 'test suite' : 'stories');
@@ -45,9 +44,21 @@ export const stats = ({
 };
 
 // TODO: refactor this function
-// eslint-disable-next-line complexity
-export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
+/* eslint-disable complexity */
+export const pending = (
+  ctx: Pick<Context, 'build' | 'options' | 'onlyStoryFiles'>,
+  { cursor = 0, label = '' } = {}
+) => {
   const { build, options, onlyStoryFiles } = ctx;
+  // `runTask` renders this pending state before the task body runs, so it must survive skip paths
+  // that have no build yet — notably `--dry-run`, where `ctx.build` is undefined.
+  if (!build) {
+    return {
+      status: 'pending',
+      title: `Test your ${isE2EBuild(options) ? 'test suite' : 'stories'}`,
+      output: 'This may take a few minutes',
+    };
+  }
   if (build.actualTestCount === 0) {
     return {
       status: 'pending',
@@ -62,8 +73,11 @@ export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
     : '';
   const affected = onlyStoryFiles ? ' affected by recent changes' : '';
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
-  const percentage = Math.round((cursor / build.actualTestCount) * 100);
-  const counts = `${cursor}/${build.actualTestCount}`;
+  // The cursor is a 1-based "now capturing" index (`actualTestCount - inProgressCount + 1`), so it
+  // reaches `actualTestCount + 1` once nothing is in progress. Clamp it so the label never exceeds 100%.
+  const boundedCursor = Math.min(cursor, build.actualTestCount);
+  const percentage = Math.round((boundedCursor / build.actualTestCount) * 100);
+  const counts = `${boundedCursor}/${build.actualTestCount}`;
 
   let errs = '';
   if (build.errorCount) {
@@ -73,11 +87,10 @@ export const pending = (ctx: Context, { cursor = 0, label = '' } = {}) => {
   return {
     status: 'pending',
     title: `Running ${tests}${matching}${affected}${skipping}`,
-    output: cursor
-      ? `${progressBar(percentage)} ${counts} ${errs} ${label}`
-      : 'This may take a few minutes',
+    output: cursor ? `${percentage}% ${counts} ${errs} ${label}` : 'This may take a few minutes',
   };
 };
+/* eslint-enable complexity */
 
 export const buildPassed = (ctx: Context) => {
   const { snapshots, components, stories, e2eTests } = stats(ctx);
@@ -144,4 +157,22 @@ export const skipped = (ctx: Context) => {
       ? `No UI tests or UI review enabled`
       : `Skipped due to ${ctx.options.list ? '--list' : '--exit-once-uploaded'}`,
   };
+};
+
+// The snapshot task's terminal frame: `runTask` always drives the `continue` result through
+// `renderer.succeed`, so all five build outcomes (including the broken/failed/canceled ones, which
+// carry `status: 'error'` and render as red failure frames) branch from here on the completed status.
+export const success = (ctx: Context) => {
+  switch (ctx.build.status) {
+    case 'PASSED':
+      return buildPassed(ctx);
+    case 'BROKEN':
+      return buildBroken(ctx);
+    case 'FAILED':
+      return buildFailed(ctx);
+    case 'CANCELLED':
+      return buildCanceled(ctx);
+    default:
+      return buildComplete(ctx);
+  }
 };

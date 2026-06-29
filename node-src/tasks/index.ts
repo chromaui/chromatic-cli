@@ -4,12 +4,13 @@ import { Context } from '../types';
 import prepareWorkspace from './prepareWorkspace';
 import report from './report';
 import restoreWorkspace from './restoreWorkspace';
-import snapshot from './snapshot';
 import uploadShare from './uploadShare';
 
 export const runShare = [uploadShare];
 
-export const runUploadBuild = [snapshot];
+// snapshot migrated to the Clack renderer (`renderSnapshot`, called directly in `index.ts`); only
+// the conditionally-appended `report` task may remain in this Listr block.
+export const runUploadBuild: ((ctx: Context) => Listr.ListrTask<Context>)[] = [];
 
 export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
 
