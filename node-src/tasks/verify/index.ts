@@ -18,6 +18,7 @@ export interface VerifyOutput {
   announcedBuild: Context['announcedBuild'];
   storybookUrl: string;
   build: Context['build'];
+  // TECHDEBT: if we add a third flag here, we should refactor to something more extensible
   isPublishOnly: boolean;
   skipSnapshots: boolean;
   limitExitCode?: { code: number; userError: boolean };
@@ -82,8 +83,8 @@ export const applyVerifyOutput = (ctx: Context, output: VerifyOutput) => {
   ctx.build = output.build;
   ctx.isPublishOnly = output.isPublishOnly;
 
-  // Replays the legacy setExitCode ordering: a limit code first, then OK overrides it when the
-  // build is publish-only / listed / exiting once uploaded.
+  // Ordering on the setExitCode calls matters: a limit code first, then OK overrides it when the
+  // build is publish-only / listed / exiting once uploaded. If we add a third case, refactor.
   if (output.limitExitCode) {
     setExitCode(ctx, output.limitExitCode.code, output.limitExitCode.userError);
   }

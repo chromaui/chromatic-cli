@@ -40,6 +40,7 @@ import { renderBuild } from './renderer/build';
 import { renderGitInfo } from './renderer/gitInfo';
 import { renderInitialize } from './renderer/initialize';
 import { renderPrepare } from './renderer/prepare';
+import { renderSnapshot } from './renderer/snapshot';
 import { renderStorybookInfo } from './renderer/storybookInfo';
 import { renderUpload } from './renderer/upload';
 import { renderVerify } from './renderer/verify';
@@ -357,6 +358,7 @@ async function runBuild(ctx: Context) {
       await renderPrepare(ctx);
       await renderUpload(ctx);
       await renderVerify(ctx);
+      await renderSnapshot(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {
