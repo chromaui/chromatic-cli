@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
-import buildTurboSkipped from '../ui/messages/info/buildFullyTurboSnapped';
+import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
+import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { applyUploadOutput, extractUploadInput, uploadProject } from './upload';
 
 vi.mock('@sentry/node');
@@ -387,8 +388,42 @@ describe('uploadProject', () => {
       } as any;
       const result = await runUpload(ctx);
 
-      expect(result).toEqual({ kind: 'skip', reason: buildTurboSkipped() });
+      expect(result).toEqual({ kind: 'skip' });
       expect(http.fetch).not.toHaveBeenCalled();
+    });
+
+    it('logs the TurboSnap skip messages with ancestor build details when SKIPPED', async () => {
+      const skipLogger = new TestLogger();
+      const ancestorBuild = {
+        status: 'PASSED',
+        webUrl: 'https://www.chromatic.com/build?appId=abc&number=95',
+        snapshotCount: 54,
+      };
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockResolvedValue({
+        uploadBuild: {
+          build: { id: '2', status: 'SKIPPED', ancestorBuilds: [ancestorBuild] },
+          userErrors: [],
+        },
+      });
+
+      const ctx = {
+        client,
+        env: environment,
+        log: skipLogger,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1' },
+        onlyStoryFiles: [],
+      } as any;
+      await uploadProject({ log: skipLogger, report: vi.fn() } as any, extractUploadInput(ctx));
+
+      expect(skipLogger.info).toHaveBeenCalledWith(
+        turboSnapEnabled({ ...ctx, skip: true, ancestorBuild })
+      );
+      expect(skipLogger.info).toHaveBeenCalledWith(buildFullyTurboSnapped({ ancestorBuild }));
     });
 
     it('prepares the skipped build so stats carry over from its ancestor', async () => {
@@ -441,7 +476,7 @@ describe('uploadProject', () => {
       } as any;
       const result = await runUpload(ctx);
 
-      expect(result).toEqual({ kind: 'skip', reason: buildTurboSkipped() });
+      expect(result).toEqual({ kind: 'skip' });
       expect(skipLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to prepare skipped build 2'),
         error

@@ -467,6 +467,11 @@ export interface Context {
   sentinelUrls?: string[];
   uploadedBytes?: number;
   uploadedFiles?: number;
+  ancestorBuild?: {
+    status: string;
+    webUrl: string;
+    snapshotCount: number;
+  };
   turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
