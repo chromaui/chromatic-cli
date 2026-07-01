@@ -16,7 +16,7 @@ const style = {
  * @param param0 Additional properties for a <div> element.
  * @param param0.backgroundColor The desired background color for the div.
  *
- * @returns A stsyled div element.
+ * @returns A styled div element.
  */
 export default function A({ backgroundColor, ...props }) {
   let computedStyle = style;

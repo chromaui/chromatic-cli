@@ -19,10 +19,21 @@ jobs:
         run: yarn run release-next
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Build and pack the CLI
+        run: |
+          yarn build
+          yarn pack --out chromatic.tgz
+      - name: Install fixture deps
+        working-directory: smoke-tests
+        run: |
+          corepack enable
+          yarn set version 4.2.2
+          yarn install
       - name: Run build against action-next
         uses: chromaui/action-next@latest
         with:
-          buildScriptName: build-test-storybook
+          workingDir: smoke-tests
+          buildScriptName: build-storybook
           exitZeroOnChanges: true
           forceRebuild: true
         env:

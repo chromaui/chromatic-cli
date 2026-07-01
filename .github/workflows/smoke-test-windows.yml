@@ -19,14 +19,28 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "22.22.3"
-      - name: install
-        run: yarn && git status --porcelain
-      - name: prep package
-        run: ./scripts/rename.js storybook-chromatic
-      - run: yarn build
-      - name: run chromatic
-        run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
+      - name: Build and pack the renamed CLI
+        run: |
+          yarn
+          node ./scripts/rename.js storybook-chromatic
+          # re-install so yarn's resolution matches the renamed package before packing
+          yarn
+          yarn build
+          yarn pack --out storybook-chromatic.tgz
         env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+      - name: Install fixture with yarn and run chromatic
+        working-directory: smoke-tests
+        shell: bash
+        run: |
+          # empty lockfile makes yarn treat smoke-tests as a standalone project, not the CLI repo's workspace
+          touch yarn.lock
+          corepack enable
+          yarn set version 4.2.2
+          yarn add chromatic@file:../storybook-chromatic.tgz
+          yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}

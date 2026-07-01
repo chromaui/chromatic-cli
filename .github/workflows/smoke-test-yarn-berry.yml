@@ -19,13 +19,22 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "22.22.3"
-      - name: install
-        run: yarn install
+      - name: Build and pack the CLI
+        run: |
+          yarn
+          yarn build
+          yarn pack --out chromatic.tgz
+      - name: Install fixture with yarn berry and run chromatic
+        working-directory: smoke-tests
+        run: |
+          # empty lockfile makes yarn treat smoke-tests as a standalone project, not the CLI repo's workspace
+          touch yarn.lock
+          corepack enable
+          yarn set version stable
+          yarn install
+          yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
-      - name: run chromatic
-        run: npx -p . chromatic --build-script-name build-test-storybook --exit-zero-on-changes --force-rebuild
-        env:
           LOG_LEVEL: debug
           DEBUG: chromatic-cli
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
