@@ -19,11 +19,25 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "22.22.3"
-      - run: yarn
-      - run: yarn build
+      - name: Build and pack the CLI
+        run: |
+          yarn
+          yarn build
+          yarn pack --out chromatic.tgz
+      - name: Install fixture deps
+        working-directory: smoke-tests
+        run: |
+          # empty lockfile makes yarn treat smoke-tests as a standalone project, not the CLI repo's workspace
+          touch yarn.lock
+          corepack enable
+          yarn set version 4.2.2
+          yarn install
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
       - uses: ./
         with:
-          buildScriptName: build-test-storybook
+          workingDir: smoke-tests
+          buildScriptName: build-storybook
           exitZeroOnChanges: true
           forceRebuild: true
           onlyChanged: true

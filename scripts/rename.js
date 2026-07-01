@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import pkgUp from 'pkg-up';
 import { readFile, writeFile } from 'jsonfile';
+
+// Node runs this file as ESM (it uses import), where __dirname isn't defined
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const packageJson = {
   async read() {

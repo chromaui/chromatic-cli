@@ -26,3 +26,9 @@ storybook-out
 coverage
 package.json.backup
 tests-file.xml
+
+# smoke tests
+smoke-tests/yarn.lock
+smoke-tests/package-lock.json
+smoke-tests/pnpm-lock.yaml
+smoke-tests/storybook-static

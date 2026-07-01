@@ -7,6 +7,7 @@ import { run } from '../dist/node.cjs';
 run({
   flags: {
     projectToken: process.env.CHROMATIC_PROJECT_TOKEN,
+    buildScriptName: 'build-storybook',
     exitZeroOnChanges: true,
   },
 }).then(
