@@ -1,3 +1,39 @@
+# v18.0.0 (Wed Jul 01 2026)
+
+#### 💥 Breaking Change
+
+- Update CLI task list to render with Clack [#1390](https://github.com/chromaui/chromatic-cli/pull/1390) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### 🚀 Enhancement
+
+- Implement logRenderer [#1378](https://github.com/chromaui/chromatic-cli/pull/1378) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### 🐛 Bug Fix
+
+- Update upload task to log ancestor build details [#1411](https://github.com/chromaui/chromatic-cli/pull/1411) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `snapshot` to Clack [#1410](https://github.com/chromaui/chromatic-cli/pull/1410) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `verify` to Clack [#1409](https://github.com/chromaui/chromatic-cli/pull/1409) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `upload` task to Clack [#1404](https://github.com/chromaui/chromatic-cli/pull/1404) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `prepare` to Clack [#1402](https://github.com/chromaui/chromatic-cli/pull/1402) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `build` to Clack renderer [#1398](https://github.com/chromaui/chromatic-cli/pull/1398) ([@justin-thurman](https://github.com/justin-thurman))
+- Add error class to carry exit code information to `runTask` [#1397](https://github.com/chromaui/chromatic-cli/pull/1397) ([@justin-thurman](https://github.com/justin-thurman))
+- Implement a spinner renderer [#1396](https://github.com/chromaui/chromatic-cli/pull/1396) ([@justin-thurman](https://github.com/justin-thurman))
+- Adds a progress bar renderer [#1395](https://github.com/chromaui/chromatic-cli/pull/1395) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `initialize` to Clack renderer [#1393](https://github.com/chromaui/chromatic-cli/pull/1393) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `storybookInfo` to Clack [#1392](https://github.com/chromaui/chromatic-cli/pull/1392) ([@justin-thurman](https://github.com/justin-thurman))
+- Migrate `gitInfo` to Clack [#1389](https://github.com/chromaui/chromatic-cli/pull/1389) ([@justin-thurman](https://github.com/justin-thurman))
+- Implement mid-task UI updates [#1388](https://github.com/chromaui/chromatic-cli/pull/1388) ([@justin-thurman](https://github.com/justin-thurman))
+- Implement Clack-based storybook rendering [#1386](https://github.com/chromaui/chromatic-cli/pull/1386) ([@justin-thurman](https://github.com/justin-thurman))
+- Fan out `auth` and `intro` output to Clack and file logging [#1384](https://github.com/chromaui/chromatic-cli/pull/1384) ([@justin-thurman](https://github.com/justin-thurman))
+- Implement `broadcastRenderer` to fan out multiple `TaskRenderer`s [#1379](https://github.com/chromaui/chromatic-cli/pull/1379) ([@justin-thurman](https://github.com/justin-thurman))
+- Implement Clack-based task rendering and tracer bullet the `auth` task [#1358](https://github.com/chromaui/chromatic-cli/pull/1358) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v17.8.0 (Mon Jun 29 2026)
 
 #### 🚀 Enhancement
