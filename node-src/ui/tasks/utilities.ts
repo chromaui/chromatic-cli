@@ -1,7 +1,7 @@
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { Context } from '../../types';
 
-export const buildType = (ctx: Context) => {
+export const buildType = (ctx: Pick<Context, 'options'>) => {
   if (isE2EBuild(ctx.options)) return 'test suite';
   return 'Storybook';
 };

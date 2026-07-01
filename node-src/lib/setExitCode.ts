@@ -50,3 +50,20 @@ export const setExitCode = (ctx: Partial<Context>, exitCode: number, userError =
   ctx.exitCodeKey = exitCodeKey;
   ctx.userError = userError;
 };
+
+/**
+ * Thrown by a task's `run` to fail with a specific exit code. `run` has no `ctx`, so it
+ * can't call `setExitCode` directly. `runTask` catches this and applies the exit code before
+ * rendering the failure and rethrowing.
+ */
+export class TaskFailure extends Error {
+  readonly exitCode: number;
+  readonly userError: boolean;
+
+  constructor(message: string, options: { exitCode: number; userError?: boolean }) {
+    super(message);
+    this.name = 'TaskFailure';
+    this.exitCode = options.exitCode;
+    this.userError = options.userError ?? false;
+  }
+}

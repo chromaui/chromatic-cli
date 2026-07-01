@@ -28,7 +28,7 @@ type AdaptedTaskConfig<TInput, TOutput, TPartial = never> = ListrTaskExtras & {
   run: TaskFunction<TInput, TOutput, Deps, TPartial>;
 };
 
-const buildDeps = (ctx: Context): Deps => ({
+export const buildDeps = (ctx: Context): Deps => ({
   log: ctx.log,
   client: ctx.client,
   http: ctx.http,
@@ -39,8 +39,14 @@ const buildDeps = (ctx: Context): Deps => ({
   pkg: ctx.pkg,
   sessionId: ctx.sessionId,
   packageJson: ctx.packageJson,
+  // No-op by default; the new engine's `runTask` overrides this with a renderer-aware reporter.
+  // Under Listr there is no reporter: legacy tasks mutate the Listr task object directly, and
+  // adapted tasks have no mid-task channel here — so a task must not adopt `deps.report` until it
+  // has been migrated off Listr onto `runTask`, where the override makes it live.
+  report: () => {},
 });
 
+// eslint-disable-next-line complexity
 async function applyAdaptedResult<TInput, TOutput, TPartial>(
   config: AdaptedTaskConfig<TInput, TOutput, TPartial>,
   ctx: Context,
@@ -63,6 +69,9 @@ async function applyAdaptedResult<TInput, TOutput, TPartial>(
       return;
     case 'skip':
       ctx.skip = true;
+      return;
+    case 'skip-self':
+      // Self-skip without halting the pipeline, so we leave ctx.skip unset.
       return;
     default:
       result satisfies never;

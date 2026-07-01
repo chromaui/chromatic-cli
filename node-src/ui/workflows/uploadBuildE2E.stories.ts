@@ -1,19 +1,166 @@
+import { environment, options } from '../../renderer/storybook/fixtures';
 import task from '../components/task';
 import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
 import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassedE2E.stories';
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublishedE2E.stories';
-import * as auth from '../tasks/auth.stories';
-import * as build from '../tasks/buildE2E.stories';
-import * as gitInfo from '../tasks/gitInfo.stories';
-import * as initialize from '../tasks/initialize.stories';
-import * as snapshot from '../tasks/snapshotE2E.stories';
-import * as storybookInfo from '../tasks/storybookInfoE2E.stories';
-import * as upload from '../tasks/uploadE2E.stories';
-import * as verify from '../tasks/verifyE2E.stories';
+import { authenticated, authenticating, initial } from '../tasks/auth';
+import {
+  initial as buildInitial,
+  pending as buildPending,
+  success as buildSuccess,
+} from '../tasks/build';
+import {
+  initial as gitInfoInitial,
+  pending as gitInfoPending,
+  success as gitInfoSuccess,
+} from '../tasks/gitInfo';
+import {
+  initial as initializeInitial,
+  pending as initializePending,
+  success as initializeSuccess,
+} from '../tasks/initialize';
+import {
+  buildComplete as snapshotBuildComplete,
+  buildPassed as snapshotBuildPassed,
+  initial as snapshotInitial,
+  pending as snapshotPending,
+  skipped as snapshotSkipped,
+} from '../tasks/snapshot';
+import {
+  initial as storybookInfoInitial,
+  pending as storybookInfoPending,
+  success as storybookInfoSuccess,
+} from '../tasks/storybookInfo';
+import {
+  initial as uploadInitial,
+  success as uploadSuccess,
+  uploading as uploadUploading,
+} from '../tasks/upload';
+import {
+  initial as verifyInitial,
+  pending as verifyPending,
+  success as verifySuccess,
+} from '../tasks/verify';
 
 const ctx = { options: { playwright: true } } as any;
 const steps = (...steps) => steps.map((step) => task(step(ctx))).join('\n');
+
+// Build the auth states from the raw task source: auth.stories now returns rendered ANSI strings
+// (Clack capture), which the old task() path can't consume.
+const auth = {
+  Initial: () => initial,
+  Authenticating: () => authenticating({ env: environment } as any),
+  Authenticated: () => authenticated({ env: environment, options } as any),
+};
+
+// gitInfo.stories now returns rendered ANSI strings (Clack capture), which the old task() path
+// can't consume, so rebuild the states the workflow needs from the raw task source.
+const git = { commit: 'a32af7e265aa08e4a16d', branch: 'feat/new-ui', parentCommits: ['a', 'b'] };
+const gitInfo = {
+  Initial: () => gitInfoInitial,
+  Pending: () => gitInfoPending(),
+  Success: () => gitInfoSuccess({ git, options } as any),
+};
+
+// storybookInfo.stories now returns rendered ANSI strings (Clack capture), which the old task()
+// path can't consume, so rebuild the states the workflow needs from the raw task source.
+const storybookInfo = {
+  Initial: () => storybookInfoInitial(ctx),
+  Pending: () => storybookInfoPending(ctx),
+  Success: () => storybookInfoSuccess(ctx),
+};
+
+// build.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source. The file-level `ctx`
+// (playwright) is forwarded by the `steps()` helper.
+const buildCommand = 'yarn build-archive-storybook';
+const build = {
+  Initial: () => buildInitial(ctx),
+  Building: () => buildPending({ ...ctx, buildCommand } as any),
+  Built: () =>
+    buildSuccess({
+      ...ctx,
+      now: 0,
+      startedAt: -32_100,
+      buildLogFile: '/users/me/project/build-archive.log',
+    } as any),
+};
+
+// initialize.stories now returns rendered ANSI strings (Clack capture), which the old task() path
+// can't consume, so rebuild the states the workflow needs from the raw task source.
+const announcedBuild = { number: 42 };
+const initialize = {
+  Initial: () => initializeInitial,
+  Pending: () => initializePending(),
+  Success: () => initializeSuccess({ announcedBuild } as any),
+};
+
+// upload.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source. The file-level `ctx`
+// (playwright) is forwarded by the `steps()` helper.
+const upload = {
+  Initial: () => uploadInitial(ctx),
+  Uploading: () => uploadUploading(ctx, { percentage: 42 }),
+  Success: () =>
+    uploadSuccess({
+      ...ctx,
+      now: 0,
+      startedAt: -54_321,
+      uploadedBytes: 1_234_567,
+      uploadedFiles: 42,
+      fileInfo: { paths: { length: 42 } },
+    } as any),
+};
+
+// verify.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
+// consume, so rebuild the states the workflow needs from the raw task source. The file-level `ctx`
+// (playwright) is forwarded by the `steps()` helper.
+const verifiedBuild = {
+  number: 42,
+  webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+  app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
+};
+const verify = {
+  Initial: () => verifyInitial(ctx),
+  Pending: () => verifyPending(ctx),
+  Published: () => verifySuccess({ ...ctx, isPublishOnly: true, build: verifiedBuild } as any),
+};
+
+// snapshot.stories now returns rendered ANSI strings (Clack capture), which the old task() path
+// can't consume, so rebuild the states the workflow needs from the raw task source. The file-level
+// `ctx` (playwright) is forwarded by the `steps()` helper.
+const snapshotBuild = {
+  number: 42,
+  errorCount: 1,
+  changeCount: 2,
+  testCount: 10,
+  actualTestCount: 10,
+  actualCaptureCount: 20,
+  componentCount: 5,
+  specCount: 8,
+  features: { uiTests: true },
+};
+const snapshot = {
+  Initial: () => snapshotInitial(ctx),
+  Pending: () =>
+    snapshotPending({ ...ctx, build: snapshotBuild } as any, {
+      cursor: 6,
+      label: 'Snapshot #1 w1280h720',
+    }),
+  BuildPassed: () =>
+    snapshotBuildPassed({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
+  BuildComplete: () =>
+    snapshotBuildComplete({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
+  BuildAutoAccepted: () =>
+    snapshotBuildComplete({
+      ...ctx,
+      build: { ...snapshotBuild, autoAcceptChanges: true },
+      now: 0,
+      startedAt: -123_456,
+    } as any),
+  SkippedPublishOnly: () => snapshotSkipped({ ...ctx, isPublishOnly: true } as any),
+};
 
 export default {
   title: 'CLI/Workflows/UploadBuildE2E',

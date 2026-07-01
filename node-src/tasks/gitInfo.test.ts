@@ -28,10 +28,10 @@ import {
 
 // Helper that `expect`s a result kind and asserts on the kind to type narrow the result,
 // allowing later lines to access other result properties without casting
-function expectKind<R extends { kind: 'continue' | 'partial' | 'skip' }, K extends R['kind']>(
-  result: R,
-  kind: K
-): asserts result is Extract<R, { kind: K }> {
+function expectKind<
+  R extends { kind: 'continue' | 'partial' | 'skip' | 'skip-self' },
+  K extends R['kind'],
+>(result: R, kind: K): asserts result is Extract<R, { kind: K }> {
   expect(result.kind).toBe(kind);
 }
 
@@ -90,6 +90,7 @@ const buildDeps = (overrides: Partial<GitInfoDeps> = {}): GitInfoDeps => ({
   options: {} as any,
   runtime: {} as any,
   packageJson: {},
+  report: vi.fn(),
   ...overrides,
 });
 
@@ -99,7 +100,6 @@ const buildInput = (overrides: Partial<GitInfoInput> = {}): GitInfoInput => ({
   isLocalBuild: false,
   skip: false,
   onlyChanged: false,
-  onSkippingBuild: vi.fn(),
   ...overrides,
 });
 
@@ -253,14 +253,17 @@ describe('gatherGitInfo', () => {
 
   it('returns skip-commit partial when skip matches branch and mutation succeeds', async () => {
     client.runQuery.mockResolvedValue(true);
-    const onSkippingBuild = vi.fn();
-    const result = await gatherGitInfo(buildDeps(), buildInput({ skip: true, onSkippingBuild }));
+    const report = vi.fn();
+    const result = await gatherGitInfo(buildDeps({ report }), buildInput({ skip: true }));
 
     expectKind(result, 'partial');
     expectPhase(result.output, 'skip-commit');
     expect(result.output.git.commit).toBe(commitInfo.commit);
     expect(result.output.projectMetadata).toMatchObject({ hasRouter: true });
-    expect(onSkippingBuild).toHaveBeenCalledWith(result.output.git);
+    expect(report).toHaveBeenCalledWith({
+      title: 'Skipping build',
+      output: `Skipping build for commit ${result.output.git.commit.slice(0, 7)}`,
+    });
   });
 
   it('throws when skip matches branch but mutation returns falsy', async () => {
@@ -482,9 +485,8 @@ describe('extractGitInfoInput', () => {
         untraced: ['bar'],
       },
     } as any;
-    const listrTask: any = {};
 
-    const input = extractGitInfoInput(ctx, listrTask);
+    const input = extractGitInfoInput(ctx);
 
     expect(input).toMatchObject({
       branchName: 'branch',
@@ -500,17 +502,5 @@ describe('extractGitInfoInput', () => {
       externals: ['foo'],
       untraced: ['bar'],
     });
-  });
-
-  it('onSkippingBuild writes git to ctx and transitions the listr task title', () => {
-    const ctx = { options: {}, log } as any;
-    const listrTask: any = { title: 'initial' };
-
-    const input = extractGitInfoInput(ctx, listrTask);
-    const git = { commit: 'abc', branch: 'main' } as any;
-    input.onSkippingBuild(git);
-
-    expect(ctx.git).toBe(git);
-    expect(listrTask.title).not.toBe('initial');
   });
 });

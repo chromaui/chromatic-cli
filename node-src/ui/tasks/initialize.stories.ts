@@ -1,17 +1,8 @@
-import task from '../components/task';
-import { initial, pending, success } from './initialize';
+import frames from './initialize.frames?clack';
 
 export default {
   title: 'CLI/Tasks/Initialize',
-  decorators: [(storyFunction: any) => task(storyFunction())],
 };
 
-const announcedBuild = {
-  number: 42,
-};
-
-export const Initial = () => initial;
-
-export const Pending = () => pending();
-
-export const Success = () => success({ announcedBuild } as any);
+export const Pending = () => frames.Pending;
+export const Success = () => frames.Success;

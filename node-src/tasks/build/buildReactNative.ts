@@ -7,16 +7,22 @@ import { openLogFileStream } from '../../lib/logFile';
 import { buildAndroid, buildIos, execWithBuildEnvironment } from '../../lib/react-native/build';
 import { readExpoConfig } from '../../lib/react-native/expoConfig';
 import { generateManifest } from '../../lib/react-native/generateManifest';
-import { exitCodes, setExitCode } from '../../lib/setExitCode';
-import { transitionTo } from '../../lib/tasks';
-import { Context, Task } from '../../types';
+import { exitCodes, TaskFailure } from '../../lib/setExitCode';
+import { Context, Deps } from '../../types';
 import { reactNativeBuildFailed } from '../../ui/messages/errors/buildFailed';
-import {
-  failed,
-  failedNoValidPlatforms,
-  pendingAndroid,
-  pendingIOS,
-} from '../../ui/tasks/buildReactNative';
+import { failedNoValidPlatforms, pendingAndroid, pendingIOS } from '../../ui/tasks/buildReactNative';
+
+type BuildReactNativeDeps = Pick<Deps, 'options' | 'log' | 'report'>;
+
+interface BuildArtifactsInput {
+  sourceDir: string;
+  browsers?: string[];
+  runtimeMetadata?: Context['runtimeMetadata'];
+}
+
+interface BuildArtifactsOutput {
+  reactNativeBuildLogFile: string;
+}
 
 const MAX_REACT_NATIVE_LOG_LINES = 20;
 
@@ -33,14 +39,19 @@ async function readLastLines(filePath: string, lineCount: number): Promise<strin
   });
 }
 
-const runPlatformCommand = async (ctx: Context, command: string, logStream: WriteStream) => {
-  ctx.log.debug('Running React Native build command:', command);
+const runPlatformCommand = async (
+  deps: BuildReactNativeDeps,
+  sourceDir: string,
+  command: string,
+  logStream: WriteStream
+) => {
+  deps.log.debug('Running React Native build command:', command);
   try {
     const [cmd, ...args] = parseCommandString(command);
     await execWithBuildEnvironment(
       cmd,
       args,
-      { env: { CHROMATIC_ARTIFACT_DIRECTORY: ctx.sourceDir } },
+      { env: { CHROMATIC_ARTIFACT_DIRECTORY: sourceDir } },
       logStream
     );
   } catch (err) {
@@ -48,72 +59,96 @@ const runPlatformCommand = async (ctx: Context, command: string, logStream: Writ
   }
 };
 
-const resolvePlatforms = (ctx: Context) => {
-  return (ctx.announcedBuild?.browsers ?? []).filter(
+const resolvePlatforms = (browsers?: string[]) => {
+  return (browsers ?? []).filter(
     (b): b is 'ios' | 'android' => b === 'ios' || b === 'android'
   );
 };
 
-const buildAndroidArtifact = async (ctx: Context, task: Task, logStream: WriteStream) => {
-  transitionTo(pendingAndroid)(ctx, task);
-  const { androidBuildCommand, androidBuildArchitectures } = ctx.options.reactNative ?? {};
-  ctx.log.debug({ androidBuildCommand }, 'Running Android build');
+const buildAndroidArtifact = async (
+  deps: BuildReactNativeDeps,
+  sourceDir: string,
+  logStream: WriteStream
+) => {
+  const { title, output } = pendingAndroid(deps.options.reactNative);
+  deps.report({ title, output });
+  const { androidBuildCommand, androidBuildArchitectures } = deps.options.reactNative ?? {};
+  deps.log.debug({ androidBuildCommand }, 'Running Android build');
   if (androidBuildCommand) {
     if (androidBuildArchitectures?.length) {
-      ctx.log.debug('androidBuildArchitectures is ignored when androidBuildCommand is set');
+      deps.log.debug('androidBuildArchitectures is ignored when androidBuildCommand is set');
     }
-    await runPlatformCommand(ctx, androidBuildCommand, logStream);
+    await runPlatformCommand(deps, sourceDir, androidBuildCommand, logStream);
   } else {
-    await buildAndroid(
-      path.join(ctx.sourceDir, 'storybook.apk'),
-      logStream,
-      androidBuildArchitectures
-    );
+    await buildAndroid(path.join(sourceDir, 'storybook.apk'), logStream, androidBuildArchitectures);
   }
 };
 
-const buildIosArtifact = async (ctx: Context, task: Task, logStream: WriteStream) => {
-  transitionTo(pendingIOS)(ctx, task);
-  const { iosBuildCommand } = ctx.options.reactNative ?? {};
-  ctx.log.debug({ iosBuildCommand }, 'Running iOS build');
+const buildIosArtifact = async (
+  deps: BuildReactNativeDeps,
+  sourceDir: string,
+  logStream: WriteStream
+) => {
+  const { title, output } = pendingIOS(deps.options.reactNative);
+  deps.report({ title, output });
+  const { iosBuildCommand } = deps.options.reactNative ?? {};
+  deps.log.debug({ iosBuildCommand }, 'Running iOS build');
   if (iosBuildCommand) {
-    await runPlatformCommand(ctx, iosBuildCommand, logStream);
+    await runPlatformCommand(deps, sourceDir, iosBuildCommand, logStream);
   } else {
     const config = await readExpoConfig();
-    await buildIos(config.name, path.join(ctx.sourceDir, 'storybook.app'), logStream);
+    await buildIos(config.name, path.join(sourceDir, 'storybook.app'), logStream);
   }
 };
 
-export const buildArtifacts = async (ctx: Context, task: Task) => {
-  const platforms = resolvePlatforms(ctx);
+export const buildArtifacts = async (
+  deps: BuildReactNativeDeps,
+  input: BuildArtifactsInput
+): Promise<BuildArtifactsOutput> => {
+  const platforms = resolvePlatforms(input.browsers);
   const needsAndroid = platforms.includes('android');
   const needsIos = platforms.includes('ios');
 
   if (!needsAndroid && !needsIos) {
-    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
-    ctx.log.debug('No supported platforms found for React Native build:', platforms);
-    throw new Error(failedNoValidPlatforms().output);
+    deps.log.debug('No supported platforms found for React Native build:', platforms);
+    throw new TaskFailure(failedNoValidPlatforms().output, {
+      exitCode: exitCodes.NPM_BUILD_STORYBOOK_FAILED,
+      userError: true,
+    });
   }
 
-  mkdirSync(path.join(ctx.sourceDir, '.chromatic'), { recursive: true });
-  ctx.reactNativeBuildLogFile = path.join(ctx.sourceDir, '.chromatic', 'react-native-build.log');
+  mkdirSync(path.join(input.sourceDir, '.chromatic'), { recursive: true });
+  const reactNativeBuildLogFile = path.join(input.sourceDir, '.chromatic', 'react-native-build.log');
 
-  const logStream = await openLogFileStream(ctx.reactNativeBuildLogFile);
+  const logStream = await openLogFileStream(reactNativeBuildLogFile);
 
   try {
-    if (needsAndroid) await buildAndroidArtifact(ctx, task, logStream);
-    if (needsIos) await buildIosArtifact(ctx, task, logStream);
+    if (needsAndroid) await buildAndroidArtifact(deps, input.sourceDir, logStream);
+    if (needsIos) await buildIosArtifact(deps, input.sourceDir, logStream);
     await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (buildError) {
-    setExitCode(ctx, exitCodes.NPM_BUILD_STORYBOOK_FAILED, true);
     await new Promise<void>((resolve) => logStream.end(resolve));
-    const tail = await readLastLines(ctx.reactNativeBuildLogFile, MAX_REACT_NATIVE_LOG_LINES);
-    ctx.log.error(reactNativeBuildFailed(ctx, buildError, tail));
-    throw new Error(failed(ctx).output);
+    const tail = await readLastLines(reactNativeBuildLogFile, MAX_REACT_NATIVE_LOG_LINES);
+    deps.log.error(
+      reactNativeBuildFailed(
+        { reactNativeBuildLogFile, runtimeMetadata: input.runtimeMetadata },
+        buildError,
+        tail
+      )
+    );
+    throw new TaskFailure(`Build failed, see logs at ${reactNativeBuildLogFile}`, {
+      exitCode: exitCodes.NPM_BUILD_STORYBOOK_FAILED,
+      userError: true,
+    });
   }
+
+  return { reactNativeBuildLogFile };
 };
 
-export const generateManifestStep = async (ctx: Context) => {
-  ctx.log.debug('Generating manifest.json file for React Native build');
-  return await generateManifest(ctx);
+export const generateManifestStep = async (
+  deps: Pick<Deps, 'options' | 'log'>,
+  input: { sourceDir: string }
+) => {
+  deps.log.debug('Generating manifest.json file for React Native build');
+  return await generateManifest(deps, { sourceDir: input.sourceDir });
 };

@@ -34,6 +34,16 @@ import {
   removeChromaticDiagnostics,
   writeChromaticDiagnostics,
 } from './lib/writeChromaticDiagnostics';
+import { intro as clackIntro } from './renderer';
+import { renderAuth } from './renderer/auth';
+import { renderBuild } from './renderer/build';
+import { renderGitInfo } from './renderer/gitInfo';
+import { renderInitialize } from './renderer/initialize';
+import { renderPrepare } from './renderer/prepare';
+import { renderSnapshot } from './renderer/snapshot';
+import { renderStorybookInfo } from './renderer/storybookInfo';
+import { renderUpload } from './renderer/upload';
+import { renderVerify } from './renderer/verify';
 import getTasks from './tasks';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
@@ -171,10 +181,6 @@ export async function run({
 // TODO: refactor this function
 // eslint-disable-next-line complexity
 export async function runAll(initialContext: InitialContext) {
-  initialContext.log.info('');
-  initialContext.log.info(intro(initialContext));
-  initialContext.log.info('');
-
   const onError = (err: Error | Error[]) => {
     initialContext.log.info('');
     initialContext.log.error(fatalError(initialContext, [err].flat()));
@@ -193,6 +199,12 @@ export async function runAll(initialContext: InitialContext) {
     );
 
     const partialOptions = getPartialOptions(initialContext);
+    if (partialOptions.interactive) {
+      clackIntro(initialContext);
+      initialContext.log.file(intro(initialContext)); // noop if file logging not enabled
+    } else {
+      initialContext.log.info(intro(initialContext));
+    }
 
     if (await shouldSkipWithoutProjectToken(initialContext, partialOptions)) {
       initialContext.log.warn(skipNoProjectToken());
@@ -338,6 +350,15 @@ async function runBuild(ctx: Context) {
         // Queue up any non-Listr log messages while Listr is running
         ctx.log.queue();
       }
+      await renderAuth(ctx);
+      await renderGitInfo(ctx);
+      await renderStorybookInfo(ctx);
+      await renderInitialize(ctx);
+      await renderBuild(ctx);
+      await renderPrepare(ctx);
+      await renderUpload(ctx);
+      await renderVerify(ctx);
+      await renderSnapshot(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
     } catch (err) {

@@ -1,84 +1,19 @@
-import { exitCodes } from '../../lib/setExitCode';
-import task from '../components/task';
-import {
-  buildBroken,
-  buildCanceled,
-  buildComplete,
-  buildFailed,
-  buildPassed,
-  dryRun,
-  initial,
-  pending,
-  skipped,
-} from './snapshot';
+import frames from './snapshot.frames?clack';
 
 export default {
   title: 'CLI/Tasks/Snapshot',
-  decorators: [(storyFunction) => task(storyFunction())],
 };
 
-const build = {
-  number: 42,
-  errorCount: 1,
-  changeCount: 2,
-  testCount: 10,
-  actualTestCount: 10,
-  actualCaptureCount: 20,
-  componentCount: 5,
-  specCount: 8,
-  features: { uiTests: true },
-};
-const ctx = { options: {} } as any;
-
-const now = 0;
-const startedAt = -123_456;
-
-export const Initial = () => initial(ctx);
-
-export const DryRun = () => dryRun(ctx);
-
-export const Pending = () =>
-  pending({ ...ctx, build } as any, {
-    cursor: 6,
-    label: 'ComponentName › StoryName',
-  });
-
-export const PendingOnlyChanged = () =>
-  pending({ ...ctx, build: { ...build, actualTestCount: 8 }, onlyStoryFiles: [] } as any, {
-    cursor: 6,
-  });
-
-export const PendingOnlyStoryNames = () =>
-  pending(
-    {
-      ...ctx,
-      build: { ...build, actualTestCount: 8 },
-      options: { ...ctx.options, onlyStoryNames: ['Pages/**'] },
-    } as any,
-    { cursor: 6 }
-  );
-
-export const BuildPassed = () => buildPassed({ ...ctx, build, now, startedAt } as any);
-
-export const BuildComplete = () =>
-  buildComplete({ ...ctx, build, now, startedAt, exitCode: 1 } as any);
-
-export const BuildAutoAccepted = () =>
-  buildComplete({ ...ctx, build: { ...build, autoAcceptChanges: true }, now, startedAt } as any);
-
-export const BuildBroken = () =>
-  buildBroken({ ...ctx, build, now, startedAt, exitCode: exitCodes.BUILD_HAS_ERRORS } as any);
-
-export const BuildFailed = () =>
-  buildFailed({ ...ctx, build, now, startedAt, exitCode: exitCodes.BUILD_FAILED } as any);
-
-export const BuildCanceled = () =>
-  buildCanceled({ ...ctx, build, now, startedAt, exitCode: exitCodes.BUILD_WAS_CANCELED } as any);
-
-export const SkippedPublishOnly = () => skipped({ ...ctx, isPublishOnly: true } as any);
-
-export const SkippedList = () =>
-  skipped({ ...ctx, options: { ...ctx.options, list: true } } as any);
-
-export const SkippedExitOnceUploaded = () =>
-  skipped({ ...ctx, options: { ...ctx.optionns, exitOnceUploaded: true } } as any);
+export const Pending = () => frames.Pending;
+export const PendingOnlyChanged = () => frames.PendingOnlyChanged;
+export const PendingOnlyStoryNames = () => frames.PendingOnlyStoryNames;
+export const BuildPassed = () => frames.BuildPassed;
+export const BuildComplete = () => frames.BuildComplete;
+export const BuildAutoAccepted = () => frames.BuildAutoAccepted;
+export const BuildBroken = () => frames.BuildBroken;
+export const BuildFailed = () => frames.BuildFailed;
+export const BuildCanceled = () => frames.BuildCanceled;
+export const DryRun = () => frames.DryRun;
+export const SkippedPublishOnly = () => frames.SkippedPublishOnly;
+export const SkippedList = () => frames.SkippedList;
+export const SkippedExitOnceUploaded = () => frames.SkippedExitOnceUploaded;

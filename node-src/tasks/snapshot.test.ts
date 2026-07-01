@@ -8,7 +8,12 @@ import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { takeSnapshots } from './snapshot';
+import {
+  applySnapshotOutput,
+  extractSnapshotInput,
+  SnapshotOutput,
+  snapshotProject,
+} from './snapshot';
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
@@ -41,7 +46,20 @@ const createBaseTestContext = () => ({
 
 const mockWaitForBuildToComplete = vi.mocked(waitForBuildToComplete);
 
-describe('takeSnapshots', () => {
+// Project ctx into the (deps, input) seam the way `runTask` would, run the task body, then fold its
+// result back onto ctx so the legacy assertions (ctx.build, ctx.exitCode) keep holding.
+const runSnapshot = async (ctx: any) => {
+  const report = vi.fn();
+  const deps = { report, client: ctx.client, log: ctx.log, env: ctx.env, options: ctx.options };
+  const input = extractSnapshotInput(ctx);
+  const result = await snapshotProject(deps as any, input as any);
+  if (result.kind === 'continue') {
+    applySnapshotOutput(ctx, result.output);
+  }
+  return { result, report };
+};
+
+describe('snapshotProject', () => {
   it('waits for the build to complete and sets it on context', async () => {
     const build = {
       app: { repository: { provider: 'github' } },
@@ -49,17 +67,14 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
     expect(ctx.client.runQuery).toHaveBeenCalledWith(
       expect.stringMatching(/SnapshotBuildQuery/),
       { number: 1 },
@@ -72,18 +87,14 @@ describe('takeSnapshots', () => {
 
   it('sets exitCode to 1 when build has changes', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-      announcedBuild: build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build, announcedBuild: build } as any;
 
     ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING', completedAt: 1 });
     expect(ctx.exitCode).toBe(1);
   });
@@ -92,9 +103,7 @@ describe('takeSnapshots', () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       ...createBaseTestContext(),
-      options: {
-        exitZeroOnChanges: 'true',
-      },
+      options: { exitZeroOnChanges: 'true' },
       build,
       announcedBuild: build,
     } as any;
@@ -104,48 +113,52 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);
   });
 
   it('sets exitCode to 2 when build is broken (capture error)', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-      announcedBuild: build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build, announcedBuild: build } as any;
 
     ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'BROKEN', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BROKEN', completedAt: 1 });
     expect(ctx.exitCode).toBe(2);
   });
 
   it('sets exitCode to 3 when build fails (system error)', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-      announcedBuild: build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build, announcedBuild: build } as any;
 
     ctx.client.runQuery.mockReturnValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
     ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 2, status: 'FAILED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'FAILED', completedAt: 1 });
     expect(ctx.exitCode).toBe(3);
   });
 
-  it('calls experimental_onTaskProgress with progress', async () => {
+  it('sets exitCode to 6 when build is canceled', async () => {
+    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const ctx = { ...createBaseTestContext(), build, announcedBuild: build } as any;
+
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: { build: { status: 'CANCELLED', completedAt: 1 } },
+    });
+
+    await runSnapshot(ctx);
+    expect(ctx.exitCode).toBe(6);
+  });
+
+  it('reports snapshot-count progress through deps.report', async () => {
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -154,11 +167,7 @@ describe('takeSnapshots', () => {
       actualTestCount: 5,
       inProgressCount: 5,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      options: { experimental_onTaskProgress: vi.fn() },
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { status: 'IN_PROGRESS', inProgressCount: 5 } },
@@ -170,43 +179,19 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1, inProgressCount: 0 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    const { report } = await runSnapshot(ctx);
 
-    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledTimes(2);
-    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
-      progress: 1,
-      total: 5,
-      unit: 'snapshots',
-    });
-    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
-      progress: 3,
-      total: 5,
-      unit: 'snapshots',
-    });
-  });
-
-  it('calls waitForBuildToComplete with correct arguments', async () => {
-    const build = {
-      app: { repository: { provider: 'github' } },
-      number: 1,
-      features: {},
-      reportToken: 'report-token',
-      id: 'build-123',
-      actualTestCount: 0,
-    };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
-
-    mockWaitForBuildToComplete.mockResolvedValue();
-    ctx.client.runQuery.mockReturnValueOnce({
-      app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
-    });
-
-    await takeSnapshots(ctx, {} as any);
-
-    expect(mockWaitForBuildToComplete).not.toHaveBeenCalled();
+    expect(report).toHaveBeenCalledTimes(2);
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ progress: { progress: 1, total: 5, unit: 'snapshots' } })
+    );
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ progress: { progress: 3, total: 5, unit: 'snapshots' } })
+    );
+    // Each report carries the live polled build so the engine can keep ctx.build fresh mid-task.
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ build: expect.objectContaining({ status: 'IN_PROGRESS' }) })
+    );
   });
 
   it('does not call waitForBuildToComplete if there are no tests', async () => {
@@ -216,19 +201,37 @@ describe('takeSnapshots', () => {
       features: {},
       reportToken: 'report-token',
       id: 'build-123',
-      actualTestCount: 1,
+      actualTestCount: 0,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     mockWaitForBuildToComplete.mockResolvedValue();
     ctx.client.runQuery.mockReturnValueOnce({
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
+
+    expect(mockWaitForBuildToComplete).not.toHaveBeenCalled();
+  });
+
+  it('calls waitForBuildToComplete with correct arguments', async () => {
+    const build = {
+      app: { repository: { provider: 'github' } },
+      number: 1,
+      features: {},
+      reportToken: 'report-token',
+      id: 'build-123',
+      actualTestCount: 1,
+    };
+    const ctx = { ...createBaseTestContext(), build } as any;
+
+    mockWaitForBuildToComplete.mockResolvedValue();
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
+    });
+
+    await runSnapshot(ctx);
 
     expect(mockWaitForBuildToComplete).toHaveBeenCalledWith({
       notifyServiceUrl: environment.CHROMATIC_NOTIFY_SERVICE_URL,
@@ -250,10 +253,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
       actualTestCount: 1,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     const connectionError = new NotifyConnectionError('Failed to connect to notify service', 1006);
     mockWaitForBuildToComplete.mockRejectedValue(connectionError);
@@ -261,7 +261,7 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
 
     expect(ctx.log.debug).toHaveBeenCalledWith(
       'Failed to connect to notify service, falling back to polling: code: 1006, original error: undefined'
@@ -279,10 +279,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
       actualTestCount: 1,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     const notifyError = new NotifyServiceError(
       'Connection failed',
@@ -295,7 +292,7 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
 
     expect(ctx.log.debug).toHaveBeenCalledWith(
       'Error getting updates from notify service: Connection failed code: 1001, reason: Going away, original error: Original error'
@@ -313,10 +310,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
       actualTestCount: 1,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     const timeoutError = new NotifyServiceMessageTimeoutError(
       'Timed out waiting for message',
@@ -328,7 +322,7 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
 
     expect(ctx.log.debug).toHaveBeenCalledWith(
       'Timed out waiting for message from notify service, falling back to polling'
@@ -347,10 +341,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
       actualTestCount: 1,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     const genericError = new Error('Generic connection error');
     mockWaitForBuildToComplete.mockRejectedValue(genericError);
@@ -358,7 +349,7 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
 
     expect(ctx.log.error).toHaveBeenCalledWith(
       'Unexpected error from notify service: Generic connection error'
@@ -376,10 +367,7 @@ describe('takeSnapshots', () => {
       id: 'build-123',
       actualTestCount: 1,
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     const authenticationError = new NotifyServiceAuthenticationError('Unauthorized request', 401);
     mockWaitForBuildToComplete.mockRejectedValue(authenticationError);
@@ -387,7 +375,7 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    await runSnapshot(ctx);
 
     expect(ctx.log.debug).toHaveBeenCalledWith(
       'Error authenticating with notify service: 401 Unauthorized request'
@@ -396,7 +384,7 @@ describe('takeSnapshots', () => {
     expect(ctx.exitCode).toBe(0);
   });
 
-  it('calls experimental_onTaskProgress via waitForBuildToComplete progress callback', async () => {
+  it('reports progress via the waitForBuildToComplete progress callback', async () => {
     const build = {
       app: { repository: { provider: 'github' } },
       number: 1,
@@ -405,11 +393,7 @@ describe('takeSnapshots', () => {
       actualTestCount: 5,
       id: 'build-123',
     };
-    const ctx = {
-      ...createBaseTestContext(),
-      options: { experimental_onTaskProgress: vi.fn() },
-      build,
-    } as any;
+    const ctx = { ...createBaseTestContext(), build } as any;
 
     let progressCallback: any;
     mockWaitForBuildToComplete.mockImplementation(({ progressMessageCallback }) => {
@@ -420,22 +404,64 @@ describe('takeSnapshots', () => {
       app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
     });
 
-    await takeSnapshots(ctx, {} as any);
+    const { report } = await runSnapshot(ctx);
 
     // Simulate progress messages through the callback
     progressCallback({ inProgressCount: 3, status: 'IN_PROGRESS' });
     progressCallback({ inProgressCount: 1, status: 'IN_PROGRESS' });
 
-    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledTimes(2);
-    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
-      progress: 3, // actualTestCount (5) - inProgressCount (3) + 1 = 3
-      total: 5,
-      unit: 'snapshots',
-    });
-    expect(ctx.options.experimental_onTaskProgress).toHaveBeenCalledWith(expect.any(Object), {
-      progress: 5, // actualTestCount (5) - inProgressCount (1) + 1 = 5
-      total: 5,
-      unit: 'snapshots',
-    });
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ progress: { progress: 3, total: 5, unit: 'snapshots' } })
+    );
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ progress: { progress: 5, total: 5, unit: 'snapshots' } })
+    );
+  });
+
+  it('self-skips for --dry-run without polling', async () => {
+    const build = { app: {}, number: 1, features: {} };
+    const ctx = { ...createBaseTestContext(), options: { dryRun: true }, build } as any;
+
+    const { result } = await runSnapshot(ctx);
+
+    expect(result.kind).toBe('skip-self');
+    expect(ctx.client.runQuery).not.toHaveBeenCalled();
+    expect(ctx.exitCode).toBeUndefined();
+  });
+
+  it('self-skips when ctx.skipSnapshots is set without polling', async () => {
+    const build = { app: {}, number: 1, features: {} };
+    const ctx = { ...createBaseTestContext(), skipSnapshots: true, build } as any;
+
+    const { result } = await runSnapshot(ctx);
+
+    expect(result.kind).toBe('skip-self');
+    expect(ctx.client.runQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe('applySnapshotOutput', () => {
+  it('sets the exit code, writes the build onto ctx, and logs the passed message', () => {
+    const build = { number: 1, changeCount: 0, webUrl: 'https://x' } as any;
+    const ctx = { log, options: {} } as any;
+    const output: SnapshotOutput = { exitCode: 0, userError: false, log: 'passed', build };
+
+    applySnapshotOutput(ctx, output);
+
+    expect(ctx.build).toBe(build);
+    expect(ctx.exitCode).toBe(0);
+    expect(ctx.log.info).toHaveBeenCalled();
+  });
+
+  it('sets the changes exit code as a user error and logs the changes message', () => {
+    const build = { number: 1, changeCount: 2, webUrl: 'https://x' } as any;
+    const ctx = { log, options: {} } as any;
+    const output: SnapshotOutput = { exitCode: 1, userError: true, log: 'changes', build };
+
+    applySnapshotOutput(ctx, output);
+
+    expect(ctx.exitCode).toBe(1);
+    expect(ctx.userError).toBe(true);
+    expect(ctx.log.error).toHaveBeenCalled();
   });
 });
