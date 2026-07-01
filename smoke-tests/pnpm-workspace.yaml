@@ -1,0 +1,2 @@
+# Ignore package manager versions so CI can install whatever version is needed
+managePackageManagerVersions: false
