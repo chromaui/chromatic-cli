@@ -111,6 +111,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+          cache: yarn
       - name: Build and pack the CLI
         shell: bash
         run: |
