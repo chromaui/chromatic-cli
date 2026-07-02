@@ -53,6 +53,15 @@ jobs:
               yarn install --ignore-engines
               npx chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
 
+          - name: pnpm
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack prepare pnpm@latest --activate
+              pnpm install
+              pnpm chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
           - name: npx
             runs-on: ubuntu-latest
             node-version: "22.22.3"
