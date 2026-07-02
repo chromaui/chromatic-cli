@@ -10,8 +10,31 @@ permissions:
   contents: read
 
 jobs:
+  pack:
+    name: Build and pack the CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "22.22.3"
+          cache: yarn
+      - run: |
+          yarn
+          yarn build
+          yarn pack --out chromatic.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packed-cli
+          # chromatic.tgz is the packed CLI
+          # action/ is the built output of the action
+          path: |
+            chromatic.tgz
+            action/
+
   smoke-test:
     name: smoke-test (${{ matrix.name }})
+    needs: pack
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -111,13 +134,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: yarn
-      - name: Build and pack the CLI
-        shell: bash
-        run: |
-          yarn
-          yarn build
-          yarn pack --out chromatic.tgz
+      - name: Download the packed CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: packed-cli
       - name: Copy fixture outside the repo
         # We copy the fixture outside the repo so the test can stand alone without falling back to the repo's node_modules
         shell: bash
