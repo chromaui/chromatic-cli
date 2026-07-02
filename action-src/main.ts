@@ -153,7 +153,7 @@ async function run() {
       process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
     }
 
-    process.chdir(path.join(process.cwd(), workingDir || ''));
+    process.chdir(path.resolve(process.cwd(), workingDir || ''));
 
     const isMergeQueueBuild = context.eventName === 'merge_group';
     if (isMergeQueueBuild && exitZeroOnChanges === 'true') {
