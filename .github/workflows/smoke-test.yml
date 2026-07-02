@@ -25,6 +25,7 @@ jobs:
               yarn set version 4.2.2
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
           - name: yarn-berry
             runs-on: ubuntu-latest
             node-version: "22.22.3"
@@ -33,6 +34,7 @@ jobs:
               yarn set version stable
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
           - name: yarn-canary
             runs-on: ubuntu-latest
             node-version: "22.22.3"
@@ -41,6 +43,7 @@ jobs:
               yarn set version canary
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
           - name: yarn-classic
             runs-on: ubuntu-latest
             node-version: "22.22.3"
@@ -49,12 +52,14 @@ jobs:
               yarn set version 1.22.22
               yarn install --ignore-engines
               npx chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
           - name: npx
             runs-on: ubuntu-latest
             node-version: "22.22.3"
             install-and-run: |
               npm install
               npx chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
           - name: node22
             runs-on: ubuntu-latest
             node-version: "22.22.3"
@@ -63,6 +68,7 @@ jobs:
               corepack enable
               yarn set version 4.2.2
               yarn install
+
           - name: node24
             runs-on: ubuntu-latest
             node-version: "24"
@@ -71,6 +77,7 @@ jobs:
               corepack enable
               yarn set version 4.2.2
               yarn install
+
           - name: node-api
             runs-on: ubuntu-latest
             node-version: "lts/*"
@@ -79,10 +86,10 @@ jobs:
               yarn set version 4.2.2
               yarn install
               node run-via-node.mjs
+
           - name: windows
             runs-on: windows-latest
             node-version: "22.22.3"
-            rename: storybook-chromatic
             install-and-run: |
               corepack enable
               yarn set version 4.2.2
@@ -99,17 +106,10 @@ jobs:
         shell: bash
         run: |
           yarn
-          if [ -n "${{ matrix.rename }}" ]; then
-            node ./scripts/rename.js ${{ matrix.rename }}
-            # re-install so yarn's resolution matches the renamed package before packing
-            yarn
-          fi
           yarn build
           yarn pack --out chromatic.tgz
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
       - name: Copy fixture outside the repo
-        # outside the repo tree, a missing dependency fails instead of resolving upward to the repo's node_modules
+        # We copy the fixture outside the repo so the test can stand alone without falling back to the repo's node_modules
         shell: bash
         run: |
           cp -r smoke-tests "$RUNNER_TEMP/smoke-tests"

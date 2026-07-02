@@ -42,56 +42,8 @@ jobs:
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
-  smoke-test-node-api:
-    uses: ./.github/workflows/smoke-test-node-api.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-node-22:
-    uses: ./.github/workflows/smoke-test-node22.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-node-24:
-    uses: ./.github/workflows/smoke-test-node24.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-npx:
-    uses: ./.github/workflows/smoke-test-npx.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-windows:
-    uses: ./.github/workflows/smoke-test-windows.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-yarn:
-    uses: ./.github/workflows/smoke-test-yarn.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-yarn-berry:
-    uses: ./.github/workflows/smoke-test-yarn-berry.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-yarn-canary:
-    uses: ./.github/workflows/smoke-test-yarn-canary.yml
-    needs: lint-and-test
-    secrets:
-      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
-
-  smoke-test-yarn-classic:
-    uses: ./.github/workflows/smoke-test-yarn-classic.yml
+  smoke-test:
+    uses: ./.github/workflows/smoke-test.yml
     needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
