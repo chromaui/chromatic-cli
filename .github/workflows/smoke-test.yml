@@ -138,6 +138,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: packed-cli
+      - name: Install repo dependencies for the local action
+        # The action doesn't install the CLI's dependencies, so we need to install them ourselves for CI testing.
+        # The tests outside of the action automatically install the CLI's dependencies when installing the tarball, so we don't need to do anything for them.
+        if: matrix.use-action
+        shell: bash
+        run: yarn
       - name: Copy fixture outside the repo
         # We copy the fixture outside the repo so the test can stand alone without falling back to the repo's node_modules
         shell: bash
