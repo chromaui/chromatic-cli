@@ -15,6 +15,7 @@
     "@storybook/addon-docs": "10.3.5",
     "@storybook/react-vite": "10.3.5",
     "storybook": "10.3.5",
+    "typescript": "5.9.3",
     "vite": "8.0.10"
   }
 }

@@ -24,8 +24,17 @@ jobs:
           yarn
           yarn build
           yarn pack --out chromatic.tgz
+      - name: Copy fixture outside the repo
+        # outside the repo tree, a missing dependency fails instead of resolving upward to the repo's node_modules
+        run: |
+          cp -r smoke-tests "$RUNNER_TEMP/smoke-tests"
+          cp chromatic.tgz "$RUNNER_TEMP/chromatic.tgz"
+          git -C "$RUNNER_TEMP/smoke-tests" init --quiet
+          git -C "$RUNNER_TEMP/smoke-tests" add -A
+          git -C "$RUNNER_TEMP/smoke-tests" -c user.email=smoke@chromatic.com -c user.name="Smoke Test" commit --quiet -m "Smoke test fixture"
+          git -C "$RUNNER_TEMP/smoke-tests" -c user.email=smoke@chromatic.com -c user.name="Smoke Test" commit --quiet --allow-empty -m "Second commit so Chromatic can find a baseline"
       - name: Install fixture with yarn classic and run chromatic
-        working-directory: smoke-tests
+        working-directory: ${{ runner.temp }}/smoke-tests
         run: |
           corepack enable
           yarn set version 1.22.22

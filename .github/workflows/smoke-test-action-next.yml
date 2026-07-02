@@ -23,8 +23,20 @@ jobs:
         run: |
           yarn build
           yarn pack --out chromatic.tgz
+      - name: Copy fixture outside the repo
+        # We copy the fixture outside the repo so the test can stand alone without falling back to the repo's node_modules
+        run: |
+          cp -r smoke-tests "$RUNNER_TEMP/smoke-tests"
+          cp chromatic.tgz "$RUNNER_TEMP/chromatic.tgz"
+          git -C "$RUNNER_TEMP/smoke-tests" init --quiet
+          git -C "$RUNNER_TEMP/smoke-tests" config user.email smoke@chromatic.com
+          git -C "$RUNNER_TEMP/smoke-tests" config user.name "Smoke Test"
+
+          git -C "$RUNNER_TEMP/smoke-tests" add -A
+          git -C "$RUNNER_TEMP/smoke-tests" commit --quiet -m "Smoke test fixture"
+          git -C "$RUNNER_TEMP/smoke-tests" commit --quiet --allow-empty -m "Second commit so Chromatic can find a baseline"
       - name: Install fixture deps
-        working-directory: smoke-tests
+        working-directory: ${{ runner.temp }}/smoke-tests
         run: |
           corepack enable
           yarn set version 4.2.2
@@ -32,7 +44,7 @@ jobs:
       - name: Run build against action-next
         uses: chromaui/action-next@latest
         with:
-          workingDir: smoke-tests
+          workingDir: ${{ runner.temp }}/smoke-tests
           buildScriptName: build-storybook
           exitZeroOnChanges: true
           forceRebuild: true
