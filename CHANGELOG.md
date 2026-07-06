@@ -1,3 +1,15 @@
+# v18.0.1 (Thu Jul 02 2026)
+
+#### 🐛 Bug Fix
+
+- Fix silent error swallowing early in CLI invocation [#1413](https://github.com/chromaui/chromatic-cli/pull/1413) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v18.0.0 (Wed Jul 01 2026)
 
 #### 💥 Breaking Change
