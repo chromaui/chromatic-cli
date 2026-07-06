@@ -1,0 +1,6 @@
+# Ignore package manager versions so CI can install whatever version is needed
+managePackageManagerVersions: false
+
+# pnpm blocks dependency build scripts unless approved
+allowBuilds:
+  esbuild: true

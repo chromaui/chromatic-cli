@@ -1,0 +1,181 @@
+name: Smoke test
+
+on:
+  workflow_call:
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  pack:
+    name: Build and pack the CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "22.22.3"
+          cache: yarn
+      - run: |
+          yarn
+          yarn build
+          yarn pack --out chromatic.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packed-cli
+          # chromatic.tgz is the packed CLI
+          # action/ is the built output of the action
+          path: |
+            chromatic.tgz
+            action/
+
+  smoke-test:
+    name: smoke-test (${{ matrix.name }})
+    needs: pack
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: yarn
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack use yarn@4.2.2
+              yarn install
+              yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
+          - name: yarn-berry
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack use yarn@stable
+              yarn install
+              yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
+          - name: yarn-canary
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack use yarn@canary
+              yarn install
+              yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
+          - name: yarn-classic
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack use yarn@1.22.22
+              yarn install --ignore-engines
+              npx chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
+          - name: pnpm
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack use pnpm@latest
+              pnpm install
+              pnpm chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
+          - name: npx
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              npm install
+              npx chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+
+          - name: node22
+            runs-on: ubuntu-latest
+            node-version: "22.22.3"
+            use-action: true
+            install-and-run: |
+              corepack enable
+              corepack use yarn@4.2.2
+              yarn install
+
+          - name: node24
+            runs-on: ubuntu-latest
+            node-version: "24"
+            use-action: true
+            install-and-run: |
+              corepack enable
+              corepack use yarn@4.2.2
+              yarn install
+
+          - name: node-api
+            runs-on: ubuntu-latest
+            node-version: "lts/*"
+            install-and-run: |
+              corepack enable
+              corepack use yarn@4.2.2
+              yarn install
+              node run-via-node.mjs
+
+          - name: windows
+            runs-on: windows-latest
+            node-version: "22.22.3"
+            install-and-run: |
+              corepack enable
+              corepack use yarn@4.2.2
+              yarn install
+              yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Download the packed CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: packed-cli
+      - name: Install repo dependencies for the local action
+        # The action doesn't install the CLI's dependencies, so we need to install them ourselves for CI testing.
+        # The tests outside of the action automatically install the CLI's dependencies when installing the tarball, so we don't need to do anything for them.
+        if: matrix.use-action
+        shell: bash
+        run: yarn
+      - name: Copy fixture outside the repo
+        # We copy the fixture outside the repo so the test can stand alone without falling back to the repo's node_modules
+        shell: bash
+        run: |
+          cp -r smoke-tests "$RUNNER_TEMP/smoke-tests"
+          cp chromatic.tgz "$RUNNER_TEMP/chromatic.tgz"
+          git -C "$RUNNER_TEMP/smoke-tests" init --quiet
+          git -C "$RUNNER_TEMP/smoke-tests" config user.email smoke@chromatic.com
+          git -C "$RUNNER_TEMP/smoke-tests" config user.name "Smoke Test"
+
+          git -C "$RUNNER_TEMP/smoke-tests" add -A
+          git -C "$RUNNER_TEMP/smoke-tests" commit --quiet -m "Smoke test fixture"
+          git -C "$RUNNER_TEMP/smoke-tests" commit --quiet --allow-empty -m "Second commit so Chromatic can find a baseline"
+      - name: Install fixture and run chromatic
+        working-directory: ${{ runner.temp }}/smoke-tests
+        shell: bash
+        run: ${{ matrix.install-and-run }}
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+      - name: Run chromatic via the GitHub Action
+        if: matrix.use-action
+        uses: ./
+        with:
+          workingDir: ${{ runner.temp }}/smoke-tests
+          buildScriptName: build-storybook
+          exitZeroOnChanges: true
+          forceRebuild: true
+          onlyChanged: true
+        env:
+          LOG_LEVEL: debug
+          DEBUG: chromatic-cli
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}

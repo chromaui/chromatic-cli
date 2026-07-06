@@ -71,12 +71,11 @@
   "scripts": {
     "build": "clean-package && tsdown && clean-package restore",
     "build-storybook": "cross-env FORCE_COLOR=3 TERM=xterm-256color storybook build --stats-json",
-    "build-test-storybook": "cross-env storybook build -c ./.storybook-test -o test-storybook --stats-json",
     "chromatic": "./dist/bin.cjs",
     "chromatic-prebuilt": "./dist/bin.cjs --storybook-build-dir=\"storybook-static\"",
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.cjs",
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.cjs",
-    "lint": "yarn lint:js bin-src node-src test-stories ./isChromatic.js ./isChromatic.mjs",
+    "lint": "yarn lint:js bin-src node-src ./isChromatic.js ./isChromatic.mjs",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "./scripts/release.mjs",

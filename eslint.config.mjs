@@ -23,6 +23,7 @@ export default [
       'storybook-static/**',
       'storybook-out/**',
       'coverage/**',
+      'smoke-tests/**',
     ],
   },
   // eslint core + overrides

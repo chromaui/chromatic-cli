@@ -1,0 +1,21 @@
+{
+  "name": "smoke-tests",
+  "private": true,
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build --stats-json"
+  },
+  "dependencies": {
+    "chromatic": "file:../chromatic.tgz",
+    "prop-types": "15.8.1",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@storybook/addon-docs": "10.3.5",
+    "@storybook/react-vite": "10.3.5",
+    "storybook": "10.3.5",
+    "typescript": "5.9.3",
+    "vite": "8.0.10"
+  }
+}

@@ -2,11 +2,12 @@
 
 import process from 'process';
 
-import { run } from '../dist/node.cjs';
+import { run } from 'chromatic/node';
 
 run({
   flags: {
     projectToken: process.env.CHROMATIC_PROJECT_TOKEN,
+    buildScriptName: 'build-storybook',
     exitZeroOnChanges: true,
   },
 }).then(
