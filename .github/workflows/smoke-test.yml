@@ -45,7 +45,7 @@ jobs:
             node-version: "22.22.3"
             install-and-run: |
               corepack enable
-              yarn set version 4.2.2
+              corepack use yarn@4.2.2
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
 
@@ -54,7 +54,7 @@ jobs:
             node-version: "22.22.3"
             install-and-run: |
               corepack enable
-              yarn set version stable
+              corepack use yarn@stable
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
 
@@ -63,7 +63,7 @@ jobs:
             node-version: "22.22.3"
             install-and-run: |
               corepack enable
-              yarn set version canary
+              corepack use yarn@canary
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
 
@@ -72,7 +72,7 @@ jobs:
             node-version: "22.22.3"
             install-and-run: |
               corepack enable
-              yarn set version 1.22.22
+              corepack use yarn@1.22.22
               yarn install --ignore-engines
               npx chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
 
@@ -81,7 +81,7 @@ jobs:
             node-version: "22.22.3"
             install-and-run: |
               corepack enable
-              corepack prepare pnpm@latest --activate
+              corepack use pnpm@latest
               pnpm install
               pnpm chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
 
@@ -98,7 +98,7 @@ jobs:
             use-action: true
             install-and-run: |
               corepack enable
-              yarn set version 4.2.2
+              corepack use yarn@4.2.2
               yarn install
 
           - name: node24
@@ -107,7 +107,7 @@ jobs:
             use-action: true
             install-and-run: |
               corepack enable
-              yarn set version 4.2.2
+              corepack use yarn@4.2.2
               yarn install
 
           - name: node-api
@@ -115,7 +115,7 @@ jobs:
             node-version: "lts/*"
             install-and-run: |
               corepack enable
-              yarn set version 4.2.2
+              corepack use yarn@4.2.2
               yarn install
               node run-via-node.mjs
 
@@ -124,7 +124,7 @@ jobs:
             node-version: "22.22.3"
             install-and-run: |
               corepack enable
-              yarn set version 4.2.2
+              corepack use yarn@4.2.2
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
     steps:
