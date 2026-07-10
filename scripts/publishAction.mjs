@@ -91,16 +91,43 @@ export async function main(context) {
   }
 }
 
-/**
- * For manual (local) use:
- *   yarn publish-action {context} [--dry-run]
- *   e.g. yarn publish-action canary
- *   or   yarn publish-action latest --dry-run
- *
- * Make sure to build the action before publishing manually.
- */
+function printHelp() {
+  console.info(`
+Publish the built GitHub Action (the action/ directory) to one of the
+chromaui/action* repos, tagged and pushed with the version from package.json.
+
+Usage:
+  yarn publish-action <context> [options]
+
+Arguments:
+  context                 Which action repo to publish to. One of:
+                            canary   -> chromaui/action-canary
+                            next     -> chromaui/action-next
+                            latest   -> chromaui/action
+
+Options:
+  --dry-run               Do everything except push commits/tags to the remote repo.
+  -h, --help              Show this help message and exit.
+
+Environment variables:
+  GH_TOKEN                Required. GitHub token used to clone and push to the target action repo.
+
+Examples:
+  yarn publish-action canary
+  yarn publish-action latest --dry-run
+
+Notes:
+  - Build the action (action/ output) before publishing manually.
+  - The working directory must be clean (no uncommitted changes) to run this script directly.
+`);
+}
 
 if (process.argv[1] === import.meta.filename) {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    printHelp();
+    process.exit(0);
+  }
+
   if (process.env.GH_TOKEN === undefined) {
     console.error(
       `❗️ GH_TOKEN environment variable is required to publish the action. Please set it and try again.`
