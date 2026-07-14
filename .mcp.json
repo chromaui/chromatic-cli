@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "stag-test-cimd": {
+      "type": "http",
+      "url": "https://main--59ea6fbfe857870036197b80.staging-chromatic.com/mcp"
+    }
+  }
+}
