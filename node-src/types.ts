@@ -549,7 +549,6 @@ interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
-  missingStatsFile?: true;
   noAncestorBuild?: true;
   rebuild?: true;
 }

@@ -1,5 +1,4 @@
 import * as turbosnap from '@cli/turbosnap';
-import { MissingStatsFileError } from '@cli/turbosnap';
 
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
 import { Context, Deps } from '../../types';
@@ -32,7 +31,7 @@ export interface TraceChangedFilesOutput {
  * @throws {Error} if stats file is missing or tracing fails
  */
 // TODO: refactor this function
-// eslint-disable-next-line max-statements, complexity
+// eslint-disable-next-line complexity
 export async function traceChangedFiles(
   deps: TraceChangedFilesDeps,
   input: TraceChangedFilesInput

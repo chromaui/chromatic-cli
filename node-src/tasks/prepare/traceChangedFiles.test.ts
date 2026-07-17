@@ -119,7 +119,7 @@ describe('traceChangedFiles', () => {
     expect(d.report).toHaveBeenCalledWith(expect.objectContaining({ title: 'TurboSnap disabled' }));
   });
 
-  it('rethrows the missing stats file error unwrapped', async () => {
+  it('wraps the missing stats file error without recording a bail reason', async () => {
     const ctx = turboSnapContext();
     const missingStatsError = new Error('stats file not found');
     traceChangedFilesTurbosnap.mockRejectedValue(missingStatsError);
@@ -131,8 +131,7 @@ describe('traceChangedFiles', () => {
       err = error;
     }
 
-    expect(err).toBe(missingStatsError);
     expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(err.message).not.toContain('Could not retrieve dependent story files');
+    expect(err.message).toBe('Could not retrieve dependent story files.\nstats file not found');
   });
 });

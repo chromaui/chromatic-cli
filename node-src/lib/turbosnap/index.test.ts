@@ -335,7 +335,7 @@ describe('traceChangedFiles', () => {
     } catch (error) {
       err = error;
     }
-    expect(err.message).toContain('TurboSnap requires a stats file, but none was found');
+    expect(err.message).toContain('TurboSnap requires a stats file');
     expect(ctx.turboSnap.bailReason).toBeUndefined();
   });
 
