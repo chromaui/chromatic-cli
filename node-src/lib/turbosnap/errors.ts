@@ -108,6 +108,16 @@ const NETWORK_ERROR_CODES = new Set([
 ]);
 
 /**
+ * Error thrown when no CSF globs were found in the stats file.
+ */
+export class NoCSFGlobsError extends Error {
+  constructor() {
+    super('Did not find any CSF globs in preview-stats.json');
+    this.name = 'NoCSFGlobsError';
+  }
+}
+
+/**
  * Determine whether an unknown thrown value represents a transport-layer network failure.
  * Recognizes `HTTPClientError`, `FetchError`-shaped errors, and Node-style errors carrying a
  * known DNS/connection error code (`ENOTFOUND`, `ECONNREFUSED`, `ECONNRESET`, `ETIMEDOUT`,

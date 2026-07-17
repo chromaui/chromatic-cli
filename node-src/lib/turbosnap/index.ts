@@ -1,7 +1,7 @@
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { ChangedPackageFilesBailReason, Context } from '../../types';
+import { ChangedPackageFilesBailReason, Context, TurboSnap, UntracedFile } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
@@ -12,25 +12,48 @@ import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
 
+export type TraceChangedFilesResult =
+  | { status: 'skipped' } // turboSnap unavailable / no changed files
+  | {
+      status: 'bailed';
+      turboSnap: TurboSnap;
+      changedDependencyNames?: string[];
+      untracedFiles?: UntracedFile[]; // present when the bail happened mid-trace
+    }
+  | {
+      status: 'traced';
+      onlyStoryFiles: Record<string, string[]>;
+      turboSnap: TurboSnap;
+      changedDependencyNames?: string[];
+      untracedFiles: UntracedFile[];
+    };
+
+/**
+ * Determines which story files are affected by the changed git files, bailing out of TurboSnap
+ * when necessary.
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns The trace result: skipped, bailed, or traced with the affected story files.
+ */
 // eslint-disable-next-line complexity
-export const traceChangedFiles = async (ctx: Context) => {
-  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return;
-  if (!ctx.git.changedFiles) return;
+export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
+  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return { status: 'skipped' };
+  if (!ctx.git.changedFiles) return { status: 'skipped' };
   if (!ctx.fileInfo?.statsPath) {
     // If we don't know the SB version, we should assume we don't support `--stats-json`
     const nonLegacyStatsSupported =
       ctx.storybook?.version &&
       semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
 
-    ctx.turboSnap.bailReason = { missingStatsFile: true };
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
   const { statsPath } = ctx.fileInfo;
   const { changedFiles, packageMetadataChanges } = ctx.git;
 
-  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  let changedDependencyNames: void | string[] = [];
+  // Only set when lockfile analysis ran and succeeded; an empty array means "no changes found".
+  let changedDependencyNames: string[] | undefined;
   let pendingError: unknown;
   let pendingPatch: Partial<ChangedPackageFilesBailReason> | undefined;
   if (packageMetadataChanges?.length) {
@@ -40,9 +63,9 @@ export const traceChangedFiles = async (ctx: Context) => {
 
       const { name, message, stack, code } = err;
       ctx.log.debug({ name, message, stack, code });
+      return undefined;
     });
     if (changedDependencyNames) {
-      ctx.git.changedDependencyNames = changedDependencyNames;
       if (!ctx.options.interactive) {
         const list =
           changedDependencyNames.length > 0
@@ -66,12 +89,12 @@ export const traceChangedFiles = async (ctx: Context) => {
           });
         }
 
-        ctx.turboSnap.bailReason = {
-          changedPackageFiles,
-          ...pendingPatch,
+        const turboSnap: TurboSnap = {
+          ...ctx.turboSnap,
+          bailReason: { changedPackageFiles, ...pendingPatch },
         };
-        ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-        return;
+        ctx.log.warn(bailFile({ turboSnap }));
+        return { status: 'bailed', turboSnap };
       }
     }
   }
@@ -80,15 +103,28 @@ export const traceChangedFiles = async (ctx: Context) => {
 
   await checkStorybookBaseDirectory(ctx, stats);
 
-  return await getDependentStoryFiles(
+  const { affectedModules, turboSnap, untracedFiles } = await getDependentStoryFiles(
     ctx,
     stats,
     statsPath,
     changedFiles,
     changedDependencyNames || []
   );
-};
 
+  if (!affectedModules) {
+    return { status: 'bailed', turboSnap, changedDependencyNames, untracedFiles };
+  }
+
+  return {
+    status: 'traced',
+    onlyStoryFiles: affectedModules,
+    turboSnap,
+    changedDependencyNames,
+    untracedFiles,
+  };
+}
+
+export { NoCSFGlobsError } from './errors';
 export { findChangedDependencies } from './findChangedDependencies';
 export { findChangedPackageFiles } from './findChangedPackageFiles';
 export { getDependentStoryFiles } from './getDependentStoryFiles';

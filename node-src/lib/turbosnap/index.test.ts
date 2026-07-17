@@ -63,7 +63,11 @@ beforeEach(() => {
 describe('traceChangedFiles', () => {
   it('does not run package dependency analysis if there are no metadata changes', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    getDependentStoryFiles.mockResolvedValue(deps);
+    getDependentStoryFiles.mockResolvedValue({
+      affectedModules: deps,
+      turboSnap: {},
+      untracedFiles: [],
+    });
 
     const ctx = {
       env: environment,
@@ -75,9 +79,15 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js'] },
       turboSnap: {},
     } as any;
-    const onlyStoryFiles = await traceChangedFiles(ctx);
+    const result = await traceChangedFiles(ctx);
 
-    expect(onlyStoryFiles).toStrictEqual(deps);
+    expect(result).toStrictEqual({
+      status: 'traced',
+      onlyStoryFiles: deps,
+      turboSnap: {},
+      changedDependencyNames: undefined,
+      untracedFiles: [],
+    });
     expect(findChangedDependencies).not.toHaveBeenCalled();
     expect(findChangedPackageFiles).not.toHaveBeenCalled();
   });
@@ -162,9 +172,13 @@ describe('traceChangedFiles', () => {
         git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
         turboSnap: {},
       } as any;
-      await traceChangedFiles(ctx);
+      const result = await traceChangedFiles(ctx);
 
-      expect(ctx.turboSnap.bailReason).toEqual(expectedBailReason);
+      // Putting this in an if statement to avoid TS errors about type shape
+      if (result.status !== 'bailed') {
+        throw new Error(`Expected result.status to be 'bailed', but got '${result.status}'`);
+      }
+      expect(result.turboSnap.bailReason).toEqual(expectedBailReason);
       expect(captureException).toHaveBeenCalledTimes(1);
       expect(captureException).toHaveBeenCalledWith(error, {
         tags: {
@@ -177,9 +191,14 @@ describe('traceChangedFiles', () => {
     });
   }
 
-  it('stores dependency changes', async () => {
+  it('returns dependency changes', async () => {
     findChangedDependencies.mockResolvedValue(['moment']);
     findChangedPackageFiles.mockResolvedValue([]);
+    getDependentStoryFiles.mockResolvedValue({
+      affectedModules: {},
+      turboSnap: {},
+      untracedFiles: [],
+    });
 
     const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
@@ -192,16 +211,25 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
-    await traceChangedFiles(ctx);
+    const result = await traceChangedFiles(ctx);
 
-    expect(ctx.git.changedDependencyNames).toEqual(['moment']);
+    // Putting this in an if statement to avoid TS errors about type shape
+    if (result.status !== 'traced') {
+      throw new Error(`Expected result.status to be 'traced', but got '${result.status}'`);
+    }
+    expect(result.changedDependencyNames).toEqual(['moment']);
+    expect(ctx.git.changedDependencyNames).toBeUndefined();
   });
 
   it('throws an error if storybookBaseDir is incorrect', async () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue(deps);
+    getDependentStoryFiles.mockResolvedValue({
+      affectedModules: deps,
+      turboSnap: {},
+      untracedFiles: [],
+    });
     accessMock.mockImplementation((_path, callback) =>
       Promise.resolve(callback(new Error('some error')))
     );
@@ -216,7 +244,13 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js'] },
       turboSnap: {},
     } as any;
-    await expect(traceChangedFiles(ctx)).rejects.toThrow();
+    let err;
+    try {
+      await traceChangedFiles(ctx);
+    } catch (error) {
+      err = error;
+    }
+    expect(err).toBeTruthy();
     expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
   });
 
@@ -224,7 +258,11 @@ describe('traceChangedFiles', () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
     findChangedPackageFiles.mockResolvedValue([]); // no dependency changes
-    getDependentStoryFiles.mockResolvedValue(deps);
+    getDependentStoryFiles.mockResolvedValue({
+      affectedModules: deps,
+      turboSnap: {},
+      untracedFiles: [],
+    });
 
     const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
@@ -237,10 +275,14 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
-    const onlyStoryFiles = await traceChangedFiles(ctx);
+    const result = await traceChangedFiles(ctx);
 
-    expect(ctx.turboSnap.bailReason).toBeUndefined();
-    expect(onlyStoryFiles).toStrictEqual(deps);
+    // Putting this in an if statement to avoid TS errors about type shape
+    if (result.status !== 'traced') {
+      throw new Error(`Expected result.status to be 'traced', but got '${result.status}'`);
+    }
+    expect(result.onlyStoryFiles).toStrictEqual(deps);
+    expect(result.turboSnap.bailReason).toBeUndefined();
     expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
   });
 
@@ -248,7 +290,11 @@ describe('traceChangedFiles', () => {
     const error = new LockFileSizeExceededError('/tmp/x', 999);
     findChangedDependencies.mockRejectedValue(error);
     findChangedPackageFiles.mockResolvedValue([]);
-    getDependentStoryFiles.mockResolvedValue({});
+    getDependentStoryFiles.mockResolvedValue({
+      affectedModules: {},
+      turboSnap: {},
+      untracedFiles: [],
+    });
 
     const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
     const ctx = {
@@ -261,9 +307,13 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
       turboSnap: {},
     } as any;
-    await traceChangedFiles(ctx);
+    const result = await traceChangedFiles(ctx);
 
-    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    // Putting this in an if statement to avoid TS errors about type shape
+    if (result.status !== 'traced') {
+      throw new Error(`Expected result.status to be 'traced', but got '${result.status}'`);
+    }
+    expect(result.turboSnap.bailReason).toBeUndefined();
     expect(captureException).not.toHaveBeenCalled();
   });
 
@@ -279,7 +329,51 @@ describe('traceChangedFiles', () => {
       turboSnap: {},
     } as any;
 
-    await expect(traceChangedFiles(ctx)).rejects.toThrow();
-    expect(ctx.turboSnap.bailReason).toEqual({ missingStatsFile: true });
+    let err;
+    try {
+      await traceChangedFiles(ctx);
+    } catch (error) {
+      err = error;
+    }
+    expect(err.message).toContain('TurboSnap requires a stats file, but none was found');
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+  });
+
+  it('returns skipped when TurboSnap is unavailable', async () => {
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      git: {},
+      turboSnap: { unavailable: true },
+    } as any;
+
+    const result = await traceChangedFiles(ctx);
+
+    expect(result).toStrictEqual({ status: 'skipped' });
+  });
+
+  it('bails without mutating ctx when package files changed', async () => {
+    findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
+    findChangedPackageFiles.mockResolvedValue(['./package.json']);
+
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+
+    const result = await traceChangedFiles(ctx);
+
+    expect(result.status).toBe('bailed');
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(ctx.git.changedDependencyNames).toBeUndefined();
   });
 });

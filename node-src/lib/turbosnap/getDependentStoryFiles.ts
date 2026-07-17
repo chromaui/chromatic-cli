@@ -1,11 +1,12 @@
 import path from 'path';
 
-import { Context, Module, Reason, Stats } from '../../types';
+import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../types';
 import noCSFGlobs from '../../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { posix } from '../posix';
 import { isPackageManifestFile, matchesFile } from '../utilities';
+import { NoCSFGlobsError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 type FilePath = string;
@@ -52,9 +53,19 @@ export function normalizePath(posixPath: string, rootPath: string, baseDirectory
 }
 
 /**
- * This traverses the webpack module stats to retrieve a set of CSF files that somehow trace back to
- * the changed git files. The result is a map of Module ID => file path. In the end we'll only send
- * the Module IDs to Chromatic, the file paths are only for logging purposes.
+ * The affected story files plus the TurboSnap trace state and untraced files; `affectedModules`
+ * is absent when TurboSnap bailed.
+ */
+export interface DependentStoryFilesResult {
+  affectedModules?: Record<string, string[]>;
+  turboSnap: TurboSnap;
+  untracedFiles: UntracedFile[];
+}
+
+/**
+ * Traverses the webpack module stats to retrieve a set of CSF files that somehow trace back to
+ * the changed git files. The result is a map of Module ID => file path. In the end we'll only
+ * send the Module IDs to Chromatic, the file paths are only for logging purposes.
  *
  * @param ctx The context set when executing the CLI.
  * @param stats The stats file information from the project's builder (Webpack, for example).
@@ -63,7 +74,8 @@ export function normalizePath(posixPath: string, rootPath: string, baseDirectory
  * @param changedFiles A list of changed files.
  * @param changedDependencies A list of changed dependencies.
  *
- * @returns Any story files that are impacted by the list of changed files and dependencies.
+ * @returns The affected story files plus the TurboSnap trace state and untraced files;
+ * `affectedModules` is absent when TurboSnap bailed.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
@@ -73,7 +85,7 @@ export async function getDependentStoryFiles(
   statsPath: string,
   changedFiles: string[],
   changedDependencies: string[] = []
-) {
+): Promise<DependentStoryFilesResult> {
   const { rootPath } = ctx.git || {};
   if (!rootPath) {
     throw new Error('Failed to determine repository root');
@@ -199,20 +211,20 @@ export async function getDependentStoryFiles(
         entryFile,
       })
     );
-    throw new Error('Did not find any CSF globs in preview-stats.json');
+    throw new NoCSFGlobsError();
   }
 
   const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);
   const isStaticFile = (name: string) =>
     staticDirectories.some((directory) => name && name.startsWith(`${directory}/`));
 
-  ctx.untracedFiles = [];
+  const untracedFiles: UntracedFile[] = [];
 
   function untrace(filepath: string) {
     filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
     const matchedGlob = untraced.find((glob) => matchesFile(glob, filepath));
     if (matchedGlob) {
-      ctx.untracedFiles?.push({ filepath, glob: matchedGlob });
+      untracedFiles.push({ filepath, glob: matchedGlob });
       return false;
     }
     return true;
@@ -237,7 +249,8 @@ export async function getDependentStoryFiles(
   const checkedIds = {};
   const toCheck: TraceToCheck[] = [];
 
-  ctx.turboSnap = {
+  const turboSnap: TurboSnap = {
+    ...ctx.turboSnap,
     rootPath,
     baseDir: baseDirectory,
     storybookDir: storybookDirectory,
@@ -255,7 +268,7 @@ export async function getDependentStoryFiles(
   if (nodeModules.size === 0 && changedDependencies.length > 0) {
     // If we didn't find any node_modules in the stats file, it's probably incomplete and we can't
     // trace changed dependencies, so we bail just in case.
-    ctx.turboSnap.bailReason = {
+    turboSnap.bailReason = {
       changedPackageFiles: [
         ...(ctx.git.changedFiles?.filter((file) => isPackageManifestFile(file)) || []),
         ...changedPackageLockFiles,
@@ -273,20 +286,18 @@ export async function getDependentStoryFiles(
   }
 
   function shouldBail(moduleName: string, tracePath: string[] = []) {
-    if (!ctx.turboSnap) ctx.turboSnap = {};
-
     // Check staticDirs before the Storybook config dir so static assets
     // nested under `.storybook/` (e.g. an MSW-generated mockServiceWorker.js
     // inside a configured staticDir) aren't mis-categorized as config changes.
     if (isStaticFile(moduleName)) {
-      ctx.turboSnap.bailReason = { changedStaticFiles: files(moduleName) };
-      ctx.turboSnap.bailPath = buildBailPath(moduleName, tracePath);
+      turboSnap.bailReason = { changedStaticFiles: files(moduleName) };
+      turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
     }
 
     if (isStorybookFile(moduleName)) {
-      ctx.turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
-      ctx.turboSnap.bailPath = buildBailPath(moduleName, tracePath);
+      turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
+      turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
     }
     return false;
@@ -295,7 +306,7 @@ export async function getDependentStoryFiles(
   // TODO: refactor this function
   // eslint-disable-next-line complexity
   function traceName(name: string, tracePath: string[] = []) {
-    if (ctx.turboSnap?.bailReason || isCsfGlob(name)) return;
+    if (turboSnap.bailReason || isCsfGlob(name)) return;
     if (shouldBail(name, tracePath)) return;
     const { id } = modulesByName.get(name) || {};
     // eslint-disable-next-line unicorn/no-null
@@ -351,20 +362,23 @@ export async function getDependentStoryFiles(
 
   if (ctx.options.traceChanged) {
     ctx.log.info(
-      tracedAffectedFiles(ctx, {
-        changedFiles,
-        affectedModules,
-        modulesByName: Object.fromEntries(modulesByName),
-        normalize,
-      })
+      tracedAffectedFiles(
+        { ...ctx, turboSnap, untracedFiles },
+        {
+          changedFiles,
+          affectedModules,
+          modulesByName: Object.fromEntries(modulesByName),
+          normalize,
+        }
+      )
     );
     ctx.log.info('');
   }
 
-  if (ctx.turboSnap.bailReason) {
-    ctx.log.warn(bailFile({ turboSnap: ctx.turboSnap }));
-    return;
+  if (turboSnap.bailReason) {
+    ctx.log.warn(bailFile({ turboSnap }));
+    return { turboSnap, untracedFiles };
   }
 
-  return affectedModules;
+  return { affectedModules, turboSnap, untracedFiles };
 }
