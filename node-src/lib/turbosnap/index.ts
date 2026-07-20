@@ -4,6 +4,10 @@ import { Context } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
+import { traceChangedFiles as traceChangedFilesV2 } from './v2';
+
+// TODO: remove this once we fully implement TurboSnap 2.0
+const USE_V2 = process.env.TURBOSNAP_V2 === 'true';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
@@ -25,5 +29,8 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
-  return traceChangedFilesV1(ctx);
+  if (USE_V2) {
+    return await traceChangedFilesV2(ctx);
+  }
+  return await traceChangedFilesV1(ctx);
 }
