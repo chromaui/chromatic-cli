@@ -10,7 +10,7 @@ export interface PrepareInput {
   buildLogFile?: string;
   browsers?: string[];
   // Context threaded for the TurboSnap subsystem, which reads it; trace results are applied back
-  // onto it in traceChangedFiles.
+  // onto it in ./traceChangedFiles.
   turboSnapContext: Context;
 }
 
