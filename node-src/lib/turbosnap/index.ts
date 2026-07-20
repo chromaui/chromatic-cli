@@ -1,7 +1,7 @@
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { ChangedPackageFilesBailReason, Context, TurboSnap, UntracedFile } from '../../types';
+import { ChangedPackageFilesBailReason, Context, TurboSnap } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../checkStorybookBaseDirectory';
@@ -11,20 +11,7 @@ import { classifyTagsFromError } from './classifyBailRootCause';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
-
-export type TraceChangedFilesResult =
-  | { status: 'skipped' } // turboSnap unavailable / no changed files from `git diff`
-  | {
-      status: 'bailed';
-      turboSnap: TurboSnap;
-    }
-  | {
-      status: 'traced';
-      onlyStoryFiles: Record<string, string[]>;
-      turboSnap: TurboSnap;
-      changedDependencyNames?: string[];
-      untracedFiles: UntracedFile[];
-    };
+import { TraceChangedFilesResult } from './types';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap

@@ -7,6 +7,7 @@ import bailFile from '../../ui/messages/warnings/bailFile';
 import { posix } from '../posix';
 import { isPackageManifestFile, matchesFile } from '../utilities';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
+import { TraceChangedFilesResult } from './types';
 
 type FilePath = string;
 type NormalizedName = string;
@@ -52,14 +53,10 @@ export function normalizePath(posixPath: string, rootPath: string, baseDirectory
 }
 
 /**
- * The affected story files plus the TurboSnap trace state and untraced files; `affectedModules`
- * is absent when TurboSnap bailed.
+ * The result of tracing story files: either `bailed` or `traced`. This never skips since it's
+ * handled by the caller.
  */
-export interface DependentStoryFilesResult {
-  affectedModules?: Record<string, string[]>;
-  turboSnap: TurboSnap;
-  untracedFiles: UntracedFile[];
-}
+export type DependentStoryFilesResult = Exclude<TraceChangedFilesResult, { status: 'skipped' }>;
 
 /**
  * Traverses the webpack module stats to retrieve a set of CSF files that somehow trace back to
@@ -73,8 +70,8 @@ export interface DependentStoryFilesResult {
  * @param changedFiles A list of changed files.
  * @param changedDependencies A list of changed dependencies.
  *
- * @returns The affected story files plus the TurboSnap trace state and untraced files;
- * `affectedModules` is absent when TurboSnap bailed.
+ * @returns `bailed` when TurboSnap gave up, or `traced` with the affected story files in
+ * `onlyStoryFiles`.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
@@ -376,8 +373,8 @@ export async function getDependentStoryFiles(
 
   if (turboSnap.bailReason) {
     ctx.log.warn(bailFile({ turboSnap }));
-    return { turboSnap, untracedFiles };
+    return { status: 'bailed', turboSnap };
   }
 
-  return { affectedModules, turboSnap, untracedFiles };
+  return { status: 'traced', onlyStoryFiles: affectedModules, turboSnap, untracedFiles };
 }

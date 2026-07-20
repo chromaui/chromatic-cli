@@ -64,7 +64,8 @@ describe('traceChangedFiles', () => {
   it('does not run package dependency analysis if there are no metadata changes', async () => {
     const deps = { 123: ['./example.stories.js'] };
     getDependentStoryFiles.mockResolvedValue({
-      affectedModules: deps,
+      status: 'traced',
+      onlyStoryFiles: deps,
       turboSnap: {},
       untracedFiles: [],
     });
@@ -195,7 +196,8 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockResolvedValue(['moment']);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue({
-      affectedModules: {},
+      status: 'traced',
+      onlyStoryFiles: {},
       turboSnap: {},
       untracedFiles: [],
     });
@@ -226,7 +228,8 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockResolvedValue([]);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue({
-      affectedModules: deps,
+      status: 'traced',
+      onlyStoryFiles: deps,
       turboSnap: {},
       untracedFiles: [],
     });
@@ -259,7 +262,8 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
     findChangedPackageFiles.mockResolvedValue([]); // no dependency changes
     getDependentStoryFiles.mockResolvedValue({
-      affectedModules: deps,
+      status: 'traced',
+      onlyStoryFiles: deps,
       turboSnap: {},
       untracedFiles: [],
     });
@@ -291,7 +295,8 @@ describe('traceChangedFiles', () => {
     findChangedDependencies.mockRejectedValue(error);
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue({
-      affectedModules: {},
+      status: 'traced',
+      onlyStoryFiles: {},
       turboSnap: {},
       untracedFiles: [],
     });
