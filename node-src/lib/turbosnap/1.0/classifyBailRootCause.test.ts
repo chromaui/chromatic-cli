@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   commitExists as commitExistsDep,
   getChangedFilesWithStatus as getChangedFilesWithStatusDep,
-} from '../../git/git';
-import TestLogger from '../testLogger';
+} from '../../../git/git';
+import TestLogger from '../../testLogger';
 import { classifyTagsFromError } from './classifyBailRootCause';
 import { BaselineCheckoutFailedError } from './errors';
 
-vi.mock('../../git/git');
+vi.mock('../../../git/git');
 const getChangedFilesWithStatus = vi.mocked(getChangedFilesWithStatusDep);
 const commitExists = vi.mocked(commitExistsDep);
 

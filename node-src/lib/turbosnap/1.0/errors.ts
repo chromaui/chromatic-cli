@@ -1,4 +1,4 @@
-import { HTTPClientError } from '../../io/httpClient';
+import { HTTPClientError } from '../../../io/httpClient';
 
 /**
  * Error thrown when a lockfile exceeds the configured maximum size and parsing is skipped.

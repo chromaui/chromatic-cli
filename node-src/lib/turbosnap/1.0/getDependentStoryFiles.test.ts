@@ -2,8 +2,8 @@
 import chalk from 'chalk';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Context } from '../../types';
-import TestLogger from '../testLogger';
+import { Context } from '../../../types';
+import TestLogger from '../../testLogger';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;

@@ -1,4 +1,4 @@
-import { AncestorMissingError, BaselineDirtyError } from '../lib/turbosnap/errors';
+import { AncestorMissingError, BaselineDirtyError } from '../lib/turbosnap/1.0/errors';
 import { Deps } from '../types';
 import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 import { getChangedFiles } from './git';

@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { AncestorMissingError, BaselineDirtyError, GitCommandError } from '../lib/turbosnap/errors';
+import {
+  AncestorMissingError,
+  BaselineDirtyError,
+  GitCommandError,
+} from '../lib/turbosnap/1.0/errors';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import * as gitModule from './git';
 

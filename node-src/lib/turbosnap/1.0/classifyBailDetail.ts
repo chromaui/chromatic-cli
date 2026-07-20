@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { ChangedPackageFilesBailReason, InvalidChangedFilesBailReason } from '../../types';
+import { ChangedPackageFilesBailReason, InvalidChangedFilesBailReason } from '../../../types';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,

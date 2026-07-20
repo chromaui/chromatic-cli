@@ -5,9 +5,9 @@ import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, Mock, vi } from 'vitest';
 
-import packageJson from '../../__mocks__/dependencyChanges/plain/package.json';
-import { checkoutFile } from '../../git/git';
-import TestLogger from '../testLogger';
+import packageJson from '../../../__mocks__/dependencyChanges/plain/package.json';
+import { checkoutFile } from '../../../git/git';
+import TestLogger from '../../testLogger';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
@@ -43,7 +43,7 @@ describe('getDependencies', () => {
   it('should find top-level dependencies for each lock file type', async () => {
     for (const lockfile of SUPPORTED_LOCK_FILES) {
       const dependencies = await getDependencies(ctx, {
-        rootPath: path.join(__dirname, '../../__mocks__/dependencyParsing'),
+        rootPath: path.join(__dirname, '../../../__mocks__/dependencyParsing'),
         manifestPath: 'package.json',
         lockfilePath: lockfile,
       });
@@ -130,7 +130,7 @@ describe('getDependencies', () => {
     statSync.mockReturnValue({ size: MAX_LOCK_FILE_SIZE + 1000 });
 
     const dependencies = await getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
+      rootPath: path.join(__dirname, '../../../__mocks__/dependencyChanges/plain'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
     });
@@ -149,7 +149,7 @@ describe('getDependencies', () => {
 
     await expect(() =>
       getDependencies(ctx, {
-        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+        rootPath: path.join(__dirname, '../../../__mocks__/dependencyChanges/plain'),
         manifestPath: 'package.json',
         lockfilePath: 'yarn.lock',
       })
@@ -161,7 +161,7 @@ describe('getDependencies', () => {
 
     await expect(() =>
       getDependencies(ctx, {
-        rootPath: path.join(__dirname, '../__mocks__/dependencyChanges/plain'),
+        rootPath: path.join(__dirname, '../../../__mocks__/dependencyChanges/plain'),
         manifestPath: 'package.json',
         lockfilePath: 'yarn.lock',
       })
@@ -173,7 +173,7 @@ describe('getDependencies', () => {
     inspect.mockRejectedValueOnce(cause);
 
     const promise = getDependencies(ctx, {
-      rootPath: path.join(__dirname, '../../__mocks__/dependencyChanges/plain'),
+      rootPath: path.join(__dirname, '../../../__mocks__/dependencyChanges/plain'),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
     });

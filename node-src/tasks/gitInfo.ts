@@ -18,8 +18,8 @@ import {
 import { getHasRouter } from '../lib/getHasRouter';
 import matchesBranch from '../lib/matchesBranch';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
-import { captureBailException } from '../lib/turbosnap/captureBailException';
-import { classifyInvalidChangedFilesDetail } from '../lib/turbosnap/classifyBailDetail';
+import { captureBailException } from '../lib/turbosnap/1.0/captureBailException';
+import { classifyInvalidChangedFilesDetail } from '../lib/turbosnap/1.0/classifyBailDetail';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
 import {
   BaselineBuild,
