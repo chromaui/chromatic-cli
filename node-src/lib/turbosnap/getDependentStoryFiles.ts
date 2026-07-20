@@ -246,7 +246,6 @@ export async function getDependentStoryFiles(
   const toCheck: TraceToCheck[] = [];
 
   const turboSnap: TurboSnap = {
-    ...ctx.turboSnap,
     rootPath,
     baseDir: baseDirectory,
     storybookDir: storybookDirectory,
