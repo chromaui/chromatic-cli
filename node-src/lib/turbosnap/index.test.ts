@@ -175,11 +175,12 @@ describe('traceChangedFiles', () => {
       } as any;
       const result = await traceChangedFiles(ctx);
 
-      // Putting this in an if statement to avoid TS errors about type shape
-      if (result.status !== 'bailed') {
-        throw new Error(`Expected result.status to be 'bailed', but got '${result.status}'`);
-      }
-      expect(result.turboSnap.bailReason).toEqual(expectedBailReason);
+      expect(result).toMatchObject({
+        status: 'bailed',
+        turboSnap: {
+          bailReason: expectedBailReason,
+        },
+      });
       expect(captureException).toHaveBeenCalledTimes(1);
       expect(captureException).toHaveBeenCalledWith(error, {
         tags: {
@@ -215,11 +216,10 @@ describe('traceChangedFiles', () => {
     } as any;
     const result = await traceChangedFiles(ctx);
 
-    // Putting this in an if statement to avoid TS errors about type shape
-    if (result.status !== 'traced') {
-      throw new Error(`Expected result.status to be 'traced', but got '${result.status}'`);
-    }
-    expect(result.changedDependencyNames).toEqual(['moment']);
+    expect(result).toMatchObject({
+      status: 'traced',
+      changedDependencyNames: ['moment'],
+    });
     expect(ctx.git.changedDependencyNames).toBeUndefined();
   });
 
@@ -281,12 +281,11 @@ describe('traceChangedFiles', () => {
     } as any;
     const result = await traceChangedFiles(ctx);
 
-    // Putting this in an if statement to avoid TS errors about type shape
-    if (result.status !== 'traced') {
-      throw new Error(`Expected result.status to be 'traced', but got '${result.status}'`);
-    }
-    expect(result.onlyStoryFiles).toStrictEqual(deps);
-    expect(result.turboSnap.bailReason).toBeUndefined();
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: deps,
+      turboSnap: {}, // checking there is no bailReason set
+    });
     expect(findChangedPackageFiles).toHaveBeenCalledWith(ctx, packageMetadataChanges);
   });
 
@@ -314,11 +313,10 @@ describe('traceChangedFiles', () => {
     } as any;
     const result = await traceChangedFiles(ctx);
 
-    // Putting this in an if statement to avoid TS errors about type shape
-    if (result.status !== 'traced') {
-      throw new Error(`Expected result.status to be 'traced', but got '${result.status}'`);
-    }
-    expect(result.turboSnap.bailReason).toBeUndefined();
+    expect(result).toMatchObject({
+      status: 'traced',
+      turboSnap: {}, // checking there is no bailReason set
+    });
     expect(captureException).not.toHaveBeenCalled();
   });
 

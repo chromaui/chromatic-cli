@@ -52,8 +52,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -73,8 +76,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -94,8 +100,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ storybookBaseDir: 'path/to/project' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['path/to/project/src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['path/to/project/src/foo.stories.js'],
+      },
     });
   });
 
@@ -115,8 +124,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -136,8 +148,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -160,8 +175,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -195,8 +213,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -221,8 +242,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -253,8 +277,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.ts': ['src/foo.stories.ts'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.ts': ['src/foo.stories.ts'],
+      },
     });
   });
 
@@ -275,8 +302,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js', 'src/foo.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js', 'src/foo.js'],
+      },
     });
   });
 
@@ -308,8 +338,11 @@ describe('getDependentStoryFiles', () => {
       changedFiles,
       changedDependencies
     );
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -334,8 +367,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ storybookBaseDir: 'services/webapp' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['services/webapp/src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['services/webapp/src/foo.stories.js'],
+      },
     });
   });
 
@@ -362,8 +398,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      '/path/to/project/src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        '/path/to/project/src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -390,8 +429,13 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ storybookBaseDir: 'packages/storybook' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      '/path/to/project/packages/webapp/src/foo.stories.js': ['packages/webapp/src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        '/path/to/project/packages/webapp/src/foo.stories.js': [
+          'packages/webapp/src/foo.stories.js',
+        ],
+      },
     });
   });
 
@@ -437,8 +481,11 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
     expect(result.turboSnap.bailReason).toBeUndefined();
   });
@@ -472,8 +519,11 @@ describe('getDependentStoryFiles', () => {
       changedDependencies
     );
     expect(result.turboSnap.bailReason).toBeUndefined();
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -501,8 +551,11 @@ describe('getDependentStoryFiles', () => {
     };
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.turboSnap.bailReason).toBeUndefined();
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -522,7 +575,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -550,8 +603,11 @@ describe('getDependentStoryFiles', () => {
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.turboSnap.bailReason).toBeUndefined();
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -571,7 +627,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/preview.js'],
     });
@@ -598,7 +654,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
     });
@@ -644,7 +700,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/preview.js'],
     });
@@ -683,7 +739,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
     });
@@ -710,7 +766,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ staticDir: ['path/to/statics'] });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStaticFiles: ['path/to/statics/image.png'],
     });
@@ -738,7 +794,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext({ staticDir: ['.storybook/static'] });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStaticFiles: ['.storybook/static/foo.js'],
     });
@@ -763,7 +819,7 @@ describe('getDependentStoryFiles', () => {
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['.storybook/static/foo.js'],
     });
@@ -845,11 +901,14 @@ describe('getDependentStoryFiles', () => {
       untraced: ['**/stories/**'],
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.affectedModules).toEqual({});
-    expect(result.untracedFiles).toEqual([
-      { filepath: 'src/stories/Button.jsx', glob: '**/stories/**' },
-      { filepath: 'src/stories/Page.jsx', glob: '**/stories/**' },
-    ]);
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {},
+      untracedFiles: [
+        { filepath: 'src/stories/Button.jsx', glob: '**/stories/**' },
+        { filepath: 'src/stories/Page.jsx', glob: '**/stories/**' },
+      ],
+    });
   });
 
   it.each(['./src/foo.js', './src/foo.js + 1 module', './src/foo.js + 2 modules'])(
@@ -883,8 +942,11 @@ describe('getDependentStoryFiles', () => {
         untraced: ['**/foo.js'],
       });
       const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {},
+      });
       expect(result.turboSnap.bailReason).toBeUndefined();
-      expect(result.affectedModules).toEqual({});
     }
   );
 
@@ -923,8 +985,11 @@ describe('getDependentStoryFiles', () => {
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.turboSnap.bailReason).toBeUndefined();
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -972,8 +1037,11 @@ describe('getDependentStoryFiles', () => {
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.turboSnap.bailReason).toBeUndefined();
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
   it('does not bail on changed dependency in dynamic import of untraced config file', async () => {
@@ -1029,8 +1097,11 @@ describe('getDependentStoryFiles', () => {
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.turboSnap.bailReason).toBeUndefined();
-    expect(result.affectedModules).toEqual({
-      './src/foo.stories.js': ['src/foo.stories.js'],
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './src/foo.stories.js': ['src/foo.stories.js'],
+      },
     });
   });
 
@@ -1061,7 +1132,7 @@ describe('getDependentStoryFiles', () => {
       changedFiles,
       changedDependencies
     );
-    expect(result.affectedModules).toBeUndefined();
+    expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedPackageFiles: ['package.json'],
       bailSubreason: 'nodeModulesMissingInStats',

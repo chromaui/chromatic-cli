@@ -88,7 +88,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
 
   await checkStorybookBaseDirectory(ctx, stats);
 
-  const { affectedModules, turboSnap, untracedFiles } = await getDependentStoryFiles(
+  const result = await getDependentStoryFiles(
     ctx,
     stats,
     statsPath,
@@ -96,17 +96,11 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     changedDependencyNames || []
   );
 
-  if (!affectedModules) {
-    return { status: 'bailed', turboSnap };
+  if (result.status === 'bailed') {
+    return result;
   }
 
-  return {
-    status: 'traced',
-    onlyStoryFiles: affectedModules,
-    turboSnap,
-    changedDependencyNames,
-    untracedFiles,
-  };
+  return { ...result, changedDependencyNames };
 }
 
 export { findChangedDependencies } from './findChangedDependencies';
