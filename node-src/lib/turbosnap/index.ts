@@ -1,3 +1,4 @@
+import path from 'path';
 import semver from 'semver';
 
 import { Context } from '../../types';
@@ -30,7 +31,10 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   }
 
   if (USE_V2) {
-    return await traceChangedFilesV2(ctx);
+    return await traceChangedFilesV2({
+      statsPath: ctx.fileInfo.statsPath,
+      manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
+    });
   }
   return await traceChangedFilesV1(ctx);
 }

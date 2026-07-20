@@ -1,15 +1,30 @@
-import { Context } from '../../../types';
+import { readStatsFile } from '../../../tasks/readStatsFile';
 import { TraceChangedFilesResult } from '../types';
+import { buildManifest, determineChangedFiles, writeManifest } from './manifest';
+
+interface TraceChangedFilesInput {
+  statsPath: string;
+  manifestOutputDirectory: string;
+}
 
 /**
  * Determines which story files are affected by the changed source file hashes, bailing out of TurboSnap
  * when necessary.
  *
- * @param _ctx The context set when executing the CLI.
+ * @param input The input to run TurboSnap 2.0.
+ * @param input.statsPath The path to the stats file.
+ * @param input.manifestOutputDirectory The directory to write the manifest file to.
  *
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
  */
-export async function traceChangedFiles(_ctx: Context): Promise<TraceChangedFilesResult> {
+export async function traceChangedFiles(
+  input: TraceChangedFilesInput
+): Promise<TraceChangedFilesResult> {
+  const stats = await readStatsFile(input.statsPath);
+  const manifest = await buildManifest(stats);
+  await determineChangedFiles(manifest);
+  writeManifest(manifest, input.manifestOutputDirectory);
+
   return {
     status: 'skipped',
   };
