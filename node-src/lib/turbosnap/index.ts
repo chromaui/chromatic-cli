@@ -13,7 +13,7 @@ import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
 
 export type TraceChangedFilesResult =
-  | { status: 'skipped' } // turboSnap unavailable / no changed files
+  | { status: 'skipped' } // turboSnap unavailable / no changed files from `git diff`
   | {
       status: 'bailed';
       turboSnap: TurboSnap;
