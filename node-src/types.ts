@@ -475,7 +475,7 @@ export interface Context {
   turboSnap?: TurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
-  untracedFiles?: { filepath: string; glob: string }[];
+  untracedFiles?: UntracedFile[];
   rebuildForBuildId?: string;
 }
 
@@ -549,7 +549,6 @@ interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
-  missingStatsFile?: true;
   noAncestorBuild?: true;
   rebuild?: true;
 }
@@ -597,6 +596,11 @@ export type TurboSnapBailReason =
       changedPackageFiles?: never;
       invalidChangedFiles?: never;
     });
+
+export interface UntracedFile {
+  filepath: string;
+  glob: string;
+}
 
 export interface TurboSnap {
   unavailable?: boolean;

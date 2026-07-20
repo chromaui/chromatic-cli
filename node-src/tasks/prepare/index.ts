@@ -9,7 +9,8 @@ export interface PrepareInput {
   sourceDir: string;
   buildLogFile?: string;
   browsers?: string[];
-  // Context threaded for the still-ctx-coupled TurboSnap subsystem (see traceChangedFiles).
+  // Context threaded for the TurboSnap subsystem, which reads it; trace results are applied back
+  // onto it in ./traceChangedFiles.
   turboSnapContext: Context;
 }
 
