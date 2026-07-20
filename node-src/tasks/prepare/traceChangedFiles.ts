@@ -50,16 +50,15 @@ export async function traceChangedFiles(
     }
 
     ctx.turboSnap = result.turboSnap;
-    if (result.changedDependencyNames) {
-      ctx.git.changedDependencyNames = result.changedDependencyNames;
-    }
-    if (result.untracedFiles) {
-      ctx.untracedFiles = result.untracedFiles;
-    }
 
     if (result.status === 'bailed') {
       deps.report(bailed({ turboSnap: result.turboSnap }));
       return {};
+    }
+
+    ctx.untracedFiles = result.untracedFiles;
+    if (result.changedDependencyNames) {
+      ctx.git.changedDependencyNames = result.changedDependencyNames;
     }
 
     // Escape special characters in the filename so it does not conflict with picomatch

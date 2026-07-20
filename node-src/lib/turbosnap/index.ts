@@ -17,8 +17,6 @@ export type TraceChangedFilesResult =
   | {
       status: 'bailed';
       turboSnap: TurboSnap;
-      changedDependencyNames?: string[];
-      untracedFiles?: UntracedFile[]; // present when the bail happened mid-trace
     }
   | {
       status: 'traced';
@@ -112,7 +110,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   );
 
   if (!affectedModules) {
-    return { status: 'bailed', turboSnap, changedDependencyNames, untracedFiles };
+    return { status: 'bailed', turboSnap };
   }
 
   return {
