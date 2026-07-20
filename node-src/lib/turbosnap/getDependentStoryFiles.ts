@@ -6,7 +6,6 @@ import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../ui/messages/warnings/bailFile';
 import { posix } from '../posix';
 import { isPackageManifestFile, matchesFile } from '../utilities';
-import { NoCSFGlobsError } from './errors';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 type FilePath = string;
@@ -211,7 +210,7 @@ export async function getDependentStoryFiles(
         entryFile,
       })
     );
-    throw new NoCSFGlobsError();
+    throw new Error('Did not find any CSF globs in preview-stats.json');
   }
 
   const isCsfGlob = (name: NormalizedName) => csfGlobsByName.has(name);

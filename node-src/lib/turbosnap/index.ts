@@ -122,7 +122,6 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   };
 }
 
-export { NoCSFGlobsError } from './errors';
 export { findChangedDependencies } from './findChangedDependencies';
 export { findChangedPackageFiles } from './findChangedPackageFiles';
 export { getDependentStoryFiles } from './getDependentStoryFiles';

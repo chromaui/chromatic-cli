@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context } from '../../types';
 import TestLogger from '../testLogger';
-import { NoCSFGlobsError } from './errors';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
@@ -412,7 +411,8 @@ describe('getDependentStoryFiles', () => {
     } catch (error) {
       err = error;
     }
-    expect(err).toBeInstanceOf(NoCSFGlobsError);
+    expect(err).toBeDefined();
+    expect(err.message).toContain('Did not find any CSF globs in preview-stats.json');
   });
 
   it('does not bail on changed global file', async () => {
