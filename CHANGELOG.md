@@ -1,3 +1,23 @@
+# v18.1.0 (Tue Jul 21 2026)
+
+#### 🚀 Enhancement
+
+- TurboSnap: Skipped -> Bypassed [#1419](https://github.com/chromaui/chromatic-cli/pull/1419) ([@codykaup](https://github.com/codykaup))
+- Isolate TurboSnap version 1.0 [#1418](https://github.com/chromaui/chromatic-cli/pull/1418) ([@codykaup](https://github.com/codykaup))
+- Reorganize TurboSnap to return results instead of mutating `ctx` [#1417](https://github.com/chromaui/chromatic-cli/pull/1417) ([@codykaup](https://github.com/codykaup))
+- Setup smoke-test directory for tests [#1412](https://github.com/chromaui/chromatic-cli/pull/1412) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- :pencil2: Add a --help command-line parameter for publishAction. [#1415](https://github.com/chromaui/chromatic-cli/pull/1415) ([@jwir3](https://github.com/jwir3))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Scott Johnson ([@jwir3](https://github.com/jwir3))
+
+---
+
 # v18.0.1 (Thu Jul 02 2026)
 
 #### 🐛 Bug Fix
