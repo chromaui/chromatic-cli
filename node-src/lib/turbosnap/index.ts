@@ -32,6 +32,8 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
 
   if (USE_V2) {
     return await traceChangedFilesV2({
+      graphqlClient: ctx.client,
+      buildId: ctx.build.id,
       statsPath: ctx.fileInfo.statsPath,
       manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
     });

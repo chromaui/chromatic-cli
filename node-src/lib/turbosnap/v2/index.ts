@@ -1,9 +1,12 @@
+import GraphQLClient from '../../../io/graphqlClient';
 import { readStatsFile } from '../../../tasks/readStatsFile';
 import { TraceChangedFilesResult } from '../types';
 import { determineChangedFiles } from './api';
 import { buildManifest, writeManifest } from './manifest';
 
 interface TraceChangedFilesInput {
+  graphqlClient: GraphQLClient;
+  buildId: string;
   statsPath: string;
   manifestOutputDirectory: string;
 }
@@ -23,7 +26,7 @@ export async function traceChangedFiles(
 ): Promise<TraceChangedFilesResult> {
   const stats = await readStatsFile(input.statsPath);
   const manifest = await buildManifest(stats);
-  await determineChangedFiles(manifest);
+  await determineChangedFiles(input.graphqlClient, input.buildId, manifest);
   writeManifest(manifest, input.manifestOutputDirectory);
 
   return {
