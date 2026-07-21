@@ -105,19 +105,6 @@ export async function buildManifest(stats: Stats): Promise<TurboSnapManifest> {
 }
 
 /**
- * Sends the story file and Storybook hashes to the Index and gets back the list of changed files.
- *
- * @param _manifest The manifest whose story file and Storybook hashes are sent to the Index.
- *
- * @returns The changed files.
- */
-// TODO: Implement this!
-export async function determineChangedFiles(_manifest: TurboSnapManifest) {
-  // Send the story file and Storybook hashes to the Index and get back a list of changed files.
-  return {};
-}
-
-/**
  * Writes the entire manifest to a file in the output directory. This is uploaded to S3 for
  * debugging.
  *

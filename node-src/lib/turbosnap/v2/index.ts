@@ -1,6 +1,7 @@
 import { readStatsFile } from '../../../tasks/readStatsFile';
 import { TraceChangedFilesResult } from '../types';
-import { buildManifest, determineChangedFiles, writeManifest } from './manifest';
+import { determineChangedFiles } from './api';
+import { buildManifest, writeManifest } from './manifest';
 
 interface TraceChangedFilesInput {
   statsPath: string;
