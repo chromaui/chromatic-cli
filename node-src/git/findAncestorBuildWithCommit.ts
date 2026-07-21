@@ -1,6 +1,6 @@
 import gql from 'fake-tag';
 
-import { isNetworkError, NetworkError, ReplacementFailedError } from '../lib/turbosnap/errors';
+import { isNetworkError, NetworkError, ReplacementFailedError } from '../lib/turbosnap/v1/errors';
 import { Deps } from '../types';
 import { commitExists } from './git';
 

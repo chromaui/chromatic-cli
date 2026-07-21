@@ -2,7 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it } from 'vitest';
 
-import TestLogger from '../testLogger';
+import TestLogger from '../../testLogger';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 
@@ -17,12 +17,12 @@ async function getMockedDependencies(headName: string, baseName: string) {
   const ctx = getContext();
   return {
     head: await getDependencies(ctx, {
-      rootPath: path.join(__dirname, `../../__mocks__/dependencyChanges/${headName}`),
+      rootPath: path.join(__dirname, `../../../__mocks__/dependencyChanges/${headName}`),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
     }),
     base: await getDependencies(ctx, {
-      rootPath: path.join(__dirname, `../../__mocks__/dependencyChanges/${baseName}`),
+      rootPath: path.join(__dirname, `../../../__mocks__/dependencyChanges/${baseName}`),
       manifestPath: 'package.json',
       lockfilePath: 'yarn.lock',
     }),

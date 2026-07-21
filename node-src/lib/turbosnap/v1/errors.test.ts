@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { HTTPClientError } from '../../io/httpClient';
+import { HTTPClientError } from '../../../io/httpClient';
 import { isNetworkError } from './errors';
 
 describe('isNetworkError', () => {

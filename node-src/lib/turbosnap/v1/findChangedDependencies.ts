@@ -3,9 +3,9 @@ import os from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
 
-import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../git/git';
-import { Context } from '../../types';
-import { matchesFile } from '../utilities';
+import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
+import { Context } from '../../../types';
+import { matchesFile } from '../../utilities';
 import { compareBaseline } from './compareBaseline';
 import { getDependencies } from './getDependencies';
 

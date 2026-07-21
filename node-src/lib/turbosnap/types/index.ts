@@ -1,4 +1,4 @@
-import { TurboSnap, UntracedFile } from '../../types';
+import { TurboSnap, UntracedFile } from '../../../types';
 
 export type TraceChangedFilesResult =
   | { status: 'skipped' } // turboSnap unavailable / no changed files from `git diff`

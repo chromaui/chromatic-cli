@@ -1,8 +1,8 @@
 import * as Sentry from '@sentry/node';
 import path from 'path';
 
-import { GitDeps } from '../../git/execGit';
-import { ChangedFileWithStatus, commitExists, getChangedFilesWithStatus } from '../../git/git';
+import { GitDeps } from '../../../git/execGit';
+import { ChangedFileWithStatus, commitExists, getChangedFilesWithStatus } from '../../../git/git';
 import { BaselineCheckoutFailedError } from './errors';
 
 /**

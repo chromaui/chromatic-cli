@@ -1,13 +1,13 @@
 import path from 'path';
 
-import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../types';
-import noCSFGlobs from '../../ui/messages/errors/noCSFGlobs';
-import tracedAffectedFiles from '../../ui/messages/info/tracedAffectedFiles';
-import bailFile from '../../ui/messages/warnings/bailFile';
-import { posix } from '../posix';
-import { isPackageManifestFile, matchesFile } from '../utilities';
+import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../../types';
+import noCSFGlobs from '../../../ui/messages/errors/noCSFGlobs';
+import tracedAffectedFiles from '../../../ui/messages/info/tracedAffectedFiles';
+import bailFile from '../../../ui/messages/warnings/bailFile';
+import { posix } from '../../posix';
+import { isPackageManifestFile, matchesFile } from '../../utilities';
+import { TraceChangedFilesResult } from '../types';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
-import { TraceChangedFilesResult } from './types';
 
 type FilePath = string;
 type NormalizedName = string;
