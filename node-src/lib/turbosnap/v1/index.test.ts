@@ -342,4 +342,22 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(ctx.git.changedDependencyNames).toBeUndefined();
   });
+
+  it('throws if stats file is not found', async () => {
+    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
+    const ctx = {
+      options: {},
+      sourceDir: '/static/',
+      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+
+    let err;
+    try {
+      await traceChangedFiles(ctx);
+    } catch (error) {
+      err = error;
+    }
+    expect(err.message).toContain('TurboSnap requires a stats file');
+  });
 });

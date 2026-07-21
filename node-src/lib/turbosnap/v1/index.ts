@@ -1,5 +1,8 @@
+import semver from 'semver';
+
 import { readStatsFile } from '../../../tasks/readStatsFile';
 import { ChangedPackageFilesBailReason, Context, TurboSnap } from '../../../types';
+import missingStatsFile from '../../../ui/messages/errors/missingStatsFile';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../../checkStorybookBaseDirectory';
 import { TraceChangedFilesResult } from '../types';
@@ -20,10 +23,18 @@ import { getDependentStoryFiles } from './getDependentStoryFiles';
  */
 // eslint-disable-next-line complexity
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
-  // The caller checks for ctx.fileInfo.statsPath before calling this function, so we can safely assert that it exists
-  // here.
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { statsPath } = ctx.fileInfo!;
+  // This is an additional check from lib/turbosnap/index.ts in case we call this function directly
+  // from another file.
+  if (!ctx.fileInfo?.statsPath) {
+    // If we don't know the SB version, we should assume we don't support `--stats-json`
+    const nonLegacyStatsSupported =
+      ctx.storybook?.version &&
+      semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
+
+    throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
+  }
+
+  const { statsPath } = ctx.fileInfo;
   const { changedFiles = [], packageMetadataChanges } = ctx.git;
 
   // Only set when lockfile analysis ran and succeeded; an empty array means "no changes found".
