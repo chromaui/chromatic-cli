@@ -5,7 +5,7 @@ import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
   GitCommandError,
-} from '../lib/turbosnap/1.0/errors';
+} from '../lib/turbosnap/v1/errors';
 import * as execGit from './execGit';
 import {
   checkoutFile,

@@ -2,8 +2,8 @@ import semver from 'semver';
 
 import { Context } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
-import { traceChangedFiles as traceChangedFilesV1 } from './1.0';
 import { TraceChangedFilesResult } from './types';
+import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap

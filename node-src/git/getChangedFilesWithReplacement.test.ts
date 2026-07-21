@@ -5,7 +5,7 @@ import {
   AncestorMissingError,
   BaselineDirtyError,
   GitCommandError,
-} from '../lib/turbosnap/1.0/errors';
+} from '../lib/turbosnap/v1/errors';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import * as gitModule from './git';
 

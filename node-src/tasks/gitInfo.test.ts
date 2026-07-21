@@ -15,7 +15,7 @@ import {
   GitCommandError,
   NetworkError,
   ReplacementFailedError,
-} from '../lib/turbosnap/1.0/errors';
+} from '../lib/turbosnap/v1/errors';
 import {
   applyGitInfoOutput,
   applyGitInfoPartial,

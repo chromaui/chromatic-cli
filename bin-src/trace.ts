@@ -1,4 +1,4 @@
-import { getDependentStoryFiles } from '@cli/turbosnap/1.0';
+import { getDependentStoryFiles } from '@cli/turbosnap/v1';
 import meow from 'meow';
 
 import { getRepositoryRoot } from '../node-src/git/git';

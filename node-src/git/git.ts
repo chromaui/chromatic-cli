@@ -8,7 +8,7 @@ import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
   GitCommandError,
-} from '../lib/turbosnap/1.0/errors';
+} from '../lib/turbosnap/v1/errors';
 import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
   execGitCommand,

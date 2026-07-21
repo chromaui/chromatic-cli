@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HTTPClientError } from '../io/httpClient';
 import TestLogger from '../lib/testLogger';
-import { NetworkError, ReplacementFailedError } from '../lib/turbosnap/1.0/errors';
+import { NetworkError, ReplacementFailedError } from '../lib/turbosnap/v1/errors';
 import {
   AncestorBuildsQueryResult,
   findAncestorBuildWithCommit,
