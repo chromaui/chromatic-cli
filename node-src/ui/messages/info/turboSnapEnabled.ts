@@ -18,7 +18,7 @@ export default ({
       : 'snapshots';
     return dedent(chalk`
       ${success} {bold TurboSnap enabled}
-      Skipped capturing ${skipped} because no frontend files were changed.
+      Bypassed ${skipped} because no frontend files were changed.
     `);
   }
 
