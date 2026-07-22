@@ -30,11 +30,19 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   }
 
   try {
+    // Anchor at the Storybook base directory when we know it. Without a base directory (e.g. a
+    // non-monorepo where Storybook lives at `<repo>/.storybook`), fall back to the repo root, and
+    // only to the current working directory when even the repo root is unknown.
+    const projectRoot = ctx.git.rootPath
+      ? path.resolve(ctx.git.rootPath, ctx.storybook?.baseDir ?? '.')
+      : process.cwd();
+
     const result = await traceChangedFilesV2({
       graphqlClient: ctx.client,
       buildId: ctx.build.id,
       statsPath: ctx.fileInfo.statsPath,
       manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
+      projectRoot,
     });
 
     if (result.status !== 'fallback') {

@@ -4,6 +4,7 @@ import xxHashWasm from 'xxhash-wasm';
 
 import { getFileHashes } from '../../../lib/getFileHashes';
 import { Stats } from '../../../types';
+import { normalizeStatsPath, resolveStatsPath } from './paths';
 
 // Generated entry points that import all story files. We use this to determine if a file is a story
 // file because they may not always be *.stories.* files because it's configurable.
@@ -58,27 +59,29 @@ interface ManifestFile {
  * Parses the stats file and hashes the files into a TurboSnap manifest.
  *
  * @param stats The stats file to parse.
+ * @param projectRoot The absolute Storybook project root to anchor module paths against.
  *
  * @returns The manifest containing the file hashes, story file hashes, and Storybook hash.
  */
-export async function buildManifest(stats: Stats): Promise<TurboSnapManifest> {
-  const hashes = await hashFiles(stats);
+export async function buildManifest(stats: Stats, projectRoot: string): Promise<TurboSnapManifest> {
+  const hashes = await hashFiles(stats, projectRoot);
   const files = new Map<FilePath, TurboSnapFile>();
   // A temporary set to collect the story file names before we build the story file hashes because
   // we need to parse the entire list of dependencies first.
   const storyFileNames = new Set<FilePath>();
 
-  // This is a second loop is all in-memory so it's not a wild performance hit. We're doing this
-  // so it's easier to read and understand.
   for (const module of stats.modules) {
-    const sourceFilePath = module.name;
-    const importers = module.reasons?.map((reason) => reason.moduleName) ?? [];
+    const sourceFilePath = normalizeStatsPath(module.name, projectRoot);
+    // Match story entry files against the raw importer names, since STORIES_ENTRY_FILES holds the
+    // builder's own entry paths (e.g. `./storybook-stories.js`).
+    const rawImporters = module.reasons?.map((reason) => reason.moduleName) ?? [];
 
-    if (importers.some((importer) => STORIES_ENTRY_FILES.has(importer))) {
+    if (rawImporters.some((importer) => STORIES_ENTRY_FILES.has(importer))) {
       storyFileNames.add(sourceFilePath);
     }
 
-    for (const importer of importers) {
+    for (const rawImporter of rawImporters) {
+      const importer = normalizeStatsPath(rawImporter, projectRoot);
       const file = files.get(importer);
       if (file) {
         file.dependencies.add(sourceFilePath);
@@ -94,12 +97,19 @@ export async function buildManifest(stats: Stats): Promise<TurboSnapManifest> {
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
   for (const storyFile of storyFileNames) {
-    const dependencyPaths = [...collectTransitiveDependencies(files, storyFile)].sort();
-    const combined = dependencyPaths.map((filePath) => files.get(filePath)?.hash).join('');
+    // Combine dependency content-hashes in sorted-hash order so the result depends only on the set
+    // of contents, not on where the files live. Reading from `hashes` (not `files`) also includes
+    // leaf dependencies. Together this keeps a story's hash stable when the project or a dependency
+    // moves within the repository.
+    const combined = [...collectTransitiveDependencies(files, storyFile)]
+      .map((filePath) => hashes.get(filePath) ?? '')
+      .sort()
+      .join('');
     storyFileHashes.set(storyFile, h64ToString(combined));
   }
 
-  const storybookHash = h64ToString([...storyFileHashes.values()].join(''));
+  // Sort the story hashes so the Storybook hash is independent of module iteration order.
+  const storybookHash = h64ToString([...storyFileHashes.values()].sort().join(''));
 
   return { files, storyFileHashes, storybookHash };
 }
@@ -112,16 +122,13 @@ export async function buildManifest(stats: Stats): Promise<TurboSnapManifest> {
  * @param outputDirectory The directory to write the manifest file to.
  */
 export function writeManifest(manifest: TurboSnapManifest, outputDirectory: string) {
-  const storyFiles: ManifestFile['storyFiles'] = {};
-  for (const [filePath, hash] of manifest.storyFileHashes) {
-    storyFiles[normalizePath(filePath)] = hash;
-  }
+  const storyFiles: ManifestFile['storyFiles'] = Object.fromEntries(manifest.storyFileHashes);
 
   const files: ManifestFile['files'] = {};
   for (const [filePath, file] of manifest.files) {
-    files[normalizePath(filePath)] = {
+    files[filePath] = {
       hash: file.hash,
-      dependencies: [...file.dependencies].map((dependency) => normalizePath(dependency)),
+      dependencies: [...file.dependencies],
     };
   }
 
@@ -164,42 +171,34 @@ function collectTransitiveDependencies(
   return dependencies;
 }
 
-/**
- * @param filePath The module name from the stats file (e.g. `./src/file.ts`).
- *
- * @returns The path relative to the project root (e.g. `src/file.ts`).
- */
-function normalizePath(filePath: string) {
-  return filePath.replace(/^\.\//, '');
-}
-
-/**
- * @param filePath The module name from the stats file.
- *
- * @returns True if the file exists on disk and can be hashed.
- */
-function isHashable(filePath: string) {
-  return !filePath.includes('virtual:') && existsSync(path.join(process.cwd(), filePath));
-}
-
-async function hashFiles(stats: Stats): Promise<Map<FilePath, FileHash>> {
-  // Hash every real file in one batch before wiring up dependencies. Virtual modules (e.g. Vite's
-  // `/virtual:` entries) don't exist on disk and can't be hashed or traced.
-  const allPaths = new Set<FilePath>();
+async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePath, FileHash>> {
+  // Collect every referenced module path once.
+  const rawPaths = new Set<FilePath>();
   for (const module of stats.modules) {
-    allPaths.add(module.name);
+    rawPaths.add(module.name);
     for (const reason of module.reasons ?? []) {
-      allPaths.add(reason.moduleName);
+      rawPaths.add(reason.moduleName);
     }
   }
 
-  const filesToHash = [...allPaths].filter((filePath) => isHashable(filePath));
+  // Map each hashable file's canonical project-relative name to its absolute on-disk path. Virtual
+  // modules (e.g. Vite's `virtual:` entries) don't exist on disk and can't be hashed or traced.
+  const normalizedToAbsolute = new Map<FilePath, string>();
+  for (const rawPath of rawPaths) {
+    if (rawPath.includes('virtual:')) continue;
+    const absolutePath = resolveStatsPath(rawPath, projectRoot);
+    if (!existsSync(absolutePath)) continue;
+    normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot), absolutePath);
+  }
+
+  // getFileHashes joins its directory argument with each file; pass '' so the absolute paths are
+  // used as-is, and it returns hashes keyed by those absolute paths.
+  const absolutePaths = [...normalizedToAbsolute.values()];
+  const fileHashes = await getFileHashes(absolutePaths, '', 10);
 
   const hashes = new Map<FilePath, FileHash>();
-  const fileHashes = await getFileHashes(filesToHash, process.cwd(), 10);
-
-  for (const file of filesToHash) {
-    hashes.set(file, fileHashes[file]);
+  for (const [normalizedName, absolutePath] of normalizedToAbsolute) {
+    hashes.set(normalizedName, fileHashes[absolutePath]);
   }
 
   return hashes;
