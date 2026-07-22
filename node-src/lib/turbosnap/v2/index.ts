@@ -12,24 +12,28 @@ interface TraceChangedFilesInput {
 }
 
 /**
- * Determines which story files are affected by the changed source file hashes, bailing out of TurboSnap
- * when necessary.
+ * The result of running TurboSnap v2. In addition to the shared trace statuses, v2 can return
+ * 'fallback' to tell the caller it can't be trusted to trace this build and v1 should run instead.
+ */
+export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fallback' };
+
+/**
+ * Determines which story files are affected by the changed source file hashes, bailing out of
+ * TurboSnap when necessary.
  *
  * @param input The input to run TurboSnap 2.0.
  * @param input.statsPath The path to the stats file.
  * @param input.manifestOutputDirectory The directory to write the manifest file to.
  *
- * @returns The trace result: skipped, bailed, or traced with the affected story files.
+ * @returns The TurboSnap result.
  */
 export async function traceChangedFiles(
   input: TraceChangedFilesInput
-): Promise<TraceChangedFilesResult> {
+): Promise<TraceChangedFilesV2Result> {
   const stats = await readStatsFile(input.statsPath);
   const manifest = await buildManifest(stats);
   await determineChangedFiles(input.graphqlClient, input.buildId, manifest);
   writeManifest(manifest, input.manifestOutputDirectory);
 
-  return {
-    status: 'skipped',
-  };
+  return { status: 'fallback' };
 }

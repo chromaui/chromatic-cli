@@ -7,17 +7,16 @@ import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 
-// TODO: remove this once we fully implement TurboSnap 2.0
-const USE_V2 = process.env.TURBOSNAP_V2 === 'true';
-
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
  * when necessary.
  *
  * @param ctx The context set when executing the CLI.
  *
- * @returns The trace result: skipped, bailed, or traced with the affected story files.
+ * @returns The TurboSnap result.
  */
+// TODO: Refactor this function
+// eslint-disable-next-line complexity
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return { status: 'skipped' };
   if (!ctx.git.changedFiles) return { status: 'skipped' };
@@ -30,13 +29,20 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
-  if (USE_V2) {
-    return await traceChangedFilesV2({
+  try {
+    const result = await traceChangedFilesV2({
       graphqlClient: ctx.client,
       buildId: ctx.build.id,
       statsPath: ctx.fileInfo.statsPath,
       manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
     });
+
+    if (result.status !== 'fallback') {
+      return result;
+    }
+  } catch (error) {
+    ctx.log.error('Error running TurboSnap v2, falling back to v1:', error);
   }
+
   return await traceChangedFilesV1(ctx);
 }
