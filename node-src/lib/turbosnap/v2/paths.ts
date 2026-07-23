@@ -2,6 +2,11 @@ import path from 'path';
 
 import { posix } from '../../posix';
 
+// Webpack/rspack concatenate modules and label the combined module with the root file plus a
+// ` + N modules` suffix (e.g. `./Button.stories.tsx + 1 modules`). Strip it so the name resolves
+// to the root file.
+const CONCATENATED_MODULE_SUFFIX = / \+ \d+ modules?$/;
+
 /**
  * Converts a stats module path into a canonical POSIX path relative to the Storybook project root,
  * so a file keeps the same identity when the project moves within the repository. Virtual modules
@@ -15,7 +20,7 @@ import { posix } from '../../posix';
 export function normalizeStatsPath(statsPath: string, projectRoot: string): string {
   if (statsPath.includes('virtual:')) return statsPath;
 
-  const stripped = statsPath.replace(/^\.\//, '');
+  const stripped = statsPath.replace(CONCATENATED_MODULE_SUFFIX, '').replace(/^\.\//, '');
   return path.isAbsolute(stripped) ? posix(path.relative(projectRoot, stripped)) : posix(stripped);
 }
 
@@ -29,6 +34,6 @@ export function normalizeStatsPath(statsPath: string, projectRoot: string): stri
  * @returns The absolute path to the file on disk.
  */
 export function resolveStatsPath(statsPath: string, projectRoot: string): string {
-  const stripped = statsPath.replace(/^\.\//, '');
+  const stripped = statsPath.replace(CONCATENATED_MODULE_SUFFIX, '').replace(/^\.\//, '');
   return path.isAbsolute(stripped) ? stripped : path.resolve(projectRoot, stripped);
 }
