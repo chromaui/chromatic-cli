@@ -70,6 +70,8 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
   // we need to parse the entire list of dependencies first.
   const storyFileNames = new Set<FilePath>();
 
+  const storyImporters = collectStoryImporters(stats, projectRoot, hashes);
+
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
@@ -77,14 +79,16 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
-    // Match story entry files against the raw importer names, since STORIES_ENTRY_FILES holds the
-    // builder's own entry paths (e.g. `./storybook-stories.js`). Entry reasons carry a null
-    // moduleName, so drop those.
-    const rawImporters = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter((moduleName): moduleName is string => Boolean(moduleName));
+    // Match story importers against the raw importer names, since they hold the builder's own entry
+    // paths (e.g. `./storybook-stories.js`). Entry reasons carry a null moduleName, so drop those.
+    const rawImporters = (module.reasons ?? []).map((reason) => reason.moduleName).filter(Boolean);
 
-    if (rawImporters.some((importer) => STORIES_ENTRY_FILES.has(importer))) {
+    // Only real files are story files; requiring a hash excludes the require-context glob itself
+    // (which is imported by an entry but has no on-disk file).
+    if (
+      hashes.has(sourceFilePath) &&
+      rawImporters.some((importer) => storyImporters.has(importer))
+    ) {
       storyFileNames.add(sourceFilePath);
     }
 
@@ -189,7 +193,37 @@ function collectTransitiveDependencies(
  */
 function moduleFileNames(module: Module): string[] {
   const names = module.modules?.length ? module.modules.map((m) => m.name) : [module.name];
-  return names.filter((name): name is string => Boolean(name));
+  return names.filter(Boolean);
+}
+
+/**
+ * Collects the module names a story file may be imported from. Vite imports stories straight from
+ * the builder entry, but webpack/rspack wrap them in a lazy require-context: the entry imports the
+ * context and the context imports the stories. Treat any such context (a module imported by an
+ * entry file that isn't itself a real file) as an entry too, so both builders are covered.
+ *
+ * @param stats The stats file to parse.
+ * @param projectRoot The absolute Storybook project root to anchor module paths against.
+ * @param hashes The content hashes keyed by canonical file path, used to tell real files apart
+ * from the require-context glob.
+ *
+ * @returns The set of raw importer names that indicate a story file.
+ */
+function collectStoryImporters(
+  stats: Stats,
+  projectRoot: string,
+  hashes: Map<FilePath, FileHash>
+): Set<string> {
+  const storyImporters = new Set<string>(STORIES_ENTRY_FILES);
+  for (const module of stats.modules) {
+    const [root] = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
+    if (!module.name || !root || hashes.has(root)) continue;
+    const importedByEntry = (module.reasons ?? []).some(
+      (reason) => reason.moduleName && STORIES_ENTRY_FILES.has(reason.moduleName)
+    );
+    if (importedByEntry) storyImporters.add(module.name);
+  }
+  return storyImporters;
 }
 
 /**

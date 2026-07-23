@@ -30,9 +30,9 @@ describe('normalizeStatsPath', () => {
   });
 
   it('strips a trailing " + N modules" suffix from a concatenated module name', () => {
-    expect(
-      normalizeStatsPath('./src/lib/Button/Button.stories.tsx + 1 modules', projectRoot)
-    ).toBe('src/lib/Button/Button.stories.tsx');
+    expect(normalizeStatsPath('./src/lib/Button/Button.stories.tsx + 1 modules', projectRoot)).toBe(
+      'src/lib/Button/Button.stories.tsx'
+    );
   });
 
   it('strips a singular " + 1 module" suffix', () => {

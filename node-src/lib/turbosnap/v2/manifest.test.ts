@@ -346,6 +346,46 @@ describe('buildManifest missing names', () => {
   });
 });
 
+// The require-context glob is not a file on disk; everything else is. Spy on the shared `fs` mock
+// (which hardcodes `existsSync: () => true`) so the glob module appears absent, then restore it.
+function withGlobAbsent(run: () => Promise<void>) {
+  const spy = vi
+    .spyOn(fs, 'existsSync')
+    .mockImplementation((candidate) => !String(candidate).includes(' lazy '));
+  return run().finally(() => spy.mockRestore());
+}
+
+describe('buildManifest story detection through a require-context', () => {
+  // Webpack/rspack don't import story files directly from the entry: the entry imports a lazy
+  // require-context (a glob module that is not a real file), and that context imports the stories.
+  const glob = './src/lib/ lazy namespace object';
+  const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
+
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: glob, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: story, reasons: [{ moduleName: glob }] },
+    ],
+  };
+
+  it('detects stories imported via a lazy require-context imported by the entry', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S' };
+      const manifest = await buildManifest(stats, projectRoot);
+      expect([...manifest.storyFileHashes.keys()]).toEqual(['src/lib/Button.stories.tsx']);
+    });
+  });
+
+  it('does not treat the require-context glob itself as a story file', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S' };
+      const manifest = await buildManifest(stats, projectRoot);
+      const keys = [...manifest.storyFileHashes.keys()];
+      expect(keys.some((key) => key.includes(' lazy '))).toBe(false);
+    });
+  });
+});
+
 describe('buildManifest hashFiles skip branches', () => {
   it('contributes the empty string to a story hash for a file missing on disk', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
