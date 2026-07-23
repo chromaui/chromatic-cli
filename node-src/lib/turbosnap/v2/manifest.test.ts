@@ -238,6 +238,114 @@ describe('buildManifest relocation stability', () => {
   });
 });
 
+describe('buildManifest concatenated modules', () => {
+  // Webpack/rspack concatenate the story and its local imports into one module: the module name
+  // carries a ` + N modules` suffix and the real files live in `module.modules`.
+  const concatenatedStory: Stats = {
+    modules: [
+      {
+        id: 1,
+        name: '/repo/packages/ui/src/Button.stories.tsx + 1 modules',
+        modules: [
+          { name: '/repo/packages/ui/src/Button.stories.tsx' },
+          { name: '/repo/packages/ui/src/Button.tsx' },
+        ],
+        reasons: [{ moduleName: './storybook-stories.js' }],
+      },
+    ],
+  };
+
+  it('keys the story by its root file, stripping the concatenation suffix', async () => {
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B',
+    };
+    const manifest = await buildManifest(concatenatedStory, projectRoot);
+
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
+  });
+
+  it('records each concatenated sub-file as a dependency of the root file', async () => {
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B',
+    };
+    const manifest = await buildManifest(concatenatedStory, projectRoot);
+
+    expect([...(manifest.files.get('src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
+      'src/Button.tsx'
+    );
+  });
+
+  it('changes the story hash when a concatenated sub-file content changes', async () => {
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B1',
+    };
+    const before = await buildManifest(concatenatedStory, projectRoot);
+
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B2',
+    };
+    const after = await buildManifest(concatenatedStory, projectRoot);
+
+    expect(after.storyFileHashes.get('src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('src/Button.stories.tsx')
+    );
+  });
+});
+
+describe('buildManifest missing names', () => {
+  it('skips reasons with a null moduleName without dropping the story', async () => {
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/Button.stories.tsx',
+          // An entry reason carries `moduleName: null`; the stories-entry reason must still apply.
+          reasons: [
+            { moduleName: null as unknown as string },
+            { moduleName: './storybook-stories.js' },
+          ],
+        },
+      ],
+    };
+    fileHashesRef.current = { '/repo/packages/ui/src/Button.stories.tsx': 'S' };
+
+    const manifest = await buildManifest(stats, projectRoot);
+
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
+  });
+
+  it('uses module.modules when module.name is absent', async () => {
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: null as unknown as string,
+          modules: [
+            { name: '/repo/packages/ui/src/Button.stories.tsx' },
+            { name: '/repo/packages/ui/src/Button.tsx' },
+          ],
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+      ],
+    };
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B',
+    };
+
+    const manifest = await buildManifest(stats, projectRoot);
+
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
+    expect([...(manifest.files.get('src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
+      'src/Button.tsx'
+    );
+  });
+});
+
 describe('buildManifest hashFiles skip branches', () => {
   it('contributes the empty string to a story hash for a file missing on disk', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';

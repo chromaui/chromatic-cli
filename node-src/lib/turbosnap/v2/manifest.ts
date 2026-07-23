@@ -3,7 +3,7 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { getFileHashes } from '../../../lib/getFileHashes';
-import { Stats } from '../../../types';
+import { Module, Stats } from '../../../types';
 import { normalizeStatsPath, resolveStatsPath } from './paths';
 
 // Generated entry points that import all story files. We use this to determine if a file is a story
@@ -71,26 +71,33 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
   const storyFileNames = new Set<FilePath>();
 
   for (const module of stats.modules) {
-    const sourceFilePath = normalizeStatsPath(module.name, projectRoot);
+    // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
+    // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
+    const fileNames = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
+    if (fileNames.length === 0) continue;
+    const [sourceFilePath, ...concatenated] = fileNames;
+
     // Match story entry files against the raw importer names, since STORIES_ENTRY_FILES holds the
-    // builder's own entry paths (e.g. `./storybook-stories.js`).
-    const rawImporters = module.reasons?.map((reason) => reason.moduleName) ?? [];
+    // builder's own entry paths (e.g. `./storybook-stories.js`). Entry reasons carry a null
+    // moduleName, so drop those.
+    const rawImporters = (module.reasons ?? [])
+      .map((reason) => reason.moduleName)
+      .filter((moduleName): moduleName is string => Boolean(moduleName));
 
     if (rawImporters.some((importer) => STORIES_ENTRY_FILES.has(importer))) {
       storyFileNames.add(sourceFilePath);
     }
 
+    // The other files in a concatenated module are dependencies of the root file. Webpack hides
+    // these internal edges inside a single module, so reconstruct them here.
+    const rootFile = ensureFile(files, sourceFilePath, hashes);
+    for (const dependency of concatenated) {
+      rootFile.dependencies.add(dependency);
+    }
+
     for (const rawImporter of rawImporters) {
       const importer = normalizeStatsPath(rawImporter, projectRoot);
-      const file = files.get(importer);
-      if (file) {
-        file.dependencies.add(sourceFilePath);
-      } else {
-        files.set(importer, {
-          hash: hashes.get(importer) ?? '',
-          dependencies: new Set([sourceFilePath]),
-        });
-      }
+      ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
   }
 
@@ -171,13 +178,52 @@ function collectTransitiveDependencies(
   return dependencies;
 }
 
+/**
+ * Returns the real source files a stats module represents, root first. Webpack/rspack concatenate
+ * modules and expose the combined files in `module.modules`; a plain module has just its own name.
+ * Names that are null/undefined (e.g. externals or entries) are dropped.
+ *
+ * @param module The stats module to read file names from.
+ *
+ * @returns The module's real file names, or an empty array if it has none.
+ */
+function moduleFileNames(module: Module): string[] {
+  const names = module.modules?.length ? module.modules.map((m) => m.name) : [module.name];
+  return names.filter((name): name is string => Boolean(name));
+}
+
+/**
+ * Gets the manifest entry for a file, creating it (seeded with the file's content hash) if absent.
+ *
+ * @param files The map of files to their hashes and dependencies.
+ * @param filePath The file to get or create an entry for.
+ * @param hashes The content hashes keyed by canonical file path.
+ *
+ * @returns The file's manifest entry.
+ */
+function ensureFile(
+  files: Map<FilePath, TurboSnapFile>,
+  filePath: FilePath,
+  hashes: Map<FilePath, FileHash>
+): TurboSnapFile {
+  let file = files.get(filePath);
+  if (!file) {
+    file = { hash: hashes.get(filePath) ?? '', dependencies: new Set() };
+    files.set(filePath, file);
+  }
+  return file;
+}
+
 async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePath, FileHash>> {
-  // Collect every referenced module path once.
+  // Collect every referenced module path once, expanding concatenated modules into their real
+  // files and skipping importers with a null moduleName.
   const rawPaths = new Set<FilePath>();
   for (const module of stats.modules) {
-    rawPaths.add(module.name);
+    for (const name of moduleFileNames(module)) {
+      rawPaths.add(name);
+    }
     for (const reason of module.reasons ?? []) {
-      rawPaths.add(reason.moduleName);
+      if (reason.moduleName) rawPaths.add(reason.moduleName);
     }
   }
 
