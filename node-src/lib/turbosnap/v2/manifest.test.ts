@@ -55,7 +55,9 @@ describe('serializeManifest', () => {
     expect(serialized.storybookHash).toBe(manifest.storybookHash);
     expect(serialized.storyFiles).toEqual(Object.fromEntries(manifest.storyFileHashes));
     expect(serialized.files['src/Button.stories.tsx'].dependencies).toEqual(['src/helper.ts']);
-    expect(structuredClone(serialized)).toEqual(serialized);
+    // structuredClone can hide fields that are not friendly to JSON.parse/JSON>stringify so we test the exact flow instead.
+    // eslint-disable-next-line unicorn/prefer-structured-clone
+    expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 });
 
