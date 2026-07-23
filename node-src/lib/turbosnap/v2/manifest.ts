@@ -139,7 +139,8 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
 
 /**
  * Converts the in-memory manifest (which uses Maps and Sets) into the JSON-safe shape written to
- * disk. Shared by writeManifest and the `trace-v2` CLI command so both emit an identical structure.
+ * disk. Shared by writeManifest and the `turbosnap-manifest` CLI command so both emit an identical
+ * structure.
  *
  * @param manifest The manifest to serialize.
  *
