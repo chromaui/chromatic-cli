@@ -351,7 +351,7 @@ describe('buildManifest missing names', () => {
 function withGlobAbsent(run: () => Promise<void>) {
   const spy = vi
     .spyOn(fs, 'existsSync')
-    .mockImplementation((candidate) => !String(candidate).includes(' lazy '));
+    .mockImplementation((candidate) => !String(candidate).includes('lazy'));
   return run().finally(() => spy.mockRestore());
 }
 
@@ -381,7 +381,51 @@ describe('buildManifest story detection through a require-context', () => {
       fileHashesRef.current = { [story]: 'S' };
       const manifest = await buildManifest(stats, projectRoot);
       const keys = [...manifest.storyFileHashes.keys()];
-      expect(keys.some((key) => key.includes(' lazy '))).toBe(false);
+      expect(keys.some((key) => key.includes('lazy'))).toBe(false);
+    });
+  });
+});
+
+describe('buildManifest story detection through a config-entry require-context', () => {
+  // rsbuild imports the require-context from the config entry (not storybook-stories.js), and the
+  // stories themselves are concatenated modules.
+  const glob = './src/lib|lazy|namespace object';
+  const configEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js';
+  const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
+  const impl = '/repo/packages/ui/src/lib/Button.tsx';
+
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: glob, reasons: [{ moduleName: `${configEntry} + 1 modules` }] },
+      {
+        id: 2,
+        name: `${story} + 1 modules`,
+        modules: [{ name: story }, { name: impl }],
+        reasons: [{ moduleName: glob }],
+      },
+      // A real file the config entry imports directly (like `.storybook/preview.ts`); it must not
+      // be mistaken for a story just because the config entry imports it.
+      {
+        id: 3,
+        name: '/repo/packages/ui/.storybook/preview.ts',
+        reasons: [{ moduleName: `${configEntry} + 1 modules` }],
+      },
+    ],
+  };
+
+  it('detects a concatenated story imported via a context imported by the config entry', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      const manifest = await buildManifest(stats, projectRoot);
+      expect([...manifest.storyFileHashes.keys()]).toEqual(['src/lib/Button.stories.tsx']);
+    });
+  });
+
+  it('does not treat a real file imported directly by the config entry as a story', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      const manifest = await buildManifest(stats, projectRoot);
+      expect([...manifest.storyFileHashes.keys()]).not.toContain('.storybook/preview.ts');
     });
   });
 });

@@ -4,7 +4,7 @@ import xxHashWasm from 'xxhash-wasm';
 
 import { getFileHashes } from '../../../lib/getFileHashes';
 import { Module, Stats } from '../../../types';
-import { normalizeStatsPath, resolveStatsPath } from './paths';
+import { normalizeStatsPath, resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
 
 // Generated entry points that import all story files. We use this to determine if a file is a story
 // file because they may not always be *.stories.* files because it's configurable.
@@ -21,6 +21,15 @@ const STORIES_ENTRY_FILES = new Set([
   // rspack builder
   './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
   './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
+]);
+
+// Config entry files import the story require-context (see collectStoryImporters). They import
+// non-story files too (e.g. `.storybook/preview.ts`), so they only help locate the context — they
+// are not treated as direct story importers.
+const CONFIG_ENTRY_FILES = new Set([
+  './storybook-config-entry.js',
+  './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
+  './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
 ]);
 
 type FilePath = string;
@@ -198,9 +207,10 @@ function moduleFileNames(module: Module): string[] {
 
 /**
  * Collects the module names a story file may be imported from. Vite imports stories straight from
- * the builder entry, but webpack/rspack wrap them in a lazy require-context: the entry imports the
- * context and the context imports the stories. Treat any such context (a module imported by an
- * entry file that isn't itself a real file) as an entry too, so both builders are covered.
+ * the builder entry, but webpack/rspack wrap them in a lazy require-context: an entry (the stories
+ * entry or the config entry) imports the context and the context imports the stories. Treat any
+ * such context (a module imported by an entry file that isn't itself a real file) as a story
+ * importer too, so both builders are covered.
  *
  * @param stats The stats file to parse.
  * @param projectRoot The absolute Storybook project root to anchor module paths against.
@@ -214,12 +224,16 @@ function collectStoryImporters(
   projectRoot: string,
   hashes: Map<FilePath, FileHash>
 ): Set<string> {
+  // The stories entry directly imports stories (Vite), so it is a story importer on its own. The
+  // config entry only helps locate the require-context, so it is not.
+  const entryFiles = new Set([...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES]);
   const storyImporters = new Set<string>(STORIES_ENTRY_FILES);
   for (const module of stats.modules) {
     const [root] = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
     if (!module.name || !root || hashes.has(root)) continue;
     const importedByEntry = (module.reasons ?? []).some(
-      (reason) => reason.moduleName && STORIES_ENTRY_FILES.has(reason.moduleName)
+      (reason) =>
+        reason.moduleName && entryFiles.has(stripConcatenatedModuleSuffix(reason.moduleName))
     );
     if (importedByEntry) storyImporters.add(module.name);
   }

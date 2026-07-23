@@ -8,6 +8,17 @@ import { posix } from '../../posix';
 const CONCATENATED_MODULE_SUFFIX = / \+ \d+ modules?$/;
 
 /**
+ * Strips a trailing ` + N modules` suffix from a concatenated module's name, leaving the root file.
+ *
+ * @param statsPath The module name from the stats file.
+ *
+ * @returns The name without the concatenation suffix.
+ */
+export function stripConcatenatedModuleSuffix(statsPath: string): string {
+  return statsPath.replace(CONCATENATED_MODULE_SUFFIX, '');
+}
+
+/**
  * Converts a stats module path into a canonical POSIX path relative to the Storybook project root,
  * so a file keeps the same identity when the project moves within the repository. Virtual modules
  * (e.g. Vite's `virtual:` entries) have no on-disk location and are returned unchanged.
@@ -20,7 +31,7 @@ const CONCATENATED_MODULE_SUFFIX = / \+ \d+ modules?$/;
 export function normalizeStatsPath(statsPath: string, projectRoot: string): string {
   if (statsPath.includes('virtual:')) return statsPath;
 
-  const stripped = statsPath.replace(CONCATENATED_MODULE_SUFFIX, '').replace(/^\.\//, '');
+  const stripped = stripConcatenatedModuleSuffix(statsPath).replace(/^\.\//, '');
   return path.isAbsolute(stripped) ? posix(path.relative(projectRoot, stripped)) : posix(stripped);
 }
 
@@ -34,6 +45,6 @@ export function normalizeStatsPath(statsPath: string, projectRoot: string): stri
  * @returns The absolute path to the file on disk.
  */
 export function resolveStatsPath(statsPath: string, projectRoot: string): string {
-  const stripped = statsPath.replace(CONCATENATED_MODULE_SUFFIX, '').replace(/^\.\//, '');
+  const stripped = stripConcatenatedModuleSuffix(statsPath).replace(/^\.\//, '');
   return path.isAbsolute(stripped) ? stripped : path.resolve(projectRoot, stripped);
 }
