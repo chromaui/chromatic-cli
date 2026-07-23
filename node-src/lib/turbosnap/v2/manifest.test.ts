@@ -376,6 +376,15 @@ describe('buildManifest story detection through a require-context', () => {
     });
   });
 
+  it('excludes the require-context glob (no file on disk) from the files map', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S' };
+      const manifest = await buildManifest(stats, projectRoot);
+      expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(false);
+      expect(manifest.files.has('src/lib/Button.stories.tsx')).toBe(true);
+    });
+  });
+
   it('does not treat the require-context glob itself as a story file', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S' };

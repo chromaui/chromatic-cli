@@ -131,6 +131,9 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
   // Sort the story hashes so the Storybook hash is independent of module iteration order.
   const storybookHash = h64ToString([...storyFileHashes.values()].sort().join(''));
 
+  // Done after hashing so the graph used above is complete.
+  pruneSyntheticFiles(files, hashes);
+
   return { files, storyFileHashes, storybookHash };
 }
 
@@ -260,6 +263,20 @@ function ensureFile(
     files.set(filePath, file);
   }
   return file;
+}
+
+/**
+ * Removes synthetic nodes that have no file on disk (require-context globs, externals) from the
+ * manifest. They are never a dependency of a story, so pruning them leaves every story and the
+ * Storybook hash unchanged — it just keeps the manifest limited to real files.
+ *
+ * @param files The map of files to their hashes and dependencies, mutated in place.
+ * @param hashes The content hashes keyed by canonical file path; a missing entry means no file.
+ */
+function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<FilePath, FileHash>) {
+  for (const filePath of files.keys()) {
+    if (!hashes.has(filePath)) files.delete(filePath);
+  }
 }
 
 async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePath, FileHash>> {
