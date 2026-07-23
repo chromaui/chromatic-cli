@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
-import { buildManifest } from './manifest';
+import { buildManifest, serializeManifest } from './manifest';
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
@@ -25,6 +25,38 @@ const projectRoot = '/repo/packages/ui';
 
 beforeEach(() => {
   fileHashesRef.current = {};
+});
+
+describe('serializeManifest', () => {
+  it('converts the manifest maps and sets into JSON-safe objects and arrays', async () => {
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/helper.ts': 'H',
+    };
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/Button.stories.tsx',
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+        {
+          id: 2,
+          name: '/repo/packages/ui/src/helper.ts',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.stories.tsx' }],
+        },
+      ],
+    };
+
+    const manifest = await buildManifest(stats, projectRoot);
+    const serialized = serializeManifest(manifest);
+
+    // JSON-safe: storyFiles is a plain object, dependencies is an array.
+    expect(serialized.storybookHash).toBe(manifest.storybookHash);
+    expect(serialized.storyFiles).toEqual(Object.fromEntries(manifest.storyFileHashes));
+    expect(serialized.files['src/Button.stories.tsx'].dependencies).toEqual(['src/helper.ts']);
+    expect(structuredClone(serialized)).toEqual(serialized);
+  });
 });
 
 describe('buildManifest', () => {

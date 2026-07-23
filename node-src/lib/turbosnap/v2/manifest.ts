@@ -138,13 +138,14 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
 }
 
 /**
- * Writes the entire manifest to a file in the output directory. This is uploaded to S3 for
- * debugging.
+ * Converts the in-memory manifest (which uses Maps and Sets) into the JSON-safe shape written to
+ * disk. Shared by writeManifest and the `trace-v2` CLI command so both emit an identical structure.
  *
- * @param manifest The manifest to write.
- * @param outputDirectory The directory to write the manifest file to.
+ * @param manifest The manifest to serialize.
+ *
+ * @returns The JSON-safe manifest object.
  */
-export function writeManifest(manifest: TurboSnapManifest, outputDirectory: string) {
+export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   const storyFiles: ManifestFile['storyFiles'] = Object.fromEntries(manifest.storyFileHashes);
 
   const files: ManifestFile['files'] = {};
@@ -155,15 +156,24 @@ export function writeManifest(manifest: TurboSnapManifest, outputDirectory: stri
     };
   }
 
-  const manifestFile: ManifestFile = {
+  return {
     storybookHash: manifest.storybookHash,
     storyFiles,
     files,
   };
+}
 
+/**
+ * Writes the entire manifest to a file in the output directory. This is uploaded to S3 for
+ * debugging.
+ *
+ * @param manifest The manifest to write.
+ * @param outputDirectory The directory to write the manifest file to.
+ */
+export function writeManifest(manifest: TurboSnapManifest, outputDirectory: string) {
   writeFileSync(
     path.join(outputDirectory, 'turbosnap-manifest.json'),
-    JSON.stringify(manifestFile)
+    JSON.stringify(serializeManifest(manifest))
   );
 }
 
