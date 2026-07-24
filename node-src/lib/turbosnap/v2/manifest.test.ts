@@ -330,6 +330,65 @@ describe('buildManifest concatenated modules', () => {
   });
 });
 
+describe('buildManifest concatenated modules with rspack-style child names', () => {
+  // rspack labels a concatenated child's `name` with the parent group name (e.g.
+  // `./Button.stories.tsx + 1 modules`) rather than the child's own file. The real path is only in
+  // `nameForCondition`. Without reading `nameForCondition` the child collapses onto the root file
+  // and its content is never hashed.
+  const rspackConcatenatedStory: Stats = {
+    modules: [
+      {
+        id: 1,
+        name: '/repo/packages/ui/src/Button.stories.tsx + 1 modules',
+        nameForCondition: '/repo/packages/ui/src/Button.stories.tsx',
+        modules: [
+          {
+            name: '/repo/packages/ui/src/Button.stories.tsx',
+            nameForCondition: '/repo/packages/ui/src/Button.stories.tsx',
+          },
+          {
+            // The buggy child: `name` is the group label, real file is in nameForCondition.
+            name: '/repo/packages/ui/src/Button.stories.tsx + 1 modules',
+            nameForCondition: '/repo/packages/ui/src/Button.tsx',
+          },
+        ],
+        reasons: [{ moduleName: './storybook-stories.js' }],
+      },
+    ],
+  };
+
+  it('recovers the concatenated child file from nameForCondition', async () => {
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B',
+    };
+    const manifest = await buildManifest(rspackConcatenatedStory, projectRoot);
+
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
+    expect([...(manifest.files.get('src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
+      'src/Button.tsx'
+    );
+  });
+
+  it('changes the story hash when the concatenated child content changes', async () => {
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B1',
+    };
+    const before = await buildManifest(rspackConcatenatedStory, projectRoot);
+
+    fileHashesRef.current = {
+      '/repo/packages/ui/src/Button.stories.tsx': 'S',
+      '/repo/packages/ui/src/Button.tsx': 'B2',
+    };
+    const after = await buildManifest(rspackConcatenatedStory, projectRoot);
+
+    expect(after.storyFileHashes.get('src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('src/Button.stories.tsx')
+    );
+  });
+});
+
 describe('buildManifest missing names', () => {
   it('skips reasons with a null moduleName without dropping the story', async () => {
     const stats: Stats = {

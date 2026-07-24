@@ -215,7 +215,10 @@ function collectTransitiveDependencies(
  * @returns The module's real file names, or an empty array if it has none.
  */
 function moduleFileNames(module: Module): string[] {
-  const names = module.modules?.length ? module.modules.map((m) => m.name) : [module.name];
+  // rspack puts the real file name in `nameForCondition` then fallback to `name` for the other builders.
+  const names = module.modules?.length
+    ? module.modules.map((m) => m.nameForCondition ?? m.name)
+    : [module.nameForCondition ?? module.name];
   return names.filter(Boolean);
 }
 
