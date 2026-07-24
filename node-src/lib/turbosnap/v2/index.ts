@@ -10,6 +10,7 @@ interface TraceChangedFilesInput {
   statsPath: string;
   manifestOutputDirectory: string;
   projectRoot: string;
+  gitRoot: string;
 }
 
 /**
@@ -25,7 +26,9 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * @param input The input to run TurboSnap 2.0.
  * @param input.statsPath The path to the stats file.
  * @param input.manifestOutputDirectory The directory to write the manifest file to.
- * @param input.projectRoot The absolute Storybook project root used to anchor manifest paths.
+ * @param input.projectRoot The absolute Storybook project root used to read source files off disk.
+ * @param input.gitRoot The absolute git repository root used to anchor manifest keys; see
+ * {@link StatsPathRoots} for why the two roots differ.
  *
  * @returns The TurboSnap result.
  */
@@ -33,7 +36,10 @@ export async function traceChangedFiles(
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesV2Result> {
   const stats = await readStatsFile(input.statsPath);
-  const manifest = await buildManifest(stats, input.projectRoot);
+  const manifest = await buildManifest(stats, {
+    projectRoot: input.projectRoot,
+    gitRoot: input.gitRoot,
+  });
   await determineChangedFiles(input.graphqlClient, input.buildId, manifest);
   writeManifest(manifest, input.manifestOutputDirectory);
 

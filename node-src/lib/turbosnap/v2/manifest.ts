@@ -4,7 +4,12 @@ import xxHashWasm from 'xxhash-wasm';
 
 import { getFileHashes } from '../../../lib/getFileHashes';
 import { Module, Stats } from '../../../types';
-import { normalizeStatsPath, resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
+import {
+  normalizeStatsPath,
+  resolveStatsPath,
+  StatsPathRoots,
+  stripConcatenatedModuleSuffix,
+} from './paths';
 
 // Generated entry points that import all story files. We use this to determine if a file is a story
 // file because they may not always be *.stories.* files because it's configurable.
@@ -68,23 +73,26 @@ interface ManifestFile {
  * Parses the stats file and hashes the files into a TurboSnap manifest.
  *
  * @param stats The stats file to parse.
- * @param projectRoot The absolute Storybook project root to anchor module paths against.
+ * @param roots The project and git roots used to anchor module paths; see {@link StatsPathRoots}.
  *
  * @returns The manifest containing the file hashes, story file hashes, and Storybook hash.
  */
-export async function buildManifest(stats: Stats, projectRoot: string): Promise<TurboSnapManifest> {
-  const hashes = await hashFiles(stats, projectRoot);
+export async function buildManifest(
+  stats: Stats,
+  roots: StatsPathRoots
+): Promise<TurboSnapManifest> {
+  const hashes = await hashFiles(stats, roots);
   const files = new Map<FilePath, TurboSnapFile>();
   // A temporary set to collect the story file names before we build the story file hashes because
   // we need to parse the entire list of dependencies first.
   const storyFileNames = new Set<FilePath>();
 
-  const storyImporters = collectStoryImporters(stats, projectRoot, hashes);
+  const storyImporters = collectStoryImporters(stats, roots, hashes);
 
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
-    const fileNames = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
+    const fileNames = moduleFileNames(module).map((name) => normalizeStatsPath(name, roots));
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
@@ -109,7 +117,7 @@ export async function buildManifest(stats: Stats, projectRoot: string): Promise<
     }
 
     for (const rawImporter of rawImporters) {
-      const importer = normalizeStatsPath(rawImporter, projectRoot);
+      const importer = normalizeStatsPath(rawImporter, roots);
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
   }
@@ -230,7 +238,7 @@ function moduleFileNames(module: Module): string[] {
  * importer too, so both builders are covered.
  *
  * @param stats The stats file to parse.
- * @param projectRoot The absolute Storybook project root to anchor module paths against.
+ * @param roots The project and git roots used to anchor module paths; see {@link StatsPathRoots}.
  * @param hashes The content hashes keyed by canonical file path, used to tell real files apart
  * from the require-context glob.
  *
@@ -238,7 +246,7 @@ function moduleFileNames(module: Module): string[] {
  */
 function collectStoryImporters(
   stats: Stats,
-  projectRoot: string,
+  roots: StatsPathRoots,
   hashes: Map<FilePath, FileHash>
 ): Set<string> {
   // The stories entry directly imports stories (Vite), so it is a story importer on its own. The
@@ -246,7 +254,7 @@ function collectStoryImporters(
   const entryFiles = new Set([...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES]);
   const storyImporters = new Set<string>(STORIES_ENTRY_FILES);
   for (const module of stats.modules) {
-    const [root] = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
+    const [root] = moduleFileNames(module).map((name) => normalizeStatsPath(name, roots));
     if (!module.name || !root || hashes.has(root)) continue;
     const importedByEntry = (module.reasons ?? []).some(
       (reason) =>
@@ -293,7 +301,7 @@ function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<Fi
   }
 }
 
-async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePath, FileHash>> {
+async function hashFiles(stats: Stats, roots: StatsPathRoots): Promise<Map<FilePath, FileHash>> {
   // Collect every referenced module path once, expanding concatenated modules into their real
   // files and skipping importers with a null moduleName.
   const rawPaths = new Set<FilePath>();
@@ -311,9 +319,9 @@ async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePat
   const normalizedToAbsolute = new Map<FilePath, string>();
   for (const rawPath of rawPaths) {
     if (rawPath.includes('virtual:')) continue;
-    const absolutePath = resolveStatsPath(rawPath, projectRoot);
+    const absolutePath = resolveStatsPath(rawPath, roots.projectRoot);
     if (!existsSync(absolutePath)) continue;
-    normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot), absolutePath);
+    normalizedToAbsolute.set(normalizeStatsPath(rawPath, roots), absolutePath);
   }
 
   // getFileHashes joins its directory argument with each file; pass '' so the absolute paths are

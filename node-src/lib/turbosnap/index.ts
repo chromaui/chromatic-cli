@@ -36,6 +36,9 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     const projectRoot = ctx.git.rootPath
       ? path.resolve(ctx.git.rootPath, ctx.storybook?.baseDir ?? '.')
       : process.cwd();
+    // See StatsPathRoots for why manifest keys anchor at the git root. When the repo root is
+    // unknown, fall back to the project root, keeping keys project-relative.
+    const gitRoot = ctx.git.rootPath ?? projectRoot;
 
     const result = await traceChangedFilesV2({
       graphqlClient: ctx.client,
@@ -43,6 +46,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
       statsPath: ctx.fileInfo.statsPath,
       manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
       projectRoot,
+      gitRoot,
     });
 
     if (result.status !== 'fallback') {

@@ -67,11 +67,14 @@ export async function main(argv: string[]) {
     // Anchor at the Storybook base directory when we know the repo root, matching the production
     // rule in node-src/lib/turbosnap/index.ts; otherwise fall back to the current directory.
     const projectRoot = rootPath ? path.resolve(rootPath, flags.storybookBaseDir) : process.cwd();
+    // See StatsPathRoots for why manifest keys anchor at the git root. Without a known repo root,
+    // fall back to the project root to keep keys project-relative.
+    const gitRoot = rootPath ?? projectRoot;
 
     // Anchor the stats file at the same project root, so passing only --storybook-base-dir locates
     // both the stats file and the source tree it references under that directory.
     const stats = await readStatsFile(path.resolve(projectRoot, flags.statsFile));
-    const manifest = await buildManifest(stats, projectRoot);
+    const manifest = await buildManifest(stats, { projectRoot, gitRoot });
 
     process.stdout.write(JSON.stringify(serializeManifest(manifest)));
   } catch (err) {

@@ -21,7 +21,11 @@ vi.mock('../../../lib/getFileHashes', () => ({
     Promise.resolve(Object.fromEntries(files.map((f) => [f, fileHashesRef.current[f] ?? 'x']))),
 }));
 
+// Manifest keys anchor at the git root, so a project in a subdirectory keys its files by their
+// repo-relative path (e.g. `packages/ui/src/...`). See StatsPathRoots for why the two roots differ.
 const projectRoot = '/repo/packages/ui';
+const gitRoot = '/repo';
+const roots = { projectRoot, gitRoot };
 
 beforeEach(() => {
   fileHashesRef.current = {};
@@ -48,13 +52,15 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const manifest = await buildManifest(stats, projectRoot);
+    const manifest = await buildManifest(stats, roots);
     const serialized = serializeManifest(manifest);
 
     // JSON-safe: storyFiles is a plain object, dependencies is an array.
     expect(serialized.storybookHash).toBe(manifest.storybookHash);
     expect(serialized.storyFiles).toEqual(Object.fromEntries(manifest.storyFileHashes));
-    expect(serialized.files['src/Button.stories.tsx'].dependencies).toEqual(['src/helper.ts']);
+    expect(serialized.files['packages/ui/src/Button.stories.tsx'].dependencies).toEqual([
+      'packages/ui/src/helper.ts',
+    ]);
     // structuredClone can hide fields that are not friendly to JSON.parse/JSON>stringify so we test the exact flow instead.
     // eslint-disable-next-line unicorn/prefer-structured-clone
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
@@ -62,7 +68,7 @@ describe('serializeManifest', () => {
 });
 
 describe('buildManifest', () => {
-  it('keys story files by their canonical project-relative path', async () => {
+  it('keys story files by their canonical git-root-relative path', async () => {
     const stats: Stats = {
       modules: [
         {
@@ -78,10 +84,10 @@ describe('buildManifest', () => {
       ],
     };
 
-    const manifest = await buildManifest(stats, projectRoot);
+    const manifest = await buildManifest(stats, roots);
 
-    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
-    expect(manifest.files.has('src/Button.stories.tsx')).toBe(true);
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['packages/ui/src/Button.stories.tsx']);
+    expect(manifest.files.has('packages/ui/src/Button.stories.tsx')).toBe(true);
   });
 });
 
@@ -99,19 +105,19 @@ describe('buildManifest leaf inclusion', () => {
 
   it('changes the story hash when a leaf dependency content changes', async () => {
     fileHashesRef.current = { [story]: 'S', [leaf]: 'T1' };
-    const before = await buildManifest(stats, projectRoot);
+    const before = await buildManifest(stats, roots);
 
     fileHashesRef.current = { [story]: 'S', [leaf]: 'T2' };
-    const after = await buildManifest(stats, projectRoot);
+    const after = await buildManifest(stats, roots);
 
-    expect(after.storyFileHashes.get('src/Button.stories.tsx')).not.toBe(
-      before.storyFileHashes.get('src/Button.stories.tsx')
+    expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
     );
   });
 });
 
 describe('buildManifest relocation stability', () => {
-  it('produces identical story keys and hashes when the whole project moves', async () => {
+  it('keeps story hashes stable when the whole project moves, even as the keys track the new location', async () => {
     const before = await (async () => {
       fileHashesRef.current = {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
@@ -132,7 +138,7 @@ describe('buildManifest relocation stability', () => {
             },
           ],
         },
-        '/repo/packages/ui'
+        { projectRoot: '/repo/packages/ui', gitRoot }
       );
     })();
 
@@ -156,11 +162,15 @@ describe('buildManifest relocation stability', () => {
             },
           ],
         },
-        '/repo/apps/web/ui'
+        { projectRoot: '/repo/apps/web/ui', gitRoot }
       );
     })();
 
-    expect([...after.storyFileHashes.entries()]).toEqual([...before.storyFileHashes.entries()]);
+    // The keys are git-root-relative, so moving the project changes where each story is keyed.
+    expect([...before.storyFileHashes.keys()]).toEqual(['packages/ui/src/Button.stories.tsx']);
+    expect([...after.storyFileHashes.keys()]).toEqual(['apps/web/ui/src/Button.stories.tsx']);
+    // The content-based hashes are unchanged by the move.
+    expect([...after.storyFileHashes.values()]).toEqual([...before.storyFileHashes.values()]);
     expect(after.storybookHash).toBe(before.storybookHash);
   });
 
@@ -181,7 +191,7 @@ describe('buildManifest relocation stability', () => {
           { id: 3, name: '/repo/packages/ui/src/b.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot
+      roots
     );
 
     // Build 2: a.ts moved to z.ts (content unchanged), so paths now sort as [Button, b, z].
@@ -198,19 +208,19 @@ describe('buildManifest relocation stability', () => {
           { id: 3, name: '/repo/packages/ui/src/b.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot
+      roots
     );
 
-    expect(after.storyFileHashes.get('src/Button.stories.tsx')).toBe(
-      before.storyFileHashes.get('src/Button.stories.tsx')
+    expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).toBe(
+      before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
     );
   });
 
   it('keeps a story hash stable when an external dependency relocates further from the project', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
 
-    // Build 1: theme.ts lives one level above the project, in a sibling package.
-    // It normalizes to '../shared/theme.ts' relative to projectRoot.
+    // Build 1: theme.ts lives in a sibling package. Anchored at the git root it keys as
+    // 'packages/shared/theme.ts'.
     fileHashesRef.current = {
       [story]: 'S',
       '/repo/packages/shared/theme.ts': 'HT',
@@ -222,12 +232,11 @@ describe('buildManifest relocation stability', () => {
           { id: 2, name: '/repo/packages/shared/theme.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot
+      roots
     );
 
-    // Build 2: the repo is restructured so theme.ts now lives two levels above the project
-    // ('../../shared/theme.ts'), but its content is unchanged. The story and its internal
-    // dependencies don't move.
+    // Build 2: the repo is restructured so theme.ts moves up to the repo root ('shared/theme.ts'),
+    // but its content is unchanged. The story and its internal dependencies don't move.
     fileHashesRef.current = {
       [story]: 'S',
       '/repo/shared/theme.ts': 'HT',
@@ -239,11 +248,11 @@ describe('buildManifest relocation stability', () => {
           { id: 2, name: '/repo/shared/theme.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot
+      roots
     );
 
-    expect(after.storyFileHashes.get('src/Button.stories.tsx')).toBe(
-      before.storyFileHashes.get('src/Button.stories.tsx')
+    expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).toBe(
+      before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
     );
   });
 
@@ -265,8 +274,8 @@ describe('buildManifest relocation stability', () => {
       '/repo/packages/ui/src/B.stories.tsx': 'HB',
     };
 
-    const first = await buildManifest(forwards, projectRoot);
-    const second = await buildManifest(backwards, projectRoot);
+    const first = await buildManifest(forwards, roots);
+    const second = await buildManifest(backwards, roots);
 
     expect(second.storybookHash).toBe(first.storybookHash);
   });
@@ -294,9 +303,9 @@ describe('buildManifest concatenated modules', () => {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
-    const manifest = await buildManifest(concatenatedStory, projectRoot);
+    const manifest = await buildManifest(concatenatedStory, roots);
 
-    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['packages/ui/src/Button.stories.tsx']);
   });
 
   it('records each concatenated sub-file as a dependency of the root file', async () => {
@@ -304,11 +313,11 @@ describe('buildManifest concatenated modules', () => {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
-    const manifest = await buildManifest(concatenatedStory, projectRoot);
+    const manifest = await buildManifest(concatenatedStory, roots);
 
-    expect([...(manifest.files.get('src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
-      'src/Button.tsx'
-    );
+    expect([
+      ...(manifest.files.get('packages/ui/src/Button.stories.tsx')?.dependencies ?? []),
+    ]).toContain('packages/ui/src/Button.tsx');
   });
 
   it('changes the story hash when a concatenated sub-file content changes', async () => {
@@ -316,16 +325,16 @@ describe('buildManifest concatenated modules', () => {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B1',
     };
-    const before = await buildManifest(concatenatedStory, projectRoot);
+    const before = await buildManifest(concatenatedStory, roots);
 
     fileHashesRef.current = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B2',
     };
-    const after = await buildManifest(concatenatedStory, projectRoot);
+    const after = await buildManifest(concatenatedStory, roots);
 
-    expect(after.storyFileHashes.get('src/Button.stories.tsx')).not.toBe(
-      before.storyFileHashes.get('src/Button.stories.tsx')
+    expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
     );
   });
 });
@@ -362,12 +371,12 @@ describe('buildManifest concatenated modules with rspack-style child names', () 
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
-    const manifest = await buildManifest(rspackConcatenatedStory, projectRoot);
+    const manifest = await buildManifest(rspackConcatenatedStory, roots);
 
-    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
-    expect([...(manifest.files.get('src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
-      'src/Button.tsx'
-    );
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['packages/ui/src/Button.stories.tsx']);
+    expect([
+      ...(manifest.files.get('packages/ui/src/Button.stories.tsx')?.dependencies ?? []),
+    ]).toContain('packages/ui/src/Button.tsx');
   });
 
   it('changes the story hash when the concatenated child content changes', async () => {
@@ -375,16 +384,16 @@ describe('buildManifest concatenated modules with rspack-style child names', () 
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B1',
     };
-    const before = await buildManifest(rspackConcatenatedStory, projectRoot);
+    const before = await buildManifest(rspackConcatenatedStory, roots);
 
     fileHashesRef.current = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B2',
     };
-    const after = await buildManifest(rspackConcatenatedStory, projectRoot);
+    const after = await buildManifest(rspackConcatenatedStory, roots);
 
-    expect(after.storyFileHashes.get('src/Button.stories.tsx')).not.toBe(
-      before.storyFileHashes.get('src/Button.stories.tsx')
+    expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
     );
   });
 });
@@ -406,9 +415,9 @@ describe('buildManifest missing names', () => {
     };
     fileHashesRef.current = { '/repo/packages/ui/src/Button.stories.tsx': 'S' };
 
-    const manifest = await buildManifest(stats, projectRoot);
+    const manifest = await buildManifest(stats, roots);
 
-    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['packages/ui/src/Button.stories.tsx']);
   });
 
   it('uses module.modules when module.name is absent', async () => {
@@ -430,12 +439,12 @@ describe('buildManifest missing names', () => {
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
 
-    const manifest = await buildManifest(stats, projectRoot);
+    const manifest = await buildManifest(stats, roots);
 
-    expect([...manifest.storyFileHashes.keys()]).toEqual(['src/Button.stories.tsx']);
-    expect([...(manifest.files.get('src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
-      'src/Button.tsx'
-    );
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['packages/ui/src/Button.stories.tsx']);
+    expect([
+      ...(manifest.files.get('packages/ui/src/Button.stories.tsx')?.dependencies ?? []),
+    ]).toContain('packages/ui/src/Button.tsx');
   });
 });
 
@@ -464,24 +473,26 @@ describe('buildManifest story detection through a require-context', () => {
   it('detects stories imported via a lazy require-context imported by the entry', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S' };
-      const manifest = await buildManifest(stats, projectRoot);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['src/lib/Button.stories.tsx']);
+      const manifest = await buildManifest(stats, roots);
+      expect([...manifest.storyFileHashes.keys()]).toEqual([
+        'packages/ui/src/lib/Button.stories.tsx',
+      ]);
     });
   });
 
   it('excludes the require-context glob (no file on disk) from the files map', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S' };
-      const manifest = await buildManifest(stats, projectRoot);
+      const manifest = await buildManifest(stats, roots);
       expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(false);
-      expect(manifest.files.has('src/lib/Button.stories.tsx')).toBe(true);
+      expect(manifest.files.has('packages/ui/src/lib/Button.stories.tsx')).toBe(true);
     });
   });
 
   it('does not treat the require-context glob itself as a story file', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S' };
-      const manifest = await buildManifest(stats, projectRoot);
+      const manifest = await buildManifest(stats, roots);
       const keys = [...manifest.storyFileHashes.keys()];
       expect(keys.some((key) => key.includes('lazy'))).toBe(false);
     });
@@ -518,15 +529,17 @@ describe('buildManifest story detection through a config-entry require-context',
   it('detects a concatenated story imported via a context imported by the config entry', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
-      const manifest = await buildManifest(stats, projectRoot);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['src/lib/Button.stories.tsx']);
+      const manifest = await buildManifest(stats, roots);
+      expect([...manifest.storyFileHashes.keys()]).toEqual([
+        'packages/ui/src/lib/Button.stories.tsx',
+      ]);
     });
   });
 
   it('does not treat a real file imported directly by the config entry as a story', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
-      const manifest = await buildManifest(stats, projectRoot);
+      const manifest = await buildManifest(stats, roots);
       expect([...manifest.storyFileHashes.keys()]).not.toContain('.storybook/preview.ts');
     });
   });
@@ -552,15 +565,15 @@ describe('buildManifest hashFiles skip branches', () => {
       };
 
       fileHashesRef.current = { [story]: 'S', [missing]: 'WOULD-BE-A' };
-      const before = await buildManifest(stats, projectRoot);
+      const before = await buildManifest(stats, roots);
 
       // Change the content hash the missing file *would* have if it were hashed. If the skip
       // branch didn't treat it as contributing '', this toggle would change the story hash.
       fileHashesRef.current = { [story]: 'S', [missing]: 'WOULD-BE-B' };
-      const after = await buildManifest(stats, projectRoot);
+      const after = await buildManifest(stats, roots);
 
-      expect(after.storyFileHashes.get('src/Button.stories.tsx')).toBe(
-        before.storyFileHashes.get('src/Button.stories.tsx')
+      expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).toBe(
+        before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
       );
     } finally {
       existsSyncSpy.mockRestore();
