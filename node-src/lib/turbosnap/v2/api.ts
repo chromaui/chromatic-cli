@@ -6,11 +6,13 @@ const UploadBuildHashesMutation = `
     $buildId: ObjID!
     $storybookHash: String!
     $storyFileHashes: JSONObject!
+    $storybookFileHashes: JSONObject!
   ) {
     uploadBuildHashes(
       buildId: $buildId,
       storybookHash: $storybookHash,
-      storyFileHashes: $storyFileHashes
+      storyFileHashes: $storyFileHashes,
+      storybookFileHashes: $storybookFileHashes
     )
 }
 `;
@@ -23,12 +25,19 @@ const UploadBuildHashesMutation = `
 // }
 
 /**
- * Sends the story file and Storybook hashes to the Index and gets back the list of changed story
- * files.
+ * Sends the story file, Storybook config file and whole-Storybook hashes to the Index and gets back
+ * the list of changed story files.
+ *
+ * `storybookHash` is the Index's top-level gate: if it is unchanged nothing in Storybook changed and
+ * no story needs recapturing. When it moves, the Index drills into the two hash maps —
+ * `storyFileHashes` attributes the change to individual stories, while any change to a
+ * `storybookFileHashes` entry (a `.storybook/preview.*` file or the `<storybookGlobals>` catch-all)
+ * means Storybook-wide config changed and everything must be recaptured.
  *
  * @param graphqlClient The GraphQL client to use.
  * @param buildId The build ID associated with the manifest.
- * @param manifest The manifest whose story file and Storybook hashes are sent to the Index.
+ * @param manifest The manifest whose story file, Storybook config file and Storybook hashes are sent
+ * to the Index.
  *
  * @returns The changed files.
  */
@@ -44,6 +53,7 @@ export async function determineChangedFiles(
       buildId,
       storybookHash: manifest.storybookHash,
       storyFileHashes: Object.fromEntries(manifest.storyFileHashes),
+      storybookFileHashes: Object.fromEntries(manifest.storybookFiles),
     },
     { retries: 3 }
   );
