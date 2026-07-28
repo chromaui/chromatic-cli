@@ -65,6 +65,27 @@ describe('serializeManifest', () => {
     // eslint-disable-next-line unicorn/prefer-structured-clone
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
+
+  it('emits storybookFiles as a JSON-safe object', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const preview = '/repo/packages/ui/.storybook/preview.ts';
+    fileHashesRef.current = { [story]: 'S', [preview]: 'P' };
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: preview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
+      ],
+    };
+
+    const manifest = await buildManifest(stats, roots);
+    const serialized = serializeManifest(manifest);
+
+    expect(serialized.storybookFiles['packages/ui/.storybook/preview.ts']).toBe(
+      manifest.storybookFiles.get('packages/ui/.storybook/preview.ts')
+    );
+    // eslint-disable-next-line unicorn/prefer-structured-clone
+    expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
+  });
 });
 
 describe('buildManifest', () => {
@@ -542,6 +563,179 @@ describe('buildManifest story detection through a config-entry require-context',
       const manifest = await buildManifest(stats, roots);
       expect([...manifest.storyFileHashes.keys()]).not.toContain('.storybook/preview.ts');
     });
+  });
+});
+
+describe('buildManifest storybookFiles', () => {
+  // Two stories imported straight from the stories entry (Vite style). Button also imports moment,
+  // a per-story dependency. The config entry imports `.storybook/preview.ts`, which imports a
+  // helper — preview and its helper form the preview subtree that no story reaches.
+  const buttonStory = '/repo/packages/ui/src/Button.stories.tsx';
+  const headerStory = '/repo/packages/ui/src/Header.stories.tsx';
+  const moment = '/repo/packages/ui/node_modules/moment/moment.js';
+  const preview = '/repo/packages/ui/.storybook/preview.ts';
+  const previewHelper = '/repo/packages/ui/.storybook/theme.ts';
+  const configEntry = './storybook-config-entry.js';
+  // An orphan global: Storybook wires the framework's preview annotations into the config entry
+  // alongside preview.ts, so it is neither story-reachable nor in the preview subtree.
+  const entryPreview = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
+  const reactDom = '/repo/packages/ui/node_modules/react-dom/index.js';
+
+  const previewKey = 'packages/ui/.storybook/preview.ts';
+  const globalsKey = '<storybookGlobals>';
+
+  function makeStats(): Stats {
+    return {
+      modules: [
+        { id: 1, name: buttonStory, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: headerStory, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 3, name: moment, reasons: [{ moduleName: buttonStory }] },
+        { id: 4, name: preview, reasons: [{ moduleName: configEntry }] },
+        { id: 5, name: previewHelper, reasons: [{ moduleName: preview }] },
+        { id: 6, name: entryPreview, reasons: [{ moduleName: configEntry }] },
+        { id: 7, name: reactDom, reasons: [{ moduleName: entryPreview }] },
+      ],
+    };
+  }
+
+  const baseHashes = {
+    [buttonStory]: 'S1',
+    [headerStory]: 'S2',
+    [moment]: 'M',
+    [preview]: 'P',
+    [previewHelper]: 'PT',
+    [entryPreview]: 'EP',
+    [reactDom]: 'RD',
+  };
+
+  it('keys an entry by the canonical preview config path', async () => {
+    fileHashesRef.current = { ...baseHashes };
+
+    const manifest = await buildManifest(makeStats(), roots);
+
+    expect([...manifest.storybookFiles.keys()]).toContain(previewKey);
+  });
+
+  it('rolls orphan globals into a single catch-all entry', async () => {
+    fileHashesRef.current = { ...baseHashes };
+
+    const manifest = await buildManifest(makeStats(), roots);
+
+    expect([...manifest.storybookFiles.keys()]).toContain(globalsKey);
+  });
+
+  it('changes the catch-all entry when an orphan global content changes', async () => {
+    fileHashesRef.current = { ...baseHashes };
+    const before = await buildManifest(makeStats(), roots);
+
+    // reactDom is reached only via the framework's preview annotations, so it lands in the bucket.
+    fileHashesRef.current = { ...baseHashes, [reactDom]: 'RD2' };
+    const after = await buildManifest(makeStats(), roots);
+
+    expect(after.storybookFiles.get(globalsKey)).not.toBe(before.storybookFiles.get(globalsKey));
+  });
+
+  it('changes the storybook hash when the preview config changes, leaving story hashes pure', async () => {
+    fileHashesRef.current = { ...baseHashes };
+    const before = await buildManifest(makeStats(), roots);
+
+    fileHashesRef.current = { ...baseHashes, [preview]: 'P2' };
+    const after = await buildManifest(makeStats(), roots);
+
+    expect(after.storybookHash).not.toBe(before.storybookHash);
+    // Pure per-story hashes: a config change must not perturb any individual story's hash. The
+    // backend notices it via storybookHash and drills into storybookFiles instead.
+    expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
+  });
+
+  it('changes the storybook hash when an orphan global changes', async () => {
+    fileHashesRef.current = { ...baseHashes };
+    const before = await buildManifest(makeStats(), roots);
+
+    fileHashesRef.current = { ...baseHashes, [entryPreview]: 'EP2' };
+    const after = await buildManifest(makeStats(), roots);
+
+    expect(after.storybookHash).not.toBe(before.storybookHash);
+    expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
+  });
+
+  it('keeps a story dependency out of the catch-all, scoping the change to that story', async () => {
+    fileHashesRef.current = { ...baseHashes };
+    const before = await buildManifest(makeStats(), roots);
+
+    // moment lives only in Button's subtree, so it is story-reachable and must not be bucketed.
+    fileHashesRef.current = { ...baseHashes, [moment]: 'M2' };
+    const after = await buildManifest(makeStats(), roots);
+
+    expect(after.storyFileHashes.get('packages/ui/src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('packages/ui/src/Button.stories.tsx')
+    );
+    expect(after.storyFileHashes.get('packages/ui/src/Header.stories.tsx')).toBe(
+      before.storyFileHashes.get('packages/ui/src/Header.stories.tsx')
+    );
+    expect(after.storybookFiles.get(globalsKey)).toBe(before.storybookFiles.get(globalsKey));
+  });
+
+  it('attributes a preview-subtree change to the preview entry, not the catch-all', async () => {
+    fileHashesRef.current = { ...baseHashes };
+    const before = await buildManifest(makeStats(), roots);
+
+    // theme.ts is reached only through preview.ts, so it belongs to the keyed preview entry. Landing
+    // in both would double-count it and destroy the backend's attribution.
+    fileHashesRef.current = { ...baseHashes, [previewHelper]: 'PT2' };
+    const after = await buildManifest(makeStats(), roots);
+
+    expect(after.storybookFiles.get(previewKey)).not.toBe(before.storybookFiles.get(previewKey));
+    expect(after.storybookFiles.get(globalsKey)).toBe(before.storybookFiles.get(globalsKey));
+  });
+
+  it('omits the preview entry when the graph has no preview config', async () => {
+    // Real case: a Storybook project with no `.storybook/preview.*` in its graph at all.
+    fileHashesRef.current = { [buttonStory]: 'S1' };
+    const manifest = await buildManifest(
+      {
+        modules: [
+          { id: 1, name: buttonStory, reasons: [{ moduleName: './storybook-stories.js' }] },
+        ],
+      },
+      roots
+    );
+
+    expect([...manifest.storybookFiles.keys()]).not.toContain(previewKey);
+  });
+
+  it('omits the catch-all entry when every global is synthetic', async () => {
+    // The stories entry is the only non-story node here, and it has no file on disk, so there is
+    // nothing real to bucket and no empty entry should appear.
+    const spy = vi
+      .spyOn(fs, 'existsSync')
+      .mockImplementation((candidate) => !String(candidate).includes('storybook-stories.js'));
+
+    try {
+      fileHashesRef.current = { [buttonStory]: 'S1' };
+      const manifest = await buildManifest(
+        {
+          modules: [
+            { id: 1, name: buttonStory, reasons: [{ moduleName: './storybook-stories.js' }] },
+          ],
+        },
+        roots
+      );
+
+      expect([...manifest.storybookFiles.keys()]).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('produces identical storybookFiles and storybook hash when building the same stats twice', async () => {
+    fileHashesRef.current = { ...baseHashes };
+    const first = await buildManifest(makeStats(), roots);
+    fileHashesRef.current = { ...baseHashes };
+    const second = await buildManifest(makeStats(), roots);
+
+    expect([...second.storybookFiles]).toEqual([...first.storybookFiles]);
+    expect(second.storybookHash).toBe(first.storybookHash);
   });
 });
 

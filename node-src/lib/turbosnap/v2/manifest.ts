@@ -37,6 +37,15 @@ const CONFIG_ENTRY_FILES = new Set([
   './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
 ]);
 
+// Matches `.storybook/preview.*` on a canonical manifest path. Path matching is the only consistent
+// way to find the preview config: the config-entry import edge is spelled three incompatible ways
+// across builders (vite has no such edge at all, leaving preview a detached root).
+const PREVIEW_CONFIG_PATTERN = /(^|\/)\.storybook\/preview\.[cm]?[jt]sx?$/;
+
+// The synthetic `storybookFiles` key holding every orphan global. Angle brackets can't appear in a
+// canonical relative path, so it can never collide with a real file.
+const STORYBOOK_GLOBALS_KEY = '<storybookGlobals>';
+
 type FilePath = string;
 type FileHash = string;
 
@@ -47,18 +56,26 @@ interface TurboSnapFile {
 
 /**
  * The TurboSnap manifest holds the hash of every file in the Storybook project and the dependencies
- * of each file, along with the derived per-story and whole-Storybook hashes. This is uploaded as a
- * static file to S3 for debugging purposes.
+ * of each file, along with the derived per-story, Storybook-config and whole-Storybook hashes. This
+ * is uploaded as a static file to S3 for debugging purposes.
  */
 export interface TurboSnapManifest {
   files: Map<FilePath, TurboSnapFile>;
+  /** Rolled-up hash per story file, covering only that story's own transitive subtree. */
   storyFileHashes: Map<FilePath, FileHash>;
+  /**
+   * Rolled-up hash per Storybook config file that no story imports: one entry per
+   * `.storybook/preview.*` plus the {@link STORYBOOK_GLOBALS_KEY} catch-all. A change to any entry
+   * means recapture everything, so the small map is enough for the backend to decide; the per-file
+   * breakdown behind each entry stays in `files` for debugging.
+   */
+  storybookFiles: Map<FilePath, FileHash>;
   storybookHash: string;
 }
 
 /**
- * The manifest shape written to disk: the whole-Storybook hash, the per-story hashes, and the hash
- * and dependencies of every source file.
+ * The manifest shape written to disk: the whole-Storybook hash, the per-story hashes, the
+ * Storybook-config hashes, and the hash and dependencies of every source file.
  *
  * Note: This is a separate type than TurboSnapManifest because we're writing to a file and need to
  * use JSON-safe types like arrays and objects instead of sets and maps.
@@ -66,6 +83,7 @@ export interface TurboSnapManifest {
 interface ManifestFile {
   storybookHash: string;
   storyFiles: Record<FilePath, FileHash>;
+  storybookFiles: Record<FilePath, FileHash>;
   files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
 }
 
@@ -75,7 +93,8 @@ interface ManifestFile {
  * @param stats The stats file to parse.
  * @param roots The project and git roots used to anchor module paths; see {@link StatsPathRoots}.
  *
- * @returns The manifest containing the file hashes, story file hashes, and Storybook hash.
+ * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
+ * and Storybook hash.
  */
 export async function buildManifest(
   stats: Stats,
@@ -125,24 +144,24 @@ export async function buildManifest(
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
   for (const storyFile of storyFileNames) {
-    // Combine dependency content-hashes in sorted-hash order so the result depends only on the set
-    // of contents, not on where the files live. Reading from `hashes` (not `files`) also includes
-    // leaf dependencies. Together this keeps a story's hash stable when the project or a dependency
-    // moves within the repository.
-    const combined = [...collectTransitiveDependencies(files, storyFile)]
-      .map((filePath) => hashes.get(filePath) ?? '')
-      .sort()
-      .join('');
-    storyFileHashes.set(storyFile, h64ToString(combined));
+    const subtree = collectTransitiveDependencies(files, storyFile);
+    storyFileHashes.set(storyFile, rollUpHash(hashes, subtree, h64ToString));
   }
 
-  // Sort the story hashes so the Storybook hash is independent of module iteration order.
-  const storybookHash = h64ToString([...storyFileHashes.values()].sort().join(''));
+  const storybookFiles = collectStorybookFiles(files, hashes, storyFileNames, h64ToString);
+
+  // The backend's top-level "did Storybook change at all?" gate: every story hash plus every
+  // `storybookFiles` hash. If it moved, the backend drills into `storyFiles` and `storybookFiles` to
+  // decide what to recapture. Each group is sorted independently so the result doesn't depend on
+  // module iteration order, and so a hash can't change meaning by moving between the two groups.
+  const storybookHash = h64ToString(
+    [...storyFileHashes.values()].sort().join('') + [...storybookFiles.values()].sort().join('')
+  );
 
   // Done after hashing so the graph used above is complete.
   pruneSyntheticFiles(files, hashes);
 
-  return { files, storyFileHashes, storybookHash };
+  return { files, storyFileHashes, storybookFiles, storybookHash };
 }
 
 /**
@@ -156,6 +175,9 @@ export async function buildManifest(
  */
 export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   const storyFiles: ManifestFile['storyFiles'] = Object.fromEntries(manifest.storyFileHashes);
+  const storybookFiles: ManifestFile['storybookFiles'] = Object.fromEntries(
+    manifest.storybookFiles
+  );
 
   const files: ManifestFile['files'] = {};
   for (const [filePath, file] of manifest.files) {
@@ -168,6 +190,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   return {
     storybookHash: manifest.storybookHash,
     storyFiles,
+    storybookFiles,
     files,
   };
 }
@@ -184,6 +207,88 @@ export function writeManifest(manifest: TurboSnapManifest, outputDirectory: stri
     path.join(outputDirectory, 'turbosnap-manifest.json'),
     JSON.stringify(serializeManifest(manifest))
   );
+}
+
+/**
+ * Builds the `storybookFiles` section: a rolled-up hash for each Storybook config file that no story
+ * imports. Every hashable file lands in exactly one hashing home — a story's own subtree, a keyed
+ * `.storybook/preview.*` entry, or the {@link STORYBOOK_GLOBALS_KEY} catch-all — so nothing goes
+ * unhashed and the backend can still attribute a change to the preview config or to a
+ * Storybook/framework global.
+ *
+ * @param files The map of files to their hashes and dependencies.
+ * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
+ * @param storyFileNames The detected story files.
+ * @param h64ToString The hash function.
+ *
+ * @returns The rolled-up hash per Storybook config file.
+ */
+function collectStorybookFiles(
+  files: Map<FilePath, TurboSnapFile>,
+  hashes: Map<FilePath, FileHash>,
+  storyFileNames: Set<FilePath>,
+  h64ToString: (input: string) => string
+): Map<FilePath, FileHash> {
+  // The union of every story's subtree, used to tell Storybook globals apart from story code.
+  const storyReachable = new Set<FilePath>();
+  for (const storyFile of storyFileNames) {
+    collectTransitiveDependencies(files, storyFile, storyReachable);
+  }
+
+  const storybookFiles = new Map<FilePath, FileHash>();
+  const previewSubtree = new Set<FilePath>();
+  for (const filePath of files.keys()) {
+    if (!hashes.has(filePath) || !PREVIEW_CONFIG_PATTERN.test(filePath)) continue;
+    // Collect each subtree on its own, then union: sharing one accumulator would leak one preview's
+    // files into another's rolled-up hash.
+    const subtree = collectTransitiveDependencies(files, filePath);
+    storybookFiles.set(filePath, rollUpHash(hashes, subtree, h64ToString));
+    for (const dependency of subtree) {
+      previewSubtree.add(dependency);
+    }
+  }
+
+  // Everything else real goes in one catch-all bucket. Membership is defined by *absence* from the
+  // story graph and the preview subtree rather than by an import edge, because those edges are
+  // unreliable — vite has no config-to-preview edge and rspack drops importer edges. Framework
+  // preview annotations and the React runtime land here, and they affect rendering, so leaving them
+  // unhashed would be a real blind spot.
+  const orphanGlobals = [...files.keys()].filter(
+    (filePath) =>
+      hashes.has(filePath) && !storyReachable.has(filePath) && !previewSubtree.has(filePath)
+  );
+  if (orphanGlobals.length > 0) {
+    storybookFiles.set(STORYBOOK_GLOBALS_KEY, rollUpHash(hashes, orphanGlobals, h64ToString));
+  }
+
+  return storybookFiles;
+}
+
+/**
+ * Rolls a set of files up into a single hash. Content-hashes are combined in sorted-hash order so
+ * the result depends only on the set of contents, not on where the files live — this keeps a hash
+ * stable when the project or a dependency moves within the repository. Reading from `hashes` (not
+ * `files`) also includes leaf dependencies.
+ *
+ * This is the shared recipe for both a story-file hash and a `storybookFiles` entry, so the two are
+ * directly comparable.
+ *
+ * @param hashes The content hashes keyed by canonical file path.
+ * @param filePaths The files to roll up.
+ * @param h64ToString The hash function.
+ *
+ * @returns The rolled-up hash.
+ */
+function rollUpHash(
+  hashes: Map<FilePath, FileHash>,
+  filePaths: Iterable<FilePath>,
+  h64ToString: (input: string) => string
+): FileHash {
+  const combined = [...filePaths]
+    .map((filePath) => hashes.get(filePath) ?? '')
+    .sort()
+    .join('');
+  return h64ToString(combined);
 }
 
 /**
