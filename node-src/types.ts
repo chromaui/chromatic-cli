@@ -522,7 +522,10 @@ export interface Reason {
 export interface Module {
   id: string | number | null;
   name: string;
-  modules?: Pick<Module, 'name'>[];
+  // The absolute path of the module's source file when using rspack. The `name` field is the group
+  // name (e.g. `./x.stories.tsx + 1 modules`).
+  nameForCondition?: string;
+  modules?: Pick<Module, 'name' | 'nameForCondition'>[];
   reasons?: Reason[];
 }
 
@@ -549,8 +552,24 @@ interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
+  changedStorybookGlobals?: true;
+  changedStorybookVersion?: true;
+  untrustedBuilderStats?: true;
+  anchorMismatch?: true;
+  noStoryFiles?: true;
+  noStorybookConfigFiles?: true;
+  noStaticFiles?: true;
+  noNodeModulesFiles?: true;
+  unresolvedStaticDirectories?: true;
+  indexUnavailable?: true;
+  indexContractViolation?: true;
+  internalError?: true;
   noAncestorBuild?: true;
   rebuild?: true;
+  bailSubreason?: TurboSnapBailSubreason;
+  builderName?: string;
+  builderVersion?: string;
+  sentryEventId?: string;
 }
 
 export type TurboSnapChangedPackageFilesSubreason =
@@ -566,9 +585,25 @@ export type TurboSnapInvalidChangedFilesSubreason =
   | 'networkError'
   | 'gitCommandFailed';
 
+export type TurboSnapIndexContractViolationSubreason =
+  | 'invalidStoryFileHashes'
+  | 'invalidBuildStatus'
+  | 'invalidResponse';
+
 export type TurboSnapBailSubreason =
   | TurboSnapChangedPackageFilesSubreason
-  | TurboSnapInvalidChangedFilesSubreason;
+  | TurboSnapInvalidChangedFilesSubreason
+  | TurboSnapIndexContractViolationSubreason
+  | 'packageNotFound'
+  | 'invalidVersion'
+  | 'unsupportedVersion'
+  | 'builderCompatibilityCheckFailed'
+  | 'manifestBuildFailed'
+  | 'anchorCheckFailed'
+  | 'builderMismatch'
+  | 'statsFileOutsideProject'
+  | 'statsEntryOutsideProject'
+  | 'unresolvedSourceModules';
 
 // All additional fields allowed for the `changedPackageFiles` bail reason
 export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
