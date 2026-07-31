@@ -12,6 +12,8 @@ const commands = {
   trace: () => import('./trace').then(({ main: traceMain }) => traceMain(process.argv.slice(3))),
   'trim-stats-file': () =>
     import('./trimStatsFile').then(({ main: trimMain }) => trimMain(process.argv.slice(3))),
+  'turbosnap-manifest': () =>
+    import('./turbosnapManifest').then(({ main }) => main(process.argv.slice(3))),
 };
 
 (commands[process.argv[2]] || commands.main)();

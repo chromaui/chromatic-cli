@@ -117,13 +117,23 @@ const findStorybookVersion = async ({ env, log, options, packageJson }: Storyboo
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
  *
- * @param deps The resolved options and the project's package.json.
+ * Takes the build script name directly so `chromatic turbosnap-manifest` derives the flags the same
+ * way a real build does, rather than reading a different config directory than production would.
+ *
+ * @param input The project's package.json and the resolved build script name.
+ * @param input.buildScriptName The package.json script that builds Storybook.
+ * @param input.packageJson The project's package.json.
  *
  * @returns The config directory and static directories the build script names, if any.
  */
-export const findConfigFlags = async (deps: Pick<StorybookInfoDeps, 'options' | 'packageJson'>) => {
-  const { buildScriptName } = deps.options;
-  const { scripts = {} } = deps.packageJson;
+export const findConfigFlags = async ({
+  buildScriptName,
+  packageJson,
+}: {
+  buildScriptName?: string;
+  packageJson: StorybookInfoDeps['packageJson'];
+}) => {
+  const { scripts = {} } = packageJson;
   if (!buildScriptName || !scripts[buildScriptName]) return {};
 
   const { flags } = meow({
@@ -300,7 +310,10 @@ export const getStorybookMetadata = async (
   const { mainConfig, isAstConfig } = await readMainConfig(configDirectory, deps.log);
 
   const info = await Promise.allSettled([
-    findConfigFlags(deps),
+    findConfigFlags({
+      buildScriptName: deps.options.buildScriptName,
+      packageJson: deps.packageJson,
+    }),
     findStorybookVersion(deps),
     findBuilder(mainConfig, isAstConfig),
     findReferences(mainConfig, isAstConfig),
