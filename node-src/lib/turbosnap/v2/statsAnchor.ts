@@ -209,6 +209,11 @@ function getUnresolvedSourceModules(
 
 /**
  * Every file name the stats mention: each module's own names plus the names of its importers.
+ *
+ * Deliberately not shared with `moduleFileNames` in manifest.ts, which enumerates the same stats to
+ * build the graph and so returns each file once. This takes every spelling of every module,
+ * including both `name` and `nameForCondition`, because the anchor checks only ask whether any one
+ * name witnesses a mismatch — over-inclusion costs nothing and a missed spelling hides evidence.
  */
 function statsPaths(stats: Stats): string[] {
   return stats.modules.flatMap((module: Module) =>

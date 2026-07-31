@@ -2,8 +2,8 @@ import { existsSync, writeFileSync } from 'fs';
 import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
-import { getFileHashes } from '../../../lib/getFileHashes';
 import { Module, Stats } from '../../../types';
+import { hashAbsolutePaths } from './fileHashes';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -51,7 +51,7 @@ const CONFIG_ENTRY_FILES = new Set([
 // The synthetic `storybookFiles` key holding the installed Storybook version. Unlike every other
 // entry this is a version string rather than a hash, because the preview core runtime is served
 // outside the module graph on webpack and rspack; see resolveStorybookVersion.
-const STORYBOOK_VERSION_KEY = '<storybookVersion>';
+export const STORYBOOK_VERSION_KEY = '<storybookVersion>';
 
 type StorybookVersion = string;
 
@@ -253,6 +253,11 @@ export function writeManifest(manifest: TurboSnapManifest, outputDirectory: stri
  * modules and expose the combined files in `module.modules`; a plain module has just its own name.
  * Names that are null/undefined (e.g. externals or entries) are dropped.
  *
+ * Deliberately not shared with `statsPaths` in statsAnchor.ts, which enumerates the same stats for a
+ * different question. This returns each file *once*, preferring `nameForCondition`, because a second
+ * spelling of the same module would become a duplicate graph node; `statsPaths` takes every spelling
+ * because it is gathering evidence and only asks whether any one of them witnesses a mismatch.
+ *
  * @param module The stats module to read file names from.
  *
  * @returns The module's real file names, or an empty array if it has none.
@@ -405,10 +410,7 @@ async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePat
     normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot), absolutePath);
   }
 
-  // getFileHashes joins its directory argument with each file; pass '' so the absolute paths are
-  // used as-is, and it returns hashes keyed by those absolute paths.
-  const absolutePaths = [...normalizedToAbsolute.values()];
-  const fileHashes = await getFileHashes(absolutePaths, '', 10);
+  const fileHashes = await hashAbsolutePaths([...normalizedToAbsolute.values()]);
 
   const hashes = new Map<FilePath, FileHash>();
   for (const [normalizedName, absolutePath] of normalizedToAbsolute) {

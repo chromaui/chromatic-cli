@@ -1,7 +1,7 @@
 import { readdir, realpath, stat } from 'fs/promises';
 import path from 'path';
 
-import { getFileHashes } from '../../getFileHashes';
+import { hashAbsolutePaths } from './fileHashes';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { normalizeStatsPath } from './paths';
 
@@ -139,11 +139,7 @@ async function hashByManifestPath(
   absolutePaths: string[],
   projectRoot: string
 ): Promise<Map<FilePath, FileHash>> {
-  if (absolutePaths.length === 0) return new Map();
-
-  // getFileHashes joins its directory argument with each file; pass '' so the absolute paths are
-  // used as-is, and it returns hashes keyed by those absolute paths.
-  const hashes = await getFileHashes(absolutePaths, '', 10);
+  const hashes = await hashAbsolutePaths(absolutePaths);
 
   return new Map(
     absolutePaths
