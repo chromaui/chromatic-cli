@@ -59,12 +59,14 @@ export const getFileHashes = async (files: string[], directory: string, concurre
   const limit = pLimit(concurrency);
   const xxhash = await xxHashWasm();
 
-  // Pre-allocate a 64K buffer for each file, matching WASM memory page size.
-  const buffers = files.map((file) => [Buffer.allocUnsafe(64 * 1024), file] as const);
-
   const hashes = await Promise.all(
-    buffers.map(([buffer, file]) =>
-      limit(async () => [file, await hashFile(buffer, path.join(directory, file), xxhash)] as const)
+    files.map((file) =>
+      limit(async () => {
+        // Allocate the 64K read buffer (matching WASM memory page size) inside the limit, so peak
+        // memory is bounded by `concurrency` rather than by the number of files.
+        const buffer = Buffer.allocUnsafe(64 * 1024);
+        return [file, await hashFile(buffer, path.join(directory, file), xxhash)] as const;
+      })
     )
   );
 
