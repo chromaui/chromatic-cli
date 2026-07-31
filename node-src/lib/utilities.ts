@@ -94,3 +94,18 @@ export const redact = (value: unknown, ...fields: string[]): unknown => {
   }
   return object;
 };
+
+/**
+ * Redacts a plain object, keeping it indexable by the caller.
+ *
+ * `redact` returns `unknown` because it also turns Sets and Errors into other shapes. A plain object
+ * always comes back as a plain object, so that narrower contract is asserted here once rather than
+ * at each call site.
+ *
+ * @param value The plain object to redact.
+ * @param fields The field names to redact.
+ *
+ * @returns The redacted object.
+ */
+export const redactObject = (value: object, ...fields: string[]): Record<string, unknown> =>
+  redact(value, ...fields) as Record<string, unknown>;
