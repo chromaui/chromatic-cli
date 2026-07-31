@@ -1,7 +1,7 @@
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { compareChangedFiles, traceChangedFiles } from '.';
+import { traceChangedFiles } from '.';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 
@@ -52,14 +52,10 @@ describe('traceChangedFiles', () => {
     expect(result).toStrictEqual({ status: 'skipped' });
   });
 
-  it('copies a pre-algorithm bail into both monitoring results', async () => {
-    const turboSnap = { bailReason: { noAncestorBuild: true as const } };
-    const ctx = { git: {}, turboSnap } as any;
+  it('runs neither algorithm when there are no changed files', async () => {
+    const ctx = { git: {}, turboSnap: { bailReason: { noAncestorBuild: true as const } } } as any;
 
-    await expect(compareChangedFiles(ctx)).resolves.toEqual({
-      v1: { status: 'bailed', turboSnap },
-      v2: { status: 'bailed', turboSnap },
-    });
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
   });
@@ -102,7 +98,7 @@ describe('traceChangedFiles', () => {
     vi.mocked(traceChangedFilesV1).mockResolvedValue({ status: 'skipped' });
     vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
 
-    await compareChangedFiles(ctx);
+    await traceChangedFiles(ctx);
 
     expect(traceChangedFilesV2).toHaveBeenCalledWith(
       expect.objectContaining({ buildId: 'head-build' })
@@ -127,22 +123,19 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx);
   });
 
-  it('exposes both ordinary algorithm results for monitoring', async () => {
+  it('still runs v2 for monitoring when v1 traces successfully', async () => {
     const ctx = makeContext({ rootPath: '/repo' });
-    const v1 = {
+    const v1Result = {
       status: 'traced' as const,
       onlyStoryFiles: { button: ['./src/Button.stories.tsx'] },
       turboSnap: {},
       untracedFiles: [],
     };
-    const v2 = {
-      status: 'bailed' as const,
-      turboSnap: { bailReason: { noStoryFiles: true as const } },
-    };
-    vi.mocked(traceChangedFilesV2).mockResolvedValue(v2);
-    vi.mocked(traceChangedFilesV1).mockResolvedValue(v1);
+    vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
+    vi.mocked(traceChangedFilesV1).mockResolvedValue(v1Result);
 
-    await expect(compareChangedFiles(ctx)).resolves.toEqual({ v1, v2 });
+    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+    expect(traceChangedFilesV2).toHaveBeenCalledOnce();
   });
 
   describe('projectRoot resolution', () => {
