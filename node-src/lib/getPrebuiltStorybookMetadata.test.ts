@@ -13,6 +13,7 @@ describe('getStorybookMetadataFromProjectJson', () => {
         name: '@storybook/builder-webpack5',
         packageVersion: '8.1.5',
       },
+      staticDirsDeclared: true,
     });
   });
 
@@ -26,6 +27,7 @@ describe('getStorybookMetadataFromProjectJson', () => {
         name: '@storybook/builder-vite',
         packageVersion: undefined,
       },
+      staticDirsDeclared: false,
     });
   });
 
@@ -39,6 +41,7 @@ describe('getStorybookMetadataFromProjectJson', () => {
         name: 'webpack4',
         packageVersion: '6.5.16',
       },
+      staticDirsDeclared: true,
     });
   });
 
@@ -52,6 +55,7 @@ describe('getStorybookMetadataFromProjectJson', () => {
         name: 'webpack4',
         packageVersion: '6.5.16',
       },
+      staticDirsDeclared: true,
     });
   });
 });

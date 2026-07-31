@@ -16,6 +16,7 @@ export interface SBProjectJson {
   framework: {
     name: string;
   };
+  hasStaticDirs?: boolean;
   storybookVersion: string;
   storybookPackages?: Record<string, { version: string }>;
 }
@@ -46,5 +47,8 @@ export const getStorybookMetadataFromProjectJson = async (
   return {
     version,
     builder,
+    ...(typeof sbProjectJson.hasStaticDirs === 'boolean' && {
+      staticDirsDeclared: sbProjectJson.hasStaticDirs,
+    }),
   };
 };

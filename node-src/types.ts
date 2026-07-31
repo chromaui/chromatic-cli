@@ -219,6 +219,7 @@ export interface Storybook {
   baseDir?: string;
   configDir: string;
   staticDir: string[];
+  staticDirsDeclared?: boolean;
   addons: {
     name: string;
     packageName?: string;
