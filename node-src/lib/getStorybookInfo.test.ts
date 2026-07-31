@@ -2,6 +2,12 @@ import TestLogger from '@cli/testLogger';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import getStorybookInfo from './getStorybookInfo';
+import { getStorybookMetadata } from './getStorybookMetadata';
+
+vi.mock('./getStorybookMetadata', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./getStorybookMetadata')>();
+  return { ...actual, getStorybookMetadata: vi.fn(actual.getStorybookMetadata) };
+});
 
 vi.useFakeTimers();
 
@@ -120,7 +126,20 @@ describe('getStorybookInfo', () => {
   });
 
   describe('with --storybook-build-dir', () => {
-    it('returns version from packageJson', async () => {
+    it('combines prebuilt metadata with static directories derived from source', async () => {
+      const ctx = getContext({
+        options: { storybookBuildDir: 'bin-src/__mocks__/normalProjectJson' },
+        packageJson: { dependencies: REACT },
+      });
+      expect(await getStorybookInfo(ctx)).toEqual({
+        builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
+        staticDir: ['static'],
+        version: expect.any(String),
+      });
+    });
+
+    it('still returns prebuilt metadata when the source config cannot be read', async () => {
+      vi.mocked(getStorybookMetadata).mockRejectedValueOnce(new Error('no source config'));
       const ctx = getContext({
         options: { storybookBuildDir: 'bin-src/__mocks__/normalProjectJson' },
         packageJson: { dependencies: REACT },
@@ -146,6 +165,7 @@ describe('getStorybookInfo', () => {
       });
       expect(await getStorybookInfo(ctx)).toEqual({
         builder: { name: 'webpack4', packageVersion: '6.5.16' },
+        staticDir: ['static'],
         version: '6.5.16',
       });
     });
