@@ -1,0 +1,81 @@
+import path from 'path';
+
+import { posix } from '../../posix';
+
+// Webpack/rspack concatenate modules and label the combined module with the root file plus a
+// ` + N modules` suffix (e.g. `./Button.stories.tsx + 1 modules`). Strip it so the name resolves
+// to the root file.
+const CONCATENATED_MODULE_SUFFIX = / \+ \d+ modules?$/;
+
+/**
+ * Canonical manifest keys are project-root-relative, and in-project paths carry a `./` prefix, so a
+ * story file's key is byte-identical to the `importPath` Storybook reports for it. That is what lets
+ * the Index write `storyFileHashes` keys straight into `onlyStoryFiles`, where they are matched
+ * against story filenames.
+ */
+const IN_PROJECT_PREFIX = './';
+
+/**
+ * Strips a trailing ` + N modules` suffix from a concatenated module's name, leaving the root file.
+ *
+ * @param statsPath The module name from the stats file.
+ *
+ * @returns The name without the concatenation suffix.
+ */
+export function stripConcatenatedModuleSuffix(statsPath: string): string {
+  return statsPath.replace(CONCATENATED_MODULE_SUFFIX, '');
+}
+
+/**
+ * Converts a stats module path into the canonical manifest key: a POSIX path relative to the
+ * Storybook project root, prefixed `./` when it lands inside the project. This is the builder's own
+ * spelling, so a relative stats path is already canonical and only needs its suffix stripped.
+ *
+ * Builders spell the same file inconsistently — rspack keys modules by an absolute
+ * `nameForCondition` but references importers by a relative `moduleName` — so an absolute path is
+ * relativized to reconcile both forms and keep the dependency graph connected. A file outside the
+ * project (a hoisted `node_modules`, a sibling monorepo package) keeps its leading `../`. Virtual
+ * modules (e.g. Vite's `virtual:` entries) have no on-disk location and are returned unchanged.
+ *
+ * @param statsPath The module name from the stats file (relative like `./src/x` or absolute).
+ * @param projectRoot The absolute Storybook project root to anchor against.
+ *
+ * @returns The canonical project-root-relative POSIX path.
+ */
+export function normalizeStatsPath(statsPath: string, projectRoot: string): string {
+  if (statsPath.includes('virtual:')) return statsPath;
+
+  const stripped = stripConcatenatedModuleSuffix(statsPath);
+  // A relative stats path is already project-relative, so resolving it to an absolute path only to
+  // relativize it back would cancel out. Skipping that round trip keeps the common case a string
+  // operation.
+  return path.isAbsolute(stripped)
+    ? prefixInProjectPath(posix(path.relative(projectRoot, stripped)))
+    : prefixInProjectPath(posix(stripped.replace(/^\.\//, '')));
+}
+
+/**
+ * Adds the `./` prefix that marks a path as living inside the project. A path that already escapes
+ * the project keeps its leading `../`, which is prefix enough to read.
+ *
+ * @param relativePath The project-relative POSIX path.
+ *
+ * @returns The path with an explicit prefix.
+ */
+function prefixInProjectPath(relativePath: string): string {
+  return relativePath.startsWith('../') ? relativePath : `${IN_PROJECT_PREFIX}${relativePath}`;
+}
+
+/**
+ * Resolves a stats module path to an absolute on-disk path for hashing, anchoring relative paths at
+ * the Storybook project root.
+ *
+ * @param statsPath The module name from the stats file.
+ * @param projectRoot The absolute Storybook project root to anchor against.
+ *
+ * @returns The absolute path to the file on disk.
+ */
+export function resolveStatsPath(statsPath: string, projectRoot: string): string {
+  const stripped = stripConcatenatedModuleSuffix(statsPath).replace(/^\.\//, '');
+  return path.isAbsolute(stripped) ? stripped : path.resolve(projectRoot, stripped);
+}
