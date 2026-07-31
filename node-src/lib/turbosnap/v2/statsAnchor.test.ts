@@ -1,0 +1,272 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+
+import { Stats } from '../../../types';
+import { buildManifest } from './manifest';
+import { getAnchorMismatchReason } from './statsAnchor';
+
+// The fixtures below are real directories on disk — the anchor damage is only visible against real
+// bytes — but they install no Storybook, and resolving its version is the one thing that would throw.
+vi.mock('./storybookVersion', () => ({
+  resolveStorybookVersion: () => '9.1.20',
+}));
+
+// A vite-shaped graph: relative module names only, no `nameForCondition`, so the anchor is the sole
+// thing deciding which files get hashed. Both fixture packages below satisfy every path in it.
+const VITE_STATS: Stats = {
+  modules: [
+    { id: 1, name: './iframe.html', reasons: [] },
+    {
+      id: 2,
+      name: '/virtual:/@storybook/builder-vite/storybook-stories.js',
+      reasons: [{ moduleName: './iframe.html' }],
+    },
+    {
+      id: 3,
+      name: './src/lib/Badge/Badge.stories.tsx',
+      reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/storybook-stories.js' }],
+    },
+    {
+      id: 4,
+      name: './src/lib/Badge/Badge.tsx',
+      reasons: [{ moduleName: './src/lib/Badge/Badge.stories.tsx' }],
+    },
+    { id: 5, name: './.storybook/preview.ts', reasons: [{ moduleName: './iframe.html' }] },
+  ],
+} as unknown as Stats;
+
+const temporaryDirectories: string[] = [];
+
+afterAll(() => {
+  for (const directory of temporaryDirectories) rmSync(directory, { recursive: true, force: true });
+});
+
+/**
+ * Builds a monorepo of near-identical sibling packages, which is what makes a wrong anchor dangerous:
+ * every path in the stats resolves under either one. `badge` is the only content that differs, so a
+ * hash read off the wrong sibling is visible.
+ *
+ * @param packages
+ *
+ * @returns
+ */
+function givenSiblingPackages(packages: Record<string, { badge: string }>) {
+  const repository = mkdtempSync(path.join(tmpdir(), 'anchor-'));
+  temporaryDirectories.push(repository);
+  writeFileSync(path.join(repository, 'package.json'), JSON.stringify({ name: 'repo' }));
+
+  const roots: Record<string, string> = {};
+  for (const [name, { badge }] of Object.entries(packages)) {
+    const root = path.join(repository, 'packages', name);
+    mkdirSync(path.join(root, 'src/lib/Badge'), { recursive: true });
+    mkdirSync(path.join(root, '.storybook'), { recursive: true });
+    mkdirSync(path.join(root, 'storybook-static'), { recursive: true });
+    writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name }));
+    writeFileSync(path.join(root, 'src/lib/Badge/Badge.tsx'), badge);
+    writeFileSync(
+      path.join(root, 'src/lib/Badge/Badge.stories.tsx'),
+      `import { Badge } from './Badge';\nexport default { component: Badge };\n`
+    );
+    writeFileSync(path.join(root, '.storybook/preview.ts'), 'export const parameters = {};\n');
+    writeFileSync(
+      path.join(root, 'storybook-static/preview-stats.json'),
+      JSON.stringify(VITE_STATS)
+    );
+    roots[name] = root;
+  }
+
+  return { repository, roots };
+}
+
+function statsPathFor(projectRoot: string) {
+  return path.join(projectRoot, 'storybook-static/preview-stats.json');
+}
+
+describe('getAnchorMismatchReason', () => {
+  it('accepts the anchor the stats file belongs to', () => {
+    const { roots } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+      'marketing-ui': { badge: 'export const Badge = () => "marketing";\n' },
+    });
+
+    expect(
+      getAnchorMismatchReason(VITE_STATS, {
+        projectRoot: roots.ui,
+        statsPath: statsPathFor(roots.ui),
+        builderName: '@storybook/react-vite',
+        configDir: '.storybook',
+      })
+    ).toBeUndefined();
+  });
+
+  it('refuses a structurally similar sibling, which no emptiness guard can detect', async () => {
+    const { roots } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+      'marketing-ui': { badge: 'export const Badge = () => "marketing";\n' },
+    });
+    const statsPath = statsPathFor(roots.ui);
+
+    // First, the damage: with the wrong sibling as the anchor the manifest is complete — a story is
+    // found and nothing is empty — but its hashes are read off the other package's bytes.
+    const outOfGraph = { configDir: '.storybook', staticDirs: [] };
+    const correct = await buildManifest(VITE_STATS, roots.ui, outOfGraph);
+    const wrong = await buildManifest(VITE_STATS, roots['marketing-ui'], outOfGraph);
+    const storyFile = './src/lib/Badge/Badge.stories.tsx';
+    expect(correct.storyFileHashes.get(storyFile)).toBeDefined();
+    expect(wrong.storyFileHashes.get(storyFile)).toBeDefined();
+    expect(wrong.storyFileHashes.get(storyFile)).not.toBe(correct.storyFileHashes.get(storyFile));
+
+    // Which is what the guard refuses to build.
+    expect(
+      getAnchorMismatchReason(VITE_STATS, {
+        projectRoot: roots['marketing-ui'],
+        statsPath,
+        builderName: '@storybook/react-vite',
+        configDir: '.storybook',
+      })
+    ).toMatchObject({ subreason: 'statsFileOutsideProject' });
+  });
+
+  it('accepts a stats file built into a directory above the project', () => {
+    const { repository, roots } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+    });
+    const statsPath = path.join(repository, 'dist/storybook/preview-stats.json');
+    mkdirSync(path.dirname(statsPath), { recursive: true });
+    writeFileSync(statsPath, JSON.stringify(VITE_STATS));
+
+    expect(
+      getAnchorMismatchReason(VITE_STATS, {
+        projectRoot: roots.ui,
+        statsPath,
+        builderName: '@storybook/react-vite',
+        configDir: '.storybook',
+      })
+    ).toBeUndefined();
+  });
+
+  it('accepts a stats file with no owning package, as the CLI’s own temporary build has', () => {
+    const { roots } = givenSiblingPackages({ ui: { badge: 'export const Badge = () => "ui";\n' } });
+    const buildDirectory = mkdtempSync(path.join(tmpdir(), 'chromatic-'));
+    temporaryDirectories.push(buildDirectory);
+    const statsPath = path.join(buildDirectory, 'preview-stats.json');
+    writeFileSync(statsPath, JSON.stringify(VITE_STATS));
+
+    expect(
+      getAnchorMismatchReason(VITE_STATS, {
+        projectRoot: roots.ui,
+        statsPath,
+        builderName: '@storybook/react-vite',
+        configDir: '.storybook',
+      })
+    ).toBeUndefined();
+  });
+
+  describe('the builder the stats were produced by', () => {
+    it('refuses vite stats anchored at a project that declares webpack', () => {
+      const { roots } = givenSiblingPackages({
+        ui: { badge: 'export const Badge = () => "ui";\n' },
+      });
+
+      expect(
+        getAnchorMismatchReason(VITE_STATS, {
+          projectRoot: roots.ui,
+          statsPath: statsPathFor(roots.ui),
+          builderName: '@storybook/react-webpack5',
+          configDir: '.storybook',
+        })
+      ).toMatchObject({ subreason: 'builderMismatch' });
+    });
+
+    it('refuses non-vite stats anchored at a project that declares vite', () => {
+      const { roots } = givenSiblingPackages({
+        ui: { badge: 'export const Badge = () => "ui";\n' },
+      });
+      const webpackStats = {
+        modules: [
+          { id: 1, name: './storybook-stories.js', reasons: [] },
+          {
+            id: 2,
+            name: './src/lib/Badge/Badge.stories.tsx',
+            reasons: [{ moduleName: './storybook-stories.js' }],
+          },
+        ],
+      } as unknown as Stats;
+
+      expect(
+        getAnchorMismatchReason(webpackStats, {
+          projectRoot: roots.ui,
+          statsPath: statsPathFor(roots.ui),
+          builderName: '@storybook/react-vite',
+          configDir: '.storybook',
+        })
+      ).toMatchObject({ subreason: 'builderMismatch' });
+    });
+
+    it('gives no verdict for a framework whose name does not name its builder', () => {
+      const { roots } = givenSiblingPackages({
+        ui: { badge: 'export const Badge = () => "ui";\n' },
+      });
+
+      expect(
+        getAnchorMismatchReason(VITE_STATS, {
+          projectRoot: roots.ui,
+          statsPath: statsPathFor(roots.ui),
+          builderName: '@storybook/nextjs',
+          configDir: '.storybook',
+        })
+      ).toBeUndefined();
+    });
+  });
+
+  it('refuses an anchor contradicted by an absolute entry path in the stats', () => {
+    const { roots } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+      'ui-webpack': { badge: 'export const Badge = () => "webpack";\n' },
+    });
+    writeFileSync(path.join(roots['ui-webpack'], 'storybook-config-entry.js'), '');
+    const webpackStats = {
+      modules: [
+        {
+          id: 1,
+          name: './storybook-config-entry.js',
+          nameForCondition: path.join(roots['ui-webpack'], 'storybook-config-entry.js'),
+          reasons: [],
+        },
+        {
+          id: 2,
+          name: './src/lib/Badge/Badge.stories.tsx',
+          reasons: [{ moduleName: './storybook-config-entry.js' }],
+        },
+      ],
+    } as unknown as Stats;
+
+    expect(
+      getAnchorMismatchReason(webpackStats, {
+        projectRoot: roots.ui,
+        statsPath: statsPathFor(roots.ui),
+        builderName: '@storybook/react-webpack5',
+        configDir: '.storybook',
+      })
+    ).toMatchObject({ subreason: 'statsEntryOutsideProject' });
+  });
+
+  it('refuses an unrelated anchor where no source module resolves, as v1 does', () => {
+    const { repository } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+    });
+    const unrelated = path.join(repository, 'packages/empty');
+    mkdirSync(unrelated, { recursive: true });
+
+    // No stats path, so this is the predicate under test rather than the stats file's location.
+    expect(
+      getAnchorMismatchReason(VITE_STATS, {
+        projectRoot: unrelated,
+        builderName: '@storybook/react-vite',
+        configDir: '.storybook',
+      })
+    ).toMatchObject({ subreason: 'unresolvedSourceModules' });
+  });
+});
