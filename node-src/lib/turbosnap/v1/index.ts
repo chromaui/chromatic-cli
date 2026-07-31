@@ -105,4 +105,4 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
 
 export { findChangedDependencies } from './findChangedDependencies';
 export { findChangedPackageFiles } from './findChangedPackageFiles';
-export { getDependentStoryFiles } from './getDependentStoryFiles';
+export { type DependentStoryFilesResult, getDependentStoryFiles } from './getDependentStoryFiles';
