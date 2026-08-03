@@ -1,15 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { findStaticDirectories, getStorybookMetadata } from './getStorybookMetadata';
+import {
+  findStaticDirectories,
+  getStorybookMetadata,
+  MainConfigReader,
+} from './getStorybookMetadata';
 
-const makeConfig = (returnValue: any) => ({
-  getSafeFieldValue: vi.fn().mockReturnValue(returnValue),
+// The two config forms are read by `readMainConfig`, so these only need a reader answering
+// `staticDirs`; the forms themselves are covered by the fixture-based tests below.
+const makeConfig = (returnValue: any): MainConfigReader => ({
+  readField: vi.fn().mockReturnValue(returnValue),
+  isAstConfig: true,
 });
 
 describe('findStaticDirs', () => {
   it('returns string entries resolved relative to configDirectory', () => {
     const config = makeConfig(['./static', '../public']);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['.storybook/static', 'public'],
     });
   });
@@ -19,66 +26,54 @@ describe('findStaticDirs', () => {
       { from: './static', to: '/' },
       { from: '../public', to: '/public' },
     ]);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['.storybook/static', 'public'],
     });
   });
 
   it('handles mixed string and object entries', () => {
     const config = makeConfig(['./static', { from: '../public', to: '/' }]);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['.storybook/static', 'public'],
     });
   });
 
   it('leaves absolute paths unchanged', () => {
     const config = makeConfig(['/absolute/path']);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['/absolute/path'],
     });
   });
 
   it('uses nested configDirectory when provided', () => {
     const config = makeConfig(['./static']);
-    expect(findStaticDirectories(config, true, 'packages/ui/.storybook')).toEqual({
+    expect(findStaticDirectories(config, 'packages/ui/.storybook')).toEqual({
       staticDir: ['packages/ui/.storybook/static'],
     });
   });
 
   it('returns {} for empty array', () => {
     const config = makeConfig([]);
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 
-  it('reads staticDirs off an evaluated CommonJS config module', () => {
-    expect(findStaticDirectories({ staticDirs: ['./static'] }, false)).toEqual({
-      staticDir: ['.storybook/static'],
-    });
-  });
-
-  it('reads staticDirs off the default export of an evaluated ESM config module', () => {
-    expect(findStaticDirectories({ default: { staticDirs: ['./static'] } }, false)).toEqual({
-      staticDir: ['.storybook/static'],
-    });
-  });
-
-  it('returns {} when mainConfig is null', () => {
-    expect(findStaticDirectories(null, true)).toEqual({});
+  it('returns {} when the main config could not be read', () => {
+    expect(findStaticDirectories(undefined)).toEqual({});
   });
 
   it('returns {} when staticDirs is not present on config', () => {
     const config = makeConfig(undefined);
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 
   it('returns {} when staticDirs is a non-array value', () => {
     const config = makeConfig('./static');
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 
   it('returns {} when all entries have no valid path', () => {
     const config = makeConfig([null, undefined, { to: '/' }]);
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 });
 

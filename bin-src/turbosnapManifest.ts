@@ -167,10 +167,7 @@ async function readStaticDirectories(
   configDirectory: string,
   buildScriptStaticDirectories: string[] = []
 ): Promise<string[]> {
-  const { mainConfig, isAstConfig } = await readMainConfig(
-    path.resolve(projectRoot, configDirectory),
-    log
-  );
-  const { staticDir } = findStaticDirectories(mainConfig, isAstConfig, configDirectory);
+  const mainConfig = await readMainConfig(path.resolve(projectRoot, configDirectory), log);
+  const { staticDir } = findStaticDirectories(mainConfig, configDirectory);
   return [...new Set([...buildScriptStaticDirectories, ...(staticDir ?? [])])];
 }
