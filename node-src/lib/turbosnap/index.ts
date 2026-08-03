@@ -11,7 +11,9 @@ import { traceChangedFiles as traceChangedFilesV2 } from './v2';
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
  * when necessary.
  *
- * V2 runs first, but only for monitoring; V1 remains authoritative. See {@link runV2ForMonitoring}.
+ * V2 runs first, but only for monitoring: it writes the manifest and uploads the story hashes to
+ * the Index. Nothing reads its result, and nothing it does — including a failure — is allowed to
+ * affect V1, which remains authoritative.
  *
  * @param ctx The context set when executing the CLI.
  *
@@ -29,26 +31,9 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
-  await runV2ForMonitoring(ctx, ctx.fileInfo.statsPath);
+  await traceChangedFilesV2(getV2Input(ctx, ctx.fileInfo.statsPath)).catch(() => {});
 
   return traceChangedFilesV1(ctx);
-}
-
-/**
- * Runs TurboSnap v2 for its side effects: it writes the manifest and uploads the story hashes to
- * the Index. Nothing reads the result yet, so it only decides which log line to print.
- *
- * @param ctx The context set when executing the CLI.
- * @param statsPath The path to the stats file, resolved by the caller.
- */
-async function runV2ForMonitoring(ctx: Context, statsPath: string) {
-  const result = await traceChangedFilesV2(getV2Input(ctx, statsPath));
-
-  if (result.status === 'bailed') {
-    ctx.log.info('TurboSnap v2 bailed; running TurboSnap v1');
-  } else if (result.status === 'fallback') {
-    ctx.log.info('TurboSnap v2 could not produce a result; running TurboSnap v1');
-  }
 }
 
 /**

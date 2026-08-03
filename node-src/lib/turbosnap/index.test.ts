@@ -1,4 +1,3 @@
-import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { traceChangedFiles } from '.';
@@ -13,11 +12,13 @@ vi.mock('./v1', () => ({
   traceChangedFiles: vi.fn(),
 }));
 
-function makeContext(overrides: { rootPath?: string; baseDir?: string }) {
+function makeContext(overrides: { rootPath?: string; baseDir?: string } = {}) {
+  const rootPath = 'rootPath' in overrides ? overrides.rootPath : '/repo';
+
   return {
     turboSnap: {},
     options: {},
-    git: { changedFiles: ['./src/Button.tsx'], rootPath: overrides.rootPath },
+    git: { changedFiles: ['./src/Button.tsx'], rootPath },
     fileInfo: { statsPath: '/tmp/stats.json' },
     client: {},
     build: { id: 'baseline-build' },
@@ -53,7 +54,10 @@ describe('traceChangedFiles', () => {
   });
 
   it('runs neither algorithm when there are no changed files', async () => {
-    const ctx = { git: {}, turboSnap: { bailReason: { noAncestorBuild: true as const } } } as any;
+    const ctx = {
+      git: {},
+      turboSnap: { bailReason: { noAncestorBuild: true } },
+    } as any;
 
     await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
@@ -79,21 +83,23 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
   });
 
-  it('does not let v1 replace a v2 stats read failure with a bail', async () => {
-    const ctx = makeContext({ rootPath: '/repo' });
-    const error = new Error('stats file is unreadable');
-    vi.mocked(traceChangedFilesV2).mockRejectedValue(error);
-    vi.mocked(traceChangedFilesV1).mockResolvedValue({
-      status: 'bailed',
-      turboSnap: { bailReason: { changedPackageFiles: ['./package.json'] } },
-    });
+  it('still runs v1 when v2 rejects', async () => {
+    const ctx = makeContext();
+    const v1Result = {
+      status: 'traced' as const,
+      onlyStoryFiles: { button: ['./src/Button.stories.tsx'] },
+      turboSnap: {},
+      untracedFiles: [],
+    };
+    vi.mocked(traceChangedFilesV2).mockRejectedValue(new Error('stats file is unreadable'));
+    vi.mocked(traceChangedFilesV1).mockResolvedValue(v1Result);
 
-    await expect(traceChangedFiles(ctx)).rejects.toBe(error);
-    expect(traceChangedFilesV1).not.toHaveBeenCalled();
+    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx);
   });
 
   it('uploads hashes to the head build even when there is no baseline build', async () => {
-    const ctx = makeContext({ rootPath: '/repo' });
+    const ctx = makeContext();
     ctx.build = undefined;
     vi.mocked(traceChangedFilesV1).mockResolvedValue({ status: 'skipped' });
     vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
@@ -106,7 +112,7 @@ describe('traceChangedFiles', () => {
   });
 
   it('keeps v1 authoritative when v2 bails', async () => {
-    const ctx = makeContext({ rootPath: '/repo' });
+    const ctx = makeContext();
     const v1Result = {
       status: 'traced' as const,
       onlyStoryFiles: { button: ['./src/Button.stories.tsx'] },
@@ -124,7 +130,7 @@ describe('traceChangedFiles', () => {
   });
 
   it('still runs v2 for monitoring when v1 traces successfully', async () => {
-    const ctx = makeContext({ rootPath: '/repo' });
+    const ctx = makeContext();
     const v1Result = {
       status: 'traced' as const,
       onlyStoryFiles: { button: ['./src/Button.stories.tsx'] },
@@ -152,22 +158,22 @@ describe('traceChangedFiles', () => {
       await traceChangedFiles(ctx);
 
       expect(traceChangedFilesV2).toHaveBeenCalledWith(
-        expect.objectContaining({ projectRoot: path.resolve('/repo', 'packages/ui') })
+        expect.objectContaining({ projectRoot: '/repo/packages/ui' })
       );
     });
 
     it('resolves projectRoot to the repo root when storybook.baseDir is absent', async () => {
-      const ctx = makeContext({ rootPath: '/repo' });
+      const ctx = makeContext();
 
       await traceChangedFiles(ctx);
 
       expect(traceChangedFilesV2).toHaveBeenCalledWith(
-        expect.objectContaining({ projectRoot: path.resolve('/repo', '.') })
+        expect.objectContaining({ projectRoot: '/repo' })
       );
     });
 
     it('resolves projectRoot to process.cwd() when git.rootPath is absent', async () => {
-      const ctx = makeContext({});
+      const ctx = makeContext({ rootPath: undefined });
 
       await traceChangedFiles(ctx);
 
