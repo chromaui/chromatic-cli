@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
+import { outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
 
 /**
@@ -42,47 +43,31 @@ vi.mock('fs', async (importOriginal) => ({
   writeFileSync: vi.fn(),
 }));
 
-// Content hashes are stubbed per absolute path so the fixture is fully deterministic; only the
-// roll-up recipe under test contributes real hashing.
-const { fileHashesRef } = vi.hoisted(() => ({
+// Content hashes are stubbed per absolute path and the out-of-graph sweep is backed by an in-memory
+// directory tree, so the fixture is fully deterministic; only the roll-up recipe under test
+// contributes real hashing. See ./__fixtures__/manifestMocks.
+const { fileHashesRef, directoryTreeRef } = vi.hoisted(() => ({
   fileHashesRef: { current: {} as Record<string, string> },
+  directoryTreeRef: { current: {} as Record<string, string[]> },
 }));
 
-vi.mock('../../getFileHashes', () => ({
-  getFileHashes: (files: string[]) =>
-    Promise.resolve(Object.fromEntries(files.map((f) => [f, fileHashesRef.current[f] ?? 'x']))),
-}));
+vi.mock('../../getFileHashes', async () => {
+  const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
+  return fileHashesModule(fileHashesRef);
+});
+
+vi.mock('fs/promises', async (importOriginal) => {
+  const { directoryTreeModule } = await import('./__fixtures__/manifestMocks');
+  return {
+    ...(await importOriginal<typeof import('fs/promises')>()),
+    ...directoryTreeModule(directoryTreeRef),
+  };
+});
 
 // Pinned so a Storybook release cannot move the golden values.
 vi.mock('./storybookVersion', () => ({
   resolveStorybookVersion: () => '9.1.20',
 }));
-
-const { directoryTreeRef } = vi.hoisted(() => ({
-  directoryTreeRef: { current: {} as Record<string, string[]> },
-}));
-
-vi.mock('fs/promises', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('fs/promises')>()),
-  readdir: (directory: string) => {
-    const entries = directoryTreeRef.current[directory];
-    if (!entries) return Promise.reject(new Error(`ENOENT: ${directory}`));
-    return Promise.resolve(
-      entries.map((name) => ({
-        name,
-        isDirectory: () => Boolean(directoryTreeRef.current[`${directory}/${name}`]),
-        isFile: () => !directoryTreeRef.current[`${directory}/${name}`],
-      }))
-    );
-  },
-  realpath: async (directory: string) => {
-    if (!directoryTreeRef.current[directory]) throw new Error(`ENOENT: ${directory}`);
-    return directory;
-  },
-}));
-
-const projectRoot = '/repo/packages/ui';
-const outOfGraph = { configDir: '.storybook', staticDirs: ['.storybook/static'] };
 
 // A fixture exercising every section that feeds a published hash: two stories with a shared and a
 // private dependency, a preview config with its own subtree, an orphan global reached only through
