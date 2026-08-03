@@ -225,53 +225,9 @@ function getStaticDirectoriesBail(
   return bailWith({ unresolvedStaticDirectories: true });
 }
 
-interface EmptySectionCheck {
-  isEmpty: (manifest: TurboSnapManifest, stats: Stats, staticDirectories: string[]) => boolean;
-  bailReason: TurboSnapBailReason;
-}
-
 /**
- * Sections that should never be empty, in diagnosis order. An empty one is evidence that the input
- * we derived is wrong rather than that the project genuinely lacks that input.
- */
-const EMPTY_SECTION_CHECKS: readonly EmptySectionCheck[] = [
-  {
-    // A real Storybook always has a non-empty config directory, so resolving zero files there says the
-    // input derivation is wrong rather than that the project has no config. It remains the first and
-    // most actionable diagnosis when several manifest sections are empty.
-    isEmpty: (manifest) => manifest.outOfGraphFiles.storybookConfigFiles.size === 0,
-    bailReason: { noStorybookConfigFiles: true },
-  },
-  {
-    // An empty static section is only suspicious when static directories were explicitly configured.
-    // A configured-but-empty directory deliberately bails in the safe direction rather than sharing
-    // the same silent evidence as a missing or unreadable directory.
-    isEmpty: (manifest, _stats, staticDirectories) =>
-      staticDirectories.length > 0 && manifest.outOfGraphFiles.staticFiles.size === 0,
-    bailReason: { noStaticFiles: true },
-  },
-  {
-    // Content-hashing the `node_modules` files that are in the graph is v2's entire dependency
-    // coverage, so a graph containing none of them covers no dependency change at all: an upgrade
-    // would leave the manifest byte-identical and capture nothing. This is the precise condition
-    // under which v1 declares the stats incomplete and bails (`nodeModulesMissingInStats`), except
-    // that reading it needs no changed-file list — it is a self-contained property of the stats.
-    //
-    // Zero is the whole test, with no threshold to tune: the lowest count across the ten harness
-    // fixtures is 17 (`ui-sb8`), and Vite's pre-bundling does not erase them (`ui` has 30).
-    isEmpty: (_manifest, stats) => countNodeModulesFiles(stats) === 0,
-    bailReason: { noNodeModulesFiles: true },
-  },
-  {
-    // A graph we found no stories in can only ever recapture everything through `<storybookGlobals>`,
-    // which is wider than v1.
-    isEmpty: (manifest) => manifest.storyFileHashes.size === 0,
-    bailReason: { noStoryFiles: true },
-  },
-];
-
-/**
- * Bails when a section that should never be empty is empty; see {@link EMPTY_SECTION_CHECKS}.
+ * Bails when a section that should never be empty is empty, in diagnosis order. An empty section is
+ * evidence that the input we derived is wrong rather than that the project genuinely lacks it.
  *
  * @param manifest The manifest built from the stats.
  * @param stats The stats file the manifest was built from.
@@ -284,8 +240,37 @@ function getEmptySectionBail(
   stats: Stats,
   staticDirectories: string[]
 ): TraceChangedFilesResult | undefined {
-  const check = EMPTY_SECTION_CHECKS.find((candidate) =>
-    candidate.isEmpty(manifest, stats, staticDirectories)
-  );
-  return check && bailWith(check.bailReason);
+  // A real Storybook always has a non-empty config directory, so resolving zero files there says the
+  // input derivation is wrong rather than that the project has no config. It remains the first and
+  // most actionable diagnosis when several manifest sections are empty.
+  if (manifest.outOfGraphFiles.storybookConfigFiles.size === 0) {
+    return bailWith({ noStorybookConfigFiles: true });
+  }
+
+  // An empty static section is only suspicious when static directories were explicitly configured.
+  // A configured-but-empty directory deliberately bails in the safe direction rather than sharing
+  // the same silent evidence as a missing or unreadable directory.
+  if (staticDirectories.length > 0 && manifest.outOfGraphFiles.staticFiles.size === 0) {
+    return bailWith({ noStaticFiles: true });
+  }
+
+  // Content-hashing the `node_modules` files that are in the graph is v2's entire dependency
+  // coverage, so a graph containing none of them covers no dependency change at all: an upgrade
+  // would leave the manifest byte-identical and capture nothing. This is the precise condition
+  // under which v1 declares the stats incomplete and bails (`nodeModulesMissingInStats`), except
+  // that reading it needs no changed-file list — it is a self-contained property of the stats.
+  //
+  // Zero is the whole test, with no threshold to tune: the lowest count across the ten harness
+  // fixtures is 17 (`ui-sb8`), and Vite's pre-bundling does not erase them (`ui` has 30).
+  if (countNodeModulesFiles(stats) === 0) {
+    return bailWith({ noNodeModulesFiles: true });
+  }
+
+  // A graph we found no stories in can only ever recapture everything through `<storybookGlobals>`,
+  // which is wider than v1.
+  if (manifest.storyFileHashes.size === 0) {
+    return bailWith({ noStoryFiles: true });
+  }
+
+  return undefined;
 }
