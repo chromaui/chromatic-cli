@@ -1,17 +1,12 @@
 import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readStatsFile } from '../../../tasks/readStatsFile';
 import { captureBailException } from '../v1/captureBailException';
 import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { traceChangedFiles } from './index';
 import { buildManifest, countNodeModulesFiles, writeManifest } from './manifest';
 import { getAnchorMismatchReason } from './statsAnchor';
-
-vi.mock('../../../tasks/readStatsFile', () => ({
-  readStatsFile: vi.fn(),
-}));
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
@@ -43,6 +38,7 @@ vi.mock('./statsAnchor', () => ({
 const input = {
   graphqlClient: {} as any,
   buildId: 'build-id',
+  stats: { modules: [] },
   statsPath: '/repo/packages/ui/storybook-static/preview-stats.json',
   manifestOutputDirectory: '/repo/packages/ui/.chromatic',
   projectRoot: '/repo/packages/ui',
@@ -61,7 +57,6 @@ const manifest = {
 };
 
 beforeEach(() => {
-  vi.mocked(readStatsFile).mockResolvedValue({ modules: [] });
   vi.mocked(getUntrustedBuilderStatsReason).mockReturnValue(undefined);
   vi.mocked(getAnchorMismatchReason).mockReturnValue(undefined);
   vi.mocked(buildManifest).mockResolvedValue(manifest as any);
@@ -73,15 +68,6 @@ beforeEach(() => {
 });
 
 describe('traceChangedFiles', () => {
-  it('preserves the terminal missing or unreadable stats behavior', async () => {
-    const error = new Error('stats file is unreadable');
-    vi.mocked(readStatsFile).mockRejectedValue(error);
-
-    await expect(traceChangedFiles(input)).rejects.toBe(error);
-    expect(getUntrustedBuilderStatsReason).not.toHaveBeenCalled();
-    expect(captureBailException).not.toHaveBeenCalled();
-  });
-
   it('refuses to build a manifest when the stats and the anchor disagree', async () => {
     vi.mocked(getAnchorMismatchReason).mockReturnValue({
       subreason: 'statsFileOutsideProject',

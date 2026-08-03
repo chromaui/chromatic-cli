@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { readStatsFile } from '../../tasks/readStatsFile';
 import { traceChangedFiles } from '.';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
+
+vi.mock('../../tasks/readStatsFile', () => ({
+  readStatsFile: vi.fn(),
+}));
 
 vi.mock('./v2', () => ({
   traceChangedFiles: vi.fn(),
@@ -11,6 +16,8 @@ vi.mock('./v2', () => ({
 vi.mock('./v1', () => ({
   traceChangedFiles: vi.fn(),
 }));
+
+const stats = { modules: [] };
 
 function makeContext(overrides: { rootPath?: string; baseDir?: string } = {}) {
   const rootPath = 'rootPath' in overrides ? overrides.rootPath : '/repo';
@@ -28,6 +35,10 @@ function makeContext(overrides: { rootPath?: string; baseDir?: string } = {}) {
     storybook: overrides.baseDir ? { baseDir: overrides.baseDir } : undefined,
   } as any;
 }
+
+beforeEach(() => {
+  vi.mocked(readStatsFile).mockResolvedValue(stats);
+});
 
 describe('traceChangedFiles', () => {
   it('returns skipped when TurboSnap is unavailable', async () => {
@@ -83,6 +94,34 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
   });
 
+  it('reads the stats file once and shares it with both algorithms', async () => {
+    const ctx = makeContext();
+    vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
+    vi.mocked(traceChangedFilesV1).mockResolvedValue({ status: 'skipped' });
+
+    await traceChangedFiles(ctx);
+
+    expect(readStatsFile).toHaveBeenCalledOnce();
+    expect(traceChangedFilesV2).toHaveBeenCalledWith(expect.objectContaining({ stats }));
+    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx, stats, '/tmp/stats.json');
+  });
+
+  it('preserves the terminal unreadable stats behavior', async () => {
+    const ctx = makeContext();
+    const error = new Error('stats file is unreadable');
+    vi.mocked(readStatsFile).mockRejectedValue(error);
+
+    let err;
+    try {
+      await traceChangedFiles(ctx);
+    } catch (error_) {
+      err = error_;
+    }
+    expect(err).toBe(error);
+    expect(traceChangedFilesV2).not.toHaveBeenCalled();
+    expect(traceChangedFilesV1).not.toHaveBeenCalled();
+  });
+
   it('still runs v1 when v2 rejects', async () => {
     const ctx = makeContext();
     const v1Result = {
@@ -95,7 +134,7 @@ describe('traceChangedFiles', () => {
     vi.mocked(traceChangedFilesV1).mockResolvedValue(v1Result);
 
     await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
-    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx);
+    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx, stats, '/tmp/stats.json');
   });
 
   it('uploads hashes to the head build even when there is no baseline build', async () => {
@@ -126,7 +165,7 @@ describe('traceChangedFiles', () => {
     vi.mocked(traceChangedFilesV1).mockResolvedValue(v1Result);
 
     await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
-    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx);
+    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx, stats, '/tmp/stats.json');
   });
 
   it('still runs v2 for monitoring when v1 traces successfully', async () => {

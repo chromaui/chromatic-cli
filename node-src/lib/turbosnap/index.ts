@@ -1,7 +1,8 @@
 import path from 'path';
 import semver from 'semver';
 
-import { Context } from '../../types';
+import { readStatsFile } from '../../tasks/readStatsFile';
+import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
@@ -14,6 +15,9 @@ import { traceChangedFiles as traceChangedFilesV2 } from './v2';
  * V2 runs first, but only for monitoring: it writes the manifest and uploads the story hashes to
  * the Index. Nothing reads its result, and nothing it does — including a failure — is allowed to
  * affect V1, which remains authoritative.
+ *
+ * The stats file is read here rather than in each algorithm, because both trace the same one and it
+ * is the largest artifact in the build.
  *
  * @param ctx The context set when executing the CLI.
  *
@@ -31,9 +35,12 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
-  await traceChangedFilesV2(getV2Input(ctx, ctx.fileInfo.statsPath)).catch(() => {});
+  const statsPath = ctx.fileInfo.statsPath;
+  const stats = await readStatsFile(statsPath);
 
-  return traceChangedFilesV1(ctx);
+  await traceChangedFilesV2(getV2Input(ctx, stats, statsPath)).catch(() => {});
+
+  return traceChangedFilesV1(ctx, stats, statsPath);
 }
 
 /**
@@ -43,11 +50,12 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
  * task has run, so it is read defensively here.
  *
  * @param ctx The context set when executing the CLI.
+ * @param stats The preview stats file, read by the caller.
  * @param statsPath The path to the stats file, resolved by the caller.
  *
  * @returns The input to run TurboSnap 2.0.
  */
-function getV2Input(ctx: Context, statsPath: string) {
+function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
   const storybook: Partial<Context['storybook']> = ctx.storybook ?? {};
 
   return {
@@ -56,6 +64,7 @@ function getV2Input(ctx: Context, statsPath: string) {
     // Whether they can decide anything is the Index's call: it compares them against the baseline's
     // hashes, and with no baseline everything reads as changed.
     buildId: ctx.announcedBuild.id,
+    stats,
     statsPath,
     manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
     projectRoot: getProjectRoot(ctx, storybook.baseDir),

@@ -1,7 +1,6 @@
 import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
-import { readStatsFile } from '../../../tasks/readStatsFile';
 import type { Stats, TurboSnapBailReason, TurboSnapBailSubreason } from '../../../types';
 import { TraceChangedFilesResult } from '../types';
 import { captureBailException } from '../v1/captureBailException';
@@ -15,6 +14,7 @@ import { getAnchorMismatchReason } from './statsAnchor';
 interface TraceChangedFilesInput {
   graphqlClient: GraphQLClient;
   buildId: string;
+  stats: Stats;
   statsPath: string;
   manifestOutputDirectory: string;
   projectRoot: string;
@@ -35,7 +35,8 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * TurboSnap when necessary.
  *
  * @param input The input to run TurboSnap 2.0.
- * @param input.statsPath The path to the stats file.
+ * @param input.stats The preview stats file, read by the caller because v1 traces the same one.
+ * @param input.statsPath The path the stats file was read from, used as anchor-check evidence.
  * @param input.manifestOutputDirectory The directory to write the manifest file to.
  * @param input.projectRoot The absolute Storybook project root used to read source files off disk
  * and to anchor manifest keys.
@@ -52,7 +53,7 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
 export async function traceChangedFiles(
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesV2Result> {
-  const stats = await readStatsFile(input.statsPath);
+  const { stats } = input;
 
   const statsBail = getStatsBail(stats, input);
   if (statsBail) return statsBail;
