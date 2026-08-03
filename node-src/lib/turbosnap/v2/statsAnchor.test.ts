@@ -269,4 +269,53 @@ describe('getAnchorMismatchReason', () => {
       })
     ).toMatchObject({ subreason: 'unresolvedSourceModules' });
   });
+
+  describe('modules bundled by concatenation', () => {
+    // Webpack and rspack fold several real files into one module and expose them in `module.modules`.
+    // The wrapper's own name is a synthetic label that resolves nowhere, so the anchor evidence lives
+    // only on the children — a check that read the wrapper alone would see no source modules at all.
+    const concatenatedStats = {
+      modules: [
+        {
+          id: 1,
+          name: './src/lib/Badge/Badge.stories.tsx + 1 modules',
+          modules: [
+            { name: './src/lib/Badge/Badge.stories.tsx' },
+            { name: './src/lib/Badge/Badge.tsx' },
+          ],
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+      ],
+    } as unknown as Stats;
+
+    it('accepts an anchor witnessed only by a concatenated child', () => {
+      const { roots } = givenSiblingPackages({
+        ui: { badge: 'export const Badge = () => "ui";\n' },
+      });
+
+      expect(
+        getAnchorMismatchReason(concatenatedStats, {
+          projectRoot: roots.ui,
+          builderName: '@storybook/react-webpack5',
+          configDir: '.storybook',
+        })
+      ).toBeUndefined();
+    });
+
+    it('counts concatenated children as source modules when none of them resolve', () => {
+      const { repository } = givenSiblingPackages({
+        ui: { badge: 'export const Badge = () => "ui";\n' },
+      });
+      const unrelated = path.join(repository, 'packages/empty');
+      mkdirSync(unrelated, { recursive: true });
+
+      expect(
+        getAnchorMismatchReason(concatenatedStats, {
+          projectRoot: unrelated,
+          builderName: '@storybook/react-webpack5',
+          configDir: '.storybook',
+        })
+      ).toMatchObject({ subreason: 'unresolvedSourceModules' });
+    });
+  });
 });

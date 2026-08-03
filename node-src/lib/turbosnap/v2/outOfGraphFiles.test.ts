@@ -6,9 +6,13 @@ import { hashOutOfGraphFiles, OutOfGraphInput, rollUpOutOfGraphFiles } from './o
 // anything else named by a parent is a file. Backing the sweep this way keeps these tests off disk.
 // `symlinkTargetsRef` names entries that are symlinks, mapping absolute path -> absolute target: like
 // a real `Dirent`, those report neither isDirectory nor isFile, so only stat/realpath resolve them.
-const { directoryTreeRef, symlinkTargetsRef, fakeFs } = vi.hoisted(() => {
+// `unreadableDirectoriesRef` names directories that exist and resolve but refuse to be listed, as an
+// EACCES directory does. That case has to be reachable independently of a missing directory, because
+// the sweep handles the two at different points in the walk.
+const { directoryTreeRef, symlinkTargetsRef, unreadableDirectoriesRef, fakeFs } = vi.hoisted(() => {
   const directoryTreeReference = { current: {} as Record<string, string[]> };
   const symlinkTargetsReference = { current: {} as Record<string, string> };
+  const unreadableDirectoriesReference = { current: new Set<string>() };
 
   // Resolves every symlinked segment of a path, as the real fs does, refusing to loop forever (ELOOP).
   function resolve(entryPath: string) {
@@ -45,6 +49,9 @@ const { directoryTreeRef, symlinkTargetsRef, fakeFs } = vi.hoisted(() => {
 
   const fakeFs = {
     readdir: async (directory: string) => {
+      if (unreadableDirectoriesReference.current.has(directory)) {
+        throw new Error(`EACCES: permission denied, scandir '${directory}'`);
+      }
       const entries = directoryTreeReference.current[resolve(directory)];
       if (!entries) throw new Error(`ENOENT: ${directory}`);
       // A Dirent reports on the link itself, never its target, so a symlink is neither file nor
@@ -74,6 +81,7 @@ const { directoryTreeRef, symlinkTargetsRef, fakeFs } = vi.hoisted(() => {
   return {
     directoryTreeRef: directoryTreeReference,
     symlinkTargetsRef: symlinkTargetsReference,
+    unreadableDirectoriesRef: unreadableDirectoriesReference,
     fakeFs,
   };
 });
@@ -101,6 +109,7 @@ const h64ToString = (value: string) => `h(${value})`;
 beforeEach(() => {
   directoryTreeRef.current = {};
   symlinkTargetsRef.current = {};
+  unreadableDirectoriesRef.current = new Set();
   fileHashesRef.current = {};
 });
 
@@ -161,6 +170,20 @@ describe('hashOutOfGraphFiles', () => {
 
     expect(storybookConfigFiles.size).toBe(0);
     expect(staticFiles.size).toBe(0);
+  });
+
+  it('treats an unreadable directory as contributing nothing rather than throwing', async () => {
+    // A directory can resolve and still refuse to be listed (EACCES). The sweep is best-effort, so
+    // one unreadable subtree must not fail the build or discard the siblings already collected.
+    directoryTreeRef.current = {
+      '/repo/packages/ui/.storybook': ['main.ts', 'locked'],
+      '/repo/packages/ui/.storybook/locked': ['secret.ts'],
+    };
+    unreadableDirectoriesRef.current = new Set(['/repo/packages/ui/.storybook/locked']);
+
+    const { storybookConfigFiles } = await hashOutOfGraphFiles(input, projectRoot);
+
+    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
   });
 
   it('collects static files from every configured static directory', async () => {

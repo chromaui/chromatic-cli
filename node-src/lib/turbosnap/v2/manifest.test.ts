@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
-import { buildManifest, countNodeModulesFiles, serializeManifest } from './manifest';
+import { buildManifest, countNodeModulesFiles, serializeManifest, writeManifest } from './manifest';
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
@@ -1381,6 +1381,31 @@ describe('countNodeModulesFiles', () => {
     };
 
     expect(countNodeModulesFiles(stats)).toBe(2);
+  });
+});
+
+describe('writeManifest', () => {
+  it('writes the serialized manifest as JSON to turbosnap-manifest.json in the output directory', async () => {
+    const manifest = await manifestWithPreview('preview.ts');
+
+    writeManifest(manifest, '/repo/packages/ui/storybook-static');
+
+    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
+      '/repo/packages/ui/storybook-static/turbosnap-manifest.json',
+      JSON.stringify(serializeManifest(manifest))
+    );
+  });
+
+  it('writes a payload that round-trips through JSON.parse', async () => {
+    // The file is uploaded to S3 and read back for debugging, so it has to be valid JSON with the
+    // Maps and Sets already flattened.
+    writeManifest(await manifestWithPreview('preview.ts'), '/out');
+
+    const [, payload] = vi.mocked(fs.writeFileSync).mock.calls[0];
+
+    expect(JSON.parse(payload as string).storybookFiles['./.storybook/preview.ts']).toEqual(
+      expect.any(String)
+    );
   });
 });
 
