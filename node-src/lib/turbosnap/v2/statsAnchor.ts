@@ -1,29 +1,13 @@
 import { existsSync } from 'fs';
 import path from 'path';
 
-import { Module, Stats } from '../../../types';
+import { Module, Stats, TurboSnapAnchorMismatchSubreason } from '../../../types';
 import { isBuilderViteStats } from './builderViteCompatibility';
 import { normalizeStatsPath, resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
 
-/**
- * Why the stats file and `projectRoot` cannot be shown to describe the same package.
- *
- * - `builderMismatch`: the stats were produced by a different builder than the project at the anchor
- *   declares.
- * - `statsFileOutsideProject`: the stats file itself sits inside a different Storybook project.
- * - `statsEntryOutsideProject`: the stats name a builder entry file by absolute path, that file is on
- *   disk, and it is not inside the anchor.
- * - `unresolvedSourceModules`: no in-project source module in the stats exists under the anchor. This
- *   is v1's `checkStorybookBaseDirectory` predicate.
- */
-export type AnchorMismatchSubreason =
-  | 'builderMismatch'
-  | 'statsFileOutsideProject'
-  | 'statsEntryOutsideProject'
-  | 'unresolvedSourceModules';
-
 export interface AnchorMismatchReason {
-  subreason: AnchorMismatchSubreason;
+  /** Why the pairing was refused; see {@link TurboSnapAnchorMismatchSubreason}. */
+  subreason: TurboSnapAnchorMismatchSubreason;
   /** The evidence, reported to Sentry for whoever investigates the bail. */
   detail: string;
 }

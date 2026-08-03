@@ -3,7 +3,7 @@ import { createRequire } from 'module';
 import path from 'path';
 import semver from 'semver';
 
-import { Stats } from '../../../types';
+import { Stats, TurboSnapUntrustedBuilderStatsSubreason } from '../../../types';
 
 const BUILDER_VITE_PACKAGE = '@storybook/builder-vite';
 
@@ -13,7 +13,7 @@ const FIRST_BUILDER_VITE_VERSION_WITH_CJS_EDGE_FIX = '10.6.0-alpha.4';
 
 export interface UntrustedBuilderStatsReason {
   reason: 'untrustedBuilderStats';
-  subreason: 'packageNotFound' | 'invalidVersion' | 'unsupportedVersion';
+  subreason: TurboSnapUntrustedBuilderStatsSubreason;
   builderName: typeof BUILDER_VITE_PACKAGE;
   builderVersion?: string;
 }
