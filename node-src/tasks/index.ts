@@ -23,11 +23,9 @@ export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorksp
  */
 export default function index(ctx: Context): Listr.ListrTask<Context>[] {
   const tasks =
-    ctx.options.patchHeadRef && ctx.options.patchBaseRef ? runUploadBuild : runUploadBuild;
+    ctx.options.patchHeadRef && ctx.options.patchBaseRef ? runPatchBuild : runUploadBuild;
 
-  if (ctx.options.junitReport) {
-    tasks.push(report);
-  }
+  const tasksWithReport = ctx.options.junitReport ? [...tasks, report] : tasks;
 
-  return tasks.map((task) => task(ctx));
+  return tasksWithReport.map((task) => task(ctx));
 }
