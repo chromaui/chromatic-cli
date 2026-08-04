@@ -18,7 +18,7 @@ import {
   OutOfGraphInput,
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
-import { normalizeStatsPath, resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
+import { normalizeStatsPath, resolveStatsPath } from './paths';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
 
@@ -47,6 +47,10 @@ const CONFIG_ENTRY_FILES = new Set([
   './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
   './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
 ]);
+
+// Webpack/rspack name a module the bundle does not own `external "<request>"` (e.g. Storybook's
+// preview runtime globals). It has no on-disk file and imports nothing.
+const EXTERNAL_MODULE = /^external "/;
 
 // The synthetic `storybookFiles` key holding the installed Storybook version. Unlike every other
 // entry this is a version string rather than a hash, because the preview core runtime is served
@@ -128,23 +132,24 @@ export async function buildManifest(
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
-    // Match story importers against the raw importer names, since they hold the builder's own entry
-    // paths (e.g. `./storybook-stories.js`). Entry reasons carry a null moduleName, so drop those.
-    const rawImporters = (module.reasons ?? []).map((reason) => reason.moduleName).filter(Boolean);
+    // Importers hold the builder's own entry paths (e.g. `./storybook-stories.js`), canonicalised so
+    // they compare against the canonical keys collectStoryImporters returns — the builder may spell
+    // the same entry with or without a `./` prefix. Entry reasons carry a null moduleName, so drop
+    // those.
+    const importers = (module.reasons ?? [])
+      .map((reason) => reason.moduleName)
+      .filter(Boolean)
+      .map((name) => normalizeStatsPath(name, projectRoot));
 
     // Only real files are story files; requiring a hash excludes the require-context glob itself
     // (which is imported by an entry but has no on-disk file).
-    if (
-      hashes.has(sourceFilePath) &&
-      rawImporters.some((importer) => storyImporters.has(stripConcatenatedModuleSuffix(importer)))
-    ) {
+    if (hashes.has(sourceFilePath) && importers.some((importer) => storyImporters.has(importer))) {
       storyFileNames.add(sourceFilePath);
     }
 
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
-    for (const rawImporter of rawImporters) {
-      const importer = normalizeStatsPath(rawImporter, projectRoot);
+    for (const importer of importers) {
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
   }
@@ -298,25 +303,32 @@ export function countNodeModulesFiles(stats: Stats): number {
  * @param hashes The content hashes keyed by canonical file path, used to tell real files apart
  * from the require-context glob.
  *
- * @returns The set of raw importer names that indicate a story file.
+ * @returns The set of canonical importer keys that indicate a story file.
  */
 function collectStoryImporters(
   stats: Stats,
   projectRoot: string,
   hashes: Map<FilePath, FileHash>
 ): Set<string> {
+  const canonical = (name: string) => normalizeStatsPath(name, projectRoot);
   // The stories entry directly imports stories (Vite), so it is a story importer on its own. The
-  // config entry only helps locate the require-context, so it is not.
-  const entryFiles = new Set([...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES]);
-  const storyImporters = new Set<string>(STORIES_ENTRY_FILES);
+  // config entry only helps locate the require-context, so it is not. Both are canonicalised because
+  // a builder may spell its own entry either way: rsbuild names the same module both
+  // `storybook-stories.js` and `./storybook-stories.js`, and the raw spelling never matched.
+  const entryFiles = new Set(
+    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonical(name))
+  );
+  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonical(name)));
   for (const module of stats.modules) {
-    const [root] = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
+    const [root] = moduleFileNames(module).map((name) => canonical(name));
     if (!module.name || !root || hashes.has(root)) continue;
+    // An external is a graph leaf, so it can never import a story. It has no on-disk file either,
+    // which would otherwise let it through as a require-context.
+    if (EXTERNAL_MODULE.test(module.name)) continue;
     const importedByEntry = (module.reasons ?? []).some(
-      (reason) =>
-        reason.moduleName && entryFiles.has(stripConcatenatedModuleSuffix(reason.moduleName))
+      (reason) => reason.moduleName && entryFiles.has(canonical(reason.moduleName))
     );
-    if (importedByEntry) storyImporters.add(stripConcatenatedModuleSuffix(module.name));
+    if (importedByEntry) storyImporters.add(canonical(module.name));
   }
   return storyImporters;
 }

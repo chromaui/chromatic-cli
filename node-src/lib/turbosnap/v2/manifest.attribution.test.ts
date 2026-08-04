@@ -151,6 +151,55 @@ describe('buildManifest story detection through a config-entry require-context',
   });
 });
 
+describe('buildManifest story detection when the builder omits the `./` prefix', () => {
+  // storybook-builder-rsbuild 3.x ships `withChromaticMinimalContract`, which re-derives module names
+  // via `path.relative(cwd, …)` — that never emits a `./` prefix. So the same graph carries both
+  // spellings: the config entry is named `./storybook-config-entry.js` but referenced as
+  // `storybook-config-entry.js`, and the require-context is named bare. Comparing the entry allowlist
+  // against the raw spelling matched nothing and every build bailed `noStoryFiles`.
+  const configEntry = 'storybook-config-entry.js';
+  const glob = String.raw`src/lib|lazy|/^\.\/.*$/|namespace object`;
+  const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
+  const impl = '/repo/packages/ui/src/lib/Button.tsx';
+
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: glob, reasons: [{ moduleName: configEntry }] },
+      { id: 2, name: story, reasons: [{ moduleName: glob }] },
+      { id: 3, name: impl, reasons: [{ moduleName: story }] },
+      // Storybook's preview runtime globals. The config entry imports them and they have no file on
+      // disk, which is exactly the shape of a require-context — but an external imports nothing, so
+      // it must never become a story importer.
+      {
+        id: 4,
+        name: 'external "__STORYBOOK_MODULE_PREVIEW_API__"',
+        reasons: [{ moduleName: configEntry }],
+      },
+    ],
+  };
+
+  it('detects the story behind a bare-named context imported by a bare-named entry', async () => {
+    await withSyntheticAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
+    });
+  });
+
+  it('rolls the story implementation into the story hash', async () => {
+    await withSyntheticAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      const before = await buildManifest(stats, projectRoot, outOfGraph);
+      fileHashesRef.current = { [story]: 'S', [impl]: 'B2' };
+      const after = await buildManifest(stats, projectRoot, outOfGraph);
+
+      expect(after.storyFileHashes.get('./src/lib/Button.stories.tsx')).not.toBe(
+        before.storyFileHashes.get('./src/lib/Button.stories.tsx')
+      );
+    });
+  });
+});
+
 describe('buildManifest attribution', () => {
   const story = '/repo/packages/ui/src/Button.stories.tsx';
   const storyDep = '/repo/packages/ui/node_modules/moment/moment.js';
