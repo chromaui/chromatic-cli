@@ -556,6 +556,7 @@ interface TurboSnapBailReasonBase {
   changedStorybookGlobals?: true;
   changedStorybookVersion?: true;
   noStoryFiles?: true;
+  unrecognizedStoryEntry?: true;
   noStorybookConfigFiles?: true;
   noStaticFiles?: true;
   noNodeModulesFiles?: true;

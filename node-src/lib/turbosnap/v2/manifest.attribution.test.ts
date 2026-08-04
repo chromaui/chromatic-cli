@@ -85,6 +85,43 @@ describe('buildManifest story detection through a require-context', () => {
     });
   });
 
+  it('reports the relocated entry above a lazy story context when it is absent from the catalogue', async () => {
+    const relocatedEntry = './node_modules/.cache/storybook-next/storybook-stories.js';
+    const relocatedStats: Stats = {
+      modules: [
+        { id: 1, name: glob, reasons: [{ moduleName: relocatedEntry }] },
+        { id: 2, name: story, reasons: [{ moduleName: glob }] },
+      ],
+    };
+
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S' };
+      const manifest = await buildManifest(relocatedStats, projectRoot, outOfGraph);
+
+      expect(manifest.storyFileHashes.size).toBe(0);
+      expect(manifest.unrecognizedStoryEntries).toEqual([relocatedEntry]);
+    });
+  });
+
+  it('does not report an application file that owns an unrelated lazy context', async () => {
+    const applicationImporter = '/repo/packages/ui/src/loadExamples.ts';
+    const importedFile = '/repo/packages/ui/src/examples/Button.tsx';
+    const applicationStats: Stats = {
+      modules: [
+        { id: 1, name: applicationImporter },
+        { id: 2, name: glob, reasons: [{ moduleName: applicationImporter }] },
+        { id: 3, name: importedFile, reasons: [{ moduleName: glob }] },
+      ],
+    };
+
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [applicationImporter]: 'I', [importedFile]: 'B' };
+      const manifest = await buildManifest(applicationStats, projectRoot, outOfGraph);
+
+      expect(manifest.unrecognizedStoryEntries).toEqual([]);
+    });
+  });
+
   it('serializes the same manifest when only the require-context identity gains a concatenation suffix', async () => {
     await withGlobAbsent(async () => {
       const statsWithContext = (storyImporter: string): Stats => ({

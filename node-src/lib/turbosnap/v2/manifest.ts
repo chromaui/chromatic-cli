@@ -48,6 +48,12 @@ const CONFIG_ENTRY_FILES = new Set([
   './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
 ]);
 
+// Recognition still requires an exact canonical path. Basenames are diagnostic evidence only: a
+// familiar generated name at an unfamiliar path is how an entry relocation presents in the stats.
+const ENTRY_FILE_BASENAMES = new Set(
+  [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => path.posix.basename(name))
+);
+
 // Webpack/rspack name a module the bundle does not own `external "<request>"` (e.g. Storybook's
 // preview runtime globals). It has no on-disk file and imports nothing.
 const EXTERNAL_MODULE = /^external "/;
@@ -68,6 +74,8 @@ export interface TurboSnapManifest {
   files: Map<FilePath, TurboSnapFile>;
   /** Rolled-up hash per story file, covering only that story's own transitive subtree. */
   storyFileHashes: Map<FilePath, FileHash>;
+  /** Generated entries above a lazy context that are absent from the explicit entry catalogue. */
+  unrecognizedStoryEntries: FilePath[];
   /**
    * One entry per `.storybook/preview.*` holding its rolled-up hash, plus the
    * {@link STORYBOOK_GLOBALS_KEY} catch-all, the {@link STORYBOOK_VERSION_KEY} version string and the
@@ -123,7 +131,11 @@ export async function buildManifest(
   // we need to parse the entire list of dependencies first.
   const storyFileNames = new Set<FilePath>();
 
-  const storyImporters = collectStoryImporters(stats, projectRoot, hashes);
+  const { storyImporters, unrecognizedStoryEntries } = collectStoryImporters(
+    stats,
+    projectRoot,
+    hashes
+  );
 
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
@@ -191,7 +203,15 @@ export async function buildManifest(
   // Done after hashing so the graph used above is complete.
   pruneSyntheticFiles(files, hashes);
 
-  return { files, storyFileHashes, storybookFiles, storybookHash, attribution, outOfGraphFiles };
+  return {
+    files,
+    storyFileHashes,
+    unrecognizedStoryEntries,
+    storybookFiles,
+    storybookHash,
+    attribution,
+    outOfGraphFiles,
+  };
 }
 
 /**
@@ -309,7 +329,7 @@ function collectStoryImporters(
   stats: Stats,
   projectRoot: string,
   hashes: Map<FilePath, FileHash>
-): Set<string> {
+): { storyImporters: Set<string>; unrecognizedStoryEntries: FilePath[] } {
   const canonical = (name: string) => normalizeStatsPath(name, projectRoot);
   // The stories entry directly imports stories (Vite), so it is a story importer on its own. The
   // config entry only helps locate the require-context, so it is not. Both are canonicalised because
@@ -319,18 +339,46 @@ function collectStoryImporters(
     [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonical(name))
   );
   const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonical(name)));
+  const unrecognizedStoryEntries = new Set<FilePath>();
   for (const module of stats.modules) {
     const [root] = moduleFileNames(module).map((name) => canonical(name));
     if (!module.name || !root || hashes.has(root)) continue;
     // An external is a graph leaf, so it can never import a story. It has no on-disk file either,
     // which would otherwise let it through as a require-context.
     if (EXTERNAL_MODULE.test(module.name)) continue;
-    const importedByEntry = (module.reasons ?? []).some(
-      (reason) => reason.moduleName && entryFiles.has(canonical(reason.moduleName))
-    );
+    const importers = (module.reasons ?? [])
+      .map((reason) => reason.moduleName)
+      .filter(Boolean)
+      .map((name) => canonical(name));
+    const importedByEntry = importers.some((importer) => entryFiles.has(importer));
     if (importedByEntry) storyImporters.add(canonical(module.name));
+    else collectUnrecognizedStoryEntries(module.name, importers, hashes, unrecognizedStoryEntries);
   }
-  return storyImporters;
+  return { storyImporters, unrecognizedStoryEntries: [...unrecognizedStoryEntries] };
+}
+
+function collectUnrecognizedStoryEntries(
+  moduleName: string,
+  importers: FilePath[],
+  hashes: Map<FilePath, FileHash>,
+  entries: Set<FilePath>
+) {
+  if (!isLazyContext(moduleName)) return;
+
+  for (const importer of importers) {
+    // A known basename catches the supported relocation workflow even when the generated entry is
+    // a real cache file. A synthetic importer also qualifies because it cannot be an
+    // application-owned lazy context; this preserves a loud failure if upstream renames a virtual
+    // entry as well as moving it.
+    if (ENTRY_FILE_BASENAMES.has(path.posix.basename(importer)) || !hashes.has(importer)) {
+      entries.add(importer);
+    }
+  }
+}
+
+/** Webpack spells contexts with ` lazy `; rspack delimits the same marker with pipes. */
+function isLazyContext(moduleName: string): boolean {
+  return moduleName.includes(' lazy ') || moduleName.includes('|lazy|');
 }
 
 /**

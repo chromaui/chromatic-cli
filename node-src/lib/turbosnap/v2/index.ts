@@ -266,6 +266,24 @@ function getEmptySectionBail(
     return bailWith({ noNodeModulesFiles: true });
   }
 
+  if (manifest.storyFileHashes.size === 0 && manifest.unrecognizedStoryEntries?.length) {
+    Sentry.setContext('turboSnapUnrecognizedStoryEntry', {
+      entries: manifest.unrecognizedStoryEntries,
+    });
+    const error = new Error(
+      `The stats contain a lazy story context imported by an unrecognized entry: ${manifest.unrecognizedStoryEntries.join(
+        ', '
+      )}`
+    );
+    return bailWith({
+      unrecognizedStoryEntry: true,
+      sentryEventId: captureBailException(error, {
+        bailSubreason: 'unrecognizedStoryEntry',
+        bailPath: 'buildManifest',
+      }),
+    });
+  }
+
   // A graph we found no stories in can only ever recapture everything through `<storybookGlobals>`,
   // which is wider than v1.
   if (manifest.storyFileHashes.size === 0) {

@@ -10,6 +10,7 @@ const graphqlClient = client as unknown as GraphQLClient;
 const manifest: TurboSnapManifest = {
   files: new Map(),
   storyFileHashes: new Map([['./src/Button.stories.ts', 'story-hash']]),
+  unrecognizedStoryEntries: [],
   storybookFiles: new Map([
     ['./.storybook/preview.ts', 'preview-hash'],
     ['<storybookGlobals>', 'globals-hash'],

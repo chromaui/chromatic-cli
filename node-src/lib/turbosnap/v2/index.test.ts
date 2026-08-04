@@ -432,6 +432,34 @@ describe('traceChangedFiles', () => {
     expect(writeManifest).toHaveBeenCalledWith(storyless, '/repo/packages/ui/.chromatic');
   });
 
+  it('reports an unrecognized story entry to Sentry instead of calling the project storyless', async () => {
+    const storyless = {
+      ...manifest,
+      storyFileHashes: new Map(),
+      unrecognizedStoryEntries: ['./future-cache/storybook-stories.js'],
+    };
+    vi.mocked(buildManifest).mockResolvedValue(storyless as any);
+
+    await expect(traceChangedFiles(input)).resolves.toEqual({
+      status: 'bailed',
+      turboSnap: {
+        bailReason: {
+          unrecognizedStoryEntry: true,
+          sentryEventId: 'sentry-event-id',
+        },
+      },
+    });
+    expect(captureBailException).toHaveBeenCalledWith(expect.any(Error), {
+      bailSubreason: 'unrecognizedStoryEntry',
+      bailPath: 'buildManifest',
+    });
+    expect(Sentry.setContext).toHaveBeenCalledWith('turboSnapUnrecognizedStoryEntry', {
+      entries: ['./future-cache/storybook-stories.js'],
+    });
+    expect(determineChangedFiles).not.toHaveBeenCalled();
+    expect(writeManifest).toHaveBeenCalledWith(storyless, '/repo/packages/ui/.chromatic');
+  });
+
   it('preserves the no-story bail when writing its diagnostic manifest fails', async () => {
     const storyless = { ...manifest, storyFileHashes: new Map() };
     const error = new Error('disk is read-only');

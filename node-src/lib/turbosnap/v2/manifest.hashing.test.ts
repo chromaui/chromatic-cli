@@ -488,6 +488,33 @@ describe('buildManifest concatenated modules with rspack-style child names', () 
       before.storyFileHashes.get('./src/Button.stories.tsx')
     );
   });
+
+  it('publishes the same manifest when minimal stats re-emit concatenated files by usable name', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const implementation = '/repo/packages/ui/src/Button.tsx';
+    const shimmedStats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: story,
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+        {
+          id: 2,
+          name: implementation,
+          reasons: [{ moduleName: story }],
+        },
+      ],
+    };
+    fileHashesRef.current = { [story]: 'S', [implementation]: 'B' };
+
+    const full = serializeManifest(
+      await buildManifest(rspackConcatenatedStory, projectRoot, outOfGraph)
+    );
+    const shimmed = serializeManifest(await buildManifest(shimmedStats, projectRoot, outOfGraph));
+
+    expect(shimmed).toEqual(full);
+  });
 });
 
 describe('buildManifest missing names', () => {
