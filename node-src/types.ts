@@ -597,15 +597,12 @@ export type TurboSnapUntrustedBuilderStatsSubreason =
  * - `builderMismatch`: the stats were produced by a different builder than the project at the anchor
  *   declares.
  * - `statsFileOutsideProject`: the stats file itself sits inside a different Storybook project.
- * - `statsEntryOutsideProject`: the stats name a builder entry file by absolute path, that file is on
- *   disk, and it is not inside the anchor.
  * - `unresolvedSourceModules`: no in-project source module in the stats exists under the anchor. This
  *   is v1's `checkStorybookBaseDirectory` predicate.
  */
 export type TurboSnapAnchorMismatchSubreason =
   | 'builderMismatch'
   | 'statsFileOutsideProject'
-  | 'statsEntryOutsideProject'
   | 'unresolvedSourceModules';
 
 export type TurboSnapBailSubreason =

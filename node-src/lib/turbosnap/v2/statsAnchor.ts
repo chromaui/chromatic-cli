@@ -12,17 +12,6 @@ export interface AnchorMismatchReason {
   detail: string;
 }
 
-// Files the builder generates into the directory Storybook was built from, so their absolute path in
-// the stats names that directory — which is what `projectRoot` is supposed to be. Unlike a source
-// module, none of these can legitimately live in a sibling package.
-const BUILDER_ENTRY_FILES = new Set([
-  'storybook-config-entry.js',
-  'storybook-stories.js',
-  'generated-stories-entry.js',
-  'generated-stories-entry.cjs',
-  'iframe.html',
-]);
-
 const SOURCE_MODULE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
 
 /**
@@ -51,7 +40,6 @@ export function getAnchorMismatchReason(
   return (
     getBuilderMismatch(stats, builderName) ??
     getStatsFileOutsideProject({ projectRoot, statsPath, configDir }) ??
-    getEntryOutsideProject(stats, projectRoot) ??
     getUnresolvedSourceModules(stats, projectRoot)
   );
 }
@@ -133,29 +121,6 @@ function findOwningProject(directory: string, configDirectory: string): string |
     if (parent === current) return undefined;
     current = parent;
   }
-}
-
-/**
- * Looks for a builder entry file the stats name by absolute path. Existence on disk is part of the
- * predicate: a Storybook built in another checkout (a prebuilt `--storybook-build-dir`) records
- * absolute paths that are legitimately absent here, and absence is no evidence either way. A path
- * that *does* exist and sits outside the anchor is a witness that the stats describe another project.
- */
-function getEntryOutsideProject(
-  stats: Stats,
-  projectRoot: string
-): AnchorMismatchReason | undefined {
-  for (const name of statsPaths(stats)) {
-    if (!path.isAbsolute(name) || !BUILDER_ENTRY_FILES.has(path.basename(name))) continue;
-    if (!existsSync(name) || isInside(projectRoot, name)) continue;
-
-    return {
-      subreason: 'statsEntryOutsideProject',
-      detail: `the stats name ${name}, which is outside ${projectRoot}`,
-    };
-  }
-
-  return undefined;
 }
 
 /**

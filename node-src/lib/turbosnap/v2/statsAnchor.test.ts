@@ -221,18 +221,22 @@ describe('getAnchorMismatchReason', () => {
     });
   });
 
-  it('refuses an anchor contradicted by an absolute entry path in the stats', () => {
-    const { roots } = givenSiblingPackages({
+  it('accepts a builder entry that exists outside the project', () => {
+    const { repository, roots } = givenSiblingPackages({
       ui: { badge: 'export const Badge = () => "ui";\n' },
-      'ui-webpack': { badge: 'export const Badge = () => "webpack";\n' },
     });
-    writeFileSync(path.join(roots['ui-webpack'], 'storybook-config-entry.js'), '');
-    const webpackStats = {
+    const entry = path.join(
+      repository,
+      'node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js'
+    );
+    mkdirSync(path.dirname(entry), { recursive: true });
+    writeFileSync(entry, '');
+    const rsbuildStats = {
       modules: [
         {
           id: 1,
           name: './storybook-config-entry.js',
-          nameForCondition: path.join(roots['ui-webpack'], 'storybook-config-entry.js'),
+          nameForCondition: entry,
           reasons: [],
         },
         {
@@ -244,13 +248,13 @@ describe('getAnchorMismatchReason', () => {
     } as unknown as Stats;
 
     expect(
-      getAnchorMismatchReason(webpackStats, {
+      getAnchorMismatchReason(rsbuildStats, {
         projectRoot: roots.ui,
         statsPath: statsPathFor(roots.ui),
-        builderName: '@storybook/react-webpack5',
+        builderName: 'storybook-react-rsbuild',
         configDir: '.storybook',
       })
-    ).toMatchObject({ subreason: 'statsEntryOutsideProject' });
+    ).toBeUndefined();
   });
 
   it('refuses an unrelated anchor where no source module resolves, as v1 does', () => {
