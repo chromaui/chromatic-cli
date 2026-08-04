@@ -53,10 +53,12 @@ export interface AnchorInput {
 
 /**
  * Compares the builder that produced the stats against the builder the project declares. Only Vite
- * is asserted in either direction: `isBuilderViteStats` is a proven signature, while webpack and
- * rsbuild share their entry names and have no equally reliable one. A framework whose name says
- * nothing about its builder (`@storybook/nextjs`) yields no verdict rather than a guess, so an
- * unrecognised project never bails here.
+ * is asserted in either direction: `isBuilderViteStats` identifies a stats contract with a proven
+ * correctness defect, while webpack and rspack intentionally share the non-Vite bucket because both
+ * satisfy the contract consumed here. Rspack's `rspackVersion` is a reliable signature, but without
+ * a known contract defect it does not justify another bail. A framework whose name says nothing
+ * about its builder (`@storybook/nextjs`) yields no verdict rather than a guess, so an unrecognised
+ * project never bails here.
  */
 function getBuilderMismatch(
   stats: Stats,
