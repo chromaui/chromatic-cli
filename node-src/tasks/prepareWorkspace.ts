@@ -1,3 +1,5 @@
+import Listr from 'listr';
+
 import { checkout, findMergeBase, getUpdateMessage, isClean, isUpToDate } from '../git/git';
 import installDependencies from '../lib/installDependencies';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
@@ -58,8 +60,10 @@ export const runPrepareWorkspace = async (ctx: Context, task: Task) => {
   }
 };
 
-export default createTask({
-  name: 'prepareWorkspace',
-  title: initial.title,
-  steps: [transitionTo(pending), runPrepareWorkspace, transitionTo(success, true)],
-});
+export default function main(_: Context): Listr.ListrTask<Context> {
+  return createTask({
+    name: 'prepareWorkspace',
+    title: initial.title,
+    steps: [transitionTo(pending), runPrepareWorkspace, transitionTo(success, true)],
+  });
+}

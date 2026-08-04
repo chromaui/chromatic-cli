@@ -1,3 +1,5 @@
+import Listr from 'listr';
+
 import { checkoutPrevious, discardChanges } from '../git/git';
 import installDependencies from '../lib/installDependencies';
 import { createTask, transitionTo } from '../lib/tasks';
@@ -11,8 +13,10 @@ export const runRestoreWorkspace = async (ctx: Context) => {
   await discardChanges(ctx); // drop lockfile changes
 };
 
-export default createTask({
-  name: 'restoreWorkspace',
-  title: initial.title,
-  steps: [transitionTo(pending), runRestoreWorkspace, transitionTo(success, true)],
-});
+export default function main(_: Context): Listr.ListrTask<Context> {
+  return createTask({
+    name: 'restoreWorkspace',
+    title: initial.title,
+    steps: [transitionTo(pending), runRestoreWorkspace, transitionTo(success, true)],
+  });
+}
