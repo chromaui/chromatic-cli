@@ -96,6 +96,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
       stats: input.stats,
       statsPath: input.statsPath,
       manifestOutputDirectory,
+      repositoryRoot: input.repositoryRoot,
       projectRoot: input.projectRoot,
       configDir: input.configDir,
       staticDirs: input.staticDirs,

@@ -58,6 +58,8 @@ export interface TurbosnapInputFlags {
 export interface TurbosnapInput {
   /** The absolute Storybook project root, anchoring both the stats file and the source tree. */
   projectRoot: string;
+  /** The absolute repository root, which stats named from the repository root fall back to. */
+  repositoryRoot: string;
   /** The absolute path the stats file was read from. */
   statsPath: string;
   stats: Stats;
@@ -102,6 +104,8 @@ export async function readTurbosnapInput(
 
   return {
     projectRoot,
+    // Matches production: the repository root when git knows it, else the project root itself.
+    repositoryRoot: rootPath ? path.resolve(rootPath) : projectRoot,
     statsPath,
     stats,
     configDir: configDirectory,
