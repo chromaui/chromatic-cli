@@ -57,6 +57,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
  */
 function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
   const storybook: Partial<Context['storybook']> = ctx.storybook ?? {};
+  const projectRoot = getProjectRoot(ctx, storybook.baseDir);
 
   return {
     graphqlClient: ctx.client,
@@ -67,7 +68,8 @@ function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
     stats,
     statsPath,
     manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
-    projectRoot: getProjectRoot(ctx, storybook.baseDir),
+    repositoryRoot: ctx.git.rootPath ? path.resolve(ctx.git.rootPath) : projectRoot,
+    projectRoot,
     // The config and static directories are project-relative, matching how v1 reads them. An
     // explicit --storybook-config-dir wins over the discovered one, as it does in v1.
     configDir: ctx.options?.storybookConfigDir ?? storybook.configDir ?? '.storybook',

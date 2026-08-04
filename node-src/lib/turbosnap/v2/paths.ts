@@ -28,8 +28,9 @@ export function stripConcatenatedModuleSuffix(statsPath: string): string {
 
 /**
  * Converts a stats module path into the canonical manifest key: a POSIX path relative to the
- * Storybook project root, prefixed `./` when it lands inside the project. This is the builder's own
- * spelling, so a relative stats path is already canonical and only needs its suffix stripped.
+ * Storybook project root, prefixed `./` when it lands inside the project. Relative stats paths are
+ * first resolved from `statsRoot`, because a builder may name them from the repository root even
+ * though manifest keys anchor at the project.
  *
  * Builders spell the same file inconsistently — rspack keys modules by an absolute
  * `nameForCondition` but references importers by a relative `moduleName` — so an absolute path is
@@ -39,19 +40,20 @@ export function stripConcatenatedModuleSuffix(statsPath: string): string {
  *
  * @param statsPath The module name from the stats file (relative like `./src/x` or absolute).
  * @param projectRoot The absolute Storybook project root to anchor against.
+ * @param statsRoot The directory relative stats paths are named from. Defaults to the project root.
  *
  * @returns The canonical project-root-relative POSIX path.
  */
-export function normalizeStatsPath(statsPath: string, projectRoot: string): string {
+export function normalizeStatsPath(
+  statsPath: string,
+  projectRoot: string,
+  statsRoot = projectRoot
+): string {
   if (statsPath.includes('virtual:')) return statsPath;
 
   const stripped = stripConcatenatedModuleSuffix(statsPath);
-  // A relative stats path is already project-relative, so resolving it to an absolute path only to
-  // relativize it back would cancel out. Skipping that round trip keeps the common case a string
-  // operation.
-  return path.isAbsolute(stripped)
-    ? prefixInProjectPath(posix(path.relative(projectRoot, stripped)))
-    : prefixInProjectPath(posix(stripped.replace(/^\.\//, '')));
+  const absolutePath = path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
+  return prefixInProjectPath(posix(path.relative(projectRoot, absolutePath)));
 }
 
 /**
@@ -71,11 +73,11 @@ function prefixInProjectPath(relativePath: string): string {
  * the Storybook project root.
  *
  * @param statsPath The module name from the stats file.
- * @param projectRoot The absolute Storybook project root to anchor against.
+ * @param statsRoot The absolute directory relative stats paths are named from.
  *
  * @returns The absolute path to the file on disk.
  */
-export function resolveStatsPath(statsPath: string, projectRoot: string): string {
+export function resolveStatsPath(statsPath: string, statsRoot: string): string {
   const stripped = stripConcatenatedModuleSuffix(statsPath).replace(/^\.\//, '');
-  return path.isAbsolute(stripped) ? stripped : path.resolve(projectRoot, stripped);
+  return path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
 }

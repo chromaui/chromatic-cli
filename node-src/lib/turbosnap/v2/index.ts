@@ -9,7 +9,7 @@ import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { classifyUploadHashesFailure } from './classifyUploadHashesFailure';
 import { buildManifest, countNodeModulesFiles, TurboSnapManifest, writeManifest } from './manifest';
-import { getAnchorMismatchReason } from './statsAnchor';
+import { getAnchorMismatchReason, getStatsRoot } from './statsAnchor';
 
 interface TraceChangedFilesInput {
   graphqlClient: GraphQLClient;
@@ -17,6 +17,7 @@ interface TraceChangedFilesInput {
   stats: Stats;
   statsPath: string;
   manifestOutputDirectory: string;
+  repositoryRoot: string;
   projectRoot: string;
   configDir: string;
   staticDirs: string[];
@@ -38,6 +39,8 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * @param input.stats The preview stats file, read by the caller because v1 traces the same one.
  * @param input.statsPath The path the stats file was read from, used as anchor-check evidence.
  * @param input.manifestOutputDirectory The directory to write the manifest file to.
+ * @param input.repositoryRoot The repository root, used as the one supported alternate root for
+ * relative stats paths.
  * @param input.projectRoot The absolute Storybook project root used to read source files off disk
  * and to anchor manifest keys.
  * @param input.configDir The project-relative Storybook config directory, hashed off disk because it
@@ -60,10 +63,15 @@ export async function traceChangedFiles(
 
   let manifest;
   try {
-    manifest = await buildManifest(stats, input.projectRoot, {
-      configDir: input.configDir,
-      staticDirs: input.staticDirs,
-    });
+    manifest = await buildManifest(
+      stats,
+      input.projectRoot,
+      {
+        configDir: input.configDir,
+        staticDirs: input.staticDirs,
+      },
+      getStatsRoot(stats, input)
+    );
   } catch (error) {
     return internalErrorBail(error, 'manifestBuildFailed', 'buildManifest');
   }

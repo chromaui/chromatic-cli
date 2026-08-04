@@ -6,7 +6,7 @@ import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { traceChangedFiles } from './index';
 import { buildManifest, countNodeModulesFiles, writeManifest } from './manifest';
-import { getAnchorMismatchReason } from './statsAnchor';
+import { getAnchorMismatchReason, getStatsRoot } from './statsAnchor';
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
@@ -33,6 +33,7 @@ vi.mock('./api', () => ({
 
 vi.mock('./statsAnchor', () => ({
   getAnchorMismatchReason: vi.fn(),
+  getStatsRoot: vi.fn(),
 }));
 
 const input = {
@@ -41,6 +42,7 @@ const input = {
   stats: { modules: [] },
   statsPath: '/repo/packages/ui/storybook-static/preview-stats.json',
   manifestOutputDirectory: '/repo/packages/ui/.chromatic',
+  repositoryRoot: '/repo',
   projectRoot: '/repo/packages/ui',
   configDir: '.storybook',
   staticDirs: ['.storybook/static'],
@@ -59,6 +61,7 @@ const manifest = {
 beforeEach(() => {
   vi.mocked(getUntrustedBuilderStatsReason).mockReturnValue(undefined);
   vi.mocked(getAnchorMismatchReason).mockReturnValue(undefined);
+  vi.mocked(getStatsRoot).mockReturnValue(input.projectRoot);
   vi.mocked(buildManifest).mockResolvedValue(manifest as any);
   // A healthy graph, matching the `ui` fixture's count. Zero is the only interesting other value.
   vi.mocked(countNodeModulesFiles).mockReturnValue(30);
@@ -160,10 +163,15 @@ describe('traceChangedFiles', () => {
   it('uploads and writes a manifest when the stats pass compatibility checks', async () => {
     await traceChangedFiles(input);
 
-    expect(buildManifest).toHaveBeenCalledWith({ modules: [] }, '/repo/packages/ui', {
-      configDir: '.storybook',
-      staticDirs: ['.storybook/static'],
-    });
+    expect(buildManifest).toHaveBeenCalledWith(
+      { modules: [] },
+      '/repo/packages/ui',
+      {
+        configDir: '.storybook',
+        staticDirs: ['.storybook/static'],
+      },
+      '/repo/packages/ui'
+    );
     expect(determineChangedFiles).toHaveBeenCalledWith(input.graphqlClient, 'build-id', manifest);
     expect(writeManifest).toHaveBeenCalledWith(manifest, '/repo/packages/ui/.chromatic');
   });

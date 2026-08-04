@@ -116,6 +116,8 @@ interface ManifestFile {
  * @param projectRoot The absolute Storybook project root that module paths anchor against.
  * @param outOfGraph Where to find the Storybook inputs that are never bundler inputs; see
  * {@link OutOfGraphInput}.
+ * @param statsRoot The absolute directory relative stats paths are named from. Defaults to the
+ * project root.
  *
  * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
  * and Storybook hash.
@@ -123,9 +125,10 @@ interface ManifestFile {
 export async function buildManifest(
   stats: Stats,
   projectRoot: string,
-  outOfGraph: OutOfGraphInput
+  outOfGraph: OutOfGraphInput,
+  statsRoot = projectRoot
 ): Promise<TurboSnapManifest> {
-  const hashes = await hashFiles(stats, projectRoot);
+  const hashes = await hashFiles(stats, projectRoot, statsRoot);
   const files = new Map<FilePath, TurboSnapFile>();
   // A temporary set to collect the story file names before we build the story file hashes because
   // we need to parse the entire list of dependencies first.
@@ -134,13 +137,16 @@ export async function buildManifest(
   const { storyImporters, unrecognizedStoryEntries } = collectStoryImporters(
     stats,
     projectRoot,
-    hashes
+    hashes,
+    statsRoot
   );
 
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
-    const fileNames = moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot));
+    const fileNames = moduleFileNames(module).map((name) =>
+      normalizeStatsPath(name, projectRoot, statsRoot)
+    );
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
@@ -151,7 +157,7 @@ export async function buildManifest(
     const importers = (module.reasons ?? [])
       .map((reason) => reason.moduleName)
       .filter(Boolean)
-      .map((name) => normalizeStatsPath(name, projectRoot));
+      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
 
     // Only real files are story files; requiring a hash excludes the require-context glob itself
     // (which is imported by an entry but has no on-disk file).
@@ -322,23 +328,26 @@ export function countNodeModulesFiles(stats: Stats): number {
  * @param projectRoot The absolute Storybook project root that module paths anchor against.
  * @param hashes The content hashes keyed by canonical file path, used to tell real files apart
  * from the require-context glob.
+ * @param statsRoot The directory relative stats paths are named from.
  *
  * @returns The set of canonical importer keys that indicate a story file.
  */
 function collectStoryImporters(
   stats: Stats,
   projectRoot: string,
-  hashes: Map<FilePath, FileHash>
+  hashes: Map<FilePath, FileHash>,
+  statsRoot: string
 ): { storyImporters: Set<string>; unrecognizedStoryEntries: FilePath[] } {
-  const canonical = (name: string) => normalizeStatsPath(name, projectRoot);
+  const canonical = (name: string) => normalizeStatsPath(name, projectRoot, statsRoot);
+  const canonicalEntry = (name: string) => normalizeStatsPath(name, projectRoot);
   // The stories entry directly imports stories (Vite), so it is a story importer on its own. The
   // config entry only helps locate the require-context, so it is not. Both are canonicalised because
   // a builder may spell its own entry either way: rsbuild names the same module both
   // `storybook-stories.js` and `./storybook-stories.js`, and the raw spelling never matched.
   const entryFiles = new Set(
-    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonical(name))
+    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonicalEntry(name))
   );
-  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonical(name)));
+  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonicalEntry(name)));
   const unrecognizedStoryEntries = new Set<FilePath>();
   for (const module of stats.modules) {
     const [root] = moduleFileNames(module).map((name) => canonical(name));
@@ -447,7 +456,11 @@ function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<Fi
   }
 }
 
-async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePath, FileHash>> {
+async function hashFiles(
+  stats: Stats,
+  projectRoot: string,
+  statsRoot: string
+): Promise<Map<FilePath, FileHash>> {
   // Collect every referenced module path once, expanding concatenated modules into their real
   // files and skipping importers with a null moduleName.
   const rawPaths = new Set<FilePath>();
@@ -465,9 +478,9 @@ async function hashFiles(stats: Stats, projectRoot: string): Promise<Map<FilePat
   const normalizedToAbsolute = new Map<FilePath, string>();
   for (const rawPath of rawPaths) {
     if (rawPath.includes('virtual:')) continue;
-    const absolutePath = resolveStatsPath(rawPath, projectRoot);
+    const absolutePath = resolveStatsPath(rawPath, statsRoot);
     if (!existsSync(absolutePath)) continue;
-    normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot), absolutePath);
+    normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
   }
 
   const fileHashes = await hashAbsolutePaths([...normalizedToAbsolute.values()]);

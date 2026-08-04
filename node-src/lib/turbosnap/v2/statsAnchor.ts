@@ -3,7 +3,7 @@ import path from 'path';
 
 import { Module, Stats, TurboSnapAnchorMismatchSubreason } from '../../../types';
 import { isBuilderViteStats } from './builderViteCompatibility';
-import { normalizeStatsPath, resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
+import { resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
 
 export interface AnchorMismatchReason {
   /** Why the pairing was refused; see {@link TurboSnapAnchorMismatchSubreason}. */
@@ -26,6 +26,8 @@ const SOURCE_MODULE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
  * @param stats The preview stats file.
  * @param input The anchor and the builder the project declares.
  * @param input.projectRoot The absolute Storybook project root the manifest anchors against.
+ * @param input.repositoryRoot The repository root, tried when relative stats paths do not resolve
+ * from the project root.
  * @param input.builderName The builder named by the project's own Storybook config, read from the
  * config directory rather than from the anchor, which is what makes it independent evidence.
  * @param input.statsPath The path the stats file was read from.
@@ -35,20 +37,33 @@ const SOURCE_MODULE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
  */
 export function getAnchorMismatchReason(
   stats: Stats,
-  { projectRoot, builderName, statsPath, configDir }: AnchorInput
+  { projectRoot, repositoryRoot, builderName, statsPath, configDir }: AnchorInput
 ): AnchorMismatchReason | undefined {
   return (
     getBuilderMismatch(stats, builderName) ??
     getStatsFileOutsideProject({ projectRoot, statsPath, configDir }) ??
-    getUnresolvedSourceModules(stats, projectRoot)
+    getUnresolvedSourceModules(stats, { projectRoot, repositoryRoot })
   );
 }
 
 export interface AnchorInput {
   projectRoot: string;
+  repositoryRoot?: string;
   builderName?: string;
   statsPath?: string;
   configDir?: string;
+}
+
+/**
+ * Returns the root relative stats paths are named from. The project root remains the default and
+ * wins whenever any source module resolves there; the repository root is a fallback for builders
+ * that relativise names from the command's working directory.
+ */
+export function getStatsRoot(
+  stats: Stats,
+  { projectRoot, repositoryRoot = projectRoot }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot'>
+): string {
+  return getSourceModuleResolution(stats, projectRoot, repositoryRoot).statsRoot ?? projectRoot;
 }
 
 /**
@@ -127,9 +142,8 @@ function findOwningProject(directory: string, configDirectory: string): string |
 
 /**
  * v1's `checkStorybookBaseDirectory` predicate, ported: at least one non-`node_modules` source module
- * from the stats must exist under the anchor. It means the same thing against v2's keys, because
- * `normalizeStatsPath` produces the same project-relative spelling v1 joins onto its base directory,
- * and `resolveStatsPath` anchors it the same way.
+ * from the stats must exist under either known spelling root. The project root is tried first; the
+ * repository root covers builders that relativise stats names from the command's working directory.
  *
  * This is the gross-mismatch case — an unrelated anchor — which v2 already survives by accident,
  * since nothing resolves and `noStoryFiles` fires. Naming it keeps v1's diagnosis rather than
@@ -137,25 +151,44 @@ function findOwningProject(directory: string, configDirectory: string): string |
  */
 function getUnresolvedSourceModules(
   stats: Stats,
-  projectRoot: string
+  { projectRoot, repositoryRoot = projectRoot }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot'>
 ): AnchorMismatchReason | undefined {
-  let sourceModuleCount = 0;
+  const { sourceModuleCount, statsRoot } = getSourceModuleResolution(
+    stats,
+    projectRoot,
+    repositoryRoot
+  );
 
-  for (const name of statsPaths(stats)) {
-    const normalized = normalizeStatsPath(name, projectRoot);
-    if (normalized.includes('node_modules') || !SOURCE_MODULE_EXTENSIONS.test(normalized)) continue;
-    if (!normalized.startsWith('./')) continue;
-
-    sourceModuleCount += 1;
-    if (existsSync(resolveStatsPath(name, projectRoot))) return undefined;
-  }
-
-  if (sourceModuleCount === 0) return undefined;
+  if (sourceModuleCount === 0 || statsRoot) return undefined;
 
   return {
     subreason: 'unresolvedSourceModules',
     detail: `none of the ${sourceModuleCount} source modules in the stats exist under ${projectRoot}`,
   };
+}
+
+function getSourceModuleResolution(
+  stats: Stats,
+  projectRoot: string,
+  repositoryRoot: string
+): { sourceModuleCount: number; statsRoot?: string } {
+  const sourceModules = statsPaths(stats).filter((name) => {
+    if (name.includes('node_modules') || !SOURCE_MODULE_EXTENSIONS.test(name)) return false;
+    return isInside(projectRoot, resolveStatsPath(name, projectRoot));
+  });
+
+  for (const statsRoot of new Set([projectRoot, repositoryRoot])) {
+    if (
+      sourceModules.some((name) => {
+        const absolutePath = resolveStatsPath(name, statsRoot);
+        return isInside(projectRoot, absolutePath) && existsSync(absolutePath);
+      })
+    ) {
+      return { sourceModuleCount: sourceModules.length, statsRoot };
+    }
+  }
+
+  return { sourceModuleCount: sourceModules.length };
 }
 
 /**
