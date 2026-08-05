@@ -1,13 +1,13 @@
-import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
-import { outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
+import { mockStatSync, outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
-  existsSync: () => true,
+  // A trailing slash names a directory: present on disk, but not a regular file.
+  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
   writeFileSync: vi.fn(),
 }));
 
@@ -189,9 +189,7 @@ describe('buildManifest storybookFiles', () => {
   it('omits the catch-all entry when every global is synthetic', async () => {
     // The stories entry is the only non-story node here, and it has no file on disk, so there is
     // nothing real to bucket and no empty entry should appear.
-    const spy = vi
-      .spyOn(fs, 'existsSync')
-      .mockImplementation((candidate) => !String(candidate).includes('storybook-stories.js'));
+    const spy = mockStatSync((candidate) => !candidate.includes('storybook-stories.js'));
 
     try {
       fileHashesRef.current = { [buttonStory]: 'S1' };

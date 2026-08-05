@@ -12,7 +12,8 @@ import { buildManifest, countNodeModulesFiles, serializeManifest, writeManifest 
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
-  existsSync: () => true,
+  // A trailing slash names a directory: present on disk, but not a regular file.
+  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
   writeFileSync: vi.fn(),
 }));
 

@@ -88,6 +88,13 @@ export function resolveStatsPath(statsPath: string, statsRoot: string): string {
  * modules and expose the combined files in `module.modules`; a plain module has just its own name.
  * Names that are null/undefined (e.g. externals or entries) are dropped.
  *
+ * The root is always the module's own name, never the first entry of `module.modules`. Only the
+ * module's own name is guaranteed to spell the file the record stands for: `storybook-builder-rsbuild`
+ * 3.3.0/3.3.1 fill `modules` with the record's require-contexts instead of its concatenated files, so
+ * reading the root from there yields a glob, which has no file on disk and promotes the whole record
+ * to a story importer. The concatenation suffix is stripped from every name so the root does not
+ * duplicate a member that spells the same file without it.
+ *
  * Deliberately not shared with `statsPaths` in statsAnchor.ts, which enumerates the same stats for a
  * different question. This returns each file *once*, preferring `nameForCondition`, because a second
  * spelling of the same module would become a duplicate graph node; `statsPaths` takes every spelling
@@ -99,8 +106,7 @@ export function resolveStatsPath(statsPath: string, statsRoot: string): string {
  */
 export function moduleFileNames(module: Module): string[] {
   // rspack puts the real file name in `nameForCondition` then fallback to `name` for the other builders.
-  const names = module.modules?.length
-    ? module.modules.map((m) => m.nameForCondition ?? m.name)
-    : [module.nameForCondition ?? module.name];
-  return names.filter(Boolean);
+  const root = module.nameForCondition ?? module.name;
+  const names = [root, ...(module.modules ?? []).map((m) => m.nameForCondition ?? m.name)];
+  return [...new Set(names.filter(Boolean).map((name) => stripConcatenatedModuleSuffix(name)))];
 }

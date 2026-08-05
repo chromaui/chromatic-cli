@@ -10,17 +10,33 @@ export const projectRoot = '/repo/packages/ui';
 export const outOfGraph = { configDir: '.storybook', staticDirs: ['.storybook/static'] };
 
 /**
+ * Spies on `statSync` so only the paths `isPresent` accepts read as a regular file on disk. The
+ * shared `fs` mock hardcodes every path present, so a test that needs one absent overrides it here
+ * and restores it afterwards.
+ *
+ * @param isPresent Whether the candidate path has a file on disk.
+ *
+ * @returns The spy, so the caller can restore it.
+ */
+export function mockStatSync(isPresent: (candidate: string) => boolean) {
+  return vi.spyOn(fs, 'statSync').mockImplementation((candidate) => {
+    const path = String(candidate);
+    if (!isPresent(path)) return undefined as never;
+    // A trailing slash names a directory, which is present on disk but is not a regular file.
+    return { isFile: () => !path.endsWith('/') } as fs.Stats;
+  });
+}
+
+/**
  * Runs `run` with the require-context glob absent from disk. The glob is not a file on disk;
- * everything else is, and the shared `fs` mock hardcodes `existsSync: () => true`.
+ * everything else is.
  *
  * @param run The test body.
  *
  * @returns The test body's promise.
  */
 export function withGlobAbsent(run: () => Promise<void>) {
-  const spy = vi
-    .spyOn(fs, 'existsSync')
-    .mockImplementation((candidate) => !String(candidate).includes('lazy'));
+  const spy = mockStatSync((candidate) => !candidate.includes('lazy'));
   return run().finally(() => spy.mockRestore());
 }
 
@@ -34,9 +50,7 @@ export function withGlobAbsent(run: () => Promise<void>) {
  */
 export function withSyntheticAbsent(run: () => Promise<void>) {
   const synthetic = ['storybook-stories.js', 'storybook-config-entry.js', 'lazy'];
-  const spy = vi
-    .spyOn(fs, 'existsSync')
-    .mockImplementation((candidate) => !synthetic.some((name) => String(candidate).includes(name)));
+  const spy = mockStatSync((candidate) => !synthetic.some((name) => candidate.includes(name)));
   return run().finally(() => spy.mockRestore());
 }
 

@@ -16,8 +16,17 @@ export interface Reference<T> {
  */
 export function fileHashesModule(fileHashes: Reference<Record<string, string>>) {
   return {
-    getFileHashes: (files: string[]) =>
-      Promise.resolve(Object.fromEntries(files.map((f) => [f, fileHashes.current[f] ?? 'x']))),
+    getFileHashes: (files: string[]) => {
+      // A trailing slash names a directory, which the real reader rejects; see the EISDIR guard in
+      // manifest.ts. Rejecting here too keeps the guard's test honest.
+      const directory = files.find((f) => f.endsWith('/'));
+      if (directory) {
+        return Promise.reject(new Error(`EISDIR: illegal operation on a directory, read`));
+      }
+      return Promise.resolve(
+        Object.fromEntries(files.map((f) => [f, fileHashes.current[f] ?? 'x']))
+      );
+    },
   };
 }
 

@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from 'fs';
+import { statSync, writeFileSync } from 'fs';
 import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
@@ -326,6 +326,28 @@ function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<Fi
   }
 }
 
+/**
+ * Resolves a stats module path to the absolute on-disk file to hash, or undefined when there is
+ * nothing hashable there.
+ *
+ * Virtual modules (e.g. Vite's `virtual:` entries) have no on-disk location. Beyond that, only a
+ * regular file is hashable: a builder may name a module after a directory — `storybook-builder-rsbuild`
+ * 3.3.0/3.3.1 name one `./node_modules/@storybook/react/dist/` — and reading a directory throws
+ * `EISDIR`, which fails the whole manifest to an `internalError` bail. Skipping it loses no evidence,
+ * because a directory is never a source file and so can never be edited as one. A file that exists but
+ * cannot be read still throws, and that bail is the right outcome: v1 traces it instead.
+ *
+ * @param rawPath The module name from the stats file.
+ * @param statsRoot The directory relative stats paths are named from.
+ *
+ * @returns The absolute path to hash, or undefined if there is no hashable file.
+ */
+function hashableAbsolutePath(rawPath: FilePath, statsRoot: string): string | undefined {
+  if (rawPath.includes('virtual:')) return undefined;
+  const absolutePath = resolveStatsPath(rawPath, statsRoot);
+  return statSync(absolutePath, { throwIfNoEntry: false })?.isFile() ? absolutePath : undefined;
+}
+
 async function hashFiles(
   stats: Stats,
   projectRoot: string,
@@ -343,14 +365,13 @@ async function hashFiles(
     }
   }
 
-  // Map each hashable file's canonical project-relative name to its absolute on-disk path. Virtual
-  // modules (e.g. Vite's `virtual:` entries) don't exist on disk and can't be hashed or traced.
+  // Map each hashable file's canonical project-relative name to its absolute on-disk path.
   const normalizedToAbsolute = new Map<FilePath, string>();
   for (const rawPath of rawPaths) {
-    if (rawPath.includes('virtual:')) continue;
-    const absolutePath = resolveStatsPath(rawPath, statsRoot);
-    if (!existsSync(absolutePath)) continue;
-    normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
+    const absolutePath = hashableAbsolutePath(rawPath, statsRoot);
+    if (absolutePath) {
+      normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
+    }
   }
 
   const fileHashes = await hashAbsolutePaths([...normalizedToAbsolute.values()]);

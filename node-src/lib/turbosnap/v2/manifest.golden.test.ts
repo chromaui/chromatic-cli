@@ -39,7 +39,8 @@ import { buildManifest } from './manifest';
 // The fixture names no real files, so every path in it has to read as present on disk.
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
-  existsSync: () => true,
+  // A trailing slash names a directory: present on disk, but not a regular file.
+  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
   writeFileSync: vi.fn(),
 }));
 

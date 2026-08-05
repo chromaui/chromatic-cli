@@ -9,6 +9,8 @@ import { main } from './turbosnapManifest';
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
   existsSync: () => true,
+  // A trailing slash names a directory: present on disk, but not a regular file.
+  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
 }));
 
 const { statsRef } = vi.hoisted(() => ({ statsRef: { current: {} as Stats } }));

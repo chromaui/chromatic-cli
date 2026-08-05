@@ -1,13 +1,18 @@
-import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
-import { manifestWithPreview, outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
+import {
+  manifestWithPreview,
+  mockStatSync,
+  outOfGraph,
+  projectRoot,
+} from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
-  existsSync: () => true,
+  // A trailing slash names a directory: present on disk, but not a regular file.
+  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
   writeFileSync: vi.fn(),
 }));
 
@@ -410,6 +415,72 @@ describe('buildManifest concatenated modules', () => {
       before.storyFileHashes.get('./src/Button.stories.tsx')
     );
   });
+
+  // `storybook-builder-rsbuild` 3.3.0/3.3.1 fill `modules` with the record's require-contexts rather
+  // than its concatenated files, and omit the root file. Reading the root from `modules` then yields
+  // a glob, which has no file on disk, so the whole record is promoted to a story importer and every
+  // module that imports it becomes a story file.
+  const contextsInModules: Stats = {
+    modules: [
+      {
+        id: 1,
+        name: './node_modules/storybook/dist/csf/index.js + 11 modules',
+        modules: [{ name: './node_modules/storybook/dist/csf/*.js' }],
+        reasons: [{ moduleName: './storybook-config-entry.js' }],
+      },
+      {
+        id: 2,
+        name: './node_modules/storybook/dist/instrumenter/index.js',
+        reasons: [{ moduleName: './node_modules/storybook/dist/csf/index.js + 11 modules' }],
+      },
+    ],
+  };
+
+  it('roots a module at its own name when `modules` holds contexts rather than concatenated files', async () => {
+    // The glob has no file on disk, which is what would promote the record to a story importer if
+    // the root were read from `modules`.
+    const spy = mockStatSync((candidate) => !candidate.includes('*.js'));
+
+    try {
+      fileHashesRef.current = {
+        '/repo/packages/ui/node_modules/storybook/dist/csf/index.js': 'C',
+        '/repo/packages/ui/node_modules/storybook/dist/instrumenter/index.js': 'I',
+      };
+
+      const manifest = await buildManifest(contextsInModules, projectRoot, outOfGraph);
+
+      // The record keys by its own name, so it stays a real file rather than becoming a story
+      // importer, and the module it imports is not a story file.
+      expect(manifest.files.has('./node_modules/storybook/dist/csf/index.js')).toBe(true);
+      expect([...manifest.storyFileHashes.keys()]).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('buildManifest unhashable paths', () => {
+  it('skips a module named after a directory rather than failing the build', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    // rspack names one record after a directory on `storybook-builder-rsbuild` 3.3.0/3.3.1. Reading
+    // it throws EISDIR, which would fail the whole manifest to an internalError bail.
+    const directory = '/repo/packages/ui/node_modules/@storybook/react/dist/';
+
+    fileHashesRef.current = { [story]: 'S' };
+    const manifest = await buildManifest(
+      {
+        modules: [
+          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+          { id: 2, name: story, modules: [{ name: directory }], reasons: [] },
+        ],
+      },
+      projectRoot,
+      outOfGraph
+    );
+
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/Button.stories.tsx']);
+    expect(manifest.files.has('./node_modules/@storybook/react/dist')).toBe(false);
+  });
 });
 
 describe('buildManifest suffix-equivalent story importer identity', () => {
@@ -572,11 +643,9 @@ describe('buildManifest hashFiles skip branches', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const missing = '/repo/packages/ui/src/missing.ts';
 
-    // Scoped override: the shared `fs` mock hardcodes `existsSync: () => true`, so spy on it just
-    // for this test to make `missing` appear absent from disk, then restore it.
-    const existsSyncSpy = vi
-      .spyOn(fs, 'existsSync')
-      .mockImplementation((candidate) => candidate !== missing);
+    // Scoped override: the shared `fs` mock reads every path as a file, so override it just for
+    // this test to make `missing` appear absent from disk, then restore it.
+    const existsSyncSpy = mockStatSync((candidate) => candidate !== missing);
 
     try {
       const stats: Stats = {
