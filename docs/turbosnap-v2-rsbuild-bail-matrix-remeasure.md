@@ -22,6 +22,10 @@ failed. One still bails, and its reason misnames the cause.**
 | 6 | same, entry files absent | framework `1.0.3` | synthetic | `noStoryFiles` | `unrecognizedStoryEntry` + Sentry |
 | 7 | Storybook built from the repository root | builder `3.4.0` | **real** (was synthetic) | `anchorMismatch` / `unresolvedSourceModules` | `unrecognizedStoryEntry` + Sentry |
 
+> **2026-08-05.** Rows 5 and 6 assert a layout the builder cannot emit, and rows 3, 4 and 7 all reach
+> the upload now. See [Resolution](#resolution-2026-08-05) at the end of this document; the body above
+> is the 2026-08-04 measurement, left as recorded.
+
 Rows 1 and 2 report the *framework* version because their `project.json` records no builder
 (`builderSource: "unrecorded"`) — the same gap the builder-name research ticket measured. Rows 3, 4
 and 7 resolve the builder itself, `3.4.0`, and rows 3/4 hash to the manifest the 3.4.0 ticket
@@ -87,3 +91,84 @@ file: row 4 prefixes `./` onto each raw name of `ui-rsbuild`'s stats; rows 5 and
 `./node_modules/.cache/` to `../../node_modules/.cache/` in `ui-sb8-rsbuild`'s. Row 5 additionally
 needs the two generated entry files copied to
 `turbosnap-monorepo/node_modules/.cache/storybook-rsbuild-builder/`.
+
+## Resolution (2026-08-05)
+
+Wayfinder ticket: *Decide whether the remaining rsbuild failures need a new bail reason*. CLI at
+`3499ff42`, one commit after the stats-root anchoring fix (`e4c0ba91`) that the body above predates.
+
+**No reachable rsbuild layout reports a reason that points away from its cause. The vocabulary is
+unchanged.**
+
+| Layout | Verdict at `3499ff42` | Reason names the cause? |
+| ------ | --------------------- | ----------------------- |
+| Rows 1-4 and 7 | `fallback`, upload reached | — |
+| Hoisted builder cache, repository-root build | `fallback`, upload reached | — |
+| Hoisted builder cache, package-directory build (rows 5+6) | `unrecognizedStoryEntry` + Sentry | yes, but the layout is not producible |
+| Builder `3.3.0`/`3.3.1` (shape C) | `internalError` / `manifestBuildFailed` + Sentry | no — carried by its own ticket |
+
+### Row 7 is closed on a genuine repository-root build
+
+The `e4c0ba91` anchoring fix closes it: the same rebuild the body above describes now reaches the
+upload, builder `3.4.0` resolved. Rows 1-3 also re-measured `fallback`, unchanged hashes.
+
+### The hoisted cache splits into two cells, and only one was ever reachable
+
+`e4c0ba91` accepts a hoisted cache built from the repository root — at that root the entry is spelled
+`./node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js`, which is catalogued.
+Confirmed by re-rooting `ui-sb8-rsbuild`'s real stats at the repository root with the cache left at
+`./node_modules/`: `fallback`, upload reached.
+
+The package-directory cell still bails `unrecognizedStoryEntry`, and **the builder cannot produce it.**
+The cache directory comes from `find-cache-dir` via `pkg-dir`:
+
+```js
+directory = packageDirectorySync({ cwd: process.cwd() })   // nearest package.json ABOVE cwd
+const nodeModules = getNodeModuleDirectory(directory)      // <that package>/node_modules
+return useDirectory(path.join(directory, 'node_modules', '.cache', options.name), options)
+```
+
+The cache anchors to the nearest `package.json` above cwd, never above it, and `useDirectory` mkdirs
+it when absent. So hoisting the builder *package* does not hoist its *cache*. Two measurements:
+
+- **Real build, cache deleted first.** `ui-sb8-rsbuild` with its own Storybook `8.6.18` and builder
+  `1.0.3` (`node_modules/.bin/storybook build`, *not* the workspace-root binary — that resolves
+  `10.6.0-alpha.3` and silently measures a different Storybook) recreated the cache at
+  `packages/ui-sb8-rsbuild/node_modules/.cache/`, not at the repository root, and spelled the entry
+  `./node_modules/.cache/…`.
+- **Isolated helper, package with no `node_modules` at all** — the actual hoisted layout, which the nx
+  fixture cannot show because it installs per package. `getNodeModuleDirectory` returns the
+  non-existent path rather than bailing (the guard only trips when `node_modules` exists and is
+  unwritable, or the package directory itself is unwritable), so the cache lands at
+  `<package>/node_modules/.cache/` and the entry is `./node_modules/.cache/…` — catalogued.
+
+Rows 5 and 6 are kept as the record of what `unrecognizedStoryEntry` guards, marked unreachable.
+The bail is not dead code: `find-cache-dir` honours a `CACHE_DIR` environment variable, so a CI system
+pointing it outside the project would produce an uncatalogued spelling, and the bail is the loud
+failure the entry-contract ticket wanted if upstream moves the entry again.
+
+### A third stats root exists, was measured, and is declined
+
+A build whose cwd is neither the package nor the repository root — `cd packages && storybook build -c
+ui-sb8-rsbuild/.storybook`, real, not a transform — names its sources `./ui-sb8-rsbuild/src/…`. They
+resolve under neither candidate root, so `getStatsRoot` falls back to `projectRoot` and the build bails
+`anchorMismatch` / `unresolvedSourceModules`. That reason is literally true and is v1's own predicate,
+but it points at "the stats describe another project" when the cause is that cwd was never tried.
+
+Declined rather than named. The stats-root survey established that npm, pnpm, Yarn and `nx:run-script`
+all build from the package directory, and `nx:run-commands` without an explicit `cwd` builds from the
+repository root — both supported. No tooling default produces an intermediate cwd, and the cell fails
+safe to v1. If one is ever observed, the fix is a subreason separating an untried stats root from a
+genuine wrong-project anchor, not a new top-level reason.
+
+### What the audience for a new reason would have been
+
+Flag-only bail reasons print nothing to the customer: `formatBailReason`
+(`node-src/ui/messages/info/tracedAffectedFiles.ts`) renders only the four file-carrying reasons, so
+`unrecognizedStoryEntry` reaches a human through Sentry and the analytics payload alone. The evidence
+is already attached there — `v2/index.ts` sets a `turboSnapUnrecognizedStoryEntry` context with the
+exact entry spellings and repeats them in the error message. There was no missing evidence to enrich.
+
+The `storyFileHashes.size === 0` guard on that bail cannot silently hide partial coverage on rsbuild: a
+mixed build needs one generated entry hoisted and the other not, and both live in the same cache
+directory.
