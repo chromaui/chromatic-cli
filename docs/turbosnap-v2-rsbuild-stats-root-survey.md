@@ -13,6 +13,10 @@ repository-root-relative names.
 **And v2 does not yet handle that case.** A repository-root build resolves its stats root correctly but
 then bails `unrecognizedStoryEntry`, uploading nothing. The fallback added in `6ad8d9d6` is incomplete.
 
+> **Resolved 2026-08-05 in `e4c0ba91`.** Everything below is the survey as measured on 2026-08-04 and
+> is left unedited as that record — so the bail in the table and the open question in *The hole* both
+> describe the state *before* the fix. See [Resolution](#resolution) at the end for what shipped.
+
 ## Why cwd is the only variable
 
 Two mechanisms name modules, and both anchor at cwd:
@@ -116,3 +120,85 @@ cd ~/Projects/turbosnap-monorepo
 
 Then run `traceChangedFiles` with `projectRoot=packages/ui-rsbuild`,
 `repositoryRoot=~/Projects/turbosnap-monorepo` and that stats file.
+
+## Resolution
+
+Decided and shipped 2026-08-05 in `e4c0ba91`. **The catalogue anchors at `statsRoot`, and
+`canonicalEntry` is deleted** — with `statsRoot` passed it is character-for-character `canonical`, so the
+fix removes the second canonicaliser rather than adding an argument.
+
+The reasoning that settled it is what `STORIES_ENTRY_FILES` already contains:
+
+```ts
+'./node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
+'virtual:@storybook/builder-vite/storybook-stories.js',
+```
+
+Those are not claims about project layout — nobody chose to put an entry in `node_modules/.cache`. They
+are transcriptions of builder output. The catalogue is a list of **raw stats spellings**, and raw
+spellings anchor at cwd, which is `statsRoot`. Anchoring them at `projectRoot` is right only by accident,
+when cwd happens to *be* the project. This is F1's lesson one level up: F1 stopped comparing a raw
+spelling against a canonical key; this stops comparing canonical-at-project against canonical-at-stats.
+
+**Safe by construction, not only by measurement.** `normalizeStatsPath`'s signature is
+`(statsPath, projectRoot, statsRoot = projectRoot)`, so when `statsRoot === projectRoot` the two helpers
+*are* the same function. Bail-matrix rows 1–6 are all package-directory builds, so the change cannot
+reach them — which is why exactly one test moved.
+
+### Measured: full manifest, real `ui-rsbuild` builder 3.4.0 stats, both build roots
+
+| Build cwd | catalogue at `projectRoot` (before) | catalogue at `statsRoot` (after) |
+| --- | --- | --- |
+| package dir | `a72d0a20837766e8`, 3 stories, 203 files | **identical** |
+| repository root | `1414a3ff3f91577f`, **0** stories, 203 files | `a72d0a20837766e8`, **3** stories, 203 files |
+| whole manifest, package dir === repo root | false | **true** |
+
+The file keys were never wrong: `files` is 203 with identical keys in every cell, because `canonical`
+already resolved through `statsRoot` and back out to `projectRoot`. Only story classification diverged,
+and it moved `storybookHash`. **Build location has stopped being an input to the manifest.** The
+repository-root build now uploads exactly the package-directory build's keys:
+
+```
+./src/lib/Badge/Badge.stories.tsx
+./src/lib/Button/Button.stories.tsx
+./src/lib/UserCard/UserCard.stories.tsx
+```
+
+### Row 7's bail was misnamed, not unnamed
+
+It reported `unrecognizedStoryEntry` naming `../../storybook-stories.js`, but `./storybook-stories.js`
+**is** in the catalogue. The catalogue was complete; only the anchor was wrong. So the repository-root
+layout needed no new bail reason — it needed the comparison fixed.
+
+### A second case closes for free
+
+A **repository-root build with a hoisted builder cache** was never measured before, and it is now
+accepted: the catalogue's `./node_modules/.cache/…` resolves from the repository root and meets the
+hoisted spelling. That leaves a deliberate asymmetry — the *same physical hoisted entry* is recognised
+from a repository-root build and refused from a package-directory build, where it is spelled
+`../../node_modules/.cache/…`. That is the F2 ruling working as chosen (an unknown generated entry above
+a lazy context bails loudly with Sentry), so it was not reopened. It is now pinned by a test, so it is
+deliberate rather than accidental.
+
+### The test was fixed on both defects
+
+`index.statsRoot.test.ts` was unrepresentative twice over, as the section above predicted for the entry
+spelling — and in a second way that section did not catch: **it had no lazy require-context at all**, so
+the story named the entry directly. That is the Vite shape, not the rsbuild shape, so it bailed
+`noStoryFiles` and could never have reproduced row 7's real verdict. Re-based on measured builder 3.4.0
+output as a real `entry → context → story` chain, now five cases:
+
+1. repository-root build uploads project-relative story keys — re-based
+2. package-directory build unchanged
+3. bails when source modules resolve under neither known root — unchanged
+4. **new** — repository-root build recognises a hoisted builder cache entry
+5. **new** — package-directory build refuses one, pinning the asymmetry
+
+`yarn vitest run node-src/lib/turbosnap`: 370 passed, 28 files. `yarn typescript:check` and
+`yarn lint --quiet` both silent.
+
+### Correction this resolution makes to the map
+
+**`entry relocation` follows cwd, not the project root** — as *`6ad8d9d6`'s own test* above already
+noted. Sources move with cwd and the generated entry does not, and that asymmetry is the entire
+mechanism of this bug.
