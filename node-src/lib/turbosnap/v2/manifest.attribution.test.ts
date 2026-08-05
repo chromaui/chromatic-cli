@@ -430,3 +430,103 @@ describe('buildManifest attribution closure', () => {
     });
   });
 });
+
+describe('buildManifest story detection of swept node_modules stories', () => {
+  // On storybook-builder-rsbuild 1.x–3.3.x, a stories glob whose directory prefix is not
+  // slash-bounded lets rspack's require-context sweep a dependency's story into the graph: core
+  // prepends `(?!.*node_modules)` but strips the `^`, so the unanchored guard matches after the
+  // `node_modules` segment. Storybook's indexer applies `ignore: ["**/node_modules/**"]` to the same
+  // glob, so the swept story is absent from `index.json` and its key can never be matched.
+  const sweepingGlob = String.raw`..|lazy|/^\.\/.*$/|include: /(?!.*node_modules)…/|namespace object`;
+  const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
+  const swept = '/repo/packages/ui/node_modules/fake-dep/Widget.stories.tsx';
+  const shared = '/repo/packages/ui/node_modules/react-dom/index.js';
+
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: sweepingGlob, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: story, reasons: [{ moduleName: sweepingGlob }] },
+      { id: 3, name: swept, reasons: [{ moduleName: sweepingGlob }] },
+      { id: 4, name: shared, reasons: [{ moduleName: swept }] },
+    ],
+  };
+
+  it('does not treat a swept node_modules story as a story file', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
+      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
+    });
+  });
+
+  it('leaves the swept story subtree in the globals catch-all rather than draining it', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
+      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+      // The drain: were the swept story a story file, its subtree would be story-reachable and so
+      // absent from the catch-all, and a change to the shared runtime would move nothing the Index
+      // can match.
+      expect([...manifest.attribution.storybookGlobals]).toEqual(
+        expect.arrayContaining([
+          './node_modules/fake-dep/Widget.stories.tsx',
+          './node_modules/react-dom/index.js',
+        ])
+      );
+      expect([...manifest.attribution.storyReachable]).toEqual(['./src/lib/Button.stories.tsx']);
+    });
+  });
+
+  it('recaptures a change to a shared runtime file the swept story imports', async () => {
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
+      const before = await buildManifest(stats, projectRoot, outOfGraph);
+      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R2' };
+      const after = await buildManifest(stats, projectRoot, outOfGraph);
+
+      expect(after.storybookFiles.get('<storybookGlobals>')).not.toBe(
+        before.storybookFiles.get('<storybookGlobals>')
+      );
+    });
+  });
+
+  it('keeps a node_modules story a deliberate node_modules glob asked for', async () => {
+    // A glob naming `node_modules` (e.g. `../node_modules/@myorg/ui/**/*.stories.js`) is indexed by
+    // core — `commonGlobOptions` applies no ignore — and the builder emits the include regex raw,
+    // with no lookahead. The context is rooted in `node_modules`, so the sweep is intentional and
+    // the story key is real and matchable.
+    const deliberateGlob = String.raw`./node_modules/@myorg/ui|lazy|/^\.\/.*$/|namespace object`;
+    const shipped = '/repo/packages/ui/node_modules/@myorg/ui/Button.stories.js';
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [shipped]: 'D' };
+      const manifest = await buildManifest(
+        {
+          modules: [
+            { id: 1, name: deliberateGlob, reasons: [{ moduleName: './storybook-stories.js' }] },
+            { id: 2, name: shipped, reasons: [{ moduleName: deliberateGlob }] },
+          ],
+        },
+        projectRoot,
+        outOfGraph
+      );
+      expect([...manifest.storyFileHashes.keys()]).toEqual([
+        './node_modules/@myorg/ui/Button.stories.js',
+      ]);
+    });
+  });
+
+  it('keeps a node_modules story imported directly by the stories entry', async () => {
+    // Vite has no require-context: `storybook-stories.js` imports the matched files directly, and
+    // that list comes from the same glob resolution the indexer uses. So a node_modules story there
+    // is deliberate by construction and must survive.
+    const shipped = '/repo/packages/ui/node_modules/@myorg/ui/Button.stories.js';
+    fileHashesRef.current = { [shipped]: 'D' };
+    const manifest = await buildManifest(
+      { modules: [{ id: 1, name: shipped, reasons: [{ moduleName: './storybook-stories.js' }] }] },
+      projectRoot,
+      outOfGraph
+    );
+    expect([...manifest.storyFileHashes.keys()]).toEqual([
+      './node_modules/@myorg/ui/Button.stories.js',
+    ]);
+  });
+});

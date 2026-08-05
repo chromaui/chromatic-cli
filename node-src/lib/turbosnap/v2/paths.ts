@@ -1,5 +1,6 @@
 import path from 'path';
 
+import { Module } from '../../../types';
 import { posix } from '../../posix';
 
 // Webpack/rspack concatenate modules and label the combined module with the root file plus a
@@ -80,4 +81,26 @@ function prefixInProjectPath(relativePath: string): string {
 export function resolveStatsPath(statsPath: string, statsRoot: string): string {
   const stripped = stripConcatenatedModuleSuffix(statsPath).replace(/^\.\//, '');
   return path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
+}
+
+/**
+ * Returns the real source files a stats module represents, root first. Webpack/rspack concatenate
+ * modules and expose the combined files in `module.modules`; a plain module has just its own name.
+ * Names that are null/undefined (e.g. externals or entries) are dropped.
+ *
+ * Deliberately not shared with `statsPaths` in statsAnchor.ts, which enumerates the same stats for a
+ * different question. This returns each file *once*, preferring `nameForCondition`, because a second
+ * spelling of the same module would become a duplicate graph node; `statsPaths` takes every spelling
+ * because it is gathering evidence and only asks whether any one of them witnesses a mismatch.
+ *
+ * @param module The stats module to read file names from.
+ *
+ * @returns The module's real file names, or an empty array if it has none.
+ */
+export function moduleFileNames(module: Module): string[] {
+  // rspack puts the real file name in `nameForCondition` then fallback to `name` for the other builders.
+  const names = module.modules?.length
+    ? module.modules.map((m) => m.nameForCondition ?? m.name)
+    : [module.nameForCondition ?? module.name];
+  return names.filter(Boolean);
 }
