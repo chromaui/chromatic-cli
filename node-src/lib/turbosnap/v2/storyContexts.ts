@@ -139,15 +139,15 @@ export function collectStoryImporters(
   unrecognizedStoryEntries: FilePath[];
 } {
   const canonical = (name: string) => normalizeStatsPath(name, projectRoot, statsRoot);
-  const canonicalEntry = (name: string) => normalizeStatsPath(name, projectRoot);
-  // The stories entry directly imports stories (Vite), so it is a story importer on its own. The
-  // config entry only helps locate the require-context, so it is not. Both are canonicalised because
-  // a builder may spell its own entry either way: rsbuild names the same module both
-  // `storybook-stories.js` and `./storybook-stories.js`, and the raw spelling never matched.
+  // The stories entry directly imports stories (Vite), so it is a story importer on its own; the
+  // config entry only helps locate the require-context, so it is not. The catalogue holds raw builder
+  // spellings, which anchor at the build's cwd (`statsRoot`), so both sides of the comparison
+  // canonicalise the same way: rsbuild spells the same entry both `storybook-stories.js` and
+  // `./storybook-stories.js`, and the raw spelling never matched.
   const entryFiles = new Set(
-    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonicalEntry(name))
+    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonical(name))
   );
-  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonicalEntry(name)));
+  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonical(name)));
   const contextsExcludingNodeModules = new Set<string>();
   const unrecognizedStoryEntries = new Set<FilePath>();
   for (const module of stats.modules) {

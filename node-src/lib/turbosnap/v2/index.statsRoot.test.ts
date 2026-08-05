@@ -7,6 +7,32 @@ import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
 import { traceChangedFiles } from './index';
 
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(),
+  setContext: vi.fn(),
+}));
+
+vi.mock('../v1/captureBailException', () => ({
+  captureBailException: vi.fn(() => 'sentry-event-id'),
+}));
+
+// The generated stories entry sits at the build's cwd, so the same spelling serves both layouts. Its
+// importer reference drops the `./` prefix, exactly as builder 3.4.0 writes it.
+const STORIES_ENTRY = 'storybook-stories.js';
+
+// Hoisted builder cache entries, spelled from each layout's cwd.
+const REPOSITORY_ROOT_CACHE_ENTRY =
+  './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js';
+const PROJECT_ROOT_CACHE_ENTRY =
+  '../../node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js';
+
+// The lazy require-context the rsbuild builder generates in place of direct story imports. It is not
+// a file on disk, and its directory prefix names no `node_modules` segment, so it counts as a context
+// that excluded `node_modules`.
+const CONTEXT_SUFFIX = String.raw`|lazy|/^\.\/.*$/|include: /(?!.*node_modules)stories/|exclude: /[\\/]node_modules[\\/]/|namespace object`;
+const REPOSITORY_ROOT_CONTEXT = `./packages/ui/src${CONTEXT_SUFFIX}`;
+const PROJECT_ROOT_CONTEXT = `./src${CONTEXT_SUFFIX}`;
+
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -18,11 +44,12 @@ afterEach(() => {
 describe('traceChangedFiles stats root', () => {
   it('uploads project-relative story keys when rsbuild names modules from the repository root', async () => {
     const { runQuery } = await trace(
-      stats(
-        'packages/ui/src/Button.stories.tsx',
-        'packages/ui/storybook-stories.js',
-        'node_modules/react/index.js'
-      )
+      stats({
+        story: './packages/ui/src/Button.stories.tsx',
+        context: REPOSITORY_ROOT_CONTEXT,
+        entry: STORIES_ENTRY,
+        dependency: './node_modules/react/index.js',
+      })
     );
 
     expect(uploadedStoryFileHashes(runQuery)).toEqual({
@@ -32,11 +59,12 @@ describe('traceChangedFiles stats root', () => {
 
   it('keeps project-root-relative stats on the project root', async () => {
     const { runQuery } = await trace(
-      stats(
-        './src/Button.stories.tsx',
-        './storybook-stories.js',
-        '../../node_modules/react/index.js'
-      )
+      stats({
+        story: './src/Button.stories.tsx',
+        context: PROJECT_ROOT_CONTEXT,
+        entry: STORIES_ENTRY,
+        dependency: '../../node_modules/react/index.js',
+      })
     );
 
     expect(uploadedStoryFileHashes(runQuery)).toEqual({
@@ -46,11 +74,12 @@ describe('traceChangedFiles stats root', () => {
 
   it('bails when source modules resolve under neither known root', async () => {
     const { result, runQuery } = await trace(
-      stats(
-        'packages/ui/src/Missing.stories.tsx',
-        'packages/ui/storybook-stories.js',
-        'node_modules/react/index.js'
-      )
+      stats({
+        story: './packages/ui/src/Missing.stories.tsx',
+        context: REPOSITORY_ROOT_CONTEXT,
+        entry: STORIES_ENTRY,
+        dependency: './node_modules/react/index.js',
+      })
     );
 
     expect(result).toEqual({
@@ -61,17 +90,61 @@ describe('traceChangedFiles stats root', () => {
     });
     expect(runQuery).not.toHaveBeenCalled();
   });
+
+  it('recognizes a hoisted builder cache entry on a repository-root build', async () => {
+    const { runQuery } = await trace(
+      stats({
+        story: './packages/ui/src/Button.stories.tsx',
+        context: REPOSITORY_ROOT_CONTEXT,
+        entry: REPOSITORY_ROOT_CACHE_ENTRY,
+        dependency: './node_modules/react/index.js',
+      })
+    );
+
+    expect(uploadedStoryFileHashes(runQuery)).toEqual({
+      './src/Button.stories.tsx': expect.any(String),
+    });
+  });
+
+  // The catalogue holds raw builder spellings, so the same physical hoisted entry is recognized from
+  // a repository-root build and refused from a package-directory build.
+  it('refuses a hoisted builder cache entry on a package-directory build', async () => {
+    const { result, runQuery } = await trace(
+      stats({
+        story: './src/Button.stories.tsx',
+        context: PROJECT_ROOT_CONTEXT,
+        entry: PROJECT_ROOT_CACHE_ENTRY,
+        dependency: '../../node_modules/react/index.js',
+      })
+    );
+
+    expect(result).toEqual({
+      status: 'bailed',
+      turboSnap: {
+        bailReason: { unrecognizedStoryEntry: true, sentryEventId: 'sentry-event-id' },
+      },
+    });
+    expect(runQuery).not.toHaveBeenCalled();
+  });
 });
 
-function stats(storyName: string, storyImporter: string, dependencyName: string): Stats {
+interface StoryChain {
+  /** The story module's own name. */
+  story: string;
+  /** The lazy require-context that imports the story. */
+  context: string;
+  /** The generated entry that imports the context. */
+  entry: string;
+  /** A `node_modules` module the story imports. */
+  dependency: string;
+}
+
+function stats({ story, context, entry, dependency }: StoryChain): Stats {
   return {
     modules: [
-      { id: 1, name: storyName, reasons: [{ moduleName: storyImporter }] },
-      {
-        id: 2,
-        name: dependencyName,
-        reasons: [{ moduleName: storyName }],
-      },
+      { id: 1, name: story, reasons: [{ moduleName: context }] },
+      { id: 2, name: context, reasons: [{ moduleName: entry }] },
+      { id: 3, name: dependency, reasons: [{ moduleName: story }] },
     ],
   };
 }
