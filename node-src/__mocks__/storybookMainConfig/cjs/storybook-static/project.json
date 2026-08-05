@@ -1,0 +1,66 @@
+{
+  "generatedAt": 1717341501873,
+  "builder": {
+    "name": "webpack4"
+  },
+  "hasCustomBabel": false,
+  "hasCustomWebpack": true,
+  "hasStaticDirs": true,
+  "hasStorybookEslint": false,
+  "refCount": 0,
+  "monorepo": "Turborepo",
+  "packageManager": {
+    "type": "yarn",
+    "version": "1.22.19"
+  },
+  "features": {
+    "postcss": false,
+    "interactionsDebugger": true,
+    "warnOnLegacyHierarchySeparator": false
+  },
+  "storybookVersion": "6.5.16",
+  "language": "javascript",
+  "storybookPackages": {
+    "@storybook/addon-actions": {
+      "version": "6.5.16"
+    },
+    "@storybook/addons": {
+      "version": "6.5.16"
+    },
+    "@storybook/builder-webpack4": {
+      "version": "6.5.16"
+    },
+    "@storybook/manager-webpack4": {
+      "version": "6.5.16"
+    },
+    "@storybook/react": {
+      "version": "6.5.16"
+    },
+    "@storybook/testing-library": {
+      "version": "0.0.13"
+    },
+    "@storybook/theming": {
+      "version": "6.5.16"
+    },
+    "msw-storybook-addon": {
+      "version": "1.7.0"
+    },
+    "storybook-mock-date-decorator": {
+      "version": "1.0.0"
+    }
+  },
+  "framework": {
+    "name": "react"
+  },
+  "addons": {
+    "@storybook/addon-links": {
+      "version": "6.5.16"
+    },
+    "@storybook/addon-essentials": {
+      "version": "6.5.16"
+    },
+    "@storybook/addon-interactions": {
+      "version": "6.5.16"
+    }
+  }
+}
