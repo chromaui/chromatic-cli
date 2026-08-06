@@ -158,6 +158,11 @@ async function step(
     `step: candidateCommits: ${candidateCommits}, visitedCommitsWithoutBuilds: ${visitedCommitsWithoutBuilds}`
   );
 
+  const hitBoundaries = candidateCommits?.filter((c) => git.shallowBoundaryCommits?.includes(c));
+  if (hitBoundaries?.length) {
+    log.debug({ hitBoundaries }, `step: reached shallow boundary commit(s) during walk`);
+  }
+
   // No more commits uncovered commitsWithBuilds!
   if (!candidateCommits?.length) {
     log.debug('step: no candidateCommits; we are done');
@@ -255,8 +260,9 @@ export async function getParentCommits(
       log.debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
       initialCommitsWithBuilds.push(lastBuild.commit);
     } else {
+      const isShallowBoundary = git.shallowBoundaryCommits?.includes(lastBuild.commit);
       log.debug(
-        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to parents`
+        `Last branch build commit ${lastBuild.commit} not in index${isShallowBoundary ? ' (shallow boundary)' : ''}, blindly appending to parents`
       );
       extraParentCommits.push(lastBuild.commit);
     }
@@ -299,8 +305,9 @@ export async function getParentCommits(
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
       } else {
+        const isShallowBoundary = git.shallowBoundaryCommits?.includes(lastHeadBuildCommit);
         log.debug(
-          `Merged PR build commit ${lastHeadBuildCommit} not in index, blindly appending to parents`
+          `Merged PR build commit ${lastHeadBuildCommit} not in index${isShallowBoundary ? ' (shallow boundary)' : ''}, blindly appending to parents`
         );
         extraParentCommits.push(lastHeadBuildCommit);
       }

@@ -14,10 +14,13 @@ import {
   getBranch,
   getChangedFiles,
   getChangedFilesWithStatus,
+  getCloneDepth,
+  getCloneFilter,
   getCommit,
   getCommittedFileCount,
   getNumberOfCommitters,
   getRepositoryCreationDate,
+  getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
@@ -28,6 +31,7 @@ import {
 } from './git';
 
 vi.mock('./execGit');
+vi.mock('fs/promises', () => ({ readFile: vi.fn() }));
 vi.mock('tmp-promise', () => ({
   file: vi.fn().mockResolvedValue({ path: '/tmp/fake-target' }),
 }));
@@ -35,6 +39,9 @@ vi.mock('tmp-promise', () => ({
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { readFile } = vi.mocked(await import('fs/promises'));
 
 const ctx = { log: new TestLogger() };
 
@@ -359,5 +366,54 @@ describe('getCommittedFileCount', () => {
   it('parses the count successfully', async () => {
     execGitCommandCountLines.mockResolvedValue(17);
     expect(await getCommittedFileCount(ctx, ['page', 'screen'], ['js', 'ts'])).toEqual(17);
+  });
+});
+
+describe('getCloneDepth', () => {
+  it('returns shallow when git reports true', async () => {
+    execGitCommandOneLine.mockResolvedValue('true');
+    expect(await getCloneDepth(ctx)).toBe('shallow');
+  });
+
+  it('returns full when git reports false', async () => {
+    execGitCommandOneLine.mockResolvedValue('false');
+    expect(await getCloneDepth(ctx)).toBe('full');
+  });
+});
+
+describe('getShallowBoundaryCommits', () => {
+  it('returns the boundary commits listed in the shallow file', async () => {
+    execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');
+    readFile.mockResolvedValue('abc1234\ndef5678\n');
+    expect(await getShallowBoundaryCommits(ctx)).toEqual(['abc1234', 'def5678']);
+  });
+
+  it('returns an empty array when the shallow file does not exist', async () => {
+    execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');
+    readFile.mockRejectedValue(new Error('ENOENT'));
+    expect(await getShallowBoundaryCommits(ctx)).toEqual([]);
+  });
+
+  it('returns an empty array for an empty shallow file', async () => {
+    execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');
+    readFile.mockResolvedValue('');
+    expect(await getShallowBoundaryCommits(ctx)).toEqual([]);
+  });
+});
+
+describe('getCloneFilter', () => {
+  it('returns blobless when the filter is blob:none', async () => {
+    execGitCommandOneLine.mockResolvedValue('blob:none');
+    expect(await getCloneFilter(ctx)).toBe('blobless');
+  });
+
+  it('returns treeless when the filter is tree:0', async () => {
+    execGitCommandOneLine.mockResolvedValue('tree:0');
+    expect(await getCloneFilter(ctx)).toBe('treeless');
+  });
+
+  it('returns full when no filter is configured (git config exits non-zero)', async () => {
+    execGitCommandOneLine.mockRejectedValue(new Error('exit code 1'));
+    expect(await getCloneFilter(ctx)).toBe('full');
   });
 });

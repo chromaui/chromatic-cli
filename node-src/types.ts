@@ -171,6 +171,17 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+/** Whether the clone has full or truncated commit history. */
+export type CloneDepth = 'full' | 'shallow';
+
+/**
+ * Whether git objects are fully present or filtered at clone time.
+ * - `'full'` — all objects fetched (standard clone)
+ * - `'blobless'` — file contents fetched on demand (`--filter=blob:none`)
+ * - `'treeless'` — tree and blob objects fetched on demand (`--filter=tree:0`)
+ */
+export type CloneFilter = 'full' | 'blobless' | 'treeless';
+
 export interface Git {
   version?: string;
   /** The absolute location on disk of the git project */
@@ -193,6 +204,16 @@ export interface Git {
   replacementBuildIds?: [string, string][];
   matchesBranch?: (glob: boolean | string) => boolean;
   packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+  /** Whether commit history was truncated at clone time (`git clone --depth`). */
+  cloneDepth?: CloneDepth;
+  /**
+   * Commits present in the clone whose parents were not fetched (the shallow boundary).
+   * Only set when `cloneDepth` is `'shallow'`. Each SHA is a commit that exists locally
+   * but whose parent commits are absent from the repository.
+   */
+  shallowBoundaryCommits?: string[];
+  /** Whether object fetching is filtered at clone time (`git clone --filter`). */
+  cloneFilter?: CloneFilter;
 }
 
 export interface ProjectMetadata {

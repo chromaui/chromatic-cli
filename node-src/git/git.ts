@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { readFile } from 'fs/promises';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
@@ -9,6 +10,7 @@ import {
   BaselineCheckoutFailedError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
+import { CloneDepth, CloneFilter } from '../types';
 import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
   execGitCommand,
@@ -649,4 +651,61 @@ export async function getCommittedFileCount(
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Determine whether the current repository has a shallow clone (truncated commit history).
+ *
+ * Uses `git rev-parse --is-shallow-repository` (available since Git 2.15). Throws on older Git
+ * versions or unexpected failures, so callers should handle errors and treat them as unknown.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns `'shallow'` if the repository has truncated history, `'full'` otherwise.
+ */
+export async function getCloneDepth(deps: GitDeps): Promise<CloneDepth> {
+  const result = await execGitCommandOneLine(deps, `git rev-parse --is-shallow-repository`);
+  return result.trim() === 'true' ? 'shallow' : 'full';
+}
+
+/**
+ * Return the shallow boundary commits: commits that are present locally but whose parents were
+ * not fetched. These are the SHAs listed in the `.git/shallow` file.
+ *
+ * The file path is resolved via `git rev-parse --git-path shallow` so that git worktrees are
+ * handled correctly. If the file does not exist (i.e. the repository is not shallow) an empty
+ * array is returned.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns A list of commit SHAs at the shallow boundary, or `[]` for a non-shallow repository.
+ */
+export async function getShallowBoundaryCommits(deps: GitDeps): Promise<string[]> {
+  const shallowFilePath = await execGitCommandOneLine(deps, `git rev-parse --git-path shallow`);
+  const contents = await readFile(shallowFilePath.trim(), 'utf8').catch(() => '');
+  return contents.split(newline).filter(Boolean);
+}
+
+/**
+ * Determine whether the repository uses a partial clone filter, and if so which kind.
+ *
+ * Reads `remote.origin.partialclonefilter` from the git config. Git exits non-zero when the key
+ * is absent (i.e. for a standard full clone), so the non-zero case is treated as `'full'`.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns
+ *   - `'blobless'` when cloned with `--filter=blob:none`
+ *   - `'treeless'` when cloned with `--filter=tree:0`
+ *   - `'full'` for a standard clone (no filter configured)
+ */
+export async function getCloneFilter(deps: GitDeps): Promise<CloneFilter> {
+  // git config exits non-zero when the key is absent, which is the normal case for a full clone.
+  const result = await execGitCommandOneLine(
+    deps,
+    `git config remote.origin.partialclonefilter`
+  ).catch(() => '');
+  if (result.trim() === 'blob:none') return 'blobless';
+  if (result.trim() === 'tree:0') return 'treeless';
+  return 'full';
 }
