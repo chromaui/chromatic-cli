@@ -274,6 +274,52 @@ describe('getAnchorMismatchReason', () => {
     ).toMatchObject({ subreason: 'unresolvedSourceModules' });
   });
 
+  it('refuses an anchor witnessed only by the config directory, which every project has', () => {
+    const { repository } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+    });
+    // A decoy root: it has the boilerplate `.storybook/preview.ts` every project has at the same
+    // path, but none of the real source files the stats also name.
+    const decoy = path.join(repository, 'packages/decoy');
+    mkdirSync(path.join(decoy, '.storybook'), { recursive: true });
+    writeFileSync(path.join(decoy, '.storybook/preview.ts'), 'export const parameters = {};\n');
+
+    expect(
+      getAnchorMismatchReason(VITE_STATS, {
+        projectRoot: decoy,
+        builderName: '@storybook/react-vite',
+        configDir: '.storybook',
+      })
+    ).toMatchObject({ subreason: 'unresolvedSourceModules' });
+  });
+
+  it('refuses an anchor where every source module is absolute-spelled and points elsewhere', () => {
+    const { roots } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+    });
+    // Every name is absolute and lives under a different package entirely — none can resolve under
+    // `ui`, so this must count as missing evidence rather than being discarded before counting.
+    const otherPackage = path.join(roots.ui, '..', 'other-package');
+    const absoluteStats = {
+      modules: [
+        { id: 1, name: path.join(otherPackage, 'src/lib/Badge/Badge.stories.tsx'), reasons: [] },
+        {
+          id: 2,
+          name: path.join(otherPackage, 'src/lib/Badge/Badge.tsx'),
+          reasons: [{ moduleName: path.join(otherPackage, 'src/lib/Badge/Badge.stories.tsx') }],
+        },
+      ],
+    } as unknown as Stats;
+
+    expect(
+      getAnchorMismatchReason(absoluteStats, {
+        projectRoot: roots.ui,
+        builderName: '@storybook/react-webpack5',
+        configDir: '.storybook',
+      })
+    ).toMatchObject({ subreason: 'unresolvedSourceModules' });
+  });
+
   describe('modules bundled by concatenation', () => {
     // Webpack and rspack fold several real files into one module and expose them in `module.modules`.
     // The wrapper's own name is a synthetic label that resolves nowhere, so the anchor evidence lives
