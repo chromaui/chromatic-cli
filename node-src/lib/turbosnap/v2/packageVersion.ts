@@ -6,7 +6,8 @@ import path from 'path';
  * Reads a package's installed version from its own `package.json`, resolved from the project root.
  *
  * Resolves the package's manifest rather than a path inside it: `dist/*` entries are often absent
- * from the `exports` map, so resolving one fails with ERR_PACKAGE_PATH_NOT_EXPORTED. The manifest is
+ * from the `exports` map, so resolving one fails with ERR_PACKAGE_PATH_NOT_EXPORTED. A package that
+ * does not export `./package.json` either still fails, and reports no version. The manifest is
  * then read off disk rather than `require`d, which keeps it out of the require cache. Resolution
  * walks up from the project root, so a workspace-hoisted install is found too.
  *

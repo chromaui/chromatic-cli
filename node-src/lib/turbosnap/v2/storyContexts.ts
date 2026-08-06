@@ -136,8 +136,9 @@ export function collectStoryImporters(
       if (isLazyContext(module.name) && excludesNodeModules(module.name)) {
         contextsExcludingNodeModules.add(canonical(module.name));
       }
-    } else
+    } else {
       collectUnrecognizedStoryEntries(module.name, importers, hashes, unrecognizedStoryEntries);
+    }
   }
   return {
     storyImporters,
