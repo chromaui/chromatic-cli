@@ -18,6 +18,15 @@ export interface StorybookDirectories {
   staticDirs: string[];
 }
 
+/**
+ * The main config files v2 parses, adding `main.mjs` and `main.cjs` to the shared pattern.
+ *
+ * `require()` only auto-appends `.js`/`.json`/`.node` to an extensionless path, so those two reach
+ * the AST parser or nothing at all. The wider pattern lives here rather than in
+ * `getStorybookMetadata` so parsing them cannot add fields to `ctx.storybook` that v1 reads.
+ */
+const V2_MAIN_CONFIG_PATTERN = /^main\.[cm]?[jt]sx?$/;
+
 export interface StorybookDirectoriesInput {
   /** The absolute Storybook project root the directories are relative to. */
   projectRoot: string;
@@ -63,7 +72,11 @@ export async function readStorybookDirectories({
 
   // Returns nothing when the config can't be read or declares no `staticDirs` — the same blind spot
   // a real build has, and deliberately not papered over here.
-  const mainConfig = await readMainConfig(path.resolve(projectRoot, configDirectory), log);
+  const mainConfig = await readMainConfig(
+    path.resolve(projectRoot, configDirectory),
+    log,
+    V2_MAIN_CONFIG_PATTERN
+  );
   const { staticDir } = findStaticDirectories(mainConfig, configDirectory);
 
   return {

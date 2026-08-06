@@ -1,8 +1,12 @@
 import { readJson } from 'fs-extra';
+import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MainConfigReader, readMainConfig } from '../getStorybookMetadata';
 import { readStorybookDirectories } from './storybookDirectories';
+
+const { readMainConfig: readMainConfigActual } =
+  await vi.importActual<typeof import('../getStorybookMetadata')>('../getStorybookMetadata');
 
 vi.mock('fs-extra', () => ({
   readJson: vi.fn(),
@@ -79,7 +83,11 @@ describe('readStorybookDirectories', () => {
     await expect(
       readStorybookDirectories({ projectRoot: '/project', log, configDir: '.storybook-explicit' })
     ).resolves.toEqual({ configDir: '.storybook-explicit', staticDirs: [] });
-    expect(readMainConfig).toHaveBeenCalledWith('/project/.storybook-explicit', log);
+    expect(readMainConfig).toHaveBeenCalledWith(
+      '/project/.storybook-explicit',
+      log,
+      expect.any(RegExp)
+    );
   });
 
   it('lets explicit static directories replace the derived ones without reading the config', async () => {
@@ -109,6 +117,30 @@ describe('readStorybookDirectories', () => {
     await expect(readStorybookDirectories({ projectRoot: '/project', log })).resolves.toEqual({
       configDir: '.storybook',
       staticDirs: [],
+    });
+  });
+});
+
+// Real fixture projects, because which extensions reach the AST parser depends on whether
+// `require()` of the config succeeds. `main.mjs` and `main.cjs` resolve here and deliberately not
+// in `getStorybookMetadata`, so parsing them stays out of what TurboSnap v1 reads.
+describe('readStorybookDirectories main config extensions', () => {
+  it.each([
+    { project: 'ts-esm', file: 'main.ts' },
+    { project: 'mjs-esm', file: 'main.mjs' },
+    { project: 'cjs', file: 'main.cjs' },
+  ])('resolves staticDirs from $file', async ({ project }) => {
+    vi.mocked(readMainConfig).mockImplementation(readMainConfigActual);
+    readJsonMock.mockResolvedValue({});
+
+    await expect(
+      readStorybookDirectories({
+        projectRoot: path.resolve('node-src/__mocks__/storybookMainConfig', project),
+        log,
+      })
+    ).resolves.toEqual({
+      configDir: '.storybook',
+      staticDirs: ['.storybook/static', 'public'],
     });
   });
 });

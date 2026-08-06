@@ -287,6 +287,16 @@ export function mergeStaticDirectories(
   return [...new Set([...buildScriptStaticDirectories, ...mainConfigStaticDirectories])];
 }
 
+/**
+ * The main config files the shared metadata path parses into an AST.
+ *
+ * `main.js` is absent because `require()` resolves it first; `main.mjs` and `main.cjs` are absent
+ * because parsing them would newly populate `builder`, `refs` and `staticDir` on `ctx.storybook`,
+ * and TurboSnap v1 reads `staticDir` to decide its static-file bails. Callers that only feed
+ * TurboSnap v2 pass a wider pattern of their own.
+ */
+export const SHARED_MAIN_CONFIG_PATTERN = /^main\.[jt]sx?$/;
+
 export const findStorybookConfigFile = async (
   storybookConfigDirectory: string | undefined,
   pattern: RegExp
@@ -305,12 +315,15 @@ export const findStorybookConfigFile = async (
  *
  * @param configDirectory The Storybook config directory, absolute or relative to the cwd.
  * @param log The logger to report the parse path to.
+ * @param configFilePattern Which config file names to parse when `require()` fails. Widening this
+ * widens what lands on `ctx.storybook`, which TurboSnap v1 reads.
  *
  * @returns The config reader, or undefined when neither path yielded a config.
  */
 export async function readMainConfig(
   configDirectory: string,
-  log: StorybookInfoDeps['log']
+  log: StorybookInfoDeps['log'],
+  configFilePattern: RegExp = SHARED_MAIN_CONFIG_PATTERN
 ): Promise<MainConfigReader | undefined> {
   // @ts-expect-error __non_webpack_require__ is only defined when bundled with webpack, and allows us to bypass webpack's module system to require files at runtime
   // eslint-disable-next-line unicorn/prefer-module
@@ -330,9 +343,7 @@ export async function readMainConfig(
   }
 
   try {
-    // Include `.mjs` and `.cjs` can't be resolved in the step above because `require()` only
-    // auto-appends `.js`/`.json`/`.node` to an extensionless path.
-    const storybookConfig = await findStorybookConfigFile(configDirectory, /^main\.[cm]?[jt]sx?$/);
+    const storybookConfig = await findStorybookConfigFile(configDirectory, configFilePattern);
     if (!storybookConfig) {
       throw new Error('Failed to locate Storybook config file');
     }
