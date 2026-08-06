@@ -158,7 +158,7 @@ export const findConfigFlags = async ({
  */
 export interface MainConfigReader {
   /** Reads a top-level field, returning `undefined` when it is absent. */
-  readField: (field: string) => any;
+  readField: (field: string) => unknown;
   /** Whether the config was parsed as an AST rather than evaluated as a module. */
   isAstConfig: boolean;
 }
@@ -175,10 +175,10 @@ export async function findBuilder(mainConfig?: MainConfigReader) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
   }
 
-  const framework = mainConfig.readField('framework');
-  const core = mainConfig.readField('core');
+  const framework = objectField(mainConfig, 'framework');
+  const core = objectField(mainConfig, 'core');
 
-  if (framework?.name) {
+  if (typeof framework?.name === 'string') {
     const sbV7BuilderName = framework.name;
 
     return Promise.race([
@@ -192,9 +192,11 @@ export async function findBuilder(mainConfig?: MainConfigReader) {
   }
 
   let name = 'webpack4'; // default builder in Storybook v6
-  if (core?.builder) {
-    const { builder } = core;
-    name = typeof builder === 'string' ? builder : builder.name;
+  const builder = core?.builder;
+  if (typeof builder === 'string') {
+    name = builder;
+  } else if (isRecord(builder) && typeof builder.name === 'string') {
+    name = builder.name;
   }
 
   return Promise.race([
@@ -205,6 +207,19 @@ export async function findBuilder(mainConfig?: MainConfigReader) {
       }),
     timeout(10_000),
   ]);
+}
+
+/** Reads a field only when it holds a plain object, which is all `findBuilder` can use. */
+function objectField(
+  mainConfig: MainConfigReader,
+  field: string
+): Record<string, unknown> | undefined {
+  const value = mainConfig.readField(field);
+  return isRecord(value) ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
