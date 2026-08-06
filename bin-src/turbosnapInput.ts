@@ -1,15 +1,12 @@
-import { readJson } from 'fs-extra';
 import path from 'path';
 
 import { getRepositoryRoot } from '../node-src/git/git';
-import { findBuildScriptName } from '../node-src/lib/getOptions';
 import { getStorybookBaseDirectory } from '../node-src/lib/getStorybookBaseDirectory';
-import {
-  findConfigFlags,
-  findStaticDirectories,
-  readMainConfig,
-} from '../node-src/lib/getStorybookMetadata';
 import { Logger } from '../node-src/lib/log';
+import {
+  readStorybookDirectories,
+  StorybookDirectories,
+} from '../node-src/lib/turbosnap/storybookDirectories';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Stats } from '../node-src/types';
 
@@ -55,7 +52,7 @@ export interface TurbosnapInputFlags {
 }
 
 /** The inputs a local TurboSnap v2 run derives from the flags, the checkout and the project. */
-export interface TurbosnapInput {
+export interface TurbosnapInput extends StorybookDirectories {
   /** The absolute Storybook project root, anchoring both the stats file and the source tree. */
   projectRoot: string;
   /** The absolute repository root, which stats named from the repository root fall back to. */
@@ -63,10 +60,6 @@ export interface TurbosnapInput {
   /** The absolute path the stats file was read from. */
   statsPath: string;
   stats: Stats;
-  /** The project-relative Storybook config directory. */
-  configDir: string;
-  /** The project-relative static directories. */
-  staticDirs: string[];
 }
 
 /**
@@ -99,8 +92,6 @@ export async function readTurbosnapInput(
   // both the stats file and the source tree it references under that directory.
   const statsPath = path.resolve(projectRoot, flags.statsFile);
   const stats = await readStatsFile(statsPath);
-  const buildScriptFlags = await readBuildScriptFlags(projectRoot);
-  const configDirectory = flags.configDir ?? buildScriptFlags.configDir ?? '.storybook';
 
   return {
     projectRoot,
@@ -108,55 +99,12 @@ export async function readTurbosnapInput(
     repositoryRoot: rootPath ? path.resolve(rootPath) : projectRoot,
     statsPath,
     stats,
-    configDir: configDirectory,
-    staticDirs: flags.staticDir
-      ? flags.staticDir.split(',')
-      : await readStaticDirectories(log, projectRoot, configDirectory, buildScriptFlags.staticDir),
+    // Derived by the same helper production uses, so a local run is not silently narrower.
+    ...(await readStorybookDirectories({
+      projectRoot,
+      log,
+      configDir: flags.configDir,
+      ...(flags.staticDir && { staticDirs: flags.staticDir.split(',') }),
+    })),
   };
-}
-
-/**
- * Reads the `-c`/`-s` flags out of the project's Storybook build script, the same source production
- * reads them from, so the config and static directories are not silently narrower.
- *
- * @param projectRoot The absolute Storybook project root.
- *
- * @returns The build script's config and static directories, or nothing when there is no script.
- */
-async function readBuildScriptFlags(projectRoot: string) {
-  try {
-    const packageJson = await readJson(path.join(projectRoot, 'package.json'));
-    return await findConfigFlags({
-      buildScriptName: findBuildScriptName(packageJson.scripts),
-      packageJson,
-    });
-  } catch {
-    return {};
-  }
-}
-
-/**
- * Reads `staticDirs` out of the Storybook main config and merges the build script's, exactly as
- * `getStorybookMetadata` does, so `<staticFiles>` matches production without the caller naming the
- * directories.
- *
- * Returns nothing when the config can't be read or declares no `staticDirs` — the same blind spot a
- * real build has, and deliberately not papered over here.
- *
- * @param log The logger the shared config read reports its parse path to.
- * @param projectRoot The absolute Storybook project root.
- * @param configDirectory The project-relative Storybook config directory.
- * @param buildScriptStaticDirectories The static directories named by the build script's `-s`.
- *
- * @returns The project-relative static directories, or an empty array.
- */
-async function readStaticDirectories(
-  log: Logger,
-  projectRoot: string,
-  configDirectory: string,
-  buildScriptStaticDirectories: string[] = []
-): Promise<string[]> {
-  const mainConfig = await readMainConfig(path.resolve(projectRoot, configDirectory), log);
-  const { staticDir } = findStaticDirectories(mainConfig, configDirectory);
-  return [...new Set([...buildScriptStaticDirectories, ...(staticDir ?? [])])];
 }

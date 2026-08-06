@@ -5,6 +5,7 @@ import semver from 'semver';
 import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
+import { readStorybookDirectories } from './storybookDirectories';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -41,9 +42,11 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
 
   // v2 bails on everything it can throw, so a rejection here is a bug in the bail wrappers
   // themselves. It stays non-fatal for v1, but it is not allowed to disappear.
-  await traceChangedFilesV2(getV2Input(ctx, stats, statsPath)).catch((error) => {
-    Sentry.captureException(error, { tags: { turbo_snap_v2_diagnostic: 'traceChangedFiles' } });
-  });
+  await getV2Input(ctx, stats, statsPath)
+    .then(traceChangedFilesV2)
+    .catch((error) => {
+      Sentry.captureException(error, { tags: { turbo_snap_v2_diagnostic: 'traceChangedFiles' } });
+    });
 
   return traceChangedFilesV1(ctx, stats, statsPath);
 }
@@ -60,9 +63,18 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
  *
  * @returns The input to run TurboSnap 2.0.
  */
-function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
+async function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
   const storybook: Partial<Context['storybook']> = ctx.storybook ?? {};
   const projectRoot = getProjectRoot(ctx, storybook.baseDir);
+
+  // Derived from the project's own Storybook source config rather than read off `ctx.storybook`, so
+  // that giving v2 these directories cannot change the metadata v1 traces with. An explicit
+  // --storybook-config-dir wins over the build script's `-c`, as it does in v1.
+  const { configDir, staticDirs } = await readStorybookDirectories({
+    projectRoot,
+    log: ctx.log,
+    configDir: ctx.options?.storybookConfigDir,
+  });
 
   return {
     graphqlClient: ctx.client,
@@ -75,10 +87,8 @@ function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
     manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
     repositoryRoot: ctx.git.rootPath ? path.resolve(ctx.git.rootPath) : projectRoot,
     projectRoot,
-    // The config and static directories are project-relative, matching how v1 reads them. An
-    // explicit --storybook-config-dir wins over the discovered one, as it does in v1.
-    configDir: ctx.options?.storybookConfigDir ?? storybook.configDir ?? '.storybook',
-    staticDirs: storybook.staticDir ?? [],
+    configDir,
+    staticDirs,
     staticDirsDeclared: storybook.staticDirsDeclared ?? false,
     // Read from the project's own Storybook config rather than from `projectRoot`, which is what
     // makes it independent evidence about which package the stats should describe.

@@ -23,20 +23,13 @@ export default async function getStorybookInfo(
       // This test makes sure we fall through if the file does not exist.
       if (pathExistsSync(projectJsonPath)) {
         /*
-          These awaits are needed in order to for the catch block
-          to get the result in the case that either function fails.
+          This await is needed in order to for the catch block
+          to get the result in the case that this function fails.
         */
-        const [sourceMetadata, prebuiltMetadata] = await Promise.all([
-          // Reading the source config is best-effort: a prebuilt Storybook may not ship one, and its
-          // failure must not stop us reading project.json.
-          getStorybookMetadata(deps).catch((err): Partial<Storybook> => {
-            deps.log.debug(err);
-            return {};
-          }),
-          getStorybookMetadataFromProjectJson(projectJsonPath),
-        ]);
-        // The prebuilt project.json wins: it records what the Storybook was actually built with.
-        return { ...sourceMetadata, ...prebuiltMetadata };
+        // Deliberately the only source on this path. Reading the source config here as well would
+        // put `configDir` and `staticDir` on `ctx.storybook`, which TurboSnap v1 reads to decide its
+        // static-file bails; TurboSnap v2 derives those for itself in lib/turbosnap/index.ts.
+        return await getStorybookMetadataFromProjectJson(projectJsonPath);
       }
     }
     // Same for this await.

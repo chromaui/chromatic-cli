@@ -2,11 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
 import { traceChangedFiles } from '.';
+import { readStorybookDirectories } from './storybookDirectories';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 
 vi.mock('../../tasks/readStatsFile', () => ({
   readStatsFile: vi.fn(),
+}));
+
+vi.mock('./storybookDirectories', () => ({
+  readStorybookDirectories: vi.fn(),
 }));
 
 vi.mock('./v2', () => ({
@@ -38,6 +43,10 @@ function makeContext(overrides: { rootPath?: string; baseDir?: string } = {}) {
 
 beforeEach(() => {
   vi.mocked(readStatsFile).mockResolvedValue(stats);
+  vi.mocked(readStorybookDirectories).mockResolvedValue({
+    configDir: '.storybook',
+    staticDirs: [],
+  });
 });
 
 describe('traceChangedFiles', () => {
@@ -181,6 +190,29 @@ describe('traceChangedFiles', () => {
 
     await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
     expect(traceChangedFilesV2).toHaveBeenCalledOnce();
+  });
+
+  // v1 reads `ctx.storybook.configDir` and `ctx.storybook.staticDir`, so v2 taking its directories
+  // from anywhere else is what keeps v2 from changing what v1 traces.
+  it('derives the Storybook directories from the project rather than from ctx.storybook', async () => {
+    const ctx = makeContext();
+    ctx.options = { storybookConfigDir: 'config' };
+    ctx.storybook = { configDir: 'from-metadata', staticDir: ['from-metadata/public'] };
+    vi.mocked(readStorybookDirectories).mockResolvedValue({
+      configDir: 'config',
+      staticDirs: ['config/public'],
+    });
+    vi.mocked(traceChangedFilesV1).mockResolvedValue({ status: 'skipped' });
+    vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
+
+    await traceChangedFiles(ctx);
+
+    expect(readStorybookDirectories).toHaveBeenCalledWith(
+      expect.objectContaining({ projectRoot: '/repo', configDir: 'config' })
+    );
+    expect(traceChangedFilesV2).toHaveBeenCalledWith(
+      expect.objectContaining({ configDir: 'config', staticDirs: ['config/public'] })
+    );
   });
 
   describe('projectRoot resolution', () => {

@@ -254,6 +254,24 @@ export function findStaticDirectories(
   return resolvedDirectories.length > 0 ? { staticDir: resolvedDirectories } : {};
 }
 
+/**
+ * Unions the static directories the build script's `-s` names with the ones `main.*` declares.
+ *
+ * Exported so the TurboSnap v2 input derives the same set from the same two sources rather than
+ * asserting parity with a second copy of the union.
+ *
+ * @param buildScriptStaticDirectories The static directories the build script's `-s` names.
+ * @param mainConfigStaticDirectories The static directories `main.*` declares.
+ *
+ * @returns The de-duplicated union of both.
+ */
+export function mergeStaticDirectories(
+  buildScriptStaticDirectories: string[] = [],
+  mainConfigStaticDirectories: string[] = []
+): string[] {
+  return [...new Set([...buildScriptStaticDirectories, ...mainConfigStaticDirectories])];
+}
+
 export const findStorybookConfigFile = async (
   storybookConfigDirectory: string | undefined,
   pattern: RegExp
@@ -340,7 +358,7 @@ export const getStorybookMetadata = async (
 
       // Merge static directories from multiple sources and remove duplicates
       if (staticDirectories?.length) {
-        metadata.staticDir = [...new Set([...(metadata.staticDir ?? []), ...staticDirectories])];
+        metadata.staticDir = mergeStaticDirectories(metadata.staticDir, staticDirectories);
       }
     }
   }
