@@ -42,7 +42,7 @@ export function getAnchorMismatchReason(
   return (
     getBuilderMismatch(stats, builderName) ??
     getStatsFileOutsideProject({ projectRoot, statsPath, configDir }) ??
-    getUnresolvedSourceModules(stats, { projectRoot, repositoryRoot })
+    getUnresolvedSourceModules(stats, { projectRoot, repositoryRoot, configDir })
   );
 }
 
@@ -61,9 +61,16 @@ export interface AnchorInput {
  */
 export function getStatsRoot(
   stats: Stats,
-  { projectRoot, repositoryRoot = projectRoot }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot'>
+  {
+    projectRoot,
+    repositoryRoot = projectRoot,
+    configDir: configDirectory = '.storybook',
+  }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir'>
 ): string {
-  return getSourceModuleResolution(stats, projectRoot, repositoryRoot).statsRoot ?? projectRoot;
+  return (
+    getSourceModuleResolution(stats, projectRoot, repositoryRoot, configDirectory).statsRoot ??
+    projectRoot
+  );
 }
 
 /**
@@ -145,18 +152,27 @@ function findOwningProject(directory: string, configDirectory: string): string |
  * from the stats must exist under either known spelling root. The project root is tried first; the
  * repository root covers builders that relativise stats names from the command's working directory.
  *
- * This is the gross-mismatch case — an unrelated anchor — which v2 already survives by accident,
- * since nothing resolves and `noStoryFiles` fires. Naming it keeps v1's diagnosis rather than
- * reporting a degenerate graph, and it costs nothing once the first module resolves.
+ * This is the gross-mismatch case — an unrelated anchor. A 2026-08-06 audit found that v2 did not, in
+ * fact, survive it by accident: an anchor with one universal match (`.storybook/preview.ts`, present
+ * at the same path in every project) produced a complete manifest with hashes read off the wrong
+ * package, and `noStoryFiles` never fired. The evidence base now excludes config-directory entries —
+ * they are not distinctive — and no longer discards absolute-spelled names before counting them as
+ * missing, so a single boilerplate match or an all-absolute stats file can no longer pass for a
+ * verdict.
  */
 function getUnresolvedSourceModules(
   stats: Stats,
-  { projectRoot, repositoryRoot = projectRoot }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot'>
+  {
+    projectRoot,
+    repositoryRoot = projectRoot,
+    configDir: configDirectory = '.storybook',
+  }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir'>
 ): AnchorMismatchReason | undefined {
   const { sourceModuleCount, statsRoot } = getSourceModuleResolution(
     stats,
     projectRoot,
-    repositoryRoot
+    repositoryRoot,
+    configDirectory
   );
 
   if (sourceModuleCount === 0 || statsRoot) return undefined;
@@ -170,11 +186,12 @@ function getUnresolvedSourceModules(
 function getSourceModuleResolution(
   stats: Stats,
   projectRoot: string,
-  repositoryRoot: string
+  repositoryRoot: string,
+  configDirectory: string
 ): { sourceModuleCount: number; statsRoot?: string } {
   const sourceModules = statsPaths(stats).filter((name) => {
     if (name.includes('node_modules') || !SOURCE_MODULE_EXTENSIONS.test(name)) return false;
-    return isInside(projectRoot, resolveStatsPath(name, projectRoot));
+    return !isConfigDirectoryEntry(name, configDirectory);
   });
 
   for (const statsRoot of new Set([projectRoot, repositoryRoot])) {
@@ -211,6 +228,17 @@ function statsPaths(stats: Stats): string[] {
       .map((name) => stripConcatenatedModuleSuffix(name as string))
       .filter((name) => !name.includes('virtual:'))
   );
+}
+
+/**
+ * Whether a stats-named module is the project's own config entrypoint (e.g. `.storybook/preview.ts`)
+ * rather than project-identifying source. Every Storybook project has one at the same relative path,
+ * so a lone match against it is not distinctive evidence for `getUnresolvedSourceModules` — the
+ * predicate needs a real source or story file to confirm the anchor.
+ */
+function isConfigDirectoryEntry(name: string, configDirectory: string): boolean {
+  const relativeName = name.replace(/^\.\//, '');
+  return relativeName === configDirectory || relativeName.startsWith(`${configDirectory}/`);
 }
 
 function isInside(directory: string, filePath: string): boolean {
