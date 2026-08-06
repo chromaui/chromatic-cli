@@ -74,6 +74,7 @@ async function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
     projectRoot,
     log: ctx.log,
     configDir: ctx.options?.storybookConfigDir,
+    buildScriptName: ctx.options?.buildScriptName,
   });
 
   return {

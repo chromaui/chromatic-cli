@@ -27,6 +27,8 @@ export interface StorybookDirectoriesInput {
   configDir?: string;
   /** Explicitly configured static directories, which replace the derived ones. */
   staticDirs?: string[];
+  /** The build script the user asked for, which wins over the heuristic in `findBuildScriptName`. */
+  buildScriptName?: string;
 }
 
 /**
@@ -42,6 +44,7 @@ export interface StorybookDirectoriesInput {
  * @param input.log The logger the config read reports its parse path to.
  * @param input.configDir An explicitly configured config directory.
  * @param input.staticDirs Explicitly configured static directories.
+ * @param input.buildScriptName The build script the user asked for.
  *
  * @returns The project-relative config and static directories.
  */
@@ -50,8 +53,9 @@ export async function readStorybookDirectories({
   log,
   configDir: explicitConfigDirectory,
   staticDirs: explicitStaticDirectories,
+  buildScriptName,
 }: StorybookDirectoriesInput): Promise<StorybookDirectories> {
-  const buildScriptFlags = await readBuildScriptFlags(projectRoot);
+  const buildScriptFlags = await readBuildScriptFlags(projectRoot, buildScriptName);
   const configDirectory = explicitConfigDirectory ?? buildScriptFlags.configDir ?? '.storybook';
   if (explicitStaticDirectories) {
     return { configDir: configDirectory, staticDirs: explicitStaticDirectories };
@@ -70,17 +74,18 @@ export async function readStorybookDirectories({
 
 /**
  * Reads the `-c`/`-s` flags out of the project's Storybook build script, the same source
- * `getStorybookMetadata` reads them from.
+ * `getStorybookMetadata` reads them from, and for the same script production resolved.
  *
  * @param projectRoot The absolute Storybook project root.
+ * @param buildScriptName The build script the user asked for, if any.
  *
  * @returns The build script's config and static directories, or nothing when there is no script.
  */
-async function readBuildScriptFlags(projectRoot: string) {
+async function readBuildScriptFlags(projectRoot: string, buildScriptName?: string) {
   try {
     const packageJson = await readJson(path.join(projectRoot, 'package.json'));
     return await findConfigFlags({
-      buildScriptName: findBuildScriptName(packageJson.scripts),
+      buildScriptName: findBuildScriptName(packageJson.scripts, buildScriptName),
       packageJson,
     });
   } catch {

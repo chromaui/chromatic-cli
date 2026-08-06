@@ -36,19 +36,24 @@ export const turbosnapInputFlags = {
   staticDir: {
     type: 'string',
   },
+  buildScriptName: {
+    type: 'string',
+  },
 } as const;
 
 /** The help text for {@link turbosnapInputFlags}, so both commands document them identically. */
 export const TURBOSNAP_INPUT_OPTIONS_HELP = `      --stats-file, -s <filepath>           Path to preview-stats.json, relative to the Storybook base directory. (default: 'storybook-static/preview-stats.json')
       --storybook-base-dir, -b <dirname>    Relative path from repository root to Storybook project root. Use when your Storybook is located in a subdirectory of your repository. (default: the current directory, relative to the repository root)
       --config-dir, -c <dirname>            Storybook config directory, relative to the Storybook base directory. (default: the build script's -c, else '.storybook')
-      --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook base directory. (default: the build script's -s merged with main.*'s staticDirs)`;
+      --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook base directory. (default: the build script's -s merged with main.*'s staticDirs)
+      --build-script-name <name>            The package.json script that builds Storybook, whose -c and -s flags are read. (default: the script that looks like a Storybook build)`;
 
 export interface TurbosnapInputFlags {
   statsFile: string;
   storybookBaseDir?: string;
   configDir?: string;
   staticDir?: string;
+  buildScriptName?: string;
 }
 
 /** The inputs a local TurboSnap v2 run derives from the flags, the checkout and the project. */
@@ -104,6 +109,7 @@ export async function readTurbosnapInput(
       projectRoot,
       log,
       configDir: flags.configDir,
+      buildScriptName: flags.buildScriptName,
       ...(flags.staticDir && { staticDirs: flags.staticDir.split(',') }),
     })),
   };

@@ -16,7 +16,7 @@ import {
  *
  * Command:
  *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir]
- *                                [--static-dir]
+ *                                [--static-dir] [--build-script-name]
  *
  * The stats file path is resolved relative to the Storybook base directory, so a monorepo project
  * only needs to pass the base directory:
@@ -42,7 +42,7 @@ export async function main(argv: string[]) {
   const { flags } = meow(
     `
     Usage
-      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir]
+      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--build-script-name]
 
     Options
 ${TURBOSNAP_INPUT_OPTIONS_HELP}

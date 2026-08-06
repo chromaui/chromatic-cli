@@ -196,7 +196,7 @@ describe('traceChangedFiles', () => {
   // from anywhere else is what keeps v2 from changing what v1 traces.
   it('derives the Storybook directories from the project rather than from ctx.storybook', async () => {
     const ctx = makeContext();
-    ctx.options = { storybookConfigDir: 'config' };
+    ctx.options = { storybookConfigDir: 'config', buildScriptName: 'storybook:ci' };
     ctx.storybook = { configDir: 'from-metadata', staticDir: ['from-metadata/public'] };
     vi.mocked(readStorybookDirectories).mockResolvedValue({
       configDir: 'config',
@@ -208,7 +208,11 @@ describe('traceChangedFiles', () => {
     await traceChangedFiles(ctx);
 
     expect(readStorybookDirectories).toHaveBeenCalledWith(
-      expect.objectContaining({ projectRoot: '/repo', configDir: 'config' })
+      expect.objectContaining({
+        projectRoot: '/repo',
+        configDir: 'config',
+        buildScriptName: 'storybook:ci',
+      })
     );
     expect(traceChangedFilesV2).toHaveBeenCalledWith(
       expect.objectContaining({ configDir: 'config', staticDirs: ['config/public'] })

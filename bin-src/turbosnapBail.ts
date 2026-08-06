@@ -24,7 +24,7 @@ import {
  *
  * Command:
  *   chromatic turbosnap-bail [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir]
- *                            [--static-dir] [--project-json] [--builder-name]
+ *                            [--static-dir] [--build-script-name] [--project-json] [--builder-name]
  *
  * The input is derived exactly as `turbosnap-manifest` derives it, so the two commands describe the
  * same run. Two extra flags exist for probing layouts a checkout cannot produce on its own:
@@ -55,7 +55,7 @@ export async function main(argv: string[]) {
   const { flags } = meow(
     `
     Usage
-      $ chromatic turbosnap-bail [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--project-json] [--builder-name]
+      $ chromatic turbosnap-bail [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--build-script-name] [--project-json] [--builder-name]
 
     Options
 ${TURBOSNAP_INPUT_OPTIONS_HELP}
