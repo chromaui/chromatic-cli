@@ -462,13 +462,12 @@ describe('traceChangedFiles', () => {
         },
       },
     });
-    expect(captureBailException).toHaveBeenCalledWith(expect.any(Error), {
-      bailSubreason: 'unrecognizedStoryEntry',
-      bailPath: 'buildManifest',
-    });
-    expect(Sentry.setContext).toHaveBeenCalledWith('turboSnapUnrecognizedStoryEntry', {
-      entries: ['./future-cache/storybook-stories.js'],
-    });
+    expect(captureBailException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('./future-cache/storybook-stories.js'),
+      }),
+      { bailSubreason: 'unrecognizedStoryEntry', bailPath: 'getEmptySectionBail' }
+    );
     expect(determineChangedFiles).not.toHaveBeenCalled();
     expect(writeManifest).toHaveBeenCalledWith(storyless, '/repo/packages/ui/.chromatic');
   });

@@ -289,29 +289,32 @@ function getEmptySectionBail(
     return bailWith({ noNodeModulesFiles: true });
   }
 
-  if (manifest.storyFileHashes.size === 0 && manifest.unrecognizedStoryEntries.length > 0) {
-    Sentry.setContext('turboSnapUnrecognizedStoryEntry', {
-      entries: manifest.unrecognizedStoryEntries,
-    });
-    const error = new Error(
-      `The stats contain a lazy story context imported by an unrecognized entry: ${manifest.unrecognizedStoryEntries.join(
-        ', '
-      )}`
-    );
-    return bailWith({
-      unrecognizedStoryEntry: true,
-      sentryEventId: captureBailException(error, {
-        bailSubreason: 'unrecognizedStoryEntry',
-        bailPath: 'buildManifest',
-      }),
-    });
-  }
+  return getNoStoryFilesBail(manifest);
+}
 
-  // A graph we found no stories in can only ever recapture everything through `<storybookGlobals>`,
-  // which is wider than v1.
-  if (manifest.storyFileHashes.size === 0) {
-    return bailWith({ noStoryFiles: true });
-  }
+/**
+ * Explains a graph we found no stories in, which can only ever recapture everything through
+ * `<storybookGlobals>` — wider than v1. An unrecognized entry naming a lazy story context is the one
+ * explanation we can give, so it is reported; otherwise the emptiness is all we know.
+ *
+ * @param manifest The manifest built from the stats.
+ *
+ * @returns The bail result, or undefined when the graph contains story files.
+ */
+function getNoStoryFilesBail(manifest: TurboSnapManifest): TraceChangedFilesResult | undefined {
+  if (manifest.storyFileHashes.size > 0) return undefined;
 
-  return undefined;
+  const { unrecognizedStoryEntries: entries } = manifest;
+  if (entries.length === 0) return bailWith({ noStoryFiles: true });
+
+  const error = new Error(
+    `The stats contain a lazy story context imported by an unrecognized entry: ${entries.join(', ')}`
+  );
+  return bailWith({
+    unrecognizedStoryEntry: true,
+    sentryEventId: captureBailException(error, {
+      bailSubreason: 'unrecognizedStoryEntry',
+      bailPath: 'getEmptySectionBail',
+    }),
+  });
 }
