@@ -96,36 +96,62 @@ function getDeps(project: string) {
 }
 
 describe('getStorybookMetadata staticDirs discovery', () => {
-  // `require()` only auto-appends `.js`, so every other extension falls through to the AST parser.
-  it.each([
-    { project: 'ts-esm', file: 'main.ts', format: 'esm' },
-    { project: 'mjs-esm', file: 'main.mjs', format: 'esm' },
-    { project: 'cjs', file: 'main.cjs', format: 'cjs' },
-  ])('resolves staticDirs from parsed $file ($format)', async ({ project }) => {
-    const metadata = await getStorybookMetadata(getDeps(project));
+  // `main.ts` is the only extension `require()` misses that the shared pattern still parses.
+  it('resolves staticDirs from a parsed main.ts', async () => {
+    const metadata = await getStorybookMetadata(getDeps('ts-esm'));
 
     expect(metadata.staticDir).toEqual([
-      `${FIXTURES}/${project}/.storybook/static`,
-      `${FIXTURES}/${project}/public`,
+      `${FIXTURES}/ts-esm/.storybook/static`,
+      `${FIXTURES}/ts-esm/public`,
     ]);
   });
 
-  // staticDirs decides TurboSnap v1's static-file bails, so evaluated configs stay out of it until
-  // that widening is made deliberately.
+  // staticDirs decides TurboSnap v1's static-file bails, so neither evaluated configs nor the
+  // extensions only TurboSnap v2 parses widen it. See SHARED_MAIN_CONFIG_PATTERN.
   it.each([
-    { project: 'js-esm', format: 'esm' },
-    { project: 'js-cjs', format: 'cjs' },
-  ])('leaves staticDirs unset for an evaluated main.js ($format)', async ({ project }) => {
+    { project: 'js-esm', file: 'main.js', reason: 'evaluated esm' },
+    { project: 'js-cjs', file: 'main.js', reason: 'evaluated cjs' },
+    { project: 'mjs-esm', file: 'main.mjs', reason: 'not parsed by the shared pattern' },
+    { project: 'cjs', file: 'main.cjs', reason: 'not parsed by the shared pattern' },
+  ])('leaves staticDirs unset for $file ($reason)', async ({ project }) => {
     const metadata = await getStorybookMetadata(getDeps(project));
 
     expect(metadata.staticDir).toBeUndefined();
   });
 });
 
-describe('getStorybookMetadata builder discovery', () => {
-  it('detects the builder from an evaluated ESM config module', async () => {
-    const metadata = await getStorybookMetadata(getDeps('builder-js-esm'));
+// Everything `getStorybookMetadata` returns lands on `ctx.storybook`, which TurboSnap v1 reads:
+// `staticDir` is the entire basis of its static-file bails and `builder` reaches the announce
+// payload. This pins the exact field set each config shape produces, so a change made for
+// TurboSnap v2 cannot widen v1's inputs unnoticed. A new field here is a deliberate decision about
+// v1, not a test to update in passing.
+describe('getStorybookMetadata fields visible to TurboSnap v1', () => {
+  it.each([
+    { project: 'ts-esm', shape: 'a parsed main.ts', fields: ['staticDir', 'version'] },
+    { project: 'mjs-esm', shape: 'an unreadable main.mjs', fields: ['builder', 'version'] },
+    { project: 'cjs', shape: 'an unreadable main.cjs', fields: ['builder', 'version'] },
+    { project: 'js-esm', shape: 'an evaluated esm main.js', fields: ['version'] },
+    { project: 'js-cjs', shape: 'an evaluated cjs main.js', fields: ['version'] },
+    {
+      project: 'builder-js-esm',
+      shape: 'a main.js declaring a framework',
+      fields: ['builder', 'version'],
+    },
+  ])('exposes exactly $fields for $shape', async ({ project, fields }) => {
+    const metadata = await getStorybookMetadata(getDeps(project));
 
-    expect(metadata.builder?.name).toBe('@storybook/react-vite');
+    expect(Object.keys(metadata).sort()).toEqual(fields);
+  });
+
+  // The sentinel is what v1 sees when no config could be read; a real name here means the config
+  // was parsed after all.
+  it.each([
+    { project: 'mjs-esm', shape: 'main.mjs', builderName: 'unknown' },
+    { project: 'cjs', shape: 'main.cjs', builderName: 'unknown' },
+    { project: 'builder-js-esm', shape: 'main.js', builderName: '@storybook/react-vite' },
+  ])('reports the $builderName builder for $shape', async ({ project, builderName }) => {
+    const metadata = await getStorybookMetadata(getDeps(project));
+
+    expect(metadata.builder?.name).toBe(builderName);
   });
 });
