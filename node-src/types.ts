@@ -561,11 +561,8 @@ interface TurboSnapBailReasonBase {
   noStaticFiles?: true;
   noNodeModulesFiles?: true;
   unresolvedStaticDirectories?: true;
-  indexUnavailable?: true;
-  internalError?: true;
   noAncestorBuild?: true;
   rebuild?: true;
-  bailSubreason?: TurboSnapBailSubreason;
   sentryEventId?: string;
 }
 
@@ -606,15 +603,21 @@ export type TurboSnapAnchorMismatchSubreason =
   | 'statsFileOutsideProject'
   | 'unresolvedSourceModules';
 
+/** Which of our own checks threw; each one is also the Sentry fingerprint for the bail. */
+export type TurboSnapInternalErrorSubreason =
+  | 'builderCompatibilityCheckFailed'
+  | 'manifestBuildFailed'
+  | 'anchorCheckFailed';
+
+export type TurboSnapIndexUnavailableSubreason = 'networkError';
+
 export type TurboSnapBailSubreason =
   | TurboSnapChangedPackageFilesSubreason
   | TurboSnapInvalidChangedFilesSubreason
   | TurboSnapIndexContractViolationSubreason
   | TurboSnapUntrustedBuilderStatsSubreason
   | TurboSnapAnchorMismatchSubreason
-  | 'builderCompatibilityCheckFailed'
-  | 'manifestBuildFailed'
-  | 'anchorCheckFailed';
+  | TurboSnapInternalErrorSubreason;
 
 // The bail reasons that carry fields of their own. Each one owns exactly one of these flags, so the
 // others are pinned to `never` by `BailFamily` below.
@@ -624,6 +627,8 @@ interface TurboSnapBailFamilyFlags {
   untrustedBuilderStats: true;
   anchorMismatch: true;
   indexContractViolation: true;
+  indexUnavailable: true;
+  internalError: true;
 }
 
 type BailFamily<Flag extends keyof TurboSnapBailFamilyFlags> = TurboSnapBailReasonBase &
@@ -659,12 +664,25 @@ export type IndexContractViolationBailReason = BailFamily<'indexContractViolatio
   bailSubreason: TurboSnapIndexContractViolationSubreason;
 };
 
+// All additional fields allowed for the `indexUnavailable` bail reason. The subreason is optional
+// because it is only set when the transport failure is a recognised network error.
+export type IndexUnavailableBailReason = BailFamily<'indexUnavailable'> & {
+  bailSubreason?: TurboSnapIndexUnavailableSubreason;
+};
+
+// All additional fields allowed for the `internalError` bail reason
+export type InternalErrorBailReason = BailFamily<'internalError'> & {
+  bailSubreason: TurboSnapInternalErrorSubreason;
+};
+
 export type TurboSnapBailReason =
   | ChangedPackageFilesBailReason
   | InvalidChangedFilesBailReason
   | UntrustedBuilderStatsBailReason
   | AnchorMismatchBailReason
   | IndexContractViolationBailReason
+  | IndexUnavailableBailReason
+  | InternalErrorBailReason
   // All remaining bail reasons
   | (TurboSnapBailReasonBase & Partial<Record<keyof TurboSnapBailFamilyFlags, never>>);
 

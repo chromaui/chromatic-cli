@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
-import type { Stats, TurboSnapBailReason, TurboSnapBailSubreason } from '../../../types';
+import type { Stats, TurboSnapBailReason, TurboSnapInternalErrorSubreason } from '../../../types';
 import { TraceChangedFilesResult } from '../types';
 import { captureBailException } from '../v1/captureBailException';
 import { isNetworkError } from '../v1/errors';
@@ -142,7 +142,7 @@ function bailWith(bailReason: TurboSnapBailReason): TraceChangedFilesResult {
  */
 function internalErrorBail(
   error: unknown,
-  bailSubreason: TurboSnapBailSubreason,
+  bailSubreason: TurboSnapInternalErrorSubreason,
   bailPath: string
 ): TraceChangedFilesResult {
   return bailWith({
