@@ -58,7 +58,6 @@ describe('getUntrustedBuilderStatsReason', () => {
 
   it('classifies a known-invalid builder-vite version', () => {
     expect(getUntrustedBuilderStatsReason(viteStats(), projectRoot)).toEqual({
-      reason: 'untrustedBuilderStats',
       subreason: 'unsupportedVersion',
       builderName: '@storybook/builder-vite',
       builderVersion: '10.6.0-alpha.3',
@@ -69,7 +68,6 @@ describe('getUntrustedBuilderStatsReason', () => {
     mockReadFileSync.mockReturnValue(JSON.stringify({ version: 'workspace:next' }));
 
     expect(getUntrustedBuilderStatsReason(viteStats(), projectRoot)).toEqual({
-      reason: 'untrustedBuilderStats',
       subreason: 'invalidVersion',
       builderName: '@storybook/builder-vite',
       builderVersion: 'workspace:next',
@@ -103,7 +101,6 @@ describe('getUntrustedBuilderStatsReason', () => {
     });
 
     expect(getUntrustedBuilderStatsReason(viteStats(), projectRoot)).toEqual({
-      reason: 'untrustedBuilderStats',
       subreason: 'packageNotFound',
       builderName: '@storybook/builder-vite',
     });

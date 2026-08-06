@@ -12,7 +12,6 @@ const BUILDER_VITE_PACKAGE = '@storybook/builder-vite';
 const FIRST_BUILDER_VITE_VERSION_WITH_CJS_EDGE_FIX = '10.6.0-alpha.4';
 
 export interface UntrustedBuilderStatsReason {
-  reason: 'untrustedBuilderStats';
   subreason: TurboSnapUntrustedBuilderStatsSubreason;
   builderName: typeof BUILDER_VITE_PACKAGE;
   builderVersion?: string;
@@ -41,7 +40,6 @@ export function getUntrustedBuilderStatsReason(
   const version = resolvePackageVersion(projectRoot, BUILDER_VITE_PACKAGE);
   if (!version) {
     return {
-      reason: 'untrustedBuilderStats',
       subreason: 'packageNotFound',
       builderName: BUILDER_VITE_PACKAGE,
     };
@@ -49,7 +47,6 @@ export function getUntrustedBuilderStatsReason(
 
   if (!semver.valid(version)) {
     return {
-      reason: 'untrustedBuilderStats',
       subreason: 'invalidVersion',
       builderName: BUILDER_VITE_PACKAGE,
       builderVersion: version,
@@ -58,7 +55,6 @@ export function getUntrustedBuilderStatsReason(
 
   if (semver.lt(version, FIRST_BUILDER_VITE_VERSION_WITH_CJS_EDGE_FIX)) {
     return {
-      reason: 'untrustedBuilderStats',
       subreason: 'unsupportedVersion',
       builderName: BUILDER_VITE_PACKAGE,
       builderVersion: version,

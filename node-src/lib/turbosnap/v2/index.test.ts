@@ -116,7 +116,6 @@ describe('traceChangedFiles', () => {
 
   it('bails before manifest upload when builder-vite stats are known invalid', async () => {
     vi.mocked(getUntrustedBuilderStatsReason).mockReturnValue({
-      reason: 'untrustedBuilderStats',
       subreason: 'unsupportedVersion',
       builderName: '@storybook/builder-vite',
       builderVersion: '10.6.0-alpha.3',
