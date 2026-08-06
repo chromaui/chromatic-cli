@@ -2,6 +2,7 @@ import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
 import meow from 'meow';
 
 import { createLogger } from '../node-src/lib/log';
+import { getSourceModuleResolution } from '../node-src/lib/turbosnap/v2/statsAnchor';
 import {
   readTurbosnapInput,
   TURBOSNAP_INPUT_OPTIONS_HELP,
@@ -60,6 +61,12 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
 
   try {
     const input = await readTurbosnapInput(flags, log);
+    const resolution = getSourceModuleResolution(input.stats, {
+      projectRoot: input.projectRoot,
+      repositoryRoot: input.repositoryRoot,
+      configDir: input.configDir,
+    });
+
     const manifest = await buildManifest(
       input.stats,
       input.projectRoot,
@@ -67,7 +74,9 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
         configDir: input.configDir,
         staticDirs: input.staticDirs,
       },
-      input.statsRoot
+      // This command runs no anchor bail, so a stats file that resolves nowhere silently anchors at
+      // the project root instead of raising the mismatch production would.
+      resolution.statsRoot ?? input.projectRoot
     );
 
     process.stdout.write(JSON.stringify(serializeManifest(manifest)));
