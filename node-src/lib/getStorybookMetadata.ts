@@ -285,7 +285,7 @@ export function mergeStaticDirectories(
  * and TurboSnap v1 reads `staticDir` to decide its static-file bails. Callers that only feed
  * TurboSnap v2 pass a wider pattern of their own.
  */
-export const SHARED_MAIN_CONFIG_PATTERN = /^main\.[jt]sx?$/;
+const SHARED_MAIN_CONFIG_PATTERN = /^main\.[jt]sx?$/;
 
 export const findStorybookConfigFile = async (
   storybookConfigDirectory: string | undefined,
@@ -313,7 +313,7 @@ export const findStorybookConfigFile = async (
 export async function readMainConfig(
   configDirectory: string,
   log: StorybookInfoDeps['log'],
-  configFilePattern: RegExp = SHARED_MAIN_CONFIG_PATTERN
+  configFilePattern: RegExp
 ): Promise<MainConfigReader | undefined> {
   // @ts-expect-error __non_webpack_require__ is only defined when bundled with webpack, and allows us to bypass webpack's module system to require files at runtime
   // eslint-disable-next-line unicorn/prefer-module
@@ -352,7 +352,7 @@ export const getStorybookMetadata = async (
   deps: StorybookInfoDeps
 ): Promise<Partial<Storybook>> => {
   const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
-  const mainConfig = await readMainConfig(configDirectory, deps.log);
+  const mainConfig = await readMainConfig(configDirectory, deps.log, SHARED_MAIN_CONFIG_PATTERN);
 
   // `refs` and `staticDir` land on `ctx.storybook`, which TurboSnap v1 reads to decide its
   // static-file bails, so both stay restricted to AST-parsed configs as they were before the reader
