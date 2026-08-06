@@ -9,7 +9,11 @@ import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { classifyUploadHashesFailure } from './classifyUploadHashesFailure';
 import { buildManifest, countNodeModulesFiles, TurboSnapManifest, writeManifest } from './manifest';
-import { getAnchorMismatchReason, getStatsRoot } from './statsAnchor';
+import {
+  getAnchorMismatchReason,
+  getSourceModuleResolution,
+  SourceModuleResolution,
+} from './statsAnchor';
 
 interface TraceChangedFilesInput {
   graphqlClient: GraphQLClient;
@@ -58,7 +62,16 @@ export async function traceChangedFiles(
 ): Promise<TraceChangedFilesV2Result> {
   const { stats } = input;
 
-  const statsBail = getStatsBail(stats, input);
+  // A full pass over every name in the stats, so it runs once and both the anchor check and the
+  // manifest are handed the answer.
+  let resolution;
+  try {
+    resolution = getSourceModuleResolution(stats, input);
+  } catch (error) {
+    return internalErrorBail(error, 'anchorCheckFailed', 'getSourceModuleResolution');
+  }
+
+  const statsBail = getStatsBail(stats, input, resolution);
   if (statsBail) return statsBail;
 
   let manifest;
@@ -70,7 +83,7 @@ export async function traceChangedFiles(
         configDir: input.configDir,
         staticDirs: input.staticDirs,
       },
-      getStatsRoot(stats, input)
+      resolution.statsRoot ?? input.projectRoot
     );
   } catch (error) {
     return internalErrorBail(error, 'manifestBuildFailed', 'buildManifest');
@@ -155,10 +168,11 @@ function writeDiagnosticManifest(manifest: TurboSnapManifest, outputDirectory: s
  */
 function getStatsBail(
   stats: Stats,
-  input: TraceChangedFilesInput
+  input: TraceChangedFilesInput,
+  resolution: SourceModuleResolution
 ): TraceChangedFilesResult | undefined {
   return (
-    getAnchorBail(stats, input) ??
+    getAnchorBail(stats, input, resolution) ??
     getBuilderStatsBail(stats, input) ??
     getStaticDirectoriesBail(input)
   );
@@ -172,11 +186,12 @@ function getStatsBail(
  */
 function getAnchorBail(
   stats: Stats,
-  input: TraceChangedFilesInput
+  input: TraceChangedFilesInput,
+  resolution: SourceModuleResolution
 ): TraceChangedFilesResult | undefined {
   let mismatch;
   try {
-    mismatch = getAnchorMismatchReason(stats, input);
+    mismatch = getAnchorMismatchReason(stats, input, resolution);
   } catch (error) {
     return internalErrorBail(error, 'anchorCheckFailed', 'getAnchorMismatchReason');
   }

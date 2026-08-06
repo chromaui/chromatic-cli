@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
 import { buildManifest } from './manifest';
-import { getAnchorMismatchReason } from './statsAnchor';
+import { AnchorInput, getAnchorMismatchReason, getSourceModuleResolution } from './statsAnchor';
 
 // The fixtures below are real directories on disk — the anchor damage is only visible against real
 // bytes — but they install no Storybook, and resolving its version is the one thing that would throw.
@@ -80,6 +80,12 @@ function givenSiblingPackages(packages: Record<string, { badge: string }>) {
   return { repository, roots };
 }
 
+// The production caller resolves the stats root once and hands it to the anchor check, so the tests
+// exercise the same pairing.
+function anchorMismatchFor(stats: Stats, input: AnchorInput) {
+  return getAnchorMismatchReason(stats, input, getSourceModuleResolution(stats, input));
+}
+
 function statsPathFor(projectRoot: string) {
   return path.join(projectRoot, 'storybook-static/preview-stats.json');
 }
@@ -92,7 +98,7 @@ describe('getAnchorMismatchReason', () => {
     });
 
     expect(
-      getAnchorMismatchReason(VITE_STATS, {
+      anchorMismatchFor(VITE_STATS, {
         projectRoot: roots.ui,
         statsPath: statsPathFor(roots.ui),
         builderName: '@storybook/react-vite',
@@ -120,7 +126,7 @@ describe('getAnchorMismatchReason', () => {
 
     // Which is what the guard refuses to build.
     expect(
-      getAnchorMismatchReason(VITE_STATS, {
+      anchorMismatchFor(VITE_STATS, {
         projectRoot: roots['marketing-ui'],
         statsPath,
         builderName: '@storybook/react-vite',
@@ -138,7 +144,7 @@ describe('getAnchorMismatchReason', () => {
     writeFileSync(statsPath, JSON.stringify(VITE_STATS));
 
     expect(
-      getAnchorMismatchReason(VITE_STATS, {
+      anchorMismatchFor(VITE_STATS, {
         projectRoot: roots.ui,
         statsPath,
         builderName: '@storybook/react-vite',
@@ -155,7 +161,7 @@ describe('getAnchorMismatchReason', () => {
     writeFileSync(statsPath, JSON.stringify(VITE_STATS));
 
     expect(
-      getAnchorMismatchReason(VITE_STATS, {
+      anchorMismatchFor(VITE_STATS, {
         projectRoot: roots.ui,
         statsPath,
         builderName: '@storybook/react-vite',
@@ -171,7 +177,7 @@ describe('getAnchorMismatchReason', () => {
       });
 
       expect(
-        getAnchorMismatchReason(VITE_STATS, {
+        anchorMismatchFor(VITE_STATS, {
           projectRoot: roots.ui,
           statsPath: statsPathFor(roots.ui),
           builderName: '@storybook/react-webpack5',
@@ -196,7 +202,7 @@ describe('getAnchorMismatchReason', () => {
       } as unknown as Stats;
 
       expect(
-        getAnchorMismatchReason(webpackStats, {
+        anchorMismatchFor(webpackStats, {
           projectRoot: roots.ui,
           statsPath: statsPathFor(roots.ui),
           builderName: '@storybook/react-vite',
@@ -211,7 +217,7 @@ describe('getAnchorMismatchReason', () => {
       });
 
       expect(
-        getAnchorMismatchReason(VITE_STATS, {
+        anchorMismatchFor(VITE_STATS, {
           projectRoot: roots.ui,
           statsPath: statsPathFor(roots.ui),
           builderName: '@storybook/nextjs',
@@ -248,7 +254,7 @@ describe('getAnchorMismatchReason', () => {
     } as unknown as Stats;
 
     expect(
-      getAnchorMismatchReason(rsbuildStats, {
+      anchorMismatchFor(rsbuildStats, {
         projectRoot: roots.ui,
         statsPath: statsPathFor(roots.ui),
         builderName: 'storybook-react-rsbuild',
@@ -266,7 +272,7 @@ describe('getAnchorMismatchReason', () => {
 
     // No stats path, so this is the predicate under test rather than the stats file's location.
     expect(
-      getAnchorMismatchReason(VITE_STATS, {
+      anchorMismatchFor(VITE_STATS, {
         projectRoot: unrelated,
         builderName: '@storybook/react-vite',
         configDir: '.storybook',
@@ -285,7 +291,7 @@ describe('getAnchorMismatchReason', () => {
     writeFileSync(path.join(decoy, '.storybook/preview.ts'), 'export const parameters = {};\n');
 
     expect(
-      getAnchorMismatchReason(VITE_STATS, {
+      anchorMismatchFor(VITE_STATS, {
         projectRoot: decoy,
         builderName: '@storybook/react-vite',
         configDir: '.storybook',
@@ -312,7 +318,7 @@ describe('getAnchorMismatchReason', () => {
     } as unknown as Stats;
 
     expect(
-      getAnchorMismatchReason(absoluteStats, {
+      anchorMismatchFor(absoluteStats, {
         projectRoot: roots.ui,
         builderName: '@storybook/react-webpack5',
         configDir: '.storybook',
@@ -344,7 +350,7 @@ describe('getAnchorMismatchReason', () => {
       });
 
       expect(
-        getAnchorMismatchReason(concatenatedStats, {
+        anchorMismatchFor(concatenatedStats, {
           projectRoot: roots.ui,
           builderName: '@storybook/react-webpack5',
           configDir: '.storybook',
@@ -360,7 +366,7 @@ describe('getAnchorMismatchReason', () => {
       mkdirSync(unrelated, { recursive: true });
 
       expect(
-        getAnchorMismatchReason(concatenatedStats, {
+        anchorMismatchFor(concatenatedStats, {
           projectRoot: unrelated,
           builderName: '@storybook/react-webpack5',
           configDir: '.storybook',

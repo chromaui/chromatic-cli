@@ -6,7 +6,7 @@ import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { traceChangedFiles } from './index';
 import { buildManifest, countNodeModulesFiles, writeManifest } from './manifest';
-import { getAnchorMismatchReason, getStatsRoot } from './statsAnchor';
+import { getAnchorMismatchReason, getSourceModuleResolution } from './statsAnchor';
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('./api', () => ({
 
 vi.mock('./statsAnchor', () => ({
   getAnchorMismatchReason: vi.fn(),
-  getStatsRoot: vi.fn(),
+  getSourceModuleResolution: vi.fn(),
 }));
 
 const input = {
@@ -61,7 +61,10 @@ const manifest = {
 beforeEach(() => {
   vi.mocked(getUntrustedBuilderStatsReason).mockReturnValue(undefined);
   vi.mocked(getAnchorMismatchReason).mockReturnValue(undefined);
-  vi.mocked(getStatsRoot).mockReturnValue(input.projectRoot);
+  vi.mocked(getSourceModuleResolution).mockReturnValue({
+    sourceModuleCount: 1,
+    statsRoot: input.projectRoot,
+  });
   vi.mocked(buildManifest).mockResolvedValue(manifest as any);
   // A healthy graph, matching the `ui` fixture's count. Zero is the only interesting other value.
   vi.mocked(countNodeModulesFiles).mockReturnValue(30);
@@ -174,6 +177,8 @@ describe('traceChangedFiles', () => {
     );
     expect(determineChangedFiles).toHaveBeenCalledWith(input.graphqlClient, 'build-id', manifest);
     expect(writeManifest).toHaveBeenCalledWith(manifest, '/repo/packages/ui/.chromatic');
+    // The anchor check and the manifest share one pass over the stats.
+    expect(getSourceModuleResolution).toHaveBeenCalledTimes(1);
   });
 
   it('bails with indexUnavailable when the Index request times out', async () => {

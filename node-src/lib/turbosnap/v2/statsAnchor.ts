@@ -12,6 +12,13 @@ export interface AnchorMismatchReason {
   detail: string;
 }
 
+export interface SourceModuleResolution {
+  /** How many distinctive source modules the stats name. */
+  sourceModuleCount: number;
+  /** The root those names resolve from, absent when none of them resolve at all. */
+  statsRoot?: string;
+}
+
 const SOURCE_MODULE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
 
 /**
@@ -32,17 +39,20 @@ const SOURCE_MODULE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
  * config directory rather than from the anchor, which is what makes it independent evidence.
  * @param input.statsPath The path the stats file was read from.
  * @param input.configDir The project-relative Storybook config directory.
+ * @param resolution The stats-root resolution, computed once per build by the caller because the
+ * manifest needs the same answer.
  *
  * @returns The structured anchor-mismatch reason, if any.
  */
 export function getAnchorMismatchReason(
   stats: Stats,
-  { projectRoot, repositoryRoot, builderName, statsPath, configDir }: AnchorInput
+  input: AnchorInput,
+  resolution: SourceModuleResolution
 ): AnchorMismatchReason | undefined {
   return (
-    getBuilderMismatch(stats, builderName) ??
-    getStatsFileOutsideProject({ projectRoot, statsPath, configDir }) ??
-    getUnresolvedSourceModules(stats, { projectRoot, repositoryRoot, configDir })
+    getBuilderMismatch(stats, input.builderName) ??
+    getStatsFileOutsideProject(input) ??
+    getUnresolvedSourceModules(input.projectRoot, resolution)
   );
 }
 
@@ -55,22 +65,48 @@ export interface AnchorInput {
 }
 
 /**
- * Returns the root relative stats paths are named from. The project root remains the default and
- * wins whenever any source module resolves there; the repository root is a fallback for builders
- * that relativise names from the command's working directory.
+ * Resolves the root relative stats paths are named from, and counts the source modules the verdict
+ * rests on. The project root remains the default and wins whenever any source module resolves there;
+ * the repository root is a fallback for builders that relativise names from the command's working
+ * directory.
+ *
+ * This is a full pass over every name in the stats, so the caller runs it once and hands the result
+ * to both the anchor check and the manifest.
+ *
+ * @param stats The preview stats file.
+ * @param input The anchor the stats are resolved against.
+ * @param input.projectRoot The absolute Storybook project root.
+ * @param input.repositoryRoot The repository root, tried when names do not resolve from the project
+ * root.
+ * @param input.configDir The project-relative Storybook config directory.
+ *
+ * @returns The resolved stats root, if any, and the source module count.
  */
-export function getStatsRoot(
+export function getSourceModuleResolution(
   stats: Stats,
   {
     projectRoot,
     repositoryRoot = projectRoot,
     configDir: configDirectory = '.storybook',
   }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir'>
-): string {
-  return (
-    getSourceModuleResolution(stats, projectRoot, repositoryRoot, configDirectory).statsRoot ??
-    projectRoot
-  );
+): SourceModuleResolution {
+  const sourceModules = statsPaths(stats).filter((name) => {
+    if (name.includes('node_modules') || !SOURCE_MODULE_EXTENSIONS.test(name)) return false;
+    return !isConfigDirectoryEntry(name, configDirectory);
+  });
+
+  for (const statsRoot of new Set([projectRoot, repositoryRoot])) {
+    if (
+      sourceModules.some((name) => {
+        const absolutePath = resolveStatsPath(name, statsRoot);
+        return isInside(projectRoot, absolutePath) && existsSync(absolutePath);
+      })
+    ) {
+      return { sourceModuleCount: sourceModules.length, statsRoot };
+    }
+  }
+
+  return { sourceModuleCount: sourceModules.length };
 }
 
 /**
@@ -161,51 +197,15 @@ function findOwningProject(directory: string, configDirectory: string): string |
  * verdict.
  */
 function getUnresolvedSourceModules(
-  stats: Stats,
-  {
-    projectRoot,
-    repositoryRoot = projectRoot,
-    configDir: configDirectory = '.storybook',
-  }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir'>
+  projectRoot: string,
+  { sourceModuleCount, statsRoot }: SourceModuleResolution
 ): AnchorMismatchReason | undefined {
-  const { sourceModuleCount, statsRoot } = getSourceModuleResolution(
-    stats,
-    projectRoot,
-    repositoryRoot,
-    configDirectory
-  );
-
   if (sourceModuleCount === 0 || statsRoot) return undefined;
 
   return {
     subreason: 'unresolvedSourceModules',
     detail: `none of the ${sourceModuleCount} source modules in the stats exist under ${projectRoot}`,
   };
-}
-
-function getSourceModuleResolution(
-  stats: Stats,
-  projectRoot: string,
-  repositoryRoot: string,
-  configDirectory: string
-): { sourceModuleCount: number; statsRoot?: string } {
-  const sourceModules = statsPaths(stats).filter((name) => {
-    if (name.includes('node_modules') || !SOURCE_MODULE_EXTENSIONS.test(name)) return false;
-    return !isConfigDirectoryEntry(name, configDirectory);
-  });
-
-  for (const statsRoot of new Set([projectRoot, repositoryRoot])) {
-    if (
-      sourceModules.some((name) => {
-        const absolutePath = resolveStatsPath(name, statsRoot);
-        return isInside(projectRoot, absolutePath) && existsSync(absolutePath);
-      })
-    ) {
-      return { sourceModuleCount: sourceModules.length, statsRoot };
-    }
-  }
-
-  return { sourceModuleCount: sourceModules.length };
 }
 
 /**
