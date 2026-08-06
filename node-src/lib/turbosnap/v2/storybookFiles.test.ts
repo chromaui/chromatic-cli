@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { FileHash, FilePath, TurboSnapFile } from './graph';
 import { collectStorybookFiles, STORYBOOK_GLOBALS_KEY } from './storybookFiles';
 
+// The config dir most tests don't care about; only the configDir-specific tests below vary it.
+const DEFAULT_CONFIG_DIR = '.storybook';
+
 // An identity "hash" so a roll-up is readable as the set of paths that went into it, which is what
 // makes a leak between two preview subtrees visible.
 function identity(input: string): string {
@@ -31,6 +34,7 @@ describe('collectStorybookFiles', () => {
       files,
       hashes,
       new Set(['./src/a.stories.tsx']),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -50,24 +54,69 @@ describe('collectStorybookFiles', () => {
       makeFiles(Object.fromEntries(previews.map((p) => [p, []]))),
       makeHashes(previews),
       new Set(),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
     expect([...storybookFiles.keys()].sort()).toEqual([...previews].sort());
   });
 
-  it('does not treat a file merely named preview outside .storybook as a config', () => {
+  it('does not treat a file merely named preview outside the config dir as a config', () => {
     const files = makeFiles({ './src/preview.ts': [] });
 
     const { storybookFiles, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/preview.ts']),
       new Set(),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
     expect([...storybookFiles.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
     expect([...attribution.storybookGlobals]).toEqual(['./src/preview.ts']);
+  });
+
+  it('keys the preview entry by a non-default config dir', () => {
+    // A project with `-c src` has no `.storybook` at all; the preview lives at `./src/preview.ts` and
+    // must be found there, not missed for not being literally named `.storybook`.
+    const files = makeFiles({ './src/preview.ts': [] });
+
+    const { storybookFiles, attribution } = collectStorybookFiles(
+      files,
+      makeHashes(['./src/preview.ts']),
+      new Set(),
+      'src',
+      identity
+    );
+
+    expect([...storybookFiles.keys()]).toEqual(['./src/preview.ts']);
+    expect([...attribution.previewSubtree]).toEqual(['./src/preview.ts']);
+  });
+
+  it('rolls a file the preview and one story both import into the preview subtree, not just the story', () => {
+    // Reproduces the audit's synthetic repro: a theme shared between the preview and Button.stories,
+    // under a non-default config dir. Missing this would make the theme storyReachable only, so
+    // editing it moves Button's hash but not the preview's, and Badge (which never imports it) is
+    // never recaptured despite the preview affecting every story.
+    const shared = './src/theme.ts';
+    const files = makeFiles({
+      './config/preview.ts': [shared],
+      [shared]: [],
+      './src/Button.stories.tsx': [shared],
+      './src/Badge.stories.tsx': [],
+    });
+    const hashes = makeHashes([...files.keys()]);
+
+    const { attribution } = collectStorybookFiles(
+      files,
+      hashes,
+      new Set(['./src/Button.stories.tsx', './src/Badge.stories.tsx']),
+      'config',
+      identity
+    );
+
+    expect(attribution.previewSubtree.has(shared)).toBe(true);
+    expect(attribution.storyReachable.has(shared)).toBe(true);
   });
 
   it('keeps two preview subtrees out of each other rolled-up hashes', () => {
@@ -81,7 +130,13 @@ describe('collectStorybookFiles', () => {
     });
     const hashes = makeHashes([...files.keys()]);
 
-    const { storybookFiles } = collectStorybookFiles(files, hashes, new Set(), identity);
+    const { storybookFiles } = collectStorybookFiles(
+      files,
+      hashes,
+      new Set(),
+      DEFAULT_CONFIG_DIR,
+      identity
+    );
 
     expect(storybookFiles.get('./packages/other/.storybook/preview.ts')).not.toContain('themeA');
     expect(storybookFiles.get('./.storybook/preview.ts')).not.toContain('themeB');
@@ -94,6 +149,7 @@ describe('collectStorybookFiles', () => {
       files,
       makeHashes(['./node_modules/react-dom/index.js']),
       new Set(),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -111,6 +167,7 @@ describe('collectStorybookFiles', () => {
       files,
       makeHashes(['./src/a.stories.tsx', './src/button.tsx']),
       new Set(['./src/a.stories.tsx']),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -124,6 +181,7 @@ describe('collectStorybookFiles', () => {
       makeFiles({}),
       makeHashes(['./src/inlined.ts']),
       new Set(),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -144,6 +202,7 @@ describe('collectStorybookFiles', () => {
       files,
       hashes,
       new Set(['./src/a.stories.tsx']),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -168,6 +227,7 @@ describe('collectStorybookFiles', () => {
       files,
       makeHashes([...files.keys()]),
       new Set(['./src/a.stories.tsx']),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -189,6 +249,7 @@ describe('collectStorybookFiles', () => {
       files,
       makeHashes(['./src/a.stories.tsx', './.storybook/preview.ts']),
       new Set(['./src/a.stories.tsx']),
+      DEFAULT_CONFIG_DIR,
       identity
     );
 
@@ -199,7 +260,13 @@ describe('collectStorybookFiles', () => {
   it('skips a preview config that has no content hash', () => {
     const files = makeFiles({ './.storybook/preview.ts': [] });
 
-    const { storybookFiles } = collectStorybookFiles(files, new Map(), new Set(), identity);
+    const { storybookFiles } = collectStorybookFiles(
+      files,
+      new Map(),
+      new Set(),
+      DEFAULT_CONFIG_DIR,
+      identity
+    );
 
     expect([...storybookFiles.keys()]).toEqual([]);
   });

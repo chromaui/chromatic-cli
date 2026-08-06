@@ -148,6 +148,7 @@ export async function buildManifest(
     files,
     hashes,
     storyFileNames,
+    outOfGraph.configDir,
     h64ToString
   );
 

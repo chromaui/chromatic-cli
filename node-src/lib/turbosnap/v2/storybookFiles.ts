@@ -6,10 +6,14 @@ import {
   TurboSnapFile,
 } from './graph';
 
-// Matches `.storybook/preview.*` on a canonical manifest path. Path matching is the only consistent
+// Matches `<configDir>/preview.*` on a canonical manifest path. Path matching is the only consistent
 // way to find the preview config: the config-entry import edge is spelled three incompatible ways
-// across builders (vite has no such edge at all, leaving preview a detached root).
-const PREVIEW_CONFIG_PATTERN = /(^|\/)\.storybook\/preview\.[cm]?[jt]sx?$/;
+// across builders (vite has no such edge at all, leaving preview a detached root). `configDir` is a
+// project setting, not always `.storybook`, so the pattern is built per call rather than hardcoded.
+function previewConfigPattern(configDirectory: string): RegExp {
+  const escapedConfigDirectory = configDirectory.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  return new RegExp(String.raw`(^|/)${escapedConfigDirectory}/preview\.[cm]?[jt]sx?$`);
+}
 
 // The synthetic `storybookFiles` key holding every orphan global. Angle brackets can't appear in a
 // canonical relative path, so it can never collide with a real file.
@@ -43,6 +47,8 @@ export interface FileAttribution {
  * @param files The map of files to their hashes and dependencies.
  * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
  * @param storyFileNames The detected story files.
+ * @param configDirectory The project's Storybook config directory, project-root-relative (e.g.
+ * `.storybook`).
  * @param h64ToString The hash function.
  *
  * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
@@ -52,6 +58,7 @@ export function collectStorybookFiles(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
   storyFileNames: Set<FilePath>,
+  configDirectory: string,
   h64ToString: (input: string) => string
 ): { storybookFiles: Map<FilePath, FileHash>; attribution: FileAttribution } {
   // The union of every story's subtree, used to tell Storybook globals apart from story code.
@@ -60,10 +67,11 @@ export function collectStorybookFiles(
     collectTransitiveDependencies(files, storyFile, storyReachable);
   }
 
+  const previewConfig = previewConfigPattern(configDirectory);
   const storybookFiles = new Map<FilePath, FileHash>();
   const previewSubtree = new Set<FilePath>();
   for (const filePath of files.keys()) {
-    if (!hashes.has(filePath) || !PREVIEW_CONFIG_PATTERN.test(filePath)) continue;
+    if (!hashes.has(filePath) || !previewConfig.test(filePath)) continue;
     // Collect each subtree on its own, then union: sharing one accumulator would leak one preview's
     // files into another's rolled-up hash.
     const subtree = collectTransitiveDependencies(files, filePath);
