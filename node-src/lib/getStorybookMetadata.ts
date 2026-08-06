@@ -233,7 +233,11 @@ export function findStaticDirectories(
   mainConfig: MainConfigReader | undefined,
   configDirectory = '.storybook'
 ): { staticDir?: string[] } {
-  const staticDirectories = mainConfig?.readField('staticDirs');
+  // Deliberately restricted to AST-parsed configs, matching the behaviour before the reader existed:
+  // `staticDir` decides TurboSnap v1's static-file bails, so widening it is not this refactor's call.
+  if (!mainConfig?.isAstConfig) return {};
+
+  const staticDirectories = mainConfig.readField('staticDirs');
   if (!Array.isArray(staticDirectories) || staticDirectories.length === 0) return {};
 
   // staticDirs entries can be plain strings or { from, to } DirectoryMapping objects

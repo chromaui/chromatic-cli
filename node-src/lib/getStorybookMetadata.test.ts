@@ -8,10 +8,9 @@ import {
 
 // The two config forms are read by `readMainConfig`, so these only need a reader answering
 // `staticDirs`; the forms themselves are covered by the fixture-based tests below.
-const makeConfig = (returnValue: any): MainConfigReader => ({
-  readField: vi.fn().mockReturnValue(returnValue),
-  isAstConfig: true,
-});
+function makeConfig(returnValue: any, isAstConfig = true): MainConfigReader {
+  return { readField: vi.fn().mockReturnValue(returnValue), isAstConfig };
+}
 
 describe('findStaticDirs', () => {
   it('returns string entries resolved relative to configDirectory', () => {
@@ -61,6 +60,11 @@ describe('findStaticDirs', () => {
     expect(findStaticDirectories(undefined)).toEqual({});
   });
 
+  it('returns {} when the main config was evaluated rather than parsed', () => {
+    const config = makeConfig(['./static'], false);
+    expect(findStaticDirectories(config)).toEqual({});
+  });
+
   it('returns {} when staticDirs is not present on config', () => {
     const config = makeConfig(undefined);
     expect(findStaticDirectories(config)).toEqual({});
@@ -92,19 +96,29 @@ function getDeps(project: string) {
 }
 
 describe('getStorybookMetadata staticDirs discovery', () => {
+  // `require()` only auto-appends `.js`, so every other extension falls through to the AST parser.
   it.each([
     { project: 'ts-esm', file: 'main.ts', format: 'esm' },
-    { project: 'js-esm', file: 'main.js', format: 'esm' },
-    { project: 'js-cjs', file: 'main.js', format: 'cjs' },
     { project: 'mjs-esm', file: 'main.mjs', format: 'esm' },
     { project: 'cjs', file: 'main.cjs', format: 'cjs' },
-  ])('resolves staticDirs from $file ($format)', async ({ project }) => {
+  ])('resolves staticDirs from parsed $file ($format)', async ({ project }) => {
     const metadata = await getStorybookMetadata(getDeps(project));
 
     expect(metadata.staticDir).toEqual([
       `${FIXTURES}/${project}/.storybook/static`,
       `${FIXTURES}/${project}/public`,
     ]);
+  });
+
+  // staticDirs decides TurboSnap v1's static-file bails, so evaluated configs stay out of it until
+  // that widening is made deliberately.
+  it.each([
+    { project: 'js-esm', format: 'esm' },
+    { project: 'js-cjs', format: 'cjs' },
+  ])('leaves staticDirs unset for an evaluated main.js ($format)', async ({ project }) => {
+    const metadata = await getStorybookMetadata(getDeps(project));
+
+    expect(metadata.staticDir).toBeUndefined();
   });
 });
 
