@@ -278,12 +278,17 @@ export function mergeStaticDirectories(
 }
 
 /**
- * The main config files the shared metadata path parses into an AST.
+ * The main config files the shared metadata path parses into an AST when `require()` of the config
+ * fails: `main.js`, `main.jsx`, `main.ts` and `main.tsx`.
  *
- * `main.js` is absent because `require()` resolves it first; `main.mjs` and `main.cjs` are absent
- * because parsing them would newly populate `builder`, `refs` and `staticDir` on `ctx.storybook`,
- * and TurboSnap v1 reads `staticDir` to decide its static-file bails. Callers that only feed
- * TurboSnap v2 pass a wider pattern of their own.
+ * `main.ts`/`main.tsx` are the ordinary case, since `require()` cannot resolve them. `main.js` is in
+ * the pattern too and is parsed whenever `require()` of it throws, which includes an ESM `main.js`
+ * on a Node without `require(esm)` (unflagged from 22.12, and this package supports >=22.0). That is
+ * pre-existing behaviour, not a widening.
+ *
+ * `main.mjs` and `main.cjs` are deliberately absent: parsing them would newly populate `builder`,
+ * `refs` and `staticDir` on `ctx.storybook`, and TurboSnap v1 reads `staticDir` to decide its
+ * static-file bails. Callers that only feed TurboSnap v2 pass a wider pattern of their own.
  */
 const SHARED_MAIN_CONFIG_PATTERN = /^main\.[jt]sx?$/;
 

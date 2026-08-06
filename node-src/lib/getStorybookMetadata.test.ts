@@ -101,11 +101,21 @@ describe('getStorybookMetadata staticDirs discovery', () => {
     ]);
   });
 
+  // `main.js` is in the shared pattern, so a `main.js` that `require()` cannot evaluate is parsed
+  // too. This fixture's missing import makes that failure happen on every supported Node.
+  it('resolves staticDirs from a main.js that require() cannot evaluate', async () => {
+    const metadata = await getStorybookMetadata(getDeps('js-esm-unrequirable'));
+
+    expect(metadata.staticDir).toEqual([
+      `${FIXTURES}/js-esm-unrequirable/.storybook/static`,
+      `${FIXTURES}/js-esm-unrequirable/public`,
+    ]);
+  });
+
   // staticDirs decides TurboSnap v1's static-file bails, so neither evaluated configs nor the
   // extensions only TurboSnap v2 parses widen it. See the `astConfig` local in
   // `getStorybookMetadata` and SHARED_MAIN_CONFIG_PATTERN.
   it.each([
-    { project: 'js-esm', file: 'main.js', reason: 'evaluated esm' },
     { project: 'js-cjs', file: 'main.js', reason: 'evaluated cjs' },
     { project: 'mjs-esm', file: 'main.mjs', reason: 'not parsed by the shared pattern' },
     { project: 'cjs', file: 'main.cjs', reason: 'not parsed by the shared pattern' },
@@ -119,15 +129,19 @@ describe('getStorybookMetadata staticDirs discovery', () => {
 // Everything `getStorybookMetadata` returns lands on `ctx.storybook`, which TurboSnap v1 reads:
 // `staticDir` is the entire basis of its static-file bails and `builder` reaches the announce
 // payload. This pins the exact field set each config shape produces, so a change made for
-// TurboSnap v2 cannot widen v1's inputs unnoticed. A new field here is a deliberate decision about
-// v1, not a test to update in passing.
+// TurboSnap v2 cannot widen v1's inputs unnoticed. A new field in any row is a deliberate decision
+// about v1, not a test to update in passing.
 describe('getStorybookMetadata fields visible to TurboSnap v1', () => {
   it.each([
     { project: 'ts-esm', shape: 'a parsed main.ts', fields: ['staticDir', 'version'] },
     { project: 'mjs-esm', shape: 'an unreadable main.mjs', fields: ['builder', 'version'] },
     { project: 'cjs', shape: 'an unreadable main.cjs', fields: ['builder', 'version'] },
-    { project: 'js-esm', shape: 'an evaluated esm main.js', fields: ['version'] },
     { project: 'js-cjs', shape: 'an evaluated cjs main.js', fields: ['version'] },
+    {
+      project: 'js-esm-unrequirable',
+      shape: 'a parsed main.js',
+      fields: ['staticDir', 'version'],
+    },
     {
       project: 'builder-js-esm',
       shape: 'a main.js declaring a framework',
@@ -137,6 +151,16 @@ describe('getStorybookMetadata fields visible to TurboSnap v1', () => {
     const metadata = await getStorybookMetadata(getDeps(project));
 
     expect(Object.keys(metadata).sort()).toEqual(fields);
+  });
+
+  // An ESM `main.js` is evaluated where `require(esm)` is available (unflagged from Node 22.12) and
+  // AST-parsed where it is not, and this package supports Node >=22.0. Both outcomes are pinned
+  // exactly by the `js-cjs` and `js-esm-unrequirable` rows above, so all this row can honestly claim
+  // is that the runtime produces one of them.
+  it('exposes one of the two pinned shapes for an esm main.js', async () => {
+    const metadata = await getStorybookMetadata(getDeps('js-esm'));
+
+    expect([['version'], ['staticDir', 'version']]).toContainEqual(Object.keys(metadata).sort());
   });
 
   // The sentinel is what v1 sees when no config could be read; a real name here means the config
