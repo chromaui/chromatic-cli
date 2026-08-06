@@ -226,13 +226,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // Only used by Chromatic - surfaces Storybook refs and is used when announcing a build.
 // The refs are consumed by the MCP Addon for hosted Storybooks with composition on Chromatic.
 async function findReferences(mainConfig?: MainConfigReader) {
-  // Deliberately restricted to AST-parsed configs: refs are only read for the MCP Addon, which is
-  // supported for the Storybook versions whose config we parse rather than evaluate.
-  if (!mainConfig?.isAstConfig) {
-    return {};
-  }
-
-  const references = mainConfig.readField('refs');
+  const references = mainConfig?.readField('refs');
   return references ? { refs: references } : {};
 }
 
@@ -248,11 +242,7 @@ export function findStaticDirectories(
   mainConfig: MainConfigReader | undefined,
   configDirectory = '.storybook'
 ): { staticDir?: string[] } {
-  // Deliberately restricted to AST-parsed configs, matching the behaviour before the reader existed:
-  // `staticDir` decides TurboSnap v1's static-file bails, so widening it is not this refactor's call.
-  if (!mainConfig?.isAstConfig) return {};
-
-  const staticDirectories = mainConfig.readField('staticDirs');
+  const staticDirectories = mainConfig?.readField('staticDirs');
   if (!Array.isArray(staticDirectories) || staticDirectories.length === 0) return {};
 
   // staticDirs entries can be plain strings or { from, to } DirectoryMapping objects
@@ -364,6 +354,11 @@ export const getStorybookMetadata = async (
   const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
   const mainConfig = await readMainConfig(configDirectory, deps.log);
 
+  // `refs` and `staticDir` land on `ctx.storybook`, which TurboSnap v1 reads to decide its
+  // static-file bails, so both stay restricted to AST-parsed configs as they were before the reader
+  // existed. Callers that only feed TurboSnap v2 read the config themselves, unrestricted.
+  const astConfig = mainConfig?.isAstConfig ? mainConfig : undefined;
+
   const info = await Promise.allSettled([
     findConfigFlags({
       buildScriptName: deps.options.buildScriptName,
@@ -371,8 +366,8 @@ export const getStorybookMetadata = async (
     }),
     findStorybookVersion(deps),
     findBuilder(mainConfig),
-    findReferences(mainConfig),
-    findStaticDirectories(mainConfig, configDirectory),
+    findReferences(astConfig),
+    findStaticDirectories(astConfig, configDirectory),
   ]);
 
   deps.log.debug(info);

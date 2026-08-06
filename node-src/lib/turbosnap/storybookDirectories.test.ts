@@ -122,13 +122,15 @@ describe('readStorybookDirectories', () => {
 });
 
 // Real fixture projects, because which extensions reach the AST parser depends on whether
-// `require()` of the config succeeds. `main.mjs` and `main.cjs` resolve here and deliberately not
-// in `getStorybookMetadata`, so parsing them stays out of what TurboSnap v1 reads.
+// `require()` of the config succeeds. Every shape resolves here, evaluated or parsed; the ones
+// `getStorybookMetadata` deliberately leaves unset stay out of what TurboSnap v1 reads.
 describe('readStorybookDirectories main config extensions', () => {
   it.each([
     { project: 'ts-esm', file: 'main.ts' },
     { project: 'mjs-esm', file: 'main.mjs' },
     { project: 'cjs', file: 'main.cjs' },
+    { project: 'js-esm', file: 'main.js in an esm package' },
+    { project: 'js-cjs', file: 'main.js in a cjs package' },
   ])('resolves staticDirs from $file', async ({ project }) => {
     vi.mocked(readMainConfig).mockImplementation(readMainConfigActual);
     readJsonMock.mockResolvedValue({});

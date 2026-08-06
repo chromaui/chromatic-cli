@@ -8,8 +8,8 @@ import {
 
 // The two config forms are read by `readMainConfig`, so these only need a reader answering
 // `staticDirs`; the forms themselves are covered by the fixture-based tests below.
-function makeConfig(returnValue: any, isAstConfig = true): MainConfigReader {
-  return { readField: vi.fn().mockReturnValue(returnValue), isAstConfig };
+function makeConfig(returnValue: any): MainConfigReader {
+  return { readField: vi.fn().mockReturnValue(returnValue), isAstConfig: true };
 }
 
 describe('findStaticDirs', () => {
@@ -60,11 +60,6 @@ describe('findStaticDirs', () => {
     expect(findStaticDirectories(undefined)).toEqual({});
   });
 
-  it('returns {} when the main config was evaluated rather than parsed', () => {
-    const config = makeConfig(['./static'], false);
-    expect(findStaticDirectories(config)).toEqual({});
-  });
-
   it('returns {} when staticDirs is not present on config', () => {
     const config = makeConfig(undefined);
     expect(findStaticDirectories(config)).toEqual({});
@@ -107,7 +102,8 @@ describe('getStorybookMetadata staticDirs discovery', () => {
   });
 
   // staticDirs decides TurboSnap v1's static-file bails, so neither evaluated configs nor the
-  // extensions only TurboSnap v2 parses widen it. See SHARED_MAIN_CONFIG_PATTERN.
+  // extensions only TurboSnap v2 parses widen it. See the `astConfig` local in
+  // `getStorybookMetadata` and SHARED_MAIN_CONFIG_PATTERN.
   it.each([
     { project: 'js-esm', file: 'main.js', reason: 'evaluated esm' },
     { project: 'js-cjs', file: 'main.js', reason: 'evaluated cjs' },

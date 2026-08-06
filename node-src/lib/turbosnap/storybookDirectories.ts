@@ -70,8 +70,7 @@ export async function readStorybookDirectories({
     return { configDir: configDirectory, staticDirs: explicitStaticDirectories };
   }
 
-  // Returns nothing when the config can't be read or declares no `staticDirs` — the same blind spot
-  // a real build has, and deliberately not papered over here.
+  // Returns nothing when the config can't be read or declares no `staticDirs`.
   const mainConfig = await readMainConfig(
     path.resolve(projectRoot, configDirectory),
     log,
