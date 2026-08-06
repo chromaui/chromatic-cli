@@ -1,31 +1,24 @@
 import Listr from 'listr';
 
 import { Context } from '../types';
-import prepareWorkspace from './prepareWorkspace';
 import report from './report';
-import restoreWorkspace from './restoreWorkspace';
 import uploadShare from './uploadShare';
 
 export const runShare = [uploadShare];
 
-// snapshot migrated to the Clack renderer (`renderSnapshot`, called directly in `index.ts`); only
-// the conditionally-appended `report` task may remain in this Listr block.
-export const runUploadBuild: ((ctx: Context) => Listr.ListrTask<Context>)[] = [];
-
-export const runPatchBuild = [prepareWorkspace, ...runUploadBuild, restoreWorkspace];
-
 /**
  * Prepare the list of tasks to run for a new build.
+ *
+ * `auth` through `snapshot`, and the patch-build workspace prep/restore, all run directly via
+ * `render*` calls in `runBuild` (`node-src/index.ts`) now; the only task that may still remain in
+ * this Listr block is the conditionally-appended `report` task.
  *
  * @param ctx The context set when executing the CLI.
  *
  * @returns The list of tasks to be completed.
  */
 export default function index(ctx: Context): Listr.ListrTask<Context>[] {
-  const tasks =
-    ctx.options.patchHeadRef && ctx.options.patchBaseRef ? runPatchBuild : runUploadBuild;
+  const tasks = ctx.options.junitReport ? [report] : [];
 
-  const tasksWithReport = ctx.options.junitReport ? [...tasks, report] : tasks;
-
-  return tasksWithReport.map((task) => task(ctx));
+  return tasks.map((task) => task(ctx));
 }

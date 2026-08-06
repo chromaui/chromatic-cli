@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
 import installDeps from '../lib/installDependencies';
+import { TaskFailure } from '../lib/setExitCode';
 import TestLogger from '../lib/testLogger';
 import { runPrepareWorkspace } from './prepareWorkspace';
 
 vi.mock('../git/git');
 vi.mock('../lib/installDependencies');
-vi.mock('./restoreWorkspace');
 
 const checkout = vi.mocked(git.checkout);
 const isClean = vi.mocked(git.isClean);
@@ -16,57 +16,68 @@ const findMergeBase = vi.mocked(git.findMergeBase);
 const installDependencies = vi.mocked(installDeps);
 
 const log = new TestLogger();
+const input = { patchHeadRef: 'head', patchBaseRef: 'base' };
+const makeDeps = () => ({ log, options: input, report: vi.fn() }) as any;
+
+const catchError = (promise: Promise<unknown>) =>
+  promise.then(
+    () => {
+      throw new Error('Expected runPrepareWorkspace to reject');
+    },
+    (error) => error
+  );
 
 describe('runPrepareWorkspace', () => {
   it('retrieves the merge base, does a git checkout and installs dependencies', async () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    const deps = makeDeps();
 
-    await runPrepareWorkspace(ctx, {} as any);
-    expect(ctx.mergeBase).toBe('1234asd');
-    expect(checkout).toHaveBeenCalledWith(ctx, '1234asd');
+    const result = await runPrepareWorkspace(deps, input);
+
+    expect(result).toEqual({ kind: 'continue', output: { mergeBase: '1234asd' } });
+    expect(checkout).toHaveBeenCalledWith(deps, '1234asd');
     expect(installDependencies).toHaveBeenCalled();
   });
 
   it('fails when not clean', async () => {
     isClean.mockResolvedValue(false);
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    const deps = makeDeps();
 
-    await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(
-      'Working directory is not clean'
-    );
-    expect(ctx.mergeBase).toBe(undefined);
-    expect(ctx.exitCode).toBe(101);
-    expect(ctx.userError).toBe(true);
+    const error = await catchError(runPrepareWorkspace(deps, input));
+
+    expect(error).toBeInstanceOf(TaskFailure);
+    expect(error.message).toBe('Working directory is not clean');
+    expect(error.exitCode).toBe(101);
+    expect(error.userError).toBe(true);
   });
 
   it('fails when not up-to-date', async () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(false);
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    const deps = makeDeps();
 
-    await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(
-      'Workspace not up-to-date with remote'
-    );
-    expect(ctx.mergeBase).toBe(undefined);
-    expect(ctx.exitCode).toBe(102);
-    expect(ctx.userError).toBe(true);
+    const error = await catchError(runPrepareWorkspace(deps, input));
+
+    expect(error).toBeInstanceOf(TaskFailure);
+    expect(error.message).toBe('Workspace not up-to-date with remote');
+    expect(error.exitCode).toBe(102);
+    expect(error.userError).toBe(true);
   });
 
   it('fails when no merge base is found', async () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue(undefined);
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    const deps = makeDeps();
 
-    await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(
-      'Could not find a merge base'
-    );
-    expect(ctx.mergeBase).toBe(undefined);
-    expect(ctx.exitCode).toBe(103);
-    expect(ctx.userError).toBe(true);
+    const error = await catchError(runPrepareWorkspace(deps, input));
+
+    expect(error).toBeInstanceOf(TaskFailure);
+    expect(error.message).toBe('Could not find a merge base');
+    expect(error.exitCode).toBe(103);
+    expect(error.userError).toBe(true);
   });
 
   it("fails when dependencies can't be installed", async () => {
@@ -74,12 +85,13 @@ describe('runPrepareWorkspace', () => {
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
     installDependencies.mockRejectedValue(new Error('some error'));
-    const ctx = { log, options: { patchHeadRef: 'head', patchBaseRef: 'base' } } as any;
+    const deps = makeDeps();
 
-    await expect(runPrepareWorkspace(ctx, {} as any)).rejects.toThrow(
-      'Failed to install dependencies'
-    );
-    expect(ctx.mergeBase).toBe(undefined);
-    expect(ctx.exitCode).toBe(104);
+    const error = await catchError(runPrepareWorkspace(deps, input));
+
+    expect(error).toBeInstanceOf(TaskFailure);
+    expect(error.message).toBe('Failed to install dependencies');
+    expect(error.exitCode).toBe(104);
+    expect(error.userError).toBe(false);
   });
 });

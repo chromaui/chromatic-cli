@@ -11,24 +11,6 @@ export const pending = () => ({
   output: `Ensuring your git workspace is clean and up-to-date`,
 });
 
-export const lookupMergeBase = (ctx: Context) => ({
-  status: 'pending',
-  title: 'Preparing your workspace',
-  output: `Looking up the git merge base for '${ctx.options.patchHeadRef}' on '${ctx.options.patchBaseRef}'`,
-});
-
-export const checkoutMergeBase = (ctx: Context) => ({
-  status: 'pending',
-  title: 'Preparing your workspace',
-  output: `Checking out merge base commit '${ctx.mergeBase?.slice(0, 7)}'`,
-});
-
-export const installingDependencies = () => ({
-  status: 'pending',
-  title: 'Preparing your workspace',
-  output: 'Installing dependencies',
-});
-
 export const success = (ctx: Context) => ({
   status: 'success',
   title: `Prepared your workspace`,

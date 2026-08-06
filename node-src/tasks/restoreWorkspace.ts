@@ -1,22 +1,20 @@
-import Listr from 'listr';
-
 import { checkoutPrevious, discardChanges } from '../git/git';
 import installDependencies from '../lib/installDependencies';
-import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';
-import { initial, pending, success } from '../ui/tasks/restoreWorkspace';
+import { pending, success } from '../ui/tasks/restoreWorkspace';
 
+/**
+ * Restore the workspace to its original branch after a patch build. Called directly (not through
+ * the `runTask`/render pipeline) so it always runs during teardown, even if an upstream task set
+ * `ctx.skip` to halt the rest of the pipeline.
+ *
+ * @param ctx The CLI context.
+ */
 export const runRestoreWorkspace = async (ctx: Context) => {
+  ctx.log.info(pending().output);
   await discardChanges(ctx); // we need a clean state before checkout
   await checkoutPrevious(ctx);
   await installDependencies();
   await discardChanges(ctx); // drop lockfile changes
+  ctx.log.info(success().title);
 };
-
-export default function main(_: Context): Listr.ListrTask<Context> {
-  return createTask({
-    name: 'restoreWorkspace',
-    title: initial.title,
-    steps: [transitionTo(pending), runRestoreWorkspace, transitionTo(success, true)],
-  });
-}
