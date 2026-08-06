@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TurboSnap v2 audit, 2026-08-06 — holes that remain after the rsbuild fixes</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5d666f; --line: #dfe3e8;
+    --panel: #f7f8fa; --code: #f1f3f5;
+    --ok: #1a7f4b; --ok-bg: #e6f4ec;
+    --miss: #a4262c; --miss-bg: #fbeaea;
+    --over: #8a5a00; --over-bg: #fdf3e2;
+    --unex: #4b5563; --unex-bg: #eef0f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --fg: #e8eaed; --muted: #9aa3ad; --line: #2c3237;
+      --panel: #1b1f23; --code: #22272c;
+      --ok: #6cd39a; --ok-bg: #14301f;
+      --miss: #ff9b9b; --miss-bg: #3a1a1c;
+      --over: #f0c26b; --over-bg: #362a12;
+      --unex: #aab2bb; --unex-bg: #24292e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171a; --fg: #e8eaed; --muted: #9aa3ad; --line: #2c3237;
+    --panel: #1b1f23; --code: #22272c;
+    --ok: #6cd39a; --ok-bg: #14301f;
+    --miss: #ff9b9b; --miss-bg: #3a1a1c;
+    --over: #f0c26b; --over-bg: #362a12;
+    --unex: #aab2bb; --unex-bg: #24292e;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5d666f; --line: #dfe3e8;
+    --panel: #f7f8fa; --code: #f1f3f5;
+    --ok: #1a7f4b; --ok-bg: #e6f4ec;
+    --miss: #a4262c; --miss-bg: #fbeaea;
+    --over: #8a5a00; --over-bg: #fdf3e2;
+    --unex: #4b5563; --unex-bg: #eef0f3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1.25rem 5rem;
+    background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 68rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 .35rem; }
+  h2 { font-size: 1.25rem; margin: 2.75rem 0 .75rem; padding-bottom: .35rem; border-bottom: 2px solid var(--line); }
+  h3 { font-size: 1rem; margin: 1.75rem 0 .5rem; }
+  p, li { max-width: 62rem; }
+  .sub { color: var(--muted); margin: 0 0 1.5rem; font-size: .9rem; }
+  code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em;
+    background: var(--code); padding: .1em .35em; border-radius: 3px; }
+  pre { background: var(--code); padding: .8rem 1rem; border-radius: 6px; overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1rem 0; border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 44rem; font-size: .87rem; }
+  th, td { text-align: left; vertical-align: top; padding: .5rem .65rem; border-bottom: 1px solid var(--line); }
+  thead th { background: var(--panel); font-weight: 600; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .v { display: inline-block; padding: .1rem .45rem; border-radius: 4px; font-size: .78rem;
+    font-weight: 600; white-space: nowrap; }
+  .v-ok { color: var(--ok); background: var(--ok-bg); }
+  .v-miss { color: var(--miss); background: var(--miss-bg); }
+  .v-over { color: var(--over); background: var(--over-bg); }
+  .v-unex { color: var(--unex); background: var(--unex-bg); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--muted);
+    border-radius: 6px; padding: .85rem 1rem; margin: 1.25rem 0; }
+  .panel.warn { border-left-color: var(--miss); }
+  .panel.good { border-left-color: var(--ok); }
+  .panel h3 { margin-top: 0; }
+  .gap { border: 1px solid var(--line); border-radius: 6px; padding: .9rem 1.1rem; margin: 1.1rem 0; background: var(--panel); }
+  .gap header { display: flex; flex-wrap: wrap; gap: .6rem; align-items: baseline; margin-bottom: .4rem; }
+  .gap h3 { margin: 0; font-size: 1rem; }
+  .gap dl { margin: .5rem 0 0; }
+  .gap dt { font-weight: 600; font-size: .8rem; letter-spacing: .02em; text-transform: uppercase;
+    color: var(--muted); margin-top: .7rem; }
+  .gap dd { margin: .15rem 0 0; }
+  .sev { font-size: .72rem; font-weight: 700; letter-spacing: .04em; padding: .15rem .45rem; border-radius: 4px; }
+  .sev-p0 { color: var(--miss); background: var(--miss-bg); }
+  .sev-p1 { color: var(--over); background: var(--over-bg); }
+  .sev-p2 { color: var(--unex); background: var(--unex-bg); }
+  .sev-p3 { color: var(--muted); background: var(--panel); border: 1px solid var(--line); }
+  .tag { font-size: .72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 10px; padding: .1rem .5rem; }
+  ul.tight li { margin: .25rem 0; }
+  .toc { columns: 2; column-gap: 2rem; font-size: .9rem; }
+  @media (max-width: 40rem) { .toc { columns: 1; } }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>TurboSnap v2 audit — holes that remain after the rsbuild fixes</h1>
+<p class="sub">
+  2026-08-06 · <code>chromatic-cli</code> branch <code>cody/turbosnap-v2-rsbuild</code> at <code>ca96074a</code> ·
+  fixtures in <code>turbosnap-monorepo</code> at <code>063187a</code> ·
+  companion to the <em>TurboSnap 2.0 — Rsbuild</em> wayfinder map
+</p>
+
+<div class="panel">
+  <h3>What this audit is</h3>
+  <p>
+    A fresh hole-hunt after the rsbuild work landed. It re-ran every standing matrix, ran the structural
+    matrix on rsbuild for the first time, reconciled twelve earlier audit documents against the code at
+    HEAD, and read the whole v2 tree looking for change classes that move no hash.
+  </p>
+  <p>
+    <strong>The standing coverage is completely green, and that is the point.</strong> All 15 gating runs
+    pass and all 372 unit tests pass, so nothing below was visible from the coverage the project already
+    had. Every finding is something the current instruments cannot see.
+  </p>
+</div>
+
+<h2>Contents</h2>
+<ul class="toc tight">
+  <li><a href="#method">How this was measured</a></li>
+  <li><a href="#green">What is green at HEAD</a></li>
+  <li><a href="#premise">Two premises this audit falsifies</a></li>
+  <li><a href="#p0">Under-capture: changes that move no hash</a></li>
+  <li><a href="#p1">Bails that misname their cause</a></li>
+  <li><a href="#p2">Operational and latent holes</a></li>
+  <li><a href="#instruments">Holes in the instruments</a></li>
+  <li><a href="#cleared">Hypotheses checked and cleared</a></li>
+  <li><a href="#known">Already known, not re-raised</a></li>
+  <li><a href="#tickets">Tickets chartered</a></li>
+</ul>
+
+<h2 id="method">How this was measured</h2>
+
+<p>
+  Behaviourally wherever possible, per the map's standing rule: never walk the written manifest to ask
+  what is covered, because <code>pruneSyntheticFiles</code> holes it by design. Coverage claims here come
+  from building a manifest, making a real edit, rebuilding the manifest, and diffing — or from
+  <code>chromatic turbosnap-bail</code>, which runs the production <code>traceChangedFiles</code>.
+</p>
+
+<ul class="tight">
+  <li><strong>Standing matrices</strong> — <code>bail-matrix.sh</code>, <code>parity.sh</code> and
+    <code>attribution-matrix.sh</code> across five fixtures, plus <code>matrix.sh</code> across three.
+    Run sequentially: the fixture is shared and each script reverts with <code>git checkout</code>.</li>
+  <li><strong>Structural matrix on rsbuild</strong> — <code>structural-probe.sh ui-rsbuild</code>, which
+    rebuilds Storybook per case. Never run on any rsbuild generation before this audit.</li>
+  <li><strong>Graph completeness against disk</strong> — a new check: enumerate every source file on disk
+    under each fixture's <code>src/</code> and ask whether the manifest covers it. The harness has no
+    such probe; it is what surfaced the Vite asset hole.</li>
+  <li><strong>Synthetic name-only stats transforms</strong> — the map's cheapest instrument, used to
+    isolate "the graph is wrong" from "the spelling is wrong" without a rebuild.</li>
+  <li><strong>Four parallel code audits and one reconciliation pass</strong> over <code>manifest</code>/<code>graph</code>,
+    <code>outOfGraphFiles</code>/<code>storybookFiles</code>, <code>statsAnchor</code>/<code>paths</code>,
+    and the guard ladder plus production callers.</li>
+</ul>
+
+<p>
+  The fixture repo was left byte-identical: after the structural probe, <code>ui-rsbuild</code>'s manifest
+  regenerates to <code>ce4b5cbeecf3013e</code>, 3 stories, 203 files — the same bytes as before the run.
+  Two tracked fixture edits that predated this audit (a <code>ui-webpack/.storybook/main.ts</code> reformat
+  and a lockfile refresh) were committed as <code>063187a</code> so the gating scripts would run at all;
+  six untracked probe leftovers were moved out of <code>.storybook</code> and <code>.storybook/static</code>,
+  where they were silently inflating the config and static file counts.
+</p>
+
+<h2 id="green">What is green at HEAD</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Instrument</th><th>Scope</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><code>bail-matrix.sh</code></td><td>4 rows, 3 rsbuild generations</td><td><span class="v v-ok">0 mismatches</span></td></tr>
+<tr><td><code>parity.sh</code></td><td><code>ui</code>, <code>ui-webpack</code>, <code>ui-rsbuild</code>, <code>ui-sb8-rsbuild</code>, <code>ui-sb9-rsbuild</code></td><td><span class="v v-ok">0 regressions each</span></td></tr>
+<tr><td><code>attribution-matrix.sh</code></td><td>23–24 probes × 5 fixtures</td><td><span class="v v-ok">0 mismatches each</span></td></tr>
+<tr><td>unit tests</td><td><code>node-src/lib/turbosnap</code></td><td><span class="v v-ok">372 passing, 28 files</span></td></tr>
+<tr><td><code>yarn typescript:check</code> + <code>yarn lint --quiet</code></td><td>whole repo</td><td><span class="v v-ok">silent</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>
+  The bail matrix confirms all three rsbuild generations reach the hash upload with no guard refusing
+  their stats: <code>ui-rsbuild</code> on builder <code>3.4.0</code> (Storybook <code>10.6.0-alpha.3</code>),
+  <code>ui-sb8-rsbuild</code> on framework <code>1.0.3</code> (Storybook <code>8.6.18</code>),
+  <code>ui-sb9-rsbuild</code> on framework <code>2.1.6</code> (Storybook <code>9.1.20</code>). The one
+  reachable bail — the hoisted builder cache — still refuses with <code>unrecognizedStoryEntry</code> and a
+  Sentry event, and does not reach the upload.
+</p>
+
+<h3>The structural matrix on rsbuild, first results</h3>
+<p>
+  Five of thirteen cases ran before the script died; see <a href="#instruments">Holes in the instruments</a>
+  for why. Of those five, four are correct and one is not.
+</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Case</th><th>Result on <code>ui-rsbuild</code> (builder 3.4.0)</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td><code>new-import</code></td><td>Button's story recaptures correctly — but story count goes 3 → <strong>4</strong>, the fourth being <code>./src/lib/Button/spacing.ts</code>, a plain module</td><td><span class="v v-over">false story key</span></td></tr>
+<tr><td><code>new-story</code></td><td>4 stories, <code>BadgeExtra.stories.tsx</code> detected, story ID <code>ui-badgeextra--extra</code> indexed</td><td><span class="v v-ok">as expected</span></td></tr>
+<tr><td><code>delete-story</code></td><td>3 stories, <code>Badge.stories.tsx</code> leaves the graph, three story IDs removed</td><td><span class="v v-ok">as expected</span></td></tr>
+<tr><td><code>move-module</code></td><td><code>theme.ts</code> → <code>theme/index.ts</code> byte-intact: Button's hash <em>and</em> the keyed <code>preview.ts</code> entry move</td><td><span class="v v-ok">as expected</span></td></tr>
+<tr><td><code>move-component</code></td><td><code>Badge.tsx</code> → <code>Badge/index.tsx</code> byte-intact: Badge + UserCard recapture, and v1 agrees</td><td><span class="v v-ok">as expected</span></td></tr>
+<tr><td><code>move-path-derived</code> and 7 more</td><td>not run — the script assumes a fixture layout <code>ui-rsbuild</code> does not have</td><td><span class="v v-unex">unmeasured</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>
+  Notably, the path-sensitive roll-up works on rsbuild: both byte-preserving moves recapture, which is the
+  regression class that motivated <code>rollUpEntryHashes</code> in the first place.
+</p>
+
+<h2 id="premise">Two premises this audit falsifies</h2>
+
+<div class="panel warn">
+  <h3>1. The v1 fallback is <em>not</em> healthy on rsbuild builders 1.0.3 and 2.1.6</h3>
+  <p>
+    The map treats every rsbuild finding as P1/P2 rather than P0 on the stated basis that "every failure
+    found is a bail, not a miss — the v1 fallback is healthy on rsbuild, so the cost is v2's benefit, never
+    a missed snapshot." That basis does not hold on the two unshimmed generations.
+  </p>
+  <p>Measured with <code>chromatic trace</code>, the harness's own v1 instrument:</p>
+<pre><code>ui-rsbuild      (builder 3.4.0)  Button/Button.tsx      -&gt; ["…/Button.stories.tsx"]
+ui-sb8-rsbuild  (builder 1.0.3)  Button/Button.tsx      -&gt; []
+ui-sb8-rsbuild  (builder 1.0.3)  UserCard/UserCard.tsx  -&gt; []
+ui-sb9-rsbuild  (builder 2.1.6)  Button/Button.tsx      -&gt; []</code></pre>
+  <p>
+    The mechanism: rspack concatenates a single-importer component into its story's record and exposes the
+    member <strong>only</strong> through <code>nameForCondition</code>, leaving <code>modules[]</code> empty.
+    v1 expands concatenation members from <code>modules[]</code>, which webpack populates and rspack does
+    not, so v1 never sees the file:
+  </p>
+<pre><code>ui-webpack       ./src/lib/Button/Button.stories.tsx + 1 modules
+                 modules: ["…/Button.stories.tsx", "…/Button.tsx"]   -&gt; v1 finds Button.tsx
+ui-sb8-rsbuild   ./src/lib/Button/Button.stories.tsx + 1 modules
+                 nameForCondition: /abs/…/Button.tsx,  modules: []   -&gt; v1 finds nothing</code></pre>
+  <p>
+    And v1 does not bail on it: <code>getDependentStoryFiles</code> has no guard for a changed file that
+    matches no module name, so it returns <code>status: 'traced'</code> with an empty story set. A real
+    build editing only that component would snapshot <strong>zero stories</strong>. Most components in a
+    real project have exactly one importer, so this is not an edge case on those generations.
+  </p>
+  <p>
+    <strong>Consequence for the map:</strong> on builders 1.x and 2.x — roughly 37 projects and 25 accounts
+    per the version survey — a v2 bail hands the build to an algorithm that silently under-captures. Any
+    rsbuild bail on those generations is a candidate missed snapshot, not a mere loss of v2's benefit.
+    v2 gets these cases right, so this is also the strongest evidence yet <em>for</em> shipping v2.
+  </p>
+</div>
+
+<div class="panel warn">
+  <h3>2. Asset imports are <em>not</em> "measured correct for every builder"</h3>
+  <p>
+    The map's <em>Out of scope</em> section records that "the audit also newly measured CSS and asset
+    imports (a stylesheet and an SVG imported from a component) as correctly hashed and story-attributed —
+    a first result for <em>every</em> builder, and no hole." The SVG result does not hold on Vite, and the
+    rsbuild fixtures have no such case at all, so the generalisation was never supportable.
+  </p>
+  <p>See <a href="#f-asset">F2</a>. This is what the disk-versus-manifest completeness check surfaced.</p>
+</div>
+
+<h2 id="p0">Under-capture: changes that move no hash</h2>
+<p>
+  This is the only class that costs a customer a missed visual bug. v2 is monitoring-only today, so none of
+  these change a build's outcome yet — but each one is an unsafe <em>answer</em>, and the switch is the point.
+</p>
+
+<div class="gap" id="f-anchor">
+  <header>
+    <h3>F1 — A wrong sibling anchor is unguarded on the default build path</h3>
+    <span class="sev sev-p0">P0</span><span class="tag">confirmed empirically</span><span class="tag">all builders</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/statsAnchor.ts:114-128</code> (<code>getStatsFileOutsideProject</code>) interacting with
+      <code>tasks/build/setSourceDirectory.ts:27</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      For two same-builder sibling packages, <code>getBuilderMismatch</code> returns no verdict and
+      <code>getUnresolvedSourceModules</code> resolves cleanly, so <code>statsFileOutsideProject</code> is
+      the only witness left — the comment at <code>statsAnchor.ts:101-104</code> says exactly that. That
+      witness works by finding the Storybook project that owns <code>dirname(statsPath)</code>. But when the
+      CLI builds Storybook itself and no <code>--output-dir</code> is given — the <em>default</em> path —
+      the build lands in <code>tmp.dir({ prefix: 'chromatic-' })</code>, an OS temp directory with no owning
+      project. The witness returns <code>undefined</code>, and nothing else asks the question.
+    </dd>
+    <dt>Failure scenario</dt>
+    <dd>
+      Monorepo, <code>chromatic --only-changed --storybook-base-dir packages/ui-sb9-rsbuild</code> where the
+      real project is <code>packages/ui</code> — a typo, a stale copy-paste, or an Nx target that changed
+      directory. Because current-generation rsbuild and every Vite builder emit purely <em>relative</em>
+      module names, they resolve happily at the wrong root and the manifest keys stay <code>./src/…</code>,
+      so they match Storybook's <code>importPath</code> byte for byte and the Index accepts them. Every hash
+      is read off the wrong package's bytes, and no change in the real project ever moves anything.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      On a purpose-built two-sibling fixture with a temp-directory stats path: no bail, every section
+      populated, and after a real visual edit to the correct package the wrong-anchor manifest is unmoved
+      (<code>a83c6891bfe39d19</code> both times) while the correct-anchor one moves
+      (<code>7d7a4d4ff657da28</code> → <code>88bc557f09f12ba4</code>). Also reproduced on real fixtures:
+      <code>ui-rsbuild</code>'s stats anchored at <code>ui-sb9-rsbuild</code> yields 3 stories, 4 config
+      files, 203 files and no bail — indistinguishable from a correct manifest.
+    </dd>
+    <dt>Why this is the witness that matters</dt>
+    <dd>
+      <code>statsFileOutsideProject</code> was added specifically to close this case.
+      <code>unseen-inputs-audit.html</code> G2 measured that a <em>wholly unrelated</em> anchor already failed
+      safe and argued the real risk was a <em>structurally similar sibling</em>, whose module names are
+      byte-identical. That is the case this witness exists for — and it is the case the default build path
+      leaves open. (The "unrelated anchors fail safe" half does not hold either; see <a href="#p1">F9</a>.)
+    </dd>
+    <dt>Margin</dt>
+    <dd>
+      Exactly one condition: whether <code>dirname(statsPath)</code> has a <code>.storybook</code> ancestor.
+      <code>--output-dir</code> or <code>--storybook-build-dir</code> closes it; the default opens it. Two
+      existing tests each pin half of this and their combination is untested
+      (<code>statsAnchor.test.ts:104</code> and <code>:150</code>).
+    </dd>
+  </dl>
+</div>
+
+<div class="gap" id="f-asset">
+  <header>
+    <h3>F2 — Assets referenced by <code>new URL(…, import.meta.url)</code> are hashed nowhere on Vite</h3>
+    <span class="sev sev-p0">P0</span><span class="tag">confirmed behaviourally</span><span class="tag">vite</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/manifest.ts:351-385</code> (<code>hashFiles</code>). The hashed set is exactly
+      <code>{module.nameForCondition ?? name} ∪ module.modules[*] ∪ reason.moduleName</code>, plus
+      <code>outOfGraphFiles</code>' config and static directories. Nothing else in v2 hashes a source file.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      Vite resolves <code>new URL('./logo.svg', import.meta.url)</code> at transform time into a URL string,
+      so the asset produces no stats module and no reason. It is therefore in no hashing home at all — not
+      <code>storyReachable</code>, not <code>previewSubtree</code>, and not
+      <code>&lt;storybookGlobals&gt;</code> either, because the catch-all is derived from
+      <code>hashes</code> (<code>storybookFiles.ts:83</code>) rather than from the file tree.
+    </dd>
+    <dt>Failure scenario</dt>
+    <dd>Edit the SVG a story renders. The rendered snapshot changes; nothing recaptures.</dd>
+    <dt>Evidence</dt>
+    <dd>
+      <code>packages/ui/src/lib/PathDerived/PathDerived.tsx</code> renders exactly this. Appending a byte to
+      <code>logo.svg</code> and regenerating:
+<pre><code>ui           storybookHash SAME    | stories changed 0 | storybookFiles changed []
+ui-webpack   storybookHash CHANGED | stories changed 2 | storybookFiles changed []</code></pre>
+      The disk-versus-manifest check finds it directly: across five fixtures the only uncovered source files
+      are <code>src/index.ts</code> — a deliberately unreferenced control — and, on <code>ui</code> alone,
+      <code>src/lib/PathDerived/logo.svg</code>. It appears nowhere in the Vite stats (zero matches for
+      <code>logo</code>), while webpack emits it as a module.
+    </dd>
+    <dt>Guard</dt>
+    <dd>None. No emptiness check can see it: the sections it would belong to are not empty.</dd>
+    <dt>What v1 does</dt>
+    <dd>
+      Misses it too — <code>chromatic trace</code> on the same file returns <code>[]</code> on
+      <code>ui</code> and the two correct stories on <code>ui-webpack</code>. So this is a shared blind spot
+      rather than a v1 → v2 regression. It is still the class v2 exists to close, and it is <em>unmeasured
+      on rsbuild</em>, whose fixtures have no such case.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap" id="f-query">
+  <header>
+    <h3>F3 — Query-decorated stats names are silently un-hashed, and v1 handles them deliberately</h3>
+    <span class="sev sev-p0">P0</span><span class="tag">code + v1 comparison</span><span class="tag">webpack / rspack / vite</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/paths.ts:26-28, 48-58, 81-84</code> and <code>v2/manifest.ts:345-349</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      <code>normalizeStatsPath</code> and <code>resolveStatsPath</code> strip only
+      <code>+ N modules</code> and a leading <code>./</code>. There is no handling of a <code>?query</code>
+      suffix, a <code>??ruleSet[…]</code> segment, a <code>!</code>-separated loader chain, or a
+      <code>webpack://</code> prefix. So <code>./src/foo.component.html?ngResource</code> resolves to a path
+      that does not exist, <code>statSync</code> declines it, the file never enters <code>hashes</code>, and
+      the roll-up contributes the constant <code>''</code> for it (<code>graph.ts:29</code>).
+      <code>pruneSyntheticFiles</code> then removes the node, so the omission is invisible in the written
+      manifest too.
+    </dd>
+    <dt>Why this is a regression, not a shared gap</dt>
+    <dd>
+      v1 strips it on purpose: <code>v1/getDependentStoryFiles.ts:106</code> carries
+      <code>URL_PARAM_REGEX</code> with the comment "Trim query params such as <code>?ngResource</code>
+      which are sometimes present", and a regression test at
+      <code>v1/getDependentStoryFiles.test.ts:258-264</code> using that exact name as a concatenated inner
+      module. v2 has no query handling anywhere.
+    </dd>
+    <dt>Failure scenario</dt>
+    <dd>
+      Angular Storybook on webpack or rspack. The stats carry
+      <code>./src/foo.component.ts + 2 modules</code> whose members include
+      <code>./src/foo.component.html?ngResource</code>. A developer edits only the template. Every hash is
+      byte-identical; v2 says nothing changed. v1 traces the file to its story and captures it. Same shape
+      for Vue SFC sub-modules (<code>?vue&amp;type=style</code>) and for <code>?raw</code> /
+      <code>?url</code> / <code>?inline</code> / svgr imports.
+    </dd>
+    <dt>Why it is not live on the fixtures, and how narrow that is</dt>
+    <dd>
+      Exactly one fixture carries a decorated name — <code>ui-webpack</code>'s
+      <code>css-loader/…??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css</code> — and it
+      survives only because <code>moduleFileNames</code> prefers <code>nameForCondition</code>, which webpack
+      spells as the bare resource path. That defence does not exist on the builders that matter most:
+      <strong>Vite and builder-rsbuild 3.4.0 emit no <code>nameForCondition</code> at all</strong>, so on
+      those, <code>name</code> is a module's only spelling and any decoration reaches the resolver verbatim.
+      The comment at <code>paths.ts:108</code> ("rspack puts the real file name in
+      <code>nameForCondition</code>") already stopped holding for the current generation.
+    </dd>
+  </dl>
+  <div class="scroll">
+  <table>
+  <thead><tr><th>Fixtures</th><th>Builder</th><th>Modules</th><th>Absolute names</th><th><code>nameForCondition</code></th></tr></thead>
+  <tbody>
+  <tr><td><code>ui</code>, <code>ui-sb8</code>, <code>ui-sb9</code>, <code>marketing-ui</code></td><td>vite</td><td>31–49</td><td>0</td><td><strong>absent</strong></td></tr>
+  <tr><td><code>ui-rsbuild</code></td><td>builder-rsbuild 3.4.0</td><td>268</td><td>0</td><td><strong>absent (0 of 268)</strong></td></tr>
+  <tr><td><code>ui-sb8-rsbuild</code>, <code>ui-sb9-rsbuild</code></td><td>1.0.3 / 2.1.6</td><td>202 / 225</td><td>167 / 176</td><td>present</td></tr>
+  <tr><td><code>ui-webpack</code>, <code>ui-sb8-webpack</code>, <code>ui-sb9-webpack</code></td><td>webpack5</td><td>73–731</td><td>27–348</td><td>present</td></tr>
+  </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="gap" id="f-staticdir">
+  <header>
+    <h3>F4 — A <code>staticDirs</code> entry that is a file, or carries a <code>:to</code> suffix, is silently unhashed</h3>
+    <span class="sev sev-p0">P0</span><span class="tag">confirmed empirically</span><span class="tag">all builders</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/outOfGraphFiles.ts:170-190</code> (<code>listFilesRecursively</code>), reached from
+      <code>:66-76</code>; and <code>lib/getStorybookMetadata.ts:240-248</code>
+      (<code>findStaticDirectories</code>).</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      The walker assumes every derived entry is a directory. <code>realpath(file)</code> succeeds, then
+      <code>readdir(file)</code> throws <code>ENOTDIR</code>, which the <code>catch</code> at
+      <code>:189-190</code> swallows as "contributes nothing" — the same treatment as a missing directory.
+      Storybook supports both shapes: its <code>parseStaticDir</code> special-cases
+      <code>statSync(staticPath).isFile()</code> and serves the file at its basename, and it splits a string
+      entry on its <em>last colon</em> into <code>from</code>/<code>to</code>. <code>findStaticDirectories</code>
+      passes the whole string through, so <code>staticDirs: ['../public:/assets']</code> becomes the
+      nonexistent path <code>public:/assets</code>.
+    </dd>
+    <dt>Failure scenario</dt>
+    <dd>
+      <code>staticDirs: ['../other', '../public/logo.png']</code> → <code>&lt;staticFiles&gt;</code> holds
+      only <code>./other/x.txt</code>. Editing <code>public/logo.png</code>, a served asset, moves no hash.
+      With <code>['../other', '../public:/assets']</code> the whole <code>public</code> tree is invisible.
+    </dd>
+    <dt>Guard</dt>
+    <dd>
+      None in the mixed case. <code>noStaticFiles</code> only fires when <em>every</em> entry resolves empty,
+      and <code>unresolvedStaticDirectories</code> needs <code>staticDirsDeclared</code>, which is only ever
+      set on the prebuilt path.
+    </dd>
+    <dt>Note</dt>
+    <dd>Two bugs sharing one symptom: the walker cannot hash a file, and the derivation cannot parse the colon form.</dd>
+  </dl>
+</div>
+
+<div class="gap" id="f-symlink">
+  <header>
+    <h3>F5 — The static-dir cycle guard is a global visited set, so it drops non-cyclic duplicates and races</h3>
+    <span class="sev sev-p0">P0</span><span class="tag">confirmed empirically</span><span class="tag">all builders</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/outOfGraphFiles.ts:176-183</code>. <code>visitedDirectories</code> is keyed by
+      <code>realpath</code> and shared across the whole walk, including sibling branches, rather than
+      tracking the current ancestor chain.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      Two distinct served paths that resolve to the same real directory are walked once, and which spelling
+      wins depends on which <code>realpath</code> promise settles first inside the <code>Promise.all</code>
+      at <code>:192-207</code>.
+    </dd>
+    <dt>Failure scenarios</dt>
+    <dd>
+      On the tree <code>public/{v1/a.txt, v2/a.txt, current -&gt; ./v2}</code>:
+      <ul class="tight">
+        <li><strong>Under-capture.</strong> Retargeting <code>public/current</code> from <code>v2</code> to
+          <code>v1</code> — a real change to everything served under <code>/current/</code> — leaves
+          <code>&lt;staticFiles&gt;</code> byte-identical at <code>e25c02e01c825c8d</code>.</li>
+        <li><strong>Nondeterminism.</strong> 60 walks of an <em>unchanged</em> tree produced two different key
+          sets and two different roll-up hashes: 58× <code>[v1/a.txt, v2/a.txt]</code> and 2×
+          <code>[current/a.txt, v1/a.txt]</code>. About 3% of builds on that tree would move
+          <code>&lt;staticFiles&gt;</code> and <code>storybookHash</code> and force a full recapture for no
+          reason — and in the minority outcome the real directory <code>public/v2</code> is absent while the
+          symlink spelling stands in for it.</li>
+      </ul>
+    </dd>
+    <dt>Fix shape</dt>
+    <dd>
+      The guard only needs to break <em>cycles</em>, which require a symlink pointing at an ancestor.
+      Tracking the ancestor chain instead of a global set fixes both symptoms, still passes the existing
+      cycle test (<code>outOfGraphFiles.test.ts:254-266</code>, whose loop target <em>is</em> an ancestor),
+      and costs only bounded duplicate work — the direction this project prefers.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap" id="f-configflag">
+  <header>
+    <h3>F6 — A build-script <code>-c &lt;dir&gt;</code> flag makes <code>staticDirs</code> derivation read the wrong config</h3>
+    <span class="sev sev-p0">P0</span><span class="tag">code + partial empirical</span><span class="tag">input boundary</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>lib/getStorybookMetadata.ts:316-327</code> versus <code>lib/turbosnap/index.ts:75-76</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      <code>getStorybookMetadata</code> loads <code>main</code> from
+      <code>storybookConfigDir ?? '.storybook'</code> and resolves <code>staticDirs</code> against that same
+      literal — it never consults the <code>-c</code> flag that <code>findConfigFlags</code> extracts from
+      the build script in the same <code>Promise.allSettled</code>. v2's <code>getV2Input</code> <em>does</em>
+      consult it. So the two inputs handed to <code>hashOutOfGraphFiles</code> come from two different
+      config directories.
+    </dd>
+    <dt>Failure scenario</dt>
+    <dd>
+      Build script <code>storybook build -c ./config/sb</code>, no <code>--storybook-config-dir</code>,
+      and <code>./config/sb/main.ts</code> declaring <code>staticDirs: ['../../public']</code>.
+      <code>readMainConfig('.storybook')</code> fails, so <code>findStaticDirectories</code> returns
+      <code>{}</code> and <code>staticDirs</code> is empty. <code>&lt;storybookConfig&gt;</code> correctly
+      hashes <code>./config/sb/**</code>, but <code>&lt;staticFiles&gt;</code> is <strong>omitted
+      entirely</strong> and any asset change is invisible. The rarer variant is worse: with a stale
+      <code>.storybook/main.ts</code> also present, static dirs are read from the wrong config and resolved
+      against the wrong base, so v2 hashes directories the build never served.
+    </dd>
+    <dt>Guard</dt>
+    <dd>
+      None. <code>staticDirsDeclared</code> is false outside the prebuilt path, and
+      <code>noStorybookConfigFiles</code> is satisfied by the correct <code>-c</code> directory. The same
+      <code>mainConfig === undefined</code> also makes <code>findBuilder</code> return
+      <code>'unknown'</code>, which disables the builder-mismatch anchor check.
+    </dd>
+    <dt>Scope</dt>
+    <dd>This is the input boundary, chartered on <em>TurboSnap 2.0 — Next Phase</em>, not on the rsbuild map.</dd>
+  </dl>
+</div>
+
+<div class="gap" id="f-preview">
+  <header>
+    <h3>F7 — <code>PREVIEW_CONFIG_PATTERN</code> hardcodes <code>.storybook</code>, so a custom config dir mis-attributes shared preview dependencies</h3>
+    <span class="sev sev-p1">P1</span><span class="tag">reproduced</span><span class="tag">all builders</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/storybookFiles.ts:12</code>, used at <code>:66</code>. <code>collectStorybookFiles</code>
+      takes no <code>configDir</code>, and <code>manifest.ts:147-152</code> does not pass one — even though
+      <code>configDir</code> is threaded into <code>hashOutOfGraphFiles</code> a few lines later.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      With a config directory not literally named <code>.storybook</code>, no <code>storybookFiles</code>
+      entry is created for the preview and <code>previewSubtree</code> is empty. A file the preview imports
+      <em>and</em> some story also imports — a theme, a token file, a decorator helper — is then
+      <code>storyReachable</code>, so it is excluded from <code>&lt;storybookGlobals&gt;</code>. Its change
+      moves only that one story's hash, even though the preview makes it affect every story.
+    </dd>
+    <dt>Failure scenario, reproduced</dt>
+    <dd>
+      <code>-c config</code>, <code>config/preview.ts</code> importing <code>src/theme.ts</code> and setting
+      a global parameter from it, <code>Button.stories.tsx</code> also importing it,
+      <code>Badge.stories.tsx</code> not.
+      <ul class="tight">
+        <li><code>configDir = '.storybook'</code>: editing <code>theme.ts</code> moves the keyed
+          <code>./.storybook/preview.ts</code> entry → recapture everything. Correct.</li>
+        <li><code>configDir = 'config'</code>: editing <code>theme.ts</code> moves <strong>only</strong>
+          <code>Button.stories.tsx</code>. <code>&lt;storybookGlobals&gt;</code> and
+          <code>&lt;storybookConfig&gt;</code> both stay put — the latter hashes
+          <code>config/preview.ts</code>'s <em>bytes</em>, not its imports. <code>Badge.stories.tsx</code>
+          does not recapture despite its global parameter changing.</li>
+      </ul>
+    </dd>
+    <dt>Guard</dt>
+    <dd>
+      None, and the test suite currently pins the wrong behaviour:
+      <code>storybookFiles.test.ts:60-70</code> asserts that <code>./src/preview.ts</code> belongs in
+      <code>storybookGlobals</code>.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap" id="f-falsestory">
+  <header>
+    <h3>F8 — A plain first-party module becomes a story file on rsbuild when a story component gains an import</h3>
+    <span class="sev sev-p1">P1</span><span class="tag">reproduced twice</span><span class="tag">builder-rsbuild 3.4.0</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/storyContexts.ts</code>'s story-importer rule, fed by <code>v2/manifest.ts:118-121</code>'s
+      canonicalisation of <code>reason.moduleName</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      The rsbuild shim, when it reduces the module list, re-emits each concatenation member as its own
+      top-level record carrying the <em>parent's</em> reasons — which for a story concatenation is the lazy
+      story require-context. So a plain module looks as though the story context imported it directly, and
+      v2's "a file imported by a lazy story context is a story file" rule promotes it. The correctly-reasoned
+      record exists too, under the shim's unprefixed spelling, and <code>normalizeStatsPath</code>
+      canonicalises both to the same key and unions their reasons — so the context reason always survives.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      Found by <code>structural-probe.sh ui-rsbuild new-import</code>, then reproduced independently by
+      hand. Adding <code>src/lib/Button/spacing.ts</code> and importing it from <code>Button.tsx</code>:
+<pre><code>storyFiles: [
+ "./src/lib/Badge/Badge.stories.tsx",
+ "./src/lib/Button/Button.stories.tsx",
+ "./src/lib/Button/spacing.ts",      &lt;-- not a story
+ "./src/lib/UserCard/UserCard.stories.tsx"
+]</code></pre>
+      The two records, from the same stats file:
+<pre><code>./src/lib/Button/spacing.ts   reasons: ["./src/lib|lazy|…|include: /…\.(mdx|stories\.(js|jsx|ts|tsx))$/|…"]
+  src/lib/Button/spacing.ts   reasons: ["src/lib/Button/Button.tsx"]</code></pre>
+    </dd>
+    <dt>Why it is not an under-capture</dt>
+    <dd>
+      Recapture stays correct — Button's story hash still moves, <code>storyReachable</code> goes 151 → 152
+      and the bucket is unchanged. The damage is a story key that Storybook's index can never match, sent to
+      the Index as though it were a story, plus a story count that misreports. That is the unmatchable-key
+      class the map has reasoned about twice; the existing fix does not apply, because it is gated on
+      <code>node_modules</code> and this key is first-party.
+    </dd>
+    <dt>Fix shape</dt>
+    <dd>
+      The same switch the <code>node_modules</code> refusal already reads: the context's own
+      <code>include</code> glob demands <code>.stories.*</code> or <code>.mdx</code>, so the glob's own
+      intent excludes <code>spacing.ts</code>. Only the baseline concatenation is small enough to hide this
+      — <code>+ 1 modules</code> does not trigger it, <code>+ 2 modules</code> does, which is why no
+      standing matrix has ever seen it.
+    </dd>
+  </dl>
+</div>
+
+<h2 id="p1">Bails that misname their cause</h2>
+
+<div class="gap">
+  <header>
+    <h3>F9 — <code>unresolvedSourceModules</code> is satisfied by one universally-present filename</h3>
+    <span class="sev sev-p1">P1</span><span class="tag">confirmed empirically</span>
+  </header>
+  <dl>
+    <dt>Where</dt><dd><code>v2/statsAnchor.ts:180-189</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      The predicate is <code>sourceModules.some(…)</code> — one surviving name clears it. In practice the
+      survivor is <code>./.storybook/preview.ts</code>, which every Storybook project has at the same
+      relative path, so it carries no project identity whatsoever.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      <code>ui-webpack</code>'s stats anchored at the entirely unrelated <code>marketing-ui</code> —
+      different builder, different stories, different components:
+<pre><code>sourceModuleCount = 151
+root …/marketing-ui        -&gt; hits 6   [ './.storybook/preview.ts' ]   &lt;-- one distinct filename
+root …/turbosnap-monorepo  -&gt; hits 0
+MISMATCH: undefined</code></pre>
+      150 of 151 source-module names are missing and the pairing survives. The comment at
+      <code>statsAnchor.ts:147-150</code> claims this gross-mismatch case is survived "by accident, since
+      nothing resolves and <code>noStoryFiles</code> fires". It is not: the same run produced 5 populated
+      story hashes and 347 files, so <code>noStoryFiles</code> never fires either. A wholly unrelated anchor
+      produces <strong>no bail at all</strong>.
+    </dd>
+    <dt>Aggravating</dt>
+    <dd>
+      <code>SOURCE_MODULE_EXTENSIONS</code> (<code>statsAnchor.ts:15</code>) covers only
+      <code>js|jsx|ts|tsx</code>, so a Vue or Svelte Storybook with a <code>preview.mjs</code> has an
+      evidence base of roughly zero and the predicate degenerates to "no verdict" for correct and wrong
+      anchors alike.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap">
+  <header>
+    <h3>F10 — Absolute-spelled stats names erase the anchor evidence before it can be counted</h3>
+    <span class="sev sev-p1">P1</span><span class="tag">confirmed empirically</span>
+  </header>
+  <dl>
+    <dt>Where</dt><dd><code>v2/statsAnchor.ts:175-178</code> and <code>:162</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      <code>getSourceModuleResolution</code> pre-filters candidates with
+      <code>isInside(projectRoot, resolveStatsPath(name, projectRoot))</code>. An absolute name pointing at
+      another package fails that test and is dropped <em>before</em> it can be counted as missing. With
+      <code>sourceModuleCount === 0</code>, line 162 returns "no verdict" even though the stats named 151
+      files, none of them in the project. v1's <code>checkStorybookBaseDirectory</code> has no such filter,
+      so this is a regression in the ported predicate rather than a faithful port.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      <code>ui-sb9-webpack</code>'s stats transformed to all-absolute names, anchored at
+      <code>marketing-ui</code>: all 151 candidates dropped, no anchor verdict, and the run is diagnosed by
+      <code>noStoryFiles</code> — which sends a debugger to story globs and require-contexts instead of to
+      the anchor.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap">
+  <header>
+    <h3>F11 — A case-only anchor difference either states something false or builds a chimera</h3>
+    <span class="sev sev-p1">P1</span><span class="tag">confirmed empirically</span><span class="tag">macOS default, Windows</span>
+  </header>
+  <dl>
+    <dt>Where</dt><dd><code>v2/statsAnchor.ts:216-228</code> (<code>isInside</code>/<code>isDisjoint</code>) and <code>v2/paths.ts:57</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      <code>existsSync</code> is case-insensitive on macOS and Windows, while <code>path.relative</code> and
+      <code>path.resolve</code> comparison are case-sensitive. So one on-disk directory spelled with
+      different case is judged disjoint from itself.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      <code>ui-webpack</code>'s stats with <code>projectRoot = packages/UI-webpack</code>:
+      <ul class="tight">
+        <li>With a prebuilt stats path it bails and states something untrue — "the stats file lives in the
+          Storybook project …/ui-webpack, which is not …/UI-webpack". It is the same project, so a debugger
+          hunts for a second Storybook that does not exist.</li>
+        <li>With the default temp-directory stats path there is <strong>no bail</strong>, but
+          <code>path.relative</code> turns every absolute name into a <code>../ui-webpack/…</code> key. Story
+          keys spelled that way can never match a Storybook <code>importPath</code>, and the graph splits —
+          module keys from the absolute <code>nameForCondition</code>, importer keys from the relative
+          <code>reason.moduleName</code> — while <code>&lt;storybookConfig&gt;</code> is still read
+          correctly. The result is a manifest that reports success and is internally inconsistent.</li>
+      </ul>
+    </dd>
+  </dl>
+</div>
+
+<div class="gap">
+  <header>
+    <h3>F12 — An unreadable or vanished config/static file is reported as our own internal error</h3>
+    <span class="sev sev-p1">P1</span><span class="tag">confirmed empirically</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>v2/outOfGraphFiles.ts:142</code> → <code>v2/fileHashes.ts:25</code> →
+      <code>lib/getFileHashes.ts:62-72</code>, surfacing at <code>v2/index.ts:75-77</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      The walk filters entries by type, but the hashing step has no equivalent of the graph path's
+      <code>statSync</code> guard. Any single <code>open</code> failure rejects the
+      <code>Promise.all</code>, throws out of <code>buildManifest</code>, and lands in
+      <code>internalErrorBail(error, 'manifestBuildFailed', 'buildManifest')</code> — with a Sentry event
+      under that one fingerprint.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      <code>chmod 000</code> on one file in a static dir produces <code>EACCES</code> out of
+      <code>hashOutOfGraphFiles</code>; a file deleted between <code>readdir</code> and <code>open</code>
+      produces <code>ENOENT</code> the same way. Neither is our bug, both are environment-caused, and both
+      are indistinguishable from a real defect. There is no subreason for it.
+    </dd>
+    <dt>Related</dt>
+    <dd>
+      An unresolvable Storybook version (<code>v2/storybookVersion.ts:50,56-58</code>) collapses into the
+      same bucket, including an unguarded <code>JSON.parse</code>. And an <code>EACCES</code>/<code>EIO</code>
+      on a <em>nested</em> subdirectory takes the opposite path — <code>outOfGraphFiles.ts:176-190</code>
+      returns <code>[]</code>, yielding a silently partial section while the sibling files keep both
+      emptiness guards quiet.
+    </dd>
+  </dl>
+</div>
+
+<h2 id="p2">Operational and latent holes</h2>
+
+<div class="gap">
+  <header>
+    <h3>F13 — The diagnostic manifest is never written in production, and emits a Sentry event per build</h3>
+    <span class="sev sev-p2">P2</span><span class="tag">confirmed</span>
+  </header>
+  <dl>
+    <dt>Where</dt>
+    <dd><code>lib/turbosnap/index.ts:70</code>, <code>v2/index.ts:142-150</code>,
+      <code>v2/manifest.ts:240-245</code>.</dd>
+    <dt>Three independent facts</dt>
+    <dd>
+      <ol class="tight">
+        <li><strong>Nothing creates the directory.</strong> The only <code>mkdirSync</code> of
+          <code>&lt;sourceDir&gt;/.chromatic</code> in the codebase is
+          <code>tasks/build/buildReactNative.ts:120</code>, and TurboSnap is rejected for React Native. So
+          <code>writeFileSync</code> throws <code>ENOENT</code>, which
+          <code>writeDiagnosticManifest</code> swallows into a Sentry event tagged
+          <code>turbo_snap_v2_diagnostic: writeManifest</code> — one per build. Confirmed against the
+          fixtures: <code>.chromatic</code> is absent under all five
+          <code>storybook-static/</code> directories even though <code>turbosnap-bail</code> ran against
+          them four times during this audit.</li>
+        <li><strong>Nothing uploads it even if written.</strong>
+          <code>tasks/prepare/validateFiles.ts:52</code> excludes <code>.chromatic</code> from the upload
+          list, and <code>lib/uploadMetadataFiles.ts:30-41</code> uploads a fixed list that does not include
+          it. The doc comment at <code>manifest.ts:36-37</code> ("uploaded as a static file to S3 for
+          debugging purposes") does not hold.</li>
+        <li><strong>Wrong directory when the output dir deviates.</strong>
+          <code>tasks/prepare/index.ts</code> hands TurboSnap the corrected <code>fileInfo</code>, but
+          <code>ctx.sourceDir</code> is only updated after the task, so <code>statsPath</code> comes from the
+          corrected directory while the manifest is aimed at the stale one.</li>
+      </ol>
+    </dd>
+    <dt>Why it matters</dt>
+    <dd>
+      A bail is exactly when the manifest is worth inspecting — that is the stated reason it is written at
+      every exit. Today no bail produces one. Separately, the comment at <code>v2/index.ts:79-81</code>
+      ("every one of them writes it") is not true of the four pre-manifest exits, which have no manifest to
+      write.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap">
+  <header>
+    <h3>F14 — v2 uploads no hashes on exactly the builds that must serve as hash baselines</h3>
+    <span class="sev sev-p2">P2</span><span class="tag">code reading</span><span class="tag">blocks the switch</span>
+  </header>
+  <dl>
+    <dt>Where</dt><dd><code>lib/turbosnap/index.ts:27-28</code>.</dd>
+    <dt>Mechanism</dt>
+    <dd>
+      v2 is gated behind v1's preconditions — <code>ctx.turboSnap.unavailable</code> and
+      <code>!ctx.git.changedFiles</code>. A build with no ancestor has no changed-file list, so v2 is skipped
+      and uploads nothing. But that is precisely the build a descendant's Index comparison will use as its
+      baseline. v2 needs hashes on the <em>baseline</em>, which is a different precondition from v1's "I have
+      a diff to trace".
+    </dd>
+    <dt>Consequence</dt>
+    <dd>
+      Today: monitoring data is systematically missing after every cold start, rebase, or
+      <code>UNAVAILABLE</code> build. After the switch: the first build following each of those cannot be
+      decided by hash.
+    </dd>
+    <dt>Scope</dt>
+    <dd>The switch is chartered on <em>TurboSnap 2.0 — Final Phase</em>; this is a precondition for it.</dd>
+  </dl>
+</div>
+
+<div class="gap">
+  <header>
+    <h3>F15 — Concatenated-member coverage rests entirely on one optional stats field, with no assertion</h3>
+    <span class="sev sev-p2">P2</span><span class="tag">confirmed by transform</span><span class="tag">rsbuild</span>
+  </header>
+  <dl>
+    <dt>Mechanism</dt>
+    <dd>
+      On the unshimmed rsbuild generations a single-importer component exists in the stats <em>only</em> as a
+      concatenation member's <code>nameForCondition</code>. <code>moduleFileNames</code>
+      (<code>paths.ts:107-112</code>) is <code>nameForCondition ?? name</code>, so that field is the whole
+      mechanism. On builder 3.4.0 there is no <code>nameForCondition</code> at all — 0 of 268 modules — and
+      14 concatenated records whose <code>modules[]</code> do not list their real members, so coverage there
+      depends instead on the shim independently emitting a per-file record. Two different mechanisms, one
+      per generation, neither asserted at runtime.
+    </dd>
+    <dt>Evidence</dt>
+    <dd>
+      Stripping both spellings recursively from <code>ui-sb8-rsbuild</code>'s real stats:
+<pre><code>BASE  hash eeeaf231321ba882  stories 3  files 167
+STRIP hash ffb4adff5208f856  stories 3  files 164
+lost first-party keys: ["./src/lib/Button/Button.tsx", "./src/lib/UserCard/UserCard.tsx"]</code></pre>
+      Two real components leave the graph, three stories are still detected, and <strong>nothing
+      bails</strong>. A later edit to either file would move no hash.
+    </dd>
+    <dt>Why this is not hypothetical</dt>
+    <dd>
+      The shim's reduced record shape is <code>{id, name, modules, reasons}</code> — it drops
+      <code>nameForCondition</code> by construction. It happens to also flatten every module into its own
+      record today, and the map pins that as a semantic requirement ("every attributable real module appears
+      somewhere with a usable filename") tested by comparing full against minimal stats. But that test
+      compares 3.4.0 against itself, where the flattening exists. Nothing pins the unshimmed concatenation
+      shape, and nothing detects the loss at runtime.
+    </dd>
+  </dl>
+</div>
+
+<div class="gap">
+  <header>
+    <h3>F16 — Smaller latent items</h3>
+    <span class="sev sev-p3">P3</span>
+  </header>
+  <dl>
+    <dt><code>--untraced</code> is silently inert in v2</dt>
+    <dd>
+      <code>untraced</code> appears nowhere in <code>TraceChangedFilesInput</code> or the v2 tree. v1 removes
+      untraced files from its seed list and from every reason it walks; v2 hashes them and rolls them into
+      every reaching story subtree. The direction is safe (v2 wider), but a documented user option silently
+      stops working.
+    </dd>
+    <dt>Partial story detection has no guard</dt>
+    <dd>
+      <code>v2/index.ts:277</code> and <code>:297</code> both gate on
+      <code>storyFileHashes.size === 0</code>, so nothing notices a graph that yields <em>some</em> stories.
+      Usually that degrades to over-capture, with one leak: a component imported by both a missed story and
+      a detected one is <code>storyReachable</code>, so an edit moves only the detected story's hash. The
+      same shape makes <code>unrecognizedStoryEntry</code> unable to fire for a build with one recognised
+      and one unrecognised generated entry. No fixture reproduces partial detection today — all ten detect
+      100% of their on-disk story files.
+    </dd>
+    <dt>A prebuilt build can be told it declares <code>webpack4</code></dt>
+    <dd>
+      <code>lib/getPrebuiltStorybookMetadata.ts:24-30</code> lets prebuilt metadata win, and
+      <code>getBuilder</code> defaults a missing <code>project.json</code> builder to <code>'webpack4'</code>.
+      <code>declaresVite('webpack4')</code> then asserts "the project is non-Vite", so Vite stats bail
+      <code>anchorMismatch/builderMismatch</code> naming a builder the build never used — pre-empting the
+      accurate <code>untrustedBuilderStats</code>. Fails safe; the reason is a fabrication. The harness
+      omits this default and so can never reproduce it.
+    </dd>
+    <dt>Input derivation sits outside the isolation boundary</dt>
+    <dd>
+      <code>lib/turbosnap/index.ts:41</code> protects v1 with
+      <code>traceChangedFilesV2(getV2Input(…)).catch(() =&gt; {})</code>, but <code>getV2Input</code> is
+      evaluated as an argument, so a synchronous throw inside it escapes the catch and fails the customer's
+      build. Unreachable today; the wrong shape for a monitoring-mode subsystem.
+    </dd>
+  </dl>
+</div>
+
+<h2 id="instruments">Holes in the instruments</h2>
+
+<div class="panel warn">
+  <h3><code>parity.mjs</code> has no verdict for "v1 missed a story v2 caught"</h3>
+  <p>
+    The three cells where v2 and v1 disagree on the older rsbuild fixtures are reported as
+    <code>v2 wider (over-captures — safe)</code>. They are nothing of the kind: v1 recaptured
+    <strong>zero</strong> stories for a direct component edit and v2 recaptured the correct one. The verdict
+    vocabulary — <code>parity</code>, <code>v2 wider</code>, <code>v2 narrower</code>, and
+    <code>v2 MISSES a story v1 caught</code> — has no cell for the mirror case, so v2's strongest result is
+    recorded as a v2 wart and the underlying v1 defect is invisible. This is why the premise in
+    <a href="#premise">§1</a> survived.
+  </p>
+</div>
+
+<div class="panel warn">
+  <h3><code>structural-probe.sh</code> does not gate, and cannot run on rsbuild</h3>
+  <ul class="tight">
+    <li><strong>No exit-code gate.</strong> Unlike <code>attribution-matrix.sh</code>,
+      <code>parity.sh</code> and <code>bail-matrix.sh</code>, it prints for a human to read and carries no
+      machine-checked expectations. This is the defect that let one attribution probe measure nothing for
+      months, and it is still present here.</li>
+    <li><strong>It exits 0 after dying.</strong> The run aborted at <code>move-path-derived</code> —
+      <code>mv: … No such file or directory</code>, because <code>ui-rsbuild</code> has no
+      <code>PathDerived</code> component — and still reported success. Eight of thirteen cases never ran.</li>
+    <li><strong>Its rspack exclusion rested on a falsified reason.</strong>
+      <code>structural-audit.md</code> scoped rsbuild out because it "indexes 0 stories, so every structural
+      probe there only moves the bucket". Story detection was fixed; parity and bail were re-measured on
+      rsbuild; structural was not. That is how F8 stayed hidden — and F8 needs a
+      <code>+ 2 modules</code> concatenation, which only a structural case produces.</li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h3>Fixture coverage gaps</h3>
+  <ul class="tight">
+    <li>The three rsbuild fixtures have <strong>8 source files each</strong> against 13 for
+      <code>ui</code>/<code>ui-webpack</code>: no CSS module, no imported SVG, no
+      <code>import.meta.url</code> asset, no <code>PathDerived</code>. So the entire asset and
+      path-derived class is unmeasured on every rsbuild generation, and the eight structural cases that
+      need those files cannot run.</li>
+    <li><strong>MDX is measured nowhere and recorded nowhere.</strong> No document names it and no v2 code
+      branches on it. The map lists MDX-on-rsbuild as fog; the reality is broader — MDX story files are
+      unmeasured on every builder.</li>
+    <li>No fixture story references a static asset by URL, so <code>&lt;staticFiles&gt;</code>' mechanism is
+      measured but its consequence is not.</li>
+    <li><code>matrix.sh</code>'s <code>moment</code> row is vacuous on webpack and rspack (a hardcoded Vite
+      path), which is annotated in the script and covered properly by
+      <code>attribution-matrix.sh</code>'s <code>dep_key</code>. Not a finding — recorded so a reader of
+      <code>matrix-ui-rsbuild.log</code>'s "0 stories changed" does not mistake it for one.</li>
+  </ul>
+</div>
+
+<h2 id="cleared">Hypotheses checked and cleared</h2>
+
+<p>Negative results, so they need not be re-chased:</p>
+
+<ul class="tight">
+  <li><strong><code>getStatsRoot</code> preferring the project root cannot pick the wrong root</strong> for
+    genuinely repository-root-relative stats: a repo-root build names the config file
+    <code>./packages/ui/.storybook/preview.ts</code>, which does not resolve under
+    <code>projectRoot</code>. Measured — an anchor at the repo root correctly bails
+    <code>unresolvedSourceModules</code>.</li>
+  <li><strong>Forgetting <code>--storybook-base-dir</code> entirely</strong> in a monorepo is correctly
+    diagnosed as <code>unresolvedSourceModules</code>.</li>
+  <li><strong>Webpack loader chains and <code>??ruleSet[…]</code> are harmless today</strong> on all three
+    webpack fixtures and both older rsbuild fixtures — <code>nameForCondition</code> neutralises them, and
+    no <code>reason.moduleName</code> in any fixture carries a loader chain. Recorded as latent under F3.</li>
+  <li><strong>Story files above the project root</strong> (<code>../shared/src/Foo.stories.tsx</code>) match
+    Storybook's <code>importPath</code>: <code>prefixInProjectPath</code> implements exactly Storybook's
+    <code>normalizeStoryPath</code> rule.</li>
+  <li><strong>Windows separators</strong> round-trip through <code>normalizeStatsPath</code> for the
+    same-drive case; cross-drive is cosmetic, since the node is pruned.</li>
+  <li><strong>A case-insensitive filesystem producing two hash keys for one file</strong> is
+    over-capture-neutral: both keys hash the same bytes.</li>
+  <li><strong><code>getBuilderMismatch</code> does not false-assert on webpack</strong> —
+    <code>isBuilderViteStats</code> matches <code>@storybook/builder-vite/</code>, absent from all five
+    non-Vite fixtures, and <code>declaresVite</code> returns no verdict for an unrecognised builder.</li>
+  <li><strong>The <code>{ from, to }</code> object form of <code>staticDirs</code> resolves correctly</strong>,
+    and its resolution base matches Storybook's own <code>resolve(configDir, directory)</code>. F4 is about
+    <em>which</em> config directory and the <em>string</em> colon form, not the base rule.</li>
+  <li><strong>Config/static overlap dedupe is correct</strong> — nested static files are removed from the
+    config sweep, and duplicate or nested static dirs collapse. No double-hashing.</li>
+  <li><strong>Dotfiles in the config walk cause no churn</strong> on any fixture, so the deliberate absence
+    of ignore rules is not an over-capture in practice.</li>
+  <li><strong>Symlink cycles still terminate.</strong> F5 is that the guard is broader than cycles, not that
+    it diverges.</li>
+  <li><strong><code>storybook/package.json</code> resolves in practice</strong> on every fixture layout —
+    <code>10.6.0-alpha.3</code>, <code>9.1.20</code>, <code>8.6.18</code> — with no
+    <code>ERR_PACKAGE_PATH_NOT_EXPORTED</code>.</li>
+  <li><strong>The <code>STORIES_ENTRY_FILES</code>/<code>CONFIG_ENTRY_FILES</code> asymmetry is not
+    exploitable</strong>: an un-catalogued stories entry above a lazy context is caught on the basename and
+    bails <code>unrecognizedStoryEntry</code>.</li>
+  <li><strong>Externals cannot become story files</strong> — the resulting node is unhashable, so it is
+    pruned.</li>
+  <li><strong><code>classifyUploadHashesFailure</code> has no double-reporting or swallowing</strong>: the
+    throw path and the resolved-failure path are disjoint, and unknown <code>__typename</code>s fold into
+    <code>invalidResponse</code> by design.</li>
+  <li><strong>Stats with no <code>modules</code> array at all</strong> are caught as
+    <code>internalError/anchorCheckFailed</code>.</li>
+  <li><strong>Two stats modules collapsing to one canonical key</strong> unions their dependency sets, which
+    is over-capture-safe.</li>
+  <li><strong><code>pruneSyntheticFiles</code> mutating during iteration</strong> is well-defined; no entries
+    are skipped.</li>
+  <li><strong>My own <code>nameForCondition</code>-only strip cleared a false alarm.</strong> Removing it from
+    top-level records alone changes nothing, because the nested member copy still carries it. Only the
+    recursive strip loses files — which is what makes F15 precise rather than speculative.</li>
+</ul>
+
+<h2 id="known">Already known, not re-raised</h2>
+
+<p>
+  A reconciliation pass over twelve earlier audit documents found 27 findings closed in code and 8 retracted,
+  mis-attributed, or superseded. Two live items are worth restating because they bound what any CLI-side
+  audit can conclude:
+</p>
+
+<div class="panel warn">
+  <h3><code>storybookFiles</code> is never sent to the Index</h3>
+  <p>
+    <code>v2/api.ts:84-93</code> sends <code>buildId</code>, <code>storybookHash</code> and
+    <code>storyFileHashes</code> and nothing else; <code>BuildUploadHashesInput</code> has no field for
+    <code>storybookFiles</code>. So a change confined to a <code>storybookFiles</code> entry — a static
+    asset, <code>main.ts</code>, a <code>preview.*</code> edit, a Storybook upgrade — moves
+    <code>storybookHash</code> while matching no story, and the Index captures nothing where v1 bails.
+    <strong>This is the largest live under-capture in the system and no CLI change can close it.</strong> It
+    is documented in the code and tracked as a P0 on the Index Fixes page.
+  </p>
+</div>
+
+<div class="panel">
+  <h3>Deliberate positions this audit did not reopen</h3>
+  <ul class="tight">
+    <li>No rsbuild builder version floor — declined twice, and the reason is now stronger: both fixes in
+      <code>ca96074a</code> are generation-blind, and 3.3.0/3.3.1/3.3.4 produce a byte-identical manifest.</li>
+    <li>The intermediate-cwd stats root fails safe to v1 and no tooling default produces it.</li>
+    <li>The hoisted-cache asymmetry — accepted from a repo-root build, refused from a package-dir build — is
+      a deliberate, test-pinned choice.</li>
+    <li><code>package.json</code> and lockfiles stay out of the hashed inputs.</li>
+    <li>The <code>builder-vite</code> version floor and its escape hatch, and the
+      <code>findBuilder</code>/<code>resolvePackageJson</code> <code>builderName</code> defect, are chartered
+      elsewhere.</li>
+    <li>Redundant path normalisation (~30% of <code>buildManifest</code> self time) and the
+      stories×subtree roll-up cost remain deferred, non-blocking. <code>moduleFileNames</code>' new
+      suffix-strip and <code>Set</code> de-dupe have grown the former slightly.</li>
+  </ul>
+</div>
+
+<h2 id="tickets">Tickets chartered</h2>
+
+<p>
+  Added to the <em>TurboSnap 2.0 — Rsbuild</em> map's Tickets database, ordered as listed. Three carry a
+  scope note: F6 belongs to the input boundary and F14 to the switch, both chartered on sibling maps, and
+  they are filed here only because this audit found them.
+</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>#</th><th>Ticket</th><th>Finding</th><th>Sev</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Re-measure v1's rsbuild coverage and revisit the "fallback is safe" premise</td><td><a href="#premise">§1</a></td><td><span class="sev sev-p0">P0</span></td></tr>
+<tr><td>2</td><td>Decide whether v2 should refuse a stats file it cannot tie to the project on the default build path</td><td><a href="#f-anchor">F1</a></td><td><span class="sev sev-p0">P0</span></td></tr>
+<tr><td>3</td><td>Decide whether v2 should strip query and loader decorations from stats names</td><td><a href="#f-query">F3</a></td><td><span class="sev sev-p0">P0</span></td></tr>
+<tr><td>4</td><td>Decide how v2 should cover assets the builder resolves without emitting a module</td><td><a href="#f-asset">F2</a></td><td><span class="sev sev-p0">P0</span></td></tr>
+<tr><td>5</td><td>Decide what v2 should do with a staticDirs entry that is a file or carries a <code>to</code> suffix</td><td><a href="#f-staticdir">F4</a></td><td><span class="sev sev-p0">P0</span></td></tr>
+<tr><td>6</td><td>Decide whether the static-dir walk should break cycles by ancestor chain</td><td><a href="#f-symlink">F5</a></td><td><span class="sev sev-p0">P0</span></td></tr>
+<tr><td>7</td><td>Decide whether the anchor predicates need distinctive evidence rather than one surviving name</td><td>F9, F10</td><td><span class="sev sev-p1">P1</span></td></tr>
+<tr><td>8</td><td>Decide whether a first-party module can become a story file through a shim-attributed context reason</td><td><a href="#f-falsestory">F8</a></td><td><span class="sev sev-p1">P1</span></td></tr>
+<tr><td>9</td><td>Decide whether the preview subtree should be found by configDir rather than the literal <code>.storybook</code></td><td><a href="#f-preview">F7</a></td><td><span class="sev sev-p1">P1</span></td></tr>
+<tr><td>10</td><td>Decide whether an unreadable config or static file deserves its own bail reason</td><td>F12</td><td><span class="sev sev-p1">P1</span></td></tr>
+<tr><td>11</td><td>Decide whether a case-only anchor difference should be reconciled against the filesystem</td><td>F11</td><td><span class="sev sev-p1">P1</span></td></tr>
+<tr><td>12</td><td>Decide where the diagnostic manifest should be written, and whether it is uploaded</td><td>F13</td><td><span class="sev sev-p2">P2</span></td></tr>
+<tr><td>13</td><td>Give the structural matrix an exit-code gate, an rsbuild-capable fixture, and a v1-misses verdict</td><td><a href="#instruments">Instruments</a></td><td><span class="sev sev-p2">P2</span></td></tr>
+<tr><td>14</td><td>Decide whether v2 should assert that every concatenated member resolves to a real file</td><td>F15</td><td><span class="sev sev-p2">P2</span></td></tr>
+<tr><td>15</td><td>Decide whether v2 should upload hashes on builds with no changed-file list</td><td>F14</td><td><span class="sev sev-p2">P2</span></td></tr>
+<tr><td>16</td><td>Decide whether the prebuilt <code>webpack4</code> default may assert a builder mismatch</td><td>F16</td><td><span class="sev sev-p3">P3</span></td></tr>
+<tr><td>17</td><td>Decide whether <code>--untraced</code> should reach v2 or be documented as v1-only</td><td>F16</td><td><span class="sev sev-p3">P3</span></td></tr>
+<tr><td>18</td><td>Decide whether v2 needs a story-set completeness check</td><td>F16</td><td><span class="sev sev-p3">P3</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<footer>
+  Measured 2026-08-06 against <code>chromatic-cli@ca96074a</code> and <code>turbosnap-monorepo@063187a</code>.
+  Raw logs for every run in this audit are transient; the standing matrices reproduce them with
+  <code>bash bail-matrix.sh</code>, <code>bash parity.sh &lt;pkg&gt;</code> and
+  <code>bash attribution-matrix.sh &lt;pkg&gt;</code>. Before trusting any figure here against a later tree,
+  re-read the harness README's seven traps — trap 1 (the fixture is shared and gets rebuilt mid-run) and
+  trap 6 (building an SB8/SB9 fixture with the workspace-root bin measures the wrong Storybook) are the two
+  that would invalidate these numbers.
+</footer>
+
+</main>
+</body>
+</html>
