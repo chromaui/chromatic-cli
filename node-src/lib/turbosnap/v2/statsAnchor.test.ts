@@ -80,9 +80,30 @@ function givenSiblingPackages(packages: Record<string, { badge: string }>) {
   return { repository, roots };
 }
 
+/** An anchor named only by the part a case is about; the rest is what production always supplies. */
+type AnchorOverrides = Partial<AnchorInput> & Pick<AnchorInput, 'projectRoot'>;
+
+/**
+ * Completes an anchor. The defaults live here rather than in the module under test, where a default
+ * could mask a wiring bug instead of failing.
+ *
+ * @param overrides The anchor fields the case names.
+ *
+ * @returns The complete anchor.
+ */
+function anchorInput(overrides: AnchorOverrides): AnchorInput {
+  return {
+    repositoryRoot: overrides.projectRoot,
+    statsPath: statsPathFor(overrides.projectRoot),
+    configDir: '.storybook',
+    ...overrides,
+  };
+}
+
 // The production caller resolves the stats root once and hands it to the anchor check, so the tests
 // exercise the same pairing.
-function anchorMismatchFor(stats: Stats, input: AnchorInput) {
+function anchorMismatchFor(stats: Stats, overrides: AnchorOverrides) {
+  const input = anchorInput(overrides);
   return getAnchorMismatchReason(stats, input, getSourceModuleResolution(stats, input));
 }
 
@@ -100,9 +121,7 @@ describe('getAnchorMismatchReason', () => {
     expect(
       anchorMismatchFor(VITE_STATS, {
         projectRoot: roots.ui,
-        statsPath: statsPathFor(roots.ui),
         builderName: '@storybook/react-vite',
-        configDir: '.storybook',
       })
     ).toBeUndefined();
   });
@@ -130,7 +149,6 @@ describe('getAnchorMismatchReason', () => {
         projectRoot: roots['marketing-ui'],
         statsPath,
         builderName: '@storybook/react-vite',
-        configDir: '.storybook',
       })
     ).toMatchObject({ subreason: 'statsFileOutsideProject' });
   });
@@ -148,7 +166,6 @@ describe('getAnchorMismatchReason', () => {
         projectRoot: roots.ui,
         statsPath,
         builderName: '@storybook/react-vite',
-        configDir: '.storybook',
       })
     ).toBeUndefined();
   });
@@ -165,7 +182,6 @@ describe('getAnchorMismatchReason', () => {
         projectRoot: roots.ui,
         statsPath,
         builderName: '@storybook/react-vite',
-        configDir: '.storybook',
       })
     ).toBeUndefined();
   });
@@ -179,9 +195,7 @@ describe('getAnchorMismatchReason', () => {
       expect(
         anchorMismatchFor(VITE_STATS, {
           projectRoot: roots.ui,
-          statsPath: statsPathFor(roots.ui),
           builderName: '@storybook/react-webpack5',
-          configDir: '.storybook',
         })
       ).toMatchObject({ subreason: 'builderMismatch' });
     });
@@ -204,9 +218,7 @@ describe('getAnchorMismatchReason', () => {
       expect(
         anchorMismatchFor(webpackStats, {
           projectRoot: roots.ui,
-          statsPath: statsPathFor(roots.ui),
           builderName: '@storybook/react-vite',
-          configDir: '.storybook',
         })
       ).toMatchObject({ subreason: 'builderMismatch' });
     });
@@ -219,9 +231,7 @@ describe('getAnchorMismatchReason', () => {
       expect(
         anchorMismatchFor(VITE_STATS, {
           projectRoot: roots.ui,
-          statsPath: statsPathFor(roots.ui),
           builderName: '@storybook/nextjs',
-          configDir: '.storybook',
         })
       ).toBeUndefined();
     });
@@ -256,9 +266,7 @@ describe('getAnchorMismatchReason', () => {
     expect(
       anchorMismatchFor(rsbuildStats, {
         projectRoot: roots.ui,
-        statsPath: statsPathFor(roots.ui),
         builderName: 'storybook-react-rsbuild',
-        configDir: '.storybook',
       })
     ).toBeUndefined();
   });
@@ -270,12 +278,12 @@ describe('getAnchorMismatchReason', () => {
     const unrelated = path.join(repository, 'packages/empty');
     mkdirSync(unrelated, { recursive: true });
 
-    // No stats path, so this is the predicate under test rather than the stats file's location.
+    // The default stats path sits under the unrelated root and owns no config directory, so this is
+    // the predicate under test rather than the stats file's location.
     expect(
       anchorMismatchFor(VITE_STATS, {
         projectRoot: unrelated,
         builderName: '@storybook/react-vite',
-        configDir: '.storybook',
       })
     ).toMatchObject({ subreason: 'unresolvedSourceModules' });
   });
@@ -294,7 +302,6 @@ describe('getAnchorMismatchReason', () => {
       anchorMismatchFor(VITE_STATS, {
         projectRoot: decoy,
         builderName: '@storybook/react-vite',
-        configDir: '.storybook',
       })
     ).toMatchObject({ subreason: 'unresolvedSourceModules' });
   });
@@ -321,7 +328,6 @@ describe('getAnchorMismatchReason', () => {
       anchorMismatchFor(absoluteStats, {
         projectRoot: roots.ui,
         builderName: '@storybook/react-webpack5',
-        configDir: '.storybook',
       })
     ).toMatchObject({ subreason: 'unresolvedSourceModules' });
   });
@@ -353,7 +359,6 @@ describe('getAnchorMismatchReason', () => {
         anchorMismatchFor(concatenatedStats, {
           projectRoot: roots.ui,
           builderName: '@storybook/react-webpack5',
-          configDir: '.storybook',
         })
       ).toBeUndefined();
     });
@@ -369,7 +374,6 @@ describe('getAnchorMismatchReason', () => {
         anchorMismatchFor(concatenatedStats, {
           projectRoot: unrelated,
           builderName: '@storybook/react-webpack5',
-          configDir: '.storybook',
         })
       ).toMatchObject({ subreason: 'unresolvedSourceModules' });
     });

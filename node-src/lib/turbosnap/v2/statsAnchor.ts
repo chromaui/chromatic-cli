@@ -56,12 +56,13 @@ export function getAnchorMismatchReason(
   );
 }
 
+/** What the caller guarantees about the anchor; only the builder can genuinely be unknown. */
 export interface AnchorInput {
   projectRoot: string;
-  repositoryRoot?: string;
+  repositoryRoot: string;
+  statsPath: string;
+  configDir: string;
   builderName?: string;
-  statsPath?: string;
-  configDir?: string;
 }
 
 /**
@@ -86,8 +87,8 @@ export function getSourceModuleResolution(
   stats: Stats,
   {
     projectRoot,
-    repositoryRoot = projectRoot,
-    configDir: configDirectory = '.storybook',
+    repositoryRoot,
+    configDir: configDirectory,
   }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir'>
 ): SourceModuleResolution {
   const sourceModules = statsPaths(stats).filter((name) => {
@@ -157,10 +158,8 @@ function declaresVite(builderName: string | undefined): boolean | undefined {
 function getStatsFileOutsideProject({
   projectRoot,
   statsPath,
-  configDir: configDirectory = '.storybook',
+  configDir: configDirectory,
 }: AnchorInput): AnchorMismatchReason | undefined {
-  if (!statsPath) return undefined;
-
   const owningProject = findOwningProject(path.dirname(path.resolve(statsPath)), configDirectory);
   if (!owningProject || !isDisjoint(owningProject, projectRoot)) return undefined;
 
