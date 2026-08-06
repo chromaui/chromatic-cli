@@ -549,6 +549,9 @@ export interface TargetInfo {
   formFields: Record<string, string>;
 }
 
+// The flag-only bail reasons, which are deliberately not mutually exclusive: they are a pre-existing
+// shape, and `BailFamily` below already makes the field-carrying reasons exclusive where analytics
+// depend on it.
 interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
