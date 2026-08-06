@@ -171,6 +171,29 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+/**
+ * Metadata about a commit visited during the parent-commit walk in `getParentCommits`.
+ * Used for diagnostics — helps explain why a particular baseline was (or wasn't) chosen.
+ */
+export interface VisitedCommit {
+  /** The commit SHA. */
+  commit: string;
+  /** Direct parent SHAs. */
+  parentCommits: string[];
+  /** A Chromatic build exists for this commit. */
+  hasBuild: boolean;
+  /**
+   * The index told us this was a merge commit for a PR, likely a squash or rebase merge.
+   */
+  isMergePoint: boolean;
+  /**
+   * The commit subject matches `(#N)`, which is the default format appended by GitHub and
+   * Bitbucket Cloud for squash merges. Not reliable for GitLab (`!N`) or Bitbucket Server.
+   * The subject itself is not stored.
+   */
+  isProbableSquashMerge: boolean;
+}
+
 /** Whether the clone has full or truncated commit history. */
 export type CloneDepth = 'full' | 'shallow';
 
@@ -204,6 +227,8 @@ export interface Git {
   replacementBuildIds?: [string, string][];
   matchesBranch?: (glob: boolean | string) => boolean;
   packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+  /** All commits visited during the `getParentCommits` walk, with annotations */
+  visitedCommits?: VisitedCommit[];
   /** Whether commit history was truncated at clone time (`git clone --depth`). */
   cloneDepth?: CloneDepth;
   /**

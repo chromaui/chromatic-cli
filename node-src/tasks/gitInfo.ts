@@ -261,7 +261,7 @@ export async function gatherGitInfo(
     throw new Error(skipFailed().output);
   }
 
-  const parentCommits = await getParentCommits(
+  const { ancestorCommits: parentCommits, visitedCommits } = await getParentCommits(
     { log, client, options },
     {
       git,
@@ -269,6 +269,7 @@ export async function gatherGitInfo(
     }
   );
   git.parentCommits = parentCommits;
+  git.visitedCommits = visitedCommits;
   log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
   const result = await client.runQuery<LastBuildQueryResult>(LastBuildQuery, {

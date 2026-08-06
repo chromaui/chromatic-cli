@@ -26,6 +26,7 @@ import {
   getUncommittedHash,
   getUserEmail,
   getVersion,
+  getVisitedCommitDetails,
   hasPreviousCommit,
   NULL_BYTE,
 } from './git';
@@ -415,5 +416,56 @@ describe('getCloneFilter', () => {
   it('returns full when no filter is configured (git config exits non-zero)', async () => {
     execGitCommandOneLine.mockRejectedValue(new Error('exit code 1'));
     expect(await getCloneFilter(ctx)).toBe('full');
+  });
+});
+
+describe('getVisitedCommitDetails', () => {
+  it('returns an empty array when given no commits', async () => {
+    expect(await getVisitedCommitDetails(ctx, [])).toEqual([]);
+    expect(execGitCommand).not.toHaveBeenCalled();
+  });
+
+  it('parses commit SHA, parent SHAs, and marks non-squash subject', async () => {
+    execGitCommand.mockResolvedValue('abc123\0def456 ghi789\0Regular commit message\0');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([
+      { commit: 'abc123', parentCommits: ['def456', 'ghi789'], isProbableSquashMerge: false },
+    ]);
+  });
+
+  it('sets isProbableSquashMerge true when subject contains (#N)', async () => {
+    execGitCommand.mockResolvedValue('abc123\0def456\0Merge my feature (#42)\0');
+    const [result] = await getVisitedCommitDetails(ctx, ['abc123']);
+    expect(result.isProbableSquashMerge).toBe(true);
+  });
+
+  it('sets isProbableSquashMerge false for a regular merge commit subject', async () => {
+    execGitCommand.mockResolvedValue(
+      'abc123\0def456 ghi789\0Merge pull request #42 from org/branch\0'
+    );
+    const [result] = await getVisitedCommitDetails(ctx, ['abc123']);
+    expect(result.isProbableSquashMerge).toBe(false);
+  });
+
+  it('returns an empty parentCommits array for a root commit', async () => {
+    execGitCommand.mockResolvedValue('abc123\0\0Initial commit\0');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([
+      { commit: 'abc123', parentCommits: [], isProbableSquashMerge: false },
+    ]);
+  });
+
+  it('parses multiple commits', async () => {
+    execGitCommand.mockResolvedValue(
+      'aaa111\0bbb222\0Fix bug (#10)\0\nccc333\0ddd444\0Regular commit\0'
+    );
+    const results = await getVisitedCommitDetails(ctx, ['aaa111', 'ccc333']);
+    expect(results).toEqual([
+      { commit: 'aaa111', parentCommits: ['bbb222'], isProbableSquashMerge: true },
+      { commit: 'ccc333', parentCommits: ['ddd444'], isProbableSquashMerge: false },
+    ]);
+  });
+
+  it('returns an empty array when git returns no output', async () => {
+    execGitCommand.mockResolvedValue('');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([]);
   });
 });

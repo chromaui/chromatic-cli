@@ -10,7 +10,7 @@ import {
   BaselineCheckoutFailedError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
-import { CloneDepth, CloneFilter } from '../types';
+import { CloneDepth, CloneFilter, VisitedCommit } from '../types';
 import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
   execGitCommand,
@@ -684,6 +684,56 @@ export async function getShallowBoundaryCommits(deps: GitDeps): Promise<string[]
   const shallowFilePath = await execGitCommandOneLine(deps, `git rev-parse --git-path shallow`);
   const contents = await readFile(shallowFilePath.trim(), 'utf8').catch(() => '');
   return contents.split(newline).filter(Boolean);
+}
+
+// Matches the `(#N)` suffix that GitHub and Bitbucket Cloud append to squash merge subjects.
+const PROBABLE_SQUASH_MERGE_RE = /\(#\d+\)/;
+
+/**
+ * Fetch parent SHAs and compute squash-merge likelihood for each of the given commits in a
+ * single git call.
+ *
+ * Uses `git log --no-walk=unsorted` so git reads only the listed objects with no ancestor
+ * traversal. The commit subject is used to compute `isProbableSquashMerge` but is not
+ * included in the returned objects. The `hasBuild` and `isMergePoint` fields are left as
+ * `false` here; callers are responsible for annotating them from their own data.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commit SHAs to look up.
+ *
+ * @returns One entry per commit containing its direct parent SHAs and squash-merge flag.
+ *   Returns an empty array when `commits` is empty.
+ */
+export async function getVisitedCommitDetails(
+  deps: GitDeps,
+  commits: string[]
+): Promise<Pick<VisitedCommit, 'commit' | 'parentCommits' | 'isProbableSquashMerge'>[]> {
+  if (commits.length === 0) return [];
+
+  // %H = full SHA, %P = space-separated parent SHAs, %s = subject line (first line of message)
+  // %x00 = NUL field separator (safe even with special chars in subject)
+  // --no-walk=unsorted shows only the listed objects, no ancestor traversal
+  const result = await execGitCommand(
+    deps,
+    `git log --no-walk=unsorted --format=%H%x00%P%x00%s%x00 ${commits.join(' ')}`
+  );
+  if (!result?.trim()) return [];
+
+  // Output is a sequence of: <sha>\0<parents>\0<subject>\0 per commit
+  const fields = result.split('\0');
+  const details: Pick<VisitedCommit, 'commit' | 'parentCommits' | 'isProbableSquashMerge'>[] = [];
+  for (let index = 0; index + 2 < fields.length; index += 3) {
+    const commit = fields[index].trim();
+    const parents = fields[index + 1].trim();
+    const subject = fields[index + 2].trim();
+    if (!commit) continue;
+    details.push({
+      commit,
+      parentCommits: parents ? parents.split(' ') : [],
+      isProbableSquashMerge: PROBABLE_SQUASH_MERGE_RE.test(subject),
+    });
+  }
+  return details;
 }
 
 /**

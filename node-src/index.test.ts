@@ -336,7 +336,7 @@ vi.mock('./git/git', () => ({
 }));
 
 vi.mock('./git/getParentCommits', () => ({
-  getParentCommits: () => Promise.resolve(['baseline']),
+  getParentCommits: () => Promise.resolve({ ancestorCommits: ['baseline'], visitedCommits: [] }),
 }));
 
 vi.mock('./lib/installDependencies', () => ({

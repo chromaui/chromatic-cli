@@ -1,9 +1,9 @@
 import gql from 'fake-tag';
 
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
-import { Deps, Git } from '../types';
+import { Deps, Git, VisitedCommit } from '../types';
 import { execGitCommand, GitDeps } from './execGit';
-import { commitExists } from './git';
+import { commitExists, getVisitedCommitDetails } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -215,7 +215,11 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
  * @param options.ignoreLastBuildOnBranch Ignore the last Chromatic build associated with this
  * branch.
  *
- * @returns A list of parent commits associated with this branch.
+ * @returns An object with:
+ *   - `ancestorCommits` – the baseline parent commits to pass to the Chromatic build.
+ *   - `visitedCommits` – every commit inspected during the walk, annotated with parent SHAs,
+ *     build presence, and PR merge-point status. Populated on a best-effort basis; `undefined`
+ *     if the git call to fetch commit details fails.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
@@ -237,7 +241,7 @@ export async function getParentCommits(
 
   if (!firstBuild) {
     log.debug('App has no builds, returning []');
-    return [];
+    return { ancestorCommits: [], visitedCommits: [] as VisitedCommit[] };
   }
 
   const initialCommitsWithBuilds: string[] = [];
@@ -295,7 +299,9 @@ export async function getParentCommits(
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
 
-  for (const pullRequest of mergedPullRequests) {
+  // Track which visited commits the platform index identified as PR merge points.
+  const mergePointCommits = new Set<string>();
+  for (const [index, pullRequest] of mergedPullRequests.entries()) {
     // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
     // during our ancestor selection that was the merge commit for that PR.
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
@@ -311,6 +317,9 @@ export async function getParentCommits(
         );
         extraParentCommits.push(lastHeadBuildCommit);
       }
+      // The commit at the same position in mergeInfoList is the merge point
+      const mergePoint = mergeInfoList?.[index]?.commit;
+      if (mergePoint) mergePointCommits.add(mergePoint);
     }
   }
 
@@ -320,5 +329,29 @@ export async function getParentCommits(
   const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
 
   const ancestorCommits = [...extraParentCommits, ...(descendentCommits || [])];
-  return ancestorCommits;
+
+  // Build the visited commit list from everything the walk touched, on a best-effort basis.
+  const allVisitedShas = [
+    ...new Set([...(visitedCommitsWithoutBuilds ?? []), ...commitsWithBuilds]),
+  ];
+  const commitsWithBuildsSet = new Set(commitsWithBuilds);
+  let visitedCommits: VisitedCommit[] | undefined;
+  try {
+    const details = await getVisitedCommitDetails(deps, allVisitedShas);
+    visitedCommits = details.map(({ commit, parentCommits, isProbableSquashMerge }) => ({
+      commit,
+      parentCommits,
+      hasBuild: commitsWithBuildsSet.has(commit),
+      isMergePoint: mergePointCommits.has(commit),
+      isProbableSquashMerge,
+    }));
+  } catch (err) {
+    log.debug('Failed to retrieve visited commit details', err);
+  }
+
+  log.debug(
+    `visitedCommits: total=${allVisitedShas.length}, withBuilds=${commitsWithBuildsSet.size}, mergePoints=${mergePointCommits.size}`
+  );
+
+  return { ancestorCommits, visitedCommits };
 }

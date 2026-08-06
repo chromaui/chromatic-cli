@@ -109,7 +109,7 @@ const buildInput = (overrides: Partial<GitInfoInput> = {}): GitInfoInput => ({
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
   getUncommittedHash.mockResolvedValue('abc123');
-  getParentCommits.mockResolvedValue(['asd2344']);
+  getParentCommits.mockResolvedValue({ ancestorCommits: ['asd2344'], visitedCommits: [] });
   getBaselineBuilds.mockResolvedValue([]);
   getChangedFilesWithReplacement.mockResolvedValue({ changedFiles: [] });
   getVersion.mockResolvedValue('Git v1.0.0');
@@ -218,7 +218,10 @@ describe('gatherGitInfo', () => {
 
   it('returns continue with rebuildForBuildId when force-rebuild prevents skip', async () => {
     const lastBuild = { id: 'last-build-id', status: 'PASSED', storybookUrl: 'https://x' };
-    getParentCommits.mockResolvedValue([commitInfo.commit]);
+    getParentCommits.mockResolvedValue({
+      ancestorCommits: [commitInfo.commit],
+      visitedCommits: [],
+    });
     client.runQuery.mockReturnValue({ app: { isOnboarding: false, lastBuild } });
 
     const result = await gatherGitInfo(
@@ -247,7 +250,10 @@ describe('gatherGitInfo', () => {
       inheritedCaptureCount: 9,
     };
 
-    getParentCommits.mockResolvedValue([commitInfo.commit]);
+    getParentCommits.mockResolvedValue({
+      ancestorCommits: [commitInfo.commit],
+      visitedCommits: [],
+    });
     client.runQuery.mockReturnValue({ app: { lastBuild } });
 
     const result = await gatherGitInfo(buildDeps(), buildInput());
