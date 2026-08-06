@@ -1,9 +1,7 @@
-import { readFileSync } from 'fs';
-import { createRequire } from 'module';
-import path from 'path';
 import semver from 'semver';
 
 import { Stats, TurboSnapUntrustedBuilderStatsSubreason } from '../../../types';
+import { resolvePackageVersion } from './packageVersion';
 
 const BUILDER_VITE_PACKAGE = '@storybook/builder-vite';
 
@@ -81,18 +79,4 @@ export function isBuilderViteStats(stats: Stats) {
       ...(module.reasons ?? []).map((reason) => reason.moduleName),
     ].some((name) => name?.includes(`${BUILDER_VITE_PACKAGE}/`))
   );
-}
-
-function resolvePackageVersion(projectRoot: string, packageName: string): string | undefined {
-  const requireFromProject = createRequire(path.join(projectRoot, 'package.json'));
-
-  let packageJsonPath;
-  try {
-    packageJsonPath = requireFromProject.resolve(`${packageName}/package.json`);
-  } catch {
-    return undefined;
-  }
-
-  const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-  return version;
 }

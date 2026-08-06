@@ -1,12 +1,12 @@
 import { traceChangedFiles } from '@cli/turbosnap/v2';
 import { readJson } from 'fs-extra';
 import meow from 'meow';
-import { createRequire } from 'module';
 import path from 'path';
 
 import GraphQLClient from '../node-src/io/graphqlClient';
 import { SBProjectJson } from '../node-src/lib/getPrebuiltStorybookMetadata';
 import { createLogger } from '../node-src/lib/log';
+import { resolvePackageVersion } from '../node-src/lib/turbosnap/v2/packageVersion';
 import {
   readTurbosnapInput,
   TURBOSNAP_INPUT_OPTIONS_HELP,
@@ -250,15 +250,4 @@ function describePackage(
     prebuilt?.storybookPackages?.[packageName]?.version;
 
   return { name: packageName, ...(version && { version }) };
-}
-
-function resolvePackageVersion(projectRoot: string, packageName: string): string | undefined {
-  const requireFromProject = createRequire(path.join(projectRoot, 'package.json'));
-
-  try {
-    const { version } = requireFromProject(`${packageName}/package.json`);
-    return version;
-  } catch {
-    return undefined;
-  }
 }

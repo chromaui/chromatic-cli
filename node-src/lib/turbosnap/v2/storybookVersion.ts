@@ -1,6 +1,4 @@
-import { readFileSync } from 'fs';
-import { createRequire } from 'module';
-import path from 'path';
+import { resolvePackageVersion } from './packageVersion';
 
 // The packages that own Storybook's preview runtime, newest layout first: Storybook >= 9 ships it in
 // `storybook`, Storybook 8 in `@storybook/core`. If a future major moves the runtime into some other
@@ -34,20 +32,8 @@ const STORYBOOK_CORE_PACKAGES = ['storybook', '@storybook/core'];
  * @returns The installed Storybook version (e.g. `9.1.20`).
  */
 export function resolveStorybookVersion(projectRoot: string): string {
-  const requireFromProject = createRequire(path.join(projectRoot, 'package.json'));
-
   for (const packageName of STORYBOOK_CORE_PACKAGES) {
-    // Resolve the package's own manifest rather than a path inside it: `dist/preview/*` is absent
-    // from the `exports` map, so resolving it fails with ERR_PACKAGE_PATH_NOT_EXPORTED. Resolution
-    // walks up from the project root, so a workspace-hoisted install is found too.
-    let packageJsonPath;
-    try {
-      packageJsonPath = requireFromProject.resolve(`${packageName}/package.json`);
-    } catch {
-      continue;
-    }
-
-    const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    const version = resolvePackageVersion(projectRoot, packageName);
     if (version) return version;
   }
 
