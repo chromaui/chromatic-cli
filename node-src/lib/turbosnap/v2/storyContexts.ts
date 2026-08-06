@@ -49,36 +49,6 @@ const NODE_MODULES_SEGMENT = /(^|\/)node_modules\//;
 const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
 
 /**
- * Whether a module name is a lazy require-context: the glob module a builder generates in place of
- * direct story imports. It is not a file on disk.
- *
- * @param moduleName The raw module name from the stats.
- *
- * @returns Whether the module is a lazy require-context.
- */
-export function isLazyContext(moduleName: string): boolean {
-  return LAZY_CONTEXT_MARKER.test(moduleName);
-}
-
-/**
- * Whether a lazy context's stories glob did not name `node_modules`, which is the switch both halves
- * of Storybook read. The indexer applies `ignore: ["**\/node_modules/**"]` unless the glob names
- * `node_modules` (`commonGlobOptions`), and `storybook-builder-rsbuild` prepends a
- * `(?!.*node_modules)` guard under the same condition (`webpackIncludeRegexp`). So a context that
- * excludes `node_modules` should never yield a story from there.
- *
- * Read off the context's directory — its raw name up to the lazy marker — because the include regex
- * that follows contains the literal text `node_modules` in every clean build.
- *
- * @param contextName The raw name of a lazy require-context.
- *
- * @returns Whether the context's glob excluded `node_modules`.
- */
-export function excludesNodeModules(contextName: string): boolean {
-  return !NODE_MODULES_SEGMENT.test(contextName.split(LAZY_CONTEXT_MARKER)[0]);
-}
-
-/**
  * Whether a module is a story file, given the story importers that claim it.
  *
  * A `node_modules` story claimed only by contexts that excluded `node_modules` is refused, because it
@@ -193,4 +163,34 @@ function collectUnrecognizedStoryEntries(
       entries.add(importer);
     }
   }
+}
+
+/**
+ * Whether a module name is a lazy require-context: the glob module a builder generates in place of
+ * direct story imports. It is not a file on disk.
+ *
+ * @param moduleName The raw module name from the stats.
+ *
+ * @returns Whether the module is a lazy require-context.
+ */
+function isLazyContext(moduleName: string): boolean {
+  return LAZY_CONTEXT_MARKER.test(moduleName);
+}
+
+/**
+ * Whether a lazy context's stories glob did not name `node_modules`, which is the switch both halves
+ * of Storybook read. The indexer applies `ignore: ["**\/node_modules/**"]` unless the glob names
+ * `node_modules` (`commonGlobOptions`), and `storybook-builder-rsbuild` prepends a
+ * `(?!.*node_modules)` guard under the same condition (`webpackIncludeRegexp`). So a context that
+ * excludes `node_modules` should never yield a story from there.
+ *
+ * Read off the context's directory — its raw name up to the lazy marker — because the include regex
+ * that follows contains the literal text `node_modules` in every clean build.
+ *
+ * @param contextName The raw name of a lazy require-context.
+ *
+ * @returns Whether the context's glob excluded `node_modules`.
+ */
+function excludesNodeModules(contextName: string): boolean {
+  return !NODE_MODULES_SEGMENT.test(contextName.split(LAZY_CONTEXT_MARKER)[0]);
 }

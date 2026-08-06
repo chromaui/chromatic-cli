@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import path from 'path';
 import semver from 'semver';
 
@@ -38,7 +39,11 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
 
-  await traceChangedFilesV2(getV2Input(ctx, stats, statsPath)).catch(() => {});
+  // v2 bails on everything it can throw, so a rejection here is a bug in the bail wrappers
+  // themselves. It stays non-fatal for v1, but it is not allowed to disappear.
+  await traceChangedFilesV2(getV2Input(ctx, stats, statsPath)).catch((error) => {
+    Sentry.captureException(error, { tags: { turbo_snap_v2_diagnostic: 'traceChangedFiles' } });
+  });
 
   return traceChangedFilesV1(ctx, stats, statsPath);
 }

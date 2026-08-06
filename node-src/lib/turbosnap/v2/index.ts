@@ -289,7 +289,7 @@ function getEmptySectionBail(
     return bailWith({ noNodeModulesFiles: true });
   }
 
-  if (manifest.storyFileHashes.size === 0 && manifest.unrecognizedStoryEntries?.length) {
+  if (manifest.storyFileHashes.size === 0 && manifest.unrecognizedStoryEntries.length > 0) {
     Sentry.setContext('turboSnapUnrecognizedStoryEntry', {
       entries: manifest.unrecognizedStoryEntries,
     });

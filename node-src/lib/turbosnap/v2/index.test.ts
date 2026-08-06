@@ -52,6 +52,7 @@ const input = {
 const manifest = {
   storybookHash: 'hash',
   storyFileHashes: new Map([['./src/Button.stories.tsx', 'story-hash']]),
+  unrecognizedStoryEntries: [],
   outOfGraphFiles: {
     storybookConfigFiles: new Map([['.storybook/main.ts', 'config-hash']]),
     staticFiles: new Map([['./.storybook/static/logo.svg', 'static-hash']]),
