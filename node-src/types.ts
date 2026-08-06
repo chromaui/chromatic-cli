@@ -618,6 +618,7 @@ export type TurboSnapBailSubreason =
   | TurboSnapChangedPackageFilesSubreason
   | TurboSnapInvalidChangedFilesSubreason
   | TurboSnapIndexContractViolationSubreason
+  | TurboSnapIndexUnavailableSubreason
   | TurboSnapUntrustedBuilderStatsSubreason
   | TurboSnapAnchorMismatchSubreason
   | TurboSnapInternalErrorSubreason;
