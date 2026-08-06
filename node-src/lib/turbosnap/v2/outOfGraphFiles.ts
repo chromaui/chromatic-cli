@@ -4,17 +4,7 @@ import path from 'path';
 import { hashAbsolutePaths } from './fileHashes';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { normalizeStatsPath } from './paths';
-
-// The synthetic `storybookFiles` keys covering Storybook inputs that are never bundler inputs, so no
-// module hash can see them change. Angle brackets can't appear in a canonical relative path, so
-// neither can collide with a real file.
-//
-// `package.json` and lockfiles deliberately do not belong here, even though they are also not modules.
-// v1 diffed them only to derive changed package *names*; v2 content-hashes the installed files that are
-// in the graph, which covers a dependency change more precisely. Hashing manifest bytes on top would
-// recapture everything on lockfile churn that v1 correctly captures nothing for.
-export const STORYBOOK_CONFIG_KEY = '<storybookConfig>';
-export const STATIC_FILES_KEY = '<staticFiles>';
+import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY } from './storybookFileKeys';
 
 /** Where to look for the out-of-graph inputs. Both are project-root-relative, as they arrive on `ctx.storybook`. */
 export interface OutOfGraphInput {

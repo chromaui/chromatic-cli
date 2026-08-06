@@ -83,6 +83,8 @@ export async function traceChangedFiles(
         configDir: input.configDir,
         staticDirs: input.staticDirs,
       },
+      // Only reachable for a stats file naming no source modules at all; any other unresolved case
+      // already bailed at getUnresolvedSourceModules.
       resolution.statsRoot ?? input.projectRoot
     );
   } catch (error) {

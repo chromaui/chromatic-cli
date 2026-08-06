@@ -5,6 +5,7 @@ import {
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
+import { STORYBOOK_GLOBALS_KEY } from './storybookFileKeys';
 
 // Matches `<configDir>/preview.*` on a canonical manifest path. Path matching is the only consistent
 // way to find the preview config: the config-entry import edge is spelled three incompatible ways
@@ -14,10 +15,6 @@ function previewConfigPattern(configDirectory: string): RegExp {
   const escapedConfigDirectory = configDirectory.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   return new RegExp(String.raw`(^|/)${escapedConfigDirectory}/preview\.[cm]?[jt]sx?$`);
 }
-
-// The synthetic `storybookFiles` key holding every orphan global. Angle brackets can't appear in a
-// canonical relative path, so it can never collide with a real file.
-export const STORYBOOK_GLOBALS_KEY = '<storybookGlobals>';
 
 /**
  * Which of the three hashing homes each real file landed in, recorded by the same pass that builds

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { FileHash, FilePath, TurboSnapFile } from './graph';
-import { collectStorybookFiles, STORYBOOK_GLOBALS_KEY } from './storybookFiles';
+import { STORYBOOK_GLOBALS_KEY } from './storybookFileKeys';
+import { collectStorybookFiles } from './storybookFiles';
 
 // The config dir most tests don't care about; only the configDir-specific tests below vary it.
 const DEFAULT_CONFIG_DIR = '.storybook';

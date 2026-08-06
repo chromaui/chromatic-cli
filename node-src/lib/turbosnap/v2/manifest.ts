@@ -19,14 +19,10 @@ import {
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
 import { moduleFileNames, normalizeStatsPath, resolveStatsPath } from './paths';
+import { STORYBOOK_VERSION_KEY } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
 import { collectStoryImporters, isStoryFile } from './storyContexts';
-
-// The synthetic `storybookFiles` key holding the installed Storybook version. Unlike every other
-// entry this is a version string rather than a hash, because the preview core runtime is served
-// outside the module graph on webpack and rspack; see resolveStorybookVersion.
-export const STORYBOOK_VERSION_KEY = '<storybookVersion>';
 
 type StorybookVersion = string;
 
@@ -67,6 +63,8 @@ export interface TurboSnapManifest {
 interface ManifestFile {
   storybookHash: string;
   storyFiles: Record<FilePath, FileHash>;
+  /** The sole evidence for the `unrecognizedStoryEntry` bail, which writes this manifest. */
+  unrecognizedStoryEntries: FilePath[];
   storybookFiles: Record<FilePath, FileHash | StorybookVersion>;
   files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
   attribution: Record<keyof FileAttribution, FilePath[]>;
@@ -219,6 +217,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   return {
     storybookHash: manifest.storybookHash,
     storyFiles,
+    unrecognizedStoryEntries: manifest.unrecognizedStoryEntries,
     storybookFiles,
     files,
     attribution,
