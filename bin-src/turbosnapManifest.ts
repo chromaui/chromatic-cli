@@ -60,10 +60,15 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
 
   try {
     const input = await readTurbosnapInput(flags, log);
-    const manifest = await buildManifest(input.stats, input.projectRoot, {
-      configDir: input.configDir,
-      staticDirs: input.staticDirs,
-    });
+    const manifest = await buildManifest(
+      input.stats,
+      input.projectRoot,
+      {
+        configDir: input.configDir,
+        staticDirs: input.staticDirs,
+      },
+      input.statsRoot
+    );
 
     process.stdout.write(JSON.stringify(serializeManifest(manifest)));
   } catch (err) {

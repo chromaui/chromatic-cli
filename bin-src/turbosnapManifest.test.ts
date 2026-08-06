@@ -8,12 +8,17 @@ import { main } from './turbosnapManifest';
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
-  existsSync: () => true,
+  existsSync: (candidate: unknown) => existsRef.current(String(candidate)),
   // A trailing slash names a directory: present on disk, but not a regular file.
   statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
 }));
 
-const { statsRef } = vi.hoisted(() => ({ statsRef: { current: {} as Stats } }));
+// `existsRef` decides which absolute paths are on disk, which is what picks the root relative stats
+// names are anchored at.
+const { statsRef, existsRef } = vi.hoisted(() => ({
+  statsRef: { current: {} as Stats },
+  existsRef: { current: (_candidate: string): boolean => true },
+}));
 
 vi.mock('../node-src/tasks/readStatsFile', () => ({
   readStatsFile: vi.fn(() => Promise.resolve(statsRef.current)),
@@ -39,6 +44,9 @@ describe('turbosnap-manifest command', () => {
 
   beforeEach(() => {
     stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    existsRef.current = () => true;
+    // Re-stated per test because a mockResolvedValue set in one test outlives it.
+    vi.mocked(getRepositoryRoot).mockResolvedValue('/repo');
     statsRef.current = {
       modules: [
         {
@@ -92,5 +100,31 @@ describe('turbosnap-manifest command', () => {
     expect(readStatsFile).toHaveBeenCalledWith(
       path.join(process.cwd(), 'storybook-static/preview-stats.json')
     );
+  });
+
+  // Builders that relativise stats names from the command's working directory anchor at the
+  // repository root, which is the root production resolves and hands to the manifest.
+  it('anchors relative stats names at the repository root when they only resolve there', async () => {
+    existsRef.current = (candidate) => candidate.startsWith('/repo/packages/ui/src/');
+    statsRef.current = {
+      modules: [
+        {
+          id: 1,
+          name: './packages/ui/src/Button.stories.tsx',
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+        {
+          id: 2,
+          name: './packages/ui/src/helper.ts',
+          reasons: [{ moduleName: './packages/ui/src/Button.stories.tsx' }],
+        },
+      ],
+    };
+
+    await main(['-b', 'packages/ui']);
+
+    const manifest = JSON.parse(stdout.mock.calls[0][0] as string);
+    expect(Object.keys(manifest.storyFiles)).toEqual(['./src/Button.stories.tsx']);
+    expect(manifest.files['./src/Button.stories.tsx'].dependencies).toEqual(['./src/helper.ts']);
   });
 });

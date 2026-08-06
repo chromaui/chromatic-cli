@@ -7,6 +7,7 @@ import {
   readStorybookDirectories,
   StorybookDirectories,
 } from '../node-src/lib/turbosnap/storybookDirectories';
+import { getSourceModuleResolution } from '../node-src/lib/turbosnap/v2/statsAnchor';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Stats } from '../node-src/types';
 
@@ -64,12 +65,14 @@ export interface TurbosnapInput extends StorybookDirectories {
   repositoryRoot: string;
   /** The absolute path the stats file was read from. */
   statsPath: string;
+  /** The absolute directory relative stats paths are named from, resolved as production resolves it. */
+  statsRoot: string;
   stats: Stats;
 }
 
 /**
- * Derives the project root, stats file, config directory and static directories the same way a real
- * build does, so a local run is not silently narrower than production.
+ * Derives the project root, stats file, stats root, config directory and static directories the same
+ * way a real build does, so a local run is not silently narrower than production.
  *
  * @param flags The parsed command flags.
  * @param log The logger the shared config read reports its parse path to.
@@ -98,19 +101,32 @@ export async function readTurbosnapInput(
   const statsPath = path.resolve(projectRoot, flags.statsFile);
   const stats = await readStatsFile(statsPath);
 
+  // Matches production: the repository root when git knows it, else the project root itself.
+  const repositoryRoot = rootPath ? path.resolve(rootPath) : projectRoot;
+
+  // Derived by the same helper production uses, so a local run is not silently narrower.
+  const directories = await readStorybookDirectories({
+    projectRoot,
+    log,
+    configDir: flags.configDir,
+    buildScriptName: flags.buildScriptName,
+    ...(flags.staticDir && { staticDirs: flags.staticDir.split(',') }),
+  });
+
+  const resolution = getSourceModuleResolution(stats, {
+    projectRoot,
+    repositoryRoot,
+    configDir: directories.configDir,
+  });
+
   return {
     projectRoot,
-    // Matches production: the repository root when git knows it, else the project root itself.
-    repositoryRoot: rootPath ? path.resolve(rootPath) : projectRoot,
+    repositoryRoot,
     statsPath,
     stats,
-    // Derived by the same helper production uses, so a local run is not silently narrower.
-    ...(await readStorybookDirectories({
-      projectRoot,
-      log,
-      configDir: flags.configDir,
-      buildScriptName: flags.buildScriptName,
-      ...(flags.staticDir && { staticDirs: flags.staticDir.split(',') }),
-    })),
+    // Matches production: the project root when no source module resolves anywhere, which only a
+    // stats file naming no source modules at all can reach.
+    statsRoot: resolution.statsRoot ?? projectRoot,
+    ...directories,
   };
 }
