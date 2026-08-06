@@ -68,6 +68,22 @@ describe('buildManifest story detection through a require-context', () => {
     });
   });
 
+  it('detects an MDX story from the builder context without relying on a stories extension', async () => {
+    const mdxStory = '/repo/packages/ui/src/lib/Badge.stories.mdx';
+    const mdxStats: Stats = {
+      modules: [
+        { id: 1, name: glob, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: mdxStory, reasons: [{ moduleName: glob }] },
+      ],
+    };
+
+    await withGlobAbsent(async () => {
+      fileHashesRef.current = { [mdxStory]: 'MDX' };
+      const manifest = await buildManifest(mdxStats, projectRoot, outOfGraph);
+      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Badge.stories.mdx']);
+    });
+  });
+
   it('excludes the require-context glob (no file on disk) from the files map', async () => {
     await withGlobAbsent(async () => {
       fileHashesRef.current = { [story]: 'S' };
