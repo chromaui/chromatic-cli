@@ -22,11 +22,21 @@ export default async function getStorybookInfo(
       const projectJsonPath = path.resolve(deps.options.storybookBuildDir, 'project.json');
       // This test makes sure we fall through if the file does not exist.
       if (pathExistsSync(projectJsonPath)) {
+        // Reading the source config is best-effort: a prebuilt Storybook may not ship one, and its
+        // failure must not stop us reading project.json.
+        let sourceMetadata: Partial<Storybook> = {};
+        try {
+          sourceMetadata = await getStorybookMetadata(deps);
+        } catch (err) {
+          deps.log.debug(err);
+        }
+
         /*
           This await is needed in order to for the catch block
           to get the result in the case that this function fails.
         */
-        return await getStorybookMetadataFromProjectJson(projectJsonPath);
+        const prebuiltMetadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
+        return { ...sourceMetadata, ...prebuiltMetadata };
       }
     }
     // Same for this await.

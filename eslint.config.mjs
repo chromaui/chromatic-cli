@@ -24,6 +24,8 @@ export default [
       'storybook-out/**',
       'coverage/**',
       'smoke-tests/**',
+      // Storybook config fixtures: intentionally a mix of module formats, so linting them is noise.
+      'node-src/__mocks__/storybookMainConfig/**',
     ],
   },
   // eslint core + overrides
