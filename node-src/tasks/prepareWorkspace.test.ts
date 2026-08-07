@@ -84,7 +84,7 @@ describe('runPrepareWorkspace', () => {
     isClean.mockResolvedValue(true);
     isUpToDate.mockResolvedValue(true);
     findMergeBase.mockResolvedValue('1234asd');
-    installDependencies.mockRejectedValue(new Error('some error'));
+    installDependencies.mockRejectedValueOnce(new Error('some error'));
     const deps = makeDeps();
 
     const error = await catchError(runPrepareWorkspace(deps, input));

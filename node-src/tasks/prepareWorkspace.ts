@@ -5,6 +5,7 @@ import { Context, Deps, TaskFunction } from '../types';
 import mergeBaseNotFound from '../ui/messages/errors/mergeBaseNotFound';
 import workspaceNotClean from '../ui/messages/errors/workspaceNotClean';
 import workspaceNotUpToDate from '../ui/messages/errors/workspaceNotUpToDate';
+import { runRestoreWorkspace } from './restoreWorkspace';
 
 export type PrepareWorkspaceDeps = Pick<Deps, 'log' | 'options' | 'report'>;
 
@@ -69,6 +70,7 @@ export const runPrepareWorkspace: TaskFunction<
     await installDependencies(); // this might modify a lockfile
   } catch (err) {
     deps.log.error(err);
+    await runRestoreWorkspace(deps); // checkout already happened; don't strand the user
     throw new TaskFailure('Failed to install dependencies', {
       exitCode: exitCodes.NPM_INSTALL_FAILED,
     });
