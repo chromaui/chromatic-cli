@@ -97,6 +97,8 @@ function anchorInput(overrides: AnchorOverrides): AnchorInput {
     repositoryRoot: overrides.projectRoot,
     statsPath: statsPathFor(overrides.projectRoot),
     configDir: '.storybook',
+    // The fixtures are real directories, so the real disk is the disk under test.
+    projectFiles: realProjectFiles(),
     ...overrides,
   };
 }
@@ -181,6 +183,25 @@ describe('getAnchorMismatchReason', () => {
     temporaryDirectories.push(buildDirectory);
     const statsPath = path.join(buildDirectory, 'preview-stats.json');
     writeFileSync(statsPath, JSON.stringify(VITE_STATS));
+
+    expect(
+      anchorMismatchFor(VITE_STATS, {
+        projectRoot: roots.ui,
+        statsPath,
+        builderName: '@storybook/react-vite',
+      })
+    ).toBeUndefined();
+  });
+
+  it('does not treat a plain file named like the config directory as an owning project', () => {
+    const { roots } = givenSiblingPackages({ ui: { badge: 'export const Badge = () => "ui";\n' } });
+    const buildDirectory = mkdtempSync(path.join(tmpdir(), 'chromatic-'));
+    temporaryDirectories.push(buildDirectory);
+    const statsPath = path.join(buildDirectory, 'preview-stats.json');
+    writeFileSync(statsPath, JSON.stringify(VITE_STATS));
+    // The walk looks for a config *directory*. A file of the same name holds no Storybook config, so
+    // it cannot make this directory the project the stats belong to.
+    writeFileSync(path.join(buildDirectory, '.storybook'), '');
 
     expect(
       anchorMismatchFor(VITE_STATS, {
@@ -302,6 +323,24 @@ describe('getAnchorMismatchReason', () => {
     const decoy = path.join(repository, 'packages/decoy');
     mkdirSync(path.join(decoy, '.storybook'), { recursive: true });
     writeFileSync(path.join(decoy, '.storybook/preview.ts'), 'export const parameters = {};\n');
+
+    expect(
+      anchorMismatchFor(VITE_STATS, {
+        projectRoot: decoy,
+        builderName: '@storybook/react-vite',
+      })
+    ).toMatchObject({ subreason: 'unresolvedSourceModules' });
+  });
+
+  it('refuses an anchor whose only matches are directories named like source files', () => {
+    const { repository } = givenSiblingPackages({
+      ui: { badge: 'export const Badge = () => "ui";\n' },
+    });
+    // Every source module the stats name resolves here, but each one lands on a directory. Reading
+    // such a path throws EISDIR, so it is not evidence that the anchor owns those modules.
+    const decoy = path.join(repository, 'packages/decoy');
+    mkdirSync(path.join(decoy, 'src/lib/Badge/Badge.stories.tsx'), { recursive: true });
+    mkdirSync(path.join(decoy, 'src/lib/Badge/Badge.tsx'), { recursive: true });
 
     expect(
       anchorMismatchFor(VITE_STATS, {

@@ -5,9 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Stats } from '../node-src/types';
 import { main } from './turbosnapBail';
 
+// This fake project root is entirely off disk, so every path it names reads as present, and as
+// whichever of a file or a directory the asking guard is looking for.
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
   existsSync: () => true,
+  statSync: () => ({ isFile: () => true, isDirectory: () => true }),
 }));
 
 const { statsRef } = vi.hoisted(() => ({ statsRef: { current: {} as Stats } }));

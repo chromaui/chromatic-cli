@@ -1,9 +1,9 @@
-import { existsSync } from 'fs';
 import path from 'path';
 
 import { Module, Stats, TurboSnapAnchorMismatchSubreason } from '../../../types';
 import { isBuilderViteStats } from './builderViteCompatibility';
 import { resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
+import { ProjectFiles } from './projectFiles';
 
 export interface AnchorMismatchReason {
   /** Why the pairing was refused; see {@link TurboSnapAnchorMismatchSubreason}. */
@@ -39,6 +39,7 @@ const SOURCE_MODULE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
  * config directory rather than from the anchor, which is what makes it independent evidence.
  * @param input.statsPath The path the stats file was read from.
  * @param input.configDir The project-relative Storybook config directory.
+ * @param input.projectFiles How to read the disk; see {@link ProjectFiles}.
  * @param resolution The stats-root resolution, computed once per build by the caller because the
  * manifest needs the same answer.
  *
@@ -62,6 +63,8 @@ export interface AnchorInput {
   repositoryRoot: string;
   statsPath: string;
   configDir: string;
+  /** Required rather than defaulted, so a caller cannot silently reach the real disk. */
+  projectFiles: ProjectFiles;
   builderName?: string;
 }
 
@@ -80,6 +83,7 @@ export interface AnchorInput {
  * @param input.repositoryRoot The repository root, tried when names do not resolve from the project
  * root.
  * @param input.configDir The project-relative Storybook config directory.
+ * @param input.projectFiles How to read the disk; see {@link ProjectFiles}.
  *
  * @returns The resolved stats root, if any, and the source module count.
  */
@@ -89,7 +93,8 @@ export function getSourceModuleResolution(
     projectRoot,
     repositoryRoot,
     configDir: configDirectory,
-  }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir'>
+    projectFiles,
+  }: Pick<AnchorInput, 'projectRoot' | 'repositoryRoot' | 'configDir' | 'projectFiles'>
 ): SourceModuleResolution {
   const sourceModules = statsPaths(stats).filter((name) => {
     if (name.includes('node_modules') || !SOURCE_MODULE_EXTENSIONS.test(name)) return false;
@@ -100,7 +105,9 @@ export function getSourceModuleResolution(
     if (
       sourceModules.some((name) => {
         const absolutePath = resolveStatsPath(name, statsRoot);
-        return isInside(projectRoot, absolutePath) && existsSync(absolutePath);
+        // A file, not merely something: a directory named like a source module is not a module the
+        // anchor could have built, and reading one throws EISDIR.
+        return isInside(projectRoot, absolutePath) && projectFiles.isFile(absolutePath);
       })
     ) {
       return { sourceModuleCount: sourceModules.length, statsRoot };
@@ -159,8 +166,13 @@ function getStatsFileOutsideProject({
   projectRoot,
   statsPath,
   configDir: configDirectory,
+  projectFiles,
 }: AnchorInput): AnchorMismatchReason | undefined {
-  const owningProject = findOwningProject(path.dirname(path.resolve(statsPath)), configDirectory);
+  const owningProject = findOwningProject(
+    path.dirname(path.resolve(statsPath)),
+    configDirectory,
+    projectFiles
+  );
   if (!owningProject || !isDisjoint(owningProject, projectRoot)) return undefined;
 
   return {
@@ -172,10 +184,14 @@ function getStatsFileOutsideProject({
 /**
  * Walks up from a directory to the nearest ancestor holding the Storybook config directory.
  */
-function findOwningProject(directory: string, configDirectory: string): string | undefined {
+function findOwningProject(
+  directory: string,
+  configDirectory: string,
+  projectFiles: ProjectFiles
+): string | undefined {
   let current = directory;
   for (;;) {
-    if (existsSync(path.join(current, configDirectory))) return current;
+    if (projectFiles.isDirectory(path.join(current, configDirectory))) return current;
     const parent = path.dirname(current);
     if (parent === current) return undefined;
     current = parent;

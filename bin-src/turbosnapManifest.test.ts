@@ -9,8 +9,16 @@ import { main } from './turbosnapManifest';
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
   existsSync: (candidate: unknown) => existsRef.current(String(candidate)),
-  // A trailing slash names a directory: present on disk, but not a regular file.
-  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
+  // A trailing slash names a directory: present on disk, but not a regular file. Absence reads as
+  // undefined rather than a throw because every caller passes `{ throwIfNoEntry: false }`.
+  statSync: (candidate: unknown) => {
+    const absolutePath = String(candidate);
+    if (!existsRef.current(absolutePath)) return undefined;
+    return {
+      isFile: () => !absolutePath.endsWith('/'),
+      isDirectory: () => absolutePath.endsWith('/'),
+    };
+  },
 }));
 
 // `existsRef` decides which absolute paths are on disk, which is what picks the root relative stats
