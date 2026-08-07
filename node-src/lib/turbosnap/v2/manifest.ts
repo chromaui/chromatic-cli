@@ -17,12 +17,10 @@ import {
   OutOfGraphInput,
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
-import { moduleFileNames, normalizeStatsPath, resolveStatsPath } from './paths';
-import { ProjectFiles } from './projectFiles';
+import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
-import { detectStoryFiles } from './storyDetection';
 
 type StorybookVersion = string;
 
@@ -73,7 +71,9 @@ interface ManifestFile {
 }
 
 /**
- * Parses the stats file and hashes the files into a TurboSnap manifest.
+ * Rolls the graph a stats file describes up into a TurboSnap manifest: the per-story hashes, the
+ * Storybook-wide hashes and the whole-Storybook gate. Reading the stats file is
+ * {@link readStatsGraph}'s job; everything here works in canonical paths.
  *
  * @param stats The stats file to parse.
  * @param projectRoot The absolute Storybook project root that module paths anchor against.
@@ -91,37 +91,11 @@ export async function buildManifest(
   outOfGraph: OutOfGraphInput,
   statsRoot = projectRoot
 ): Promise<TurboSnapManifest> {
-  const hashes = await hashFiles(stats, projectRoot, statsRoot, outOfGraph.projectFiles);
-  const files = new Map<FilePath, TurboSnapFile>();
-
-  const { storyFiles, unrecognizedStoryEntries } = detectStoryFiles(stats, {
+  const { files, hashes, storyFiles, unrecognizedStoryEntries } = await readStatsGraph(stats, {
     projectRoot,
     statsRoot,
-    realFiles: hashes,
+    projectFiles: outOfGraph.projectFiles,
   });
-
-  for (const module of stats.modules) {
-    // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
-    // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
-    const fileNames = moduleFileNames(module).map((name) =>
-      normalizeStatsPath(name, projectRoot, statsRoot)
-    );
-    if (fileNames.length === 0) continue;
-    const [sourceFilePath, ...concatenated] = fileNames;
-
-    // Canonicalised so a dependency edge names the same key wherever the builder spells it. Entry
-    // reasons carry a null moduleName, so drop those.
-    const importers = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter(Boolean)
-      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
-
-    linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
-
-    for (const importer of importers) {
-      ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
-    }
-  }
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
@@ -236,67 +210,6 @@ export function writeManifest(manifest: TurboSnapManifest, outputDirectory: stri
 }
 
 /**
- * Counts the graph's `node_modules` file names. Read off the stats file rather than the manifest,
- * because it is a property of the builder's output rather than of what we derived from it.
- *
- * @param stats The stats file to parse.
- *
- * @returns The number of `node_modules` file names across all modules.
- */
-export function countNodeModulesFiles(stats: Stats): number {
-  let count = 0;
-  for (const module of stats.modules) {
-    count += moduleFileNames(module).filter((name) => name.includes('node_modules')).length;
-  }
-  return count;
-}
-
-/**
- * Records the internal edges of a concatenated module: webpack/rspack bundle several real files into
- * one module, so the other files become dependencies of the concatenation root. Each of them also gets
- * an entry of its own, so no dependency reference names a file the serialized graph omits.
- *
- * @param files The map of files to their hashes and dependencies, mutated in place.
- * @param rootPath The canonical path of the concatenation root.
- * @param concatenated The canonical paths of the other files bundled into the same module.
- * @param hashes The content hashes keyed by canonical file path.
- */
-function linkConcatenatedFiles(
-  files: Map<FilePath, TurboSnapFile>,
-  rootPath: FilePath,
-  concatenated: FilePath[],
-  hashes: Map<FilePath, FileHash>
-) {
-  const rootFile = ensureFile(files, rootPath, hashes);
-  for (const dependency of concatenated) {
-    rootFile.dependencies.add(dependency);
-    ensureFile(files, dependency, hashes);
-  }
-}
-
-/**
- * Gets the manifest entry for a file, creating it (seeded with the file's content hash) if absent.
- *
- * @param files The map of files to their hashes and dependencies.
- * @param filePath The file to get or create an entry for.
- * @param hashes The content hashes keyed by canonical file path.
- *
- * @returns The file's manifest entry.
- */
-function ensureFile(
-  files: Map<FilePath, TurboSnapFile>,
-  filePath: FilePath,
-  hashes: Map<FilePath, FileHash>
-): TurboSnapFile {
-  let file = files.get(filePath);
-  if (!file) {
-    file = { hash: hashes.get(filePath) ?? '', dependencies: new Set() };
-    files.set(filePath, file);
-  }
-  return file;
-}
-
-/**
  * Removes synthetic nodes that have no file on disk (require-context globs, externals) from the
  * manifest, including references to those removed nodes. This runs only after every derived hash
  * and attribution set has been computed from the complete graph, so pruning keeps those values
@@ -315,67 +228,4 @@ function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<Fi
   for (const filePath of files.keys()) {
     if (!hashes.has(filePath)) files.delete(filePath);
   }
-}
-
-/**
- * Resolves a stats module path to the absolute on-disk file to hash, or undefined when there is
- * nothing hashable there.
- *
- * Virtual modules (e.g. Vite's `virtual:` entries) have no on-disk location. Skipping them is stats
- * policy, which is why it is asked here rather than of the disk. Beyond that, only a regular file is
- * hashable, and what counts as one is the module's rule; see {@link ProjectFiles.isFile}. Skipping a
- * name with no file loses no evidence, because such a name is never a source file and so can never be
- * edited as one.
- *
- * @param rawPath The module name from the stats file.
- * @param statsRoot The directory relative stats paths are named from.
- * @param projectFiles How to read the disk.
- *
- * @returns The absolute path to hash, or undefined if there is no hashable file.
- */
-function hashableAbsolutePath(
-  rawPath: FilePath,
-  statsRoot: string,
-  projectFiles: ProjectFiles
-): string | undefined {
-  if (rawPath.includes('virtual:')) return undefined;
-  const absolutePath = resolveStatsPath(rawPath, statsRoot);
-  return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
-}
-
-async function hashFiles(
-  stats: Stats,
-  projectRoot: string,
-  statsRoot: string,
-  projectFiles: ProjectFiles
-): Promise<Map<FilePath, FileHash>> {
-  // Collect every referenced module path once, expanding concatenated modules into their real
-  // files and skipping importers with a null moduleName.
-  const rawPaths = new Set<FilePath>();
-  for (const module of stats.modules) {
-    for (const name of moduleFileNames(module)) {
-      rawPaths.add(name);
-    }
-    for (const reason of module.reasons ?? []) {
-      if (reason.moduleName) rawPaths.add(reason.moduleName);
-    }
-  }
-
-  // Map each hashable file's canonical project-relative name to its absolute on-disk path.
-  const normalizedToAbsolute = new Map<FilePath, string>();
-  for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, statsRoot, projectFiles);
-    if (absolutePath) {
-      normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
-    }
-  }
-
-  const fileHashes = await projectFiles.hashAll([...normalizedToAbsolute.values()]);
-
-  const hashes = new Map<FilePath, FileHash>();
-  for (const [normalizedName, absolutePath] of normalizedToAbsolute) {
-    hashes.set(normalizedName, fileHashes[absolutePath]);
-  }
-
-  return hashes;
 }

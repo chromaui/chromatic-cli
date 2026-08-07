@@ -22,6 +22,16 @@ export const outOfGraph = {
   projectFiles: inMemoryProjectFiles(disk),
 };
 
+/**
+ * The context readStatsGraph takes, reading the same in-memory disk. Stats paths are named from the
+ * project root here; the cases where they are not have their own suite in index.statsRoot.test.ts.
+ */
+export const statsContext = {
+  projectRoot,
+  statsRoot: projectRoot,
+  projectFiles: outOfGraph.projectFiles,
+};
+
 /** Empties the disk, leaving only the installed Storybook version every manifest needs. */
 export function resetDisk() {
   disk.current = { packageVersions: { storybook: storybookVersion } };

@@ -8,13 +8,14 @@ import { isNetworkError } from '../v1/errors';
 import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { classifyUploadHashesFailure } from './classifyUploadHashesFailure';
-import { buildManifest, countNodeModulesFiles, TurboSnapManifest, writeManifest } from './manifest';
+import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ProjectFiles } from './projectFiles';
 import {
   getAnchorMismatchReason,
   getSourceModuleResolution,
   SourceModuleResolution,
 } from './statsAnchor';
+import { countNodeModulesFiles } from './statsGraph';
 
 interface TraceChangedFilesInput {
   graphqlClient: GraphQLClient;

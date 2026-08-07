@@ -12,7 +12,7 @@ import {
   resetDisk,
   withSyntheticAbsent,
 } from './__fixtures__/manifestFixtures';
-import { buildManifest, countNodeModulesFiles, serializeManifest, writeManifest } from './manifest';
+import { buildManifest, serializeManifest, writeManifest } from './manifest';
 
 beforeEach(resetDisk);
 
@@ -108,50 +108,40 @@ describe('serializeManifest', () => {
       expect(after.attribution).toEqual(before.attribution);
     });
   });
-});
 
-describe('countNodeModulesFiles', () => {
-  it('counts zero for a first-party-only graph', () => {
-    const stats: Stats = {
+  it('counts a synthetic node itself towards the roll-up of the story that reaches it', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const synthetic = 'virtual:bridge';
+    const helper = '/repo/packages/ui/src/helper.ts';
+
+    // The same two real files with the same bytes, once with a synthetic leaf hanging off the story
+    // and once without. The leaf has no file, so pruning erases it and both serialized graphs come
+    // out identical — but it was a member of the story's subtree when the roll-up ran, so it moved
+    // the hash. Pruning any earlier would collapse these two manifests onto the same story hash.
+    const withLeaf: Stats = {
       modules: [
-        { id: 1, name: './src/Button.stories.tsx' },
-        { id: 2, name: './src/Button.tsx' },
-        { id: 3, name: './.storybook/preview.ts' },
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: helper, reasons: [{ moduleName: story }] },
+        { id: 3, name: synthetic, reasons: [{ moduleName: story }] },
+      ],
+    };
+    const withoutLeaf: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: helper, reasons: [{ moduleName: story }] },
       ],
     };
 
-    expect(countNodeModulesFiles(stats)).toBe(0);
-  });
+    await withSyntheticAbsent(async () => {
+      disk.current.fileHashes = { [story]: 'S', [helper]: 'H' };
+      const bridged = serializeManifest(await buildManifest(withLeaf, projectRoot, outOfGraph));
+      const plain = serializeManifest(await buildManifest(withoutLeaf, projectRoot, outOfGraph));
 
-  it('counts installed dependency files however the builder spells them', () => {
-    const stats: Stats = {
-      // One relative (Vite), one absolute (webpack), one via `nameForCondition` (rspack).
-      modules: [
-        { id: 1, name: './src/Button.tsx' },
-        { id: 2, name: './../../node_modules/@storybook/react/dist/entry-preview.js' },
-        { id: 3, name: '/repo/node_modules/storybook/dist/csf/index.js' },
-        { id: 4, name: 'dependency group', nameForCondition: '/repo/node_modules/react/index.js' },
-      ],
-    };
-
-    expect(countNodeModulesFiles(stats)).toBe(3);
-  });
-
-  it('counts the concatenated children of a dependency group', () => {
-    const stats: Stats = {
-      modules: [
-        {
-          id: 1,
-          name: './../../node_modules/storybook/dist/csf/index.js + 1 modules',
-          modules: [
-            { name: './../../node_modules/storybook/dist/csf/index.js' },
-            { name: './../../node_modules/storybook/dist/csf/toId.js' },
-          ],
-        },
-      ],
-    };
-
-    expect(countNodeModulesFiles(stats)).toBe(2);
+      // Identical after pruning, so the story hash is the only place the leaf can show up.
+      expect(bridged.files).toEqual(plain.files);
+      const key = './src/Button.stories.tsx';
+      expect(bridged.storyFiles[key]).not.toBe(plain.storyFiles[key]);
+    });
   });
 });
 
