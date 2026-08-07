@@ -89,7 +89,7 @@ export async function hashOutOfGraphFiles(
  * graph-rolled entry: bytes-changed and imports-changed are different failure modes, so `preview.*` is
  * covered twice on purpose and neither entry has to be complete alone.
  *
- * A section with no files contributes no entry at all, matching how the `<storybookGlobals>` catch-all
+ * A section with no files contributes no entry at all, matching how the `storybookGlobals` catch-all
  * is omitted when empty.
  *
  * Both roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served

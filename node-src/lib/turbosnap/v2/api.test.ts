@@ -13,7 +13,7 @@ const manifest: TurboSnapManifest = {
   unrecognizedStoryEntries: [],
   storybookFiles: new Map([
     ['./.storybook/preview.ts', 'preview-hash'],
-    ['<storybookGlobals>', 'globals-hash'],
+    ['storybookGlobals', 'globals-hash'],
   ]),
   storybookHash: 'storybook-hash',
   attribution: {

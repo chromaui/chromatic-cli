@@ -332,7 +332,7 @@ describe('buildManifest attribution closure', () => {
   const previewHelper = '/repo/packages/ui/.storybook/test.ts';
   const orphanRoot = '/repo/packages/ui/src/probe/orphanRoot.tsx';
   const hiddenInner = '/repo/packages/ui/src/probe/hiddenInner.tsx';
-  const globalsKey = '<storybookGlobals>';
+  const globalsKey = 'storybookGlobals';
   const configEntry = './storybook-config-entry.js';
 
   // A concatenated module whose root is itself an orphan global. The inner file is hashed, but it is
@@ -466,8 +466,8 @@ describe('buildManifest story detection of swept node_modules stories', () => {
       disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R2' };
       const after = await buildManifest(stats, projectRoot, outOfGraph);
 
-      expect(after.storybookFiles.get('<storybookGlobals>')).not.toBe(
-        before.storybookFiles.get('<storybookGlobals>')
+      expect(after.storybookFiles.get('storybookGlobals')).not.toBe(
+        before.storybookFiles.get('storybookGlobals')
       );
     });
   });

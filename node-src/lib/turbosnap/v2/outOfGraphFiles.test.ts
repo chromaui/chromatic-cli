@@ -94,7 +94,7 @@ describe('rollUpOutOfGraphFiles', () => {
 
     const rollUps = await rollUp();
 
-    expect([...rollUps.keys()]).toEqual(['<storybookConfig>', '<staticFiles>']);
+    expect([...rollUps.keys()]).toEqual(['storybookConfig', 'staticFiles']);
   });
 
   it('moves the config roll-up when a config file content changes', async () => {
@@ -105,7 +105,7 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M2' };
     const after = await rollUp();
 
-    expect(after.get('<storybookConfig>')).not.toBe(before.get('<storybookConfig>'));
+    expect(after.get('storybookConfig')).not.toBe(before.get('storybookConfig'));
   });
 
   it('moves the static roll-up when a static file content changes, leaving the config roll-up alone', async () => {
@@ -120,8 +120,8 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A2' };
     const after = await rollUp();
 
-    expect(after.get('<staticFiles>')).not.toBe(before.get('<staticFiles>'));
-    expect(after.get('<storybookConfig>')).toBe(before.get('<storybookConfig>'));
+    expect(after.get('staticFiles')).not.toBe(before.get('staticFiles'));
+    expect(after.get('storybookConfig')).toBe(before.get('storybookConfig'));
   });
 
   it('moves the static roll-up when an asset is renamed without changing its bytes', async () => {
@@ -140,7 +140,7 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { '/repo/packages/ui/.storybook/static/brand.svg': 'A' };
     const after = await rollUp();
 
-    expect(after.get('<staticFiles>')).not.toBe(before.get('<staticFiles>'));
+    expect(after.get('staticFiles')).not.toBe(before.get('staticFiles'));
   });
 
   it('moves the static roll-up when two assets swap contents', async () => {
@@ -159,7 +159,7 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { [a]: 'B', [b]: 'A' };
     const after = await rollUp();
 
-    expect(after.get('<staticFiles>')).not.toBe(before.get('<staticFiles>'));
+    expect(after.get('staticFiles')).not.toBe(before.get('staticFiles'));
   });
 
   it('moves the config roll-up when a config file is renamed without changing its bytes', async () => {
@@ -172,7 +172,7 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { '/repo/packages/ui/.storybook/preview-body.html': 'H' };
     const after = await rollUp();
 
-    expect(after.get('<storybookConfig>')).not.toBe(before.get('<storybookConfig>'));
+    expect(after.get('storybookConfig')).not.toBe(before.get('storybookConfig'));
   });
 
   it('omits a section that has no files, matching how the globals catch-all behaves', async () => {
@@ -180,7 +180,7 @@ describe('rollUpOutOfGraphFiles', () => {
 
     const rollUps = await rollUp();
 
-    expect(rollUps.has('<staticFiles>')).toBe(false);
+    expect(rollUps.has('staticFiles')).toBe(false);
   });
 
   it('keeps both roll-ups stable when the project moves, since path identity is project-relative', async () => {
@@ -204,8 +204,8 @@ describe('rollUpOutOfGraphFiles', () => {
     };
     const after = await rollUp(input, '/repo/apps/web');
 
-    expect(after.get('<storybookConfig>')).toBe(before.get('<storybookConfig>'));
-    expect(after.get('<staticFiles>')).toBe(before.get('<staticFiles>'));
+    expect(after.get('storybookConfig')).toBe(before.get('storybookConfig'));
+    expect(after.get('staticFiles')).toBe(before.get('staticFiles'));
   });
 });
 

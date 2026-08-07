@@ -246,7 +246,7 @@ function getBuilderStatsBail(
 /**
  * A prebuilt Storybook's project.json records whether static directories were declared, while their
  * paths must still be derived from the checked-out source. If those two sources disagree, continuing
- * would silently omit `<staticFiles>` even though we know the section should exist.
+ * would silently omit `staticFiles` even though we know the section should exist.
  */
 function getStaticDirectoriesBail(
   input: Pick<TraceChangedFilesInput, 'staticDirs' | 'staticDirsDeclared'>
@@ -301,7 +301,7 @@ function getEmptySectionBail(
 
 /**
  * Explains a graph we found no stories in, which can only ever recapture everything through
- * `<storybookGlobals>` — wider than v1. An unrecognized entry naming a lazy story context is the one
+ * `storybookGlobals` — wider than v1. An unrecognized entry naming a lazy story context is the one
  * explanation we can give, so it is reported; otherwise the emptiness is all we know.
  *
  * @param manifest The manifest built from the stats.

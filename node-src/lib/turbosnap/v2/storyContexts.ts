@@ -59,7 +59,7 @@ const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
  *
  * Refusing it also protects the globals catch-all. Were it a story file, its subtree would become
  * story-reachable, so a shared runtime module (React DOM, the scheduler) would leave
- * `<storybookGlobals>` for a roll-up no story the Index knows about can carry — and a change to that
+ * `storybookGlobals` for a roll-up no story the Index knows about can carry — and a change to that
  * module would recapture nothing.
  *
  * A story a `node_modules` glob deliberately asked for survives, because its context did not exclude

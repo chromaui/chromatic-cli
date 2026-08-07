@@ -87,7 +87,7 @@ describe('turbosnap-manifest command', () => {
     expect(manifest.files['./src/Button.stories.tsx'].dependencies).toEqual(['./src/helper.ts']);
     // The version survives serialization as a readable string, so the emitted manifest itself says
     // which Storybook produced the build.
-    expect(manifest.storybookFiles['<storybookVersion>']).toBe('9.1.20');
+    expect(manifest.storybookFiles['storybookVersion']).toBe('9.1.20');
   });
 
   it('resolves the stats file against the storybook base directory', async () => {

@@ -40,7 +40,7 @@ export interface TurboSnapManifest {
   /**
    * One entry per `.storybook/preview.*` holding its rolled-up hash, plus the
    * {@link STORYBOOK_GLOBALS_KEY} catch-all, the {@link STORYBOOK_VERSION_KEY} version string and the
-   * `<storybookConfig>` / `<staticFiles>` out-of-graph roll-ups (see {@link rollUpOutOfGraphFiles}). A
+   * `storybookConfig` / `staticFiles` out-of-graph roll-ups (see {@link rollUpOutOfGraphFiles}). A
    * change to any entry means recapture everything, so the small map is enough for the backend to
    * decide; the per-file breakdown behind each hash stays in `files` (graph) or in the out-of-graph
    * detail sections for debugging.
@@ -62,14 +62,14 @@ export interface TurboSnapManifest {
  */
 interface ManifestFile {
   storybookHash: string;
+  storybookFiles: Record<FilePath, FileHash | StorybookVersion>;
+  storybookConfigFiles: Record<FilePath, FileHash>;
+  staticFiles: Record<FilePath, FileHash>;
   storyFiles: Record<FilePath, FileHash>;
   /** The sole evidence for the `unrecognizedStoryEntry` bail, which writes this manifest. */
   unrecognizedStoryEntries: FilePath[];
-  storybookFiles: Record<FilePath, FileHash | StorybookVersion>;
-  files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
   attribution: Record<keyof FileAttribution, FilePath[]>;
-  storybookConfigFiles: Record<FilePath, FileHash>;
-  staticFiles: Record<FilePath, FileHash>;
+  files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
 }
 
 /**
@@ -219,17 +219,17 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
 
   return {
     storybookHash: manifest.storybookHash,
-    storyFiles,
-    unrecognizedStoryEntries: manifest.unrecognizedStoryEntries,
     storybookFiles,
-    files,
-    attribution,
     // The per-file detail behind the out-of-graph roll-ups. Kept out of `files` and `attribution`,
     // which describe the bundle graph: the globals catch-all is defined by *absence* from
     // storyReachable/previewSubtree (storybookFiles.ts:76-79), which these files satisfy by
     // construction, so putting them in `files` would double-hash them into the catch-all.
     storybookConfigFiles: Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles),
     staticFiles: Object.fromEntries(manifest.outOfGraphFiles.staticFiles),
+    storyFiles,
+    unrecognizedStoryEntries: manifest.unrecognizedStoryEntries,
+    attribution,
+    files,
   };
 }
 

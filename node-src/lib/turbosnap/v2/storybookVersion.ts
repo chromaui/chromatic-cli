@@ -8,7 +8,7 @@ const STORYBOOK_CORE_PACKAGES = ['storybook', '@storybook/core'];
 /**
  * Reads the installed Storybook version from the resolved core package's own `package.json`.
  *
- * This backs the `<storybookVersion>` manifest entry, which exists because the preview core runtime
+ * This backs the `storybookVersion` manifest entry, which exists because the preview core runtime
  * is served *outside* the module graph on webpack and rspack: it is externalized to
  * `__STORYBOOK_MODULE_*__` globals and loaded from a prebuilt `sb-preview/runtime.js`, so it never
  * appears in `preview-stats.json` and content hashing cannot see it. Tracking the version means a

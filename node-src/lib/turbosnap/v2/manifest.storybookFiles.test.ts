@@ -28,7 +28,7 @@ describe('buildManifest storybookFiles', () => {
   const reactDom = '/repo/packages/ui/node_modules/react-dom/index.js';
 
   const previewKey = './.storybook/preview.ts';
-  const globalsKey = '<storybookGlobals>';
+  const globalsKey = 'storybookGlobals';
 
   function makeStats(): Stats {
     return {
@@ -169,7 +169,7 @@ describe('buildManifest storybookFiles', () => {
         );
 
         // The version entry is unconditional, so it is the only key left once the catch-all is gone.
-        expect([...manifest.storybookFiles.keys()]).toEqual(['<storybookVersion>']);
+        expect([...manifest.storybookFiles.keys()]).toEqual(['storybookVersion']);
       }
     );
   });
@@ -183,7 +183,7 @@ describe('buildManifest storybookFiles', () => {
 
     const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect(manifest.storybookFiles.get('<storybookVersion>')).toBe('10.6.0-alpha.3');
+    expect(manifest.storybookFiles.get('storybookVersion')).toBe('10.6.0-alpha.3');
   });
 
   it('changes the storybookHash when only the Storybook version changes', async () => {
@@ -233,8 +233,8 @@ describe('buildManifest out-of-graph inputs', () => {
   it('emits a synthetic entry per out-of-graph section', async () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
 
-    expect([...manifest.storybookFiles.keys()]).toContain('<storybookConfig>');
-    expect([...manifest.storybookFiles.keys()]).toContain('<staticFiles>');
+    expect([...manifest.storybookFiles.keys()]).toContain('storybookConfig');
+    expect([...manifest.storybookFiles.keys()]).toContain('staticFiles');
   });
 
   it('moves the storybook hash when main.ts changes, leaving story hashes untouched', async () => {
@@ -262,7 +262,7 @@ describe('buildManifest out-of-graph inputs', () => {
     const before = await buildManifest(stats, projectRoot, outOfGraph);
 
     // Static assets are served by URL, so the same bytes at a new path render differently. A
-    // content-only roll-up left both `<staticFiles>` and the storybook hash byte-identical here.
+    // content-only roll-up left both `staticFiles` and the storybook hash byte-identical here.
     disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['sw.js'],
@@ -297,7 +297,7 @@ describe('buildManifest out-of-graph inputs', () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
 
     // The catch-all is defined by absence from storyReachable/previewSubtree, which these satisfy by
-    // construction — entering `files` would double-hash them into `<storybookGlobals>`.
+    // construction — entering `files` would double-hash them into `storybookGlobals`.
     expect(manifest.files.has('./.storybook/main.ts')).toBe(false);
     expect(manifest.attribution.storybookGlobals.has('./.storybook/main.ts')).toBe(false);
     expect(

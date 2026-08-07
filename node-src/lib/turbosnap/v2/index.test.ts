@@ -227,9 +227,9 @@ describe('traceChangedFiles', () => {
     // The three out-of-graph sections the Index gates on, plus the graph-rolled preview entry.
     expect(writtenManifest().storybookFiles).toEqual({
       [PREVIEW]: expect.any(String),
-      '<storybookVersion>': '9.1.20',
-      '<storybookConfig>': expect.any(String),
-      '<staticFiles>': expect.any(String),
+      storybookVersion: '9.1.20',
+      storybookConfig: expect.any(String),
+      staticFiles: expect.any(String),
     });
     expect(writtenManifest().storybookConfigFiles).toEqual({
       './.storybook/main.ts': expect.any(String),
@@ -436,7 +436,7 @@ describe('traceChangedFiles', () => {
     });
 
     expect(uploaded().storyFileHashes).toEqual({ [STORY]: expect.any(String) });
-    expect(writtenManifest().storybookFiles['<staticFiles>']).toBeUndefined();
+    expect(writtenManifest().storybookFiles['staticFiles']).toBeUndefined();
   });
 
   it('bails without uploading when the graph contains no node_modules files', async () => {
