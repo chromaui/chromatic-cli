@@ -31,13 +31,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.GH_TOKEN }}
-      - uses: actions/setup-node@v4
+      - run: corepack enable
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.22.3"
-
       - name: Prepare repository
         run: git fetch --unshallow --tags
         # Update NPM since we're using trusted publishing and need a newer version
