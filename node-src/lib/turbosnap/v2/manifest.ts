@@ -22,7 +22,7 @@ import { ProjectFiles } from './projectFiles';
 import { STORYBOOK_VERSION_KEY } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
-import { collectStoryImporters, isStoryFile } from './storyContexts';
+import { detectStoryFiles } from './storyDetection';
 
 type StorybookVersion = string;
 
@@ -93,12 +93,12 @@ export async function buildManifest(
 ): Promise<TurboSnapManifest> {
   const hashes = await hashFiles(stats, projectRoot, statsRoot, outOfGraph.projectFiles);
   const files = new Map<FilePath, TurboSnapFile>();
-  // A temporary set to collect the story file names before we build the story file hashes because
-  // we need to parse the entire list of dependencies first.
-  const storyFileNames = new Set<FilePath>();
 
-  const { storyImporters, contextsExcludingNodeModules, unrecognizedStoryEntries } =
-    collectStoryImporters(stats, projectRoot, hashes, statsRoot);
+  const { storyFiles, unrecognizedStoryEntries } = detectStoryFiles(stats, {
+    projectRoot,
+    statsRoot,
+    realFiles: hashes,
+  });
 
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
@@ -109,24 +109,12 @@ export async function buildManifest(
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
-    // Importers hold the builder's own entry paths (e.g. `./storybook-stories.js`), canonicalised so
-    // they compare against the canonical keys collectStoryImporters returns — the builder may spell
-    // the same entry with or without a `./` prefix. Entry reasons carry a null moduleName, so drop
-    // those.
+    // Canonicalised so a dependency edge names the same key wherever the builder spells it. Entry
+    // reasons carry a null moduleName, so drop those.
     const importers = (module.reasons ?? [])
       .map((reason) => reason.moduleName)
       .filter(Boolean)
       .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
-
-    // Only real files are story files; requiring a hash excludes the require-context glob itself
-    // (which is imported by an entry but has no on-disk file).
-    const matchedStoryImporters = importers.filter((importer) => storyImporters.has(importer));
-    if (
-      hashes.has(sourceFilePath) &&
-      isStoryFile(sourceFilePath, matchedStoryImporters, contextsExcludingNodeModules)
-    ) {
-      storyFileNames.add(sourceFilePath);
-    }
 
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
@@ -137,7 +125,7 @@ export async function buildManifest(
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
-  for (const storyFile of storyFileNames) {
+  for (const storyFile of storyFiles) {
     const subtree = collectTransitiveDependencies(files, storyFile);
     storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
   }
@@ -145,7 +133,7 @@ export async function buildManifest(
   const { storybookFiles, attribution } = collectStorybookFiles(
     files,
     hashes,
-    storyFileNames,
+    storyFiles,
     outOfGraph.configDir,
     h64ToString
   );

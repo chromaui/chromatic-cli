@@ -13,9 +13,10 @@ import { buildManifest, serializeManifest } from './manifest';
 
 beforeEach(resetDisk);
 
-describe('buildManifest story detection through a require-context', () => {
+describe('buildManifest with a require-context in the graph', () => {
   // Webpack/rspack don't import story files directly from the entry: the entry imports a lazy
   // require-context (a glob module that is not a real file), and that context imports the stories.
+  // Which files that makes stories is storyDetection's rule; here it is only the synthetic node.
   const glob = './src/lib/ lazy namespace object';
   const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
 
@@ -26,82 +27,12 @@ describe('buildManifest story detection through a require-context', () => {
     ],
   };
 
-  it('detects stories imported via a lazy require-context imported by the entry', async () => {
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S' };
-      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
-    });
-  });
-
-  it('detects an MDX story from the builder context without relying on a stories extension', async () => {
-    const mdxStory = '/repo/packages/ui/src/lib/Badge.stories.mdx';
-    const mdxStats: Stats = {
-      modules: [
-        { id: 1, name: glob, reasons: [{ moduleName: './storybook-stories.js' }] },
-        { id: 2, name: mdxStory, reasons: [{ moduleName: glob }] },
-      ],
-    };
-
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [mdxStory]: 'MDX' };
-      const manifest = await buildManifest(mdxStats, projectRoot, outOfGraph);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Badge.stories.mdx']);
-    });
-  });
-
   it('excludes the require-context glob (no file on disk) from the files map', async () => {
     await withGlobAbsent(async () => {
       disk.current.fileHashes = { [story]: 'S' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(false);
       expect(manifest.files.has('./src/lib/Button.stories.tsx')).toBe(true);
-    });
-  });
-
-  it('does not treat the require-context glob itself as a story file', async () => {
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S' };
-      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-      const keys = [...manifest.storyFileHashes.keys()];
-      expect(keys.some((key) => key.includes('lazy'))).toBe(false);
-    });
-  });
-
-  it('reports the relocated entry above a lazy story context when it is absent from the catalogue', async () => {
-    const relocatedEntry = './node_modules/.cache/storybook-next/storybook-stories.js';
-    const relocatedStats: Stats = {
-      modules: [
-        { id: 1, name: glob, reasons: [{ moduleName: relocatedEntry }] },
-        { id: 2, name: story, reasons: [{ moduleName: glob }] },
-      ],
-    };
-
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S' };
-      const manifest = await buildManifest(relocatedStats, projectRoot, outOfGraph);
-
-      expect(manifest.storyFileHashes.size).toBe(0);
-      expect(manifest.unrecognizedStoryEntries).toEqual([relocatedEntry]);
-    });
-  });
-
-  it('does not report an application file that owns an unrelated lazy context', async () => {
-    const applicationImporter = '/repo/packages/ui/src/loadExamples.ts';
-    const importedFile = '/repo/packages/ui/src/examples/Button.tsx';
-    const applicationStats: Stats = {
-      modules: [
-        { id: 1, name: applicationImporter },
-        { id: 2, name: glob, reasons: [{ moduleName: applicationImporter }] },
-        { id: 3, name: importedFile, reasons: [{ moduleName: glob }] },
-      ],
-    };
-
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [applicationImporter]: 'I', [importedFile]: 'B' };
-      const manifest = await buildManifest(applicationStats, projectRoot, outOfGraph);
-
-      expect(manifest.unrecognizedStoryEntries).toEqual([]);
     });
   });
 
@@ -127,56 +58,11 @@ describe('buildManifest story detection through a require-context', () => {
   });
 });
 
-describe('buildManifest story detection through a config-entry require-context', () => {
-  // rsbuild imports the require-context from the config entry (not storybook-stories.js), and the
-  // stories themselves are concatenated modules.
-  const glob = './src/lib|lazy|namespace object';
-  const configEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js';
-  const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
-  const impl = '/repo/packages/ui/src/lib/Button.tsx';
-
-  const stats: Stats = {
-    modules: [
-      { id: 1, name: glob, reasons: [{ moduleName: `${configEntry} + 1 modules` }] },
-      {
-        id: 2,
-        name: `${story} + 1 modules`,
-        modules: [{ name: story }, { name: impl }],
-        reasons: [{ moduleName: glob }],
-      },
-      // A real file the config entry imports directly (like `.storybook/preview.ts`); it must not
-      // be mistaken for a story just because the config entry imports it.
-      {
-        id: 3,
-        name: '/repo/packages/ui/.storybook/preview.ts',
-        reasons: [{ moduleName: `${configEntry} + 1 modules` }],
-      },
-    ],
-  };
-
-  it('detects a concatenated story imported via a context imported by the config entry', async () => {
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
-      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
-    });
-  });
-
-  it('does not treat a real file imported directly by the config entry as a story', async () => {
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
-      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-      expect([...manifest.storyFileHashes.keys()]).not.toContain('.storybook/preview.ts');
-    });
-  });
-});
-
-describe('buildManifest story detection when the builder omits the `./` prefix', () => {
+describe('buildManifest story hashing behind a bare-named require-context', () => {
   // storybook-builder-rsbuild 3.x ships `withChromaticMinimalContract`, which re-derives module names
-  // via `path.relative(cwd, …)` — that never emits a `./` prefix. So the same graph carries both
-  // spellings: the config entry is named `./storybook-config-entry.js` but referenced as
-  // `storybook-config-entry.js`, and the require-context is named bare. Comparing the entry allowlist
-  // against the raw spelling matched nothing and every build bailed `noStoryFiles`.
+  // via `path.relative(cwd, …)` — that never emits a `./` prefix, so the same graph carries both
+  // spellings of the config entry and the context. Recognizing them is storyDetection's rule; here it
+  // is the roll-up that has to reach through the synthetic node.
   const configEntry = 'storybook-config-entry.js';
   const glob = String.raw`src/lib|lazy|/^\.\/.*$/|namespace object`;
   const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
@@ -187,24 +73,8 @@ describe('buildManifest story detection when the builder omits the `./` prefix',
       { id: 1, name: glob, reasons: [{ moduleName: configEntry }] },
       { id: 2, name: story, reasons: [{ moduleName: glob }] },
       { id: 3, name: impl, reasons: [{ moduleName: story }] },
-      // Storybook's preview runtime globals. The config entry imports them and they have no file on
-      // disk, which is exactly the shape of a require-context — but an external imports nothing, so
-      // it must never become a story importer.
-      {
-        id: 4,
-        name: 'external "__STORYBOOK_MODULE_PREVIEW_API__"',
-        reasons: [{ moduleName: configEntry }],
-      },
     ],
   };
-
-  it('detects the story behind a bare-named context imported by a bare-named entry', async () => {
-    await withSyntheticAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
-      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
-    });
-  });
 
   it('rolls the story implementation into the story hash', async () => {
     await withSyntheticAbsent(async () => {
@@ -414,7 +284,7 @@ describe('buildManifest attribution closure', () => {
   });
 });
 
-describe('buildManifest story detection of swept node_modules stories', () => {
+describe('buildManifest attribution of swept node_modules stories', () => {
   // On storybook-builder-rsbuild 1.x–3.3.x, a stories glob whose directory prefix is not
   // slash-bounded lets rspack's require-context sweep a dependency's story into the graph: core
   // prepends `(?!.*node_modules)` but strips the `^`, so the unanchored guard matches after the
@@ -433,14 +303,6 @@ describe('buildManifest story detection of swept node_modules stories', () => {
       { id: 4, name: shared, reasons: [{ moduleName: swept }] },
     ],
   };
-
-  it('does not treat a swept node_modules story as a story file', async () => {
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
-      const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-      expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
-    });
-  });
 
   it('leaves the swept story subtree in the globals catch-all rather than draining it', async () => {
     await withGlobAbsent(async () => {
@@ -470,46 +332,5 @@ describe('buildManifest story detection of swept node_modules stories', () => {
         before.storybookFiles.get('storybookGlobals')
       );
     });
-  });
-
-  it('keeps a node_modules story a deliberate node_modules glob asked for', async () => {
-    // A glob naming `node_modules` (e.g. `../node_modules/@myorg/ui/**/*.stories.js`) is indexed by
-    // core — `commonGlobOptions` applies no ignore — and the builder emits the include regex raw,
-    // with no lookahead. The context is rooted in `node_modules`, so the sweep is intentional and
-    // the story key is real and matchable.
-    const deliberateGlob = String.raw`./node_modules/@myorg/ui|lazy|/^\.\/.*$/|namespace object`;
-    const shipped = '/repo/packages/ui/node_modules/@myorg/ui/Button.stories.js';
-    await withGlobAbsent(async () => {
-      disk.current.fileHashes = { [shipped]: 'D' };
-      const manifest = await buildManifest(
-        {
-          modules: [
-            { id: 1, name: deliberateGlob, reasons: [{ moduleName: './storybook-stories.js' }] },
-            { id: 2, name: shipped, reasons: [{ moduleName: deliberateGlob }] },
-          ],
-        },
-        projectRoot,
-        outOfGraph
-      );
-      expect([...manifest.storyFileHashes.keys()]).toEqual([
-        './node_modules/@myorg/ui/Button.stories.js',
-      ]);
-    });
-  });
-
-  it('keeps a node_modules story imported directly by the stories entry', async () => {
-    // Vite has no require-context: `storybook-stories.js` imports the matched files directly, and
-    // that list comes from the same glob resolution the indexer uses. So a node_modules story there
-    // is deliberate by construction and must survive.
-    const shipped = '/repo/packages/ui/node_modules/@myorg/ui/Button.stories.js';
-    disk.current.fileHashes = { [shipped]: 'D' };
-    const manifest = await buildManifest(
-      { modules: [{ id: 1, name: shipped, reasons: [{ moduleName: './storybook-stories.js' }] }] },
-      projectRoot,
-      outOfGraph
-    );
-    expect([...manifest.storyFileHashes.keys()]).toEqual([
-      './node_modules/@myorg/ui/Button.stories.js',
-    ]);
   });
 });

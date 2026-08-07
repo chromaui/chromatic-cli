@@ -1,8 +1,13 @@
 import path from 'path';
 
 import { Stats } from '../../../types';
-import { FileHash, FilePath } from './graph';
+import { FilePath } from './graph';
 import { moduleFileNames, normalizeStatsPath } from './paths';
+
+/** Whether a canonical path has a real file on disk. A `Map` of hashes satisfies this. */
+export interface RealFiles {
+  has(filePath: FilePath): boolean;
+}
 
 // Generated entry points that import all story files. We use this to determine if a file is a story
 // file because they may not always be *.stories.* files because it's configurable.
@@ -49,6 +54,55 @@ const NODE_MODULES_SEGMENT = /(^|\/)node_modules\//;
 const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
 
 /**
+ * Which modules in the stats are story files, and — when none are — the entries that explain it.
+ *
+ * @param stats The stats file to parse.
+ * @param context.projectRoot The absolute Storybook project root that module paths anchor against.
+ * @param context.statsRoot The directory relative stats paths are named from.
+ * @param context.realFiles Which canonical paths have a real file on disk, used to tell real files
+ * apart from the require-context glob.
+ *
+ * @returns The canonical paths of the story files, and the unrecognized generated entries.
+ */
+export function detectStoryFiles(
+  stats: Stats,
+  context: { projectRoot: string; statsRoot: string; realFiles: RealFiles }
+): { storyFiles: Set<FilePath>; unrecognizedStoryEntries: FilePath[] } {
+  const { projectRoot, statsRoot, realFiles } = context;
+  const { storyImporters, contextsExcludingNodeModules, unrecognizedStoryEntries } =
+    collectStoryImporters(stats, projectRoot, realFiles, statsRoot);
+
+  const storyFiles = new Set<FilePath>();
+  for (const module of stats.modules) {
+    const [sourceFilePath] = moduleFileNames(module).map((name) =>
+      normalizeStatsPath(name, projectRoot, statsRoot)
+    );
+    if (!sourceFilePath) continue;
+
+    // Importers hold the builder's own entry paths (e.g. `./storybook-stories.js`), canonicalised so
+    // they compare against the canonical keys collectStoryImporters returns — the builder may spell
+    // the same entry with or without a `./` prefix. Entry reasons carry a null moduleName, so drop
+    // those.
+    const matchedStoryImporters = (module.reasons ?? [])
+      .map((reason) => reason.moduleName)
+      .filter(Boolean)
+      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot))
+      .filter((importer) => storyImporters.has(importer));
+
+    // Only real files are story files; requiring a file on disk excludes the require-context glob
+    // itself (which is imported by an entry but has no on-disk file).
+    if (
+      realFiles.has(sourceFilePath) &&
+      isStoryFile(sourceFilePath, matchedStoryImporters, contextsExcludingNodeModules)
+    ) {
+      storyFiles.add(sourceFilePath);
+    }
+  }
+
+  return { storyFiles, unrecognizedStoryEntries };
+}
+
+/**
  * Whether a module is a story file, given the story importers that claim it.
  *
  * A `node_modules` story claimed only by contexts that excluded `node_modules` is refused, because it
@@ -73,7 +127,7 @@ const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
  *
  * @returns Whether the module is a story file.
  */
-export function isStoryFile(
+function isStoryFile(
   filePath: FilePath,
   matchedStoryImporters: FilePath[],
   contextsExcludingNodeModules: Set<string>
@@ -92,16 +146,16 @@ export function isStoryFile(
  *
  * @param stats The stats file to parse.
  * @param projectRoot The absolute Storybook project root that module paths anchor against.
- * @param hashes The content hashes keyed by canonical file path, used to tell real files apart
+ * @param realFiles Which canonical paths have a real file on disk, used to tell real files apart
  * from the require-context glob.
  * @param statsRoot The directory relative stats paths are named from.
  *
  * @returns The set of canonical importer keys that indicate a story file.
  */
-export function collectStoryImporters(
+function collectStoryImporters(
   stats: Stats,
   projectRoot: string,
-  hashes: Map<FilePath, FileHash>,
+  realFiles: RealFiles,
   statsRoot: string
 ): {
   storyImporters: Set<string>;
@@ -122,7 +176,7 @@ export function collectStoryImporters(
   const unrecognizedStoryEntries = new Set<FilePath>();
   for (const module of stats.modules) {
     const [root] = moduleFileNames(module).map((name) => canonical(name));
-    if (!module.name || !root || hashes.has(root)) continue;
+    if (!module.name || !root || realFiles.has(root)) continue;
     // An external is a graph leaf, so it can never import a story. It has no on-disk file either,
     // which would otherwise let it through as a require-context.
     if (EXTERNAL_MODULE.test(module.name)) continue;
@@ -137,7 +191,7 @@ export function collectStoryImporters(
         contextsExcludingNodeModules.add(canonical(module.name));
       }
     } else {
-      collectUnrecognizedStoryEntries(module.name, importers, hashes, unrecognizedStoryEntries);
+      collectUnrecognizedStoryEntries(module.name, importers, realFiles, unrecognizedStoryEntries);
     }
   }
   return {
@@ -150,7 +204,7 @@ export function collectStoryImporters(
 function collectUnrecognizedStoryEntries(
   moduleName: string,
   importers: FilePath[],
-  hashes: Map<FilePath, FileHash>,
+  realFiles: RealFiles,
   entries: Set<FilePath>
 ) {
   if (!isLazyContext(moduleName)) return;
@@ -160,7 +214,7 @@ function collectUnrecognizedStoryEntries(
     // a real cache file. A synthetic importer also qualifies because it cannot be an
     // application-owned lazy context; this preserves a loud failure if upstream renames a virtual
     // entry as well as moving it.
-    if (ENTRY_FILE_BASENAMES.has(path.posix.basename(importer)) || !hashes.has(importer)) {
+    if (ENTRY_FILE_BASENAMES.has(path.posix.basename(importer)) || !realFiles.has(importer)) {
       entries.add(importer);
     }
   }
