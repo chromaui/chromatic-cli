@@ -6,8 +6,7 @@ import path from 'path';
 import GraphQLClient from '../node-src/io/graphqlClient';
 import { SBProjectJson } from '../node-src/lib/getPrebuiltStorybookMetadata';
 import { createLogger } from '../node-src/lib/log';
-import { resolvePackageVersion } from '../node-src/lib/turbosnap/v2/packageVersion';
-import { realProjectFiles } from '../node-src/lib/turbosnap/v2/projectFiles';
+import { ProjectFiles, realProjectFiles } from '../node-src/lib/turbosnap/v2/projectFiles';
 import {
   readTurbosnapInput,
   TURBOSNAP_INPUT_OPTIONS_HELP,
@@ -91,6 +90,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
 
     const staticDirectoriesDeclared = prebuilt?.hasStaticDirs ?? false;
     const index = stubIndexClient();
+    const projectFiles = realProjectFiles();
     const result = await traceChangedFiles({
       graphqlClient: index.graphqlClient,
       buildId: 'turbosnap-bail',
@@ -102,7 +102,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
       configDir: input.configDir,
       staticDirs: input.staticDirs,
       staticDirsDeclared: staticDirectoriesDeclared,
-      projectFiles: realProjectFiles(),
+      projectFiles,
       ...(builderName && { builderName }),
     });
 
@@ -122,6 +122,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
           prebuilt,
           projectJsonPath,
           projectRoot: input.projectRoot,
+          projectFiles,
           builderName,
           builderNameFromFlag: Boolean(flags.builderName),
         }),
@@ -192,6 +193,7 @@ interface StorybookProvenance {
   prebuilt?: SBProjectJson;
   projectJsonPath: string;
   projectRoot: string;
+  projectFiles: ProjectFiles;
   builderName?: string;
   builderNameFromFlag: boolean;
 }
@@ -208,6 +210,7 @@ interface StorybookProvenance {
  * @param provenance.prebuilt The prebuilt Storybook's project.json, when it could be read.
  * @param provenance.projectJsonPath The path it was looked for at.
  * @param provenance.projectRoot The project root package versions resolve from.
+ * @param provenance.projectFiles How to read the disk.
  * @param provenance.builderName The builder the anchor check was told about.
  * @param provenance.builderNameFromFlag Whether that builder came from `--builder-name`.
  *
@@ -217,6 +220,7 @@ function describeStorybook({
   prebuilt,
   projectJsonPath,
   projectRoot,
+  projectFiles,
   builderName,
   builderNameFromFlag,
 }: StorybookProvenance) {
@@ -225,8 +229,8 @@ function describeStorybook({
     projectJsonFound: Boolean(prebuilt),
     builderSource: builderSourceOf(builderName, builderNameFromFlag),
     ...(prebuilt?.storybookVersion && { version: prebuilt.storybookVersion }),
-    builder: describePackage(builderName, prebuilt, projectRoot),
-    framework: describePackage(prebuilt?.framework?.name, prebuilt, projectRoot),
+    builder: describePackage(builderName, prebuilt, projectRoot, projectFiles),
+    framework: describePackage(prebuilt?.framework?.name, prebuilt, projectRoot, projectFiles),
   };
 }
 
@@ -243,12 +247,13 @@ function builderSourceOf(builderName: string | undefined, builderNameFromFlag: b
 function describePackage(
   packageName: string | undefined,
   prebuilt: SBProjectJson | undefined,
-  projectRoot: string
+  projectRoot: string,
+  projectFiles: ProjectFiles
 ) {
   if (!packageName) return {};
 
   const version =
-    resolvePackageVersion(projectRoot, packageName) ??
+    projectFiles.packageVersion(projectRoot, packageName) ??
     prebuilt?.storybookPackages?.[packageName]?.version;
 
   return { name: packageName, ...(version && { version }) };

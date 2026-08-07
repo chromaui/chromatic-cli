@@ -1,9 +1,8 @@
-import { statSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
-import { hashAbsolutePaths } from './fileHashes';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -19,6 +18,7 @@ import {
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
 import { moduleFileNames, normalizeStatsPath, resolveStatsPath } from './paths';
+import { ProjectFiles } from './projectFiles';
 import { STORYBOOK_VERSION_KEY } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
@@ -91,7 +91,7 @@ export async function buildManifest(
   outOfGraph: OutOfGraphInput,
   statsRoot = projectRoot
 ): Promise<TurboSnapManifest> {
-  const hashes = await hashFiles(stats, projectRoot, statsRoot);
+  const hashes = await hashFiles(stats, projectRoot, statsRoot, outOfGraph.projectFiles);
   const files = new Map<FilePath, TurboSnapFile>();
   // A temporary set to collect the story file names before we build the story file hashes because
   // we need to parse the entire list of dependencies first.
@@ -152,7 +152,10 @@ export async function buildManifest(
 
   // The preview core runtime is out of the module graph on webpack and rspack, so no file hash can
   // see a Storybook upgrade there. Track the version instead; it is a plain string, not a hash.
-  storybookFiles.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(projectRoot));
+  storybookFiles.set(
+    STORYBOOK_VERSION_KEY,
+    resolveStorybookVersion(projectRoot, outOfGraph.projectFiles)
+  );
 
   // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
@@ -330,28 +333,33 @@ function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<Fi
  * Resolves a stats module path to the absolute on-disk file to hash, or undefined when there is
  * nothing hashable there.
  *
- * Virtual modules (e.g. Vite's `virtual:` entries) have no on-disk location. Beyond that, only a
- * regular file is hashable: a builder may name a module after a directory — `storybook-builder-rsbuild`
- * 3.3.0/3.3.1 name one `./node_modules/@storybook/react/dist/` — and reading a directory throws
- * `EISDIR`, which fails the whole manifest to an `internalError` bail. Skipping it loses no evidence,
- * because a directory is never a source file and so can never be edited as one. A file that exists but
- * cannot be read still throws, and that bail is the right outcome: v1 traces it instead.
+ * Virtual modules (e.g. Vite's `virtual:` entries) have no on-disk location. Skipping them is stats
+ * policy, which is why it is asked here rather than of the disk. Beyond that, only a regular file is
+ * hashable, and what counts as one is the module's rule; see {@link ProjectFiles.isFile}. Skipping a
+ * name with no file loses no evidence, because such a name is never a source file and so can never be
+ * edited as one.
  *
  * @param rawPath The module name from the stats file.
  * @param statsRoot The directory relative stats paths are named from.
+ * @param projectFiles How to read the disk.
  *
  * @returns The absolute path to hash, or undefined if there is no hashable file.
  */
-function hashableAbsolutePath(rawPath: FilePath, statsRoot: string): string | undefined {
+function hashableAbsolutePath(
+  rawPath: FilePath,
+  statsRoot: string,
+  projectFiles: ProjectFiles
+): string | undefined {
   if (rawPath.includes('virtual:')) return undefined;
   const absolutePath = resolveStatsPath(rawPath, statsRoot);
-  return statSync(absolutePath, { throwIfNoEntry: false })?.isFile() ? absolutePath : undefined;
+  return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
 }
 
 async function hashFiles(
   stats: Stats,
   projectRoot: string,
-  statsRoot: string
+  statsRoot: string,
+  projectFiles: ProjectFiles
 ): Promise<Map<FilePath, FileHash>> {
   // Collect every referenced module path once, expanding concatenated modules into their real
   // files and skipping importers with a null moduleName.
@@ -368,13 +376,13 @@ async function hashFiles(
   // Map each hashable file's canonical project-relative name to its absolute on-disk path.
   const normalizedToAbsolute = new Map<FilePath, string>();
   for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, statsRoot);
+    const absolutePath = hashableAbsolutePath(rawPath, statsRoot, projectFiles);
     if (absolutePath) {
       normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
     }
   }
 
-  const fileHashes = await hashAbsolutePaths([...normalizedToAbsolute.values()]);
+  const fileHashes = await projectFiles.hashAll([...normalizedToAbsolute.values()]);
 
   const hashes = new Map<FilePath, FileHash>();
   for (const [normalizedName, absolutePath] of normalizedToAbsolute) {

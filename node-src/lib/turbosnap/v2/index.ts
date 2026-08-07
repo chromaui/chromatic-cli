@@ -27,7 +27,7 @@ interface TraceChangedFilesInput {
   configDir: string;
   staticDirs: string[];
   staticDirsDeclared: boolean;
-  projectFiles: Pick<ProjectFiles, 'listTree'>;
+  projectFiles: ProjectFiles;
   builderName?: string;
 }
 
@@ -224,7 +224,7 @@ function getBuilderStatsBail(
 ): TraceChangedFilesResult | undefined {
   let reason;
   try {
-    reason = getUntrustedBuilderStatsReason(stats, input.projectRoot);
+    reason = getUntrustedBuilderStatsReason(stats, input.projectRoot, input.projectFiles);
   } catch (error) {
     return internalErrorBail(
       error,

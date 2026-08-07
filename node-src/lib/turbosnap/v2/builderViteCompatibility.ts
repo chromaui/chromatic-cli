@@ -1,7 +1,7 @@
 import semver from 'semver';
 
 import { Stats, TurboSnapUntrustedBuilderStatsSubreason } from '../../../types';
-import { resolvePackageVersion } from './packageVersion';
+import { ProjectFiles } from './projectFiles';
 
 const BUILDER_VITE_PACKAGE = '@storybook/builder-vite';
 
@@ -21,12 +21,14 @@ export interface UntrustedBuilderStatsReason {
  *
  * @param stats The preview stats file.
  * @param projectRoot The absolute Storybook project root to resolve packages from.
+ * @param projectFiles How to read the disk.
  *
  * @returns The structured untrusted-stats reason, if any.
  */
 export function getUntrustedBuilderStatsReason(
   stats: Stats,
-  projectRoot: string
+  projectRoot: string,
+  projectFiles: ProjectFiles
 ): UntrustedBuilderStatsReason | undefined {
   if (!isBuilderViteStats(stats)) return undefined;
 
@@ -35,7 +37,7 @@ export function getUntrustedBuilderStatsReason(
   // Read inline rather than through getEnvironment because it is deleted along with this gate.
   if (process.env.CHROMATIC_TURBOSNAP_TRUST_BUILDER_STATS) return undefined;
 
-  const version = resolvePackageVersion(projectRoot, BUILDER_VITE_PACKAGE);
+  const version = projectFiles.packageVersion(projectRoot, BUILDER_VITE_PACKAGE);
   if (!version) {
     return {
       subreason: 'packageNotFound',

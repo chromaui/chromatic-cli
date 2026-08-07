@@ -1,43 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
 import {
-  directoryTree,
+  disk,
   manifestWithPreview,
-  mockStatSync,
   outOfGraph,
   projectRoot,
+  resetDisk,
+  withAbsent,
 } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
-vi.mock('fs', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('fs')>()),
-  // A trailing slash names a directory: present on disk, but not a regular file.
-  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
-  writeFileSync: vi.fn(),
-}));
-
-// A hoisted ref the mock factory reads, so each test controls the file hashes; see
-// ./__fixtures__/manifestMocks. The swept directory tree is a plain fixture value, needing no mock.
-const { fileHashesRef } = vi.hoisted(() => ({
-  fileHashesRef: { current: {} as Record<string, string> },
-}));
-
-vi.mock('../../getFileHashes', async () => {
-  const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
-  return fileHashesModule(fileHashesRef);
-});
-
-// The version is read off the resolved Storybook package on disk, which no fixture here installs;
-// stub it so these tests exercise graph hashing only. See storybookVersion.test.ts for the probe.
-vi.mock('./storybookVersion', () => ({
-  resolveStorybookVersion: () => '9.1.20',
-}));
-
-beforeEach(() => {
-  fileHashesRef.current = {};
-  directoryTree.current = {};
-});
+beforeEach(resetDisk);
 
 describe('buildManifest', () => {
   it('keys story files by their canonical project-root-relative path', async () => {
@@ -76,10 +50,10 @@ describe('buildManifest leaf inclusion', () => {
   };
 
   it('changes the story hash when a leaf dependency content changes', async () => {
-    fileHashesRef.current = { [story]: 'S', [leaf]: 'T1' };
+    disk.current.fileHashes = { [story]: 'S', [leaf]: 'T1' };
     const before = await buildManifest(stats, projectRoot, outOfGraph);
 
-    fileHashesRef.current = { [story]: 'S', [leaf]: 'T2' };
+    disk.current.fileHashes = { [story]: 'S', [leaf]: 'T2' };
     const after = await buildManifest(stats, projectRoot, outOfGraph);
 
     expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
@@ -91,7 +65,7 @@ describe('buildManifest leaf inclusion', () => {
 describe('buildManifest relocation stability', () => {
   it('changes nothing at all when the whole project moves', async () => {
     const before = await (async () => {
-      fileHashesRef.current = {
+      disk.current.fileHashes = {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
         '/repo/packages/ui/src/helper.ts': 'H',
       };
@@ -116,7 +90,7 @@ describe('buildManifest relocation stability', () => {
     })();
 
     const after = await (async () => {
-      fileHashesRef.current = {
+      disk.current.fileHashes = {
         '/repo/apps/web/ui/src/Button.stories.tsx': 'S',
         '/repo/apps/web/ui/src/helper.ts': 'H',
       };
@@ -151,8 +125,8 @@ describe('buildManifest relocation stability', () => {
   it('changes the storybook hash when a Storybook-wide file is renamed within the project', async () => {
     // A project move no longer touches any key, so the case that proves keys are in the gate is a
     // rename *inside* the project: `preview.ts` -> `preview.tsx`, byte-for-byte identical.
-    const before = await manifestWithPreview(fileHashesRef, 'preview.ts');
-    const after = await manifestWithPreview(fileHashesRef, 'preview.tsx');
+    const before = await manifestWithPreview('preview.ts');
+    const after = await manifestWithPreview('preview.tsx');
 
     // The roll-up covers each file's path as well as its bytes, so the entry moves under its new
     // key...
@@ -169,7 +143,7 @@ describe('buildManifest relocation stability', () => {
     // changing a byte. The snapshots are keyed by those IDs, so the gate has to move.
     const helper = '/repo/packages/ui/src/helper.ts';
     async function manifestWithStoryAt(story: string) {
-      fileHashesRef.current = { [story]: 'S', [helper]: 'H' };
+      disk.current.fileHashes = { [story]: 'S', [helper]: 'H' };
       return buildManifest(
         {
           modules: [
@@ -203,7 +177,7 @@ describe('buildManifest relocation stability', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
 
     // Build 1: deps a.ts and b.ts sort as [Button, a, b].
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       [story]: 'S',
       '/repo/packages/ui/src/a.ts': 'HA',
       '/repo/packages/ui/src/b.ts': 'HB',
@@ -223,7 +197,7 @@ describe('buildManifest relocation stability', () => {
     // Build 2: a.ts moved to z.ts (content unchanged). A module's own path reaches the output — it
     // is baked into `import.meta.url`, emitted chunk names and CSS-Module class names — so the same
     // bytes at a new path can render differently and the story has to recapture.
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       [story]: 'S',
       '/repo/packages/ui/src/z.ts': 'HA',
       '/repo/packages/ui/src/b.ts': 'HB',
@@ -250,7 +224,7 @@ describe('buildManifest relocation stability', () => {
 
     // Build 1: theme.ts lives in a sibling package. Anchored at the git root it keys as
     // '../shared/theme.ts'.
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       [story]: 'S',
       '/repo/packages/shared/theme.ts': 'HT',
     };
@@ -269,7 +243,7 @@ describe('buildManifest relocation stability', () => {
     // but its content is unchanged. The story and its internal dependencies don't move. The key
     // still moves relative to the project root, so the story recaptures — over-capture in the safe
     // direction, and what a tracing v1 does here too.
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       [story]: 'S',
       '/repo/shared/theme.ts': 'HT',
     };
@@ -296,7 +270,7 @@ describe('buildManifest relocation stability', () => {
     const badgeStory = '/repo/packages/ui/src/Badge.stories.tsx';
     const cardStory = '/repo/packages/ui/src/UserCard.stories.tsx';
     const manifestWithBadgeAt = async (badge: string) => {
-      fileHashesRef.current = { [badgeStory]: 'S1', [cardStory]: 'S2', [badge]: 'B' };
+      disk.current.fileHashes = { [badgeStory]: 'S1', [cardStory]: 'S2', [badge]: 'B' };
       return buildManifest(
         {
           modules: [
@@ -339,7 +313,7 @@ describe('buildManifest relocation stability', () => {
         { id: 1, name: './src/A.stories.tsx', reasons: [{ moduleName: './storybook-stories.js' }] },
       ],
     };
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/A.stories.tsx': 'HA',
       '/repo/packages/ui/src/B.stories.tsx': 'HB',
     };
@@ -369,7 +343,7 @@ describe('buildManifest concatenated modules', () => {
   };
 
   it('keys the story by its root file, stripping the concatenation suffix', async () => {
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
@@ -379,7 +353,7 @@ describe('buildManifest concatenated modules', () => {
   });
 
   it('records each concatenated sub-file as a dependency of the root file', async () => {
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
@@ -391,13 +365,13 @@ describe('buildManifest concatenated modules', () => {
   });
 
   it('changes the story hash when a concatenated sub-file content changes', async () => {
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B1',
     };
     const before = await buildManifest(concatenatedStory, projectRoot, outOfGraph);
 
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B2',
     };
@@ -431,23 +405,22 @@ describe('buildManifest concatenated modules', () => {
   it('roots a module at its own name when `modules` holds contexts rather than concatenated files', async () => {
     // The glob has no file on disk, which is what would promote the record to a story importer if
     // the root were read from `modules`.
-    const spy = mockStatSync((candidate) => !candidate.includes('*.js'));
+    await withAbsent(
+      (candidate) => candidate.includes('*.js'),
+      async () => {
+        disk.current.fileHashes = {
+          '/repo/packages/ui/node_modules/storybook/dist/csf/index.js': 'C',
+          '/repo/packages/ui/node_modules/storybook/dist/instrumenter/index.js': 'I',
+        };
 
-    try {
-      fileHashesRef.current = {
-        '/repo/packages/ui/node_modules/storybook/dist/csf/index.js': 'C',
-        '/repo/packages/ui/node_modules/storybook/dist/instrumenter/index.js': 'I',
-      };
+        const manifest = await buildManifest(contextsInModules, projectRoot, outOfGraph);
 
-      const manifest = await buildManifest(contextsInModules, projectRoot, outOfGraph);
-
-      // The record keys by its own name, so it stays a real file rather than becoming a story
-      // importer, and the module it imports is not a story file.
-      expect(manifest.files.has('./node_modules/storybook/dist/csf/index.js')).toBe(true);
-      expect([...manifest.storyFileHashes.keys()]).toEqual([]);
-    } finally {
-      spy.mockRestore();
-    }
+        // The record keys by its own name, so it stays a real file rather than becoming a story
+        // importer, and the module it imports is not a story file.
+        expect(manifest.files.has('./node_modules/storybook/dist/csf/index.js')).toBe(true);
+        expect([...manifest.storyFileHashes.keys()]).toEqual([]);
+      }
+    );
   });
 });
 
@@ -458,7 +431,7 @@ describe('buildManifest unhashable paths', () => {
     // it throws EISDIR, which would fail the whole manifest to an internalError bail.
     const directory = '/repo/packages/ui/node_modules/@storybook/react/dist/';
 
-    fileHashesRef.current = { [story]: 'S' };
+    disk.current.fileHashes = { [story]: 'S' };
     const manifest = await buildManifest(
       {
         modules: [
@@ -481,7 +454,7 @@ describe('buildManifest suffix-equivalent story importer identity', () => {
     const stats = (storyImporter: string): Stats => ({
       modules: [{ id: 1, name: story, reasons: [{ moduleName: storyImporter }] }],
     });
-    fileHashesRef.current = { [story]: 'S' };
+    disk.current.fileHashes = { [story]: 'S' };
 
     const plain = serializeManifest(
       await buildManifest(stats('./storybook-stories.js'), projectRoot, outOfGraph)
@@ -522,7 +495,7 @@ describe('buildManifest concatenated modules with rspack-style child names', () 
   };
 
   it('recovers the concatenated child file from nameForCondition', async () => {
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
@@ -535,13 +508,13 @@ describe('buildManifest concatenated modules with rspack-style child names', () 
   });
 
   it('changes the story hash when the concatenated child content changes', async () => {
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B1',
     };
     const before = await buildManifest(rspackConcatenatedStory, projectRoot, outOfGraph);
 
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B2',
     };
@@ -569,7 +542,7 @@ describe('buildManifest concatenated modules with rspack-style child names', () 
         },
       ],
     };
-    fileHashesRef.current = { [story]: 'S', [implementation]: 'B' };
+    disk.current.fileHashes = { [story]: 'S', [implementation]: 'B' };
 
     const full = serializeManifest(
       await buildManifest(rspackConcatenatedStory, projectRoot, outOfGraph)
@@ -595,7 +568,7 @@ describe('buildManifest missing names', () => {
         },
       ],
     };
-    fileHashesRef.current = { '/repo/packages/ui/src/Button.stories.tsx': 'S' };
+    disk.current.fileHashes = { '/repo/packages/ui/src/Button.stories.tsx': 'S' };
 
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
 
@@ -616,7 +589,7 @@ describe('buildManifest missing names', () => {
         },
       ],
     };
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/Button.tsx': 'B',
     };
@@ -635,31 +608,55 @@ describe('buildManifest hashFiles skip branches', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const missing = '/repo/packages/ui/src/missing.ts';
 
-    // Scoped override: the shared `fs` mock reads every path as a file, so override it just for
-    // this test to make `missing` appear absent from disk, then restore it.
-    const existsSyncSpy = mockStatSync((candidate) => candidate !== missing);
+    // Every path but this one has a file on disk, which is what makes the skip branch the only
+    // difference between the two builds below.
+    await withAbsent(
+      (candidate) => candidate === missing,
+      async () => {
+        const stats: Stats = {
+          modules: [
+            { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+            { id: 2, name: missing, reasons: [{ moduleName: story }] },
+          ],
+        };
 
+        disk.current.fileHashes = { [story]: 'S', [missing]: 'WOULD-BE-A' };
+        const before = await buildManifest(stats, projectRoot, outOfGraph);
+
+        // Change the content hash the missing file *would* have if it were hashed. If the skip
+        // branch didn't treat it as contributing '', this toggle would change the story hash.
+        disk.current.fileHashes = { [story]: 'S', [missing]: 'WOULD-BE-B' };
+        const after = await buildManifest(stats, projectRoot, outOfGraph);
+
+        expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
+          before.storyFileHashes.get('./src/Button.stories.tsx')
+        );
+      }
+    );
+  });
+});
+
+describe('buildManifest hashing failures', () => {
+  it('fails the build rather than returning a manifest missing a file it could not read', async () => {
+    // Unreadability is a bug, not an answer: a manifest built without those bytes would silently
+    // under-capture, so this propagates to the entry point and bails TurboSnap to v1.
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const unreadable = new Error(`Could not hash ${story}: EACCES: permission denied`);
+
+    let err: Error | undefined;
     try {
-      const stats: Stats = {
-        modules: [
-          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
-          { id: 2, name: missing, reasons: [{ moduleName: story }] },
-        ],
-      };
-
-      fileHashesRef.current = { [story]: 'S', [missing]: 'WOULD-BE-A' };
-      const before = await buildManifest(stats, projectRoot, outOfGraph);
-
-      // Change the content hash the missing file *would* have if it were hashed. If the skip
-      // branch didn't treat it as contributing '', this toggle would change the story hash.
-      fileHashesRef.current = { [story]: 'S', [missing]: 'WOULD-BE-B' };
-      const after = await buildManifest(stats, projectRoot, outOfGraph);
-
-      expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
-        before.storyFileHashes.get('./src/Button.stories.tsx')
+      await buildManifest(
+        { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
+        projectRoot,
+        {
+          ...outOfGraph,
+          projectFiles: { ...outOfGraph.projectFiles, hashAll: () => Promise.reject(unreadable) },
+        }
       );
-    } finally {
-      existsSyncSpy.mockRestore();
+    } catch (error) {
+      err = error as Error;
     }
+
+    expect(err?.message).toContain(story);
   });
 });

@@ -1,90 +1,38 @@
-import { readFileSync } from 'fs';
-import { createRequire } from 'module';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
+import { InMemoryDiskReference, inMemoryProjectFiles } from './projectFiles';
 import { resolveStorybookVersion } from './storybookVersion';
 
-vi.mock('module', () => ({
-  createRequire: vi.fn(),
-}));
-
-vi.mock('fs', () => ({
-  readFileSync: vi.fn(),
-}));
-
-const mockCreateRequire = vi.mocked(
-  createRequire as (filename: string) => { resolve: (request: string) => string }
-);
-const mockReadFileSync = vi.mocked(readFileSync as (path: string) => string);
-const mockResolve = vi.fn();
+// What is installed, as a value. How a package's version is found on disk — that the manifest is
+// resolved rather than a path inside the package, and that resolution walks up to a hoisted install
+// — is the adapter's rule, pinned against a real package layout in projectFiles.test.ts. This suite
+// decides only which package is asked about and what happens when none answers.
+const disk: InMemoryDiskReference = { current: {} };
+const projectFiles = inMemoryProjectFiles(disk);
 
 const projectRoot = '/repo/packages/ui';
 
-// Resolution is keyed by request so a test can make one package resolvable and another not, which is
-// how the Storybook 8 fallback and the hoisted-install case are told apart.
-function givenResolvable(paths: Record<string, string>) {
-  mockResolve.mockImplementation((request: string) => {
-    const resolved = paths[request];
-    if (!resolved) throw new Error(`Cannot find module '${request}'`);
-    return resolved;
-  });
-}
-
 beforeEach(() => {
-  mockCreateRequire.mockReturnValue({ resolve: mockResolve });
+  disk.current = {};
 });
 
 describe('resolveStorybookVersion', () => {
   it('reads the version from the `storybook` package on Storybook 9 and later', () => {
-    givenResolvable({ 'storybook/package.json': '/repo/node_modules/storybook/package.json' });
-    mockReadFileSync.mockReturnValue(JSON.stringify({ version: '9.1.20' }));
+    disk.current = { packageVersions: { storybook: '9.1.20', '@storybook/core': '8.6.18' } };
 
-    expect(resolveStorybookVersion(projectRoot)).toBe('9.1.20');
-    expect(mockReadFileSync).toHaveBeenCalledWith(
-      '/repo/node_modules/storybook/package.json',
-      'utf8'
-    );
+    expect(resolveStorybookVersion(projectRoot, projectFiles)).toBe('9.1.20');
   });
 
   it('falls back to `@storybook/core` on Storybook 8, where `storybook` is the CLI', () => {
-    givenResolvable({
-      '@storybook/core/package.json': '/repo/node_modules/@storybook/core/package.json',
-    });
-    mockReadFileSync.mockReturnValue(JSON.stringify({ version: '8.6.18' }));
+    disk.current = { packageVersions: { '@storybook/core': '8.6.18' } };
 
-    expect(resolveStorybookVersion(projectRoot)).toBe('8.6.18');
-  });
-
-  it('resolves from the project root so a workspace-hoisted install is found', () => {
-    givenResolvable({ 'storybook/package.json': '/repo/node_modules/storybook/package.json' });
-    mockReadFileSync.mockReturnValue(JSON.stringify({ version: '10.6.0-alpha.3' }));
-
-    expect(resolveStorybookVersion(projectRoot)).toBe('10.6.0-alpha.3');
-    // The resolver walks up from the project root, which is what finds a package hoisted to the
-    // repository root rather than installed beside the Storybook project.
-    expect(mockCreateRequire).toHaveBeenCalledWith('/repo/packages/ui/package.json');
-  });
-
-  it('skips a resolvable package that has no version and continues to the next', () => {
-    givenResolvable({
-      'storybook/package.json': '/repo/node_modules/storybook/package.json',
-      '@storybook/core/package.json': '/repo/node_modules/@storybook/core/package.json',
-    });
-    mockReadFileSync.mockImplementation((path: string) =>
-      path.includes('@storybook/core')
-        ? JSON.stringify({ version: '8.6.18' })
-        : JSON.stringify({ name: 'storybook' })
-    );
-
-    expect(resolveStorybookVersion(projectRoot)).toBe('8.6.18');
+    expect(resolveStorybookVersion(projectRoot, projectFiles)).toBe('8.6.18');
   });
 
   it('throws when no Storybook package can be resolved, so the caller falls back to v1', () => {
-    givenResolvable({});
-
     let err: Error | undefined;
     try {
-      resolveStorybookVersion(projectRoot);
+      resolveStorybookVersion(projectRoot, projectFiles);
     } catch (error) {
       err = error as Error;
     }

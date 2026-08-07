@@ -1,41 +1,30 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { hashOutOfGraphFiles, OutOfGraphInput, rollUpOutOfGraphFiles } from './outOfGraphFiles';
-import { DirectoryTreeReference, inMemoryProjectFiles } from './projectFiles';
+import { InMemoryDiskReference, inMemoryProjectFiles } from './projectFiles';
 
-// The sweep's disk, as a tree of absolute directory to entry names. What the disk *means* — symlinks,
-// cycles, absent and unreadable directories — belongs to the adapter and is pinned against real
-// temporary directories in projectFiles.test.ts, so these tests describe only which files each
+// The sweep's disk: the tree it walks and the content hash of each file. What the disk *means* —
+// symlinks, cycles, absent and unreadable directories — belongs to the adapter and is pinned against
+// real temporary directories in projectFiles.test.ts, so these tests describe only which files each
 // section claims.
-const directoryTree: DirectoryTreeReference = { current: {} };
-
-// Content hashes are keyed by the absolute path getFileHashes is called with.
-const { fileHashesRef } = vi.hoisted(() => ({
-  fileHashesRef: { current: {} as Record<string, string> },
-}));
-
-vi.mock('../../getFileHashes', () => ({
-  getFileHashes: (files: string[]) =>
-    Promise.resolve(Object.fromEntries(files.map((f) => [f, fileHashesRef.current[f] ?? 'x']))),
-}));
+const disk: InMemoryDiskReference = { current: {} };
 
 const projectRoot = '/repo/packages/ui';
 const input = {
   configDir: '.storybook',
   staticDirs: ['.storybook/static'],
-  projectFiles: inMemoryProjectFiles(directoryTree),
+  projectFiles: inMemoryProjectFiles(disk),
 };
 
 const h64ToString = (value: string) => `h(${value})`;
 
 beforeEach(() => {
-  directoryTree.current = {};
-  fileHashesRef.current = {};
+  disk.current = {};
 });
 
 describe('hashOutOfGraphFiles', () => {
   it('hashes every config file recursively, keyed by canonical git-root-relative path', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'nested'],
       '/repo/packages/ui/.storybook/nested': ['helper.ts'],
     };
@@ -50,7 +39,7 @@ describe('hashOutOfGraphFiles', () => {
   });
 
   it('hashes preview.* alongside the rest of the config dir, so its bytes are covered too', async () => {
-    directoryTree.current = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] };
+    disk.current.directories = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] };
 
     const { storybookConfigFiles } = await hashOutOfGraphFiles(input, projectRoot);
 
@@ -60,7 +49,7 @@ describe('hashOutOfGraphFiles', () => {
   });
 
   it('gives static files their own section, excluding them from the config sweep', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['mockServiceWorker.js'],
     };
@@ -73,7 +62,7 @@ describe('hashOutOfGraphFiles', () => {
   });
 
   it('returns an empty static section when staticDirs is unset', async () => {
-    directoryTree.current = { '/repo/packages/ui/.storybook': ['main.ts'] };
+    disk.current.directories = { '/repo/packages/ui/.storybook': ['main.ts'] };
 
     const { staticFiles } = await hashOutOfGraphFiles({ ...input, staticDirs: [] }, projectRoot);
 
@@ -81,7 +70,7 @@ describe('hashOutOfGraphFiles', () => {
   });
 
   it('collects static files from every configured static directory', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts'],
       '/repo/packages/ui/public': ['logo.svg'],
       '/repo/packages/ui/assets': ['font.woff2'],
@@ -98,7 +87,7 @@ describe('hashOutOfGraphFiles', () => {
 
 describe('rollUpOutOfGraphFiles', () => {
   it('rolls each section into its own synthetic entry', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['logo.svg'],
     };
@@ -109,26 +98,26 @@ describe('rollUpOutOfGraphFiles', () => {
   });
 
   it('moves the config roll-up when a config file content changes', async () => {
-    directoryTree.current = { '/repo/packages/ui/.storybook': ['main.ts'] };
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/main.ts': 'M1' };
+    disk.current.directories = { '/repo/packages/ui/.storybook': ['main.ts'] };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M1' };
     const before = await rollUp();
 
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/main.ts': 'M2' };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M2' };
     const after = await rollUp();
 
     expect(after.get('<storybookConfig>')).not.toBe(before.get('<storybookConfig>'));
   });
 
   it('moves the static roll-up when a static file content changes, leaving the config roll-up alone', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['logo.svg'],
     };
     const staticFile = '/repo/packages/ui/.storybook/static/logo.svg';
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A1' };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A1' };
     const before = await rollUp();
 
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A2' };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A2' };
     const after = await rollUp();
 
     expect(after.get('<staticFiles>')).not.toBe(before.get('<staticFiles>'));
@@ -136,26 +125,26 @@ describe('rollUpOutOfGraphFiles', () => {
   });
 
   it('moves the static roll-up when an asset is renamed without changing its bytes', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['logo.svg'],
     };
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/static/logo.svg': 'A' };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/static/logo.svg': 'A' };
     const before = await rollUp();
 
     // Same bytes at a different URL renders differently, so the multiset of contents isn't enough.
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['brand.svg'],
     };
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/static/brand.svg': 'A' };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/static/brand.svg': 'A' };
     const after = await rollUp();
 
     expect(after.get('<staticFiles>')).not.toBe(before.get('<staticFiles>'));
   });
 
   it('moves the static roll-up when two assets swap contents', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['a.png', 'b.png'],
     };
@@ -163,31 +152,31 @@ describe('rollUpOutOfGraphFiles', () => {
       '/repo/packages/ui/.storybook/static/a.png',
       '/repo/packages/ui/.storybook/static/b.png',
     ];
-    fileHashesRef.current = { [a]: 'A', [b]: 'B' };
+    disk.current.fileHashes = { [a]: 'A', [b]: 'B' };
     const before = await rollUp();
 
     // The multiset of contents is identical, but each URL now serves the other's bytes.
-    fileHashesRef.current = { [a]: 'B', [b]: 'A' };
+    disk.current.fileHashes = { [a]: 'B', [b]: 'A' };
     const after = await rollUp();
 
     expect(after.get('<staticFiles>')).not.toBe(before.get('<staticFiles>'));
   });
 
   it('moves the config roll-up when a config file is renamed without changing its bytes', async () => {
-    directoryTree.current = { '/repo/packages/ui/.storybook': ['preview-head.html'] };
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/preview-head.html': 'H' };
+    disk.current.directories = { '/repo/packages/ui/.storybook': ['preview-head.html'] };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/preview-head.html': 'H' };
     const before = await rollUp();
 
     // Storybook loads config files by name, so the same bytes under a new name inject elsewhere.
-    directoryTree.current = { '/repo/packages/ui/.storybook': ['preview-body.html'] };
-    fileHashesRef.current = { '/repo/packages/ui/.storybook/preview-body.html': 'H' };
+    disk.current.directories = { '/repo/packages/ui/.storybook': ['preview-body.html'] };
+    disk.current.fileHashes = { '/repo/packages/ui/.storybook/preview-body.html': 'H' };
     const after = await rollUp();
 
     expect(after.get('<storybookConfig>')).not.toBe(before.get('<storybookConfig>'));
   });
 
   it('omits a section that has no files, matching how the globals catch-all behaves', async () => {
-    directoryTree.current = { '/repo/packages/ui/.storybook': ['main.ts'] };
+    disk.current.directories = { '/repo/packages/ui/.storybook': ['main.ts'] };
 
     const rollUps = await rollUp();
 
@@ -195,21 +184,21 @@ describe('rollUpOutOfGraphFiles', () => {
   });
 
   it('keeps both roll-ups stable when the project moves, since path identity is project-relative', async () => {
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['logo.svg'],
     };
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/.storybook/main.ts': 'M',
       '/repo/packages/ui/.storybook/static/logo.svg': 'A',
     };
     const before = await rollUp();
 
-    directoryTree.current = {
+    disk.current.directories = {
       '/repo/apps/web/.storybook': ['main.ts', 'static'],
       '/repo/apps/web/.storybook/static': ['logo.svg'],
     };
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/apps/web/.storybook/main.ts': 'M',
       '/repo/apps/web/.storybook/static/logo.svg': 'A',
     };

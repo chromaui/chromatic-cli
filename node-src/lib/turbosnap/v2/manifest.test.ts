@@ -1,48 +1,24 @@
-import * as fs from 'fs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
 import {
-  directoryTree,
+  disk,
   manifestWithPreview,
   outOfGraph,
   projectRoot,
+  resetDisk,
   withSyntheticAbsent,
 } from './__fixtures__/manifestFixtures';
 import { buildManifest, countNodeModulesFiles, serializeManifest, writeManifest } from './manifest';
 
-vi.mock('fs', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('fs')>()),
-  // A trailing slash names a directory: present on disk, but not a regular file.
-  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
-  writeFileSync: vi.fn(),
-}));
-
-// A hoisted ref the mock factory reads, so each test controls the file hashes; see
-// ./__fixtures__/manifestMocks. The swept directory tree is a plain fixture value, needing no mock.
-const { fileHashesRef } = vi.hoisted(() => ({
-  fileHashesRef: { current: {} as Record<string, string> },
-}));
-
-vi.mock('../../getFileHashes', async () => {
-  const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
-  return fileHashesModule(fileHashesRef);
-});
-
-// The version is read off the resolved Storybook package on disk, which no fixture here installs;
-// stub it so these tests exercise graph hashing only. See storybookVersion.test.ts for the probe.
-vi.mock('./storybookVersion', () => ({
-  resolveStorybookVersion: () => '9.1.20',
-}));
-
-beforeEach(() => {
-  fileHashesRef.current = {};
-  directoryTree.current = {};
-});
+beforeEach(resetDisk);
 
 describe('serializeManifest', () => {
   it('converts the manifest maps and sets into JSON-safe objects and arrays', async () => {
-    fileHashesRef.current = {
+    disk.current.fileHashes = {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       '/repo/packages/ui/src/helper.ts': 'H',
     };
@@ -76,7 +52,7 @@ describe('serializeManifest', () => {
   it('emits storybookFiles as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';
-    fileHashesRef.current = { [story]: 'S', [preview]: 'P' };
+    disk.current.fileHashes = { [story]: 'S', [preview]: 'P' };
     const stats: Stats = {
       modules: [
         { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
@@ -107,10 +83,10 @@ describe('serializeManifest', () => {
     };
 
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [helper]: 'H1' };
+      disk.current.fileHashes = { [story]: 'S', [helper]: 'H1' };
       const before = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
 
-      fileHashesRef.current = { [story]: 'S', [helper]: 'H2' };
+      disk.current.fileHashes = { [story]: 'S', [helper]: 'H2' };
       const after = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
 
       for (const file of Object.values(before.files)) {
@@ -180,13 +156,25 @@ describe('countNodeModulesFiles', () => {
 });
 
 describe('writeManifest', () => {
+  // Writing is not reading, so it stays a direct `fs` call rather than a method on the disk module.
+  // These write into a real temporary directory and read the bytes back, which is what the Index
+  // debugging flow does with the uploaded file.
+  let outputDirectory: string;
+
+  beforeEach(() => {
+    outputDirectory = mkdtempSync(path.join(tmpdir(), 'chromatic-manifest-'));
+  });
+
+  afterEach(() => {
+    rmSync(outputDirectory, { recursive: true, force: true });
+  });
+
   it('writes the serialized manifest as JSON to turbosnap-manifest.json in the output directory', async () => {
-    const manifest = await manifestWithPreview(fileHashesRef, 'preview.ts');
+    const manifest = await manifestWithPreview('preview.ts');
 
-    writeManifest(manifest, '/repo/packages/ui/storybook-static');
+    writeManifest(manifest, outputDirectory);
 
-    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
-      '/repo/packages/ui/storybook-static/turbosnap-manifest.json',
+    expect(readFileSync(path.join(outputDirectory, 'turbosnap-manifest.json'), 'utf8')).toBe(
       JSON.stringify(serializeManifest(manifest))
     );
   });
@@ -194,11 +182,11 @@ describe('writeManifest', () => {
   it('writes a payload that round-trips through JSON.parse', async () => {
     // The file is uploaded to S3 and read back for debugging, so it has to be valid JSON with the
     // Maps and Sets already flattened.
-    writeManifest(await manifestWithPreview(fileHashesRef, 'preview.ts'), '/out');
+    writeManifest(await manifestWithPreview('preview.ts'), outputDirectory);
 
-    const [, payload] = vi.mocked(fs.writeFileSync).mock.calls[0];
+    const payload = readFileSync(path.join(outputDirectory, 'turbosnap-manifest.json'), 'utf8');
 
-    expect(JSON.parse(payload as string).storybookFiles['./.storybook/preview.ts']).toEqual(
+    expect(JSON.parse(payload).storybookFiles['./.storybook/preview.ts']).toEqual(
       expect.any(String)
     );
   });

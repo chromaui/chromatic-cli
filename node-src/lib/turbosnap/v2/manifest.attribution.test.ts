@@ -1,43 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
 import {
-  directoryTree,
+  disk,
   outOfGraph,
   projectRoot,
+  resetDisk,
   withGlobAbsent,
   withSyntheticAbsent,
 } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
-vi.mock('fs', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('fs')>()),
-  // A trailing slash names a directory: present on disk, but not a regular file.
-  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
-  writeFileSync: vi.fn(),
-}));
-
-// A hoisted ref the mock factory reads, so each test controls the file hashes; see
-// ./__fixtures__/manifestMocks. The swept directory tree is a plain fixture value, needing no mock.
-const { fileHashesRef } = vi.hoisted(() => ({
-  fileHashesRef: { current: {} as Record<string, string> },
-}));
-
-vi.mock('../../getFileHashes', async () => {
-  const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
-  return fileHashesModule(fileHashesRef);
-});
-
-// The version is read off the resolved Storybook package on disk, which no fixture here installs;
-// stub it so these tests exercise graph hashing only. See storybookVersion.test.ts for the probe.
-vi.mock('./storybookVersion', () => ({
-  resolveStorybookVersion: () => '9.1.20',
-}));
-
-beforeEach(() => {
-  fileHashesRef.current = {};
-  directoryTree.current = {};
-});
+beforeEach(resetDisk);
 
 describe('buildManifest story detection through a require-context', () => {
   // Webpack/rspack don't import story files directly from the entry: the entry imports a lazy
@@ -54,7 +28,7 @@ describe('buildManifest story detection through a require-context', () => {
 
   it('detects stories imported via a lazy require-context imported by the entry', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S' };
+      disk.current.fileHashes = { [story]: 'S' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
     });
@@ -70,7 +44,7 @@ describe('buildManifest story detection through a require-context', () => {
     };
 
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [mdxStory]: 'MDX' };
+      disk.current.fileHashes = { [mdxStory]: 'MDX' };
       const manifest = await buildManifest(mdxStats, projectRoot, outOfGraph);
       expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Badge.stories.mdx']);
     });
@@ -78,7 +52,7 @@ describe('buildManifest story detection through a require-context', () => {
 
   it('excludes the require-context glob (no file on disk) from the files map', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S' };
+      disk.current.fileHashes = { [story]: 'S' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(false);
       expect(manifest.files.has('./src/lib/Button.stories.tsx')).toBe(true);
@@ -87,7 +61,7 @@ describe('buildManifest story detection through a require-context', () => {
 
   it('does not treat the require-context glob itself as a story file', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S' };
+      disk.current.fileHashes = { [story]: 'S' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       const keys = [...manifest.storyFileHashes.keys()];
       expect(keys.some((key) => key.includes('lazy'))).toBe(false);
@@ -104,7 +78,7 @@ describe('buildManifest story detection through a require-context', () => {
     };
 
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S' };
+      disk.current.fileHashes = { [story]: 'S' };
       const manifest = await buildManifest(relocatedStats, projectRoot, outOfGraph);
 
       expect(manifest.storyFileHashes.size).toBe(0);
@@ -124,7 +98,7 @@ describe('buildManifest story detection through a require-context', () => {
     };
 
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [applicationImporter]: 'I', [importedFile]: 'B' };
+      disk.current.fileHashes = { [applicationImporter]: 'I', [importedFile]: 'B' };
       const manifest = await buildManifest(applicationStats, projectRoot, outOfGraph);
 
       expect(manifest.unrecognizedStoryEntries).toEqual([]);
@@ -139,7 +113,7 @@ describe('buildManifest story detection through a require-context', () => {
           { id: 2, name: story, reasons: [{ moduleName: storyImporter }] },
         ],
       });
-      fileHashesRef.current = { [story]: 'S' };
+      disk.current.fileHashes = { [story]: 'S' };
 
       const plain = serializeManifest(
         await buildManifest(statsWithContext(glob), projectRoot, outOfGraph)
@@ -182,7 +156,7 @@ describe('buildManifest story detection through a config-entry require-context',
 
   it('detects a concatenated story imported via a context imported by the config entry', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
     });
@@ -190,7 +164,7 @@ describe('buildManifest story detection through a config-entry require-context',
 
   it('does not treat a real file imported directly by the config entry as a story', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.storyFileHashes.keys()]).not.toContain('.storybook/preview.ts');
     });
@@ -226,7 +200,7 @@ describe('buildManifest story detection when the builder omits the `./` prefix',
 
   it('detects the story behind a bare-named context imported by a bare-named entry', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
     });
@@ -234,9 +208,9 @@ describe('buildManifest story detection when the builder omits the `./` prefix',
 
   it('rolls the story implementation into the story hash', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [impl]: 'B' };
+      disk.current.fileHashes = { [story]: 'S', [impl]: 'B' };
       const before = await buildManifest(stats, projectRoot, outOfGraph);
-      fileHashesRef.current = { [story]: 'S', [impl]: 'B2' };
+      disk.current.fileHashes = { [story]: 'S', [impl]: 'B2' };
       const after = await buildManifest(stats, projectRoot, outOfGraph);
 
       expect(after.storyFileHashes.get('./src/lib/Button.stories.tsx')).not.toBe(
@@ -274,7 +248,7 @@ describe('buildManifest attribution', () => {
 
   it('records each real file in the set that hashes it', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { ...hashes };
+      disk.current.fileHashes = { ...hashes };
 
       const { attribution } = await buildManifest(stats, projectRoot, outOfGraph);
 
@@ -300,7 +274,7 @@ describe('buildManifest attribution', () => {
     const throughGlob = '/repo/packages/ui/src/lib/Widget.stories.tsx';
 
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { [throughGlob]: 'W' };
+      disk.current.fileHashes = { [throughGlob]: 'W' };
       const manifest = await buildManifest(
         {
           modules: [
@@ -321,7 +295,7 @@ describe('buildManifest attribution', () => {
 
   it('omits synthetic nodes from every set', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { ...hashes };
+      disk.current.fileHashes = { ...hashes };
 
       const { attribution } = await buildManifest(stats, projectRoot, outOfGraph);
 
@@ -337,7 +311,7 @@ describe('buildManifest attribution', () => {
 
   it('serializes each set as a sorted, JSON-safe array', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = { ...hashes };
+      disk.current.fileHashes = { ...hashes };
 
       const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
 
@@ -392,7 +366,7 @@ describe('buildManifest attribution closure', () => {
 
   it('attributes a file that is hashed only inside a concatenated module', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = hashes('H1');
+      disk.current.fileHashes = hashes('H1');
       const before = await buildManifest(stats, projectRoot, outOfGraph);
 
       expect([...before.attribution.storybookGlobals].sort()).toEqual([
@@ -400,7 +374,7 @@ describe('buildManifest attribution closure', () => {
         './src/probe/orphanRoot.tsx',
       ]);
 
-      fileHashesRef.current = hashes('H2');
+      disk.current.fileHashes = hashes('H2');
       const after = await buildManifest(stats, projectRoot, outOfGraph);
 
       // Editing the inner file used to leave the manifest byte-identical.
@@ -411,12 +385,12 @@ describe('buildManifest attribution closure', () => {
 
   it('lands every hashed file in exactly one attribution home', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = hashes('H1');
+      disk.current.fileHashes = hashes('H1');
       const { attribution } = await buildManifest(stats, projectRoot, outOfGraph);
 
       // The story and preview subtrees are disjoint in this graph, so each file has one home only.
       const homes = Object.entries(attribution);
-      for (const hashedFile of Object.keys(fileHashesRef.current)) {
+      for (const hashedFile of Object.keys(disk.current.fileHashes)) {
         const filePath = hashedFile.replace(projectRoot, '.');
         expect(homes.filter(([, files]) => files.has(filePath)).map(([home]) => home)).toHaveLength(
           1
@@ -427,7 +401,7 @@ describe('buildManifest attribution closure', () => {
 
   it('leaves no dependency reference outside the serialized graph', async () => {
     await withSyntheticAbsent(async () => {
-      fileHashesRef.current = hashes('H1');
+      disk.current.fileHashes = hashes('H1');
       const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
 
       for (const file of Object.values(serialized.files)) {
@@ -462,7 +436,7 @@ describe('buildManifest story detection of swept node_modules stories', () => {
 
   it('does not treat a swept node_modules story as a story file', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
+      disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/lib/Button.stories.tsx']);
     });
@@ -470,7 +444,7 @@ describe('buildManifest story detection of swept node_modules stories', () => {
 
   it('leaves the swept story subtree in the globals catch-all rather than draining it', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
+      disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
       const manifest = await buildManifest(stats, projectRoot, outOfGraph);
       // The drain: were the swept story a story file, its subtree would be story-reachable and so
       // absent from the catch-all, and a change to the shared runtime would move nothing the Index
@@ -487,9 +461,9 @@ describe('buildManifest story detection of swept node_modules stories', () => {
 
   it('recaptures a change to a shared runtime file the swept story imports', async () => {
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
+      disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
       const before = await buildManifest(stats, projectRoot, outOfGraph);
-      fileHashesRef.current = { [story]: 'S', [swept]: 'W', [shared]: 'R2' };
+      disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R2' };
       const after = await buildManifest(stats, projectRoot, outOfGraph);
 
       expect(after.storybookFiles.get('<storybookGlobals>')).not.toBe(
@@ -506,7 +480,7 @@ describe('buildManifest story detection of swept node_modules stories', () => {
     const deliberateGlob = String.raw`./node_modules/@myorg/ui|lazy|/^\.\/.*$/|namespace object`;
     const shipped = '/repo/packages/ui/node_modules/@myorg/ui/Button.stories.js';
     await withGlobAbsent(async () => {
-      fileHashesRef.current = { [shipped]: 'D' };
+      disk.current.fileHashes = { [shipped]: 'D' };
       const manifest = await buildManifest(
         {
           modules: [
@@ -528,7 +502,7 @@ describe('buildManifest story detection of swept node_modules stories', () => {
     // that list comes from the same glob resolution the indexer uses. So a node_modules story there
     // is deliberate by construction and must survive.
     const shipped = '/repo/packages/ui/node_modules/@myorg/ui/Button.stories.js';
-    fileHashesRef.current = { [shipped]: 'D' };
+    disk.current.fileHashes = { [shipped]: 'D' };
     const manifest = await buildManifest(
       { modules: [{ id: 1, name: shipped, reasons: [{ moduleName: './storybook-stories.js' }] }] },
       projectRoot,

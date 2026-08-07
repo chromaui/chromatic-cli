@@ -1,6 +1,5 @@
 import path from 'path';
 
-import { hashAbsolutePaths } from './fileHashes';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
@@ -16,7 +15,7 @@ export interface OutOfGraphInput {
   /** The configured static directories, e.g. `['.storybook/static']`. Empty when unset. */
   staticDirs: string[];
   /** How to read the disk; required, so no caller can silently get the real one. */
-  projectFiles: Pick<ProjectFiles, 'listTree'>;
+  projectFiles: ProjectFiles;
 }
 
 /**
@@ -76,9 +75,10 @@ export async function hashOutOfGraphFiles(
   return {
     storybookConfigFiles: await hashByManifestPath(
       configPaths.filter((filePath) => !staticFileSet.has(filePath)),
-      projectRoot
+      projectRoot,
+      input.projectFiles
     ),
-    staticFiles: await hashByManifestPath(staticFilePaths, projectRoot),
+    staticFiles: await hashByManifestPath(staticFilePaths, projectRoot, input.projectFiles),
   };
 }
 
@@ -127,14 +127,16 @@ export function rollUpOutOfGraphFiles(
  *
  * @param absolutePaths The absolute paths to hash.
  * @param projectRoot The absolute Storybook project root canonical keys are relative to.
+ * @param projectFiles How to read the disk.
  *
  * @returns The content hash per canonical manifest path.
  */
 async function hashByManifestPath(
   absolutePaths: string[],
-  projectRoot: string
+  projectRoot: string,
+  projectFiles: ProjectFiles
 ): Promise<Map<FilePath, FileHash>> {
-  const hashes = await hashAbsolutePaths(absolutePaths);
+  const hashes = await projectFiles.hashAll(absolutePaths);
 
   return new Map(
     absolutePaths

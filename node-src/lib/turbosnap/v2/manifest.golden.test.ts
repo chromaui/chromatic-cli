@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { directoryTree, outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
+import { disk, outOfGraph, projectRoot, resetDisk } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
 
 /**
@@ -35,31 +35,6 @@ import { buildManifest } from './manifest';
  *
  * Never regenerate these values without reading the diff first.
  */
-
-// The fixture names no real files, so every path in it has to read as present on disk.
-vi.mock('fs', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('fs')>()),
-  // A trailing slash names a directory: present on disk, but not a regular file.
-  statSync: (candidate: unknown) => ({ isFile: () => !String(candidate).endsWith('/') }),
-  writeFileSync: vi.fn(),
-}));
-
-// Content hashes are stubbed per absolute path and the out-of-graph sweep reads the in-memory
-// directory tree, so the fixture is fully deterministic; only the roll-up recipe under test
-// contributes real hashing. See ./__fixtures__/manifestMocks.
-const { fileHashesRef } = vi.hoisted(() => ({
-  fileHashesRef: { current: {} as Record<string, string> },
-}));
-
-vi.mock('../../getFileHashes', async () => {
-  const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
-  return fileHashesModule(fileHashesRef);
-});
-
-// Pinned so a Storybook release cannot move the golden values.
-vi.mock('./storybookVersion', () => ({
-  resolveStorybookVersion: () => '9.1.20',
-}));
 
 // A fixture exercising every section that feeds a published hash: two stories with a shared and a
 // private dependency, a preview config with its own subtree, an orphan global reached only through
@@ -120,8 +95,12 @@ const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
 
 describe('manifest golden hashes', () => {
   beforeEach(() => {
-    fileHashesRef.current = { ...GOLDEN_FILE_HASHES };
-    directoryTree.current = { ...GOLDEN_DIRECTORY_TREE };
+    resetDisk();
+    disk.current.fileHashes = { ...GOLDEN_FILE_HASHES };
+    disk.current.directories = { ...GOLDEN_DIRECTORY_TREE };
+    // Pinned here rather than taken from the fixture default, so a Storybook release — or an edit to
+    // that default — cannot move the golden values.
+    disk.current.packageVersions = { storybook: '9.1.20' };
   });
 
   it('publishes the same storybookHash for the frozen fixture', async () => {

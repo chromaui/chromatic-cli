@@ -1,4 +1,4 @@
-import { resolvePackageVersion } from './packageVersion';
+import { ProjectFiles } from './projectFiles';
 
 // The packages that own Storybook's preview runtime, newest layout first: Storybook >= 9 ships it in
 // `storybook`, Storybook 8 in `@storybook/core`. If a future major moves the runtime into some other
@@ -28,12 +28,13 @@ const STORYBOOK_CORE_PACKAGES = ['storybook', '@storybook/core'];
  * install, and can be a bare semver range rather than a concrete version.
  *
  * @param projectRoot The absolute Storybook project root to resolve from.
+ * @param projectFiles How to read the disk.
  *
  * @returns The installed Storybook version (e.g. `9.1.20`).
  */
-export function resolveStorybookVersion(projectRoot: string): string {
+export function resolveStorybookVersion(projectRoot: string, projectFiles: ProjectFiles): string {
   for (const packageName of STORYBOOK_CORE_PACKAGES) {
-    const version = resolvePackageVersion(projectRoot, packageName);
+    const version = projectFiles.packageVersion(projectRoot, packageName);
     if (version) return version;
   }
 

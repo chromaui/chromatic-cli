@@ -1,42 +1,45 @@
-import * as fs from 'fs';
-import { vi } from 'vitest';
-
 import { buildManifest } from '../manifest';
-import { DirectoryTreeReference, inMemoryProjectFiles } from '../projectFiles';
-import { Reference } from './manifestMocks';
+import { InMemoryDiskReference, inMemoryProjectFiles } from '../projectFiles';
 
 // Manifest keys anchor at the project root, so a file inside the project keys as `./src/...` and one
 // outside it keeps its `../` prefix (e.g. a sibling package as `../shared/...`).
 export const projectRoot = '/repo/packages/ui';
 
+// The version the manifest reads off the installed Storybook package. Fixed here, so a Storybook
+// release cannot move a manifest these suites assert on.
+export const storybookVersion = '9.1.20';
+
 /**
- * The disk the out-of-graph sweep reads, as a tree of absolute directory to entry names. No fixture
- * has these directories on disk, so a suite that cares about them sets this per test and every other
- * suite leaves it empty; see the in-memory adapter in ../projectFiles.
+ * The disk the manifest reads: the tree the out-of-graph sweep walks, the content hash of each file
+ * and the installed package versions. A suite sets the part its assertion turns on and leaves the
+ * rest; see the in-memory adapter in ../projectFiles.
  */
-export const directoryTree: DirectoryTreeReference = { current: {} };
+export const disk: InMemoryDiskReference = { current: {} };
 
 export const outOfGraph = {
   configDir: '.storybook',
   staticDirs: ['.storybook/static'],
-  projectFiles: inMemoryProjectFiles(directoryTree),
+  projectFiles: inMemoryProjectFiles(disk),
 };
 
+/** Empties the disk, leaving only the installed Storybook version every manifest needs. */
+export function resetDisk() {
+  disk.current = { packageVersions: { storybook: storybookVersion } };
+}
+
 /**
- * Spies on `statSync` so only the paths `isPresent` accepts read as a regular file on disk. The
- * shared `fs` mock hardcodes every path present, so a test that needs one absent overrides it here
- * and restores it afterwards.
+ * Runs `run` with the paths `isAbsent` names missing from disk. Everything else is a file, so a test
+ * names only what a real project has no file for.
  *
- * @param isPresent Whether the candidate path has a file on disk.
+ * @param isAbsent Whether the candidate path has no file on disk.
+ * @param run The test body.
  *
- * @returns The spy, so the caller can restore it.
+ * @returns The test body's promise.
  */
-export function mockStatSync(isPresent: (candidate: string) => boolean) {
-  return vi.spyOn(fs, 'statSync').mockImplementation((candidate) => {
-    const path = String(candidate);
-    if (!isPresent(path)) return undefined as never;
-    // A trailing slash names a directory, which is present on disk but is not a regular file.
-    return { isFile: () => !path.endsWith('/') } as fs.Stats;
+export function withAbsent(isAbsent: (candidate: string) => boolean, run: () => Promise<void>) {
+  disk.current.isAbsent = isAbsent;
+  return run().finally(() => {
+    disk.current.isAbsent = undefined;
   });
 }
 
@@ -49,8 +52,7 @@ export function mockStatSync(isPresent: (candidate: string) => boolean) {
  * @returns The test body's promise.
  */
 export function withGlobAbsent(run: () => Promise<void>) {
-  const spy = mockStatSync((candidate) => !candidate.includes('lazy'));
-  return run().finally(() => spy.mockRestore());
+  return withAbsent((candidate) => candidate.includes('lazy'), run);
 }
 
 /**
@@ -63,24 +65,19 @@ export function withGlobAbsent(run: () => Promise<void>) {
  */
 export function withSyntheticAbsent(run: () => Promise<void>) {
   const synthetic = ['storybook-stories.js', 'storybook-config-entry.js', 'lazy'];
-  const spy = mockStatSync((candidate) => !synthetic.some((name) => candidate.includes(name)));
-  return run().finally(() => spy.mockRestore());
+  return withAbsent((candidate) => synthetic.some((name) => candidate.includes(name)), run);
 }
 
 /**
  * Builds a manifest whose only Storybook-wide graph entry is the named preview file, with fixed
  * bytes, so two spellings differ by key alone.
  *
- * @param fileHashes The hash per absolute file path, which this sets.
  * @param previewFile The preview file's name within the config directory.
  *
  * @returns The manifest.
  */
-export function manifestWithPreview(
-  fileHashes: Reference<Record<string, string>>,
-  previewFile: string
-) {
-  fileHashes.current = {
+export function manifestWithPreview(previewFile: string) {
+  disk.current.fileHashes = {
     '/repo/packages/ui/src/Button.stories.tsx': 'S',
     [`/repo/packages/ui/.storybook/${previewFile}`]: 'P',
   };
