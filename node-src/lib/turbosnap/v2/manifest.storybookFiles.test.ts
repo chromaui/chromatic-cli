@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
-import { mockStatSync, outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
+import {
+  directoryTree,
+  mockStatSync,
+  outOfGraph,
+  projectRoot,
+} from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
 vi.mock('fs', async (importOriginal) => ({
@@ -11,24 +16,15 @@ vi.mock('fs', async (importOriginal) => ({
   writeFileSync: vi.fn(),
 }));
 
-// Hoisted refs the mock factories read, so each test controls the file hashes and the swept
-// directory tree; see ./__fixtures__/manifestMocks.
-const { fileHashesRef, directoryTreeRef } = vi.hoisted(() => ({
+// A hoisted ref the mock factory reads, so each test controls the file hashes; see
+// ./__fixtures__/manifestMocks. The swept directory tree is a plain fixture value, needing no mock.
+const { fileHashesRef } = vi.hoisted(() => ({
   fileHashesRef: { current: {} as Record<string, string> },
-  directoryTreeRef: { current: {} as Record<string, string[]> },
 }));
 
 vi.mock('../../getFileHashes', async () => {
   const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
   return fileHashesModule(fileHashesRef);
-});
-
-vi.mock('fs/promises', async (importOriginal) => {
-  const { directoryTreeModule } = await import('./__fixtures__/manifestMocks');
-  return {
-    ...(await importOriginal<typeof import('fs/promises')>()),
-    ...directoryTreeModule(directoryTreeRef),
-  };
 });
 
 // The version is read off the resolved Storybook package on disk, which no fixture here installs;
@@ -44,7 +40,7 @@ vi.mock('./storybookVersion', () => ({
 beforeEach(() => {
   fileHashesRef.current = {};
   storybookVersionRef.current = '9.1.20';
-  directoryTreeRef.current = {};
+  directoryTree.current = {};
 });
 
 describe('buildManifest storybookFiles', () => {
@@ -259,7 +255,7 @@ describe('buildManifest out-of-graph inputs', () => {
   };
 
   beforeEach(() => {
-    directoryTreeRef.current = {
+    directoryTree.current = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['mockServiceWorker.js'],
     };
@@ -299,7 +295,7 @@ describe('buildManifest out-of-graph inputs', () => {
 
     // Static assets are served by URL, so the same bytes at a new path render differently. A
     // content-only roll-up left both `<staticFiles>` and the storybook hash byte-identical here.
-    directoryTreeRef.current = {
+    directoryTree.current = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['sw.js'],
     };
@@ -311,7 +307,7 @@ describe('buildManifest out-of-graph inputs', () => {
   });
 
   it('moves the storybook hash when two static assets swap contents', async () => {
-    directoryTreeRef.current = {
+    directoryTree.current = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['a.png', 'b.png'],
     };
@@ -355,7 +351,7 @@ describe('buildManifest out-of-graph inputs', () => {
   it('covers a preview.* the builder elided, which has no graph-rolled entry at all', async () => {
     // marketing-ui's preview.ts is 0 lines, so vite emits no module for it: v2 had no entry and
     // missed where v1 bails. Hashing the config dir off disk closes that unconditionally.
-    directoryTreeRef.current = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] };
+    directoryTree.current = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] };
     const preview = '/repo/packages/ui/.storybook/preview.ts';
     fileHashesRef.current = { [story]: 'S', [mainConfig]: 'M', [preview]: 'P1' };
     const before = await buildManifest(stats, projectRoot, outOfGraph);

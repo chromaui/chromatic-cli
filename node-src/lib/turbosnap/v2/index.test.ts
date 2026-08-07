@@ -6,6 +6,7 @@ import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { traceChangedFiles } from './index';
 import { buildManifest, countNodeModulesFiles, writeManifest } from './manifest';
+import { inMemoryProjectFiles } from './projectFiles';
 import { getAnchorMismatchReason, getSourceModuleResolution } from './statsAnchor';
 
 vi.mock('@sentry/node', () => ({
@@ -36,6 +37,10 @@ vi.mock('./statsAnchor', () => ({
   getSourceModuleResolution: vi.fn(),
 }));
 
+// buildManifest is mocked here, so the adapter is only threaded through; the sweep it backs is
+// covered in outOfGraphFiles.test.ts.
+const projectFiles = inMemoryProjectFiles({ current: {} });
+
 const input = {
   graphqlClient: {} as any,
   buildId: 'build-id',
@@ -47,6 +52,7 @@ const input = {
   configDir: '.storybook',
   staticDirs: ['.storybook/static'],
   staticDirsDeclared: true,
+  projectFiles,
 };
 
 const manifest = {
@@ -172,6 +178,7 @@ describe('traceChangedFiles', () => {
       {
         configDir: '.storybook',
         staticDirs: ['.storybook/static'],
+        projectFiles,
       },
       '/repo/packages/ui'
     );

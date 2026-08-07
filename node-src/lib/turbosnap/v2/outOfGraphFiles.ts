@@ -1,17 +1,22 @@
-import { readdir, realpath, stat } from 'fs/promises';
 import path from 'path';
 
 import { hashAbsolutePaths } from './fileHashes';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { normalizeStatsPath } from './paths';
+import { ProjectFiles } from './projectFiles';
 import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY } from './storybookFileKeys';
 
-/** Where to look for the out-of-graph inputs. Both are project-root-relative, as they arrive on `ctx.storybook`. */
+/**
+ * Where to look for the out-of-graph inputs, and what to read them with. The directories are
+ * project-root-relative, as they arrive on `ctx.storybook`.
+ */
 export interface OutOfGraphInput {
   /** The Storybook config directory, e.g. `.storybook`. */
   configDir: string;
   /** The configured static directories, e.g. `['.storybook/static']`. Empty when unset. */
   staticDirs: string[];
+  /** How to read the disk; required, so no caller can silently get the real one. */
+  projectFiles: Pick<ProjectFiles, 'listTree'>;
 }
 
 /**
@@ -43,7 +48,7 @@ export interface OutOfGraphFiles {
  * Static files are hashed unbounded, with no size or count cap: a cap is a silent gap, which is the
  * failure mode this mechanism exists to remove.
  *
- * @param input Where to look; see {@link OutOfGraphInput}.
+ * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  * @param projectRoot The absolute Storybook project root used to locate files and name them.
  *
  * @returns The content hash of every config file and every static file, keyed by canonical manifest
@@ -58,11 +63,11 @@ export async function hashOutOfGraphFiles(
   );
 
   const [configPaths, staticPaths] = await Promise.all([
-    listFilesRecursively(path.resolve(projectRoot, input.configDir)),
+    input.projectFiles.listTree(path.resolve(projectRoot, input.configDir)),
     // A file can only belong to one section, so collect the static directories first and let them win
     // below. All the fixtures nest `.storybook/static/`, and v1 tests `isStaticFile` before
     // `isStorybookFile` for exactly that reason (getDependentStoryFiles.ts:284-292).
-    Promise.all(staticDirectories.map((directory) => listFilesRecursively(directory))),
+    Promise.all(staticDirectories.map((directory) => input.projectFiles.listTree(directory))),
   ]);
 
   const staticFilePaths = staticPaths.flat();
@@ -140,62 +145,4 @@ async function hashByManifestPath(
       // Sorted so the debug detail section reads in path order rather than directory-walk order.
       .sort(([a], [b]) => a.localeCompare(b))
   );
-}
-
-/**
- * Lists every file under a directory, recursively, following symlinks. A directory that doesn't exist
- * contributes nothing rather than throwing: a configured-but-missing `staticDir` is not an error, and
- * v1 never matches such a path either. The same holds for a broken symlink, whose target can't be read.
- *
- * Symlinks are followed because Storybook copies and serves the bytes they resolve to, so a skipped one
- * is a silent content gap — `.storybook/static/vendor -> ../../node_modules/pkg/dist` would make a
- * whole served tree invisible. Files are named by the *link's* path, since that is the URL they are
- * served at.
- *
- * @param directory The absolute directory to walk.
- * @param visitedDirectories Resolved real paths already walked, so a symlink cycle terminates.
- *
- * @returns The absolute path of every file found.
- */
-async function listFilesRecursively(
-  directory: string,
-  visitedDirectories = new Set<string>()
-): Promise<string[]> {
-  // Resolving before walking is what stops a symlink loop from diverging. Static files are hashed
-  // unbounded by design, so there is no count cap to fall back on.
-  let realDirectory;
-  try {
-    realDirectory = await realpath(directory);
-  } catch {
-    return [];
-  }
-  if (visitedDirectories.has(realDirectory)) return [];
-  visitedDirectories.add(realDirectory);
-
-  let entries;
-  try {
-    entries = await readdir(directory, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) return listFilesRecursively(entryPath, visitedDirectories);
-      if (entry.isFile()) return [entryPath];
-
-      // A symlink is neither, so ask `stat`, which follows it. Anything else with no bytes of its own
-      // — a socket, a device, a broken link — contributes nothing.
-      try {
-        const stats = await stat(entryPath);
-        if (stats.isDirectory()) return listFilesRecursively(entryPath, visitedDirectories);
-        return stats.isFile() ? [entryPath] : [];
-      } catch {
-        return [];
-      }
-    })
-  );
-
-  return files.flat();
 }

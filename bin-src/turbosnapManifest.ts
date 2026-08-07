@@ -1,4 +1,5 @@
 import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
+import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles';
 import meow from 'meow';
 
 import { createLogger } from '../node-src/lib/log';
@@ -73,6 +74,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
       {
         configDir: input.configDir,
         staticDirs: input.staticDirs,
+        projectFiles: realProjectFiles(),
       },
       // This command runs no anchor bail, so a stats file that resolves nowhere silently anchors at
       // the project root instead of raising the mismatch production would.

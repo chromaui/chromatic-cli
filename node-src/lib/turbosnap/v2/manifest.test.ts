@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
 import {
+  directoryTree,
   manifestWithPreview,
   outOfGraph,
   projectRoot,
@@ -17,24 +18,15 @@ vi.mock('fs', async (importOriginal) => ({
   writeFileSync: vi.fn(),
 }));
 
-// Hoisted refs the mock factories read, so each test controls the file hashes and the swept
-// directory tree; see ./__fixtures__/manifestMocks.
-const { fileHashesRef, directoryTreeRef } = vi.hoisted(() => ({
+// A hoisted ref the mock factory reads, so each test controls the file hashes; see
+// ./__fixtures__/manifestMocks. The swept directory tree is a plain fixture value, needing no mock.
+const { fileHashesRef } = vi.hoisted(() => ({
   fileHashesRef: { current: {} as Record<string, string> },
-  directoryTreeRef: { current: {} as Record<string, string[]> },
 }));
 
 vi.mock('../../getFileHashes', async () => {
   const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
   return fileHashesModule(fileHashesRef);
-});
-
-vi.mock('fs/promises', async (importOriginal) => {
-  const { directoryTreeModule } = await import('./__fixtures__/manifestMocks');
-  return {
-    ...(await importOriginal<typeof import('fs/promises')>()),
-    ...directoryTreeModule(directoryTreeRef),
-  };
 });
 
 // The version is read off the resolved Storybook package on disk, which no fixture here installs;
@@ -45,7 +37,7 @@ vi.mock('./storybookVersion', () => ({
 
 beforeEach(() => {
   fileHashesRef.current = {};
-  directoryTreeRef.current = {};
+  directoryTree.current = {};
 });
 
 describe('serializeManifest', () => {

@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
 import { buildManifest } from './manifest';
+import { realProjectFiles } from './projectFiles';
 import { AnchorInput, getAnchorMismatchReason, getSourceModuleResolution } from './statsAnchor';
 
 // The fixtures below are real directories on disk — the anchor damage is only visible against real
@@ -135,7 +136,11 @@ describe('getAnchorMismatchReason', () => {
 
     // First, the damage: with the wrong sibling as the anchor the manifest is complete — a story is
     // found and nothing is empty — but its hashes are read off the other package's bytes.
-    const outOfGraph = { configDir: '.storybook', staticDirs: [] };
+    const outOfGraph = {
+      configDir: '.storybook',
+      staticDirs: [],
+      projectFiles: realProjectFiles(),
+    };
     const correct = await buildManifest(VITE_STATS, roots.ui, outOfGraph);
     const wrong = await buildManifest(VITE_STATS, roots['marketing-ui'], outOfGraph);
     const storyFile = './src/lib/Badge/Badge.stories.tsx';

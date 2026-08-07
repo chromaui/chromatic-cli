@@ -29,34 +29,3 @@ export function fileHashesModule(fileHashes: Reference<Record<string, string>>) 
     },
   };
 }
-
-/**
- * The `fs/promises` sweep mock. The config and static directories are swept off disk, which no
- * fixture has, so the sweep is backed by an in-memory tree of absolute directory -> entry names;
- * see outOfGraphFiles.test.ts for the sweep's own behaviour.
- *
- * @param directoryTree The entry names per absolute directory.
- *
- * @returns The mocked module's overrides, to spread over the original module.
- */
-export function directoryTreeModule(directoryTree: Reference<Record<string, string[]>>) {
-  return {
-    readdir: (directory: string) => {
-      const entries = directoryTree.current[directory];
-      if (!entries) return Promise.reject(new Error(`ENOENT: ${directory}`));
-      return Promise.resolve(
-        entries.map((name) => ({
-          name,
-          isDirectory: () => Boolean(directoryTree.current[`${directory}/${name}`]),
-          isFile: () => !directoryTree.current[`${directory}/${name}`],
-        }))
-      );
-    },
-    // The sweep resolves each directory before walking it, to terminate on a symlink cycle. This tree
-    // has no symlinks, so every path is already real — but a missing directory must still reject.
-    realpath: async (directory: string) => {
-      if (!directoryTree.current[directory]) throw new Error(`ENOENT: ${directory}`);
-      return directory;
-    },
-  };
-}

@@ -9,6 +9,7 @@ import { readStorybookDirectories } from './storybookDirectories';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
+import { realProjectFiles } from './v2/projectFiles';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
@@ -91,6 +92,8 @@ async function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
     configDir,
     staticDirs,
     staticDirsDeclared: storybook.staticDirsDeclared ?? false,
+    // The real disk, named here because production is the one caller that should read it.
+    projectFiles: realProjectFiles(),
     // Read from the project's own Storybook config rather than from `projectRoot`, which is what
     // makes it independent evidence about which package the stats should describe.
     builderName: storybook.builder?.name,

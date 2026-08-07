@@ -7,6 +7,7 @@ import GraphQLClient from '../node-src/io/graphqlClient';
 import { SBProjectJson } from '../node-src/lib/getPrebuiltStorybookMetadata';
 import { createLogger } from '../node-src/lib/log';
 import { resolvePackageVersion } from '../node-src/lib/turbosnap/v2/packageVersion';
+import { realProjectFiles } from '../node-src/lib/turbosnap/v2/projectFiles';
 import {
   readTurbosnapInput,
   TURBOSNAP_INPUT_OPTIONS_HELP,
@@ -101,6 +102,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
       configDir: input.configDir,
       staticDirs: input.staticDirs,
       staticDirsDeclared: staticDirectoriesDeclared,
+      projectFiles: realProjectFiles(),
       ...(builderName && { builderName }),
     });
 

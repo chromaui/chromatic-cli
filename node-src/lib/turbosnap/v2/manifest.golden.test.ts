@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
-import { outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
+import { directoryTree, outOfGraph, projectRoot } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
 
 /**
@@ -44,25 +44,16 @@ vi.mock('fs', async (importOriginal) => ({
   writeFileSync: vi.fn(),
 }));
 
-// Content hashes are stubbed per absolute path and the out-of-graph sweep is backed by an in-memory
+// Content hashes are stubbed per absolute path and the out-of-graph sweep reads the in-memory
 // directory tree, so the fixture is fully deterministic; only the roll-up recipe under test
 // contributes real hashing. See ./__fixtures__/manifestMocks.
-const { fileHashesRef, directoryTreeRef } = vi.hoisted(() => ({
+const { fileHashesRef } = vi.hoisted(() => ({
   fileHashesRef: { current: {} as Record<string, string> },
-  directoryTreeRef: { current: {} as Record<string, string[]> },
 }));
 
 vi.mock('../../getFileHashes', async () => {
   const { fileHashesModule } = await import('./__fixtures__/manifestMocks');
   return fileHashesModule(fileHashesRef);
-});
-
-vi.mock('fs/promises', async (importOriginal) => {
-  const { directoryTreeModule } = await import('./__fixtures__/manifestMocks');
-  return {
-    ...(await importOriginal<typeof import('fs/promises')>()),
-    ...directoryTreeModule(directoryTreeRef),
-  };
 });
 
 // Pinned so a Storybook release cannot move the golden values.
@@ -130,7 +121,7 @@ const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
 describe('manifest golden hashes', () => {
   beforeEach(() => {
     fileHashesRef.current = { ...GOLDEN_FILE_HASHES };
-    directoryTreeRef.current = { ...GOLDEN_DIRECTORY_TREE };
+    directoryTree.current = { ...GOLDEN_DIRECTORY_TREE };
   });
 
   it('publishes the same storybookHash for the frozen fixture', async () => {

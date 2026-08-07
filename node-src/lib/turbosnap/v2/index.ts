@@ -9,6 +9,7 @@ import { determineChangedFiles } from './api';
 import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { classifyUploadHashesFailure } from './classifyUploadHashesFailure';
 import { buildManifest, countNodeModulesFiles, TurboSnapManifest, writeManifest } from './manifest';
+import { ProjectFiles } from './projectFiles';
 import {
   getAnchorMismatchReason,
   getSourceModuleResolution,
@@ -26,6 +27,7 @@ interface TraceChangedFilesInput {
   configDir: string;
   staticDirs: string[];
   staticDirsDeclared: boolean;
+  projectFiles: Pick<ProjectFiles, 'listTree'>;
   builderName?: string;
 }
 
@@ -52,6 +54,8 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * @param input.staticDirs The project-relative static directories, hashed off disk for the same reason.
  * @param input.staticDirsDeclared Whether the prebuilt Storybook reports that its source config
  * declared static directories.
+ * @param input.projectFiles How to read the disk; see {@link ProjectFiles}. Required rather than
+ * defaulted, so a caller cannot silently reach the real disk.
  * @param input.builderName The builder named by the project's own Storybook config, used to check the
  * stats against the anchor; see {@link getAnchorMismatchReason}.
  *
@@ -82,6 +86,7 @@ export async function traceChangedFiles(
       {
         configDir: input.configDir,
         staticDirs: input.staticDirs,
+        projectFiles: input.projectFiles,
       },
       // Only reachable for a stats file naming no source modules at all; any other unresolved case
       // already bailed at getUnresolvedSourceModules.

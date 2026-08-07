@@ -2,12 +2,25 @@ import * as fs from 'fs';
 import { vi } from 'vitest';
 
 import { buildManifest } from '../manifest';
+import { DirectoryTreeReference, inMemoryProjectFiles } from '../projectFiles';
 import { Reference } from './manifestMocks';
 
 // Manifest keys anchor at the project root, so a file inside the project keys as `./src/...` and one
 // outside it keeps its `../` prefix (e.g. a sibling package as `../shared/...`).
 export const projectRoot = '/repo/packages/ui';
-export const outOfGraph = { configDir: '.storybook', staticDirs: ['.storybook/static'] };
+
+/**
+ * The disk the out-of-graph sweep reads, as a tree of absolute directory to entry names. No fixture
+ * has these directories on disk, so a suite that cares about them sets this per test and every other
+ * suite leaves it empty; see the in-memory adapter in ../projectFiles.
+ */
+export const directoryTree: DirectoryTreeReference = { current: {} };
+
+export const outOfGraph = {
+  configDir: '.storybook',
+  staticDirs: ['.storybook/static'],
+  projectFiles: inMemoryProjectFiles(directoryTree),
+};
 
 /**
  * Spies on `statSync` so only the paths `isPresent` accepts read as a regular file on disk. The

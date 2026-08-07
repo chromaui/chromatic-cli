@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
 import { traceChangedFiles } from './index';
+import { realProjectFiles } from './projectFiles';
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
@@ -185,6 +186,7 @@ async function trace(statsInput: Stats) {
     configDir: '.storybook',
     staticDirs: [],
     staticDirsDeclared: false,
+    projectFiles: realProjectFiles(),
     builderName: 'storybook-react-rsbuild',
   });
 
