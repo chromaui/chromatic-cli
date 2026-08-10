@@ -31,7 +31,7 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({ './.storybook/preview.ts': [], './src/a.stories.tsx': [] });
     const hashes = makeHashes(['./.storybook/preview.ts', './src/a.stories.tsx']);
 
-    const { storybookFiles } = collectStorybookFiles(
+    const { storybookFileHashes } = collectStorybookFiles(
       files,
       hashes,
       new Set(['./src/a.stories.tsx']),
@@ -39,7 +39,7 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()]).toContain('./.storybook/preview.ts');
+    expect([...storybookFileHashes.keys()]).toContain('./.storybook/preview.ts');
   });
 
   it('matches every preview config extension Storybook accepts', () => {
@@ -51,7 +51,7 @@ describe('collectStorybookFiles', () => {
       './.storybook/preview.mjs',
       './.storybook/preview.cjs',
     ];
-    const { storybookFiles } = collectStorybookFiles(
+    const { storybookFileHashes } = collectStorybookFiles(
       makeFiles(Object.fromEntries(previews.map((p) => [p, []]))),
       makeHashes(previews),
       new Set(),
@@ -59,13 +59,13 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()].sort()).toEqual([...previews].sort());
+    expect([...storybookFileHashes.keys()].sort()).toEqual([...previews].sort());
   });
 
   it('does not treat a file merely named preview outside the config dir as a config', () => {
     const files = makeFiles({ './src/preview.ts': [] });
 
-    const { storybookFiles, attribution } = collectStorybookFiles(
+    const { storybookFileHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/preview.ts']),
       new Set(),
@@ -73,7 +73,7 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
+    expect([...storybookFileHashes.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
     expect([...attribution.storybookGlobals]).toEqual(['./src/preview.ts']);
   });
 
@@ -82,7 +82,7 @@ describe('collectStorybookFiles', () => {
     // must be found there, not missed for not being literally named `.storybook`.
     const files = makeFiles({ './src/preview.ts': [] });
 
-    const { storybookFiles, attribution } = collectStorybookFiles(
+    const { storybookFileHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/preview.ts']),
       new Set(),
@@ -90,7 +90,7 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()]).toEqual(['./src/preview.ts']);
+    expect([...storybookFileHashes.keys()]).toEqual(['./src/preview.ts']);
     expect([...attribution.previewSubtree]).toEqual(['./src/preview.ts']);
   });
 
@@ -131,7 +131,7 @@ describe('collectStorybookFiles', () => {
     });
     const hashes = makeHashes([...files.keys()]);
 
-    const { storybookFiles } = collectStorybookFiles(
+    const { storybookFileHashes } = collectStorybookFiles(
       files,
       hashes,
       new Set(),
@@ -139,14 +139,16 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect(storybookFiles.get('./packages/other/.storybook/preview.ts')).not.toContain('themeA');
-    expect(storybookFiles.get('./.storybook/preview.ts')).not.toContain('themeB');
+    expect(storybookFileHashes.get('./packages/other/.storybook/preview.ts')).not.toContain(
+      'themeA'
+    );
+    expect(storybookFileHashes.get('./.storybook/preview.ts')).not.toContain('themeB');
   });
 
   it('rolls files reached by no story and no preview into the catch-all', () => {
     const files = makeFiles({ './node_modules/react-dom/index.js': [] });
 
-    const { storybookFiles, attribution } = collectStorybookFiles(
+    const { storybookFileHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./node_modules/react-dom/index.js']),
       new Set(),
@@ -154,7 +156,7 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
+    expect([...storybookFileHashes.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/react-dom/index.js']);
   });
 
@@ -164,7 +166,7 @@ describe('collectStorybookFiles', () => {
       './src/button.tsx': [],
     });
 
-    const { storybookFiles } = collectStorybookFiles(
+    const { storybookFileHashes } = collectStorybookFiles(
       files,
       makeHashes(['./src/a.stories.tsx', './src/button.tsx']),
       new Set(['./src/a.stories.tsx']),
@@ -172,7 +174,7 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()]).toEqual([]);
+    expect([...storybookFileHashes.keys()]).toEqual([]);
   });
 
   it('rolls a file hashed but absent from the graph into the catch-all', () => {
@@ -261,7 +263,7 @@ describe('collectStorybookFiles', () => {
   it('skips a preview config that has no content hash', () => {
     const files = makeFiles({ './.storybook/preview.ts': [] });
 
-    const { storybookFiles } = collectStorybookFiles(
+    const { storybookFileHashes } = collectStorybookFiles(
       files,
       new Map(),
       new Set(),
@@ -269,6 +271,6 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFiles.keys()]).toEqual([]);
+    expect([...storybookFileHashes.keys()]).toEqual([]);
   });
 });

@@ -26,16 +26,16 @@ function previewConfigPattern(configDirectory: string): RegExp {
  * subtree, so the two named homes are not mutually exclusive.
  */
 export interface FileAttribution {
-  /** Files in some story's transitive subtree, hashed into that story's `storyFiles` entry. */
+  /** Files in some story's transitive subtree, hashed into that story's `storyFileHashes` entry. */
   storyReachable: Set<FilePath>;
-  /** Files in a `.storybook/preview.*` subtree, hashed into that preview's `storybookFiles` entry. */
+  /** Files in a `.storybook/preview.*` subtree, hashed into that preview's `storybookFileHashes` entry. */
   previewSubtree: Set<FilePath>;
   /** Files in neither of the above, rolled into the {@link STORYBOOK_GLOBALS_KEY} catch-all. */
   storybookGlobals: Set<FilePath>;
 }
 
 /**
- * Builds the file-hash entries of the `storybookFiles` section: a rolled-up hash for each Storybook
+ * Builds the file-hash entries of the `storybookFileHashes` section: a rolled-up hash for each Storybook
  * config file that no story imports. Every hashable file lands in exactly one hashing home — a
  * story's own subtree, a keyed `.storybook/preview.*` entry, or the {@link STORYBOOK_GLOBALS_KEY}
  * catch-all — so nothing goes unhashed and the backend can still attribute a change to the preview
@@ -57,7 +57,7 @@ export function collectStorybookFiles(
   storyFileNames: Set<FilePath>,
   configDirectory: string,
   h64ToString: (input: string) => string
-): { storybookFiles: Map<FilePath, FileHash>; attribution: FileAttribution } {
+): { storybookFileHashes: Map<FilePath, FileHash>; attribution: FileAttribution } {
   // The union of every story's subtree, used to tell Storybook globals apart from story code.
   const storyReachable = new Set<FilePath>();
   for (const storyFile of storyFileNames) {
@@ -65,14 +65,14 @@ export function collectStorybookFiles(
   }
 
   const previewConfig = previewConfigPattern(configDirectory);
-  const storybookFiles = new Map<FilePath, FileHash>();
+  const storybookFileHashes = new Map<FilePath, FileHash>();
   const previewSubtree = new Set<FilePath>();
   for (const filePath of files.keys()) {
     if (!hashes.has(filePath) || !previewConfig.test(filePath)) continue;
     // Collect each subtree on its own, then union: sharing one accumulator would leak one preview's
     // files into another's rolled-up hash.
     const subtree = collectTransitiveDependencies(files, filePath);
-    storybookFiles.set(filePath, rollUpFileHashes(hashes, subtree, h64ToString));
+    storybookFileHashes.set(filePath, rollUpFileHashes(hashes, subtree, h64ToString));
     for (const dependency of subtree) {
       previewSubtree.add(dependency);
     }
@@ -89,7 +89,10 @@ export function collectStorybookFiles(
     (filePath) => !storyReachable.has(filePath) && !previewSubtree.has(filePath)
   );
   if (orphanGlobals.length > 0) {
-    storybookFiles.set(STORYBOOK_GLOBALS_KEY, rollUpFileHashes(hashes, orphanGlobals, h64ToString));
+    storybookFileHashes.set(
+      STORYBOOK_GLOBALS_KEY,
+      rollUpFileHashes(hashes, orphanGlobals, h64ToString)
+    );
   }
 
   // Report only real files, matching how the catch-all is defined, so the three sets cover exactly
@@ -101,5 +104,5 @@ export function collectStorybookFiles(
     storybookGlobals: new Set(orphanGlobals),
   };
 
-  return { storybookFiles, attribution };
+  return { storybookFileHashes, attribution };
 }

@@ -40,16 +40,16 @@ describe('serializeManifest', () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
     const serialized = serializeManifest(manifest);
 
-    // JSON-safe: storyFiles is a plain object, dependencies is an array.
+    // JSON-safe: storyFileHashes is a plain object, dependencies is an array.
     expect(serialized.storybookHash).toBe(manifest.storybookHash);
-    expect(serialized.storyFiles).toEqual(Object.fromEntries(manifest.storyFileHashes));
+    expect(serialized.storyFileHashes).toEqual(Object.fromEntries(manifest.storyFileHashes));
     expect(serialized.files['./src/Button.stories.tsx'].dependencies).toEqual(['./src/helper.ts']);
     // structuredClone can hide fields that are not friendly to JSON.parse/JSON>stringify so we test the exact flow instead.
     // eslint-disable-next-line unicorn/prefer-structured-clone
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 
-  it('emits storybookFiles as a JSON-safe object', async () => {
+  it('emits storybookFileHashes as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';
     disk.current.fileHashes = { [story]: 'S', [preview]: 'P' };
@@ -63,8 +63,8 @@ describe('serializeManifest', () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
     const serialized = serializeManifest(manifest);
 
-    expect(serialized.storybookFiles['./.storybook/preview.ts']).toBe(
-      manifest.storybookFiles.get('./.storybook/preview.ts')
+    expect(serialized.storybookFileHashes['./.storybook/preview.ts']).toBe(
+      manifest.storybookFileHashes.get('./.storybook/preview.ts')
     );
     // eslint-disable-next-line unicorn/prefer-structured-clone
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
@@ -95,10 +95,10 @@ describe('serializeManifest', () => {
 
       // The helper remains part of the complete pre-prune graph used for derived values even though
       // its synthetic bridge is absent from the serialized graph.
-      expect(after.storyFiles['./src/Button.stories.tsx']).not.toBe(
-        before.storyFiles['./src/Button.stories.tsx']
+      expect(after.storyFileHashes['./src/Button.stories.tsx']).not.toBe(
+        before.storyFileHashes['./src/Button.stories.tsx']
       );
-      expect(after.storybookFiles).toEqual(before.storybookFiles);
+      expect(after.storybookFileHashes).toEqual(before.storybookFileHashes);
       expect(after.storybookHash).not.toBe(before.storybookHash);
       expect(before.attribution).toEqual({
         storyReachable: ['./src/Button.stories.tsx', './src/helper.ts'],
@@ -140,7 +140,7 @@ describe('serializeManifest', () => {
       // Identical after pruning, so the story hash is the only place the leaf can show up.
       expect(bridged.files).toEqual(plain.files);
       const key = './src/Button.stories.tsx';
-      expect(bridged.storyFiles[key]).not.toBe(plain.storyFiles[key]);
+      expect(bridged.storyFileHashes[key]).not.toBe(plain.storyFileHashes[key]);
     });
   });
 });
@@ -176,7 +176,7 @@ describe('writeManifest', () => {
 
     const payload = readFileSync(path.join(outputDirectory, 'turbosnap-manifest.json'), 'utf8');
 
-    expect(JSON.parse(payload).storybookFiles['./.storybook/preview.ts']).toEqual(
+    expect(JSON.parse(payload).storybookFileHashes['./.storybook/preview.ts']).toEqual(
       expect.any(String)
     );
   });

@@ -83,11 +83,11 @@ describe('turbosnap-manifest command', () => {
     const manifest = JSON.parse(written);
 
     expect(typeof manifest.storybookHash).toBe('string');
-    expect(Object.keys(manifest.storyFiles)).toEqual(['./src/Button.stories.tsx']);
+    expect(Object.keys(manifest.storyFileHashes)).toEqual(['./src/Button.stories.tsx']);
     expect(manifest.files['./src/Button.stories.tsx'].dependencies).toEqual(['./src/helper.ts']);
     // The version survives serialization as a readable string, so the emitted manifest itself says
     // which Storybook produced the build.
-    expect(manifest.storybookFiles['storybookVersion']).toBe('9.1.20');
+    expect(manifest.storybookFileHashes['storybookVersion']).toBe('9.1.20');
   });
 
   it('resolves the stats file against the storybook base directory', async () => {
@@ -132,7 +132,7 @@ describe('turbosnap-manifest command', () => {
     await main(['-b', 'packages/ui']);
 
     const manifest = JSON.parse(stdout.mock.calls[0][0] as string);
-    expect(Object.keys(manifest.storyFiles)).toEqual(['./src/Button.stories.tsx']);
+    expect(Object.keys(manifest.storyFileHashes)).toEqual(['./src/Button.stories.tsx']);
     expect(manifest.files['./src/Button.stories.tsx'].dependencies).toEqual(['./src/helper.ts']);
   });
 });

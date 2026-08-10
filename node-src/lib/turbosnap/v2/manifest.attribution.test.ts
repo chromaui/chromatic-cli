@@ -248,7 +248,9 @@ describe('buildManifest attribution closure', () => {
       const after = await buildManifest(stats, projectRoot, outOfGraph);
 
       // Editing the inner file used to leave the manifest byte-identical.
-      expect(after.storybookFiles.get(globalsKey)).not.toBe(before.storybookFiles.get(globalsKey));
+      expect(after.storybookFileHashes.get(globalsKey)).not.toBe(
+        before.storybookFileHashes.get(globalsKey)
+      );
       expect(after.storybookHash).not.toBe(before.storybookHash);
     });
   });
@@ -328,8 +330,8 @@ describe('buildManifest attribution of swept node_modules stories', () => {
       disk.current.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R2' };
       const after = await buildManifest(stats, projectRoot, outOfGraph);
 
-      expect(after.storybookFiles.get('storybookGlobals')).not.toBe(
-        before.storybookFiles.get('storybookGlobals')
+      expect(after.storybookFileHashes.get('storybookGlobals')).not.toBe(
+        before.storybookFileHashes.get('storybookGlobals')
       );
     });
   });

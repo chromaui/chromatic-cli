@@ -225,7 +225,7 @@ describe('traceChangedFiles', () => {
       storyFileHashes: { [STORY]: expect.any(String) },
     });
     // The three out-of-graph sections the Index gates on, plus the graph-rolled preview entry.
-    expect(writtenManifest().storybookFiles).toEqual({
+    expect(writtenManifest().storybookFileHashes).toEqual({
       [PREVIEW]: expect.any(String),
       storybookVersion: '9.1.20',
       storybookConfig: expect.any(String),
@@ -254,7 +254,7 @@ describe('traceChangedFiles', () => {
         },
       },
     });
-    expect(writtenManifest().storyFiles).toEqual({ [STORY]: expect.any(String) });
+    expect(writtenManifest().storyFileHashes).toEqual({ [STORY]: expect.any(String) });
     expect(captureBailException).not.toHaveBeenCalled();
   });
 
@@ -292,7 +292,7 @@ describe('traceChangedFiles', () => {
       bailSubreason: 'invalidStoryFileHashes',
       bailPath: 'determineChangedFiles',
     });
-    expect(writtenManifest().storyFiles).toEqual({ [STORY]: expect.any(String) });
+    expect(writtenManifest().storyFileHashes).toEqual({ [STORY]: expect.any(String) });
   });
 
   it('bails with a fingerprinted Sentry event when we upload at the wrong build status', async () => {
@@ -436,7 +436,7 @@ describe('traceChangedFiles', () => {
     });
 
     expect(uploaded().storyFileHashes).toEqual({ [STORY]: expect.any(String) });
-    expect(writtenManifest().storybookFiles['staticFiles']).toBeUndefined();
+    expect(writtenManifest().storybookFileHashes['staticFiles']).toBeUndefined();
   });
 
   it('bails without uploading when the graph contains no node_modules files', async () => {
@@ -451,7 +451,7 @@ describe('traceChangedFiles', () => {
       },
     });
     expect(runQuery).not.toHaveBeenCalled();
-    expect(writtenManifest().storyFiles).toEqual({ [STORY]: expect.any(String) });
+    expect(writtenManifest().storyFileHashes).toEqual({ [STORY]: expect.any(String) });
   });
 
   it('reports the empty config directory rather than the missing dependencies when both hold', async () => {
@@ -482,7 +482,7 @@ describe('traceChangedFiles', () => {
       },
     });
     expect(runQuery).not.toHaveBeenCalled();
-    expect(writtenManifest().storyFiles).toEqual({});
+    expect(writtenManifest().storyFileHashes).toEqual({});
   });
 
   it('reports an unrecognized story entry to Sentry instead of calling the project storyless', async () => {

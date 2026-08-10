@@ -59,8 +59,8 @@ interface BuildUploadHashesResult {
  * no story needs recapturing. When it moves, the Index drills into `storyFileHashes` to attribute the
  * change to individual stories.
  *
- * `storybookFiles` is deliberately **not** sent: `BuildUploadHashesInput` has no field for it. Until
- * the Index adds one, a change confined to a `storybookFiles` entry — a static asset, `main.ts`, a
+ * `storybookFileHashes` is deliberately **not** sent: `BuildUploadHashesInput` has no field for it. Until
+ * the Index adds one, a change confined to a `storybookFileHashes` entry — a static asset, `main.ts`, a
  * `preview.*` edit, a Storybook upgrade — moves `storybookHash` while matching no story, so the Index
  * captures nothing where v1 bails. That gap is tracked as a P0 on the TurboSnap 2.0 Index Fixes page;
  * it is recorded there rather than worked around here, because the CLI cannot express it.

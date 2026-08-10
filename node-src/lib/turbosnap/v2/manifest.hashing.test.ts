@@ -133,8 +133,8 @@ describe('buildManifest relocation stability', () => {
 
     // The roll-up covers each file's path as well as its bytes, so the entry moves under its new
     // key...
-    expect(after.storybookFiles.get('./.storybook/preview.tsx')).not.toBe(
-      before.storybookFiles.get('./.storybook/preview.ts')
+    expect(after.storybookFileHashes.get('./.storybook/preview.tsx')).not.toBe(
+      before.storybookFileHashes.get('./.storybook/preview.ts')
     );
     // ...and the key is part of the gate too, so the rename is doubly visible.
     expect(after.storybookHash).not.toBe(before.storybookHash);
