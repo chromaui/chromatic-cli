@@ -14,106 +14,6 @@ import { posix } from './posix';
 import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
 
-export const resolvePackageJson = (pkg: string) => {
-  try {
-    const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
-    return readJson(packagePath);
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
-
-const findDependency = (
-  { dependencies, devDependencies, peerDependencies }: StorybookInfoDeps['packageJson'],
-  predicate: (key: string) => string
-) => [
-  Object.keys(dependencies || {}).find((dependency) => predicate(dependency)),
-  Object.keys(devDependencies || {}).find((dependency) => predicate(dependency)),
-  Object.keys(peerDependencies || {}).find((dependency) => predicate(dependency)),
-];
-
-const getDependencyInfo = (
-  { packageJson, log }: Pick<StorybookInfoDeps, 'packageJson' | 'log'>,
-  dependencyMap: Record<string, string>
-) => {
-  // eslint-disable-next-line unicorn/prevent-abbreviations
-  const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
-  const [pkg, version] = dep || devDep || peerDep || [];
-  const dependency = viewLayers[pkg];
-
-  if (dep && devDep && dep[0] === devDep[0]) {
-    log.warn(
-      `Found "${dep[0]}" in both "dependencies" and "devDependencies". This is probably a mistake.`
-    );
-  }
-  if (dep && peerDep && dep[0] === peerDep[0]) {
-    log.warn(
-      `Found "${dep[0]}" in both "dependencies" and "peerDependencies". This is probably a mistake.`
-    );
-  }
-  return { dependency, version, dependencyPackage: pkg };
-};
-
-const findStorybookVersion = async ({ env, log, options, packageJson }: StorybookInfoDeps) => {
-  // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
-  if (env.CHROMATIC_STORYBOOK_VERSION) {
-    const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
-    const version = semver.valid(v); // ensures we get a specific version, not a range
-    if (!p || !version) {
-      throw new Error(
-        'Invalid CHROMATIC_STORYBOOK_VERSION; expecting something like "@storybook/react@6.2.0".'
-      );
-    }
-    const viewLayer = viewLayers[p] || viewLayers[`@storybook/${p}`];
-    if (!viewLayer) {
-      throw new Error(`Unsupported viewlayer specified in CHROMATIC_STORYBOOK_VERSION: ${p}`);
-    }
-    return { version };
-  }
-
-  const {
-    dependency: viewLayer,
-    version,
-    dependencyPackage: pkg,
-  } = getDependencyInfo({ log, packageJson }, viewLayers);
-
-  if (viewLayer) {
-    if (options.storybookBuildDir) {
-      // If we aren't going to invoke the Storybook CLI later, we can exit early.
-      // Note that `version` can be a semver range in this case.
-      return { version };
-    }
-    // Verify that the viewlayer package is actually present in node_modules.
-    return Promise.race([
-      resolvePackageJson(pkg)
-        .then((json) => ({ version: json.version }))
-        .catch(() => {
-          throw new Error(packageDoesNotExist(pkg));
-        }),
-      timeout(10_000),
-    ]);
-  }
-
-  if (!options.interactive) {
-    log.info(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
-  }
-
-  // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
-  // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
-  // and return the first one we find.
-  return Promise.race([
-    raceFulfilled(
-      Object.entries(viewLayers).map(async ([key]) => {
-        const json = await resolvePackageJson(key);
-        return { version: json.version };
-      })
-    ).catch(() => {
-      throw new Error(packageDoesNotExist(pkg));
-    }),
-    timeout(10_000),
-  ]);
-};
-
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
  *
@@ -322,3 +222,105 @@ export const getStorybookMetadata = async (
   }
   return metadata;
 };
+
+function resolvePackageJson(pkg: string) {
+  try {
+    const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
+    return readJson(packagePath);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+function findDependency(
+  { dependencies, devDependencies, peerDependencies }: StorybookInfoDeps['packageJson'],
+  predicate: (key: string) => string
+) {
+  return [
+    Object.keys(dependencies || {}).find((dependency) => predicate(dependency)),
+    Object.keys(devDependencies || {}).find((dependency) => predicate(dependency)),
+    Object.keys(peerDependencies || {}).find((dependency) => predicate(dependency)),
+  ];
+}
+
+function getDependencyInfo(
+  { packageJson, log }: Pick<StorybookInfoDeps, 'packageJson' | 'log'>,
+  dependencyMap: Record<string, string>
+) {
+  // eslint-disable-next-line unicorn/prevent-abbreviations
+  const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
+  const [pkg, version] = dep || devDep || peerDep || [];
+  const dependency = viewLayers[pkg];
+
+  if (dep && devDep && dep[0] === devDep[0]) {
+    log.warn(
+      `Found "${dep[0]}" in both "dependencies" and "devDependencies". This is probably a mistake.`
+    );
+  }
+  if (dep && peerDep && dep[0] === peerDep[0]) {
+    log.warn(
+      `Found "${dep[0]}" in both "dependencies" and "peerDependencies". This is probably a mistake.`
+    );
+  }
+  return { dependency, version, dependencyPackage: pkg };
+}
+
+async function findStorybookVersion({ env, log, options, packageJson }: StorybookInfoDeps) {
+  // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
+  if (env.CHROMATIC_STORYBOOK_VERSION) {
+    const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
+    const version = semver.valid(v); // ensures we get a specific version, not a range
+    if (!p || !version) {
+      throw new Error(
+        'Invalid CHROMATIC_STORYBOOK_VERSION; expecting something like "@storybook/react@6.2.0".'
+      );
+    }
+    const viewLayer = viewLayers[p] || viewLayers[`@storybook/${p}`];
+    if (!viewLayer) {
+      throw new Error(`Unsupported viewlayer specified in CHROMATIC_STORYBOOK_VERSION: ${p}`);
+    }
+    return { version };
+  }
+
+  const {
+    dependency: viewLayer,
+    version,
+    dependencyPackage: pkg,
+  } = getDependencyInfo({ log, packageJson }, viewLayers);
+
+  if (viewLayer) {
+    if (options.storybookBuildDir) {
+      // If we aren't going to invoke the Storybook CLI later, we can exit early.
+      // Note that `version` can be a semver range in this case.
+      return { version };
+    }
+    // Verify that the viewlayer package is actually present in node_modules.
+    return Promise.race([
+      resolvePackageJson(pkg)
+        .then((json) => ({ version: json.version }))
+        .catch(() => {
+          throw new Error(packageDoesNotExist(pkg));
+        }),
+      timeout(10_000),
+    ]);
+  }
+
+  if (!options.interactive) {
+    log.info(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
+  }
+
+  // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
+  // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
+  // and return the first one we find.
+  return Promise.race([
+    raceFulfilled(
+      Object.entries(viewLayers).map(async ([key]) => {
+        const json = await resolvePackageJson(key);
+        return { version: json.version };
+      })
+    ).catch(() => {
+      throw new Error(packageDoesNotExist(pkg));
+    }),
+    timeout(10_000),
+  ]);
+}
