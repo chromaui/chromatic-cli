@@ -98,6 +98,14 @@
     "lodash": "4.17.21",
     "@types/minimatch": "5.1.2"
   },
+  "dependenciesMeta": {
+    "@sentry/cli": {
+      "built": true
+    },
+    "esbuild": {
+      "built": true
+    }
+  },
   "dependencies": {
     "semver": "^7.3.5"
   },
@@ -280,7 +288,7 @@
     ]
   },
   "docs": "https://www.chromatic.com/docs/cli",
-  "packageManager": "yarn@4.2.2",
+  "packageManager": "yarn@4.18.0",
   "storybook": {
     "icon": "https://user-images.githubusercontent.com/263385/101995175-2e087800-3c96-11eb-9a33-9860a1c3ce62.gif",
     "displayName": "Chromatic"

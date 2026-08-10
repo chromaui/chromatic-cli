@@ -14,8 +14,9 @@ jobs:
     name: Build and pack the CLI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.22.3"
           cache: yarn
@@ -128,10 +129,11 @@ jobs:
               yarn install
               yarn chromatic --build-script-name build-storybook --exit-zero-on-changes --force-rebuild
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v3
+      - run: corepack enable
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
       - name: Download the packed CLI
