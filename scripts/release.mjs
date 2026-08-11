@@ -21,7 +21,7 @@ async function main() {
   } else {
     console.info(`📌 Temporarily bumping version to '${nextVersion}' for canary release`);
     await $`npm --no-git-tag-version version ${nextVersion}`;
-    publishAction('canary');
+    await publishAction('canary');
     console.info('🧹 Resetting changes');
     await $`git reset --hard`;
   }
