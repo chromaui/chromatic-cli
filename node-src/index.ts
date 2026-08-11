@@ -40,11 +40,13 @@ import { renderBuild } from './renderer/build';
 import { renderGitInfo } from './renderer/gitInfo';
 import { renderInitialize } from './renderer/initialize';
 import { renderPrepare } from './renderer/prepare';
+import { renderPrepareWorkspace } from './renderer/prepareWorkspace';
 import { renderSnapshot } from './renderer/snapshot';
 import { renderStorybookInfo } from './renderer/storybookInfo';
 import { renderUpload } from './renderer/upload';
 import { renderVerify } from './renderer/verify';
 import getTasks from './tasks';
+import { runRestoreWorkspace } from './tasks/restoreWorkspace';
 import { Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
@@ -350,6 +352,10 @@ async function runBuild(ctx: Context) {
         // Queue up any non-Listr log messages while Listr is running
         ctx.log.queue();
       }
+      // Check out the merge base before the rest of the pipeline runs against it.
+      if (ctx.options.patchHeadRef && ctx.options.patchBaseRef) {
+        await renderPrepareWorkspace(ctx);
+      }
       await renderAuth(ctx);
       await renderGitInfo(ctx);
       await renderStorybookInfo(ctx);
@@ -382,6 +388,22 @@ async function runBuild(ctx: Context) {
       }
       throw rewriteErrorMessage(err, taskError(ctx, err));
     } finally {
+      if (ctx.mergeBase) {
+        try {
+          // Always restore the original branch, even if the pipeline above failed partway
+          // through or set ctx.skip — called directly rather than through the render pipeline so
+          // it can't itself be short-circuited by ctx.skip.
+          await runRestoreWorkspace(ctx);
+        } catch (restoreError) {
+          // Never let a restore failure mask the original pipeline error, but the user does need
+          // to know their workspace may still be checked out on the merge base commit.
+          Sentry.captureException(restoreError);
+          ctx.log.error(
+            `Failed to restore your workspace to its original branch: ${restoreError.message}`
+          );
+        }
+      }
+
       // Handle potential runtime errors from JSDOM
       const { runtimeErrors, runtimeWarnings } = ctx;
       if (

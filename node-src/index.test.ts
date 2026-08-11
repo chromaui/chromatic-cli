@@ -323,15 +323,31 @@ vi.mock('./git/git', () => ({
   getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),
   getNumberOfComitters: () => Promise.resolve(17),
   getCommittedFileCount: () => Promise.resolve(100),
+  isClean: vi.fn(),
+  isUpToDate: vi.fn(),
+  getUpdateMessage: vi.fn(),
+  findMergeBase: vi.fn(),
+  checkout: vi.fn(),
+  checkoutPrevious: vi.fn(),
+  discardChanges: vi.fn(),
 }));
 
 vi.mock('./git/getParentCommits', () => ({
   getParentCommits: () => Promise.resolve(['baseline']),
 }));
 
+vi.mock('./lib/installDependencies', () => ({
+  default: vi.fn(() => Promise.resolve('')),
+}));
+
 const getCommit = vi.mocked(git.getCommit);
 const getBranch = vi.mocked(git.getBranch);
 const getSlug = vi.mocked(git.getSlug);
+const isClean = vi.mocked(git.isClean);
+const isUpToDate = vi.mocked(git.isUpToDate);
+const findMergeBase = vi.mocked(git.findMergeBase);
+const checkout = vi.mocked(git.checkout);
+const checkoutPrevious = vi.mocked(git.checkoutPrevious);
 const expectSkipNoProjectToken = (ctx: ReturnType<typeof getContext>) => {
   expect(ctx.exitCode).toBe(0);
   expect(ctx.testLogger.warnings[0]).toMatch(
@@ -382,6 +398,11 @@ beforeEach(() => {
   });
   getBranch.mockResolvedValue('branch');
   getSlug.mockResolvedValue('user/repo');
+  isClean.mockResolvedValue(true);
+  isUpToDate.mockResolvedValue(true);
+  findMergeBase.mockResolvedValue('mergebasesha');
+  checkout.mockResolvedValue('');
+  checkoutPrevious.mockResolvedValue('');
 });
 afterEach(() => {
   process.env = processEnvironment;
@@ -487,6 +508,41 @@ it('runs in simple situations', async () => {
     committerEmail: 'test@test.com',
     committerName: 'tester',
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
+  });
+});
+
+describe('with patch builds', () => {
+  it('checks out the merge base before gathering git info', async () => {
+    const callOrder: string[] = [];
+    checkout.mockImplementation(async () => {
+      callOrder.push('checkout');
+      return '';
+    });
+    getCommit.mockImplementation(async () => {
+      callOrder.push('getCommit');
+      return {
+        commit: 'commit',
+        committedAt: 1234,
+        committerEmail: 'test@test.com',
+        committerName: 'tester',
+      };
+    });
+
+    const ctx = getContext(['--project-token=asdf1234', '--patch-build=feature...main']);
+    await runAll(ctx);
+
+    expect(checkout).toHaveBeenCalledWith(expect.anything(), 'mergebasesha');
+    expect(callOrder.indexOf('checkout')).toBeLessThan(callOrder.indexOf('getCommit'));
+  });
+
+  it('restores the original branch even when a later step fails', async () => {
+    getCommit.mockRejectedValue(new Error('boom'));
+
+    const ctx = getContext(['--project-token=asdf1234', '--patch-build=feature...main']);
+    await runAll(ctx);
+
+    expect(checkout).toHaveBeenCalledWith(expect.anything(), 'mergebasesha');
+    expect(checkoutPrevious).toHaveBeenCalled();
   });
 });
 
