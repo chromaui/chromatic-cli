@@ -266,7 +266,12 @@
       "force": true
     },
     "plugins": [
-      "npm",
+      [
+        "npm",
+        {
+          "setRcToken": false
+        }
+      ],
       "released",
       [
         "slack",
