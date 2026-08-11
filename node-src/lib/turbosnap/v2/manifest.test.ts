@@ -63,8 +63,8 @@ describe('serializeManifest', () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
     const serialized = serializeManifest(manifest);
 
-    expect(serialized.storybookFileHashes['./.storybook/preview.ts']).toBe(
-      manifest.storybookFileHashes.get('./.storybook/preview.ts')
+    expect(serialized.storybookFileHashes['preview']).toBe(
+      manifest.storybookFileHashes.get('preview')
     );
     // eslint-disable-next-line unicorn/prefer-structured-clone
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
@@ -176,8 +176,6 @@ describe('writeManifest', () => {
 
     const payload = readFileSync(path.join(outputDirectory, 'turbosnap-manifest.json'), 'utf8');
 
-    expect(JSON.parse(payload).storybookFileHashes['./.storybook/preview.ts']).toEqual(
-      expect.any(String)
-    );
+    expect(JSON.parse(payload).storybookFileHashes['preview']).toEqual(expect.any(String));
   });
 });

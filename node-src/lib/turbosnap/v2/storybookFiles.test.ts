@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { FileHash, FilePath, TurboSnapFile } from './graph';
-import { STORYBOOK_GLOBALS_KEY } from './storybookFileKeys';
+import { PREVIEW_KEY, STORYBOOK_GLOBALS_KEY } from './storybookFileKeys';
 import { collectStorybookFiles } from './storybookFiles';
 
 // The config dir most tests don't care about; only the configDir-specific tests below vary it.
@@ -27,7 +27,7 @@ function makeHashes(filePaths: FilePath[]): Map<FilePath, FileHash> {
 }
 
 describe('collectStorybookFiles', () => {
-  it('keys an entry by each preview config path', () => {
+  it('keys the preview entry by a bare name, not by the config path', () => {
     const files = makeFiles({ './.storybook/preview.ts': [], './src/a.stories.tsx': [] });
     const hashes = makeHashes(['./.storybook/preview.ts', './src/a.stories.tsx']);
 
@@ -39,7 +39,9 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFileHashes.keys()]).toContain('./.storybook/preview.ts');
+    expect([...storybookFileHashes.keys()]).toEqual([PREVIEW_KEY]);
+    // The path is still inside the roll-up, so a preview rename moves the value.
+    expect(storybookFileHashes.get(PREVIEW_KEY)).toContain('./.storybook/preview.ts');
   });
 
   it('matches every preview config extension Storybook accepts', () => {
@@ -51,7 +53,7 @@ describe('collectStorybookFiles', () => {
       './.storybook/preview.mjs',
       './.storybook/preview.cjs',
     ];
-    const { storybookFileHashes } = collectStorybookFiles(
+    const { storybookFileHashes, attribution } = collectStorybookFiles(
       makeFiles(Object.fromEntries(previews.map((p) => [p, []]))),
       makeHashes(previews),
       new Set(),
@@ -59,7 +61,8 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFileHashes.keys()].sort()).toEqual([...previews].sort());
+    expect([...storybookFileHashes.keys()]).toEqual([PREVIEW_KEY]);
+    expect([...attribution.previewSubtree].sort()).toEqual([...previews].sort());
   });
 
   it('does not treat a file merely named preview outside the config dir as a config', () => {
@@ -77,7 +80,7 @@ describe('collectStorybookFiles', () => {
     expect([...attribution.storybookGlobals]).toEqual(['./src/preview.ts']);
   });
 
-  it('keys the preview entry by a non-default config dir', () => {
+  it('finds the preview under a non-default config dir', () => {
     // A project with `-c src` has no `.storybook` at all; the preview lives at `./src/preview.ts` and
     // must be found there, not missed for not being literally named `.storybook`.
     const files = makeFiles({ './src/preview.ts': [] });
@@ -90,7 +93,7 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect([...storybookFileHashes.keys()]).toEqual(['./src/preview.ts']);
+    expect([...storybookFileHashes.keys()]).toEqual([PREVIEW_KEY]);
     expect([...attribution.previewSubtree]).toEqual(['./src/preview.ts']);
   });
 
@@ -120,9 +123,9 @@ describe('collectStorybookFiles', () => {
     expect(attribution.storyReachable.has(shared)).toBe(true);
   });
 
-  it('keeps two preview subtrees out of each other rolled-up hashes', () => {
-    // Each subtree is collected on its own; sharing one accumulator would fold the first preview's
-    // files into the second's entry, so a change to one would move the other's hash.
+  it('rolls two preview subtrees into the one preview entry', () => {
+    // Several config dirs can match in a monorepo. They share the one key, which costs no precision:
+    // the backend recaptures everything when any storybookFileHashes entry moves either way.
     const files = makeFiles({
       './.storybook/preview.ts': ['./.storybook/themeA.ts'],
       './.storybook/themeA.ts': [],
@@ -139,10 +142,9 @@ describe('collectStorybookFiles', () => {
       identity
     );
 
-    expect(storybookFileHashes.get('./packages/other/.storybook/preview.ts')).not.toContain(
-      'themeA'
-    );
-    expect(storybookFileHashes.get('./.storybook/preview.ts')).not.toContain('themeB');
+    expect([...storybookFileHashes.keys()]).toEqual([PREVIEW_KEY]);
+    expect(storybookFileHashes.get(PREVIEW_KEY)).toContain('themeA');
+    expect(storybookFileHashes.get(PREVIEW_KEY)).toContain('themeB');
   });
 
   it('rolls files reached by no story and no preview into the catch-all', () => {

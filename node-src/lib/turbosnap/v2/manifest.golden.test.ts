@@ -78,7 +78,7 @@ const GOLDEN_DIRECTORY_TREE = {
 };
 
 // The published values. See the header before touching these.
-const GOLDEN_STORYBOOK_HASH = '0fcb504ca8999c5e';
+const GOLDEN_STORYBOOK_HASH = '71b01b3c93183018';
 
 const GOLDEN_STORY_FILES: Record<string, string> = {
   './src/Button.stories.tsx': 'cb54ddff8d709d58',
@@ -86,7 +86,7 @@ const GOLDEN_STORY_FILES: Record<string, string> = {
 };
 
 const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
-  './.storybook/preview.ts': '50834b9899fad324',
+  preview: '50834b9899fad324',
   storybookGlobals: '872cd67e6a14077f',
   storybookVersion: '9.1.20',
   storybookConfig: '15c4a036658aed13',

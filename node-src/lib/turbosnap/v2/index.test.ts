@@ -226,7 +226,7 @@ describe('traceChangedFiles', () => {
     });
     // The three out-of-graph sections the Index gates on, plus the graph-rolled preview entry.
     expect(writtenManifest().storybookFileHashes).toEqual({
-      [PREVIEW]: expect.any(String),
+      preview: expect.any(String),
       storybookVersion: '9.1.20',
       storybookConfig: expect.any(String),
       staticFiles: expect.any(String),

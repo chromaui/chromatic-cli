@@ -8,6 +8,13 @@
 export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
 
 /**
+ * Every `<configDir>/preview.*` subtree, rolled up; see {@link collectStorybookFiles}. One key rather
+ * than one per preview file: the backend only asks whether an entry moved, and a preview file's own
+ * path reaches its roll-up, so a rename is still visible in the value.
+ */
+export const PREVIEW_KEY = 'preview';
+
+/**
  * The installed Storybook version. Unlike every other entry this is a version string rather than a
  * hash, because the preview core runtime is served outside the module graph on webpack and rspack;
  * see {@link resolveStorybookVersion}.

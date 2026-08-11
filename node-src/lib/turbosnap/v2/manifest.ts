@@ -36,7 +36,7 @@ export interface TurboSnapManifest {
   /** Generated entries above a lazy context that are absent from the explicit entry catalogue. */
   unrecognizedStoryEntries: FilePath[];
   /**
-   * One entry per `.storybook/preview.*` holding its rolled-up hash, plus the
+   * The {@link PREVIEW_KEY} roll-up of the `.storybook/preview.*` subtrees, plus the
    * {@link STORYBOOK_GLOBALS_KEY} catch-all, the {@link STORYBOOK_VERSION_KEY} version string and the
    * `storybookConfig` / `staticFiles` out-of-graph roll-ups (see {@link rollUpOutOfGraphFiles}). A
    * change to any entry means recapture everything, so the small map is enough for the backend to
@@ -186,7 +186,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
     storybookFileHashes,
     // The per-file detail behind the out-of-graph roll-ups. Kept out of `files` and `attribution`,
     // which describe the bundle graph: the globals catch-all is defined by *absence* from
-    // storyReachable/previewSubtree (storybookFiles.ts:76-79), which these files satisfy by
+    // storyReachable/previewSubtree (see {@link collectStorybookFiles}), which these files satisfy by
     // construction, so putting them in `files` would double-hash them into the catch-all.
     storybookConfigFiles: Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles),
     staticFiles: Object.fromEntries(manifest.outOfGraphFiles.staticFiles),

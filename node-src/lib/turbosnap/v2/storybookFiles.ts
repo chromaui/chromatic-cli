@@ -5,7 +5,7 @@ import {
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
-import { STORYBOOK_GLOBALS_KEY } from './storybookFileKeys';
+import { PREVIEW_KEY, STORYBOOK_GLOBALS_KEY } from './storybookFileKeys';
 
 // Matches `<configDir>/preview.*` on a canonical manifest path. Path matching is the only consistent
 // way to find the preview config: the config-entry import edge is spelled three incompatible ways
@@ -28,16 +28,16 @@ function previewConfigPattern(configDirectory: string): RegExp {
 export interface FileAttribution {
   /** Files in some story's transitive subtree, hashed into that story's `storyFileHashes` entry. */
   storyReachable: Set<FilePath>;
-  /** Files in a `.storybook/preview.*` subtree, hashed into that preview's `storybookFileHashes` entry. */
+  /** Files in a `.storybook/preview.*` subtree, hashed into the {@link PREVIEW_KEY} entry. */
   previewSubtree: Set<FilePath>;
   /** Files in neither of the above, rolled into the {@link STORYBOOK_GLOBALS_KEY} catch-all. */
   storybookGlobals: Set<FilePath>;
 }
 
 /**
- * Builds the file-hash entries of the `storybookFileHashes` section: a rolled-up hash for each Storybook
- * config file that no story imports. Every hashable file lands in exactly one hashing home — a
- * story's own subtree, a keyed `.storybook/preview.*` entry, or the {@link STORYBOOK_GLOBALS_KEY}
+ * Builds the file-hash entries of the `storybookFileHashes` section: a rolled-up hash for the Storybook
+ * config files that no story imports. Every hashable file lands in exactly one hashing home — a
+ * story's own subtree, the {@link PREVIEW_KEY} entry, or the {@link STORYBOOK_GLOBALS_KEY}
  * catch-all — so nothing goes unhashed and the backend can still attribute a change to the preview
  * config or to a Storybook/framework global.
  *
@@ -48,7 +48,7 @@ export interface FileAttribution {
  * `.storybook`).
  * @param h64ToString The hash function.
  *
- * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
+ * @returns The rolled-up Storybook config hashes, and the {@link FileAttribution} recording
  * which of the three hashing homes each real file landed in.
  */
 export function collectStorybookFiles(
@@ -67,15 +67,14 @@ export function collectStorybookFiles(
   const previewConfig = previewConfigPattern(configDirectory);
   const storybookFileHashes = new Map<FilePath, FileHash>();
   const previewSubtree = new Set<FilePath>();
+  // Every preview subtree shares one accumulator and one entry. A monorepo can match more than one
+  // config dir, and folding them together costs nothing: any entry moving means recapture everything.
   for (const filePath of files.keys()) {
     if (!hashes.has(filePath) || !previewConfig.test(filePath)) continue;
-    // Collect each subtree on its own, then union: sharing one accumulator would leak one preview's
-    // files into another's rolled-up hash.
-    const subtree = collectTransitiveDependencies(files, filePath);
-    storybookFileHashes.set(filePath, rollUpFileHashes(hashes, subtree, h64ToString));
-    for (const dependency of subtree) {
-      previewSubtree.add(dependency);
-    }
+    collectTransitiveDependencies(files, filePath, previewSubtree);
+  }
+  if (previewSubtree.size > 0) {
+    storybookFileHashes.set(PREVIEW_KEY, rollUpFileHashes(hashes, previewSubtree, h64ToString));
   }
 
   // Everything else real goes in one catch-all bucket. Membership is defined by *absence* from the

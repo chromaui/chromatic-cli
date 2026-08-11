@@ -27,7 +27,7 @@ describe('buildManifest storybookFileHashes', () => {
   const entryPreview = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
   const reactDom = '/repo/packages/ui/node_modules/react-dom/index.js';
 
-  const previewKey = './.storybook/preview.ts';
+  const previewKey = 'preview';
   const globalsKey = 'storybookGlobals';
 
   function makeStats(): Stats {
@@ -54,12 +54,13 @@ describe('buildManifest storybookFileHashes', () => {
     [reactDom]: 'RD',
   };
 
-  it('keys an entry by the canonical preview config path', async () => {
+  it('keys the preview roll-up by a bare `preview`, not by the config path', async () => {
     disk.current.fileHashes = { ...baseHashes };
 
     const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
     expect([...manifest.storybookFileHashes.keys()]).toContain(previewKey);
+    expect([...manifest.storybookFileHashes.keys()]).not.toContain('./.storybook/preview.ts');
   });
 
   it('rolls orphan globals into a single catch-all entry', async () => {
