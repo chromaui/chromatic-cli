@@ -164,6 +164,20 @@ describe('readStorybookDirectories', () => {
     });
   });
 
+  it("merges the build script's -s with main.*'s staticDirs, resolved against the config dir even if it's outside the project directory", async () => {
+    readJsonMock.mockResolvedValue({
+      scripts: { 'build-storybook': 'storybook build -s public' },
+    });
+    mockMainConfig(['./assets', { from: '../../../shared', to: '/shared' }]);
+
+    const directories = await readStorybookDirectories({ projectRoot: '/project', log });
+
+    expect(directories).toEqual({
+      configDir: '.storybook',
+      staticDirs: ['public', '.storybook/assets', '../shared'],
+    });
+  });
+
   it('rewrites absolute directories as project-relative ones', async () => {
     readJsonMock.mockResolvedValue({
       scripts: { 'build-storybook': 'storybook build -c /project/config/storybook' },
