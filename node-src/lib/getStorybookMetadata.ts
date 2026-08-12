@@ -66,7 +66,7 @@ export interface MainConfigReader {
  *
  * @returns The builder name and package version, or an unknown builder without a config.
  */
-export async function findBuilder(mainConfig?: MainConfigReader) {
+async function findBuilder(mainConfig?: MainConfigReader) {
   if (!mainConfig) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
   }
