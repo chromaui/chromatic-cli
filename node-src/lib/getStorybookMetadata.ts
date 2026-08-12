@@ -148,7 +148,7 @@ export function findStaticDirectories(
 
 // The main config files we parse into an AST when `require()` of the config fails. Widening this
 // widens what lands on `ctx.storybook`.
-const MAIN_CONFIG_PATTERN = /^main\.[cm]?[jt]sx?$/;
+export const MAIN_CONFIG_PATTERN = /^main\.[cm]?[jt]sx?$/;
 
 /**
  * Finds the first file in the Storybook config directory that matches the given pattern.
