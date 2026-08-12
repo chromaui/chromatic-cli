@@ -318,7 +318,7 @@ export async function getParentCommits(
         extraParentCommits.push(lastHeadBuildCommit);
       }
       // The commit at the same position in mergeInfoList is the merge point
-      const mergePoint = mergeInfoList?.[index]?.commit;
+      const mergePoint = mergeInfoList[index]?.commit;
       if (mergePoint) mergePointCommits.add(mergePoint);
     }
   }

@@ -41,7 +41,6 @@ const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { readFile } = vi.mocked(await import('fs/promises'));
 
 const ctx = { log: new TestLogger() };
