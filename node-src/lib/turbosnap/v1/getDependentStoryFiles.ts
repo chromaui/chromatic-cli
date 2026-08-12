@@ -98,12 +98,7 @@ export async function getDependentStoryFiles(
     configDir: configDirectory = '.storybook',
     staticDir: staticDirectory = [],
   } = ctx.storybook || {};
-  const {
-    storybookBuildDir,
-    // eslint-disable-next-line unicorn/prevent-abbreviations
-    storybookConfigDir = configDirectory,
-    untraced = [],
-  } = ctx.options;
+  const { storybookBuildDir, untraced = [] } = ctx.options;
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
@@ -117,7 +112,7 @@ export async function getDependentStoryFiles(
       : newPath;
   };
 
-  const storybookDirectory = normalize(posix(storybookConfigDir));
+  const storybookDirectory = normalize(posix(configDirectory));
   const staticDirectories = staticDirectory.map((directory: string) => normalize(posix(directory)));
 
   ctx.log.debug('BASE Directory:', baseDirectory);
@@ -127,7 +122,7 @@ export async function getDependentStoryFiles(
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
   const storiesEntryFiles = [
     // v6 store (SB <= 6.3)
-    `${storybookConfigDir}/generated-stories-entry.js`,
+    `${configDirectory}/generated-stories-entry.js`,
     // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
     `./generated-stories-entry.js`,
     // v6 store with .cjs extension (SB 6.5)

@@ -643,6 +643,34 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('bails using the resolved config dir, not the cwd-relative option', async () => {
+    const changedFiles = ['packages/ui/.storybook-ci/file.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook-ci/generated-stories-entry.js' }],
+      },
+    ];
+    // The user runs the CLI at the repo root, so the option they typed and the directory the
+    // builder's paths are relative to are written differently.
+    const ctx = getContext({
+      configDir: '.storybook-ci',
+      storybookBaseDir: 'packages/ui',
+      storybookConfigDir: 'packages/ui/.storybook-ci',
+    });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result.status).toBe('bailed');
+    expect(result.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['packages/ui/.storybook-ci/file.js'],
+    });
+  });
+
   it('does not bail on changed external Storybook config file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/other-storybook/.storybook/file.js'];
     const modules = [
