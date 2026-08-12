@@ -78,18 +78,18 @@ const GOLDEN_DIRECTORY_TREE = {
 };
 
 // The published values. See the header before touching these.
-const GOLDEN_STORYBOOK_HASH = '71b01b3c93183018';
+const GOLDEN_STORYBOOK_HASH = '2de5dc773643ac1c';
 
 const GOLDEN_STORY_FILES: Record<string, string> = {
   './src/Button.stories.tsx': 'cb54ddff8d709d58',
   './src/Header.stories.tsx': 'b91201ce599d85d4',
 };
 
-const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
+const GOLDEN_STORYBOOK_CONFIG_HASHES: Record<string, string> = {
   preview: '50834b9899fad324',
   storybookGlobals: '872cd67e6a14077f',
   storybookVersion: '9.1.20',
-  storybookConfig: '15c4a036658aed13',
+  storybookConfigFiles: '15c4a036658aed13',
   staticFiles: '2ccde8021fdfb2d8',
 };
 
@@ -115,9 +115,11 @@ describe('manifest golden hashes', () => {
     expect(Object.fromEntries(manifest.storyFileHashes)).toEqual(GOLDEN_STORY_FILES);
   });
 
-  it('publishes the same storybookFileHashes hashes for the frozen fixture', async () => {
+  it('publishes the same storybookConfigHashes hashes for the frozen fixture', async () => {
     const manifest = await buildManifest(GOLDEN_STATS, projectRoot, outOfGraph);
 
-    expect(Object.fromEntries(manifest.storybookFileHashes)).toEqual(GOLDEN_STORYBOOK_FILES);
+    expect(Object.fromEntries(manifest.storybookConfigHashes)).toEqual(
+      GOLDEN_STORYBOOK_CONFIG_HASHES
+    );
   });
 });

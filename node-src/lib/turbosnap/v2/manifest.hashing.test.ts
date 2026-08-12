@@ -133,8 +133,8 @@ describe('buildManifest relocation stability', () => {
 
     // The preview entry has a fixed key, but the roll-up behind it covers each file's path as well as
     // its bytes, so the rename still moves the value...
-    expect(after.storybookFileHashes.get('preview')).not.toBe(
-      before.storybookFileHashes.get('preview')
+    expect(after.storybookConfigHashes.get('preview')).not.toBe(
+      before.storybookConfigHashes.get('preview')
     );
     // ...and the values are part of the gate, so the rename reaches it.
     expect(after.storybookHash).not.toBe(before.storybookHash);

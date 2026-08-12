@@ -12,7 +12,7 @@ import { buildManifest, serializeManifest } from './manifest';
 
 beforeEach(resetDisk);
 
-describe('buildManifest storybookFileHashes', () => {
+describe('buildManifest storybookConfigHashes', () => {
   // Two stories imported straight from the stories entry (Vite style). Button also imports moment,
   // a per-story dependency. The config entry imports `.storybook/preview.ts`, which imports a
   // helper — preview and its helper form the preview subtree that no story reaches.
@@ -59,8 +59,8 @@ describe('buildManifest storybookFileHashes', () => {
 
     const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect([...manifest.storybookFileHashes.keys()]).toContain(previewKey);
-    expect([...manifest.storybookFileHashes.keys()]).not.toContain('./.storybook/preview.ts');
+    expect([...manifest.storybookConfigHashes.keys()]).toContain(previewKey);
+    expect([...manifest.storybookConfigHashes.keys()]).not.toContain('./.storybook/preview.ts');
   });
 
   it('rolls orphan globals into a single catch-all entry', async () => {
@@ -68,7 +68,7 @@ describe('buildManifest storybookFileHashes', () => {
 
     const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect([...manifest.storybookFileHashes.keys()]).toContain(globalsKey);
+    expect([...manifest.storybookConfigHashes.keys()]).toContain(globalsKey);
   });
 
   it('changes the catch-all entry when an orphan global content changes', async () => {
@@ -79,8 +79,8 @@ describe('buildManifest storybookFileHashes', () => {
     disk.current.fileHashes = { ...baseHashes, [reactDom]: 'RD2' };
     const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect(after.storybookFileHashes.get(globalsKey)).not.toBe(
-      before.storybookFileHashes.get(globalsKey)
+    expect(after.storybookConfigHashes.get(globalsKey)).not.toBe(
+      before.storybookConfigHashes.get(globalsKey)
     );
   });
 
@@ -93,7 +93,7 @@ describe('buildManifest storybookFileHashes', () => {
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
     // Pure per-story hashes: a config change must not perturb any individual story's hash. The
-    // backend notices it via storybookHash and drills into storybookFileHashes instead.
+    // backend notices it via storybookHash and drills into storybookConfigHashes instead.
     expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
   });
 
@@ -122,8 +122,8 @@ describe('buildManifest storybookFileHashes', () => {
     expect(after.storyFileHashes.get('./src/Header.stories.tsx')).toBe(
       before.storyFileHashes.get('./src/Header.stories.tsx')
     );
-    expect(after.storybookFileHashes.get(globalsKey)).toBe(
-      before.storybookFileHashes.get(globalsKey)
+    expect(after.storybookConfigHashes.get(globalsKey)).toBe(
+      before.storybookConfigHashes.get(globalsKey)
     );
   });
 
@@ -136,11 +136,11 @@ describe('buildManifest storybookFileHashes', () => {
     disk.current.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
     const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect(after.storybookFileHashes.get(previewKey)).not.toBe(
-      before.storybookFileHashes.get(previewKey)
+    expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
+      before.storybookConfigHashes.get(previewKey)
     );
-    expect(after.storybookFileHashes.get(globalsKey)).toBe(
-      before.storybookFileHashes.get(globalsKey)
+    expect(after.storybookConfigHashes.get(globalsKey)).toBe(
+      before.storybookConfigHashes.get(globalsKey)
     );
   });
 
@@ -157,7 +157,7 @@ describe('buildManifest storybookFileHashes', () => {
       outOfGraph
     );
 
-    expect([...manifest.storybookFileHashes.keys()]).not.toContain(previewKey);
+    expect([...manifest.storybookConfigHashes.keys()]).not.toContain(previewKey);
   });
 
   it('omits the catch-all entry when every global is synthetic', async () => {
@@ -178,7 +178,7 @@ describe('buildManifest storybookFileHashes', () => {
         );
 
         // The version entry is unconditional, so it is the only key left once the catch-all is gone.
-        expect([...manifest.storybookFileHashes.keys()]).toEqual(['storybookVersion']);
+        expect([...manifest.storybookConfigHashes.keys()]).toEqual(['storybookVersion']);
       }
     );
   });
@@ -192,7 +192,7 @@ describe('buildManifest storybookFileHashes', () => {
 
     const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect(manifest.storybookFileHashes.get('storybookVersion')).toBe('10.6.0-alpha.3');
+    expect(manifest.storybookConfigHashes.get('storybookVersion')).toBe('10.6.0-alpha.3');
   });
 
   it('changes the storybookHash when only the Storybook version changes', async () => {
@@ -211,13 +211,13 @@ describe('buildManifest storybookFileHashes', () => {
     expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
   });
 
-  it('produces identical storybookFileHashes and storybook hash when building the same stats twice', async () => {
+  it('produces identical storybookConfigHashes and storybook hash when building the same stats twice', async () => {
     disk.current.fileHashes = { ...baseHashes };
     const first = await buildManifest(makeStats(), projectRoot, outOfGraph);
     disk.current.fileHashes = { ...baseHashes };
     const second = await buildManifest(makeStats(), projectRoot, outOfGraph);
 
-    expect([...second.storybookFileHashes]).toEqual([...first.storybookFileHashes]);
+    expect([...second.storybookConfigHashes]).toEqual([...first.storybookConfigHashes]);
     expect(second.storybookHash).toBe(first.storybookHash);
   });
 });
@@ -242,8 +242,8 @@ describe('buildManifest out-of-graph inputs', () => {
   it('emits a synthetic entry per out-of-graph section', async () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
 
-    expect([...manifest.storybookFileHashes.keys()]).toContain('storybookConfig');
-    expect([...manifest.storybookFileHashes.keys()]).toContain('staticFiles');
+    expect([...manifest.storybookConfigHashes.keys()]).toContain('storybookConfigFiles');
+    expect([...manifest.storybookConfigHashes.keys()]).toContain('staticFiles');
   });
 
   it('moves the storybook hash when main.ts changes, leaving story hashes untouched', async () => {
@@ -332,7 +332,7 @@ describe('buildManifest out-of-graph inputs', () => {
     const preview = '/repo/packages/ui/.storybook/preview.ts';
     disk.current.fileHashes = { [story]: 'S', [mainConfig]: 'M', [preview]: 'P1' };
     const before = await buildManifest(stats, projectRoot, outOfGraph);
-    expect(before.storybookFileHashes.has('./.storybook/preview.ts')).toBe(false);
+    expect(before.storybookConfigHashes.has('./.storybook/preview.ts')).toBe(false);
 
     disk.current.fileHashes = { ...disk.current.fileHashes, [preview]: 'P2' };
     const after = await buildManifest(stats, projectRoot, outOfGraph);

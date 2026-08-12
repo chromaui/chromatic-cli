@@ -1,5 +1,5 @@
 /**
- * The synthetic keys in the manifest's `storybookFileHashes` map. They share one namespace and one
+ * The synthetic keys in the manifest's `storybookConfigHashes` map. They share one namespace and one
  * invariant, so they are declared together: a canonical relative path always starts with `./` or
  * `../`, so none of these bare names can collide with a real file.
  */
@@ -30,7 +30,7 @@ export const STORYBOOK_VERSION_KEY = 'storybookVersion';
  * are in the graph, which covers a dependency change more precisely. Hashing manifest bytes on top
  * would recapture everything on lockfile churn that v1 correctly captures nothing for.
  */
-export const STORYBOOK_CONFIG_KEY = 'storybookConfig';
+export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 
 /** The static directories; see {@link STORYBOOK_CONFIG_KEY}. */
 export const STATIC_FILES_KEY = 'staticFiles';

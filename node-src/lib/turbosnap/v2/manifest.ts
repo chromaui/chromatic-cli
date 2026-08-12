@@ -38,12 +38,12 @@ export interface TurboSnapManifest {
   /**
    * The {@link PREVIEW_KEY} roll-up of the `.storybook/preview.*` subtrees, plus the
    * {@link STORYBOOK_GLOBALS_KEY} catch-all, the {@link STORYBOOK_VERSION_KEY} version string and the
-   * `storybookConfig` / `staticFiles` out-of-graph roll-ups (see {@link rollUpOutOfGraphFiles}). A
+   * `storybookConfigFiles` / `staticFiles` out-of-graph roll-ups (see {@link rollUpOutOfGraphFiles}). A
    * change to any entry means recapture everything, so the small map is enough for the backend to
    * decide; the per-file breakdown behind each hash stays in `files` (graph) or in the out-of-graph
    * detail sections for debugging.
    */
-  storybookFileHashes: Map<FilePath, FileHash | StorybookVersion>;
+  storybookConfigHashes: Map<FilePath, FileHash | StorybookVersion>;
   storybookHash: string;
   /** Where each real file was hashed; see {@link FileAttribution}. */
   attribution: FileAttribution;
@@ -60,7 +60,7 @@ export interface TurboSnapManifest {
  */
 interface ManifestFile {
   storybookHash: string;
-  storybookFileHashes: Record<FilePath, FileHash | StorybookVersion>;
+  storybookConfigHashes: Record<FilePath, FileHash | StorybookVersion>;
   storybookConfigFiles: Record<FilePath, FileHash>;
   staticFiles: Record<FilePath, FileHash>;
   storyFileHashes: Record<FilePath, FileHash>;
@@ -104,7 +104,7 @@ export async function buildManifest(
     storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
   }
 
-  const { storybookFileHashes, attribution } = collectStorybookFiles(
+  const { storybookConfigHashes, attribution } = collectStorybookFiles(
     files,
     hashes,
     storyFiles,
@@ -114,7 +114,7 @@ export async function buildManifest(
 
   // The preview core runtime is out of the module graph on webpack and rspack, so no file hash can
   // see a Storybook upgrade there. Track the version instead; it is a plain string, not a hash.
-  storybookFileHashes.set(
+  storybookConfigHashes.set(
     STORYBOOK_VERSION_KEY,
     resolveStorybookVersion(projectRoot, outOfGraph.projectFiles)
   );
@@ -123,16 +123,16 @@ export async function buildManifest(
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
   const outOfGraphFiles = await hashOutOfGraphFiles(outOfGraph, projectRoot);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
-    storybookFileHashes.set(key, hash);
+    storybookConfigHashes.set(key, hash);
   }
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
-  // file plus every `storybookFileHashes` entry, so additions, removals and renames are all visible
+  // file plus every `storybookConfigHashes` entry, so additions, removals and renames are all visible
   // before the backend drills into the maps. A story file's path already reaches its roll-up, which
   // makes including the key redundant; it is here so the gate does not inherit that property from
   // the roll-up recipe. Keys are project-root-relative, so moving the project still moves nothing.
   const storybookHash = h64ToString(
-    hashEntryIdentities(storyFileHashes) + hashEntryIdentities(storybookFileHashes)
+    hashEntryIdentities(storyFileHashes) + hashEntryIdentities(storybookConfigHashes)
   );
 
   // Done after hashing so the graph used above is complete.
@@ -142,7 +142,7 @@ export async function buildManifest(
     files,
     storyFileHashes,
     unrecognizedStoryEntries,
-    storybookFileHashes,
+    storybookConfigHashes,
     storybookHash,
     attribution,
     outOfGraphFiles,
@@ -162,8 +162,8 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   const storyFileHashes: ManifestFile['storyFileHashes'] = Object.fromEntries(
     manifest.storyFileHashes
   );
-  const storybookFileHashes: ManifestFile['storybookFileHashes'] = Object.fromEntries(
-    manifest.storybookFileHashes
+  const storybookConfigHashes: ManifestFile['storybookConfigHashes'] = Object.fromEntries(
+    manifest.storybookConfigHashes
   );
 
   const files: ManifestFile['files'] = {};
@@ -183,7 +183,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
 
   return {
     storybookHash: manifest.storybookHash,
-    storybookFileHashes,
+    storybookConfigHashes,
     // The per-file detail behind the out-of-graph roll-ups. Kept out of `files` and `attribution`,
     // which describe the bundle graph: the globals catch-all is defined by *absence* from
     // storyReachable/previewSubtree (see {@link collectStorybookFiles}), which these files satisfy by

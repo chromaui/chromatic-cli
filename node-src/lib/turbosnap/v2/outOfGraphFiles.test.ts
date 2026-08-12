@@ -94,7 +94,7 @@ describe('rollUpOutOfGraphFiles', () => {
 
     const rollUps = await rollUp();
 
-    expect([...rollUps.keys()]).toEqual(['storybookConfig', 'staticFiles']);
+    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles', 'staticFiles']);
   });
 
   it('moves the config roll-up when a config file content changes', async () => {
@@ -105,7 +105,7 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M2' };
     const after = await rollUp();
 
-    expect(after.get('storybookConfig')).not.toBe(before.get('storybookConfig'));
+    expect(after.get('storybookConfigFiles')).not.toBe(before.get('storybookConfigFiles'));
   });
 
   it('moves the static roll-up when a static file content changes, leaving the config roll-up alone', async () => {
@@ -121,7 +121,7 @@ describe('rollUpOutOfGraphFiles', () => {
     const after = await rollUp();
 
     expect(after.get('staticFiles')).not.toBe(before.get('staticFiles'));
-    expect(after.get('storybookConfig')).toBe(before.get('storybookConfig'));
+    expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
   });
 
   it('moves the static roll-up when an asset is renamed without changing its bytes', async () => {
@@ -172,7 +172,7 @@ describe('rollUpOutOfGraphFiles', () => {
     disk.current.fileHashes = { '/repo/packages/ui/.storybook/preview-body.html': 'H' };
     const after = await rollUp();
 
-    expect(after.get('storybookConfig')).not.toBe(before.get('storybookConfig'));
+    expect(after.get('storybookConfigFiles')).not.toBe(before.get('storybookConfigFiles'));
   });
 
   it('omits a section that has no files, matching how the globals catch-all behaves', async () => {
@@ -204,7 +204,7 @@ describe('rollUpOutOfGraphFiles', () => {
     };
     const after = await rollUp(input, '/repo/apps/web');
 
-    expect(after.get('storybookConfig')).toBe(before.get('storybookConfig'));
+    expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
     expect(after.get('staticFiles')).toBe(before.get('staticFiles'));
   });
 });

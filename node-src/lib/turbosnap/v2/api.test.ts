@@ -11,7 +11,7 @@ const manifest: TurboSnapManifest = {
   files: new Map(),
   storyFileHashes: new Map([['./src/Button.stories.ts', 'story-hash']]),
   unrecognizedStoryEntries: [],
-  storybookFileHashes: new Map([
+  storybookConfigHashes: new Map([
     ['./.storybook/preview.ts', 'preview-hash'],
     ['storybookGlobals', 'globals-hash'],
   ]),
@@ -48,12 +48,12 @@ describe('determineChangedFiles', () => {
     );
   });
 
-  it('does not send storybookFileHashes, which the input type has no field for', async () => {
+  it('does not send storybookConfigHashes, which the input type has no field for', async () => {
     await determineChangedFiles(graphqlClient, 'build-id', manifest);
 
     const [mutation, variables] = client.runQuery.mock.calls[0];
-    expect(mutation).not.toContain('storybookFileHashes');
-    expect(variables.input).not.toHaveProperty('storybookFileHashes');
+    expect(mutation).not.toContain('storybookConfigHashes');
+    expect(variables.input).not.toHaveProperty('storybookConfigHashes');
   });
 
   it('selects both members of the response union', async () => {

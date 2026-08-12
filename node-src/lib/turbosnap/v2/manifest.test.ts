@@ -49,7 +49,7 @@ describe('serializeManifest', () => {
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 
-  it('emits storybookFileHashes as a JSON-safe object', async () => {
+  it('emits storybookConfigHashes as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';
     disk.current.fileHashes = { [story]: 'S', [preview]: 'P' };
@@ -63,8 +63,8 @@ describe('serializeManifest', () => {
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
     const serialized = serializeManifest(manifest);
 
-    expect(serialized.storybookFileHashes['preview']).toBe(
-      manifest.storybookFileHashes.get('preview')
+    expect(serialized.storybookConfigHashes['preview']).toBe(
+      manifest.storybookConfigHashes.get('preview')
     );
     // eslint-disable-next-line unicorn/prefer-structured-clone
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
@@ -98,7 +98,7 @@ describe('serializeManifest', () => {
       expect(after.storyFileHashes['./src/Button.stories.tsx']).not.toBe(
         before.storyFileHashes['./src/Button.stories.tsx']
       );
-      expect(after.storybookFileHashes).toEqual(before.storybookFileHashes);
+      expect(after.storybookConfigHashes).toEqual(before.storybookConfigHashes);
       expect(after.storybookHash).not.toBe(before.storybookHash);
       expect(before.attribution).toEqual({
         storyReachable: ['./src/Button.stories.tsx', './src/helper.ts'],
@@ -176,6 +176,6 @@ describe('writeManifest', () => {
 
     const payload = readFileSync(path.join(outputDirectory, 'turbosnap-manifest.json'), 'utf8');
 
-    expect(JSON.parse(payload).storybookFileHashes['preview']).toEqual(expect.any(String));
+    expect(JSON.parse(payload).storybookConfigHashes['preview']).toEqual(expect.any(String));
   });
 });

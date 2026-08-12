@@ -10,7 +10,7 @@ export interface TurboSnapFile {
  * Rolls a set of files up into a single hash, looking each file's content hash up by path. Reading
  * from `hashes` (not `files`) also includes leaf dependencies.
  *
- * This is the shared recipe for both a story-file hash and a `storybookFileHashes` entry, so the two are
+ * This is the shared recipe for both a story-file hash and a `storybookConfigHashes` entry, so the two are
  * directly comparable.
  *
  * @param hashes The content hashes keyed by canonical file path.
