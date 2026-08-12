@@ -14,6 +14,7 @@ export interface BuildInput {
   storybook?: Context['storybook'];
   flags: Context['flags'];
   browsers?: string[];
+  projectId?: string;
   runtimeMetadata?: Context['runtimeMetadata'];
   git: Context['git'];
 }
@@ -103,6 +104,7 @@ async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResul
     },
     {
       buildCommand,
+      projectId: input.projectId,
       runtimeMetadata: input.runtimeMetadata,
       storybook: input.storybook,
       git: input.git,
@@ -139,6 +141,7 @@ export const extractBuildInput = (ctx: Context): BuildInput => ({
   storybook: ctx.storybook,
   flags: ctx.flags,
   browsers: ctx.announcedBuild?.browsers,
+  projectId: ctx.announcedBuild?.app?.id,
   runtimeMetadata: ctx.runtimeMetadata,
   git: ctx.git,
 });

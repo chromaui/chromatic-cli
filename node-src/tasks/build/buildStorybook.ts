@@ -20,6 +20,7 @@ type BuildStorybookDeps = Pick<Deps, 'options' | 'log' | 'env' | 'analytics' | '
 
 interface BuildStorybookInput {
   buildCommand?: string;
+  projectId?: string;
   runtimeMetadata?: Context['runtimeMetadata'];
   storybook?: Context['storybook'];
   git: Context['git'];
@@ -177,6 +178,7 @@ export const buildStorybook = async (
         CI: '1',
         NODE_ENV: deps.env.STORYBOOK_NODE_ENV || 'production',
         STORYBOOK_INVOKED_BY: 'chromatic',
+        CHROMATIC_PROJECT_ID: input.projectId,
       },
     });
   } catch (err) {
