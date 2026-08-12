@@ -36,7 +36,7 @@ function makeContext(overrides: { rootPath?: string; baseDir?: string } = {}) {
     build: { id: 'baseline-build' },
     announcedBuild: { id: 'head-build' },
     sourceDir: '/repo/project',
-    log: { info: vi.fn(), error: vi.fn() },
+    log: { debug: vi.fn(), info: vi.fn(), error: vi.fn() },
     storybook: overrides.baseDir ? { baseDir: overrides.baseDir } : undefined,
   } as any;
 }

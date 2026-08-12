@@ -1,9 +1,10 @@
 import path from 'path';
 
 import { Module, Stats, TurboSnapAnchorMismatchSubreason } from '../../../types';
-import { isBuilderViteStats } from './builderViteCompatibility';
 import { resolveStatsPath, stripConcatenatedModuleSuffix } from './paths';
 import { ProjectFiles } from './projectFiles';
+
+const BUILDER_VITE_PACKAGE = '@storybook/builder-vite';
 
 export interface AnchorMismatchReason {
   /** Why the pairing was refused; see {@link TurboSnapAnchorMismatchSubreason}. */
@@ -119,12 +120,11 @@ export function getSourceModuleResolution(
 
 /**
  * Compares the builder that produced the stats against the builder the project declares. Only Vite
- * is asserted in either direction: `isBuilderViteStats` identifies a stats contract with a proven
- * correctness defect, while webpack and rspack intentionally share the non-Vite bucket because both
- * satisfy the contract consumed here. Rspack's `rspackVersion` is a reliable signature, but without
- * a known contract defect it does not justify another bail. A framework whose name says nothing
- * about its builder (`@storybook/nextjs`) yields no verdict rather than a guess, so an unrecognised
- * project never bails here.
+ * is asserted in either direction: builder-vite names itself in the graph, while webpack and rspack
+ * intentionally share the non-Vite bucket because both satisfy the contract consumed here. Rspack's
+ * `rspackVersion` is a reliable signature, but telling it apart from webpack decides nothing here. A
+ * framework whose name says nothing about its builder (`@storybook/nextjs`) yields no verdict rather
+ * than a guess, so an unrecognised project never bails here.
  */
 function getBuilderMismatch(
   stats: Stats,
@@ -140,6 +140,24 @@ function getBuilderMismatch(
     subreason: 'builderMismatch',
     detail: `stats were produced by ${statsAreVite ? 'Vite' : 'a non-Vite builder'}, but the project declares ${builderName}`,
   };
+}
+
+/**
+ * Whether these stats were produced by builder-vite, told by the builder's own modules appearing in
+ * the graph.
+ *
+ * @param stats The preview stats file.
+ *
+ * @returns Whether the stats are builder-vite's.
+ */
+function isBuilderViteStats(stats: Stats) {
+  return stats.modules.some((module) =>
+    [
+      module.name,
+      module.nameForCondition,
+      ...(module.reasons ?? []).map((reason) => reason.moduleName),
+    ].some((name) => name?.includes(`${BUILDER_VITE_PACKAGE}/`))
+  );
 }
 
 function declaresVite(builderName: string | undefined): boolean | undefined {

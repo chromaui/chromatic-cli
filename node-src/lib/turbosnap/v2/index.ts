@@ -7,7 +7,6 @@ import { TraceChangedFilesResult } from '../types';
 import { captureBailException } from '../v1/captureBailException';
 import { isNetworkError } from '../v1/errors';
 import { determineChangedFiles } from './api';
-import { getUntrustedBuilderStatsReason } from './builderViteCompatibility';
 import { classifyUploadHashesFailure } from './classifyUploadHashesFailure';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ProjectFiles } from './projectFiles';
@@ -194,11 +193,7 @@ function getStatsBail(
   input: TraceChangedFilesInput,
   resolution: SourceModuleResolution
 ): TraceChangedFilesResult | undefined {
-  return (
-    getAnchorBail(stats, input, resolution) ??
-    getBuilderStatsBail(stats, input) ??
-    getStaticDirectoriesBail(input)
-  );
+  return getAnchorBail(stats, input, resolution) ?? getStaticDirectoriesBail(input);
 }
 
 /**
@@ -237,39 +232,6 @@ function getAnchorBail(
   });
 
   return bailWith({ anchorMismatch: true, bailSubreason: mismatch.subreason });
-}
-
-/**
- * Refuses stats produced by a builder whose output we know we cannot trace correctly.
- *
- * @param stats
- * @param input
- *
- * @returns
- */
-function getBuilderStatsBail(
-  stats: Stats,
-  input: TraceChangedFilesInput
-): TraceChangedFilesResult | undefined {
-  let reason;
-  try {
-    reason = getUntrustedBuilderStatsReason(stats, input.projectRoot, input.projectFiles);
-  } catch (error) {
-    return internalErrorBail(
-      error,
-      'builderCompatibilityCheckFailed',
-      'getUntrustedBuilderStatsReason'
-    );
-  }
-
-  if (!reason) return undefined;
-
-  return bailWith({
-    untrustedBuilderStats: true,
-    bailSubreason: reason.subreason,
-    builderName: reason.builderName,
-    ...(reason.builderVersion && { builderVersion: reason.builderVersion }),
-  });
 }
 
 /**

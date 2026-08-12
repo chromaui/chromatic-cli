@@ -587,11 +587,6 @@ export type TurboSnapIndexContractViolationSubreason =
   | 'invalidBuildStatus'
   | 'invalidResponse';
 
-export type TurboSnapUntrustedBuilderStatsSubreason =
-  | 'packageNotFound'
-  | 'invalidVersion'
-  | 'unsupportedVersion';
-
 /**
  * Why the stats file and the Storybook project root cannot be shown to describe the same package.
  *
@@ -607,10 +602,7 @@ export type TurboSnapAnchorMismatchSubreason =
   | 'unresolvedSourceModules';
 
 /** Which of our own checks threw; each one is also the Sentry fingerprint for the bail. */
-export type TurboSnapInternalErrorSubreason =
-  | 'builderCompatibilityCheckFailed'
-  | 'manifestBuildFailed'
-  | 'anchorCheckFailed';
+export type TurboSnapInternalErrorSubreason = 'manifestBuildFailed' | 'anchorCheckFailed';
 
 export type TurboSnapIndexUnavailableSubreason = 'networkError';
 
@@ -619,7 +611,6 @@ export type TurboSnapBailSubreason =
   | TurboSnapInvalidChangedFilesSubreason
   | TurboSnapIndexContractViolationSubreason
   | TurboSnapIndexUnavailableSubreason
-  | TurboSnapUntrustedBuilderStatsSubreason
   | TurboSnapAnchorMismatchSubreason
   | TurboSnapInternalErrorSubreason;
 
@@ -628,7 +619,6 @@ export type TurboSnapBailSubreason =
 interface TurboSnapBailFamilyFlags {
   changedPackageFiles: string[];
   invalidChangedFiles: true;
-  untrustedBuilderStats: true;
   anchorMismatch: true;
   indexContractViolation: true;
   indexUnavailable: true;
@@ -649,13 +639,6 @@ export type ChangedPackageFilesBailReason = BailFamily<'changedPackageFiles'> & 
 // All additional fields allowed for the `invalidChangedFiles` bail reason
 export type InvalidChangedFilesBailReason = BailFamily<'invalidChangedFiles'> & {
   bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
-};
-
-// All additional fields allowed for the `untrustedBuilderStats` bail reason
-export type UntrustedBuilderStatsBailReason = BailFamily<'untrustedBuilderStats'> & {
-  bailSubreason: TurboSnapUntrustedBuilderStatsSubreason;
-  builderName: string;
-  builderVersion?: string;
 };
 
 // All additional fields allowed for the `anchorMismatch` bail reason
@@ -682,7 +665,6 @@ export type InternalErrorBailReason = BailFamily<'internalError'> & {
 export type TurboSnapBailReason =
   | ChangedPackageFilesBailReason
   | InvalidChangedFilesBailReason
-  | UntrustedBuilderStatsBailReason
   | AnchorMismatchBailReason
   | IndexContractViolationBailReason
   | IndexUnavailableBailReason

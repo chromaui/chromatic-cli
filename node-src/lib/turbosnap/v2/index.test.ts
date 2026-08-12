@@ -83,9 +83,6 @@ describe('traceChangedFiles', () => {
       '/repo/packages/other/.storybook': ['main.ts'],
     };
 
-    // These stats are Vite's and no builder-vite is installed, so the builder-compatibility gate
-    // would bail with `packageNotFound`. Getting the anchor verdict instead is what proves nothing
-    // was read off a disproven anchor.
     const result = await trace({
       stats: viteStats(),
       statsPath: '/repo/packages/other/storybook-static/preview-stats.json',
@@ -162,56 +159,17 @@ describe('traceChangedFiles', () => {
     });
   });
 
-  it('bails before manifest upload when builder-vite stats are known invalid', async () => {
+  it('traces builder-vite stats like any other builder, whatever version it reports', async () => {
     disk.current.packageVersions = {
       ...disk.current.packageVersions,
-      '@storybook/builder-vite': '10.6.0-alpha.3',
+      '@storybook/builder-vite': '10.5.0',
     };
 
     const result = await trace({ stats: viteStats() });
 
-    expect(result).toEqual({
-      status: 'bailed',
-      turboSnap: {
-        bailReason: {
-          untrustedBuilderStats: true,
-          bailSubreason: 'unsupportedVersion',
-          builderName: '@storybook/builder-vite',
-          builderVersion: '10.6.0-alpha.3',
-        },
-      },
-    });
-    expect(writtenManifest()).toBeUndefined();
-    expect(runQuery).not.toHaveBeenCalled();
-  });
-
-  it('bails with a Sentry ID when the builder compatibility check fails unexpectedly', async () => {
-    const error = new Error('package metadata is unreadable');
-
-    await expect(
-      trace({
-        stats: viteStats(),
-        projectFiles: diskWhere({
-          packageVersion: () => {
-            throw error;
-          },
-        }),
-      })
-    ).resolves.toEqual({
-      status: 'bailed',
-      turboSnap: {
-        bailReason: {
-          internalError: true,
-          bailSubreason: 'builderCompatibilityCheckFailed',
-          sentryEventId: 'sentry-event-id',
-        },
-      },
-    });
-    expect(captureBailException).toHaveBeenCalledWith(error, {
-      bailSubreason: 'builderCompatibilityCheckFailed',
-      bailPath: 'getUntrustedBuilderStatsReason',
-    });
-    expect(writtenManifest()).toBeUndefined();
+    expect(result).toEqual({ status: 'fallback' });
+    expect(writtenManifest()).toBeDefined();
+    expect(runQuery).toHaveBeenCalled();
   });
 
   it('uploads and writes a manifest when the stats pass compatibility checks', async () => {
@@ -223,6 +181,12 @@ describe('traceChangedFiles', () => {
     expect(uploaded()).toEqual({
       buildId: 'build-id',
       storybookHash: expect.any(String),
+      storybookConfigHashes: {
+        preview: expect.any(String),
+        storybookVersion: '9.1.20',
+        storybookConfigFiles: expect.any(String),
+        staticFiles: expect.any(String),
+      },
       storyFileHashes: { [STORY]: expect.any(String) },
     });
     // The three out-of-graph sections the Index gates on, plus the graph-rolled preview entry.
