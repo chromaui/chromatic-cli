@@ -1,17 +1,20 @@
 import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
-import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
 import storybookInfo from '../lib/getStorybookInfo';
+import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
 import { Storybook } from '../types';
 import { applyStorybookInfoOutput, setStorybookInfo, StorybookInfoDeps } from './storybookInfo';
 
 vi.mock('../lib/getStorybookInfo');
-vi.mock('../lib/getStorybookBaseDirectory');
+vi.mock('../lib/getStorybookProjectRoot', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/getStorybookProjectRoot')>()),
+  getStorybookProjectRoot: vi.fn(),
+}));
 vi.mock('@sentry/node', () => ({ setTag: vi.fn(), setContext: vi.fn() }));
 
 const getStorybookInfo = vi.mocked(storybookInfo);
-const mockedGetStorybookBaseDirectory = vi.mocked(getStorybookBaseDirectory);
+const mockedGetStorybookProjectRoot = vi.mocked(getStorybookProjectRoot);
 const mockedSentrySetTag = vi.mocked(Sentry.setTag);
 const mockedSentrySetContext = vi.mocked(Sentry.setContext);
 
@@ -28,7 +31,7 @@ describe('setStorybookInfo', () => {
   it('returns Storybook metadata combined with the resolved baseDir', async () => {
     const storybook = { version: '1.0.0', addons: [] };
     getStorybookInfo.mockResolvedValue(storybook);
-    mockedGetStorybookBaseDirectory.mockReturnValue('');
+    mockedGetStorybookProjectRoot.mockReturnValue('/some/git/root/packages/sb');
 
     const result = await setStorybookInfo(buildDeps(), {
       gitRootPath: '/some/git/root',
@@ -37,13 +40,13 @@ describe('setStorybookInfo', () => {
 
     expect(result).toEqual({
       kind: 'continue',
-      output: { storybook: { ...storybook, baseDir: '' } },
+      output: { storybook: { ...storybook, baseDir: 'packages/sb' } },
     });
   });
 
-  it('passes gitRootPath through to getStorybookBaseDirectory', async () => {
+  it('passes gitRootPath through to getStorybookProjectRoot', async () => {
     getStorybookInfo.mockResolvedValue({ version: '1.0.0', addons: [] });
-    mockedGetStorybookBaseDirectory.mockReturnValue('packages/storybook');
+    mockedGetStorybookProjectRoot.mockReturnValue('/repo/root/override');
 
     await setStorybookInfo(
       buildDeps({
@@ -52,7 +55,7 @@ describe('setStorybookInfo', () => {
       { gitRootPath: '/repo/root', isReactNativeApp: false }
     );
 
-    expect(mockedGetStorybookBaseDirectory).toHaveBeenCalledWith({
+    expect(mockedGetStorybookProjectRoot).toHaveBeenCalledWith({
       storybookBaseDir: 'override',
       gitRootPath: '/repo/root',
     });
@@ -60,7 +63,7 @@ describe('setStorybookInfo', () => {
 
   it('returns a continue result with only baseDir when getStorybookInfo resolves to {}', async () => {
     getStorybookInfo.mockResolvedValue({});
-    mockedGetStorybookBaseDirectory.mockReturnValue('.');
+    mockedGetStorybookProjectRoot.mockReturnValue('/repo/root');
 
     const result = await setStorybookInfo(buildDeps(), {
       gitRootPath: '/repo/root',
@@ -75,7 +78,7 @@ describe('setStorybookInfo', () => {
 
   it('skips the build script check for react-native apps', async () => {
     getStorybookInfo.mockResolvedValue({});
-    mockedGetStorybookBaseDirectory.mockReturnValue('.');
+    mockedGetStorybookProjectRoot.mockReturnValue('/repo/root');
 
     await expect(
       setStorybookInfo(buildDeps({ options: {} as any, packageJson: {} }), {

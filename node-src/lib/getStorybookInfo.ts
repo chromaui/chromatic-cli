@@ -10,12 +10,14 @@ import { getStorybookMetadata } from './getStorybookMetadata';
  * Get Storybook information from the user's local project.
  *
  * @param deps Dependencies needed to detect Storybook metadata.
+ * @param projectRoot The absolute Storybook project root the reported directories are relative to.
  *
  * @returns Any Storybook information we can find from the user's local project (which may be
  * nothing).
  */
 export default async function getStorybookInfo(
-  deps: StorybookInfoDeps
+  deps: StorybookInfoDeps,
+  projectRoot: string
 ): Promise<Partial<Storybook>> {
   try {
     if (deps.options.storybookBuildDir) {
@@ -26,7 +28,7 @@ export default async function getStorybookInfo(
         // failure must not stop us reading project.json.
         let sourceMetadata: Partial<Storybook> = {};
         try {
-          sourceMetadata = await getStorybookMetadata(deps);
+          sourceMetadata = await getStorybookMetadata(deps, projectRoot);
         } catch (err) {
           deps.log.debug(err);
         }
@@ -40,7 +42,7 @@ export default async function getStorybookInfo(
       }
     }
     // Same for this await.
-    return await getStorybookMetadata(deps);
+    return await getStorybookMetadata(deps, projectRoot);
   } catch (err) {
     deps.log.debug(err);
     return {};

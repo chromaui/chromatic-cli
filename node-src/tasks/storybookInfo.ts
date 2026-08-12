@@ -1,8 +1,8 @@
 import * as Sentry from '@sentry/node';
 
 import { isE2EBuild } from '../lib/e2eUtils';
-import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
 import getStorybookInfo from '../lib/getStorybookInfo';
+import { getStorybookProjectRoot, relativeTo } from '../lib/getStorybookProjectRoot';
 import { Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 
@@ -49,15 +49,30 @@ export const setStorybookInfo: TaskFunction<
     }
   }
 
+  const projectRoot = getStorybookProjectRoot({
+    storybookBaseDir: deps.options.storybookBaseDir,
+    gitRootPath: input.gitRootPath,
+  });
+
   const storybook: Storybook = {
-    ...((await getStorybookInfo(deps)) as Storybook),
-    baseDir: getStorybookBaseDirectory({
-      storybookBaseDir: deps.options.storybookBaseDir,
-      gitRootPath: input.gitRootPath,
-    }),
+    ...((await getStorybookInfo(deps, projectRoot)) as Storybook),
+    baseDir: getBaseDirectory(projectRoot, input.gitRootPath),
   };
   return { kind: 'continue', output: { storybook } };
 };
+
+/**
+ * Reports the Storybook project root in the git-relative form.
+ *
+ * @param projectRoot The absolute Storybook project root.
+ * @param gitRootPath Absolute path of the git project root.
+ *
+ * @returns The base directory, relative to the git root.
+ */
+function getBaseDirectory(projectRoot: string, gitRootPath?: string) {
+  // A project root that is the git root gives '' which ends up reporting `.` for backward compatibility.
+  return relativeTo(gitRootPath ?? process.cwd(), projectRoot) || '.';
+}
 
 // extracted so we can test it more easily
 export const applyStorybookInfoOutput = (ctx: Context, { storybook }: StorybookInfoOutput) => {

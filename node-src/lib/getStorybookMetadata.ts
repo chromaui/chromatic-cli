@@ -1,5 +1,5 @@
 import { readdir } from 'fs/promises';
-import { readJson } from 'fs-extra';
+import { pathExists, readJson } from 'fs-extra';
 import meow from 'meow';
 import path from 'path';
 import semver from 'semver';
@@ -10,7 +10,7 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
-import { posix } from './posix';
+import { relativeTo } from './getStorybookProjectRoot';
 import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
 
@@ -21,15 +21,18 @@ import { viewLayers } from './viewLayers';
  * @param input.buildScriptName The package.json script that builds Storybook.
  * @param input.packageJson The project's package.json.
  *
+ * The flags resolve against the Storybook project root, because that is where Storybook runs the
+ * build script from.
+ *
  * @returns The config directory and static directories the build script names, if any.
  */
-export async function findConfigFlags({
+function findConfigFlags({
   buildScriptName,
   packageJson,
 }: {
   buildScriptName?: string;
   packageJson: StorybookInfoDeps['packageJson'];
-}) {
+}): { configDir?: string; staticDir?: string[] } {
   const { scripts = {} } = packageJson;
   if (!buildScriptName || !scripts[buildScriptName]) return {};
 
@@ -119,31 +122,64 @@ async function findReferences(mainConfig?: MainConfigReader) {
 }
 
 /**
- * Resolves the project-relative static directories declared by the main config.
+ * Resolves the project-relative static directories, merging the build script's `-s` flag with the
+ * main config's `staticDirs`. Storybook rejects both at once (and dropped `-s` in v8), so in
+ * practice only one is populated; the union covers both.
+ *
+ * The two sources resolve against different roots: Storybook runs the build script from the project
+ * root, but reads `staticDirs` entries relative to the config directory that declares them.
+ *
+ * @param input The loaded config and the roots each source of directories resolves against.
+ * @param input.mainConfig The loaded main config, or undefined when it could not be read.
+ * @param input.configDirectory The absolute config directory `staticDirs` entries resolve against.
+ * @param input.buildScriptStaticDirs The build script's `-s` directories, or undefined when it declares none.
+ * @param input.projectRoot The absolute Storybook project root, which the build script's `-s`
+ *   directories resolve against and the result is relative to.
+ *
+ * @returns The resolved static directories, or `{}` when there are none.
+ */
+export function findStaticDirectories({
+  mainConfig,
+  configDirectory,
+  buildScriptStaticDirs,
+  projectRoot,
+}: {
+  mainConfig?: MainConfigReader;
+  configDirectory: string;
+  buildScriptStaticDirs?: string[];
+  projectRoot: string;
+}): { staticDir?: string[] } {
+  const directories = [
+    ...(buildScriptStaticDirs ?? []).map((directory) => path.resolve(projectRoot, directory)),
+    ...readConfigStaticDirectories(mainConfig, configDirectory),
+  ];
+
+  // Both sources are made project-relative before the dedupe, so `public` and `./public` count as one.
+  const staticDirectories = [
+    ...new Set(directories.map((directory) => relativeTo(projectRoot, directory))),
+  ];
+  return staticDirectories.length > 0 ? { staticDir: staticDirectories } : {};
+}
+
+/**
+ * Reads the main config's `staticDirs`, whose entries are relative to the config directory itself.
  *
  * @param mainConfig The loaded main config, or undefined when it could not be read.
- * @param configDirectory The project-relative Storybook config directory entries resolve against.
+ * @param configDirectory The absolute Storybook config directory the entries resolve against.
  *
- * @returns The resolved static directories, or `{}` when the config declares none.
+ * @returns The declared static directories, or an empty list when the config declares none.
  */
-export function findStaticDirectories(
+function readConfigStaticDirectories(
   mainConfig: MainConfigReader | undefined,
-  configDirectory = '.storybook'
-): { staticDir?: string[] } {
+  configDirectory: string
+): string[] {
   const staticDirectories = mainConfig?.readField('staticDirs');
-  if (!Array.isArray(staticDirectories) || staticDirectories.length === 0) return {};
+  if (!Array.isArray(staticDirectories)) return [];
 
-  const directoriesFromConfig = staticDirectories
+  return staticDirectories
     .map((entry: string | { from: string }) => (typeof entry === 'string' ? entry : entry?.from))
-    .filter(Boolean);
-
-  // Convert directories to posix for cross-platform consistency
-  const safeConfigDirectory = posix(configDirectory);
-  const resolvedDirectories = directoriesFromConfig.map((directory) =>
-    path.posix.isAbsolute(directory) ? directory : path.posix.join(safeConfigDirectory, directory)
-  );
-
-  return resolvedDirectories.length > 0 ? { staticDir: resolvedDirectories } : {};
+    .filter(Boolean)
+    .map((directory) => path.resolve(configDirectory, directory));
 }
 
 // The main config files we parse into an AST when `require()` of the config fails. Widening this
@@ -216,38 +252,86 @@ export async function readMainConfig(
  * Finds the Storybook metadata from the given dependencies.
  *
  * @param deps The dependencies to find the metadata with.
+ * @param projectRoot The absolute Storybook project root the reported directories are relative to.
  *
  * @returns The Storybook metadata, or an empty object when none could be found.
  */
-export async function getStorybookMetadata(deps: StorybookInfoDeps): Promise<Partial<Storybook>> {
-  const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
+export async function getStorybookMetadata(
+  deps: StorybookInfoDeps,
+  projectRoot: string
+): Promise<Partial<Storybook>> {
+  const buildScript = findConfigFlags({
+    buildScriptName: deps.options.buildScriptName,
+    packageJson: deps.packageJson,
+  });
+  const configDirectory = await findConfigDirectory(deps, projectRoot, buildScript.configDir);
   const mainConfig = await readMainConfig(configDirectory, deps.log);
 
   const info = await Promise.allSettled([
-    findConfigFlags({
-      buildScriptName: deps.options.buildScriptName,
-      packageJson: deps.packageJson,
-    }),
     findStorybookVersion(deps),
     findBuilder(mainConfig),
     findReferences(mainConfig),
-    findStaticDirectories(mainConfig, configDirectory),
   ]);
 
   deps.log.debug(info);
-  let metadata: Record<string, any> = {};
+  let metadata: Record<string, any> = {
+    configDir: relativeTo(projectRoot, configDirectory),
+    ...findStaticDirectories({
+      mainConfig,
+      configDirectory,
+      buildScriptStaticDirs: buildScript.staticDir,
+      projectRoot,
+    }),
+  };
   for (const sbItem of info) {
     if (sbItem.status === 'fulfilled') {
-      const { staticDir: staticDirectories, ...rest } = sbItem?.value as any;
-      metadata = { ...metadata, ...rest };
-
-      // Merge static directories from multiple sources and remove duplicates
-      if (staticDirectories?.length) {
-        metadata.staticDir = [...new Set([...(metadata.staticDir ?? []), ...staticDirectories])];
-      }
+      metadata = { ...metadata, ...sbItem.value };
     }
   }
   return metadata;
+}
+
+/**
+ * Resolves the absolute Storybook config directory.
+ *
+ * `--storybook-config-dir` is documented as relative to where you run the CLI, but users also write
+ * it relative to the Storybook project root — the value their build script's `-c` uses. The two only
+ * differ under `--storybook-base-dir`. Rather than pick a frame and break the other set of users, we
+ * try both and take whichever directory is really on disk. The project root goes first, because that
+ * is the reading TurboSnap v1 has always ended up with once it joins the base directory on.
+ *
+ * Without the option the build script's `-c` decides, and Storybook runs that script from the project
+ * root, so it needs no probe.
+ *
+ * @param deps The dependencies holding the user's options.
+ * @param deps.options The user's options, including `--storybook-config-dir`.
+ * @param projectRoot The absolute Storybook project root.
+ * @param buildScriptConfigDirectory The build script's `-c` value, or undefined when it declares none.
+ *
+ * @returns The absolute config directory.
+ */
+async function findConfigDirectory(
+  { options }: StorybookInfoDeps,
+  projectRoot: string,
+  buildScriptConfigDirectory?: string
+) {
+  // The build script's `-c` locates the main config, not just the directory we report. TurboSnap v1
+  // already falls back to it, so ignoring it here meant reading no config at all for a project whose
+  // only signal is `-c`, and reporting no builder or static directories for it.
+  if (!options.storybookConfigDir) {
+    return path.resolve(projectRoot, buildScriptConfigDirectory ?? '.storybook');
+  }
+
+  const candidates = [
+    path.resolve(projectRoot, options.storybookConfigDir),
+    path.resolve(options.storybookConfigDir),
+  ];
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return candidate;
+  }
+
+  // Neither is on disk, so the config read is going to fail either way. Report the project's own.
+  return candidates[0];
 }
 
 function resolvePackageJson(pkg: string) {
