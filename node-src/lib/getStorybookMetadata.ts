@@ -109,6 +109,10 @@ async function findBuilder(mainConfig?: MainConfigReader) {
 // Only used by Chromatic - surfaces Storybook refs and is used when announcing a build.
 // The refs are consumed by the MCP Addon for hosted Storybooks with composition on Chromatic.
 async function findReferences(mainConfig?: MainConfigReader) {
+  if (!mainConfig) {
+    return {};
+  }
+
   // An evaluated config can hand back a `refs` function, which we can't make sense of.
   const references = objectField(mainConfig, 'refs');
   return references ? { refs: references } : {};
@@ -358,7 +362,7 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
  * @returns The field's value when it is a plain object, otherwise `undefined`.
  */
 function objectField(
-  mainConfig: MainConfigReader | undefined,
+  mainConfig: MainConfigReader,
   field: string
 ): Record<string, unknown> | undefined {
   const value = mainConfig?.readField(field);
