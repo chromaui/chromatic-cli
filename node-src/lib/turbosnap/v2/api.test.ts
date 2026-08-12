@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 
 describe('determineChangedFiles', () => {
-  it('uploads the Storybook hash and the story file hashes under a nested input', async () => {
+  it('uploads every input field under a nested input', async () => {
     await determineChangedFiles(graphqlClient, 'build-id', manifest);
 
     expect(client.runQuery).toHaveBeenCalledWith(
@@ -41,6 +41,10 @@ describe('determineChangedFiles', () => {
         input: {
           buildId: 'build-id',
           storybookHash: 'storybook-hash',
+          storybookConfigHashes: {
+            './.storybook/preview.ts': 'preview-hash',
+            storybookGlobals: 'globals-hash',
+          },
           storyFileHashes: { './src/Button.stories.ts': 'story-hash' },
         },
       },
@@ -48,12 +52,12 @@ describe('determineChangedFiles', () => {
     );
   });
 
-  it('does not send storybookConfigHashes, which the input type has no field for', async () => {
+  it('sends the hash maps as plain objects, which a Map does not serialize to', async () => {
     await determineChangedFiles(graphqlClient, 'build-id', manifest);
 
-    const [mutation, variables] = client.runQuery.mock.calls[0];
-    expect(mutation).not.toContain('storybookConfigHashes');
-    expect(variables.input).not.toHaveProperty('storybookConfigHashes');
+    const [, variables] = client.runQuery.mock.calls[0];
+    expect(variables.input.storybookConfigHashes).not.toBeInstanceOf(Map);
+    expect(variables.input.storyFileHashes).not.toBeInstanceOf(Map);
   });
 
   it('selects both members of the response union', async () => {

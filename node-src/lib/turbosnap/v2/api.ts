@@ -59,11 +59,10 @@ interface BuildUploadHashesResult {
  * no story needs recapturing. When it moves, the Index drills into `storyFileHashes` to attribute the
  * change to individual stories.
  *
- * `storybookConfigHashes` is deliberately **not** sent: `BuildUploadHashesInput` has no field for it. Until
- * the Index adds one, a change confined to a `storybookConfigHashes` entry — a static asset, `main.ts`, a
- * `preview.*` edit, a Storybook upgrade — moves `storybookHash` while matching no story, so the Index
- * captures nothing where v1 bails. That gap is tracked as a P0 on the TurboSnap 2.0 Index Fixes page;
- * it is recorded there rather than worked around here, because the CLI cannot express it.
+ * `storybookConfigHashes` carries the entries no story hash can cover — a static asset, `main.ts`, a
+ * `preview.*` edit, a Storybook upgrade. The Index requires the `storybookVersion` and
+ * `storybookConfigFiles` keys inside it; the manifest always sets the first, and an empty
+ * `storybookConfigFiles` section bails before this call.
  *
  * The manifest's `outOfGraphFiles` sections stay out of the request too, but for a different reason:
  * they exist to name *which* file moved for the S3 debug view, and the Index only ever needs the one
@@ -86,6 +85,7 @@ export async function determineChangedFiles(
       input: {
         buildId,
         storybookHash: manifest.storybookHash,
+        storybookConfigHashes: Object.fromEntries(manifest.storybookConfigHashes),
         storyFileHashes: Object.fromEntries(manifest.storyFileHashes),
       },
     },
