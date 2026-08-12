@@ -41,6 +41,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
 
+  ctx.log.debug("=== Tracing TurboSnap 2.0... there's not many log lines so it may be quiet. ===");
   // v2 bails on everything it can throw, so a rejection here is a bug in the bail wrappers
   // themselves. It stays non-fatal for v1, but it is not allowed to disappear.
   await getV2Input(ctx, stats, statsPath)
@@ -49,7 +50,12 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
       Sentry.captureException(error, { tags: { turbo_snap_v2_diagnostic: 'traceChangedFiles' } });
     });
 
-  return traceChangedFilesV1(ctx, stats, statsPath);
+  ctx.log.debug('=== Done tracing TurboSnap 2.0 ===');
+  ctx.log.debug('=== Tracing TurboSnap 1.0... ===');
+  const result = await traceChangedFilesV1(ctx, stats, statsPath);
+  ctx.log.debug('=== Done tracing TurboSnap 1.0 ===');
+
+  return result;
 }
 
 /**
@@ -79,6 +85,7 @@ async function getV2Input(ctx: Context, stats: Stats, statsPath: string) {
   });
 
   return {
+    log: ctx.log,
     graphqlClient: ctx.client,
     // Hashes always describe the build we are making, so they are always written to the head build.
     // Whether they can decide anything is the Index's call: it compares them against the baseline's

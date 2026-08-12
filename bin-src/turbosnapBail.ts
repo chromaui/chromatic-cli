@@ -92,6 +92,7 @@ ${TURBOSNAP_INPUT_OPTIONS_HELP}
     const index = stubIndexClient();
     const projectFiles = realProjectFiles();
     const result = await traceChangedFiles({
+      log,
       graphqlClient: index.graphqlClient,
       buildId: 'turbosnap-bail',
       stats: input.stats,

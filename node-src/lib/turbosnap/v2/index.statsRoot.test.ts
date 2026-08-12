@@ -4,6 +4,7 @@ import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import GraphQLClient from '../../../io/graphqlClient';
+import { Logger } from '../../../lib/log';
 import { Stats } from '../../../types';
 import { traceChangedFiles } from './index';
 import { realProjectFiles } from './projectFiles';
@@ -176,6 +177,7 @@ async function trace(statsInput: Stats) {
   });
 
   const result = await traceChangedFiles({
+    log: { info: vi.fn(), error: vi.fn() } as unknown as Logger,
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: statsInput,

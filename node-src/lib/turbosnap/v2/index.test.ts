@@ -5,6 +5,7 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import GraphQLClient from '../../../io/graphqlClient';
+import { Logger } from '../../../lib/log';
 import { Stats } from '../../../types';
 import { captureBailException } from '../v1/captureBailException';
 import { traceChangedFiles } from './index';
@@ -528,6 +529,7 @@ describe('traceChangedFiles', () => {
  */
 function trace(overrides: Partial<Parameters<typeof traceChangedFiles>[0]> = {}) {
   return traceChangedFiles({
+    log: { info: vi.fn(), error: vi.fn() } as unknown as Logger,
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),

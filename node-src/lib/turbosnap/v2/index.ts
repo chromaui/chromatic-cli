@@ -1,3 +1,4 @@
+import { Logger } from '@cli/log';
 import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
@@ -18,6 +19,7 @@ import {
 import { countNodeModulesFiles } from './statsGraph';
 
 interface TraceChangedFilesInput {
+  log: Logger;
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
@@ -108,6 +110,7 @@ export async function traceChangedFiles(
   try {
     response = await determineChangedFiles(input.graphqlClient, input.buildId, manifest);
   } catch (error) {
+    input.log.error('Failed to determine changed files for TurboSnap 2.0', error);
     // A thrown error is a transport failure, already retried. It is expected volume rather than a
     // bug, so it gets a named reason and no Sentry event.
     return bailWith({
@@ -134,7 +137,13 @@ export async function traceChangedFiles(
   return { status: 'fallback' };
 }
 
-/** Wraps a bail reason in the result shape the caller expects. */
+/**
+ * Wraps a bail reason in the result shape the caller expects.
+ *
+ * @param bailReason
+ *
+ * @returns
+ */
 function bailWith(bailReason: TurboSnapBailReason): TraceChangedFilesResult {
   return { status: 'bailed', turboSnap: { bailReason } };
 }
@@ -173,6 +182,12 @@ function writeDiagnosticManifest(manifest: TurboSnapManifest, outputDirectory: s
 /**
  * Everything we can refuse before a manifest exists, in the order their evidence stays trustworthy:
  * a wrong anchor makes the builder version unreliable, since that package is resolved from it.
+ *
+ * @param stats
+ * @param input
+ * @param resolution
+ *
+ * @returns
  */
 function getStatsBail(
   stats: Stats,
@@ -191,6 +206,12 @@ function getStatsBail(
  * Unlike the emptiness guards this one has to fire before anything is built: a wrong-but-similar
  * anchor produces a complete manifest with hashes read off another package's files, so there is
  * nothing suspicious left to detect afterwards. See getAnchorMismatchReason.
+ *
+ * @param stats
+ * @param input
+ * @param resolution
+ *
+ * @returns
  */
 function getAnchorBail(
   stats: Stats,
@@ -218,7 +239,14 @@ function getAnchorBail(
   return bailWith({ anchorMismatch: true, bailSubreason: mismatch.subreason });
 }
 
-/** Refuses stats produced by a builder whose output we know we cannot trace correctly. */
+/**
+ * Refuses stats produced by a builder whose output we know we cannot trace correctly.
+ *
+ * @param stats
+ * @param input
+ *
+ * @returns
+ */
 function getBuilderStatsBail(
   stats: Stats,
   input: TraceChangedFilesInput
@@ -248,6 +276,10 @@ function getBuilderStatsBail(
  * A prebuilt Storybook's project.json records whether static directories were declared, while their
  * paths must still be derived from the checked-out source. If those two sources disagree, continuing
  * would silently omit `staticFiles` even though we know the section should exist.
+ *
+ * @param input
+ *
+ * @returns
  */
 function getStaticDirectoriesBail(
   input: Pick<TraceChangedFilesInput, 'staticDirs' | 'staticDirsDeclared'>
