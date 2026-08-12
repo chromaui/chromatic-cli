@@ -8,6 +8,6 @@ export const raceFulfilled = <T>(promises: Promise<T>[]): Promise<T> =>
   invert(Promise.all(promises.map((promise) => invert(promise))).then((promises) => promises[0]));
 
 export const timeout = (ms: number) =>
-  new Promise((_, rej) => {
+  new Promise<never>((_, rej) => {
     setTimeout(() => rej(new Error('Timeout while resolving Storybook view layer package')), ms);
   });
