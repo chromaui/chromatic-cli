@@ -7,7 +7,7 @@ import { printConfig, readConfig } from 'storybook/internal/csf-tools';
 import { parseArgsStringToArgv } from 'string-argv';
 
 import type { StorybookInfoDeps } from '../tasks/storybookInfo';
-import { Storybook } from '../types';
+import { AbsolutePath, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
 import { raceFulfilled, timeout } from './promises';
@@ -144,9 +144,9 @@ export function findStaticDirectories({
   projectRoot,
 }: {
   mainConfig?: MainConfigReader;
-  configDirectory: string;
+  configDirectory: AbsolutePath;
   buildScriptStaticDirs?: string[];
-  projectRoot: string;
+  projectRoot: AbsolutePath;
 }): { staticDirs?: string[] } {
   const directories = [
     ...(buildScriptStaticDirs ?? []).map((directory) => path.resolve(projectRoot, directory)),
@@ -167,8 +167,8 @@ export function findStaticDirectories({
  */
 function readConfigStaticDirectories(
   mainConfig: MainConfigReader | undefined,
-  configDirectory: string
-): string[] {
+  configDirectory: AbsolutePath
+): AbsolutePath[] {
   const staticDirectories = mainConfig?.readField('staticDirs');
   if (!Array.isArray(staticDirectories)) return [];
 
@@ -254,7 +254,7 @@ export async function readMainConfig(
  */
 export async function getStorybookMetadata(
   deps: StorybookInfoDeps,
-  projectRoot: string
+  projectRoot: AbsolutePath
 ): Promise<Partial<Storybook>> {
   const buildScript = findConfigFlags({
     buildScriptName: deps.options.buildScriptName,
@@ -308,9 +308,9 @@ export async function getStorybookMetadata(
  */
 async function findConfigDirectory(
   { options }: StorybookInfoDeps,
-  projectRoot: string,
+  projectRoot: AbsolutePath,
   buildScriptConfigDirectory?: string
-) {
+): Promise<AbsolutePath> {
   // The build script's `-c` locates the main config, not just the directory we report. TurboSnap v1
   // already falls back to it, so ignoring it here meant reading no config at all for a project whose
   // only signal is `-c`, and reporting no builder or static directories for it.

@@ -2,7 +2,7 @@ import { pathExistsSync } from 'fs-extra';
 import path from 'path';
 
 import type { StorybookInfoDeps } from '../tasks/storybookInfo';
-import { Storybook } from '../types';
+import { AbsolutePath, Storybook } from '../types';
 import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
 import { getStorybookMetadata } from './getStorybookMetadata';
 
@@ -17,7 +17,7 @@ import { getStorybookMetadata } from './getStorybookMetadata';
  */
 export default async function getStorybookInfo(
   deps: StorybookInfoDeps,
-  projectRoot: string
+  projectRoot: AbsolutePath
 ): Promise<Partial<Storybook>> {
   try {
     if (deps.options.storybookBuildDir) {

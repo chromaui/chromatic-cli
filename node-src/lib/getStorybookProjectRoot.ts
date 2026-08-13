@@ -1,5 +1,6 @@
 import path from 'path';
 
+import { AbsolutePath } from '../types';
 import { posix } from './posix';
 
 /**
@@ -25,8 +26,8 @@ export function getStorybookProjectRoot({
   gitRootPath,
 }: {
   storybookBaseDir?: string;
-  gitRootPath?: string;
-}) {
+  gitRootPath?: AbsolutePath;
+}): AbsolutePath {
   return storybookBaseDir
     ? path.resolve(gitRootPath ?? process.cwd(), storybookBaseDir)
     : process.cwd();
@@ -40,6 +41,6 @@ export function getStorybookProjectRoot({
  *
  * @returns The relative posix path.
  */
-export function relativeTo(root: string, directory: string) {
+export function relativeTo(root: AbsolutePath, directory: AbsolutePath) {
   return posix(path.relative(root, directory));
 }

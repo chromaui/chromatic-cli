@@ -1,6 +1,14 @@
 import path from 'path';
 
-import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../../types';
+import {
+  AbsolutePath,
+  Context,
+  Module,
+  Reason,
+  Stats,
+  TurboSnap,
+  UntracedFile,
+} from '../../../types';
 import noCSFGlobs from '../../../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../../ui/messages/warnings/bailFile';
@@ -51,7 +59,11 @@ const getPackageName = (modulePath: string) => {
  *
  * @returns A normalized path to the file.
  */
-export function normalizePath(filePath: string, rootPath: string, projectRoot = rootPath) {
+export function normalizePath(
+  filePath: string,
+  rootPath: AbsolutePath,
+  projectRoot: AbsolutePath = rootPath
+) {
   if (!filePath || filePath.startsWith('/virtual:')) return filePath;
 
   const relativePath = path.isAbsolute(filePath)

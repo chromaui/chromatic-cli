@@ -3,13 +3,13 @@ import * as Sentry from '@sentry/node';
 import { isE2EBuild } from '../lib/e2eUtils';
 import getStorybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
-import { Context, Deps, Storybook, TaskFunction } from '../types';
+import { AbsolutePath, Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 
 export type StorybookInfoDeps = Pick<Deps, 'log' | 'options' | 'env' | 'packageJson'>;
 
 export interface StorybookInfoInput {
-  gitRootPath?: string;
+  gitRootPath?: AbsolutePath;
   isReactNativeApp: boolean;
 }
 
