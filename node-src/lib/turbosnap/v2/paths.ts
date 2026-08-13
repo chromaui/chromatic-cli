@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { posix } from '../../posix';
+import { relativeTo } from '../../getStorybookProjectRoot';
 import { FilePath } from './graph';
 
 /**
@@ -36,9 +36,7 @@ export function normalizeStatsPath(
     return statsPath;
   }
 
-  const stripped = stripConcatenatedModuleSuffix(statsPath);
-  const absolutePath = path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
-  return prefixInProjectPath(posix(path.relative(projectRoot, absolutePath)));
+  return prefixInProjectPath(relativeTo(projectRoot, resolveStatsPath(statsPath, statsRoot)));
 }
 
 /**
