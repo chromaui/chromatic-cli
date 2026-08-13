@@ -79,7 +79,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/logo.svg');
     write(root, 'static/nested/deep/font.woff2');
 
-    const files = await realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles().listTree(path.join(root, 'static'));
 
     expect(files.sort()).toEqual([
       path.join(root, 'static/logo.svg'),
@@ -93,7 +93,7 @@ describe('realProjectFiles listTree', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(target, path.join(root, 'static/logo.svg'));
 
-    const files = await realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles().listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
@@ -105,7 +105,7 @@ describe('realProjectFiles listTree', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(path.join(root, 'node_modules/pkg/dist'), path.join(root, 'static/vendor'));
 
-    const files = await realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles().listTree(path.join(root, 'static'));
 
     expect(files.sort()).toEqual([
       path.join(root, 'static/vendor/a.png'),
@@ -118,7 +118,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/keep.svg');
     symlinkSync(path.join(root, 'gone.svg'), path.join(root, 'static/logo.svg'));
 
-    const files = await realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles().listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/keep.svg')]);
   });
@@ -128,7 +128,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/logo.svg');
     symlinkSync(path.join(root, 'static'), path.join(root, 'static/loop'));
 
-    const files = await realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles().listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
@@ -136,7 +136,7 @@ describe('realProjectFiles listTree', () => {
   it('is empty for a directory that does not exist, since a missing staticDir is not an error', async () => {
     const root = temporaryDirectory();
 
-    const files = await realProjectFiles().listTree(path.join(root, 'absent'));
+    const files = realProjectFiles().listTree(path.join(root, 'absent'));
 
     expect(files).toEqual([]);
   });
@@ -148,7 +148,7 @@ describe('realProjectFiles listTree', () => {
     // different point than a missing directory.
     lock(path.join(root, 'locked'));
 
-    const files = await realProjectFiles().listTree(path.join(root, 'locked'));
+    const files = realProjectFiles().listTree(path.join(root, 'locked'));
 
     expect(files).toEqual([]);
   });

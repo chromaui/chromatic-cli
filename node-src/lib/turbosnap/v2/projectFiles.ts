@@ -1,5 +1,4 @@
-import { readFileSync, statSync } from 'fs';
-import { readdir, realpath, stat } from 'fs/promises';
+import { readdirSync, readFileSync, realpathSync, statSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 
@@ -19,7 +18,7 @@ export interface ProjectFiles {
   /** Throws, naming the path, when a file cannot be read. */
   hashAll(absolutePaths: AbsolutePath[]): Promise<Record<AbsolutePath, FileHash>>;
   /** Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. */
-  listTree(absoluteDirectory: AbsolutePath): Promise<AbsolutePath[]>;
+  listTree(absoluteDirectory: AbsolutePath): AbsolutePath[];
 }
 
 /**
@@ -103,45 +102,48 @@ function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
  *
  * @returns The absolute path of every file found.
  */
-async function listFilesRecursively(
+function listFilesRecursively(
   directory: AbsolutePath,
   visitedDirectories = new Set<AbsolutePath>()
-): Promise<AbsolutePath[]> {
-  // Resolving before walking is what stops a symlink loop from diverging. Static files are hashed
-  // unbounded by design, so there is no count cap to fall back on.
+): AbsolutePath[] {
   let realDirectory;
   try {
-    realDirectory = await realpath(directory);
+    realDirectory = realpathSync(directory);
   } catch {
     return [];
   }
-  if (visitedDirectories.has(realDirectory)) return [];
+
+  if (visitedDirectories.has(realDirectory)) {
+    return [];
+  }
   visitedDirectories.add(realDirectory);
 
   let entries;
   try {
-    entries = await readdir(directory, { withFileTypes: true });
+    entries = readdirSync(directory, { withFileTypes: true });
   } catch {
     return [];
   }
 
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) return listFilesRecursively(entryPath, visitedDirectories);
-      if (entry.isFile()) return [entryPath];
+  return entries.flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return listFilesRecursively(entryPath, visitedDirectories);
+    }
+    if (entry.isFile()) {
+      return [entryPath];
+    }
 
-      // A symlink is neither, so ask `stat`, which follows it. Anything else with no bytes of its own
-      // — a socket, a device, a broken link — contributes nothing.
-      try {
-        const stats = await stat(entryPath);
-        if (stats.isDirectory()) return listFilesRecursively(entryPath, visitedDirectories);
-        return stats.isFile() ? [entryPath] : [];
-      } catch {
-        return [];
+    // A symlink is neither, so ask `stat`, which follows it. Anything else with no bytes of its own
+    // — a socket, a device, a broken link — contributes nothing.
+    try {
+      const stats = statSync(entryPath);
+      if (stats.isDirectory()) {
+        return listFilesRecursively(entryPath, visitedDirectories);
       }
-    })
-  );
-
-  return files.flat();
+      return stats.isFile() ? [entryPath] : [];
+    } catch {
+      return [];
+    }
+  });
 }
