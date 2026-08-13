@@ -68,8 +68,10 @@ export function hashEntryIdentities(entries: Iterable<[FilePath, FileHash]>): st
 }
 
 /**
- * Encodes a key and value as a single string, separated by a colon so a change to either side moves
- * the result.
+ * Encodes a key and value as a single string. JSON is a self-delimiting encoding: the quotes and
+ * brackets bound each side and every path/hash character, so no pair of entries can concatenate into
+ * the same string as a different pair. That keeps the roll-up free of hash collisions, and a change
+ * to either side still moves the result.
  *
  * @param entry The key/value pair to encode.
  * @param entry."0" The file path, which comes first in the encoding.
@@ -78,7 +80,7 @@ export function hashEntryIdentities(entries: Iterable<[FilePath, FileHash]>): st
  * @returns The encoded entry.
  */
 export function hashEntryIdentity([path, hash]: [FilePath, FileHash]): string {
-  return `${path}:${hash}`;
+  return JSON.stringify([path, hash]);
 }
 
 /**

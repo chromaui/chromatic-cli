@@ -29,23 +29,23 @@ function makeFiles(graph: Record<FilePath, FilePath[]>): Map<FilePath, TurboSnap
 }
 
 describe('hashEntryIdentity', () => {
-  it('joins the key and the value with a colon', () => {
-    expect(hashEntryIdentity(['a.ts', 'H1'])).toBe('a.ts:H1');
+  it('encodes the key and the value as a JSON pair', () => {
+    expect(hashEntryIdentity(['a.ts', 'H1'])).toBe('["a.ts","H1"]');
   });
 
   it('keeps two entries distinct when the same bytes split differently between key and value', () => {
-    // The delimiter is what records where the key ends, so a file at path `ab` hashing to `c` stays
-    // distinct from one at `a` hashing to `bc`.
+    // The quotes record where the key ends, so a file at path `ab` hashing to `c` stays distinct
+    // from one at `a` hashing to `bc`.
     expect(hashEntryIdentity(['ab', 'c'])).not.toBe(hashEntryIdentity(['a', 'bc']));
   });
 
   it('puts the key before the value', () => {
     // A swap would encode just as well, but every previously published hash would change.
-    expect(hashEntryIdentity(['k', 'v'])).toBe('k:v');
+    expect(hashEntryIdentity(['k', 'v'])).toBe('["k","v"]');
   });
 
   it('encodes an empty value distinctly from an absent one being empty too', () => {
-    expect(hashEntryIdentity(['a.ts', ''])).toBe('a.ts:');
+    expect(hashEntryIdentity(['a.ts', ''])).toBe('["a.ts",""]');
   });
 });
 
@@ -77,6 +77,22 @@ describe('hashEntryIdentities', () => {
     );
   });
 
+  it('distinguishes entry sets that split the same bytes across the entry boundary', () => {
+    // With no delimiter between entries these would collide: `a`+`xb` then `y`+`` concatenates to
+    // the same bytes as `a`+`x` then `by`+``. The per-entry JSON encoding keeps them apart.
+    expect(
+      hashEntryIdentities([
+        ['a', 'xb'],
+        ['y', ''],
+      ])
+    ).not.toBe(
+      hashEntryIdentities([
+        ['a', 'x'],
+        ['by', ''],
+      ])
+    );
+  });
+
   it('distinguishes a renamed key from an unchanged one', () => {
     expect(hashEntryIdentities([['a.ts', 'H1']])).not.toBe(hashEntryIdentities([['b.ts', 'H1']]));
   });
@@ -92,7 +108,7 @@ describe('rollUpEntryHashes', () => {
         ],
         identity
       )
-    ).toBe('a.ts:H1b.ts:H2');
+    ).toBe('["a.ts","H1"]["b.ts","H2"]');
   });
 });
 
@@ -103,7 +119,9 @@ describe('rollUpFileHashes', () => {
   ]);
 
   it('looks each file up by path and rolls the pairs together into a single hash', () => {
-    expect(rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity)).toBe('./a.ts:H1./b.ts:H2');
+    expect(rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity)).toBe(
+      '["./a.ts","H1"]["./b.ts","H2"]'
+    );
   });
 
   it('does not depend on the order the files are supplied in', () => {
@@ -115,7 +133,7 @@ describe('rollUpFileHashes', () => {
   it('substitutes an empty content hash for a file with no entry in `hashes`', () => {
     // Synthetic nodes (globs, externals, virtual modules) are walked but never hashed. They still
     // contribute their path, so the roll-up records that they were part of the subtree.
-    expect(rollUpFileHashes(hashes, ['virtual:stories'], identity)).toBe('virtual:stories:');
+    expect(rollUpFileHashes(hashes, ['virtual:stories'], identity)).toBe('["virtual:stories",""]');
   });
 
   it('changes when a file moves, even though its content is identical', () => {
