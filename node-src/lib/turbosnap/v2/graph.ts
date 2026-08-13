@@ -97,13 +97,16 @@ export function collectTransitiveDependencies(
   filePath: FilePath,
   dependencies = new Set<FilePath>()
 ) {
-  if (dependencies.has(filePath)) {
-    return dependencies;
-  }
+  const unvisited: FilePath[] = [filePath];
 
-  dependencies.add(filePath);
-  for (const dependency of files.get(filePath)?.dependencies ?? []) {
-    collectTransitiveDependencies(files, dependency, dependencies);
+  while (unvisited.length > 0) {
+    const current = unvisited.pop();
+    if (current === undefined || dependencies.has(current)) {
+      continue;
+    }
+
+    dependencies.add(current);
+    unvisited.push(...(files.get(current)?.dependencies ?? []));
   }
 
   return dependencies;
