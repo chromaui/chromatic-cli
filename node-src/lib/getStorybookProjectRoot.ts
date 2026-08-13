@@ -10,8 +10,8 @@ import { posix } from './posix';
  * /repo               <-- git root
  * /repo/packages/ui   <-- project root, named by --storybook-base-dir
  *
- * This is the only derivation of the project root. Callers that need the git-relative form (the
- * `baseDir` we report and join builder paths onto) get it by passing this result to `relativeTo`.
+ * This is the only derivation of the project root. Callers that need a relative representation
+ * derive it at their interface by passing this result to `relativeTo`.
  *
  * @param input The base directory configured by the user (if any) and the git
  *   root path discovered by gitInfo.

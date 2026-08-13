@@ -28,7 +28,7 @@ const buildDeps = (overrides: Partial<StorybookInfoDeps> = {}): StorybookInfoDep
   }) as StorybookInfoDeps;
 
 describe('setStorybookInfo', () => {
-  it('returns Storybook metadata combined with the resolved baseDir', async () => {
+  it('returns Storybook metadata combined with the absolute project root', async () => {
     const storybook = { version: '1.0.0', addons: [] };
     getStorybookInfo.mockResolvedValue(storybook);
     mockedGetStorybookProjectRoot.mockReturnValue('/some/git/root/packages/sb');
@@ -40,7 +40,7 @@ describe('setStorybookInfo', () => {
 
     expect(result).toEqual({
       kind: 'continue',
-      output: { storybook: { ...storybook, baseDir: 'packages/sb' } },
+      output: { storybook: { ...storybook, projectRoot: '/some/git/root/packages/sb' } },
     });
   });
 
@@ -61,7 +61,7 @@ describe('setStorybookInfo', () => {
     });
   });
 
-  it('returns a continue result with only baseDir when getStorybookInfo resolves to {}', async () => {
+  it('returns a continue result with only projectRoot when getStorybookInfo resolves to {}', async () => {
     getStorybookInfo.mockResolvedValue({});
     mockedGetStorybookProjectRoot.mockReturnValue('/repo/root');
 
@@ -72,7 +72,7 @@ describe('setStorybookInfo', () => {
 
     expect(result).toEqual({
       kind: 'continue',
-      output: { storybook: { baseDir: '.' } },
+      output: { storybook: { projectRoot: '/repo/root' } },
     });
   });
 
@@ -104,7 +104,9 @@ describe('setStorybookInfo', () => {
 const buildStorybook = (overrides: Partial<Storybook> = {}): Storybook =>
   ({
     version: '1.0.0',
-    baseDir: 'packages/sb',
+    projectRoot: '/repo/packages/sb',
+    configDir: '/repo/packages/sb/.storybook',
+    staticDirs: ['/repo/packages/sb/public'],
     addons: [],
     ...overrides,
   }) as Storybook;
@@ -135,12 +137,15 @@ describe('applyStorybookInfoOutput', () => {
     expect(mockedSentrySetTag).not.toHaveBeenCalled();
   });
 
-  it('attaches the storybook object as Sentry context', () => {
+  it('attaches Storybook metadata without absolute paths as Sentry context', () => {
     mockedSentrySetContext.mockClear();
     const storybook = buildStorybook();
 
     applyStorybookInfoOutput({} as any, { storybook });
 
-    expect(mockedSentrySetContext).toHaveBeenCalledWith('storybook', { ...storybook });
+    expect(mockedSentrySetContext).toHaveBeenCalledWith('storybook', {
+      version: '1.0.0',
+      addons: [],
+    });
   });
 });

@@ -12,8 +12,8 @@ function makeConfig(returnValue: any): MainConfigReader {
   return { readField: vi.fn().mockReturnValue(returnValue) };
 }
 
-// The directories arrive absolute and leave relative to the project root, so the fixtures below are
-// written against a project at `/project` whose config lives in `/project/.storybook`.
+// The fixtures below represent a project at `/project` whose config lives in
+// `/project/.storybook`.
 function findProjectStaticDirectories(
   mainConfig?: MainConfigReader,
   buildScriptStaticDirectories?: string[]
@@ -30,7 +30,7 @@ describe('findStaticDirectories', () => {
   it('returns string entries resolved relative to the config directory', () => {
     const config = makeConfig(['./static', '../public']);
     expect(findProjectStaticDirectories(config)).toEqual({
-      staticDir: ['.storybook/static', 'public'],
+      staticDirs: ['/project/.storybook/static', '/project/public'],
     });
   });
 
@@ -40,45 +40,47 @@ describe('findStaticDirectories', () => {
       { from: '../public', to: '/public' },
     ]);
     expect(findProjectStaticDirectories(config)).toEqual({
-      staticDir: ['.storybook/static', 'public'],
+      staticDirs: ['/project/.storybook/static', '/project/public'],
     });
   });
 
   it('handles mixed string and object entries', () => {
     const config = makeConfig(['./static', { from: '../public', to: '/' }]);
     expect(findProjectStaticDirectories(config)).toEqual({
-      staticDir: ['.storybook/static', 'public'],
+      staticDirs: ['/project/.storybook/static', '/project/public'],
     });
   });
 
-  it('rewrites absolute paths as project-relative ones', () => {
+  it('leaves resolved absolute paths unchanged', () => {
     const config = makeConfig(['/project/public']);
-    expect(findProjectStaticDirectories(config)).toEqual({ staticDir: ['public'] });
+    expect(findProjectStaticDirectories(config)).toEqual({ staticDirs: ['/project/public'] });
   });
 
-  it('reports a directory outside the project root as an ascending path', () => {
+  it('reports a directory outside the project root as an absolute path', () => {
     const config = makeConfig(['./assets', { from: '../../../shared', to: '/shared' }]);
     expect(findProjectStaticDirectories(config)).toEqual({
-      staticDir: ['.storybook/assets', '../shared'],
+      staticDirs: ['/project/.storybook/assets', '/shared'],
     });
   });
 
   it("merges the build script's -s with the config's staticDirs", () => {
     const config = makeConfig(['./assets']);
     expect(findProjectStaticDirectories(config, ['public'])).toEqual({
-      staticDir: ['public', '.storybook/assets'],
+      staticDirs: ['/project/public', '/project/.storybook/assets'],
     });
   });
 
   it('dedupes directories that differ only in how they are written', () => {
     const config = makeConfig(['../public']);
     expect(findProjectStaticDirectories(config, ['./public', 'public'])).toEqual({
-      staticDir: ['public'],
+      staticDirs: ['/project/public'],
     });
   });
 
   it('returns the build script directories when there is no config to read', () => {
-    expect(findProjectStaticDirectories(undefined, ['public'])).toEqual({ staticDir: ['public'] });
+    expect(findProjectStaticDirectories(undefined, ['public'])).toEqual({
+      staticDirs: ['/project/public'],
+    });
   });
 
   it('returns {} for empty array', () => {
@@ -121,8 +123,6 @@ function getDeps(
   } as any;
 }
 
-// The CLI runs at the repo root in these tests, so each fixture stands in for a project root the
-// reported directories come back relative to.
 function projectRootOf(project: string) {
   return path.resolve(FIXTURES, project);
 }
@@ -164,22 +164,28 @@ describe('getStorybookMetadata staticDirs discovery', () => {
   ])('resolves staticDirs from $shape', async ({ project }) => {
     const metadata = await getStorybookMetadata(getDeps(project), projectRootOf(project));
 
-    expect(metadata.staticDir).toEqual(['.storybook/static', 'public']);
+    expect(metadata.staticDirs).toEqual([
+      path.join(projectRootOf(project), '.storybook/static'),
+      path.join(projectRootOf(project), 'public'),
+    ]);
   });
 });
 
-describe('getStorybookMetadata directories relative to the project root', () => {
+describe('getStorybookMetadata absolute directories', () => {
   it('reports the config directory the CLI option names', async () => {
     const metadata = await getStorybookMetadata(getDeps('js-cjs'), projectRootOf('js-cjs'));
 
-    expect(metadata.configDir).toBe('.storybook');
+    expect(metadata.configDir).toBe(path.join(projectRootOf('js-cjs'), '.storybook'));
   });
 
-  it('reports a project root the CLI does not run in as an ascending path', async () => {
+  it('reports the same absolute paths when the supplied project root is nested', async () => {
     const metadata = await getStorybookMetadata(getDeps('js-cjs'), projectRootOf('js-cjs/nested'));
 
-    expect(metadata.configDir).toBe('../.storybook');
-    expect(metadata.staticDir).toEqual(['../.storybook/static', '../public']);
+    expect(metadata.configDir).toBe(path.join(projectRootOf('js-cjs'), '.storybook'));
+    expect(metadata.staticDirs).toEqual([
+      path.join(projectRootOf('js-cjs'), '.storybook/static'),
+      path.join(projectRootOf('js-cjs'), 'public'),
+    ]);
   });
 
   it("resolves the build script's -c and -s against the project root", async () => {
@@ -195,8 +201,11 @@ describe('getStorybookMetadata directories relative to the project root', () => 
       projectRootOf(project)
     );
 
-    expect(metadata.configDir).toBe('.storybook-ci');
-    expect(metadata.staticDir).toEqual(['public', '.storybook-ci/static']);
+    expect(metadata.configDir).toBe(path.join(projectRootOf(project), '.storybook-ci'));
+    expect(metadata.staticDirs).toEqual([
+      path.join(projectRootOf(project), 'public'),
+      path.join(projectRootOf(project), '.storybook-ci/static'),
+    ]);
   });
 
   it('reads --storybook-config-dir relative to the project root', async () => {
@@ -208,8 +217,8 @@ describe('getStorybookMetadata directories relative to the project root', () => 
       projectRootOf(project)
     );
 
-    expect(metadata.configDir).toBe('.storybook-nested');
-    expect(metadata.staticDir).toEqual(['public']);
+    expect(metadata.configDir).toBe(path.join(projectRootOf(project), '.storybook-nested'));
+    expect(metadata.staticDirs).toEqual([path.join(projectRootOf(project), 'public')]);
   });
 
   it('falls back to the cwd reading when the option does not resolve inside the project root', async () => {
@@ -220,8 +229,7 @@ describe('getStorybookMetadata directories relative to the project root', () => 
       projectRootOf(project)
     );
 
-    // The two fixtures are siblings, so the config directory sits one level over.
-    expect(metadata.configDir).toBe('../js-cjs/.storybook');
+    expect(metadata.configDir).toBe(path.join(projectRootOf('js-cjs'), '.storybook'));
   });
 
   it('prefers the project root reading when both directories exist', async () => {
@@ -233,7 +241,7 @@ describe('getStorybookMetadata directories relative to the project root', () => 
       projectRootOf(project)
     );
 
-    expect(metadata.configDir).toBe('.storybook');
+    expect(metadata.configDir).toBe(path.join(projectRootOf(project), '.storybook'));
   });
 
   it('lets the CLI option win over the build script', async () => {
@@ -247,28 +255,32 @@ describe('getStorybookMetadata directories relative to the project root', () => 
       projectRootOf(project)
     );
 
-    expect(metadata.configDir).toBe('.storybook');
+    expect(metadata.configDir).toBe(path.join(projectRootOf(project), '.storybook'));
   });
 });
 
 describe('getStorybookMetadata fields visible on ctx.storybook', () => {
   it.each([
-    { project: 'ts-esm', shape: 'a parsed main.ts', fields: ['configDir', 'staticDir', 'version'] },
+    {
+      project: 'ts-esm',
+      shape: 'a parsed main.ts',
+      fields: ['configDir', 'staticDirs', 'version'],
+    },
     {
       project: 'mjs-esm',
       shape: 'a parsed main.mjs',
-      fields: ['configDir', 'staticDir', 'version'],
+      fields: ['configDir', 'staticDirs', 'version'],
     },
-    { project: 'cjs', shape: 'a parsed main.cjs', fields: ['configDir', 'staticDir', 'version'] },
+    { project: 'cjs', shape: 'a parsed main.cjs', fields: ['configDir', 'staticDirs', 'version'] },
     {
       project: 'js-cjs',
       shape: 'an evaluated cjs main.js',
-      fields: ['configDir', 'staticDir', 'version'],
+      fields: ['configDir', 'staticDirs', 'version'],
     },
     {
       project: 'js-esm-unrequirable',
       shape: 'a parsed main.js',
-      fields: ['configDir', 'staticDir', 'version'],
+      fields: ['configDir', 'staticDirs', 'version'],
     },
     {
       project: 'builder-js-esm',
@@ -291,10 +303,10 @@ describe('getStorybookMetadata fields visible on ctx.storybook', () => {
     expect(Object.keys(metadata).sort()).toEqual(fields);
   });
 
-  it('exposes staticDir and version for an esm main.js regardless of the runtime read path', async () => {
+  it('exposes staticDirs and version for an esm main.js regardless of the runtime read path', async () => {
     const metadata = await getStorybookMetadata(getDeps('js-esm'), projectRootOf('js-esm'));
 
-    expect(Object.keys(metadata).sort()).toEqual(['configDir', 'staticDir', 'version']);
+    expect(Object.keys(metadata).sort()).toEqual(['configDir', 'staticDirs', 'version']);
   });
 
   it('reports the refs declared by an evaluated config', async () => {

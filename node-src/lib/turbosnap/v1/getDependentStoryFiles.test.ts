@@ -1,5 +1,6 @@
 /* eslint-disable max-lines, max-statements */
 import chalk from 'chalk';
+import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
@@ -15,18 +16,24 @@ const getContext: any = (
     configDir,
     staticDir,
     ...options
-  }: { configDir?: string; staticDir?: string } & Context['options'] = {} as any
-) => ({
-  log,
-  options,
-  turboSnap: {},
-  storybook: {
-    baseDir: options.storybookBaseDir ?? '',
-    configDir,
-    staticDir,
-  },
-  git: { rootPath: '/path/to/project' },
-});
+  }: { configDir?: string; staticDir?: string[] } & Context['options'] = {} as any
+) => {
+  const rootPath = '/path/to/project';
+  const projectRoot = path.resolve(rootPath, options.storybookBaseDir ?? '');
+  return {
+    log,
+    options,
+    turboSnap: {},
+    storybook: {
+      projectRoot,
+      ...(configDir && { configDir: path.resolve(projectRoot, configDir) }),
+      ...(staticDir && {
+        staticDirs: staticDir.map((directory) => path.resolve(projectRoot, directory)),
+      }),
+    },
+    git: { rootPath },
+  };
+};
 
 afterEach(() => {
   log.info.mockReset();
@@ -1277,7 +1284,11 @@ describe('normalizePath', () => {
   describe('with workingDir', () => {
     it('makes relative paths relative to the project root', () => {
       const projectRoot = '/path/to/project';
-      const normalized = normalizePath(`folder/file.js`, projectRoot, 'packages/webapp');
+      const normalized = normalizePath(
+        `folder/file.js`,
+        projectRoot,
+        `${projectRoot}/packages/webapp`
+      );
       expect(normalized).toBe('packages/webapp/folder/file.js');
     });
 
@@ -1286,7 +1297,7 @@ describe('normalizePath', () => {
       const normalized = normalizePath(
         `../../packages/webapp/folder/file.js`,
         projectRoot,
-        'packages/tools'
+        `${projectRoot}/packages/tools`
       );
       expect(normalized).toBe('packages/webapp/folder/file.js');
     });
@@ -1296,7 +1307,7 @@ describe('normalizePath', () => {
       const normalized = normalizePath(
         `${projectRoot}/packages/webapp/file.js`,
         projectRoot,
-        'packages/webapp'
+        `${projectRoot}/packages/webapp`
       );
       expect(normalized).toBe('packages/webapp/file.js');
     });
@@ -1306,7 +1317,7 @@ describe('normalizePath', () => {
       const normalized = normalizePath(
         `${projectRoot}/packages/webapp/file.js`,
         projectRoot,
-        'packages/tools'
+        `${projectRoot}/packages/tools`
       );
       expect(normalized).toBe('packages/webapp/file.js');
     });

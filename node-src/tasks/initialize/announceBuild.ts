@@ -1,6 +1,7 @@
 import { emailHash } from '@cli/emailHash';
 import * as Sentry from '@sentry/node';
 
+import { relativeTo } from '../../lib/getStorybookProjectRoot';
 import {
   AnnouncedBuild,
   Deps,
@@ -88,7 +89,7 @@ const parseAnnounceBuildMutationInput = (deps: AnnounceBuildDeps, input: Announc
     storybookVersion: input.storybook.version,
     projectMetadata: {
       ...input.projectMetadata,
-      storybookBaseDir: input.storybook?.baseDir,
+      storybookBaseDir: relativeTo(rootPath ?? process.cwd(), input.storybook.projectRoot) || '.',
     },
   };
 };

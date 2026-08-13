@@ -10,7 +10,6 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
-import { relativeTo } from './getStorybookProjectRoot';
 import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
 
@@ -122,7 +121,7 @@ async function findReferences(mainConfig?: MainConfigReader) {
 }
 
 /**
- * Resolves the project-relative static directories, merging the build script's `-s` flag with the
+ * Resolves the absolute static directories, merging the build script's `-s` flag with the
  * main config's `staticDirs`. Storybook rejects both at once (and dropped `-s` in v8), so in
  * practice only one is populated; the union covers both.
  *
@@ -133,8 +132,8 @@ async function findReferences(mainConfig?: MainConfigReader) {
  * @param input.mainConfig The loaded main config, or undefined when it could not be read.
  * @param input.configDirectory The absolute config directory `staticDirs` entries resolve against.
  * @param input.buildScriptStaticDirs The build script's `-s` directories, or undefined when it declares none.
- * @param input.projectRoot The absolute Storybook project root, which the build script's `-s`
- *   directories resolve against and the result is relative to.
+ * @param input.projectRoot The absolute Storybook project root the build script's `-s` directories
+ *   resolve against.
  *
  * @returns The resolved static directories, or `{}` when there are none.
  */
@@ -148,17 +147,14 @@ export function findStaticDirectories({
   configDirectory: string;
   buildScriptStaticDirs?: string[];
   projectRoot: string;
-}): { staticDir?: string[] } {
+}): { staticDirs?: string[] } {
   const directories = [
     ...(buildScriptStaticDirs ?? []).map((directory) => path.resolve(projectRoot, directory)),
     ...readConfigStaticDirectories(mainConfig, configDirectory),
   ];
 
-  // Both sources are made project-relative before the dedupe, so `public` and `./public` count as one.
-  const staticDirectories = [
-    ...new Set(directories.map((directory) => relativeTo(projectRoot, directory))),
-  ];
-  return staticDirectories.length > 0 ? { staticDir: staticDirectories } : {};
+  const staticDirectories = [...new Set(directories)];
+  return staticDirectories.length > 0 ? { staticDirs: staticDirectories } : {};
 }
 
 /**
@@ -252,7 +248,7 @@ export async function readMainConfig(
  * Finds the Storybook metadata from the given dependencies.
  *
  * @param deps The dependencies to find the metadata with.
- * @param projectRoot The absolute Storybook project root the reported directories are relative to.
+ * @param projectRoot The absolute Storybook project root used to resolve declared directories.
  *
  * @returns The Storybook metadata, or an empty object when none could be found.
  */
@@ -275,7 +271,7 @@ export async function getStorybookMetadata(
 
   deps.log.debug(info);
   let metadata: Record<string, any> = {
-    configDir: relativeTo(projectRoot, configDirectory),
+    configDir: configDirectory,
     ...findStaticDirectories({
       mainConfig,
       configDirectory,

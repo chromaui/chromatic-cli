@@ -4,6 +4,7 @@ import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../.
 import noCSFGlobs from '../../../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../../ui/messages/warnings/bailFile';
+import { relativeTo } from '../../getStorybookProjectRoot';
 import { posix } from '../../posix';
 import { isPackageManifestFile, matchesFile } from '../../utilities';
 import { TraceChangedFilesResult } from '../types';
@@ -40,22 +41,23 @@ const getPackageName = (modulePath: string) => {
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
- * stats may have been generated in a subdirectory, so we prepend the baseDir if necessary. The
- * result is a relative POSIX path compatible with `git diff --name-only`. Virtual paths (e.g. Vite)
- * are returned as-is.
+ * stats may have been generated in a subdirectory, so relative paths are anchored to the Storybook
+ * project root. The result is a relative POSIX path compatible with `git diff --name-only`.
+ * Virtual paths (e.g. Vite) are returned as-is.
  *
- * @param posixPath The POSIX path to the file.
- * @param rootPath The project root path.
- * @param baseDirectory The base directory to the file.
+ * @param filePath The path to the file.
+ * @param rootPath The absolute git repository root.
+ * @param projectRoot The absolute Storybook project root.
  *
  * @returns A normalized path to the file.
  */
-export function normalizePath(posixPath: string, rootPath: string, baseDirectory = '') {
-  if (!posixPath || posixPath.startsWith('/virtual:')) return posixPath;
+export function normalizePath(filePath: string, rootPath: string, projectRoot = rootPath) {
+  if (!filePath || filePath.startsWith('/virtual:')) return filePath;
 
-  return path.posix.isAbsolute(posixPath)
-    ? path.posix.relative(rootPath, posixPath)
-    : path.posix.join(baseDirectory, posixPath);
+  const relativePath = path.isAbsolute(filePath)
+    ? path.relative(rootPath, filePath)
+    : path.join(path.relative(rootPath, projectRoot), filePath);
+  return posix(relativePath);
 }
 
 /**
@@ -93,11 +95,10 @@ export async function getDependentStoryFiles(
     throw new Error('Failed to determine repository root');
   }
 
-  const {
-    baseDir: baseDirectory = '',
-    configDir: configDirectory = '.storybook',
-    staticDir: staticDirectory = [],
-  } = ctx.storybook || {};
+  const { projectRoot = process.cwd() } = ctx.storybook || {};
+  const configDirectory = ctx.storybook?.configDir ?? path.resolve(projectRoot, '.storybook');
+  const staticDirectoriesAbsolute = ctx.storybook?.staticDirs ?? [];
+  const baseDirectory = relativeTo(rootPath, projectRoot);
   const { storybookBuildDir, untraced = [] } = ctx.options;
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
@@ -105,15 +106,17 @@ export async function getDependentStoryFiles(
   const normalize = (posixPath: FilePath): NormalizedName => {
     const CSF_REGEX = /\s+(sync|lazy)\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
-    const newPath = normalizePath(posixPath, rootPath, baseDirectory);
+    const newPath = normalizePath(posixPath, rootPath, projectRoot);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
       ? newPath.replaceAll(URL_PARAM_REGEX, '')
       : newPath;
   };
 
-  const storybookDirectory = normalize(posix(configDirectory));
-  const staticDirectories = staticDirectory.map((directory: string) => normalize(posix(directory)));
+  const storybookDirectory = relativeTo(rootPath, configDirectory);
+  const staticDirectories = staticDirectoriesAbsolute.map((directory) =>
+    relativeTo(rootPath, directory)
+  );
 
   ctx.log.debug('BASE Directory:', baseDirectory);
   ctx.log.debug('Storybook CONFIG Directory:', storybookDirectory);

@@ -1,4 +1,5 @@
 import TestLogger from '@cli/testLogger';
+import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import getStorybookInfo from './getStorybookInfo';
@@ -142,8 +143,11 @@ describe('getStorybookInfo', () => {
       });
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
-        configDir: `${FIXTURES}/js-cjs/.storybook`,
-        staticDir: [`${FIXTURES}/js-cjs/.storybook/static`, `${FIXTURES}/js-cjs/public`],
+        configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
+        staticDirs: [
+          path.resolve(FIXTURES, 'js-cjs/.storybook/static'),
+          path.resolve(FIXTURES, 'js-cjs/public'),
+        ],
         version: expect.any(String),
       });
     });
@@ -181,8 +185,11 @@ describe('getStorybookInfo', () => {
       });
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: 'webpack4', packageVersion: '6.5.16' },
-        configDir: `${FIXTURES}/cjs/.storybook`,
-        staticDir: [`${FIXTURES}/cjs/.storybook/static`, `${FIXTURES}/cjs/public`],
+        configDir: path.resolve(FIXTURES, 'cjs/.storybook'),
+        staticDirs: [
+          path.resolve(FIXTURES, 'cjs/.storybook/static'),
+          path.resolve(FIXTURES, 'cjs/public'),
+        ],
         version: '6.5.16',
       });
     });

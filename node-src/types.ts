@@ -216,9 +216,12 @@ export interface BaselineBuild {
 
 export interface Storybook {
   version: string;
-  baseDir?: string;
+  /** The absolute directory Storybook runs from. */
+  projectRoot: string;
+  /** The absolute directory containing Storybook's configuration. */
   configDir: string;
-  staticDir: string[];
+  /** The absolute directories Storybook serves as static assets. */
+  staticDirs: string[];
   addons: {
     name: string;
     packageName?: string;
@@ -229,6 +232,7 @@ export interface Storybook {
     packageName?: string;
     packageVersion?: string;
   };
+  /** The absolute main-config file path, when known. */
   mainConfigFilePath?: string;
   refs?: Record<string, StorybookReference>;
 }

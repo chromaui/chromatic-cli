@@ -1,5 +1,6 @@
 import { getDependentStoryFiles } from '@cli/turbosnap/v1';
 import meow from 'meow';
+import path from 'path';
 
 import { getRepositoryRoot } from '../node-src/git/git';
 import { createLogger } from '../node-src/lib/log';
@@ -86,6 +87,8 @@ export async function main(argv: string[]) {
   );
 
   const log = createLogger({}, { logPrefix: '', logLevel: 'info' });
+  const gitRoot = await getRepositoryRoot({ log });
+  const projectRoot = path.resolve(gitRoot, flags.storybookBaseDir);
   const ctx: Context = {
     log,
     options: {
@@ -95,11 +98,12 @@ export async function main(argv: string[]) {
       traceChanged: flags.mode || true,
     },
     git: {
-      rootPath: await getRepositoryRoot({ log }),
+      rootPath: gitRoot,
     },
     storybook: {
-      baseDir: flags.storybookBaseDir,
-      configDir: flags.storybookConfigDir,
+      projectRoot,
+      configDir: path.resolve(projectRoot, flags.storybookConfigDir),
+      staticDirs: [],
     },
   } as any;
   const stats = await readStatsFile(flags.statsFile);
