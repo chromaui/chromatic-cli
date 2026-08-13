@@ -1,5 +1,6 @@
 import path from 'path';
 
+import { AbsolutePath } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { FilePath } from './graph';
 
@@ -29,8 +30,8 @@ export function stripConcatenatedModuleSuffix(statsPath: FilePath): FilePath {
  */
 export function normalizeStatsPath(
   statsPath: FilePath,
-  projectRoot: FilePath,
-  statsRoot = projectRoot
+  projectRoot: AbsolutePath,
+  statsRoot: AbsolutePath = projectRoot
 ): FilePath {
   if (statsPath.includes('virtual:')) {
     return statsPath;
@@ -60,7 +61,7 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  *
  * @returns The absolute path to the file on disk.
  */
-export function resolveStatsPath(statsPath: FilePath, statsRoot: FilePath): FilePath {
+export function resolveStatsPath(statsPath: FilePath, statsRoot: AbsolutePath): AbsolutePath {
   const stripped = stripConcatenatedModuleSuffix(statsPath);
   return path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
 }

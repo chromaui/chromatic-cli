@@ -3,22 +3,23 @@ import { readdir, realpath, stat } from 'fs/promises';
 import { createRequire } from 'module';
 import path from 'path';
 
+import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
-import { FileHash, FilePath } from './graph';
+import { FileHash } from './graph';
 
 /**
  * Every disk read TurboSnap v2 makes, behind one interface, so the rules about what the disk means
  * live here rather than at each call site.
  */
 export interface ProjectFiles {
-  isFile(absolutePath: FilePath): boolean;
-  isDirectory(absolutePath: FilePath): boolean;
+  isFile(absolutePath: AbsolutePath): boolean;
+  isDirectory(absolutePath: AbsolutePath): boolean;
   /** Undefined when unresolvable; resolves the package manifest, not a dist path. */
-  packageVersion(fromDirectory: FilePath, packageName: string): string | undefined;
+  packageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined;
   /** Throws, naming the path, when a file cannot be read. */
-  hashAll(absolutePaths: FilePath[]): Promise<Record<FilePath, FileHash>>;
+  hashAll(absolutePaths: AbsolutePath[]): Promise<Record<AbsolutePath, FileHash>>;
   /** Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. */
-  listTree(absoluteDirectory: FilePath): Promise<FilePath[]>;
+  listTree(absoluteDirectory: AbsolutePath): Promise<AbsolutePath[]>;
 }
 
 /**
@@ -29,13 +30,13 @@ export interface ProjectFiles {
  */
 export function realProjectFiles(): ProjectFiles {
   return {
-    isFile: (absolutePath: FilePath) =>
+    isFile: (absolutePath: AbsolutePath) =>
       statSync(absolutePath, { throwIfNoEntry: false })?.isFile() ?? false,
-    isDirectory: (absolutePath: FilePath) =>
+    isDirectory: (absolutePath: AbsolutePath) =>
       statSync(absolutePath, { throwIfNoEntry: false })?.isDirectory() ?? false,
     packageVersion: readPackageVersion,
     hashAll: hashFileContents,
-    listTree: (absoluteDirectory: FilePath) => listFilesRecursively(absoluteDirectory),
+    listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(absoluteDirectory),
   };
 }
 
@@ -47,7 +48,7 @@ export function realProjectFiles(): ProjectFiles {
  *
  * @returns The installed version, or undefined when the package cannot be resolved or read.
  */
-function readPackageVersion(fromDirectory: FilePath, packageName: string): string | undefined {
+function readPackageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined {
   const requireFromDirectory = createRequire(path.join(fromDirectory, 'package.json'));
 
   try {
@@ -66,7 +67,9 @@ function readPackageVersion(fromDirectory: FilePath, packageName: string): strin
  *
  * @returns The content hash of each file, keyed by the absolute path it was read from.
  */
-async function hashFileContents(absolutePaths: FilePath[]): Promise<Record<FilePath, FileHash>> {
+async function hashFileContents(
+  absolutePaths: AbsolutePath[]
+): Promise<Record<AbsolutePath, FileHash>> {
   if (absolutePaths.length === 0) return {};
 
   try {
@@ -86,7 +89,7 @@ async function hashFileContents(absolutePaths: FilePath[]): Promise<Record<FileP
  *
  * @returns The path, or a description of the set it came from.
  */
-function namePathThatFailed(error: any, absolutePaths: FilePath[]): string {
+function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
   return error?.path ? String(error.path) : `one of the ${absolutePaths.length} files hashed`;
 }
 
@@ -101,9 +104,9 @@ function namePathThatFailed(error: any, absolutePaths: FilePath[]): string {
  * @returns The absolute path of every file found.
  */
 async function listFilesRecursively(
-  directory: FilePath,
-  visitedDirectories = new Set<FilePath>()
-): Promise<FilePath[]> {
+  directory: AbsolutePath,
+  visitedDirectories = new Set<AbsolutePath>()
+): Promise<AbsolutePath[]> {
   // Resolving before walking is what stops a symlink loop from diverging. Static files are hashed
   // unbounded by design, so there is no count cap to fall back on.
   let realDirectory;
