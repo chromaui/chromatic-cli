@@ -88,6 +88,18 @@ describe('getStorybookInfo', () => {
     });
   });
 
+  it('keeps the configured config dir when metadata discovery fails', async () => {
+    vi.mocked(getStorybookMetadata).mockRejectedValueOnce(new Error('metadata unavailable'));
+    const projectRoot = '/repo/packages/storybook';
+    const ctx = getContext({ options: { storybookConfigDir: '.storybook-ci' } });
+
+    await expect(getStorybookInfo(ctx, projectRoot)).resolves.toEqual({
+      projectRoot,
+      configDir: '/repo/packages/storybook/.storybook-ci',
+      staticDirs: [],
+    });
+  });
+
   it('looks up package in node_modules on missing dependency', async () => {
     await expect(getStorybookInfo(baseDeps, PROJECT_ROOT)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
@@ -175,22 +187,29 @@ describe('getStorybookInfo', () => {
       });
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
-        configDir: path.resolve(PROJECT_ROOT, '.storybook'),
+        configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
         projectRoot: PROJECT_ROOT,
         staticDirs: [],
         version: expect.any(String),
       });
     });
 
-    it('returns no metadata if cannot find project.json', async () => {
+    it('keeps the source metadata when project.json cannot be read', async () => {
       const ctx = getContext({
-        options: { storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson' },
+        options: {
+          storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson',
+          storybookConfigDir: `${FIXTURES}/js-cjs/.storybook`,
+        },
         packageJson: { dependencies: REACT },
       });
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
-        configDir: path.resolve(PROJECT_ROOT, '.storybook'),
+        configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
         projectRoot: PROJECT_ROOT,
-        staticDirs: [],
+        staticDirs: [
+          path.resolve(FIXTURES, 'js-cjs/.storybook/static'),
+          path.resolve(FIXTURES, 'js-cjs/public'),
+        ],
+        version: expect.any(String),
       });
     });
 
