@@ -77,6 +77,17 @@ describe('getStorybookInfo', () => {
     );
   });
 
+  it('returns the resolved path defaults when metadata discovery fails', async () => {
+    vi.mocked(getStorybookMetadata).mockRejectedValueOnce(new Error('metadata unavailable'));
+    const projectRoot = '/repo/packages/storybook';
+
+    await expect(getStorybookInfo(baseDeps, projectRoot)).resolves.toEqual({
+      projectRoot,
+      configDir: '/repo/packages/storybook/.storybook',
+      staticDirs: [],
+    });
+  });
+
   it('looks up package in node_modules on missing dependency', async () => {
     await expect(getStorybookInfo(baseDeps, PROJECT_ROOT)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
@@ -144,6 +155,7 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
         configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
+        projectRoot: PROJECT_ROOT,
         staticDirs: [
           path.resolve(FIXTURES, 'js-cjs/.storybook/static'),
           path.resolve(FIXTURES, 'js-cjs/public'),
@@ -163,6 +175,9 @@ describe('getStorybookInfo', () => {
       });
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
+        configDir: path.resolve(PROJECT_ROOT, '.storybook'),
+        projectRoot: PROJECT_ROOT,
+        staticDirs: [],
         version: expect.any(String),
       });
     });
@@ -172,7 +187,11 @@ describe('getStorybookInfo', () => {
         options: { storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson' },
         packageJson: { dependencies: REACT },
       });
-      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({});
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
+        configDir: path.resolve(PROJECT_ROOT, '.storybook'),
+        projectRoot: PROJECT_ROOT,
+        staticDirs: [],
+      });
     });
 
     it('returns the correct metadata for Storybook 6', async () => {
@@ -186,6 +205,7 @@ describe('getStorybookInfo', () => {
       expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: 'webpack4', packageVersion: '6.5.16' },
         configDir: path.resolve(FIXTURES, 'cjs/.storybook'),
+        projectRoot: PROJECT_ROOT,
         staticDirs: [
           path.resolve(FIXTURES, 'cjs/.storybook/static'),
           path.resolve(FIXTURES, 'cjs/public'),

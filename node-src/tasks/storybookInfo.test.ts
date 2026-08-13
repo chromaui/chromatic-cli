@@ -27,9 +27,22 @@ const buildDeps = (overrides: Partial<StorybookInfoDeps> = {}): StorybookInfoDep
     ...overrides,
   }) as StorybookInfoDeps;
 
+const buildStorybook = (overrides: Partial<Storybook> = {}): Storybook => ({
+  version: '1.0.0',
+  projectRoot: '/repo/packages/sb',
+  configDir: '/repo/packages/sb/.storybook',
+  staticDirs: ['/repo/packages/sb/public'],
+  addons: [],
+  ...overrides,
+});
+
 describe('setStorybookInfo', () => {
-  it('returns Storybook metadata combined with the absolute project root', async () => {
-    const storybook = { version: '1.0.0', addons: [] };
+  it('returns the complete Storybook information for the absolute project root', async () => {
+    const storybook = buildStorybook({
+      projectRoot: '/some/git/root/packages/sb',
+      configDir: '/some/git/root/packages/sb/.storybook-custom',
+      staticDirs: ['/some/git/root/packages/sb/public'],
+    });
     getStorybookInfo.mockResolvedValue(storybook);
     mockedGetStorybookProjectRoot.mockReturnValue('/some/git/root/packages/sb');
 
@@ -40,12 +53,12 @@ describe('setStorybookInfo', () => {
 
     expect(result).toEqual({
       kind: 'continue',
-      output: { storybook: { ...storybook, projectRoot: '/some/git/root/packages/sb' } },
+      output: { storybook },
     });
   });
 
   it('passes gitRootPath through to getStorybookProjectRoot', async () => {
-    getStorybookInfo.mockResolvedValue({ version: '1.0.0', addons: [] });
+    getStorybookInfo.mockResolvedValue(buildStorybook({ projectRoot: '/repo/root/override' }));
     mockedGetStorybookProjectRoot.mockReturnValue('/repo/root/override');
 
     await setStorybookInfo(
@@ -61,8 +74,13 @@ describe('setStorybookInfo', () => {
     });
   });
 
-  it('returns a continue result with only projectRoot when getStorybookInfo resolves to {}', async () => {
-    getStorybookInfo.mockResolvedValue({});
+  it('returns resolved paths when no optional Storybook metadata is discovered', async () => {
+    const storybook = {
+      projectRoot: '/repo/root',
+      configDir: '/repo/root/.storybook',
+      staticDirs: [],
+    };
+    getStorybookInfo.mockResolvedValue(storybook);
     mockedGetStorybookProjectRoot.mockReturnValue('/repo/root');
 
     const result = await setStorybookInfo(buildDeps(), {
@@ -70,14 +88,11 @@ describe('setStorybookInfo', () => {
       isReactNativeApp: false,
     });
 
-    expect(result).toEqual({
-      kind: 'continue',
-      output: { storybook: { projectRoot: '/repo/root' } },
-    });
+    expect(result).toEqual({ kind: 'continue', output: { storybook } });
   });
 
   it('skips the build script check for react-native apps', async () => {
-    getStorybookInfo.mockResolvedValue({});
+    getStorybookInfo.mockResolvedValue(buildStorybook());
     mockedGetStorybookProjectRoot.mockReturnValue('/repo/root');
 
     await expect(
@@ -101,16 +116,6 @@ describe('setStorybookInfo', () => {
   });
 });
 
-const buildStorybook = (overrides: Partial<Storybook> = {}): Storybook =>
-  ({
-    version: '1.0.0',
-    projectRoot: '/repo/packages/sb',
-    configDir: '/repo/packages/sb/.storybook',
-    staticDirs: ['/repo/packages/sb/public'],
-    addons: [],
-    ...overrides,
-  }) as Storybook;
-
 describe('applyStorybookInfoOutput', () => {
   it('assigns the storybook output onto ctx', () => {
     const ctx = {} as any;
@@ -131,7 +136,7 @@ describe('applyStorybookInfoOutput', () => {
   it('does not set a Sentry version tag when the version is missing', () => {
     mockedSentrySetTag.mockClear();
     applyStorybookInfoOutput({} as any, {
-      storybook: buildStorybook({ version: undefined as any }),
+      storybook: buildStorybook({ version: undefined }),
     });
 
     expect(mockedSentrySetTag).not.toHaveBeenCalled();

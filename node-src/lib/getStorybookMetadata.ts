@@ -117,7 +117,7 @@ async function findReferences(mainConfig?: MainConfigReader) {
 
   // An evaluated config can hand back a `refs` function, which we can't make sense of.
   const references = objectField(mainConfig, 'refs');
-  return references ? { refs: references } : {};
+  return references ? { refs: references as NonNullable<Storybook['refs']> } : {};
 }
 
 /**
@@ -147,7 +147,7 @@ export function findStaticDirectories({
   configDirectory: AbsolutePath;
   buildScriptStaticDirs?: string[];
   projectRoot: AbsolutePath;
-}): { staticDirs?: string[] } {
+}): { staticDirs?: AbsolutePath[] } {
   const directories = [
     ...(buildScriptStaticDirs ?? []).map((directory) => path.resolve(projectRoot, directory)),
     ...readConfigStaticDirectories(mainConfig, configDirectory),
@@ -255,7 +255,7 @@ export async function readMainConfig(
 export async function getStorybookMetadata(
   deps: StorybookInfoDeps,
   projectRoot: AbsolutePath
-): Promise<Partial<Storybook>> {
+): Promise<Partial<Omit<Storybook, 'projectRoot'>>> {
   const buildScript = findConfigFlags({
     buildScriptName: deps.options.buildScriptName,
     packageJson: deps.packageJson,
@@ -270,7 +270,7 @@ export async function getStorybookMetadata(
   ]);
 
   deps.log.debug(info);
-  let metadata: Record<string, any> = {
+  let metadata: Partial<Omit<Storybook, 'projectRoot'>> = {
     configDir: configDirectory,
     ...findStaticDirectories({
       mainConfig,

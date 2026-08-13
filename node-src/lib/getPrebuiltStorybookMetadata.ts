@@ -1,6 +1,6 @@
 import { readFile } from 'jsonfile';
 
-import { Context } from '../types';
+import { Storybook } from '../types';
 import { builders } from './builders';
 import { viewLayers } from './viewLayers';
 
@@ -30,7 +30,7 @@ const getBuilder = (sbProjectJson: SBProjectJson): { name: string; packageVersio
 
 export const getStorybookMetadataFromProjectJson = async (
   projectJsonPath: string
-): Promise<Partial<Context['storybook']>> => {
+): Promise<Partial<Omit<Storybook, 'projectRoot'>>> => {
   const sbProjectJson = (await readFile(projectJsonPath)) as SBProjectJson;
   const viewLayerPackage = Object.keys(viewLayers).find(
     (viewLayer) =>

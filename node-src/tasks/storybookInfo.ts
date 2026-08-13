@@ -54,10 +54,7 @@ export const setStorybookInfo: TaskFunction<
     gitRootPath: input.gitRootPath,
   });
 
-  const storybook: Storybook = {
-    ...((await getStorybookInfo(deps, projectRoot)) as Storybook),
-    projectRoot,
-  };
+  const storybook = await getStorybookInfo(deps, projectRoot);
   return { kind: 'continue', output: { storybook } };
 };
 

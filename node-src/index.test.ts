@@ -371,9 +371,12 @@ vi.mock('./lib/getPackageManager', () => ({
 }));
 
 vi.mock('./lib/getStorybookInfo', () => ({
-  default: () => ({
+  default: (_deps, projectRoot) => ({
     version: '5.1.0',
     addons: [],
+    projectRoot,
+    configDir: path.resolve(projectRoot, '.storybook'),
+    staticDirs: [],
   }),
 }));
 
