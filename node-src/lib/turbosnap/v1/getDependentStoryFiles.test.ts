@@ -14,9 +14,9 @@ const log = new TestLogger();
 const getContext: any = (
   {
     configDir,
-    staticDir,
+    staticDirs,
     ...options
-  }: { configDir?: string; staticDir?: string[] } & Context['options'] = {} as any
+  }: { configDir?: string; staticDirs?: string[] } & Context['options'] = {} as any
 ) => {
   const rootPath = '/path/to/project';
   const projectRoot = path.resolve(rootPath, options.storybookBaseDir ?? '');
@@ -27,8 +27,8 @@ const getContext: any = (
     storybook: {
       projectRoot,
       ...(configDir && { configDir: path.resolve(projectRoot, configDir) }),
-      ...(staticDir && {
-        staticDirs: staticDir.map((directory) => path.resolve(projectRoot, directory)),
+      ...(staticDirs && {
+        staticDirs: staticDirs.map((directory) => path.resolve(projectRoot, directory)),
       }),
     },
     git: { rootPath },
@@ -856,7 +856,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ staticDir: ['path/to/statics'] });
+    const ctx = getContext({ staticDirs: ['path/to/statics'] });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
@@ -884,7 +884,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ staticDir: ['.storybook/static'] });
+    const ctx = getContext({ staticDirs: ['.storybook/static'] });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
@@ -989,7 +989,7 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({
-      staticDir: ['public'],
+      staticDirs: ['public'],
       untraced: ['**/stories/**'],
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
@@ -1030,7 +1030,7 @@ describe('getDependentStoryFiles', () => {
         },
       ];
       const ctx = getContext({
-        staticDir: ['path/to/statics'],
+        staticDirs: ['path/to/statics'],
         untraced: ['**/foo.js'],
       });
       const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
