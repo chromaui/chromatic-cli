@@ -137,7 +137,7 @@ export async function getDependentStoryFiles(
   // we'll need a different approach to figure out CSF files (maybe the user should pass a glob?).
   const storiesEntryFiles = [
     // v6 store (SB <= 6.3)
-    `${configDirectory}/generated-stories-entry.js`,
+    path.join(configDirectory, 'generated-stories-entry.js'),
     // v6 store (SB 6.4 or SB <= 6.3 with root as config dir)
     `./generated-stories-entry.js`,
     // v6 store with .cjs extension (SB 6.5)
