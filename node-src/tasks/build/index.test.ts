@@ -117,7 +117,7 @@ describe('extractBuildInput', () => {
       storybook: { version: '7' },
       flags: { buildCommand: 'x' },
       git: { changedFiles: ['a.js'] },
-      announcedBuild: { browsers: ['ios'] },
+      announcedBuild: { browsers: ['ios'], app: { id: 'example-project-id' } },
       runtimeMetadata: { nodePlatform: 'darwin' },
     } as any;
     expect(extractBuildInput(ctx)).toEqual({
@@ -126,6 +126,7 @@ describe('extractBuildInput', () => {
       storybook: { version: '7' },
       flags: { buildCommand: 'x' },
       browsers: ['ios'],
+      projectId: 'example-project-id',
       runtimeMetadata: { nodePlatform: 'darwin' },
       git: { changedFiles: ['a.js'] },
     });

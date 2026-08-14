@@ -106,6 +106,34 @@ describe('buildStorybook', () => {
     );
   });
 
+  it('passes CHROMATIC_PROJECT_ID', async () => {
+    const deps = {
+      env: { STORYBOOK_BUILD_TIMEOUT: 1000 },
+      log: new TestLogger(),
+      options: {},
+    } as any;
+    const input = {
+      ...baseInput,
+      buildCommand: 'npm exec -- build-archive-storybook',
+      projectId: 'example-project-id',
+    };
+
+    await buildStorybook(deps, input);
+    const [cmd, ...args] = parseCommandString(input.buildCommand);
+    expect(execa).toHaveBeenCalledWith(
+      cmd,
+      args,
+      expect.objectContaining({
+        env: {
+          CI: '1',
+          NODE_ENV: 'production',
+          STORYBOOK_INVOKED_BY: 'chromatic',
+          CHROMATIC_PROJECT_ID: 'example-project-id',
+        },
+      })
+    );
+  });
+
   it('allows overriding NODE_ENV with STORYBOOK_NODE_ENV', async () => {
     const deps = {
       env: { STORYBOOK_BUILD_TIMEOUT: 1000, STORYBOOK_NODE_ENV: 'test' },
