@@ -36,7 +36,9 @@ const isDocumentationFile = (name: string) =>
 const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&
   (module_ as Module).id !== null &&
-  !INTERNALS.some((re) => re.test((module_ as Module).name || (module_ as Reason).moduleName));
+  !INTERNALS.some((re) =>
+    re.test((module_ as Module).name || (module_ as Reason).moduleName || '')
+  );
 
 // For any path in node_modules, return the package name, including scope prefix if any.
 const getPackageName = (modulePath: string) => {
@@ -192,7 +194,9 @@ export async function getDependentStoryFiles(
       }
 
       const normalizedReasons = module_.reasons
-        ?.map((reason) => normalize(reason.moduleName))
+        ?.map((reason) => reason.moduleName)
+        .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
+        .map((moduleName) => normalize(moduleName))
         .filter((reasonName) => reasonName && reasonName !== normalizedName);
       if (normalizedReasons) {
         reasonsById.set(module_.id, normalizedReasons);

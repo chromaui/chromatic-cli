@@ -90,7 +90,7 @@ export function detectStoryFiles(
     // those.
     const matchedStoryImporters = (module.reasons ?? [])
       .map((reason) => reason.moduleName)
-      .filter(Boolean)
+      .filter((name): name is FilePath => typeof name === 'string')
       .map((name) => normalizeStatsPath(name, projectRoot, statsRoot))
       .filter((importer) => storyImporters.has(importer));
 
@@ -189,7 +189,7 @@ function collectStoryImporters(
 
     const importers = (module.reasons ?? [])
       .map((reason) => reason.moduleName)
-      .filter(Boolean)
+      .filter((name): name is FilePath => typeof name === 'string')
       .map((name) => canonical(name));
 
     const importedByEntry = importers.some((importer) => entryFiles.has(importer));
