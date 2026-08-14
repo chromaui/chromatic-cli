@@ -7,6 +7,7 @@ export default defineConfig({
     coverage: {
       include: ['{bin,node}-src/**/*.{ts,tsx}', 'isChromatic.{mjs,js}'],
       exclude: [
+        '**/*.fake.ts',
         '**/*.stories.{t,j}s',
         '**/*.frames.{t,j}s',
         '**/lib/{testLogger,testUtilities}.ts',
