@@ -4,8 +4,6 @@ import { moduleFileNames, normalizeStatsPath, resolveStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { detectStoryFiles } from './storyDetection';
 
-const nodeModulesPathSegment = /(?:^|[\\/])node_modules(?:[\\/]|$)/;
-
 /**
  * What the builder's stats file says it emitted, read into one canonical graph. Builder spellings —
  * webpack, rspack and Vite each name the same file differently — stop mattering at this value; every
@@ -78,22 +76,6 @@ export async function readStatsGraph(
   }
 
   return { files, hashes, storyFiles };
-}
-
-/**
- * Counts the graph's `node_modules` file names. Read off the stats file rather than the manifest,
- * because it is a property of the builder's output rather than of what we derived from it.
- *
- * @param stats The stats file to parse.
- *
- * @returns The number of `node_modules` file names across all modules.
- */
-export function countNodeModulesFiles(stats: Stats): number {
-  let count = 0;
-  for (const module of stats.modules) {
-    count += moduleFileNames(module).filter((name) => nodeModulesPathSegment.test(name)).length;
-  }
-  return count;
 }
 
 /**

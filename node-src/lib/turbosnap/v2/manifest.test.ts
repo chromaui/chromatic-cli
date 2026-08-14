@@ -66,6 +66,29 @@ describe('serializeManifest', () => {
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 
+  it('sorts file dependencies regardless of their insertion order', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const alpha = '/repo/packages/ui/src/alpha.ts';
+    const zulu = '/repo/packages/ui/src/zulu.ts';
+    const { outOfGraph } = createFixture({
+      fileHashes: { [story]: 'S', [alpha]: 'A', [zulu]: 'Z' },
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: zulu, reasons: [{ moduleName: story }] },
+        { id: 3, name: alpha, reasons: [{ moduleName: story }] },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+
+    expect(serialized.files['./src/Button.stories.tsx'].dependencies).toEqual([
+      './src/alpha.ts',
+      './src/zulu.ts',
+    ]);
+  });
+
   it('prunes dependency references to synthetic nodes after deriving hashes and attribution', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';

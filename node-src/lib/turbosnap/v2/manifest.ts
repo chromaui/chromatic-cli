@@ -166,7 +166,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   for (const [filePath, file] of manifest.files) {
     files[filePath] = {
       hash: file.hash,
-      dependencies: [...file.dependencies],
+      dependencies: [...file.dependencies].sort(),
     };
   }
 

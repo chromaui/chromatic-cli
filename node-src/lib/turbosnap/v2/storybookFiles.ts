@@ -7,13 +7,14 @@ import {
 } from './graph';
 import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from './storybookFileKeys';
 
-// Matches `<configDir>/preview.*` on a canonical manifest path. Path matching is the only consistent
-// way to find the preview config: the config-entry import edge is spelled three incompatible ways
-// across builders (vite has no such edge at all, leaving preview a detached root). `configDir` is a
-// project setting, not always `.storybook`, so the pattern is built per call rather than hardcoded.
+// Matches the project-root `<configDir>/preview.*` on a canonical manifest path (whose in-project
+// keys start `./`), so a preview under node_modules is not treated as the project's preview config.
+// Path matching is the only consistent way to find it: the config-entry import edge is spelled three
+// incompatible ways across builders (vite has no such edge at all, leaving preview a detached root).
+// `configDir` is a project setting, not always `.storybook`, so the pattern is built per call.
 function previewConfigPattern(configDirectory: string): RegExp {
   const escapedConfigDirectory = configDirectory.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-  return new RegExp(String.raw`(^|/)${escapedConfigDirectory}/preview\.[cm]?[jt]sx?$`);
+  return new RegExp(String.raw`^\./${escapedConfigDirectory}/preview\.[cm]?[jt]sx?$`);
 }
 
 /**

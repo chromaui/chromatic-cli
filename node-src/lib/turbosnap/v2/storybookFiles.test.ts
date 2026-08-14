@@ -80,6 +80,26 @@ describe('collectStorybookFiles', () => {
     expect([...attribution.storybookGlobals]).toEqual(['./src/preview.ts']);
   });
 
+  it('does not treat a preview config under node_modules as the project preview', () => {
+    const vendoredPreview = './node_modules/some-addon/.storybook/preview.ts';
+    const vendoredTheme = './node_modules/some-addon/.storybook/theme.ts';
+    const files = makeFiles({ [vendoredPreview]: [vendoredTheme], [vendoredTheme]: [] });
+
+    const { storybookFileHashes, attribution } = collectStorybookFiles(
+      files,
+      makeHashes([...files.keys()]),
+      new Set(),
+      DEFAULT_CONFIG_DIR,
+      identity
+    );
+
+    expect([...storybookFileHashes.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
+    expect([...attribution.previewSubtree]).toEqual([]);
+    expect([...attribution.storybookGlobals].sort()).toEqual(
+      [vendoredPreview, vendoredTheme].sort()
+    );
+  });
+
   it('finds the preview under a non-default config dir', () => {
     // A project with `-c src` has no `.storybook` at all; the preview lives at `./src/preview.ts` and
     // must be found there, not missed for not being literally named `.storybook`.
@@ -129,8 +149,8 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({
       './.storybook/preview.ts': ['./.storybook/themeA.ts'],
       './.storybook/themeA.ts': [],
-      './packages/other/.storybook/preview.ts': ['./packages/other/.storybook/themeB.ts'],
-      './packages/other/.storybook/themeB.ts': [],
+      './.storybook/preview.js': ['./.storybook/themeB.ts'],
+      './.storybook/themeB.ts': [],
     });
     const hashes = makeHashes([...files.keys()]);
 
