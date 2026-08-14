@@ -1,3 +1,4 @@
+import { AbsolutePath } from '../../../types';
 import { ProjectFiles } from './projectFiles';
 
 // The packages that own Storybook's preview runtime, newest layout first.
@@ -25,7 +26,10 @@ const STORYBOOK_CORE_PACKAGES = [
  *
  * @returns The installed Storybook version (e.g. `9.1.20`).
  */
-export function resolveStorybookVersion(projectRoot: string, projectFiles: ProjectFiles): string {
+export function resolveStorybookVersion(
+  projectRoot: AbsolutePath,
+  projectFiles: ProjectFiles
+): string {
   for (const packageName of STORYBOOK_CORE_PACKAGES) {
     const version = projectFiles.packageVersion(projectRoot, packageName);
     if (version) {
