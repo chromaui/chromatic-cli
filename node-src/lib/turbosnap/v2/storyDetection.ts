@@ -155,9 +155,9 @@ function isStoryFile(
  */
 function collectStoryImporters(
   stats: Stats,
-  projectRoot: string,
+  projectRoot: AbsolutePath,
   realFiles: RealFiles,
-  statsRoot: string
+  statsRoot: AbsolutePath
 ): {
   storyImporters: Set<string>;
   contextsExcludingNodeModules: Set<string>;
