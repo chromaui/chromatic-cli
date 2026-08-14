@@ -427,12 +427,12 @@ function diskWhere(overrides: Partial<ProjectFiles>): ProjectFiles {
   return { ...projectFiles, ...overrides };
 }
 
-/** The mutation input the Index received, or undefined when nothing was uploaded. */
+// The mutation input the Index received, or undefined when nothing was uploaded.
 function uploaded() {
   return runQuery.mock.calls[0]?.[1]?.input;
 }
 
-/** The diagnostic manifest as written, or undefined when none was written. */
+// The diagnostic manifest as written, or undefined when none was written.
 function writtenManifest() {
   const contents =
     disk.writtenFiles?.[path.join(manifestOutputDirectory, 'turbosnap-manifest.json')];

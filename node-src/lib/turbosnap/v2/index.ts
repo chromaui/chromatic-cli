@@ -104,7 +104,7 @@ export async function traceChangedFiles(
   return { status: 'fallback' };
 }
 
-/** Wraps a bail reason in the result shape the caller expects. */
+// Wraps a bail reason in the result shape the caller expects.
 function bailWith(bailReason: TurboSnapBailReason): TraceChangedFilesResult {
   return { status: 'bailed', turboSnap: { bailReason } };
 }
@@ -148,6 +148,12 @@ function writeDiagnosticManifest(
  * A prebuilt Storybook's project.json records whether static directories were declared, while their
  * paths must still be derived from the checked-out source. If those two sources disagree, continuing
  * would silently omit `staticFiles` even though we know the section should exist.
+ *
+ * @param input The static directory inputs to reconcile.
+ * @param input.staticDirs The project-relative static directories derived from the source.
+ * @param input.staticDirsDeclared Whether the prebuilt Storybook reports static directories were declared.
+ *
+ * @returns The bail result, or undefined when the two sources agree.
  */
 function getStaticDirectoriesBail(
   input: Pick<TraceChangedFilesInput, 'staticDirs' | 'staticDirsDeclared'>
