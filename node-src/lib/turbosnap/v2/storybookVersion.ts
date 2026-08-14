@@ -1,10 +1,11 @@
 import { AbsolutePath } from '../../../types';
 import { ProjectFiles } from './projectFiles';
 
-// The packages that own Storybook's preview runtime, newest layout first.
+// The packages that own Storybook's preview runtime, most-preferred first. Both report the same
+// lockstep version when present; the order is about which one a given install can resolve.
 const STORYBOOK_CORE_PACKAGES = [
-  'storybook', // Storybook 9 and later
-  '@storybook/core', // Storybook 8 and earlier
+  'storybook', // the meta-package, when the project can resolve it
+  '@storybook/core', // the core package it wraps; reachable under strict installs (pnpm, PnP) where the meta-package isn't
 ];
 
 /**
