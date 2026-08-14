@@ -16,7 +16,7 @@ import { FilePath } from './graph';
  *
  * @returns The source file names, with empty entries dropped.
  */
-export function moduleFileNames(module: Module): FilePath[] {
+function moduleFileNames(module: Module): FilePath[] {
   const names = module.modules?.length
     ? module.modules.map((inner) => inner.nameForCondition ?? inner.name)
     : [module.nameForCondition ?? module.name];
