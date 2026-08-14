@@ -5,22 +5,28 @@ import { relativeTo } from '../../getStorybookProjectRoot';
 import { FilePath } from './graph';
 
 /**
- * The source file names a stats module stands for. A concatenated module's `name` is a group label
- * (e.g. `./x.stories.tsx + 1 modules`), so its real files are read from the inner `modules`; a
- * plain module names itself.
+ * The source file names a stats module stands for, root first. Webpack/rspack concatenate modules
+ * and expose the combined files in `module.modules`; a plain module names only itself.
  *
- * webpack and rspack both carry the real (absolute) source path in `nameForCondition`, so it is
- * preferred over `name` where present.
+ * The root is always the module's own name, never the first entry of `module.modules`: only the own
+ * name is guaranteed to spell the file the record stands for. `storybook-builder-rsbuild` 3.3.0/3.3.1
+ * fills `modules` with the record's require-contexts instead of its concatenated files, so reading the
+ * root from there yields a glob — which has no file on disk and would promote the whole record to a
+ * story importer. webpack and rspack both carry the real (absolute) source path in `nameForCondition`,
+ * so it is preferred over `name`. The concatenation suffix is stripped from every name and duplicates
+ * are dropped, so the root never duplicates a member that spells the same file without it.
  *
  * @param module The stats module to read the file names of.
  *
- * @returns The source file names, with empty entries dropped.
+ * @returns The source file names, root first, with empty entries and duplicates dropped.
  */
-function moduleFileNames(module: Module): FilePath[] {
-  const names = module.modules?.length
-    ? module.modules.map((inner) => inner.nameForCondition ?? inner.name)
-    : [module.nameForCondition ?? module.name];
-  return names.filter(Boolean);
+export function moduleFileNames(module: Module): FilePath[] {
+  const root = module.nameForCondition ?? module.name;
+  const names = [
+    root,
+    ...(module.modules ?? []).map((inner) => inner.nameForCondition ?? inner.name),
+  ];
+  return [...new Set(names.filter(Boolean).map((name) => stripConcatenatedModuleSuffix(name)))];
 }
 
 /**
