@@ -5,7 +5,11 @@ import {
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
-import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from './storybookFileKeys';
+import {
+  STORYBOOK_GLOBALS_KEY,
+  STORYBOOK_PREVIEW_KEY,
+  StorybookFileKey,
+} from './storybookFileKeys';
 
 // Matches the project-root `<configDir>/preview.*` on a canonical manifest path (whose in-project
 // keys start `./`), so a preview under node_modules is not treated as the project's preview config.
@@ -19,8 +23,8 @@ function previewConfigPattern(configDirectory: string): RegExp {
 
 /**
  * Which of the three hashing homes each real file landed in, recorded by the same pass that builds
- * the hashes. The graph in `files` is pruned of synthetic nodes after hashing, so a reachability walk
- * over the written manifest cannot reconstruct these sets — it reports attributed files as orphans.
+ * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
+ * over that graph cannot reconstruct these sets — it reports attributed files as orphans.
  *
  * The sets are closed over `hashes`: every hashed file lands in a home, and `storybookGlobals` holds
  * exactly the ones in neither of the others. A file can be both story-reachable and in a preview
@@ -58,7 +62,7 @@ export function collectStorybookFiles(
   storyFileNames: Set<FilePath>,
   configDirectory: string,
   h64ToString: (input: string) => string
-): { storybookFileHashes: Map<FilePath, FileHash>; attribution: FileAttribution } {
+): { storybookFileHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
   // The union of every story's subtree, used to tell Storybook globals apart from story code.
   const storyReachable = new Set<FilePath>();
   for (const storyFile of storyFileNames) {
@@ -70,7 +74,7 @@ export function collectStorybookFiles(
   // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview
   // leak to keep apart.
   const previewConfig = previewConfigPattern(configDirectory);
-  const storybookFileHashes = new Map<FilePath, FileHash>();
+  const storybookFileHashes = new Map<StorybookFileKey, FileHash>();
   const previewSubtree = new Set<FilePath>();
   let hasPreview = false;
   for (const filePath of files.keys()) {

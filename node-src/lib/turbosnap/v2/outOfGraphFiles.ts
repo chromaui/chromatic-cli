@@ -3,7 +3,7 @@ import path from 'path';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY } from './storybookFileKeys';
+import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY, StorybookFileKey } from './storybookFileKeys';
 
 /**
  * Where to look for the out-of-graph inputs, and what to read them with. The directories are
@@ -108,7 +108,7 @@ export async function hashOutOfGraphFiles(
 export function rollUpOutOfGraphFiles(
   outOfGraphFiles: OutOfGraphFiles,
   h64ToString: (input: string) => string
-): Map<FilePath, FileHash> {
+): Map<StorybookFileKey, FileHash> {
   const sections = [
     [STORYBOOK_CONFIG_KEY, outOfGraphFiles.storybookConfigFiles],
     [STATIC_FILES_KEY, outOfGraphFiles.staticFiles],

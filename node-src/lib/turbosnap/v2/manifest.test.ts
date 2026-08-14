@@ -89,6 +89,35 @@ describe('serializeManifest', () => {
     ]);
   });
 
+  it('keeps synthetic transit nodes in memory while omitting them from serialization', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const synthetic = 'virtual:bridge';
+    const helper = '/repo/packages/ui/src/helper.ts';
+    const { outOfGraph } = createFixture({
+      isAbsent: syntheticAbsent,
+      fileHashes: { [story]: 'S', [helper]: 'H' },
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: synthetic, reasons: [{ moduleName: story }] },
+        { id: 3, name: helper, reasons: [{ moduleName: synthetic }] },
+      ],
+    };
+
+    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+
+    expect(manifest.files.get('./src/Button.stories.tsx')?.dependencies).toContain(synthetic);
+    expect(manifest.files.get(synthetic)?.dependencies).toContain('./src/helper.ts');
+
+    const serialized = serializeManifest(manifest);
+
+    expect(serialized.files).not.toHaveProperty(synthetic);
+    expect(serialized.files['./src/Button.stories.tsx'].dependencies).not.toContain(synthetic);
+    expect(manifest.files.get('./src/Button.stories.tsx')?.dependencies).toContain(synthetic);
+    expect(manifest.files.get(synthetic)?.dependencies).toContain('./src/helper.ts');
+  });
+
   it('prunes dependency references to synthetic nodes after deriving hashes and attribution', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';

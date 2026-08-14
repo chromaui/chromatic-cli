@@ -23,12 +23,16 @@ describe('buildManifest with a require-context in the graph', () => {
     ],
   };
 
-  it('excludes the require-context glob (no file on disk) from the files map', async () => {
+  it('keeps the require-context glob in memory and excludes it from the serialized files', async () => {
     const { disk, outOfGraph } = createFixture({ isAbsent: globAbsent });
     disk.fileHashes = { [story]: 'S' };
     const manifest = await buildManifest(stats, projectRoot, outOfGraph);
-    expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(false);
+    const serialized = serializeManifest(manifest);
+
+    expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(true);
     expect(manifest.files.has('./src/lib/Button.stories.tsx')).toBe(true);
+    expect(Object.keys(serialized.files).some((key) => key.includes('lazy'))).toBe(false);
+    expect(serialized.files).toHaveProperty('./src/lib/Button.stories.tsx');
   });
 
   it('serializes the same manifest when only the require-context identity gains a concatenation suffix', async () => {
@@ -151,7 +155,9 @@ describe('buildManifest attribution', () => {
     expect([...manifest.attribution.storyReachable]).toEqual(['./src/lib/Widget.stories.tsx']);
     expect([...manifest.attribution.storybookGlobals]).toEqual([]);
     // The synthetic node is gone from the written graph, so this attribution is unreconstructable.
-    expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(false);
+    expect(Object.keys(serializeManifest(manifest).files).some((key) => key.includes('lazy'))).toBe(
+      false
+    );
   });
 
   it('omits synthetic nodes from every set', async () => {

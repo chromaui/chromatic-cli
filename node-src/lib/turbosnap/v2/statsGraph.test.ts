@@ -281,6 +281,26 @@ describe('readStatsGraph unhashable files', () => {
 });
 
 describe('readStatsGraph hashing failures', () => {
+  it('treats a file omitted from the hash result as not real', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const { statsContext } = createFixture();
+
+    const graph = await readStatsGraph(
+      { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
+      {
+        ...statsContext,
+        projectFiles: {
+          ...statsContext.projectFiles,
+          hashAll: async () => ({}),
+        },
+      }
+    );
+
+    expect(graph.hashes.has('./src/Button.stories.tsx')).toBe(false);
+    expect(graph.files.get('./src/Button.stories.tsx')?.hash).toBe('');
+    expect([...graph.storyFiles]).toEqual([]);
+  });
+
   it('fails the read rather than returning a graph missing a file it could not read', async () => {
     // Unreadability is a bug, not an answer: a manifest built without those bytes would silently
     // under-capture, so this propagates to the entry point and bails TurboSnap to v1.

@@ -18,7 +18,7 @@ import {
 } from './outOfGraphFiles';
 import { ProjectFiles } from './projectFiles';
 import { readStatsGraph } from './statsGraph';
-import { STORYBOOK_VERSION_KEY } from './storybookFileKeys';
+import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
 
@@ -37,7 +37,7 @@ export interface TurboSnapManifest {
    * catch-all, the `storybookConfigFiles` and `staticFiles` out-of-graph sweeps, and the Storybook
    * version (the plain version string, not a hash of it).
    */
-  storybookFileHashes: Map<FilePath, FileHash | StorybookVersion>;
+  storybookFileHashes: Map<StorybookFileKey, FileHash | StorybookVersion>;
   /** Rolled-up hash per story file, covering only that story's own transitive subtree. */
   storyFileHashes: Map<FilePath, FileHash>;
   /**
@@ -50,7 +50,10 @@ export interface TurboSnapManifest {
    * `storybookConfigFiles` and `staticFiles` maps.
    */
   outOfGraphFiles: OutOfGraphFiles;
-  /** The list of all files in the Storybook. This is a parsed version of `preview-stats.json` */
+  /**
+   * The unpruned graph parsed from `preview-stats.json`, including synthetic transit nodes used by
+   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized.
+   */
   files: Map<FilePath, TurboSnapFile>;
 }
 
@@ -134,16 +137,13 @@ export async function buildManifest(
     hashEntryIdentities(storyFileHashes) + hashEntryIdentities(storybookFileHashes)
   );
 
-  // Done after hashing so the graph used above is complete.
-  pruneSyntheticFiles(files, hashes);
-
   return {
-    files,
-    storyFileHashes,
-    storybookFileHashes,
     storybookHash,
+    storybookFileHashes,
+    storyFileHashes,
     attribution,
     outOfGraphFiles,
+    files,
   };
 }
 
@@ -164,9 +164,12 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
 
   const files: ManifestFile['files'] = {};
   for (const [filePath, file] of manifest.files) {
+    if (file.hash === '') continue;
     files[filePath] = {
       hash: file.hash,
-      dependencies: [...file.dependencies].sort(),
+      dependencies: [...file.dependencies]
+        .filter((dependency) => manifest.files.get(dependency)?.hash)
+        .sort(),
     };
   }
 
@@ -205,29 +208,4 @@ export function writeManifest(
     path.join(outputDirectory, 'turbosnap-manifest.json'),
     JSON.stringify(serializeManifest(manifest))
   );
-}
-
-/**
- * Removes synthetic nodes that have no file on disk (require-context globs, externals) from the
- * manifest, including references to those removed nodes. This runs only after every derived hash
- * and attribution set has been computed from the complete graph, so pruning keeps those values
- * unchanged while limiting the serialized graph to real files.
- *
- * @param files The map of files to their hashes and dependencies, mutated in place.
- * @param hashes The content hashes keyed by canonical file path; a missing entry means no file.
- */
-function pruneSyntheticFiles(files: Map<FilePath, TurboSnapFile>, hashes: Map<FilePath, FileHash>) {
-  for (const file of files.values()) {
-    for (const dependency of file.dependencies) {
-      if (!hashes.has(dependency)) {
-        file.dependencies.delete(dependency);
-      }
-    }
-  }
-
-  for (const filePath of files.keys()) {
-    if (!hashes.has(filePath)) {
-      files.delete(filePath);
-    }
-  }
 }

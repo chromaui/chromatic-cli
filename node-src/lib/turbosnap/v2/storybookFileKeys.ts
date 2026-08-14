@@ -34,3 +34,14 @@ export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 
 /** The static directories; see {@link STORYBOOK_CONFIG_KEY}. */
 export const STATIC_FILES_KEY = 'staticFiles';
+
+/**
+ * Every synthetic key in `storybookFileHashes`. A canonical file path always starts `./` or `../`,
+ * so none of these bare names can collide with one; see the note at the top of this file.
+ */
+export type StorybookFileKey =
+  | typeof STORYBOOK_PREVIEW_KEY
+  | typeof STORYBOOK_GLOBALS_KEY
+  | typeof STORYBOOK_VERSION_KEY
+  | typeof STORYBOOK_CONFIG_KEY
+  | typeof STATIC_FILES_KEY;

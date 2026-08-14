@@ -11,7 +11,7 @@ import { detectStoryFiles } from './storyDetection';
  *
  * The graph is *unpruned*: synthetic nodes with no file on disk (require-context globs, externals,
  * virtual modules) are still members, because they are members of the subtrees the roll-ups walk.
- * See `pruneSyntheticFiles` in ./manifest.
+ * {@link serializeManifest} filters them only when the manifest is written.
  */
 export interface StatsGraph {
   /** Every module path, with its content hash and the paths it depends on. */
@@ -180,7 +180,8 @@ async function hashFiles(
 
   const hashes = new Map<FilePath, FileHash>();
   for (const [normalizedName, absolutePath] of normalizedToAbsolute) {
-    hashes.set(normalizedName, fileHashes[absolutePath]);
+    const hash = fileHashes[absolutePath];
+    if (hash) hashes.set(normalizedName, hash);
   }
 
   return hashes;
