@@ -121,6 +121,24 @@ describe('realProjectFiles listTree', () => {
     ]);
   });
 
+  it('lists the same target through every symlink alias and reflects alias removal', async () => {
+    const root = temporaryDirectory();
+    write(root, 'vendor/assets/logo.svg');
+    mkdirSync(path.join(root, 'static'));
+    symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/brand'));
+    symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/legacy'));
+
+    const before = realProjectFiles().listTree(path.join(root, 'static'));
+    rmSync(path.join(root, 'static/legacy'));
+    const after = realProjectFiles().listTree(path.join(root, 'static'));
+
+    expect(before.sort()).toEqual([
+      path.join(root, 'static/brand/logo.svg'),
+      path.join(root, 'static/legacy/logo.svg'),
+    ]);
+    expect(after).toEqual([path.join(root, 'static/brand/logo.svg')]);
+  });
+
   it('contributes nothing for a broken symlink, finishing the rest of the sweep', async () => {
     const root = temporaryDirectory();
     write(root, 'static/keep.svg');

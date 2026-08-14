@@ -105,13 +105,14 @@ function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
  * v1 never matches such a path either. The same holds for a broken symlink, whose target can't be read.
  *
  * @param directory The absolute directory to walk.
- * @param visitedDirectories Resolved real paths already walked, so a symlink cycle terminates.
+ * @param ancestorDirectories Resolved real paths in the current branch, so a symlink cycle
+ * terminates without suppressing sibling aliases to the same directory.
  *
  * @returns The absolute path of every file found.
  */
 function listFilesRecursively(
   directory: AbsolutePath,
-  visitedDirectories = new Set<AbsolutePath>()
+  ancestorDirectories = new Set<AbsolutePath>()
 ): AbsolutePath[] {
   let realDirectory;
   try {
@@ -120,37 +121,41 @@ function listFilesRecursively(
     return [];
   }
 
-  if (visitedDirectories.has(realDirectory)) {
+  if (ancestorDirectories.has(realDirectory)) {
     return [];
   }
-  visitedDirectories.add(realDirectory);
+  ancestorDirectories.add(realDirectory);
 
-  let entries;
   try {
-    entries = readdirSync(directory, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  return entries.flatMap((entry) => {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      return listFilesRecursively(entryPath, visitedDirectories);
-    }
-    if (entry.isFile()) {
-      return [entryPath];
-    }
-
-    // A symlink is neither, so ask `stat`, which follows it. Anything else with no bytes of its own
-    // — a socket, a device, a broken link — contributes nothing.
+    let entries;
     try {
-      const stats = statSync(entryPath);
-      if (stats.isDirectory()) {
-        return listFilesRecursively(entryPath, visitedDirectories);
-      }
-      return stats.isFile() ? [entryPath] : [];
+      entries = readdirSync(directory, { withFileTypes: true });
     } catch {
       return [];
     }
-  });
+
+    return entries.flatMap((entry) => {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        return listFilesRecursively(entryPath, ancestorDirectories);
+      }
+      if (entry.isFile()) {
+        return [entryPath];
+      }
+
+      // A symlink is neither, so ask `stat`, which follows it. Anything else with no bytes of its own
+      // — a socket, a device, a broken link — contributes nothing.
+      try {
+        const stats = statSync(entryPath);
+        if (stats.isDirectory()) {
+          return listFilesRecursively(entryPath, ancestorDirectories);
+        }
+        return stats.isFile() ? [entryPath] : [];
+      } catch {
+        return [];
+      }
+    });
+  } finally {
+    ancestorDirectories.delete(realDirectory);
+  }
 }
