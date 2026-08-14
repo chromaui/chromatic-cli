@@ -321,18 +321,34 @@ describe('countNodeModulesFiles', () => {
     expect(countNodeModulesFiles(stats)).toBe(0);
   });
 
+  it('does not count file names and context expressions that only mention node_modules', () => {
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: './src/node_modules-helper.ts' },
+        {
+          id: 2,
+          name: String.raw`./src|lazy|/^\.\/.*$/|include: /(?!.*node_modules)/|namespace object`,
+        },
+      ],
+    };
+
+    expect(countNodeModulesFiles(stats)).toBe(0);
+  });
+
   it('counts installed dependency files however the builder spells them', () => {
     const stats: Stats = {
-      // One relative (Vite), one absolute (webpack), one via `nameForCondition` (rspack).
+      // One relative (Vite), two absolute (webpack on POSIX and Windows), one via
+      // `nameForCondition` (rspack).
       modules: [
         { id: 1, name: './src/Button.tsx' },
         { id: 2, name: './../../node_modules/@storybook/react/dist/entry-preview.js' },
         { id: 3, name: '/repo/node_modules/storybook/dist/csf/index.js' },
         { id: 4, name: 'dependency group', nameForCondition: '/repo/node_modules/react/index.js' },
+        { id: 5, name: String.raw`C:\repo\node_modules\react-dom\index.js` },
       ],
     };
 
-    expect(countNodeModulesFiles(stats)).toBe(3);
+    expect(countNodeModulesFiles(stats)).toBe(4);
   });
 
   it('counts the concatenated children of a dependency group', () => {
