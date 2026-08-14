@@ -3,6 +3,8 @@ import pLimit from 'p-limit';
 import path from 'path';
 import xxHashWasm, { XXHash, XXHashAPI } from 'xxhash-wasm';
 
+import getEnvironment from './getEnvironment';
+
 const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<string> => {
   const BUFFER_SIZE = buffer.length;
 
@@ -54,7 +56,19 @@ const hashFile = (buffer: Buffer, path: string, xxhash: XXHashAPI): Promise<stri
   });
 };
 
-export const getFileHashes = async (files: string[], directory: string, concurrency: number) => {
+interface GetFileHashesInput {
+  files: string[];
+  /** Files to hash in parallel. Defaults to `CHROMATIC_HASH_CONCURRENCY` when omitted. */
+  concurrency?: number;
+  /** Joined onto each file. Omit (or leave empty) when `files` are already absolute paths. */
+  directory?: string;
+}
+
+export const getFileHashes = async ({
+  files,
+  concurrency = getEnvironment().CHROMATIC_HASH_CONCURRENCY,
+  directory = '',
+}: GetFileHashesInput) => {
   // Limit the number of concurrent file reads and hashing operations.
   const limit = pLimit(concurrency);
   const xxhash = await xxHashWasm();
@@ -65,7 +79,8 @@ export const getFileHashes = async (files: string[], directory: string, concurre
         // Allocate the 64K read buffer (matching WASM memory page size) inside the limit, so peak
         // memory is bounded by `concurrency` rather than by the number of files.
         const buffer = Buffer.allocUnsafe(64 * 1024);
-        return [file, await hashFile(buffer, path.join(directory, file), xxhash)] as const;
+        const filePath = directory ? path.join(directory, file) : file;
+        return [file, await hashFile(buffer, filePath, xxhash)] as const;
       })
     )
   );

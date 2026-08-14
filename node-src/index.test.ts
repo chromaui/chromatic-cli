@@ -361,7 +361,7 @@ vi.mock('./lib/emailHash');
 vi.mock('./lib/getHasRouter');
 
 vi.mock('./lib/getFileHashes', () => ({
-  getFileHashes: (files: string[]) =>
+  getFileHashes: ({ files }: { files: string[] }) =>
     Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
 }));
 

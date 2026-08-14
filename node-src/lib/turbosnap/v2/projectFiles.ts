@@ -15,8 +15,11 @@ export interface ProjectFiles {
   isDirectory(absolutePath: AbsolutePath): boolean;
   /** Undefined when unresolvable; resolves the package manifest, not a dist path. */
   packageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined;
-  /** Throws, naming the path, when a file cannot be read. */
-  hashAll(absolutePaths: AbsolutePath[]): Promise<Record<AbsolutePath, FileHash>>;
+  /** Throws, naming the path, when a file cannot be read. `concurrency` bounds parallel reads. */
+  hashAll(
+    absolutePaths: AbsolutePath[],
+    concurrency?: number
+  ): Promise<Record<AbsolutePath, FileHash>>;
   /** Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. */
   listTree(absoluteDirectory: AbsolutePath): AbsolutePath[];
 }
@@ -63,18 +66,18 @@ function readPackageVersion(fromDirectory: AbsolutePath, packageName: string): s
  * Content-hashes files by absolute path, bounded by a concurrency limit.
  *
  * @param absolutePaths The absolute paths to hash.
+ * @param concurrency The number of files to hash at once. Defaults via `getFileHashes` when omitted.
  *
  * @returns The content hash of each file, keyed by the absolute path it was read from.
  */
 async function hashFileContents(
-  absolutePaths: AbsolutePath[]
+  absolutePaths: AbsolutePath[],
+  concurrency?: number
 ): Promise<Record<AbsolutePath, FileHash>> {
   if (absolutePaths.length === 0) return {};
 
   try {
-    // getFileHashes joins its directory argument with each file; pass '' so the absolute paths are
-    // used as-is, and it returns hashes keyed by those absolute paths.
-    return await getFileHashes(absolutePaths, '', 10);
+    return await getFileHashes({ files: absolutePaths, concurrency });
   } catch (error) {
     throw new Error(`Could not hash ${namePathThatFailed(error, absolutePaths)}: ${error.message}`);
   }
