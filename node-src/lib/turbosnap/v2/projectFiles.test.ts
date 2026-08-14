@@ -1,4 +1,12 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -232,6 +240,26 @@ describe('realProjectFiles hashAll', () => {
     }
 
     expect(err?.message).toContain(unreadable);
+  });
+});
+
+describe('realProjectFiles writeFile', () => {
+  it('writes the contents to the path, readable back as the same bytes', () => {
+    const root = temporaryDirectory();
+    const filePath = path.join(root, 'turbosnap-manifest.json');
+
+    realProjectFiles().writeFile(filePath, '{"storybookHash":"abc"}');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
+  });
+
+  it('overwrites an existing file rather than appending', () => {
+    const root = temporaryDirectory();
+    const filePath = write(root, 'turbosnap-manifest.json', 'stale');
+
+    realProjectFiles().writeFile(filePath, 'fresh');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('fresh');
   });
 });
 
