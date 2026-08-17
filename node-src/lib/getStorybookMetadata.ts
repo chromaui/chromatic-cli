@@ -307,7 +307,7 @@ export async function getStorybookMetadata(
  *
  * @returns The absolute config directory.
  */
-async function findConfigDirectory(
+export async function findConfigDirectory(
   { log, options }: StorybookInfoDeps,
   projectRoot: AbsolutePath,
   buildScriptConfigDirectory?: string
