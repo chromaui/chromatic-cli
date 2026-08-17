@@ -50,4 +50,34 @@ describe('Test trace script from package.json', () => {
     expect(output).toContain(untracedFileNote);
     expect(output).toContain(untracedFile);
   });
+  it('prints a machine-readable result when --json is passed', () => {
+    const scriptName =
+      'chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json --json';
+
+    const output = execSync(`yarn ${scriptName}`).toString().trim();
+    const result = JSON.parse(output);
+
+    // An affected module reports every file in its bundle, so a concatenated module lists the source
+    // file alongside the story file it was bundled with — not only story files.
+    expect(result).toStrictEqual({
+      status: 'traced',
+      storyFiles: [
+        'node-src/ui/messages/errors/invalidReportPath.stories.ts',
+        'node-src/ui/messages/errors/invalidReportPath.ts',
+      ],
+    });
+  });
+  it('traces a changed dependency name passed via --changed-dependency', () => {
+    const scriptName =
+      'chromatic trace -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json --json -d some-package';
+
+    const output = execSync(`yarn ${scriptName}`).toString().trim();
+    const result = JSON.parse(output);
+
+    // This stats file holds no node_modules entries, so a changed dependency can't be traced and
+    // TurboSnap bails. That bail only happens when the dependency name reaches the tracer, which is
+    // what this asserts.
+    expect(result.status).toBe('bailed');
+    expect(result.bailReason.bailSubreason).toBe('nodeModulesMissingInStats');
+  });
 });

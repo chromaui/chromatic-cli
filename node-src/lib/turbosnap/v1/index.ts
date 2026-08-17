@@ -1,8 +1,4 @@
-import semver from 'semver';
-
-import { readStatsFile } from '../../../tasks/readStatsFile';
-import { ChangedPackageFilesBailReason, Context, TurboSnap } from '../../../types';
-import missingStatsFile from '../../../ui/messages/errors/missingStatsFile';
+import { ChangedPackageFilesBailReason, Context, Stats, TurboSnap } from '../../../types';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../../checkStorybookBaseDirectory';
 import { TraceChangedFilesResult } from '../types';
@@ -18,23 +14,17 @@ import { getDependentStoryFiles } from './getDependentStoryFiles';
  * when necessary.
  *
  * @param ctx The context set when executing the CLI.
+ * @param stats The preview stats file, read by the caller because v2 traces the same one.
+ * @param statsPath The path the stats file was read from.
  *
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
  */
 // eslint-disable-next-line complexity
-export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
-  // This is an additional check from lib/turbosnap/index.ts in case we call this function directly
-  // from another file.
-  if (!ctx.fileInfo?.statsPath) {
-    // If we don't know the SB version, we should assume we don't support `--stats-json`
-    const nonLegacyStatsSupported =
-      ctx.storybook?.version &&
-      semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
-
-    throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
-  }
-
-  const { statsPath } = ctx.fileInfo;
+export async function traceChangedFiles(
+  ctx: Context,
+  stats: Stats,
+  statsPath: string
+): Promise<TraceChangedFilesResult> {
   const { changedFiles = [], packageMetadataChanges } = ctx.git;
 
   // Only set when lockfile analysis ran and succeeded; an empty array means "no changes found".
@@ -84,8 +74,6 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     }
   }
 
-  const stats = await readStatsFile(statsPath);
-
   await checkStorybookBaseDirectory(ctx, stats);
 
   const result = await getDependentStoryFiles(
@@ -105,4 +93,4 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
 
 export { findChangedDependencies } from './findChangedDependencies';
 export { findChangedPackageFiles } from './findChangedPackageFiles';
-export { getDependentStoryFiles } from './getDependentStoryFiles';
+export { type DependentStoryFilesResult, getDependentStoryFiles } from './getDependentStoryFiles';

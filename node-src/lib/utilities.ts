@@ -80,12 +80,33 @@ export const isPackageLockFile = (filePath: string) =>
 export const isPackageMetadataFile = (filePath: string) =>
   isPackageManifestFile(filePath) || isPackageLockFile(filePath);
 
-export const redact = <T>(value: T, ...fields: string[]): T => {
+/**
+ * Redacts the named fields, at any depth, from an object bound for JSON.
+ *
+ * Values that JSON cannot represent usefully are converted on the way: a Set becomes an array, a
+ * Date its ISO string, and an Error its name, message and stack.
+ *
+ * @param value The object to redact.
+ * @param fields The field names to redact.
+ *
+ * @returns The redacted object, still indexable by the caller.
+ */
+export function redact<T extends object>(value: T, ...fields: string[]): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, field]) => [
+      key,
+      fields.includes(key) ? undefined : redactValue(field, fields),
+    ])
+  );
+}
+
+function redactValue(value: unknown, fields: string[]): unknown {
   if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
-  const object = { ...value };
-  for (const key of Object.keys(object)) {
-    object[key] = fields.includes(key) ? undefined : redact(object[key], ...fields);
+  if (Array.isArray(value)) return value.map((item) => redactValue(item, fields));
+  if (value instanceof Set) return [...value].map((item) => redactValue(item, fields));
+  if (value instanceof Date) return value.toISOString();
+  if (value instanceof Error) {
+    return redact({ name: value.name, message: value.message, stack: value.stack }, ...fields);
   }
-  return object;
-};
+  return redact(value, ...fields);
+}

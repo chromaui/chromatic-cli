@@ -117,13 +117,23 @@ const findStorybookVersion = async ({ env, log, options, packageJson }: Storyboo
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
  *
- * @param deps The resolved options and the project's package.json.
+ * Takes the build script name directly so `chromatic turbosnap-manifest` derives the flags the same
+ * way a real build does, rather than reading a different config directory than production would.
+ *
+ * @param input The project's package.json and the resolved build script name.
+ * @param input.buildScriptName The package.json script that builds Storybook.
+ * @param input.packageJson The project's package.json.
  *
  * @returns The config directory and static directories the build script names, if any.
  */
-export const findConfigFlags = async (deps: Pick<StorybookInfoDeps, 'options' | 'packageJson'>) => {
-  const { buildScriptName } = deps.options;
-  const { scripts = {} } = deps.packageJson;
+export const findConfigFlags = async ({
+  buildScriptName,
+  packageJson,
+}: {
+  buildScriptName?: string;
+  packageJson: StorybookInfoDeps['packageJson'];
+}) => {
+  const { scripts = {} } = packageJson;
   if (!buildScriptName || !scripts[buildScriptName]) return {};
 
   const { flags } = meow({
@@ -141,32 +151,34 @@ export const findConfigFlags = async (deps: Pick<StorybookInfoDeps, 'options' | 
 };
 
 /**
- * Reads a top-level field out of the main config, in either of the two forms it can take.
+ * A loaded Storybook main config, which answers field reads in whichever form the config took.
  *
  * An evaluated module exposes its fields as plain properties, nested under `default` for ESM. A
- * parsed AST answers `getSafeFieldValue` instead.
- *
- * @param mainConfig The main config, either an evaluated module or a parsed AST.
- * @param isAstConfig Whether `mainConfig` is a parsed AST rather than an evaluated module.
- * @param field The top-level field to read.
- *
- * @returns The field's value, or `undefined` when it is absent.
+ * parsed AST answers `getSafeFieldValue` instead. Only `readMainConfig` knows which it got.
  */
-export const readMainConfigField = (mainConfig: any, isAstConfig: boolean, field: string) => {
-  if (!mainConfig) return undefined;
-  if (isAstConfig) return mainConfig.getSafeFieldValue([field]);
-  return mainConfig.default?.[field] ?? mainConfig[field];
-};
+export interface MainConfigReader {
+  /** Reads a top-level field, returning `undefined` when it is absent. */
+  readField: (field: string) => unknown;
+  /** Whether the config was parsed as an AST rather than evaluated as a module. */
+  isAstConfig: boolean;
+}
 
-export const findBuilder = async (mainConfig, isAstConfig) => {
+/**
+ * Resolves the builder the main config declares, along with its installed version.
+ *
+ * @param mainConfig The loaded main config, or undefined when it could not be read.
+ *
+ * @returns The builder name and package version, or an unknown builder without a config.
+ */
+export async function findBuilder(mainConfig?: MainConfigReader) {
   if (!mainConfig) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
   }
 
-  const framework = readMainConfigField(mainConfig, isAstConfig, 'framework');
-  const core = readMainConfigField(mainConfig, isAstConfig, 'core');
+  const framework = objectField(mainConfig, 'framework');
+  const core = objectField(mainConfig, 'core');
 
-  if (framework?.name) {
+  if (typeof framework?.name === 'string') {
     const sbV7BuilderName = framework.name;
 
     return Promise.race([
@@ -180,9 +192,11 @@ export const findBuilder = async (mainConfig, isAstConfig) => {
   }
 
   let name = 'webpack4'; // default builder in Storybook v6
-  if (core?.builder) {
-    const { builder } = core;
-    name = typeof builder === 'string' ? builder : builder.name;
+  const builder = core?.builder;
+  if (typeof builder === 'string') {
+    name = builder;
+  } else if (isRecord(builder) && typeof builder.name === 'string') {
+    name = builder.name;
   }
 
   return Promise.race([
@@ -193,36 +207,42 @@ export const findBuilder = async (mainConfig, isAstConfig) => {
       }),
     timeout(10_000),
   ]);
-};
+}
+
+/** Reads a field only when it holds a plain object, which is all `findBuilder` can use. */
+function objectField(
+  mainConfig: MainConfigReader,
+  field: string
+): Record<string, unknown> | undefined {
+  const value = mainConfig.readField(field);
+  return isRecord(value) ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
 // Only used by Chromatic - surfaces Storybook refs and is used when announcing a build.
 // The refs are consumed by the MCP Addon for hosted Storybooks with composition on Chromatic.
-const findReferences = async (mainConfig, isAstConfig) => {
-  // The MCP Addon was first added within version 9; there is no need to check for older versions
-  if (!mainConfig || !isAstConfig) {
-    return {};
-  }
-
-  const references = readMainConfigField(mainConfig, isAstConfig, 'refs');
+async function findReferences(mainConfig?: MainConfigReader) {
+  const references = mainConfig?.readField('refs');
   return references ? { refs: references } : {};
-};
+}
 
 /**
  * Resolves the project-relative static directories declared by the main config.
  *
- * @param mainConfig The main config, either an evaluated module or a parsed AST.
- * @param isAstConfig Whether `mainConfig` is a parsed AST rather than an evaluated module.
+ * @param mainConfig The loaded main config, or undefined when it could not be read.
  * @param configDirectory The project-relative Storybook config directory entries resolve against.
  *
  * @returns The resolved static directories, or `{}` when the config declares none.
  */
-export const findStaticDirectories = (
-  mainConfig: any,
-  isAstConfig: boolean,
+export function findStaticDirectories(
+  mainConfig: MainConfigReader | undefined,
   configDirectory = '.storybook'
-): { staticDir?: string[] } => {
-  const staticDirectories = readMainConfigField(mainConfig, isAstConfig, 'staticDirs');
+): { staticDir?: string[] } {
+  const staticDirectories = mainConfig?.readField('staticDirs');
   if (!Array.isArray(staticDirectories) || staticDirectories.length === 0) return {};
 
   // staticDirs entries can be plain strings or { from, to } DirectoryMapping objects
@@ -237,7 +257,40 @@ export const findStaticDirectories = (
   );
 
   return resolvedDirectories.length > 0 ? { staticDir: resolvedDirectories } : {};
-};
+}
+
+/**
+ * Unions the static directories the build script's `-s` names with the ones `main.*` declares.
+ *
+ * Exported so the TurboSnap v2 input derives the same set from the same two sources rather than
+ * asserting parity with a second copy of the union.
+ *
+ * @param buildScriptStaticDirectories The static directories the build script's `-s` names.
+ * @param mainConfigStaticDirectories The static directories `main.*` declares.
+ *
+ * @returns The de-duplicated union of both.
+ */
+export function mergeStaticDirectories(
+  buildScriptStaticDirectories: string[] = [],
+  mainConfigStaticDirectories: string[] = []
+): string[] {
+  return [...new Set([...buildScriptStaticDirectories, ...mainConfigStaticDirectories])];
+}
+
+/**
+ * The main config files the shared metadata path parses into an AST when `require()` of the config
+ * fails: `main.js`, `main.jsx`, `main.ts` and `main.tsx`.
+ *
+ * `main.ts`/`main.tsx` are the ordinary case, since `require()` cannot resolve them. `main.js` is in
+ * the pattern too and is parsed whenever `require()` of it throws, which includes an ESM `main.js`
+ * on a Node without `require(esm)` (unflagged from 22.12, and this package supports >=22.0). That is
+ * pre-existing behaviour, not a widening.
+ *
+ * `main.mjs` and `main.cjs` are deliberately absent: parsing them would newly populate `builder`,
+ * `refs` and `staticDir` on `ctx.storybook`, and TurboSnap v1 reads `staticDir` to decide its
+ * static-file bails. Callers that only feed TurboSnap v2 pass a wider pattern of their own.
+ */
+const SHARED_MAIN_CONFIG_PATTERN = /^main\.[jt]sx?$/;
 
 export const findStorybookConfigFile = async (
   storybookConfigDirectory: string | undefined,
@@ -252,17 +305,21 @@ export const findStorybookConfigFile = async (
 /**
  * Loads the Storybook main config, as either an evaluated module or a parsed AST.
  *
- * Which form we get depends on whether `require()` of the config succeeds.
+ * Which form we get depends on whether `require()` of the config succeeds. Callers get a reader
+ * either way, so the two forms stay in here.
  *
  * @param configDirectory The Storybook config directory, absolute or relative to the cwd.
  * @param log The logger to report the parse path to.
+ * @param configFilePattern Which config file names to parse when `require()` fails. Widening this
+ * widens what lands on `ctx.storybook`, which TurboSnap v1 reads.
  *
- * @returns The config and whether it is a parsed AST; no config when neither path succeeded.
+ * @returns The config reader, or undefined when neither path yielded a config.
  */
-export const readMainConfig = async (
+export async function readMainConfig(
   configDirectory: string,
-  log: StorybookInfoDeps['log']
-): Promise<{ mainConfig?: any; isAstConfig: boolean }> => {
+  log: StorybookInfoDeps['log'],
+  configFilePattern: RegExp
+): Promise<MainConfigReader | undefined> {
   // @ts-expect-error __non_webpack_require__ is only defined when bundled with webpack, and allows us to bypass webpack's module system to require files at runtime
   // eslint-disable-next-line unicorn/prefer-module
   const r = typeof __non_webpack_require__ === 'undefined' ? require : __non_webpack_require__;
@@ -270,41 +327,52 @@ export const readMainConfig = async (
   try {
     const mainConfig = await r(path.resolve(configDirectory, 'main'));
     log.debug({ configDirectory, mainConfig });
-    return { mainConfig, isAstConfig: false };
+    // An evaluated module that exports nothing is treated the same as no config at all.
+    if (!mainConfig) return undefined;
+    return {
+      readField: (field) => mainConfig.default?.[field] ?? mainConfig[field],
+      isAstConfig: false,
+    };
   } catch (err) {
     log.debug({ storybookV6error: err });
   }
 
   try {
-    // Include `.mjs` and `.cjs` can't be resolved in the step above because `require()` only
-    // auto-appends `.js`/`.json`/`.node` to an extensionless path.
-    const storybookConfig = await findStorybookConfigFile(configDirectory, /^main\.[cm]?[jt]sx?$/);
+    const storybookConfig = await findStorybookConfigFile(configDirectory, configFilePattern);
     if (!storybookConfig) {
       throw new Error('Failed to locate Storybook config file');
     }
 
     const mainConfig = await readConfig(storybookConfig);
     log.debug({ configDirectory, mainConfig: printConfig(mainConfig) });
-    return { mainConfig, isAstConfig: true };
+    return { readField: (field) => mainConfig.getSafeFieldValue([field]), isAstConfig: true };
   } catch (err) {
     log.debug({ storybookV7error: err });
-    return { isAstConfig: false };
+    return undefined;
   }
-};
+}
 
 // TODO: refactor this function
 export const getStorybookMetadata = async (
   deps: StorybookInfoDeps
 ): Promise<Partial<Storybook>> => {
   const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
-  const { mainConfig, isAstConfig } = await readMainConfig(configDirectory, deps.log);
+  const mainConfig = await readMainConfig(configDirectory, deps.log, SHARED_MAIN_CONFIG_PATTERN);
+
+  // `refs` and `staticDir` land on `ctx.storybook`, which TurboSnap v1 reads to decide its
+  // static-file bails, so both stay restricted to AST-parsed configs as they were before the reader
+  // existed. Callers that only feed TurboSnap v2 read the config themselves, unrestricted.
+  const astConfig = mainConfig?.isAstConfig ? mainConfig : undefined;
 
   const info = await Promise.allSettled([
-    findConfigFlags(deps),
+    findConfigFlags({
+      buildScriptName: deps.options.buildScriptName,
+      packageJson: deps.packageJson,
+    }),
     findStorybookVersion(deps),
-    findBuilder(mainConfig, isAstConfig),
-    findReferences(mainConfig, isAstConfig),
-    findStaticDirectories(mainConfig, isAstConfig, configDirectory),
+    findBuilder(mainConfig),
+    findReferences(astConfig),
+    findStaticDirectories(astConfig, configDirectory),
   ]);
 
   deps.log.debug(info);
@@ -316,7 +384,7 @@ export const getStorybookMetadata = async (
 
       // Merge static directories from multiple sources and remove duplicates
       if (staticDirectories?.length) {
-        metadata.staticDir = [...new Set([...(metadata.staticDir ?? []), ...staticDirectories])];
+        metadata.staticDir = mergeStaticDirectories(metadata.staticDir, staticDirectories);
       }
     }
   }

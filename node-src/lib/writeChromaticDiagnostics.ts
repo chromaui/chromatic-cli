@@ -56,7 +56,7 @@ export function removeChromaticDiagnostics(ctx: Context) {
  */
 export function getDiagnostics(ctx: Context) {
   // Drop some fields that are not useful to have and redact sensitive fields
-  const { argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
+  const { analytics, argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
   const data = redact(rest, 'projectToken', 'reportToken', 'userToken');
 
   // Sort top-level fields alphabetically

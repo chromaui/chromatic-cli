@@ -219,6 +219,7 @@ export interface Storybook {
   baseDir?: string;
   configDir: string;
   staticDir: string[];
+  staticDirsDeclared?: boolean;
   addons: {
     name: string;
     packageName?: string;
@@ -522,7 +523,10 @@ export interface Reason {
 export interface Module {
   id: string | number | null;
   name: string;
-  modules?: Pick<Module, 'name'>[];
+  // The absolute path of the module's source file when using rspack. The `name` field is the group
+  // name (e.g. `./x.stories.tsx + 1 modules`).
+  nameForCondition?: string;
+  modules?: Pick<Module, 'name' | 'nameForCondition'>[];
   reasons?: Reason[];
 }
 
@@ -545,12 +549,24 @@ export interface TargetInfo {
   formFields: Record<string, string>;
 }
 
+// The flag-only bail reasons, which are deliberately not mutually exclusive: they are a pre-existing
+// shape, and `BailFamily` below already makes the field-carrying reasons exclusive where analytics
+// depend on it.
 interface TurboSnapBailReasonBase {
   changedStorybookFiles?: string[];
   changedStaticFiles?: string[];
   changedExternalFiles?: string[];
+  changedStorybookGlobals?: true;
+  changedStorybookVersion?: true;
+  noStoryFiles?: true;
+  unrecognizedStoryEntry?: true;
+  noStorybookConfigFiles?: true;
+  noStaticFiles?: true;
+  noNodeModulesFiles?: true;
+  unresolvedStaticDirectories?: true;
   noAncestorBuild?: true;
   rebuild?: true;
+  sentryEventId?: string;
 }
 
 export type TurboSnapChangedPackageFilesSubreason =
@@ -566,36 +582,95 @@ export type TurboSnapInvalidChangedFilesSubreason =
   | 'networkError'
   | 'gitCommandFailed';
 
+export type TurboSnapIndexContractViolationSubreason =
+  | 'invalidStoryFileHashes'
+  | 'invalidBuildStatus'
+  | 'invalidResponse';
+
+/**
+ * Why the stats file and the Storybook project root cannot be shown to describe the same package.
+ *
+ * - `builderMismatch`: the stats were produced by a different builder than the project at the anchor
+ *   declares.
+ * - `statsFileOutsideProject`: the stats file itself sits inside a different Storybook project.
+ * - `unresolvedSourceModules`: no in-project source module in the stats exists under the anchor. This
+ *   is v1's `checkStorybookBaseDirectory` predicate.
+ */
+export type TurboSnapAnchorMismatchSubreason =
+  | 'builderMismatch'
+  | 'statsFileOutsideProject'
+  | 'unresolvedSourceModules';
+
+/** Which of our own checks threw; each one is also the Sentry fingerprint for the bail. */
+export type TurboSnapInternalErrorSubreason = 'manifestBuildFailed' | 'anchorCheckFailed';
+
+export type TurboSnapIndexUnavailableSubreason = 'networkError';
+
 export type TurboSnapBailSubreason =
   | TurboSnapChangedPackageFilesSubreason
-  | TurboSnapInvalidChangedFilesSubreason;
+  | TurboSnapInvalidChangedFilesSubreason
+  | TurboSnapIndexContractViolationSubreason
+  | TurboSnapIndexUnavailableSubreason
+  | TurboSnapAnchorMismatchSubreason
+  | TurboSnapInternalErrorSubreason;
+
+// The bail reasons that carry fields of their own. Each one owns exactly one of these flags, so the
+// others are pinned to `never` by `BailFamily` below.
+interface TurboSnapBailFamilyFlags {
+  changedPackageFiles: string[];
+  invalidChangedFiles: true;
+  anchorMismatch: true;
+  indexContractViolation: true;
+  indexUnavailable: true;
+  internalError: true;
+}
+
+type BailFamily<Flag extends keyof TurboSnapBailFamilyFlags> = TurboSnapBailReasonBase &
+  Pick<TurboSnapBailFamilyFlags, Flag> &
+  Partial<Record<Exclude<keyof TurboSnapBailFamilyFlags, Flag>, never>>;
 
 // All additional fields allowed for the `changedPackageFiles` bail reason
-export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
-  changedPackageFiles: string[];
-  invalidChangedFiles?: never;
+export type ChangedPackageFilesBailReason = BailFamily<'changedPackageFiles'> & {
   bailSubreason?: TurboSnapChangedPackageFilesSubreason;
   lockfileKind?: string;
   lockfileSizeBytes?: number;
-  sentryEventId?: string;
 };
 
 // All additional fields allowed for the `invalidChangedFiles` bail reason
-export type InvalidChangedFilesBailReason = TurboSnapBailReasonBase & {
-  changedPackageFiles?: never;
-  invalidChangedFiles: true;
+export type InvalidChangedFilesBailReason = BailFamily<'invalidChangedFiles'> & {
   bailSubreason?: TurboSnapInvalidChangedFilesSubreason;
-  sentryEventId?: string;
+};
+
+// All additional fields allowed for the `anchorMismatch` bail reason
+export type AnchorMismatchBailReason = BailFamily<'anchorMismatch'> & {
+  bailSubreason: TurboSnapAnchorMismatchSubreason;
+};
+
+// All additional fields allowed for the `indexContractViolation` bail reason
+export type IndexContractViolationBailReason = BailFamily<'indexContractViolation'> & {
+  bailSubreason: TurboSnapIndexContractViolationSubreason;
+};
+
+// All additional fields allowed for the `indexUnavailable` bail reason. The subreason is optional
+// because it is only set when the transport failure is a recognised network error.
+export type IndexUnavailableBailReason = BailFamily<'indexUnavailable'> & {
+  bailSubreason?: TurboSnapIndexUnavailableSubreason;
+};
+
+// All additional fields allowed for the `internalError` bail reason
+export type InternalErrorBailReason = BailFamily<'internalError'> & {
+  bailSubreason: TurboSnapInternalErrorSubreason;
 };
 
 export type TurboSnapBailReason =
   | ChangedPackageFilesBailReason
   | InvalidChangedFilesBailReason
+  | AnchorMismatchBailReason
+  | IndexContractViolationBailReason
+  | IndexUnavailableBailReason
+  | InternalErrorBailReason
   // All remaining bail reasons
-  | (TurboSnapBailReasonBase & {
-      changedPackageFiles?: never;
-      invalidChangedFiles?: never;
-    });
+  | (TurboSnapBailReasonBase & Partial<Record<keyof TurboSnapBailFamilyFlags, never>>);
 
 export interface UntracedFile {
   filepath: string;
