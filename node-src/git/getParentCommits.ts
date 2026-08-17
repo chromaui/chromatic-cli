@@ -342,7 +342,8 @@ export async function getParentCommits(
       commit,
       parentCommits,
       hasBuild: commitsWithBuildsSet.has(commit),
-      isMergePoint: mergePointCommits.has(commit),
+      // BitBucket returns 10 char prefixes for merge commit shas :shrug:
+      isMergePoint: [...mergePointCommits].some((sha) => commit.startsWith(sha)),
       isProbableSquashMerge,
     }));
   } catch (err) {
