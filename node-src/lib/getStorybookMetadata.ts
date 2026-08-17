@@ -35,13 +35,18 @@ function findConfigFlags({
   const { scripts = {} } = packageJson;
   if (!buildScriptName || !scripts[buildScriptName]) return {};
 
-  const { flags } = meow({
-    argv: parseArgsStringToArgv(scripts[buildScriptName]),
-    flags: {
-      configDir: { type: 'string', alias: 'c' },
-      staticDir: { type: 'string', alias: 's' },
-    },
-  });
+  let flags: { configDir?: string; staticDir?: string };
+  try {
+    ({ flags } = meow({
+      argv: parseArgsStringToArgv(scripts[buildScriptName]),
+      flags: {
+        configDir: { type: 'string', alias: 'c' },
+        staticDir: { type: 'string', alias: 's' },
+      },
+    }));
+  } catch {
+    return {};
+  }
 
   return {
     configDir: flags.configDir,
