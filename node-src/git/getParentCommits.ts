@@ -49,6 +49,7 @@ const MergeCommitsQuery = gql`
   query MergeCommitsQuery($mergeInfoList: [MergedInfoInput]!) {
     app {
       mergedPullRequests(mergeInfoList: $mergeInfoList) {
+        mergeCommitSha
         lastHeadBuild {
           commit
         }
@@ -60,6 +61,7 @@ export interface MergeCommitsQueryResult {
   app: {
     mergedPullRequests: [
       {
+        mergeCommitSha: string;
         lastHeadBuild: {
           commit: string;
         };
@@ -301,7 +303,7 @@ export async function getParentCommits(
 
   // Track which visited commits the platform index identified as PR merge points.
   const mergePointCommits = new Set<string>();
-  for (const [index, pullRequest] of mergedPullRequests.entries()) {
+  for (const pullRequest of mergedPullRequests) {
     // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
     // during our ancestor selection that was the merge commit for that PR.
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
@@ -317,9 +319,7 @@ export async function getParentCommits(
         );
         extraParentCommits.push(lastHeadBuildCommit);
       }
-      // The commit at the same position in mergeInfoList is the merge point
-      const mergePoint = mergeInfoList[index]?.commit;
-      if (mergePoint) mergePointCommits.add(mergePoint);
+      if (pullRequest.mergeCommitSha) mergePointCommits.add(pullRequest.mergeCommitSha);
     }
   }
 
