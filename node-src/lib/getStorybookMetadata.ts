@@ -300,6 +300,7 @@ export async function getStorybookMetadata(
  * root, so it needs no probe.
  *
  * @param deps The dependencies holding the user's options.
+ * @param deps.log Standard context logger.
  * @param deps.options The user's options, including `--storybook-config-dir`.
  * @param projectRoot The absolute Storybook project root.
  * @param buildScriptConfigDirectory The build script's `-c` value, or undefined when it declares none.
@@ -307,7 +308,7 @@ export async function getStorybookMetadata(
  * @returns The absolute config directory.
  */
 async function findConfigDirectory(
-  { options }: StorybookInfoDeps,
+  { log, options }: StorybookInfoDeps,
   projectRoot: AbsolutePath,
   buildScriptConfigDirectory?: string
 ): Promise<AbsolutePath> {
@@ -322,8 +323,12 @@ async function findConfigDirectory(
     path.resolve(projectRoot, options.storybookConfigDir),
     path.resolve(options.storybookConfigDir),
   ];
+  log.debug('Looking for config directory from: ', candidates);
   for (const candidate of candidates) {
-    if (await pathExists(candidate)) return candidate;
+    if (await pathExists(candidate)) {
+      log.debug('Found config directory:', candidate);
+      return candidate;
+    }
   }
 
   // Neither is on disk, so the config read is going to fail either way. Report the project's own.
