@@ -3,6 +3,7 @@ export const viewLayers = {
   '@storybook/vue': 'vue',
   '@storybook/vue3': 'vue3',
   '@storybook/angular': 'angular',
+  '@storybook/angular-vite': 'angular',
   '@storybook/html': 'html',
   '@storybook/web-components': 'web-components',
   '@storybook/polymer': 'polymer',
