@@ -6,7 +6,7 @@ import { normalizeStatsPath, rootFilePath } from './paths';
  * Whether a canonical path has a real file on disk. You can use things that adhere to this
  * interface such as `Map` or `Set`.
  */
-export interface RealFiles {
+export interface OnDiskFiles {
   has(filePath: FilePath): boolean;
 }
 
@@ -55,20 +55,20 @@ const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
  * @param context The context to resolve stats paths and tell real files apart from the require-context glob.
  * @param context.projectRoot The absolute Storybook project root that module paths anchor against.
  * @param context.statsRoot The directory relative stats paths are named from.
- * @param context.realFiles Which canonical paths have a real file on disk, used to tell real files
+ * @param context.onDiskFiles Which canonical paths have a real file on disk, used to tell real files
  * apart from the require-context glob.
  *
  * @returns The canonical paths of the story files.
  */
 export function detectStoryFiles(
   stats: Stats,
-  context: { projectRoot: AbsolutePath; statsRoot: AbsolutePath; realFiles: RealFiles }
+  context: { projectRoot: AbsolutePath; statsRoot: AbsolutePath; onDiskFiles: OnDiskFiles }
 ): Set<FilePath> {
-  const { projectRoot, statsRoot, realFiles } = context;
+  const { projectRoot, statsRoot, onDiskFiles } = context;
   const { storyImporters, contextsExcludingNodeModules } = collectStoryImporters(
     stats,
     projectRoot,
-    realFiles,
+    onDiskFiles,
     statsRoot
   );
 
@@ -97,7 +97,7 @@ export function detectStoryFiles(
     // Only real files are story files; requiring a file on disk excludes the require-context glob
     // itself (which is imported by an entry but has no on-disk file).
     if (
-      realFiles.has(sourceFilePath) &&
+      onDiskFiles.has(sourceFilePath) &&
       isStoryFile(sourceFilePath, matchedStoryImporters, contextsExcludingNodeModules)
     ) {
       storyFiles.add(sourceFilePath);
@@ -147,7 +147,7 @@ function isStoryFile(
  *
  * @param stats The stats file to parse.
  * @param projectRoot The absolute Storybook project root that module paths anchor against.
- * @param realFiles Which canonical paths have a real file on disk, used to tell real files apart
+ * @param onDiskFiles Which canonical paths have a real file on disk, used to tell real files apart
  * from the require-context glob.
  * @param statsRoot The directory relative stats paths are named from.
  *
@@ -156,7 +156,7 @@ function isStoryFile(
 function collectStoryImporters(
   stats: Stats,
   projectRoot: AbsolutePath,
-  realFiles: RealFiles,
+  onDiskFiles: OnDiskFiles,
   statsRoot: AbsolutePath
 ): {
   storyImporters: Set<string>;
@@ -177,7 +177,7 @@ function collectStoryImporters(
 
   for (const module of stats.modules) {
     const root = rootFilePath(module, projectRoot, statsRoot);
-    if (!module.name || !root || realFiles.has(root)) {
+    if (!module.name || !root || onDiskFiles.has(root)) {
       continue;
     }
 

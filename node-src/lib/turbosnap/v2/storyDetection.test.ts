@@ -6,20 +6,20 @@ import { detectStoryFiles } from './storyDetection';
 const projectRoot = '/repo/packages/ui';
 
 /**
- * Detects the story files in `stats`, treating exactly `realFiles` as having a file on disk. A
+ * Detects the story files in `stats`, treating exactly `onDiskFiles` as having a file on disk. A
  * canonical path absent from that list is a synthetic node (a require-context glob, a generated
  * entry, an external).
  *
  * @param stats The stats file to parse.
- * @param realFiles The canonical paths that have a file on disk.
+ * @param onDiskFiles The canonical paths that have a file on disk.
  *
  * @returns The detection result.
  */
-function detect(stats: Stats, realFiles: string[]) {
+function detect(stats: Stats, onDiskFiles: string[]) {
   return detectStoryFiles(stats, {
     projectRoot,
     statsRoot: projectRoot,
-    realFiles: new Set(realFiles),
+    onDiskFiles: new Set(onDiskFiles),
   });
 }
 
@@ -137,18 +137,18 @@ describe('detectStoryFiles through a config-entry require-context', () => {
     ],
   };
 
-  const realFiles = [
+  const onDiskFiles = [
     './src/lib/Button.stories.tsx',
     './src/lib/Button.tsx',
     './.storybook/preview.ts',
   ];
 
   it('detects a concatenated story imported via a context imported by the config entry', () => {
-    expect([...detect(stats, realFiles)]).toEqual(['./src/lib/Button.stories.tsx']);
+    expect([...detect(stats, onDiskFiles)]).toEqual(['./src/lib/Button.stories.tsx']);
   });
 
   it('does not treat a real file imported directly by the config entry as a story', () => {
-    expect([...detect(stats, realFiles)]).not.toContain('./.storybook/preview.ts');
+    expect([...detect(stats, onDiskFiles)]).not.toContain('./.storybook/preview.ts');
   });
 });
 
