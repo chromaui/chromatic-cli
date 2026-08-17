@@ -18,6 +18,12 @@ const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
 const isPackageLockFile = (name: string) =>
   SUPPORTED_LOCK_FILES.some((lockfile) => name.endsWith(lockfile));
+
+// Documentation files inside the config dir (e.g. `.storybook/README.md`) don't affect the built
+// Storybook, so a change to them shouldn't trigger a full rebuild.
+const isDocumentationFile = (name: string) =>
+  ['.md', '.txt'].some((extension) => name.toLowerCase().endsWith(extension));
+
 const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&
   (module_ as Module).id !== null &&
@@ -146,7 +152,10 @@ export async function getDependentStoryFiles(
   const csfGlobsByName = new Set<NormalizedName>();
 
   const isStorybookFile = (name: string) =>
-    name && name.startsWith(`${storybookDirectory}/`) && !storiesEntryFiles.includes(name);
+    name &&
+    name.startsWith(`${storybookDirectory}/`) &&
+    !storiesEntryFiles.includes(name) &&
+    !isDocumentationFile(name);
 
   stats.modules
     .filter((module_) => isUserModule(module_))
