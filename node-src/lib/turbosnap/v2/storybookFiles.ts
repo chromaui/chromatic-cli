@@ -18,6 +18,8 @@ import {
 // `configDir` is a project setting, not always `.storybook`, so the pattern is built per call.
 function previewConfigPattern(configDirectory: string): RegExp {
   const escapedConfigDirectory = configDirectory.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  // The only interpolated part is regex-escaped just above, so the pattern is safe.
+  // eslint-disable-next-line security/detect-non-literal-regexp
   return new RegExp(String.raw`^\./${escapedConfigDirectory}/preview\.[cm]?[jt]sx?$`);
 }
 
