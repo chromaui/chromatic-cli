@@ -158,6 +158,36 @@ describe('serializeManifest', () => {
     expect(after.attribution).toEqual(before.attribution);
   });
 
+  it('keeps a real file reachable only through a synthetic bridge as its own serialized entry', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const synthetic = 'virtual:bridge';
+    const helper = '/repo/packages/ui/src/helper.ts';
+    const { outOfGraph } = createFixture({
+      isAbsent: syntheticAbsent,
+      fileHashes: { [story]: 'S', [helper]: 'H' },
+    });
+    // The only path from the story to the helper runs through the synthetic bridge, which pruning
+    // erases. The helper must still surface as its own entry so its hash is published for diffing;
+    // its reachability is carried by the precomputed roll-ups, not by the serialized edges.
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: synthetic, reasons: [{ moduleName: story }] },
+        { id: 3, name: helper, reasons: [{ moduleName: synthetic }] },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+
+    // The helper is published with its own hash, so a debug reader can diff it...
+    expect(serialized.files['./src/helper.ts'].hash).toBe('H');
+    // ...even though no serialized dependency edge reaches it (the bridge that did was pruned).
+    const reachedByAnEdge = Object.values(serialized.files).some((file) =>
+      file.dependencies.includes('./src/helper.ts')
+    );
+    expect(reachedByAnEdge).toBe(false);
+  });
+
   it('counts a synthetic node itself towards the roll-up of the story that reaches it', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';
