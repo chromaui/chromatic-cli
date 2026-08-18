@@ -21,6 +21,7 @@ describe('announceBuild', () => {
   const input: AnnounceBuildInput = {
     git: {
       version: 'whatever',
+      rootPath: '/repo',
       matchesBranch: () => false,
       committedAt: 0,
       branch: 'branch',
@@ -35,14 +36,14 @@ describe('announceBuild', () => {
       packageManagerVersion: '8.19.2',
     },
     storybook: {
-      baseDir: '',
+      projectRoot: '/repo',
       version: '2.0.0',
       addons: [],
       refs: {
         design: { title: 'Design System', url: 'https://design.example.com' },
       },
-      configDir: './foo',
-      staticDir: [],
+      configDir: '/repo/foo',
+      staticDirs: [],
       builder: {
         name: 'webpack',
       },
@@ -82,7 +83,7 @@ describe('announceBuild', () => {
           storybookRefs: input.storybook.refs,
           storybookVersion: input.storybook.version,
           projectMetadata: {
-            storybookBaseDir: '',
+            storybookBaseDir: '.',
           },
           ...input.runtimeMetadata,
         },

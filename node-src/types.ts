@@ -174,7 +174,7 @@ type StorybookReference =
 export interface Git {
   version?: string;
   /** The absolute location on disk of the git project */
-  rootPath?: string;
+  rootPath?: AbsolutePath;
   /** The current user's email as per git config */
   gitUserEmail?: string;
   branch: string;
@@ -214,22 +214,32 @@ export interface BaselineBuild {
   changeCount: number;
 }
 
-export interface Storybook {
-  version: string;
-  baseDir?: string;
-  configDir: string;
-  staticDir: string[];
-  addons: {
+/** A fully resolved path to a location on the local filesystem. */
+export type AbsolutePath = string;
+
+export interface StorybookPaths {
+  /** The absolute directory Storybook runs from. */
+  projectRoot: AbsolutePath;
+  /** The absolute directory containing Storybook's configuration. */
+  configDir: AbsolutePath;
+  /** The absolute directories Storybook serves as static assets. */
+  staticDirs: AbsolutePath[];
+}
+
+export interface Storybook extends StorybookPaths {
+  version?: string;
+  addons?: {
     name: string;
     packageName?: string;
     packageVersion?: string;
   }[];
-  builder: {
+  builder?: {
     name: string;
     packageName?: string;
     packageVersion?: string;
   };
-  mainConfigFilePath?: string;
+  /** The absolute main-config file path, when known. */
+  mainConfigFilePath?: AbsolutePath;
   refs?: Record<string, StorybookReference>;
 }
 

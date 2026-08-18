@@ -1,5 +1,6 @@
 /* eslint-disable max-lines, max-statements */
 import chalk from 'chalk';
+import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
@@ -13,20 +14,26 @@ const log = new TestLogger();
 const getContext: any = (
   {
     configDir,
-    staticDir,
+    staticDirs,
     ...options
-  }: { configDir?: string; staticDir?: string } & Context['options'] = {} as any
-) => ({
-  log,
-  options,
-  turboSnap: {},
-  storybook: {
-    baseDir: options.storybookBaseDir ?? '',
-    configDir,
-    staticDir,
-  },
-  git: { rootPath: '/path/to/project' },
-});
+  }: { configDir?: string; staticDirs?: string[] } & Context['options'] = {} as any
+) => {
+  const rootPath = '/path/to/project';
+  const projectRoot = path.resolve(rootPath, options.storybookBaseDir ?? '');
+  return {
+    log,
+    options,
+    turboSnap: {},
+    storybook: {
+      projectRoot,
+      ...(configDir && { configDir: path.resolve(projectRoot, configDir) }),
+      ...(staticDirs && {
+        staticDirs: staticDirs.map((directory) => path.resolve(projectRoot, directory)),
+      }),
+    },
+    git: { rootPath },
+  };
+};
 
 afterEach(() => {
   log.info.mockReset();
@@ -643,6 +650,34 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  it('bails using the resolved config dir, not the cwd-relative option', async () => {
+    const changedFiles = ['packages/ui/.storybook-ci/file.js'];
+    const modules = [
+      {
+        id: './src/foo.stories.js',
+        name: './src/foo.stories.js',
+        reasons: [{ moduleName: CSF_GLOB }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './.storybook-ci/generated-stories-entry.js' }],
+      },
+    ];
+    // The user runs the CLI at the repo root, so the option they typed and the directory the
+    // builder's paths are relative to are written differently.
+    const ctx = getContext({
+      configDir: '.storybook-ci',
+      storybookBaseDir: 'packages/ui',
+      storybookConfigDir: 'packages/ui/.storybook-ci',
+    });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result.status).toBe('bailed');
+    expect(result.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['packages/ui/.storybook-ci/file.js'],
+    });
+  });
+
   it('does not bail on changed external Storybook config file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/other-storybook/.storybook/file.js'];
     const modules = [
@@ -821,7 +856,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ staticDir: ['path/to/statics'] });
+    const ctx = getContext({ staticDirs: ['path/to/statics'] });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
@@ -849,7 +884,7 @@ describe('getDependentStoryFiles', () => {
         reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
       },
     ];
-    const ctx = getContext({ staticDir: ['.storybook/static'] });
+    const ctx = getContext({ staticDirs: ['.storybook/static'] });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
@@ -954,7 +989,7 @@ describe('getDependentStoryFiles', () => {
       },
     ];
     const ctx = getContext({
-      staticDir: ['public'],
+      staticDirs: ['public'],
       untraced: ['**/stories/**'],
     });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
@@ -995,7 +1030,7 @@ describe('getDependentStoryFiles', () => {
         },
       ];
       const ctx = getContext({
-        staticDir: ['path/to/statics'],
+        staticDirs: ['path/to/statics'],
         untraced: ['**/foo.js'],
       });
       const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
@@ -1249,7 +1284,11 @@ describe('normalizePath', () => {
   describe('with workingDir', () => {
     it('makes relative paths relative to the project root', () => {
       const projectRoot = '/path/to/project';
-      const normalized = normalizePath(`folder/file.js`, projectRoot, 'packages/webapp');
+      const normalized = normalizePath(
+        `folder/file.js`,
+        projectRoot,
+        `${projectRoot}/packages/webapp`
+      );
       expect(normalized).toBe('packages/webapp/folder/file.js');
     });
 
@@ -1258,7 +1297,7 @@ describe('normalizePath', () => {
       const normalized = normalizePath(
         `../../packages/webapp/folder/file.js`,
         projectRoot,
-        'packages/tools'
+        `${projectRoot}/packages/tools`
       );
       expect(normalized).toBe('packages/webapp/folder/file.js');
     });
@@ -1268,7 +1307,7 @@ describe('normalizePath', () => {
       const normalized = normalizePath(
         `${projectRoot}/packages/webapp/file.js`,
         projectRoot,
-        'packages/webapp'
+        `${projectRoot}/packages/webapp`
       );
       expect(normalized).toBe('packages/webapp/file.js');
     });
@@ -1278,7 +1317,7 @@ describe('normalizePath', () => {
       const normalized = normalizePath(
         `${projectRoot}/packages/webapp/file.js`,
         projectRoot,
-        'packages/tools'
+        `${projectRoot}/packages/tools`
       );
       expect(normalized).toBe('packages/webapp/file.js');
     });

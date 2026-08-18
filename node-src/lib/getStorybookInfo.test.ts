@@ -1,4 +1,5 @@
 import TestLogger from '@cli/testLogger';
+import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import getStorybookInfo from './getStorybookInfo';
@@ -20,6 +21,10 @@ const VUE = { '@storybook/vue': '1.2.3' };
 
 const FIXTURES = 'node-src/__mocks__/storybookMainConfig';
 
+// The CLI runs at the repo root in these tests, so the fixture paths below are already relative to
+// the project root.
+const PROJECT_ROOT = process.cwd();
+
 afterEach(() => {
   log.info.mockReset();
   log.warn.mockReset();
@@ -35,7 +40,7 @@ describe('getStorybookInfo', () => {
 
   it('returns version', async () => {
     const ctx = getContext({ packageJson: { dependencies: REACT } });
-    const sbInfo = await getStorybookInfo(ctx);
+    const sbInfo = await getStorybookInfo(ctx, PROJECT_ROOT);
     expect(sbInfo).toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
@@ -47,7 +52,7 @@ describe('getStorybookInfo', () => {
 
   it('warns on duplicate devDependency', async () => {
     const ctx = getContext({ packageJson: { dependencies: REACT, devDependencies: REACT } });
-    await getStorybookInfo(ctx);
+    await getStorybookInfo(ctx, PROJECT_ROOT);
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('both "dependencies" and "devDependencies"')
     );
@@ -57,7 +62,7 @@ describe('getStorybookInfo', () => {
     const ctx = getContext({
       packageJson: { dependencies: REACT, peerDependencies: REACT },
     });
-    await getStorybookInfo(ctx);
+    await getStorybookInfo(ctx, PROJECT_ROOT);
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('both "dependencies" and "peerDependencies"')
     );
@@ -65,15 +70,38 @@ describe('getStorybookInfo', () => {
 
   it('returns other metadata if missing view layer package', async () => {
     const ctx = getContext({ packageJson: { dependencies: VUE } });
-    await expect(getStorybookInfo(ctx)).resolves.toEqual(
+    await expect(getStorybookInfo(ctx, PROJECT_ROOT)).resolves.toEqual(
       expect.objectContaining({
         builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
       })
     );
   });
 
+  it('returns the resolved path defaults when metadata discovery fails', async () => {
+    vi.mocked(getStorybookMetadata).mockRejectedValueOnce(new Error('metadata unavailable'));
+    const projectRoot = '/repo/packages/storybook';
+
+    await expect(getStorybookInfo(baseDeps, projectRoot)).resolves.toEqual({
+      projectRoot,
+      configDir: '/repo/packages/storybook/.storybook',
+      staticDirs: [],
+    });
+  });
+
+  it('keeps the configured config dir when metadata discovery fails', async () => {
+    vi.mocked(getStorybookMetadata).mockRejectedValueOnce(new Error('metadata unavailable'));
+    const projectRoot = '/repo/packages/storybook';
+    const ctx = getContext({ options: { storybookConfigDir: '.storybook-ci' } });
+
+    await expect(getStorybookInfo(ctx, projectRoot)).resolves.toEqual({
+      projectRoot,
+      configDir: '/repo/packages/storybook/.storybook-ci',
+      staticDirs: [],
+    });
+  });
+
   it('looks up package in node_modules on missing dependency', async () => {
-    await expect(getStorybookInfo(baseDeps)).resolves.toEqual(
+    await expect(getStorybookInfo(baseDeps, PROJECT_ROOT)).resolves.toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
         version: expect.any(String),
@@ -90,7 +118,7 @@ describe('getStorybookInfo', () => {
       const ctx = getContext({
         env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@3.2.1' },
       });
-      expect(await getStorybookInfo(ctx)).toEqual(
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual(
         expect.objectContaining({
           version: '3.2.1',
           builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
@@ -100,7 +128,7 @@ describe('getStorybookInfo', () => {
 
     it('supports unscoped package name', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: 'react@3.2.1' } });
-      expect(await getStorybookInfo(ctx)).toEqual(
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual(
         expect.objectContaining({
           version: '3.2.1',
           builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
@@ -110,7 +138,7 @@ describe('getStorybookInfo', () => {
 
     it('still returns builder for invalid version value', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '3.2.1' } });
-      expect(await getStorybookInfo(ctx)).toEqual(
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual(
         expect.objectContaining({
           builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
         })
@@ -119,7 +147,7 @@ describe('getStorybookInfo', () => {
 
     it('does not include unsupported view layers', async () => {
       const ctx = getContext({ env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/native@3.2.1' } });
-      expect(await getStorybookInfo(ctx)).toEqual(
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual(
         expect.objectContaining({
           builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
         })
@@ -136,9 +164,14 @@ describe('getStorybookInfo', () => {
         },
         packageJson: { dependencies: REACT },
       });
-      expect(await getStorybookInfo(ctx)).toEqual({
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
-        staticDir: [`${FIXTURES}/js-cjs/.storybook/static`, `${FIXTURES}/js-cjs/public`],
+        configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
+        projectRoot: PROJECT_ROOT,
+        staticDirs: [
+          path.resolve(FIXTURES, 'js-cjs/.storybook/static'),
+          path.resolve(FIXTURES, 'js-cjs/public'),
+        ],
         version: expect.any(String),
       });
     });
@@ -152,18 +185,32 @@ describe('getStorybookInfo', () => {
         },
         packageJson: { dependencies: REACT },
       });
-      expect(await getStorybookInfo(ctx)).toEqual({
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: '@storybook/builder-webpack5', packageVersion: expect.any(String) },
+        configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
+        projectRoot: PROJECT_ROOT,
+        staticDirs: [],
         version: expect.any(String),
       });
     });
 
-    it('returns no metadata if cannot find project.json', async () => {
+    it('keeps the source metadata when project.json cannot be read', async () => {
       const ctx = getContext({
-        options: { storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson' },
+        options: {
+          storybookBuildDir: 'bin-src/__mocks__/malformedProjectJson',
+          storybookConfigDir: `${FIXTURES}/js-cjs/.storybook`,
+        },
         packageJson: { dependencies: REACT },
       });
-      expect(await getStorybookInfo(ctx)).toEqual({});
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
+        configDir: path.resolve(FIXTURES, 'js-cjs/.storybook'),
+        projectRoot: PROJECT_ROOT,
+        staticDirs: [
+          path.resolve(FIXTURES, 'js-cjs/.storybook/static'),
+          path.resolve(FIXTURES, 'js-cjs/public'),
+        ],
+        version: expect.any(String),
+      });
     });
 
     it('returns the correct metadata for Storybook 6', async () => {
@@ -174,9 +221,14 @@ describe('getStorybookInfo', () => {
         },
         packageJson: { dependencies: REACT },
       });
-      expect(await getStorybookInfo(ctx)).toEqual({
+      expect(await getStorybookInfo(ctx, PROJECT_ROOT)).toEqual({
         builder: { name: 'webpack4', packageVersion: '6.5.16' },
-        staticDir: [`${FIXTURES}/cjs/.storybook/static`, `${FIXTURES}/cjs/public`],
+        configDir: path.resolve(FIXTURES, 'cjs/.storybook'),
+        projectRoot: PROJECT_ROOT,
+        staticDirs: [
+          path.resolve(FIXTURES, 'cjs/.storybook/static'),
+          path.resolve(FIXTURES, 'cjs/public'),
+        ],
         version: '6.5.16',
       });
     });

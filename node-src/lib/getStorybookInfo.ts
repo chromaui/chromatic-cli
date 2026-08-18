@@ -2,47 +2,65 @@ import { pathExistsSync } from 'fs-extra';
 import path from 'path';
 
 import type { StorybookInfoDeps } from '../tasks/storybookInfo';
-import { Storybook } from '../types';
+import { AbsolutePath, Storybook } from '../types';
 import { getStorybookMetadataFromProjectJson } from './getPrebuiltStorybookMetadata';
-import { getStorybookMetadata } from './getStorybookMetadata';
+import { findConfigDirectory, getStorybookMetadata } from './getStorybookMetadata';
 
 /**
  * Get Storybook information from the user's local project.
  *
  * @param deps Dependencies needed to detect Storybook metadata.
+ * @param projectRoot The absolute Storybook project root the reported directories are relative to.
  *
- * @returns Any Storybook information we can find from the user's local project (which may be
- * nothing).
+ * @returns The resolved Storybook paths and any additional metadata we can find.
  */
 export default async function getStorybookInfo(
-  deps: StorybookInfoDeps
-): Promise<Partial<Storybook>> {
-  try {
-    if (deps.options.storybookBuildDir) {
-      const projectJsonPath = path.resolve(deps.options.storybookBuildDir, 'project.json');
-      // This test makes sure we fall through if the file does not exist.
-      if (pathExistsSync(projectJsonPath)) {
-        // Reading the source config is best-effort: a prebuilt Storybook may not ship one, and its
-        // failure must not stop us reading project.json.
-        let sourceMetadata: Partial<Storybook> = {};
-        try {
-          sourceMetadata = await getStorybookMetadata(deps);
-        } catch (err) {
-          deps.log.debug(err);
-        }
+  deps: StorybookInfoDeps,
+  projectRoot: AbsolutePath
+): Promise<Storybook> {
+  const sourceMetadata = await readSourceMetadata(deps, projectRoot);
 
-        /*
-          This await is needed in order to for the catch block
-          to get the result in the case that this function fails.
-        */
-        const prebuiltMetadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
-        return { ...sourceMetadata, ...prebuiltMetadata };
-      }
-    }
-    // Same for this await.
-    return await getStorybookMetadata(deps);
+  const projectJsonPath =
+    deps.options.storybookBuildDir && path.resolve(deps.options.storybookBuildDir, 'project.json');
+
+  // A prebuilt Storybook may not ship a project.json, in which case the source config is all we have.
+  if (!projectJsonPath || !pathExistsSync(projectJsonPath)) {
+    return await withResolvedPaths(sourceMetadata, deps, projectRoot);
+  }
+
+  try {
+    // project.json describes the build we are actually uploading, so it wins over the source config.
+    const prebuiltMetadata = await getStorybookMetadataFromProjectJson(projectJsonPath);
+    return await withResolvedPaths({ ...sourceMetadata, ...prebuiltMetadata }, deps, projectRoot);
+  } catch (err) {
+    // If we fail to read the project.json, we continue with the source config instead of dropping
+    // everything.
+    deps.log.debug(err);
+    return await withResolvedPaths(sourceMetadata, deps, projectRoot);
+  }
+}
+
+async function readSourceMetadata(
+  deps: StorybookInfoDeps,
+  projectRoot: AbsolutePath
+): Promise<Partial<Omit<Storybook, 'projectRoot'>>> {
+  try {
+    return await getStorybookMetadata(deps, projectRoot);
   } catch (err) {
     deps.log.debug(err);
     return {};
   }
+}
+
+async function withResolvedPaths(
+  discovered: Partial<Omit<Storybook, 'projectRoot'>>,
+  deps: StorybookInfoDeps,
+  projectRoot: AbsolutePath
+): Promise<Storybook> {
+  return {
+    ...discovered,
+    projectRoot,
+    configDir: discovered.configDir ?? (await findConfigDirectory(deps, projectRoot)),
+    staticDirs: discovered.staticDirs ?? [],
+  };
 }

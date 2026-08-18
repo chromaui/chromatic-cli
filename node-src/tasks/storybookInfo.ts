@@ -1,15 +1,15 @@
 import * as Sentry from '@sentry/node';
 
 import { isE2EBuild } from '../lib/e2eUtils';
-import { getStorybookBaseDirectory } from '../lib/getStorybookBaseDirectory';
 import getStorybookInfo from '../lib/getStorybookInfo';
-import { Context, Deps, Storybook, TaskFunction } from '../types';
+import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { AbsolutePath, Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 
 export type StorybookInfoDeps = Pick<Deps, 'log' | 'options' | 'env' | 'packageJson'>;
 
 export interface StorybookInfoInput {
-  gitRootPath?: string;
+  gitRootPath?: AbsolutePath;
   isReactNativeApp: boolean;
 }
 
@@ -49,13 +49,12 @@ export const setStorybookInfo: TaskFunction<
     }
   }
 
-  const storybook: Storybook = {
-    ...((await getStorybookInfo(deps)) as Storybook),
-    baseDir: getStorybookBaseDirectory({
-      storybookBaseDir: deps.options.storybookBaseDir,
-      gitRootPath: input.gitRootPath,
-    }),
-  };
+  const projectRoot = getStorybookProjectRoot({
+    storybookBaseDir: deps.options.storybookBaseDir,
+    gitRootPath: input.gitRootPath,
+  });
+
+  const storybook = await getStorybookInfo(deps, projectRoot);
   return { kind: 'continue', output: { storybook } };
 };
 
@@ -65,5 +64,11 @@ export const applyStorybookInfoOutput = (ctx: Context, { storybook }: StorybookI
   if (storybook.version) {
     Sentry.setTag('storybookVersion', storybook.version);
   }
-  Sentry.setContext('storybook', { ...storybook });
+  const {
+    projectRoot: _projectRoot,
+    configDir: _configDirectory,
+    staticDirs: _staticDirectories,
+    ...metadata
+  } = storybook;
+  Sentry.setContext('storybook', metadata);
 };
