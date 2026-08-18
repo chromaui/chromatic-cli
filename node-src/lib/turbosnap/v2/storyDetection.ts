@@ -10,6 +10,19 @@ export interface OnDiskFiles {
   has(filePath: FilePath): boolean;
 }
 
+/**
+ * What story detection needs to resolve stats paths and tell real files apart from the
+ * require-context glob.
+ */
+interface StoryDetectionContext {
+  // The absolute Storybook project root that module paths anchor against.
+  projectRoot: AbsolutePath;
+  // The directory relative stats paths are named from.
+  statsRoot: AbsolutePath;
+  // Which canonical paths have a real file on disk.
+  onDiskFiles: OnDiskFiles;
+}
+
 // Generated entry points that import all story files. We use this to determine if a file is a story
 // file because they may not always be *.stories.* files because it's configurable.
 const STORIES_ENTRY_FILES = new Set([
@@ -51,60 +64,94 @@ const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
 /**
  * Detects which modules in the stats are story files.
  *
+ * @param context The context required for story detection. See {@link StoryDetectionContext}.
  * @param stats The stats file to parse.
- * @param context The context to resolve stats paths and tell real files apart from the require-context glob.
- * @param context.projectRoot The absolute Storybook project root that module paths anchor against.
- * @param context.statsRoot The directory relative stats paths are named from.
- * @param context.onDiskFiles Which canonical paths have a real file on disk, used to tell real files
- * apart from the require-context glob.
  *
  * @returns The canonical paths of the story files.
  */
-export function detectStoryFiles(
-  stats: Stats,
-  context: { projectRoot: AbsolutePath; statsRoot: AbsolutePath; onDiskFiles: OnDiskFiles }
-): Set<FilePath> {
-  const { projectRoot, statsRoot, onDiskFiles } = context;
-  const { storyImporters, contextsExcludingNodeModules } = collectStoryImporters(
-    stats,
-    projectRoot,
-    onDiskFiles,
-    statsRoot
-  );
+export function detectStoryFiles(context: StoryDetectionContext, stats: Stats): Set<FilePath> {
+  const modules = processModules(context, stats);
+  const { storyImporters, contextsExcludingNodeModules } = collectStoryImporters(context, modules);
 
   const storyFiles = new Set<FilePath>();
-  for (const module of stats.modules) {
-    // An external has no on-disk file, so we can skip it.
-    if (EXTERNAL_MODULE.test(module.name)) {
+  for (const module of modules) {
+    // Story files must live on disk
+    if (!module.onDisk) {
       continue;
     }
 
-    const sourceFilePath = rootFilePath(module, projectRoot, statsRoot);
-    if (!sourceFilePath) {
-      continue;
-    }
+    const matchedStoryImporters = module.importers.filter((importer) =>
+      storyImporters.has(importer)
+    );
 
-    // Importers hold the builder's own entry paths (e.g. `./storybook-stories.js`), canonicalised so
-    // they compare against the canonical keys collectStoryImporters returns — the builder may spell
-    // the same entry with or without a `./` prefix. Entry reasons carry a null moduleName, so drop
-    // those.
-    const matchedStoryImporters = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter((name): name is FilePath => typeof name === 'string')
-      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot))
-      .filter((importer) => storyImporters.has(importer));
-
-    // Only real files are story files; requiring a file on disk excludes the require-context glob
-    // itself (which is imported by an entry but has no on-disk file).
-    if (
-      onDiskFiles.has(sourceFilePath) &&
-      isStoryFile(sourceFilePath, matchedStoryImporters, contextsExcludingNodeModules)
-    ) {
-      storyFiles.add(sourceFilePath);
+    if (isStoryFile(module.filePath, matchedStoryImporters, contextsExcludingNodeModules)) {
+      storyFiles.add(module.filePath);
     }
   }
 
   return storyFiles;
+}
+
+/**
+ * A raw stats module after the per-module work every step needs: the canonical file path, whether it
+ * has a file on disk, and its canonical importer names.
+ */
+interface ProcessedModule {
+  // The raw stats module name, left un-normalized: `isLazyContext` and `excludesNodeModules` read
+  // the literal ` lazy ` marker and the include-regex text, which normalization would destroy. Do
+  // not key on it or treat it as a path — use `filePath` for that.
+  rawName: string;
+  // The module's canonical root file path (see {@link rootFilePath}). Also serves as its importer key.
+  filePath: FilePath;
+  // Whether `filePath` has a real file on disk.
+  onDisk: boolean;
+  // The canonical importer names, from the module reasons.
+  importers: FilePath[];
+}
+
+/**
+ * Walks the stats modules once and turns each into a {@link ProcessedModule}, so the heavy per-module
+ * work (the canonical path and the canonical importer names) runs one time and both steps read the
+ * same shape.
+ *
+ * A module is kept when it is not an external and has a non-null canonical file path. On-disk and
+ * off-disk modules are both kept.
+ *
+ * @param context The context required for story detection. See {@link StoryDetectionContext}.
+ * @param stats The stats file to parse.
+ *
+ * @returns The processed modules.
+ */
+function processModules(context: StoryDetectionContext, stats: Stats): ProcessedModule[] {
+  const { projectRoot, statsRoot, onDiskFiles } = context;
+  const processed: ProcessedModule[] = [];
+
+  for (const module of stats.modules) {
+    // An external has no on-disk file and imports nothing, so it can never be or import a story.
+    if (EXTERNAL_MODULE.test(module.name)) {
+      continue;
+    }
+
+    const filePath = rootFilePath(module, projectRoot, statsRoot);
+    if (!filePath) {
+      continue;
+    }
+
+    // Entry reasons carry a null moduleName, so drop those before canonicalising.
+    const importers = (module.reasons ?? [])
+      .map((reason) => reason.moduleName)
+      .filter((name): name is FilePath => typeof name === 'string')
+      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
+
+    processed.push({
+      rawName: module.name,
+      filePath,
+      onDisk: onDiskFiles.has(filePath),
+      importers,
+    });
+  }
+
+  return processed;
 }
 
 /**
@@ -145,23 +192,19 @@ function isStoryFile(
  * such context (a module imported by an entry file that isn't itself a real file) as a story
  * importer too, so both builders are covered.
  *
- * @param stats The stats file to parse.
- * @param projectRoot The absolute Storybook project root that module paths anchor against.
- * @param onDiskFiles Which canonical paths have a real file on disk, used to tell real files apart
- * from the require-context glob.
- * @param statsRoot The directory relative stats paths are named from.
+ * @param context The context required for story detection. See {@link StoryDetectionContext}.
+ * @param modules The processed modules to scan (see {@link processModules}).
  *
  * @returns The set of canonical importer keys that indicate a story file.
  */
 function collectStoryImporters(
-  stats: Stats,
-  projectRoot: AbsolutePath,
-  onDiskFiles: OnDiskFiles,
-  statsRoot: AbsolutePath
+  context: StoryDetectionContext,
+  modules: ProcessedModule[]
 ): {
   storyImporters: Set<string>;
   contextsExcludingNodeModules: Set<string>;
 } {
+  const { projectRoot, statsRoot } = context;
   const canonical = (name: string) => normalizeStatsPath(name, projectRoot, statsRoot);
 
   // The stories entry directly imports stories (Vite), so it is a story importer on its own; the
@@ -175,28 +218,17 @@ function collectStoryImporters(
   const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonical(name)));
   const contextsExcludingNodeModules = new Set<string>();
 
-  for (const module of stats.modules) {
-    const root = rootFilePath(module, projectRoot, statsRoot);
-    if (!module.name || !root || onDiskFiles.has(root)) {
+  for (const module of modules) {
+    // The require-context is off-disk; real files it imports are handled by the classify step.
+    if (module.onDisk) {
       continue;
     }
 
-    // An external is a graph leaf, so it can never import a story. It has no on-disk file either,
-    // which would otherwise let it through as a require-context.
-    if (EXTERNAL_MODULE.test(module.name)) {
-      continue;
-    }
-
-    const importers = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter((name): name is FilePath => typeof name === 'string')
-      .map((name) => canonical(name));
-
-    const importedByEntry = importers.some((importer) => entryFiles.has(importer));
+    const importedByEntry = module.importers.some((importer) => entryFiles.has(importer));
     if (importedByEntry) {
-      storyImporters.add(canonical(module.name));
-      if (isLazyContext(module.name) && excludesNodeModules(module.name)) {
-        contextsExcludingNodeModules.add(canonical(module.name));
+      storyImporters.add(module.filePath);
+      if (isLazyContext(module.rawName) && excludesNodeModules(module.rawName)) {
+        contextsExcludingNodeModules.add(module.filePath);
       }
     }
   }

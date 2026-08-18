@@ -16,11 +16,14 @@ const projectRoot = '/repo/packages/ui';
  * @returns The detection result.
  */
 function detect(stats: Stats, onDiskFiles: string[]) {
-  return detectStoryFiles(stats, {
-    projectRoot,
-    statsRoot: projectRoot,
-    onDiskFiles: new Set(onDiskFiles),
-  });
+  return detectStoryFiles(
+    {
+      projectRoot,
+      statsRoot: projectRoot,
+      onDiskFiles: new Set(onDiskFiles),
+    },
+    stats
+  );
 }
 
 describe('detectStoryFiles through a require-context', () => {
