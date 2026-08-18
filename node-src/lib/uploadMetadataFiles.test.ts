@@ -14,9 +14,13 @@ vi.mock('fs', () => ({
   writeFileSync: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('./getStorybookMetadata', () => ({
-  findStorybookConfigFile: vi.fn(() => Promise.resolve(false)),
-}));
+vi.mock('./getStorybookMetadata', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./getStorybookMetadata')>();
+  return {
+    ...actual,
+    findStorybookConfigFile: vi.fn(() => Promise.resolve(false)),
+  };
+});
 
 vi.mock('./uploadFiles', () => ({
   uploadFiles: vi.fn().mockResolvedValue(undefined),

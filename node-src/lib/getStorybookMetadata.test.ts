@@ -1,15 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { findStaticDirectories, getStorybookMetadata } from './getStorybookMetadata';
+import {
+  findStaticDirectories,
+  getStorybookMetadata,
+  MainConfigReader,
+  readMainConfig,
+} from './getStorybookMetadata';
 
-const makeConfig = (returnValue: any) => ({
-  getSafeFieldValue: vi.fn().mockReturnValue(returnValue),
-});
+function makeConfig(returnValue: any): MainConfigReader {
+  return { readField: vi.fn().mockReturnValue(returnValue) };
+}
 
 describe('findStaticDirs', () => {
   it('returns string entries resolved relative to configDirectory', () => {
     const config = makeConfig(['./static', '../public']);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['.storybook/static', 'public'],
     });
   });
@@ -19,66 +24,54 @@ describe('findStaticDirs', () => {
       { from: './static', to: '/' },
       { from: '../public', to: '/public' },
     ]);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['.storybook/static', 'public'],
     });
   });
 
   it('handles mixed string and object entries', () => {
     const config = makeConfig(['./static', { from: '../public', to: '/' }]);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['.storybook/static', 'public'],
     });
   });
 
   it('leaves absolute paths unchanged', () => {
     const config = makeConfig(['/absolute/path']);
-    expect(findStaticDirectories(config, true, '.storybook')).toEqual({
+    expect(findStaticDirectories(config, '.storybook')).toEqual({
       staticDir: ['/absolute/path'],
     });
   });
 
   it('uses nested configDirectory when provided', () => {
     const config = makeConfig(['./static']);
-    expect(findStaticDirectories(config, true, 'packages/ui/.storybook')).toEqual({
+    expect(findStaticDirectories(config, 'packages/ui/.storybook')).toEqual({
       staticDir: ['packages/ui/.storybook/static'],
     });
   });
 
   it('returns {} for empty array', () => {
     const config = makeConfig([]);
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 
-  it('reads staticDirs off an evaluated CommonJS config module', () => {
-    expect(findStaticDirectories({ staticDirs: ['./static'] }, false)).toEqual({
-      staticDir: ['.storybook/static'],
-    });
-  });
-
-  it('reads staticDirs off the default export of an evaluated ESM config module', () => {
-    expect(findStaticDirectories({ default: { staticDirs: ['./static'] } }, false)).toEqual({
-      staticDir: ['.storybook/static'],
-    });
-  });
-
-  it('returns {} when mainConfig is null', () => {
-    expect(findStaticDirectories(null, true)).toEqual({});
+  it('returns {} when the main config could not be read', () => {
+    expect(findStaticDirectories(undefined)).toEqual({});
   });
 
   it('returns {} when staticDirs is not present on config', () => {
     const config = makeConfig(undefined);
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 
   it('returns {} when staticDirs is a non-array value', () => {
     const config = makeConfig('./static');
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 
   it('returns {} when all entries have no valid path', () => {
     const config = makeConfig([null, undefined, { to: '/' }]);
-    expect(findStaticDirectories(config, true)).toEqual({});
+    expect(findStaticDirectories(config)).toEqual({});
   });
 });
 
@@ -96,14 +89,41 @@ function getDeps(project: string) {
   } as any;
 }
 
+describe('readMainConfig reader', () => {
+  it('reads a top-level field off an evaluated module', async () => {
+    const mainConfig = await readMainConfig(`${FIXTURES}/js-cjs/.storybook`, getDeps('js-cjs').log);
+
+    expect(mainConfig?.readField('staticDirs')).toEqual(['./static', '../public']);
+  });
+
+  it('unwraps a default export off an evaluated module', async () => {
+    const mainConfig = await readMainConfig(
+      `${FIXTURES}/js-cjs-default-export/.storybook`,
+      getDeps('js-cjs-default-export').log
+    );
+
+    expect(mainConfig?.readField('staticDirs')).toEqual(['./static', '../public']);
+  });
+
+  it('returns undefined when neither read path yields a config', async () => {
+    const mainConfig = await readMainConfig(
+      `${FIXTURES}/does-not-exist/.storybook`,
+      getDeps('does-not-exist').log
+    );
+
+    expect(mainConfig).toBeUndefined();
+  });
+});
+
 describe('getStorybookMetadata staticDirs discovery', () => {
   it.each([
-    { project: 'ts-esm', file: 'main.ts', format: 'esm' },
-    { project: 'js-esm', file: 'main.js', format: 'esm' },
-    { project: 'js-cjs', file: 'main.js', format: 'cjs' },
-    { project: 'mjs-esm', file: 'main.mjs', format: 'esm' },
-    { project: 'cjs', file: 'main.cjs', format: 'cjs' },
-  ])('resolves staticDirs from $file ($format)', async ({ project }) => {
+    { project: 'ts-esm', shape: 'a parsed main.ts' },
+    { project: 'js-cjs', shape: 'an evaluated cjs main.js' },
+    { project: 'js-esm', shape: 'an esm main.js' },
+    { project: 'js-esm-unrequirable', shape: "a main.js require() can't evaluate" },
+    { project: 'mjs-esm', shape: 'a parsed main.mjs' },
+    { project: 'cjs', shape: 'a parsed main.cjs' },
+  ])('resolves staticDirs from $shape', async ({ project }) => {
     const metadata = await getStorybookMetadata(getDeps(project));
 
     expect(metadata.staticDir).toEqual([
@@ -113,8 +133,55 @@ describe('getStorybookMetadata staticDirs discovery', () => {
   });
 });
 
-describe('getStorybookMetadata builder discovery', () => {
-  it('detects the builder from an evaluated ESM config module', async () => {
+describe('getStorybookMetadata fields visible on ctx.storybook', () => {
+  it.each([
+    { project: 'ts-esm', shape: 'a parsed main.ts', fields: ['staticDir', 'version'] },
+    { project: 'mjs-esm', shape: 'a parsed main.mjs', fields: ['staticDir', 'version'] },
+    { project: 'cjs', shape: 'a parsed main.cjs', fields: ['staticDir', 'version'] },
+    { project: 'js-cjs', shape: 'an evaluated cjs main.js', fields: ['staticDir', 'version'] },
+    {
+      project: 'js-esm-unrequirable',
+      shape: 'a parsed main.js',
+      fields: ['staticDir', 'version'],
+    },
+    {
+      project: 'builder-js-esm',
+      shape: 'a main.js declaring a framework',
+      fields: ['builder', 'version'],
+    },
+    { project: 'js-cjs-refs', shape: 'a main.js declaring refs', fields: ['refs', 'version'] },
+    {
+      project: 'js-cjs-refs-function',
+      shape: 'a main.js declaring refs as a function',
+      fields: ['version'],
+    },
+  ])('exposes exactly $fields for $shape', async ({ project, fields }) => {
+    const metadata = await getStorybookMetadata(getDeps(project));
+
+    expect(Object.keys(metadata).sort()).toEqual(fields);
+  });
+
+  it('exposes staticDir and version for an esm main.js regardless of the runtime read path', async () => {
+    const metadata = await getStorybookMetadata(getDeps('js-esm'));
+
+    expect(Object.keys(metadata).sort()).toEqual(['staticDir', 'version']);
+  });
+
+  it('reports the refs declared by an evaluated config', async () => {
+    const metadata = await getStorybookMetadata(getDeps('js-cjs-refs'));
+
+    expect(metadata.refs).toEqual({
+      design: { title: 'Design System', url: 'https://example.chromatic.com' },
+    });
+  });
+
+  it('drops refs the config declares as a function, which we cannot evaluate', async () => {
+    const metadata = await getStorybookMetadata(getDeps('js-cjs-refs-function'));
+
+    expect(metadata.refs).toBeUndefined();
+  });
+
+  it('reports the builder declared by the framework field', async () => {
     const metadata = await getStorybookMetadata(getDeps('builder-js-esm'));
 
     expect(metadata.builder?.name).toBe('@storybook/react-vite');
