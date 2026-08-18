@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { Module } from '../../../types';
-import { moduleFileNames, normalizeStatsPath, resolveStatsPath, rootFilePath } from './paths';
+import {
+  canonicalFileNames,
+  canonicalImporters,
+  moduleFileNames,
+  normalizeStatsPath,
+  resolveStatsPath,
+  rootFilePath,
+} from './paths';
 
 const projectRoot = '/repo/packages/ui';
 
@@ -106,6 +113,63 @@ describe('rootFilePath', () => {
 
   it('returns undefined when the module names no files', () => {
     expect(rootFilePath(module({ name: '' }), projectRoot, projectRoot)).toBeUndefined();
+  });
+});
+
+describe('canonicalFileNames', () => {
+  it.each([
+    {
+      name: 'a module that names no files',
+      module: module({ name: '' }),
+      expected: [],
+    },
+    {
+      name: 'a plain module',
+      module: module({ name: '/repo/packages/ui/src/Button.tsx' }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
+      name: 'a concatenated module, root first',
+      module: module({
+        name: '/repo/packages/ui/src/Button.stories.tsx + 1 modules',
+        modules: [
+          { name: '/repo/packages/ui/src/Button.stories.tsx' },
+          { name: '/repo/packages/ui/src/Button.tsx' },
+        ],
+      }),
+      expected: ['./src/Button.stories.tsx', './src/Button.tsx'],
+    },
+  ])('normalizes the file names of $name', ({ module: input, expected }) => {
+    expect(canonicalFileNames(input, projectRoot, projectRoot)).toEqual(expected);
+  });
+});
+
+describe('canonicalImporters', () => {
+  it.each([
+    {
+      name: 'drops reasons with a null moduleName',
+      module: module({
+        reasons: [{ moduleName: null }, { moduleName: '/repo/packages/ui/src/Button.tsx' }],
+      }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
+      name: 'normalizes string moduleNames',
+      module: module({
+        reasons: [
+          { moduleName: '/repo/packages/ui/src/a.ts' },
+          { moduleName: '/repo/packages/shared/theme.ts' },
+        ],
+      }),
+      expected: ['./src/a.ts', '../shared/theme.ts'],
+    },
+    {
+      name: 'returns nothing when the module has no reasons',
+      module: module({ name: './src/Button.tsx' }),
+      expected: [],
+    },
+  ])('$name', ({ module: input, expected }) => {
+    expect(canonicalImporters(input, projectRoot, projectRoot)).toEqual(expected);
   });
 });
 

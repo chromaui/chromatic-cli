@@ -1,6 +1,12 @@
 import { Stats } from '../../../types';
 import { FileHash, FilePath, TurboSnapFile } from './graph';
-import { moduleFileNames, normalizeStatsPath, resolveStatsPath } from './paths';
+import {
+  canonicalFileNames,
+  canonicalImporters,
+  moduleFileNames,
+  normalizeStatsPath,
+  resolveStatsPath,
+} from './paths';
 import { ProjectFiles } from './projectFiles';
 import { detectStoryFiles } from './storyDetection';
 
@@ -58,18 +64,12 @@ export async function readStatsGraph(
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
-    const fileNames = moduleFileNames(module).map((name) =>
-      normalizeStatsPath(name, projectRoot, statsRoot)
-    );
+    const fileNames = canonicalFileNames(module, projectRoot, statsRoot);
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
-    // Canonicalised so a dependency edge names the same key wherever the builder spells it. Entry
-    // reasons carry a null moduleName, so drop those.
-    const importers = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter((name): name is FilePath => typeof name === 'string')
-      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
+    // Canonicalised so a dependency edge names the same key wherever the builder spells it.
+    const importers = canonicalImporters(module, projectRoot, statsRoot);
 
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 

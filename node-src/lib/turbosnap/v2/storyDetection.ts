@@ -1,6 +1,6 @@
 import { AbsolutePath, Stats } from '../../../types';
 import { FilePath } from './graph';
-import { normalizeStatsPath, rootFilePath } from './paths';
+import { canonicalImporters, normalizeStatsPath, rootFilePath } from './paths';
 
 /**
  * Whether a canonical path has a real file on disk. You can use things that adhere to this
@@ -137,11 +137,7 @@ function processModules(context: StoryDetectionContext, stats: Stats): Processed
       continue;
     }
 
-    // Entry reasons carry a null moduleName, so drop those before canonicalising.
-    const importers = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter((name): name is FilePath => typeof name === 'string')
-      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
+    const importers = canonicalImporters(module, projectRoot, statsRoot);
 
     processed.push({
       rawName: module.name,
