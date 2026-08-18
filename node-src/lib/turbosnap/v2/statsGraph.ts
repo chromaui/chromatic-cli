@@ -45,11 +45,14 @@ export async function readStatsGraph(
   const { projectRoot, statsRoot, projectFiles } = context;
   const hashes = await hashFiles(stats, projectRoot, statsRoot, projectFiles);
 
-  const storyFiles = detectStoryFiles(stats, {
-    projectRoot,
-    statsRoot,
-    realFiles: hashes,
-  });
+  const storyFiles = detectStoryFiles(
+    {
+      projectRoot,
+      statsRoot,
+      onDiskFiles: hashes,
+    },
+    stats
+  );
 
   const files = new Map<FilePath, TurboSnapFile>();
   for (const module of stats.modules) {
