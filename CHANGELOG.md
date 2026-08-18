@@ -1,3 +1,16 @@
+# v18.4.0 (Tue Aug 18 2026)
+
+#### 🚀 Enhancement
+
+- Resolve `ctx.storybook` paths to absolute paths [#1433](https://github.com/chromaui/chromatic-cli/pull/1433) ([@codykaup](https://github.com/codykaup))
+- Improve Storybook main config parsing [#1432](https://github.com/chromaui/chromatic-cli/pull/1432) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.3.0 (Tue Aug 18 2026)
 
 #### 🚀 Enhancement
