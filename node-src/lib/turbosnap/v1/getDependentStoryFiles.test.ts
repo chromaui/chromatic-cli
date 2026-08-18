@@ -586,6 +586,63 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  it.each([
+    'path/to/storybook-config/README.md',
+    'path/to/storybook-config/docs/guidelines.md',
+    'path/to/storybook-config/notes.txt',
+  ])(
+    'does not bail on changed documentation file %s in the Storybook config dir',
+    async (documentationFile) => {
+      const changedFiles = ['src/foo.stories.js', documentationFile];
+      const modules = [
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({ configDir: 'path/to/storybook-config' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result.turboSnap.bailReason).toBeUndefined();
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/foo.stories.js': ['src/foo.stories.js'],
+        },
+      });
+    }
+  );
+
+  it('still bails on a real config change when a documentation file changed alongside it', async () => {
+    const changedFiles = [
+      'path/to/storybook-config/README.md',
+      'path/to/storybook-config/preview.js',
+    ];
+    const modules = [
+      {
+        id: './path/to/storybook-config/preview.js',
+        name: './path/to/storybook-config/preview.js',
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+      {
+        id: CSF_GLOB,
+        name: CSF_GLOB,
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result.status).toBe('bailed');
+    expect(result.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+    });
+  });
+
   it('does not bail on changed external Storybook config file', async () => {
     const changedFiles = ['src/foo.stories.js', 'path/to/other-storybook/.storybook/file.js'];
     const modules = [
