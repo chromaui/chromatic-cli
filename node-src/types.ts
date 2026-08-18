@@ -192,6 +192,11 @@ export interface VisitedCommit {
    * The subject itself is not stored.
    */
   isProbableSquashMerge: boolean;
+  /**
+   * This commit is at the shallow boundary of the clone (`git clone --depth`), meaning its
+   * parents were not fetched. Ancestor selection cannot look further back past this point.
+   */
+  isShallowBoundary: boolean;
 }
 
 /** Whether the clone has full or truncated commit history. */

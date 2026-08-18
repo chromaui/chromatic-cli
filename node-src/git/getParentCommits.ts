@@ -345,6 +345,7 @@ export async function getParentCommits(
       // BitBucket returns 10 char prefixes for merge commit shas :shrug:
       isMergePoint: [...mergePointCommits].some((sha) => commit.startsWith(sha)),
       isProbableSquashMerge,
+      isShallowBoundary: !!git.shallowBoundaryCommits?.includes(commit),
     }));
   } catch (err) {
     log.debug('Failed to retrieve visited commit details', err);
