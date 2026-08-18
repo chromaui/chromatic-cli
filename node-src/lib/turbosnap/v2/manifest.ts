@@ -173,12 +173,11 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
     };
   }
 
-  // Sorted so a manifest diff between two runs shows only real membership changes.
-  const attribution = {
-    storybookGlobals: [...manifest.attribution.storybookGlobals].sort(),
-    previewSubtree: [...manifest.attribution.previewSubtree].sort(),
-    storyReachable: [...manifest.attribution.storyReachable].sort(),
-  };
+  // Sorted so a manifest diff between two runs shows only real membership changes. Mapped over the
+  // entries rather than named by hand, so a new FileAttribution home can't be silently dropped here.
+  const attribution = Object.fromEntries(
+    Object.entries(manifest.attribution).map(([key, files]) => [key, [...files].sort()])
+  ) as ManifestFile['attribution'];
 
   return {
     storybookHash: manifest.storybookHash,
