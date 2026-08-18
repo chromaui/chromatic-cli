@@ -30,22 +30,31 @@ export function moduleFileNames(module: Module): FilePath[] {
 }
 
 /**
+ * The two roots that anchor a stats module path. They always travel together through
+ * canonicalization: {@link normalizeStatsPath} resolves a relative stats path from `statsRoot`, then
+ * names it relative to `projectRoot`.
+ */
+export interface StatsRoots {
+  /** The absolute Storybook project root that canonical manifest keys are relative to. */
+  projectRoot: AbsolutePath;
+  /** The absolute directory relative stats paths are named from. */
+  statsRoot: AbsolutePath;
+}
+
+/**
  * The canonical paths of a stats module's source files: its {@link moduleFileNames}, each normalized,
  * root first. The single place the "canonical file names" rule lives, so every walk over
  * `stats.modules` reads the same definition.
  *
  * @param module The stats module.
- * @param projectRoot The absolute Storybook project root to anchor against.
- * @param statsRoot The directory relative stats paths are named from.
+ * @param roots The roots to anchor against. See {@link StatsRoots}.
  *
  * @returns The canonical file paths, root first, with empty entries and duplicates dropped.
  */
-export function canonicalFileNames(
-  module: Module,
-  projectRoot: AbsolutePath,
-  statsRoot: AbsolutePath
-): FilePath[] {
-  return moduleFileNames(module).map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
+export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[] {
+  return moduleFileNames(module).map((name) =>
+    normalizeStatsPath(name, roots.projectRoot, roots.statsRoot)
+  );
 }
 
 /**
@@ -54,20 +63,15 @@ export function canonicalFileNames(
  * so `readStatsGraph` and story detection cannot drift apart.
  *
  * @param module The stats module.
- * @param projectRoot The absolute Storybook project root to anchor against.
- * @param statsRoot The directory relative stats paths are named from.
+ * @param roots The roots to anchor against. See {@link StatsRoots}.
  *
  * @returns The canonical importer paths.
  */
-export function canonicalImporters(
-  module: Module,
-  projectRoot: AbsolutePath,
-  statsRoot: AbsolutePath
-): FilePath[] {
+export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
   return (module.reasons ?? [])
     .map((reason) => reason.moduleName)
     .filter((name): name is FilePath => typeof name === 'string')
-    .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
+    .map((name) => normalizeStatsPath(name, roots.projectRoot, roots.statsRoot));
 }
 
 /**
@@ -76,17 +80,12 @@ export function canonicalImporters(
  * concatenation group are its descendants.
  *
  * @param module The stats module.
- * @param projectRoot The absolute Storybook project root to anchor against.
- * @param statsRoot The directory relative stats paths are named from.
+ * @param roots The roots to anchor against. See {@link StatsRoots}.
  *
  * @returns The canonical root path, or undefined when the module names no files.
  */
-export function rootFilePath(
-  module: Module,
-  projectRoot: AbsolutePath,
-  statsRoot: AbsolutePath
-): FilePath | undefined {
-  return canonicalFileNames(module, projectRoot, statsRoot)[0];
+export function rootFilePath(module: Module, roots: StatsRoots): FilePath | undefined {
+  return canonicalFileNames(module, roots)[0];
 }
 
 /**

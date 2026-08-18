@@ -11,6 +11,7 @@ import {
 } from './paths';
 
 const projectRoot = '/repo/packages/ui';
+const roots = { projectRoot, statsRoot: projectRoot };
 
 function module(module: Partial<Module>): Module {
   return { id: 0, name: '', ...module };
@@ -91,9 +92,9 @@ describe('moduleFileNames', () => {
 
 describe('rootFilePath', () => {
   it('normalizes the root name against the project root', () => {
-    expect(
-      rootFilePath(module({ name: '/repo/packages/ui/src/Button.tsx' }), projectRoot, projectRoot)
-    ).toBe('./src/Button.tsx');
+    expect(rootFilePath(module({ name: '/repo/packages/ui/src/Button.tsx' }), roots)).toBe(
+      './src/Button.tsx'
+    );
   });
 
   it("takes the root from the module's own name, not a require-context glob in modules", () => {
@@ -105,14 +106,13 @@ describe('rootFilePath', () => {
           name: './src/Button.stories.tsx',
           modules: [{ name: String.raw`./src sync recursive \.stories\.tsx$` }],
         }),
-        projectRoot,
-        projectRoot
+        roots
       )
     ).toBe('./src/Button.stories.tsx');
   });
 
   it('returns undefined when the module names no files', () => {
-    expect(rootFilePath(module({ name: '' }), projectRoot, projectRoot)).toBeUndefined();
+    expect(rootFilePath(module({ name: '' }), roots)).toBeUndefined();
   });
 });
 
@@ -140,7 +140,7 @@ describe('canonicalFileNames', () => {
       expected: ['./src/Button.stories.tsx', './src/Button.tsx'],
     },
   ])('normalizes the file names of $name', ({ module: input, expected }) => {
-    expect(canonicalFileNames(input, projectRoot, projectRoot)).toEqual(expected);
+    expect(canonicalFileNames(input, roots)).toEqual(expected);
   });
 });
 
@@ -169,7 +169,7 @@ describe('canonicalImporters', () => {
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
-    expect(canonicalImporters(input, projectRoot, projectRoot)).toEqual(expected);
+    expect(canonicalImporters(input, roots)).toEqual(expected);
   });
 });
 
