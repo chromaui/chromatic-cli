@@ -1,3 +1,6 @@
+import path from 'path';
+
+import { PREVIEW_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -11,16 +14,21 @@ import {
   StorybookFileKey,
 } from './storybookFileKeys';
 
-// Matches the project-root `<configDir>/preview.*` on a canonical manifest path (whose in-project
-// keys start `./`), so a preview under node_modules is not treated as the project's preview config.
-// Path matching is the only consistent way to find it: the config-entry import edge is spelled three
-// incompatible ways across builders (vite has no such edge at all, leaving preview a detached root).
-// `configDir` is a project setting, not always `.storybook`, so the pattern is built per call.
-function previewConfigPattern(configDirectory: string): RegExp {
-  const escapedConfigDirectory = configDirectory.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-  // The only interpolated part is regex-escaped just above, so the pattern is safe.
-  // eslint-disable-next-line security/detect-non-literal-regexp
-  return new RegExp(String.raw`^\./${escapedConfigDirectory}/preview\.[cm]?[jt]sx?$`);
+/**
+ * Whether a canonical manifest path is the project's `<configDir>/preview.*` config file. Canonical
+ * in-project keys start `./`, so a preview under node_modules (keyed elsewhere) is not mistaken for
+ * the project's. Path matching is the only consistent way to find it: the config-entry import edge is
+ * spelled three incompatible ways across builders (vite has no such edge at all, leaving preview a
+ * detached root). `configDir` is a project setting, not always `.storybook`.
+ *
+ * @param filePath The canonical manifest path to test.
+ * @param configDirectory The project's Storybook config directory, project-root-relative.
+ *
+ * @returns Whether the path is the project's preview config file.
+ */
+function isPreviewConfig(filePath: FilePath, configDirectory: string): boolean {
+  const { dir, base } = path.posix.parse(filePath);
+  return dir === `./${configDirectory}` && PREVIEW_CONFIG_PATTERN.test(base);
 }
 
 /**
@@ -75,12 +83,11 @@ export function collectStorybookFiles(
   // so the map stays a homogeneous set of category roll-ups (preview, globals, config, static). The
   // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview
   // leak to keep apart.
-  const previewConfig = previewConfigPattern(configDirectory);
   const storybookFileHashes = new Map<StorybookFileKey, FileHash>();
   const previewSubtree = new Set<FilePath>();
   let hasPreview = false;
   for (const filePath of files.keys()) {
-    if (!hashes.has(filePath) || !previewConfig.test(filePath)) continue;
+    if (!hashes.has(filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
     hasPreview = true;
     collectTransitiveDependencies(files, filePath, previewSubtree);
   }
