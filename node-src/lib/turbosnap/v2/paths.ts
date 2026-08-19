@@ -1,8 +1,47 @@
 import path from 'path';
 
-import { AbsolutePath } from '../../../types';
+import { AbsolutePath, Module } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { FilePath } from './graph';
+
+/**
+ * The source file names a stats module stands for. A concatenated module's `name` is a group label
+ * (e.g. `./x.stories.tsx + 1 modules`), so its real files are read from the inner `modules`; a
+ * plain module names itself.
+ *
+ * webpack and rspack both carry the real (absolute) source path in `nameForCondition`, so it is
+ * preferred over `name` where present.
+ *
+ * @param module The stats module to read the file names of.
+ *
+ * @returns The source file names, with empty entries dropped.
+ */
+function moduleFileNames(module: Module): FilePath[] {
+  const names = module.modules?.length
+    ? module.modules.map((inner) => inner.nameForCondition ?? inner.name)
+    : [module.nameForCondition ?? module.name];
+  return names.filter(Boolean);
+}
+
+/**
+ * The canonical path of a stats module's root source file: the first of its {@link moduleFileNames},
+ * normalized. Only the root identifies the module and matches it against importers; the other inner
+ * names of a concatenation group are its descendants.
+ *
+ * @param module The stats module.
+ * @param projectRoot The absolute Storybook project root to anchor against.
+ * @param statsRoot The directory relative stats paths are named from.
+ *
+ * @returns The canonical root path, or undefined when the module names no files.
+ */
+export function rootFilePath(
+  module: Module,
+  projectRoot: AbsolutePath,
+  statsRoot: AbsolutePath
+): FilePath | undefined {
+  const [rootName] = moduleFileNames(module);
+  return rootName === undefined ? undefined : normalizeStatsPath(rootName, projectRoot, statsRoot);
+}
 
 /**
  * Strips a trailing ` + N modules` suffix from a concatenated module's name, leaving the root file.

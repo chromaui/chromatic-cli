@@ -577,7 +577,8 @@ export interface TaskUpdate {
 export type TaskReporter = (update: TaskUpdate) => void;
 
 export interface Reason {
-  moduleName: string;
+  // An entry module's reason carries a null moduleName, so treat it as optional.
+  moduleName: string | null;
 }
 
 export interface Module {
