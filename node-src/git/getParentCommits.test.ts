@@ -914,4 +914,79 @@ describe('getParentCommits', () => {
       expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
     });
   });
+
+  describe('visitedCommits', () => {
+    it('marks commits with hasBuild correctly', async () => {
+      //  A -[B]-(C) [main]
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('C', 'main', repository);
+      const client = createClient({ repository, builds: [['B', 'main']] });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      const { visitedCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+
+      const { commitMap } = repository;
+      const visited = Object.fromEntries(visitedCommits.map((v) => [v.commit, v]));
+
+      expect(visited[commitMap.C.hash].hasBuild).toBe(false);
+      expect(visited[commitMap.B.hash].hasBuild).toBe(true);
+    });
+
+    it('marks the PR merge commit as isMergePoint', async () => {
+      //  A - B -[C]      [main]
+      //            \
+      //            (E)   [main, squash merge of branch]
+      //           /
+      //         [D]      [branch]
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('E', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['C', 'main'],
+          ['D', 'branch'],
+        ],
+        prs: [['E', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      const { visitedCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+
+      const { commitMap } = repository;
+      const visited = Object.fromEntries(visitedCommits.map((v) => [v.commit, v]));
+
+      expect(visited[commitMap.E.hash].isMergePoint).toBe(true);
+      expect(visited[commitMap.C.hash].isMergePoint).toBe(false);
+    });
+
+    it('marks commits at the shallow boundary as isShallowBoundary', async () => {
+      //  A -[B]-(C)- D - F  [main]
+      //            \   /
+      //              E
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('C', 'main', repository);
+      const { commitMap } = repository;
+      const client = createClient({ repository, builds: [['B', 'main']] });
+      const git = {
+        branch: 'main',
+        ...(await getCommit(ctx)),
+        shallowBoundaryCommits: [commitMap.B.hash],
+      };
+
+      const { visitedCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+
+      const visited = Object.fromEntries(visitedCommits.map((v) => [v.commit, v]));
+      expect(visited[commitMap.B.hash].isShallowBoundary).toBe(true);
+      expect(visited[commitMap.C.hash].isShallowBoundary).toBe(false);
+    });
+  });
 });

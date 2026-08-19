@@ -335,10 +335,9 @@ export async function getParentCommits(
     ...new Set([...(visitedCommitsWithoutBuilds ?? []), ...commitsWithBuilds]),
   ];
   const commitsWithBuildsSet = new Set(commitsWithBuilds);
-  let visitedCommits: VisitedCommit[] | undefined;
-  try {
-    const details = await getVisitedCommitDetails(deps, allVisitedShas);
-    visitedCommits = details.map(({ commit, parentCommits, isProbableSquashMerge }) => ({
+  const details = await getVisitedCommitDetails(deps, allVisitedShas);
+  const visitedCommits: VisitedCommit[] = details.map(
+    ({ commit, parentCommits, isProbableSquashMerge }) => ({
       commit,
       parentCommits,
       hasBuild: commitsWithBuildsSet.has(commit),
@@ -346,10 +345,8 @@ export async function getParentCommits(
       isMergePoint: [...mergePointCommits].some((sha) => commit.startsWith(sha)),
       isProbableSquashMerge,
       isShallowBoundary: !!git.shallowBoundaryCommits?.includes(commit),
-    }));
-  } catch (err) {
-    log.debug('Failed to retrieve visited commit details', err);
-  }
+    })
+  );
 
   log.debug(
     `visitedCommits: total=${allVisitedShas.length}, withBuilds=${commitsWithBuildsSet.size}, mergePoints=${mergePointCommits.size}`
