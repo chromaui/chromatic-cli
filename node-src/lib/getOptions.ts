@@ -93,7 +93,9 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     zip: undefined,
     skipUpdateCheck: undefined,
 
+    firstParentBaseline: undefined,
     ignoreLastBuildOnBranch: undefined,
+    ignoreMergedPrBuilds: undefined,
     preserveMissingSpecs: undefined,
 
     buildScriptName: undefined,
@@ -147,7 +149,9 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     autoAcceptChanges: trueIfSet(flags.autoAcceptChanges),
     exitZeroOnChanges: trueIfSet(flags.exitZeroOnChanges),
     exitOnceUploaded: trueIfSet(flags.exitOnceUploaded),
+    firstParentBaseline: trueIfSet(flags.firstParentBaseline),
     ignoreLastBuildOnBranch: flags.ignoreLastBuildOnBranch,
+    ignoreMergedPrBuilds: trueIfSet(flags.ignoreMergedPrBuilds),
     // deprecated
     preserveMissingSpecs: flags.preserveMissing,
 

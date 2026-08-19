@@ -812,4 +812,92 @@ describe('getParentCommits', () => {
       expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
     });
   });
+
+  describe('firstParentBaseline', () => {
+    it('follows only the first-parent mainline, excluding second-parent ancestors', async () => {
+      //  A - B - C -[D]-(F)  [main]   F = merge(D, E); D is F's first parent
+      //            \   /
+      //             [E]      [branch]  reachable only via F's second parent
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('F', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['D', 'main'],
+          ['E', 'branch'],
+        ],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      // Without the option, E is a genuine ancestor of F, so it is included.
+      const defaultParents = await getParentCommits({ client, log, options } as any, withGit(git));
+      expectCommitsToEqualNames(defaultParents, ['E', 'D'], repository);
+
+      // With the option, the rev-list walk never descends into E (the second parent).
+      const firstParentParents = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { firstParentBaseline: true })
+      );
+      expectCommitsToEqualNames(firstParentParents, ['D'], repository);
+    });
+  });
+
+  describe('ignoreMergedPrBuilds', () => {
+    it('does not inject the head build of a merged PR that is missing from the index', async () => {
+      //  [A]- C -<(D)>  [main]   D is the (squash) merge commit for "branch"; the branch's head
+      //  build (MISSING) is not in the repository, so it can only enter the baseline via the
+      //  merged-PR block.
+      const repository = repositories.twoRoots;
+      await checkoutCommit('D', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['A', 'main'],
+          ['MISSING', 'branch'],
+        ],
+        prs: [['D', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      // Without the option, the merged-PR block appends the missing head build commit.
+      const defaultParents = await getParentCommits({ client, log, options } as any, withGit(git));
+      expectCommitsToEqualNames(defaultParents, ['MISSING', 'A'], repository);
+
+      // With the option, the merged-PR block is skipped, so MISSING is not injected.
+      const parentCommits = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { ignoreMergedPrBuilds: true })
+      );
+      expectCommitsToEqualNames(parentCommits, ['A'], repository);
+    });
+
+    it('does not inject the head build of a merged PR that is in the index', async () => {
+      //  A - B - C -[D]-(F)  [main]   F = merge(D, E), F is the merge commit for "branch"
+      //            \   /
+      //             [E]      [branch]  head build
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('F', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['D', 'main'],
+          ['E', 'branch'],
+        ],
+        prs: [['F', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      // Without the option, E is included as the merged PR's head build.
+      const defaultParents = await getParentCommits({ client, log, options } as any, withGit(git));
+      expectCommitsToEqualNames(defaultParents, ['E', 'D'], repository);
+
+      // E is still a genuine ancestor of F, so the unrestricted walk finds it on its own; only
+      // combining both options excludes it entirely.
+      const parentCommits = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { ignoreMergedPrBuilds: true, firstParentBaseline: true })
+      );
+      expectCommitsToEqualNames(parentCommits, ['D'], repository);
+    });
+  });
 });
