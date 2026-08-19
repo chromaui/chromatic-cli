@@ -1,3 +1,15 @@
+# v18.5.0 (Wed Aug 19 2026)
+
+#### 🚀 Enhancement
+
+- Include more git info in diagnostics and debug logging for ancestor calculation [#1429](https://github.com/chromaui/chromatic-cli/pull/1429) ([@tmeasday](https://github.com/tmeasday))
+
+#### Authors: 1
+
+- Tom Coleman ([@tmeasday](https://github.com/tmeasday))
+
+---
+
 # v18.4.0 (Tue Aug 18 2026)
 
 #### 🚀 Enhancement
