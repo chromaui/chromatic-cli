@@ -33,6 +33,7 @@ export interface Flags {
   exitZeroOnChanges?: string;
   externals?: string[];
   ignoreLastBuildOnBranch?: string;
+  ignoreMergedPrBuilds?: string;
   onlyChanged?: string;
   onlyStoryFiles?: string[];
   onlyStoryNames?: string[];
@@ -108,6 +109,7 @@ export interface Options extends Configuration {
   exitOnceUploaded: boolean | string;
   isLocalBuild: boolean;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
+  ignoreMergedPrBuilds: boolean | string;
   preserveMissingSpecs: boolean;
   originalArgv: string[];
 

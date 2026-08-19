@@ -216,6 +216,8 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
  * @param options.git Git information for the current build.
  * @param options.ignoreLastBuildOnBranch Ignore the last Chromatic build associated with this
  * branch.
+ * @param options.ignoreMergedPrBuilds Do not consider builds on the head branches of merged pull
+ * requests as baseline candidates.
  *
  * @returns An object with:
  *   - `ancestorCommits` – the baseline parent commits to pass to the Chromatic build.
@@ -227,7 +229,15 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
 // eslint-disable-next-line complexity, max-statements
 export async function getParentCommits(
   deps: Pick<Deps, 'options' | 'client' | 'log'>,
-  { git, ignoreLastBuildOnBranch = false }: { git: Git; ignoreLastBuildOnBranch?: boolean | string }
+  {
+    git,
+    ignoreLastBuildOnBranch = false,
+    ignoreMergedPrBuilds = false,
+  }: {
+    git: Git;
+    ignoreLastBuildOnBranch?: boolean | string;
+    ignoreMergedPrBuilds?: boolean;
+  }
 ) {
   const { options, client, log } = deps;
   const { branch, committedAt } = git;
@@ -309,7 +319,13 @@ export async function getParentCommits(
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
     const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
     if (lastHeadBuildCommit) {
-      if (await commitExists(deps, lastHeadBuildCommit)) {
+      // The user can opt out of these baselines with `--ignore-merged-pr-builds`. A merged PR's
+      // last head build sits on the PR branch rather than the target branch, so on a squash-merge
+      // target branch it is not reachable from HEAD and can rank ahead of the real mainline
+      // baseline. Merge-point tracking below is deliberately left intact.
+      if (ignoreMergedPrBuilds) {
+        log.debug(`Skipping merged PR build commit ${lastHeadBuildCommit}`);
+      } else if (await commitExists(deps, lastHeadBuildCommit)) {
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
       } else {
