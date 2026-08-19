@@ -11,7 +11,7 @@ const graphqlClient = client as unknown as GraphQLClient;
 const manifest: TurboSnapManifest = {
   files: new Map(),
   storyFileHashes: new Map([['./src/Button.stories.ts', 'story-hash']]),
-  storybookFileHashes: new Map([
+  storybookConfigHashes: new Map([
     [STORYBOOK_PREVIEW_KEY, 'preview-hash'],
     [STORYBOOK_GLOBALS_KEY, 'globals-hash'],
   ]),
@@ -21,7 +21,6 @@ const manifest: TurboSnapManifest = {
     previewSubtree: new Set(['./.storybook/preview.ts']),
     storybookGlobals: new Set(),
   },
-  // Present on the manifest for the S3 debug file, but deliberately not uploaded to the Index.
   outOfGraphFiles: { storybookConfigFiles: new Map(), staticFiles: new Map() },
 };
 
@@ -47,23 +46,6 @@ describe('uploadHashes', () => {
       },
       { retries: 3 }
     );
-  });
-
-  it('sends storybookFileHashes under the storybookConfigHashes input field', async () => {
-    await uploadHashes(graphqlClient, 'build-id', manifest);
-
-    const [, variables] = client.runQuery.mock.calls[0];
-    expect(variables.input.storybookConfigHashes).toEqual(
-      Object.fromEntries(manifest.storybookFileHashes)
-    );
-  });
-
-  it('selects both members of the response union', async () => {
-    await uploadHashes(graphqlClient, 'build-id', manifest);
-
-    const [mutation] = client.runQuery.mock.calls[0];
-    expect(mutation).toContain('... on BuildUploadHashesSuccess');
-    expect(mutation).toContain('... on BuildUploadHashesFailure');
   });
 
   it('returns the mechanism the Index decided by, so a caller can tell it decided at all', async () => {

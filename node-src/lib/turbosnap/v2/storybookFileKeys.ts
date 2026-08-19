@@ -1,5 +1,5 @@
 /**
- * The synthetic keys in the manifest's `storybookFileHashes` map. They share one namespace and one
+ * The synthetic keys in the manifest's `storybookConfigHashes` map. They share one namespace and one
  * invariant, so they are declared together: a canonical relative path always starts with `./` or
  * `../`, so none of these bare names can collide with a real file.
  */
@@ -36,7 +36,7 @@ export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 export const STATIC_FILES_KEY = 'staticFiles';
 
 /**
- * Every synthetic key in `storybookFileHashes`. A canonical file path always starts `./` or `../`,
+ * Every synthetic key in `storybookConfigHashes`. A canonical file path always starts `./` or `../`,
  * so none of these bare names can collide with one; see the note at the top of this file.
  */
 export type StorybookFileKey =

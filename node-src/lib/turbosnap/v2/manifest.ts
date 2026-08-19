@@ -34,7 +34,7 @@ export interface TurboSnapManifest {
    * catch-all, the `storybookConfigFiles` and `staticFiles` out-of-graph sweeps, and the Storybook
    * version (the plain version string, not a hash of it).
    */
-  storybookFileHashes: Map<StorybookFileKey, FileHash | StorybookVersion>;
+  storybookConfigHashes: Map<StorybookFileKey, FileHash | StorybookVersion>;
   /** Rolled-up hash per story file, covering only that story's own transitive subtree. */
   storyFileHashes: Map<FilePath, FileHash>;
   /**
@@ -63,7 +63,7 @@ export interface TurboSnapManifest {
  */
 interface ManifestFile {
   storybookHash: string;
-  storybookFileHashes: Record<FilePath, FileHash | StorybookVersion>;
+  storybookConfigHashes: Record<FilePath, FileHash | StorybookVersion>;
   storybookConfigFiles: Record<FilePath, FileHash>;
   staticFiles: Record<FilePath, FileHash>;
   storyFiles: Record<FilePath, FileHash>;
@@ -101,7 +101,7 @@ export async function buildManifest(
     }
   }
 
-  const { storybookFileHashes, attribution } = collectStorybookFiles(
+  const { storybookConfigHashes, attribution } = collectStorybookFiles(
     files,
     hashes,
     storyReachable,
@@ -111,7 +111,7 @@ export async function buildManifest(
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
   // upgrade there. Track the version instead; it is a plain string, not a hash.
-  storybookFileHashes.set(
+  storybookConfigHashes.set(
     STORYBOOK_VERSION_KEY,
     resolveStorybookVersion(input.projectRoot, input.projectFiles)
   );
@@ -120,19 +120,19 @@ export async function buildManifest(
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
   const outOfGraphFiles = await hashOutOfGraphFiles(input);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
-    storybookFileHashes.set(key, hash);
+    storybookConfigHashes.set(key, hash);
   }
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
-  // file plus every `storybookFileHashes` entry, so additions, removals and renames are all visible
+  // file plus every `storybookConfigHashes` entry, so additions, removals and renames are all visible
   // before the backend drills into the maps.
   const storybookHash = h64ToString(
-    hashEntryIdentities(storyFileHashes) + hashEntryIdentities(storybookFileHashes)
+    hashEntryIdentities(storyFileHashes) + hashEntryIdentities(storybookConfigHashes)
   );
 
   return {
     storybookHash,
-    storybookFileHashes,
+    storybookConfigHashes,
     storyFileHashes,
     attribution,
     outOfGraphFiles,
@@ -152,7 +152,7 @@ export async function buildManifest(
 export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   return {
     storybookHash: manifest.storybookHash,
-    storybookFileHashes: sortByKey(Object.fromEntries(manifest.storybookFileHashes)),
+    storybookConfigHashes: sortByKey(Object.fromEntries(manifest.storybookConfigHashes)),
     storybookConfigFiles: sortByKey(
       Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles)
     ),

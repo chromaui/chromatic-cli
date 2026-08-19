@@ -77,7 +77,7 @@ export async function uploadHashes(
   const input: BuildUploadHashesInput = {
     buildId,
     storybookHash: manifest.storybookHash,
-    storybookConfigHashes: Object.fromEntries(manifest.storybookFileHashes),
+    storybookConfigHashes: Object.fromEntries(manifest.storybookConfigHashes),
     storyFileHashes: Object.fromEntries(manifest.storyFileHashes),
   };
 
