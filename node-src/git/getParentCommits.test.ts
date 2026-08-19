@@ -812,4 +812,33 @@ describe('getParentCommits', () => {
       expectCommitsToEqualNames(parentCommits, ['E', 'D'], repository);
     });
   });
+
+  describe('firstParentBaseline', () => {
+    it('follows only the first-parent mainline, excluding second-parent ancestors', async () => {
+      //  A - B - C -[D]-(F)  [main]   F = merge(D, E); D is F's first parent
+      //            \   /
+      //             [E]      [branch]  reachable only via F's second parent
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('F', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['D', 'main'],
+          ['E', 'branch'],
+        ],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      // Without the option, E is a genuine ancestor of F, so it is included.
+      const defaultParents = await getParentCommits({ client, log, options } as any, withGit(git));
+      expectCommitsToEqualNames(defaultParents, ['E', 'D'], repository);
+
+      // With the option, the rev-list walk never descends into E (the second parent).
+      const firstParentParents = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { firstParentBaseline: true })
+      );
+      expectCommitsToEqualNames(firstParentParents, ['D'], repository);
+    });
+  });
 });

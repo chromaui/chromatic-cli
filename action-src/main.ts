@@ -113,6 +113,7 @@ async function run() {
     const exitZeroOnChanges = getInput('exitZeroOnChanges');
     const externals = getMultilineInput('externals');
     const fileHashing = getInput('fileHashing');
+    const firstParentBaseline = getInput('firstParentBaseline');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
     const logFile = getInput('logFile');
@@ -180,6 +181,7 @@ async function run() {
         exitZeroOnChanges: maybe(exitZeroOnChanges, !isMergeQueueBuild),
         externals: maybe(externals),
         fileHashing: maybe(fileHashing, true),
+        firstParentBaseline: maybe(firstParentBaseline),
         forceRebuild: maybe(forceRebuild),
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
         interactive: false,
