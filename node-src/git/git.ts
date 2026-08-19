@@ -682,6 +682,10 @@ export async function getCloneDepth(deps: GitDeps): Promise<CloneDepth> {
  */
 export async function getShallowBoundaryCommits(deps: GitDeps): Promise<string[]> {
   const shallowFilePath = await execGitCommandOneLine(deps, `git rev-parse --git-path shallow`);
+  // Security check: ensure the shallow file path looks right before reading it
+  if (!/\.git[/\\]shallow$/.test(shallowFilePath.trim())) {
+    throw new Error(`Unexpected shallow file path: ${shallowFilePath}`);
+  }
   const contents = await readFile(shallowFilePath.trim(), 'utf8').catch(() => '');
   return contents.split(newline).filter(Boolean);
 }
