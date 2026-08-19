@@ -1,6 +1,12 @@
 import { Stats } from '../../../types';
 import { FilePath } from './graph';
-import { canonicalImporters, normalizeStatsPath, rootFilePath, StatsRoots } from './paths';
+import {
+  canonicalImporters,
+  isNodeModulesPath,
+  normalizeStatsPath,
+  rootFilePath,
+  StatsRoots,
+} from './paths';
 
 /**
  * Whether a canonical path has a real file on disk. You can use things that adhere to this
@@ -48,11 +54,6 @@ const CONFIG_ENTRY_FILES = new Set([
 // Webpack/rspack name a module the bundle does not own `external "<request>"` (e.g. Storybook's
 // preview runtime globals). It has no on-disk file and imports nothing.
 const EXTERNAL_MODULE = /^external "/;
-
-// A `node_modules` segment anywhere in a path. Matched segment-wise rather than by substring because
-// a canonical key may reach a hoisted install through `../`, and because a context's own name embeds
-// the literal text `node_modules` inside its include regex.
-const NODE_MODULES_SEGMENT = /(^|\/)node_modules\//;
 
 // Webpack spells contexts with ` lazy `; rspack delimits the same marker with pipes.
 const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
@@ -171,7 +172,7 @@ function isStoryFile(
   if (matchedStoryImporters.length === 0) {
     return false;
   }
-  if (!NODE_MODULES_SEGMENT.test(filePath)) {
+  if (!isNodeModulesPath(filePath)) {
     return true;
   }
   return !matchedStoryImporters.every((importer) => contextsExcludingNodeModules.has(importer));
@@ -250,5 +251,5 @@ function isLazyContext(moduleName: string): boolean {
  * @returns Whether the context's glob excluded `node_modules`.
  */
 function excludesNodeModules(contextName: string): boolean {
-  return !NODE_MODULES_SEGMENT.test(contextName.split(LAZY_CONTEXT_MARKER)[0]);
+  return !isNodeModulesPath(contextName.split(LAZY_CONTEXT_MARKER)[0]);
 }
