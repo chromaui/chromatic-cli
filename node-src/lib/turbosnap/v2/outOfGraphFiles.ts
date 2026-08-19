@@ -61,15 +61,13 @@ export async function hashOutOfGraphFiles(
     path.resolve(projectRoot, directory)
   );
 
-  const [configPaths, staticPaths] = await Promise.all([
-    input.projectFiles.listTree(path.resolve(projectRoot, input.configDir)),
-    // A file can only belong to one section, so collect the static directories first and let them win
-    // below. All the fixtures nest `.storybook/static/`, and v1 tests `isStaticFile` before
-    // `isStorybookFile` for exactly that reason.
-    Promise.all(staticDirectories.map((directory) => input.projectFiles.listTree(directory))),
-  ]);
+  const configPaths = input.projectFiles.listTree(path.resolve(projectRoot, input.configDir));
+  const staticFilePaths = staticDirectories.flatMap((directory) =>
+    input.projectFiles.listTree(directory)
+  );
 
-  const staticFilePaths = staticPaths.flat();
+  // A file can only belong to one section, so collect the static directories first and filter them
+  // out later.
   const staticFileSet = new Set(staticFilePaths);
 
   return {
