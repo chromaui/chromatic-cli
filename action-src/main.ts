@@ -116,6 +116,7 @@ async function run() {
     const firstParentBaseline = getInput('firstParentBaseline');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const ignoreMergedPrBuilds = getInput('ignoreMergedPrBuilds');
     const logFile = getInput('logFile');
     const logLevel = getInput('logLevel');
     const logPrefix = getInput('logPrefix');
@@ -184,6 +185,7 @@ async function run() {
         firstParentBaseline: maybe(firstParentBaseline),
         forceRebuild: maybe(forceRebuild),
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+        ignoreMergedPrBuilds: maybe(ignoreMergedPrBuilds),
         interactive: false,
         logFile: maybe(logFile),
         logLevel: maybe(logLevel),

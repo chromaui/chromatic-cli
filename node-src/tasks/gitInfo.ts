@@ -55,6 +55,7 @@ export interface GitInfoInput {
   skip: boolean | string;
   firstParentBaseline?: boolean | string;
   ignoreLastBuildOnBranch?: string;
+  ignoreMergedPrBuilds?: boolean | string;
   onlyChanged: boolean | string;
   externals?: string[];
   untraced?: string[];
@@ -148,6 +149,7 @@ export async function gatherGitInfo(
     skip,
     firstParentBaseline,
     ignoreLastBuildOnBranch,
+    ignoreMergedPrBuilds,
     onlyChanged,
     externals,
     untraced,
@@ -235,6 +237,7 @@ export async function gatherGitInfo(
       git,
       firstParentBaseline: git.matchesBranch(firstParentBaseline || false),
       ignoreLastBuildOnBranch: git.matchesBranch(ignoreLastBuildOnBranch || false),
+      ignoreMergedPrBuilds: git.matchesBranch(ignoreMergedPrBuilds || false),
     }
   );
   git.parentCommits = parentCommits;
@@ -433,6 +436,7 @@ export const extractGitInfoInput = (ctx: Context): GitInfoInput => ({
   skip: ctx.options.skip,
   firstParentBaseline: ctx.options.firstParentBaseline,
   ignoreLastBuildOnBranch: ctx.options.ignoreLastBuildOnBranch,
+  ignoreMergedPrBuilds: ctx.options.ignoreMergedPrBuilds,
   onlyChanged: ctx.options.onlyChanged,
   externals: ctx.options.externals,
   untraced: ctx.options.untraced,

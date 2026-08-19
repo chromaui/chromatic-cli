@@ -56,6 +56,9 @@ inputs:
   ignoreLastBuildOnBranch:
     description: 'Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased)'
     required: false
+  ignoreMergedPrBuilds:
+    description: 'Do not consider builds on the head branches of merged pull requests as baseline candidates: boolean or branch name/glob'
+    required: false
   logFile:
     description: 'Write CLI logs to a file'
     required: false

@@ -216,6 +216,8 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
  * @param options.git Git information for the current build.
  * @param options.firstParentBaseline Only walk the first-parent (mainline) history when looking
  * for ancestor commits with builds.
+ * @param options.ignoreMergedPrBuilds Do not consider builds on the head branches of merged pull
+ * requests as baseline candidates.
  * @param options.ignoreLastBuildOnBranch Ignore the last Chromatic build associated with this
  * branch.
  *
@@ -229,7 +231,13 @@ export async function getParentCommits(
     git,
     firstParentBaseline = false,
     ignoreLastBuildOnBranch = false,
-  }: { git: Git; firstParentBaseline?: boolean; ignoreLastBuildOnBranch?: boolean | string }
+    ignoreMergedPrBuilds = false,
+  }: {
+    git: Git;
+    firstParentBaseline?: boolean;
+    ignoreLastBuildOnBranch?: boolean | string;
+    ignoreMergedPrBuilds?: boolean;
+  }
 ) {
   const { options, client, log } = deps;
   const { branch, committedAt } = git;
@@ -292,31 +300,38 @@ export async function getParentCommits(
     }
   );
 
-  const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
-    return { commit, baseRefName: branch };
-  });
-  const {
-    app: { mergedPullRequests },
-  } = await client.runQuery<MergeCommitsQueryResult>(
-    MergeCommitsQuery,
-    { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
-    { retries: 5 } // This query requires a request to an upstream provider which may fail
-  );
+  // The user can opt out of merged-PR baselines with `--ignore-merged-pr-builds`. Each merged PR's
+  // last head build sits on the PR branch rather than the target branch, so on a high-velocity
+  // squash-merge target branch these commits can rank ahead of the real mainline baseline.
+  if (ignoreMergedPrBuilds) {
+    log.debug('Skipping merged PR build commits');
+  } else {
+    const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
+      return { commit, baseRefName: branch };
+    });
+    const {
+      app: { mergedPullRequests },
+    } = await client.runQuery<MergeCommitsQueryResult>(
+      MergeCommitsQuery,
+      { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
+      { retries: 5 } // This query requires a request to an upstream provider which may fail
+    );
 
-  for (const pullRequest of mergedPullRequests) {
-    // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
-    // during our ancestor selection that was the merge commit for that PR.
-    // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
-    const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
-    if (lastHeadBuildCommit) {
-      if (await commitExists(deps, lastHeadBuildCommit)) {
-        log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
-        commitsWithBuilds.push(lastHeadBuildCommit);
-      } else {
-        log.debug(
-          `Merged PR build commit ${lastHeadBuildCommit} not in index, blindly appending to parents`
-        );
-        extraParentCommits.push(lastHeadBuildCommit);
+    for (const pullRequest of mergedPullRequests) {
+      // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
+      // during our ancestor selection that was the merge commit for that PR.
+      // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
+      const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
+      if (lastHeadBuildCommit) {
+        if (await commitExists(deps, lastHeadBuildCommit)) {
+          log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
+          commitsWithBuilds.push(lastHeadBuildCommit);
+        } else {
+          log.debug(
+            `Merged PR build commit ${lastHeadBuildCommit} not in index, blindly appending to parents`
+          );
+          extraParentCommits.push(lastHeadBuildCommit);
+        }
       }
     }
   }

@@ -34,6 +34,7 @@ export interface Flags {
   externals?: string[];
   firstParentBaseline?: string;
   ignoreLastBuildOnBranch?: string;
+  ignoreMergedPrBuilds?: string;
   onlyChanged?: string;
   onlyStoryFiles?: string[];
   onlyStoryNames?: string[];
@@ -110,6 +111,7 @@ export interface Options extends Configuration {
   isLocalBuild: boolean;
   firstParentBaseline: boolean | string;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
+  ignoreMergedPrBuilds: boolean | string;
   preserveMissingSpecs: boolean;
   originalArgv: string[];
 
