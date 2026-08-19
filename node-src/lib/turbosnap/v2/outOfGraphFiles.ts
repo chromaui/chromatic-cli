@@ -65,7 +65,7 @@ export async function hashOutOfGraphFiles(
     input.projectFiles.listTree(path.resolve(projectRoot, input.configDir)),
     // A file can only belong to one section, so collect the static directories first and let them win
     // below. All the fixtures nest `.storybook/static/`, and v1 tests `isStaticFile` before
-    // `isStorybookFile` for exactly that reason (getDependentStoryFiles.ts:284-292).
+    // `isStorybookFile` for exactly that reason.
     Promise.all(staticDirectories.map((directory) => input.projectFiles.listTree(directory))),
   ]);
 
