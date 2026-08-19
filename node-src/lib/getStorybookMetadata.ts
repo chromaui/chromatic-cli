@@ -187,6 +187,10 @@ function readConfigStaticDirectories(
 // widens what lands on `ctx.storybook`.
 export const MAIN_CONFIG_PATTERN = /^main\.[cm]?[jt]sx?$/;
 
+// The preview config filename: `preview` with any JS/TS module extension, same shape as
+// MAIN_CONFIG_PATTERN.
+export const PREVIEW_CONFIG_PATTERN = /^preview\.[cm]?[jt]sx?$/;
+
 /**
  * Finds the first file in the Storybook config directory that matches the given pattern.
  *
