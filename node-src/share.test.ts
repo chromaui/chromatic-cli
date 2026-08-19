@@ -29,7 +29,7 @@ vi.mock('./lib/share', () => ({
 vi.mock('./lib/uploadFiles');
 
 vi.mock('./lib/getFileHashes', () => ({
-  getFileHashes: (files: string[]) =>
+  getFileHashes: ({ files }: { files: string[] }) =>
     Promise.resolve(Object.fromEntries(files.map((f) => [f, 'hash']))),
 }));
 

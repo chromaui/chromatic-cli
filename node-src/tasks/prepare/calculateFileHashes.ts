@@ -32,11 +32,11 @@ export async function calculateFileHashes(
 
   try {
     const start = Date.now();
-    const hashes = await getFileHashes(
-      input.fileInfo.paths,
-      input.sourceDir,
-      deps.env.CHROMATIC_HASH_CONCURRENCY
-    );
+    const hashes = await getFileHashes({
+      files: input.fileInfo.paths,
+      directory: input.sourceDir,
+      concurrency: deps.env.CHROMATIC_HASH_CONCURRENCY,
+    });
     deps.log.debug(`Calculated file hashes in ${Date.now() - start}ms`);
     return { hashes };
   } catch (err) {

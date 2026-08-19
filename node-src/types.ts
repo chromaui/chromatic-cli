@@ -583,7 +583,10 @@ export interface Reason {
 export interface Module {
   id: string | number | null;
   name: string;
-  modules?: Pick<Module, 'name'>[];
+  // The absolute path of the module's source file in the webpack/rspack stats. The `name` field is
+  // the group name (e.g. `./x.stories.tsx + 1 modules`).
+  nameForCondition?: string;
+  modules?: Pick<Module, 'name' | 'nameForCondition'>[];
   reasons?: Reason[];
 }
 
