@@ -64,6 +64,9 @@ const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
 const getNumberOfCommitters = vi.mocked(git.getNumberOfCommitters);
 const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
 const getUncommittedHash = vi.mocked(git.getUncommittedHash);
+const getCloneDepth = vi.mocked(git.getCloneDepth);
+const getCloneFilter = vi.mocked(git.getCloneFilter);
+const getShallowBoundaryCommits = vi.mocked(git.getShallowBoundaryCommits);
 const getBaselineBuilds = vi.mocked(getBaselineBuildsUnmocked);
 const getParentCommits = vi.mocked(getParentCommitsUnmocked);
 const getHasRouter = vi.mocked(getHasRouterUnmocked);
@@ -106,7 +109,7 @@ const buildInput = (overrides: Partial<GitInfoInput> = {}): GitInfoInput => ({
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
   getUncommittedHash.mockResolvedValue('abc123');
-  getParentCommits.mockResolvedValue(['asd2344']);
+  getParentCommits.mockResolvedValue({ ancestorCommits: ['asd2344'], visitedCommits: [] });
   getBaselineBuilds.mockResolvedValue([]);
   getChangedFilesWithReplacement.mockResolvedValue({ changedFiles: [] });
   getVersion.mockResolvedValue('Git v1.0.0');
@@ -118,6 +121,9 @@ beforeEach(() => {
   getNumberOfCommitters.mockResolvedValue(17);
   getCommittedFileCount.mockResolvedValue(100);
   getHasRouter.mockReturnValue(true);
+  getCloneDepth.mockResolvedValue('full');
+  getCloneFilter.mockResolvedValue('full');
+  getShallowBoundaryCommits.mockResolvedValue([]);
 
   client.runQuery.mockReturnValue({ app: { isOnboarding: false } });
 });
@@ -212,7 +218,10 @@ describe('gatherGitInfo', () => {
 
   it('returns continue with rebuildForBuildId when force-rebuild prevents skip', async () => {
     const lastBuild = { id: 'last-build-id', status: 'PASSED', storybookUrl: 'https://x' };
-    getParentCommits.mockResolvedValue([commitInfo.commit]);
+    getParentCommits.mockResolvedValue({
+      ancestorCommits: [commitInfo.commit],
+      visitedCommits: [],
+    });
     client.runQuery.mockReturnValue({ app: { isOnboarding: false, lastBuild } });
 
     const result = await gatherGitInfo(
@@ -241,7 +250,10 @@ describe('gatherGitInfo', () => {
       inheritedCaptureCount: 9,
     };
 
-    getParentCommits.mockResolvedValue([commitInfo.commit]);
+    getParentCommits.mockResolvedValue({
+      ancestorCommits: [commitInfo.commit],
+      visitedCommits: [],
+    });
     client.runQuery.mockReturnValue({ app: { lastBuild } });
 
     const result = await gatherGitInfo(buildDeps(), buildInput());
@@ -502,5 +514,70 @@ describe('extractGitInfoInput', () => {
       externals: ['foo'],
       untraced: ['bar'],
     });
+  });
+});
+
+describe('gatherGitInfo clone detection', () => {
+  it('sets cloneDepth and cloneFilter to full for a standard clone', async () => {
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git).toMatchObject({ cloneDepth: 'full', cloneFilter: 'full' });
+    expect(result.output.git.shallowBoundaryCommits).toBeUndefined();
+  });
+
+  it('sets cloneDepth to shallow and populates shallowBoundaryCommits', async () => {
+    getCloneDepth.mockResolvedValue('shallow');
+    getShallowBoundaryCommits.mockResolvedValue(['abc1234', 'def5678']);
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git).toMatchObject({
+      cloneDepth: 'shallow',
+      shallowBoundaryCommits: ['abc1234', 'def5678'],
+    });
+  });
+
+  it('does not fetch shallowBoundaryCommits for a full clone', async () => {
+    getCloneDepth.mockResolvedValue('full');
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(getShallowBoundaryCommits).not.toHaveBeenCalled();
+    expect(result.output.git.shallowBoundaryCommits).toBeUndefined();
+  });
+
+  it('sets cloneFilter to blobless', async () => {
+    getCloneFilter.mockResolvedValue('blobless');
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.cloneFilter).toBe('blobless');
+  });
+
+  it('sets cloneFilter to treeless', async () => {
+    getCloneFilter.mockResolvedValue('treeless');
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.cloneFilter).toBe('treeless');
+  });
+
+  it('continues when getCloneDepth fails', async () => {
+    getCloneDepth.mockRejectedValue(new Error('unsupported git version'));
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.cloneDepth).toBeUndefined();
+    expect(result.output.git.shallowBoundaryCommits).toBeUndefined();
+  });
+
+  it('continues when getCloneFilter fails', async () => {
+    getCloneFilter.mockRejectedValue(new Error('git config failed'));
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.cloneFilter).toBeUndefined();
+  });
+
+  it('continues when getShallowBoundaryCommits fails', async () => {
+    getCloneDepth.mockResolvedValue('shallow');
+    getShallowBoundaryCommits.mockRejectedValue(new Error('could not read shallow file'));
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.shallowBoundaryCommits).toBeUndefined();
   });
 });

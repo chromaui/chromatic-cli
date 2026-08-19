@@ -171,6 +171,45 @@ type StorybookReference =
   | ((config: StorybookReferenceConfig & { sourceUrl: string }) => StorybookReferenceConfig)
   | { disable: boolean };
 
+/**
+ * Metadata about a commit visited during the parent-commit walk in `getParentCommits`.
+ * Used for diagnostics — helps explain why a particular baseline was (or wasn't) chosen.
+ */
+export interface VisitedCommit {
+  /** The commit SHA. */
+  commit: string;
+  /** Direct parent SHAs. */
+  parentCommits: string[];
+  /** A Chromatic build exists for this commit. */
+  hasBuild: boolean;
+  /**
+   * The index told us this was a merge commit for a PR, likely a squash or rebase merge.
+   */
+  isMergePoint: boolean;
+  /**
+   * The commit subject matches `(#N)`, which is the default format appended by GitHub and
+   * Bitbucket Cloud for squash merges. Not reliable for GitLab (`!N`) or Bitbucket Server.
+   * The subject itself is not stored.
+   */
+  isProbableSquashMerge: boolean;
+  /**
+   * This commit is at the shallow boundary of the clone (`git clone --depth`), meaning its
+   * parents were not fetched. Ancestor selection cannot look further back past this point.
+   */
+  isShallowBoundary: boolean;
+}
+
+/** Whether the clone has full or truncated commit history. */
+export type CloneDepth = 'full' | 'shallow';
+
+/**
+ * Whether git objects are fully present or filtered at clone time.
+ * - `'full'` — all objects fetched (standard clone)
+ * - `'blobless'` — file contents fetched on demand (`--filter=blob:none`)
+ * - `'treeless'` — tree and blob objects fetched on demand (`--filter=tree:0`)
+ */
+export type CloneFilter = 'full' | 'blobless' | 'treeless';
+
 export interface Git {
   version?: string;
   /** The absolute location on disk of the git project */
@@ -193,6 +232,18 @@ export interface Git {
   replacementBuildIds?: [string, string][];
   matchesBranch?: (glob: boolean | string) => boolean;
   packageMetadataChanges?: { changedFiles: string[]; commit: string }[];
+  /** All commits visited during the `getParentCommits` walk, with annotations */
+  visitedCommits?: VisitedCommit[];
+  /** Whether commit history was truncated at clone time (`git clone --depth`). */
+  cloneDepth?: CloneDepth;
+  /**
+   * Commits present in the clone whose parents were not fetched (the shallow boundary).
+   * Only set when `cloneDepth` is `'shallow'`. Each SHA is a commit that exists locally
+   * but whose parent commits are absent from the repository.
+   */
+  shallowBoundaryCommits?: string[];
+  /** Whether object fetching is filtered at clone time (`git clone --filter`). */
+  cloneFilter?: CloneFilter;
 }
 
 export interface ProjectMetadata {

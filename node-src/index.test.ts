@@ -330,10 +330,13 @@ vi.mock('./git/git', () => ({
   checkout: vi.fn(),
   checkoutPrevious: vi.fn(),
   discardChanges: vi.fn(),
+  getCloneDepth: () => Promise.resolve('full'),
+  getCloneFilter: () => Promise.resolve('full'),
+  getShallowBoundaryCommits: () => Promise.resolve([]),
 }));
 
 vi.mock('./git/getParentCommits', () => ({
-  getParentCommits: () => Promise.resolve(['baseline']),
+  getParentCommits: () => Promise.resolve({ ancestorCommits: ['baseline'], visitedCommits: [] }),
 }));
 
 vi.mock('./lib/installDependencies', () => ({
@@ -1037,6 +1040,8 @@ describe('getGitInfo', () => {
       uncommittedHash: 'abc123',
       userEmail: 'test@test.com',
       userEmailHash: undefined,
+      cloneDepth: 'full',
+      cloneFilter: 'full',
     });
   });
 
@@ -1053,6 +1058,8 @@ describe('getGitInfo', () => {
       uncommittedHash: 'abc123',
       userEmail: 'test@test.com',
       userEmailHash: undefined,
+      cloneDepth: 'full',
+      cloneFilter: 'full',
     });
   });
 });

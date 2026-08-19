@@ -5,10 +5,13 @@ import { getChangedFilesWithReplacement } from '../git/getChangedFilesWithReplac
 import getCommitAndBranch from '../git/getCommitAndBranch';
 import { getParentCommits } from '../git/getParentCommits';
 import {
+  getCloneDepth,
+  getCloneFilter,
   getCommittedFileCount,
   getNumberOfCommitters,
   getRepositoryCreationDate,
   getRepositoryRoot,
+  getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
@@ -209,6 +212,37 @@ export async function gatherGitInfo(
     git.branch = git.branch.replace(UNDEFINED_BRANCH_PREFIX_REGEXP, '');
   }
 
+  const [cloneDepth, cloneFilter] = await Promise.all([
+    getCloneDepth({ log, options }).catch((err) => {
+      log.debug({ err }, 'Failed to detect clone depth');
+      return undefined;
+    }),
+    getCloneFilter({ log, options }).catch((err) => {
+      log.debug({ err }, 'Failed to detect clone filter');
+      return undefined;
+    }),
+  ]);
+  const shallowBoundaryCommits =
+    cloneDepth === 'shallow'
+      ? await getShallowBoundaryCommits({ log, options }).catch((err) => {
+          log.debug({ err }, 'Failed to retrieve shallow boundary commits');
+          return [] as string[];
+        })
+      : [];
+
+  log.debug(
+    `Git clone type: ${JSON.stringify({
+      cloneDepth,
+      cloneFilter,
+      shallowBoundaryCommitCount: shallowBoundaryCommits.length,
+      firstShallowBoundaryCommits: shallowBoundaryCommits.slice(0, 50),
+    })}`
+  );
+
+  git.cloneDepth = cloneDepth;
+  git.cloneFilter = cloneFilter;
+  if (shallowBoundaryCommits.length > 0) git.shallowBoundaryCommits = shallowBoundaryCommits;
+
   const { branch, commit, slug } = git;
 
   git.matchesBranch = (glob: string | boolean) => matchesBranch(branch, glob);
@@ -227,7 +261,7 @@ export async function gatherGitInfo(
     throw new Error(skipFailed().output);
   }
 
-  const parentCommits = await getParentCommits(
+  const { ancestorCommits: parentCommits, visitedCommits } = await getParentCommits(
     { log, client, options },
     {
       git,
@@ -235,6 +269,7 @@ export async function gatherGitInfo(
     }
   );
   git.parentCommits = parentCommits;
+  git.visitedCommits = visitedCommits;
   log.debug(`Found parentCommits: ${parentCommits.join(', ')}`);
 
   const result = await client.runQuery<LastBuildQueryResult>(LastBuildQuery, {

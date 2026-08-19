@@ -65,6 +65,10 @@ const parseAnnounceBuildMutationInput = (deps: AnnounceBuildDeps, input: Announc
     packageMetadataChanges,
     gitUserEmail,
     rootPath,
+    visitedCommits,
+    cloneFilter,
+    cloneDepth,
+    shallowBoundaryCommits,
     ...commitInfo
   } = input.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = input;

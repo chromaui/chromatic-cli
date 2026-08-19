@@ -14,20 +14,25 @@ import {
   getBranch,
   getChangedFiles,
   getChangedFilesWithStatus,
+  getCloneDepth,
+  getCloneFilter,
   getCommit,
   getCommittedFileCount,
   getNumberOfCommitters,
   getRepositoryCreationDate,
+  getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
   getUserEmail,
   getVersion,
+  getVisitedCommitDetails,
   hasPreviousCommit,
   NULL_BYTE,
 } from './git';
 
 vi.mock('./execGit');
+vi.mock('fs/promises', () => ({ readFile: vi.fn() }));
 vi.mock('tmp-promise', () => ({
   file: vi.fn().mockResolvedValue({ path: '/tmp/fake-target' }),
 }));
@@ -35,6 +40,8 @@ vi.mock('tmp-promise', () => ({
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
+
+const { readFile } = vi.mocked(await import('fs/promises'));
 
 const ctx = { log: new TestLogger() };
 
@@ -359,5 +366,105 @@ describe('getCommittedFileCount', () => {
   it('parses the count successfully', async () => {
     execGitCommandCountLines.mockResolvedValue(17);
     expect(await getCommittedFileCount(ctx, ['page', 'screen'], ['js', 'ts'])).toEqual(17);
+  });
+});
+
+describe('getCloneDepth', () => {
+  it('returns shallow when git reports true', async () => {
+    execGitCommandOneLine.mockResolvedValue('true');
+    expect(await getCloneDepth(ctx)).toBe('shallow');
+  });
+
+  it('returns full when git reports false', async () => {
+    execGitCommandOneLine.mockResolvedValue('false');
+    expect(await getCloneDepth(ctx)).toBe('full');
+  });
+});
+
+describe('getShallowBoundaryCommits', () => {
+  it('returns the boundary commits listed in the shallow file', async () => {
+    execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');
+    readFile.mockResolvedValue('abc1234\ndef5678\n');
+    expect(await getShallowBoundaryCommits(ctx)).toEqual(['abc1234', 'def5678']);
+  });
+
+  it('returns an empty array when the shallow file does not exist', async () => {
+    execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');
+    readFile.mockRejectedValue(new Error('ENOENT'));
+    expect(await getShallowBoundaryCommits(ctx)).toEqual([]);
+  });
+
+  it('returns an empty array for an empty shallow file', async () => {
+    execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');
+    readFile.mockResolvedValue('');
+    expect(await getShallowBoundaryCommits(ctx)).toEqual([]);
+  });
+});
+
+describe('getCloneFilter', () => {
+  it('returns blobless when the filter is blob:none', async () => {
+    execGitCommandOneLine.mockResolvedValue('blob:none');
+    expect(await getCloneFilter(ctx)).toBe('blobless');
+  });
+
+  it('returns treeless when the filter is tree:0', async () => {
+    execGitCommandOneLine.mockResolvedValue('tree:0');
+    expect(await getCloneFilter(ctx)).toBe('treeless');
+  });
+
+  it('returns full when no filter is configured (git config exits non-zero)', async () => {
+    execGitCommandOneLine.mockRejectedValue(new Error('exit code 1'));
+    expect(await getCloneFilter(ctx)).toBe('full');
+  });
+});
+
+describe('getVisitedCommitDetails', () => {
+  it('returns an empty array when given no commits', async () => {
+    expect(await getVisitedCommitDetails(ctx, [])).toEqual([]);
+    expect(execGitCommand).not.toHaveBeenCalled();
+  });
+
+  it('parses commit SHA, parent SHAs, and marks non-squash subject', async () => {
+    execGitCommand.mockResolvedValue('abc123\0def456 ghi789\0Regular commit message\0');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([
+      { commit: 'abc123', parentCommits: ['def456', 'ghi789'], isProbableSquashMerge: false },
+    ]);
+  });
+
+  it('sets isProbableSquashMerge true when subject contains (#N)', async () => {
+    execGitCommand.mockResolvedValue('abc123\0def456\0Merge my feature (#42)\0');
+    const [result] = await getVisitedCommitDetails(ctx, ['abc123']);
+    expect(result.isProbableSquashMerge).toBe(true);
+  });
+
+  it('sets isProbableSquashMerge false for a regular merge commit subject', async () => {
+    execGitCommand.mockResolvedValue(
+      'abc123\0def456 ghi789\0Merge pull request #42 from org/branch\0'
+    );
+    const [result] = await getVisitedCommitDetails(ctx, ['abc123']);
+    expect(result.isProbableSquashMerge).toBe(false);
+  });
+
+  it('returns an empty parentCommits array for a root commit', async () => {
+    execGitCommand.mockResolvedValue('abc123\0\0Initial commit\0');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([
+      { commit: 'abc123', parentCommits: [], isProbableSquashMerge: false },
+    ]);
+  });
+
+  it('parses multiple commits', async () => {
+    execGitCommand.mockResolvedValue(
+      'aaa111\0bbb222\0Fix bug (#10)\0\nccc333\0ddd444\0Regular commit\0'
+    );
+    const results = await getVisitedCommitDetails(ctx, ['aaa111', 'ccc333']);
+    expect(results).toEqual([
+      { commit: 'aaa111', parentCommits: ['bbb222'], isProbableSquashMerge: true },
+      { commit: 'ccc333', parentCommits: ['ddd444'], isProbableSquashMerge: false },
+    ]);
+  });
+
+  it('returns an empty array when git returns no output', async () => {
+    execGitCommand.mockResolvedValue('');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([]);
   });
 });

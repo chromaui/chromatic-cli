@@ -64,6 +64,7 @@ const mocks = {
       const prLastBuild = pr && lastBuildOnBranch(builds, pr.headBranch);
       if (prLastBuild) {
         mergedPrs.push({
+          mergeCommitSha: pr.mergeCommitHash,
           lastHeadBuild: {
             commit: prLastBuild.commit,
           },

@@ -1,9 +1,9 @@
 import gql from 'fake-tag';
 
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
-import { Deps, Git } from '../types';
+import { Deps, Git, VisitedCommit } from '../types';
 import { execGitCommand, GitDeps } from './execGit';
-import { commitExists } from './git';
+import { commitExists, getVisitedCommitDetails } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -49,6 +49,7 @@ const MergeCommitsQuery = gql`
   query MergeCommitsQuery($mergeInfoList: [MergedInfoInput]!) {
     app {
       mergedPullRequests(mergeInfoList: $mergeInfoList) {
+        mergeCommitSha
         lastHeadBuild {
           commit
         }
@@ -60,6 +61,7 @@ export interface MergeCommitsQueryResult {
   app: {
     mergedPullRequests: [
       {
+        mergeCommitSha: string;
         lastHeadBuild: {
           commit: string;
         };
@@ -158,6 +160,11 @@ async function step(
     `step: candidateCommits: ${candidateCommits}, visitedCommitsWithoutBuilds: ${visitedCommitsWithoutBuilds}`
   );
 
+  const hitBoundaries = candidateCommits?.filter((c) => git.shallowBoundaryCommits?.includes(c));
+  if (hitBoundaries?.length) {
+    log.debug({ hitBoundaries }, `step: reached shallow boundary commit(s) during walk`);
+  }
+
   // No more commits uncovered commitsWithBuilds!
   if (!candidateCommits?.length) {
     log.debug('step: no candidateCommits; we are done');
@@ -210,7 +217,11 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
  * @param options.ignoreLastBuildOnBranch Ignore the last Chromatic build associated with this
  * branch.
  *
- * @returns A list of parent commits associated with this branch.
+ * @returns An object with:
+ *   - `ancestorCommits` – the baseline parent commits to pass to the Chromatic build.
+ *   - `visitedCommits` – every commit inspected during the walk, annotated with parent SHAs,
+ *     build presence, and PR merge-point status. Populated on a best-effort basis; `undefined`
+ *     if the git call to fetch commit details fails.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
@@ -232,7 +243,7 @@ export async function getParentCommits(
 
   if (!firstBuild) {
     log.debug('App has no builds, returning []');
-    return [];
+    return { ancestorCommits: [], visitedCommits: [] as VisitedCommit[] };
   }
 
   const initialCommitsWithBuilds: string[] = [];
@@ -255,8 +266,9 @@ export async function getParentCommits(
       log.debug(`Adding last branch build commit ${lastBuild.commit} to commits with builds`);
       initialCommitsWithBuilds.push(lastBuild.commit);
     } else {
+      const isShallowBoundary = git.shallowBoundaryCommits?.includes(lastBuild.commit);
       log.debug(
-        `Last branch build commit ${lastBuild.commit} not in index, blindly appending to parents`
+        `Last branch build commit ${lastBuild.commit} not in index${isShallowBoundary ? ' (shallow boundary)' : ''}, blindly appending to parents`
       );
       extraParentCommits.push(lastBuild.commit);
     }
@@ -289,6 +301,8 @@ export async function getParentCommits(
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
 
+  // Track which visited commits the platform index identified as PR merge points.
+  const mergePointCommits = new Set<string>();
   for (const pullRequest of mergedPullRequests) {
     // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
     // during our ancestor selection that was the merge commit for that PR.
@@ -299,11 +313,13 @@ export async function getParentCommits(
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
       } else {
+        const isShallowBoundary = git.shallowBoundaryCommits?.includes(lastHeadBuildCommit);
         log.debug(
-          `Merged PR build commit ${lastHeadBuildCommit} not in index, blindly appending to parents`
+          `Merged PR build commit ${lastHeadBuildCommit} not in index${isShallowBoundary ? ' (shallow boundary)' : ''}, blindly appending to parents`
         );
         extraParentCommits.push(lastHeadBuildCommit);
       }
+      if (pullRequest.mergeCommitSha) mergePointCommits.add(pullRequest.mergeCommitSha);
     }
   }
 
@@ -313,5 +329,28 @@ export async function getParentCommits(
   const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
 
   const ancestorCommits = [...extraParentCommits, ...(descendentCommits || [])];
-  return ancestorCommits;
+
+  // Build the visited commit list from everything the walk touched, on a best-effort basis.
+  const allVisitedShas = [
+    ...new Set([...(visitedCommitsWithoutBuilds ?? []), ...commitsWithBuilds]),
+  ];
+  const commitsWithBuildsSet = new Set(commitsWithBuilds);
+  const details = await getVisitedCommitDetails(deps, allVisitedShas);
+  const visitedCommits: VisitedCommit[] = details.map(
+    ({ commit, parentCommits, isProbableSquashMerge }) => ({
+      commit,
+      parentCommits,
+      hasBuild: commitsWithBuildsSet.has(commit),
+      // BitBucket returns 10 char prefixes for merge commit shas :shrug:
+      isMergePoint: [...mergePointCommits].some((sha) => commit.startsWith(sha)),
+      isProbableSquashMerge,
+      isShallowBoundary: !!git.shallowBoundaryCommits?.includes(commit),
+    })
+  );
+
+  log.debug(
+    `visitedCommits: total=${allVisitedShas.length}, withBuilds=${commitsWithBuildsSet.size}, mergePoints=${mergePointCommits.size}`
+  );
+
+  return { ancestorCommits, visitedCommits };
 }

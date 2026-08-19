@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import 'any-observable/register/zen';
 
 import * as Sentry from '@sentry/node';
@@ -9,6 +10,8 @@ import { setupContext } from './context';
 import getCommitAndBranch from './git/getCommitAndBranch';
 import {
   getBranch,
+  getCloneDepth,
+  getCloneFilter,
   getCommit,
   getRepositoryRoot,
   getSlug,
@@ -47,7 +50,7 @@ import { renderUpload } from './renderer/upload';
 import { renderVerify } from './renderer/verify';
 import getTasks from './tasks';
 import { runRestoreWorkspace } from './tasks/restoreWorkspace';
-import { Context, Flags, Options } from './types';
+import { CloneDepth, CloneFilter, Context, Flags, Options } from './types';
 import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
 import fatalError from './ui/messages/errors/fatalError';
@@ -334,7 +337,7 @@ async function getBranchForSkip(ctx: InitialContext, partialOptions: Partial<Opt
   }
 }
 
-// TODO: refactor this function
+// TODO: refactor this function (remove max-lines from file when we do)
 // eslint-disable-next-line complexity, max-statements
 async function runBuild(ctx: Context) {
   try {
@@ -454,6 +457,8 @@ export interface GitInfo {
   userEmail: string;
   userEmailHash: string;
   repositoryRootDir: string;
+  cloneDepth: CloneDepth;
+  cloneFilter: CloneFilter;
 }
 
 /**
@@ -483,6 +488,8 @@ export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
   const uncommittedHash = (await getUncommittedHash(ctx)) || '';
+  const cloneDepth = await getCloneDepth(ctx);
+  const cloneFilter = await getCloneFilter(ctx);
   return {
     slug: isValidSlug ? slug : '',
     branch,
@@ -491,6 +498,8 @@ export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
     userEmail,
     userEmailHash,
     repositoryRootDir: repositoryRootDirectory,
+    cloneDepth,
+    cloneFilter,
   };
 }
 
