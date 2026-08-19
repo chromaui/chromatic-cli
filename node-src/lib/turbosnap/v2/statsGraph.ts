@@ -3,6 +3,7 @@ import { FileHash, FilePath, TurboSnapFile } from './graph';
 import {
   canonicalFileNames,
   canonicalImporters,
+  isNodeModulesPath,
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
@@ -10,8 +11,6 @@ import {
 } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { detectStoryFiles } from './storyDetection';
-
-const nodeModulesPathSegment = /(?:^|[\\/])node_modules(?:[\\/]|$)/;
 
 /**
  * What the builder's stats file says it emitted, read into one canonical graph. Builder spellings —
@@ -89,7 +88,7 @@ export async function readStatsGraph(
 export function countNodeModulesFiles(stats: Stats): number {
   let count = 0;
   for (const module of stats.modules) {
-    count += moduleFileNames(module).filter((name) => nodeModulesPathSegment.test(name)).length;
+    count += moduleFileNames(module).filter((name) => isNodeModulesPath(name)).length;
   }
   return count;
 }
