@@ -4,6 +4,7 @@ import { Module } from '../../../types';
 import {
   canonicalFileNames,
   canonicalImporters,
+  isNodeModulesPath,
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
@@ -237,5 +238,30 @@ describe('resolveStatsPath', () => {
     expect(resolveStatsPath('/repo/packages/shared/theme.ts', projectRoot)).toBe(
       '/repo/packages/shared/theme.ts'
     );
+  });
+});
+
+describe('isNodeModulesPath', () => {
+  it.each([
+    ['canonical project-relative path', './node_modules/react/index.js'],
+    ['bare relative path', 'node_modules/react/index.js'],
+    ['absolute POSIX path', '/repo/node_modules/react/index.js'],
+    ['nested node_modules', './node_modules/a/node_modules/b/index.js'],
+    ['Windows backslash separators', String.raw`C:\repo\node_modules\react\index.js`],
+    ['segment at the end of the path', './packages/ui/node_modules'],
+    ['segment at the start of the path', 'node_modules'],
+  ])('is true for a %s', (_description, filePath) => {
+    expect(isNodeModulesPath(filePath)).toBe(true);
+  });
+
+  it.each([
+    ['a project source file', './src/Button.stories.tsx'],
+    ['an absolute source file', '/repo/packages/ui/src/Button.tsx'],
+    ['a file merely named node_modules', './src/node_modules.ts'],
+    ['a segment that only starts with node_modules', './src/node_modules_backup/x.ts'],
+    ['a segment that only ends with node_modules', './src/my_node_modules/x.ts'],
+    ['an empty path', ''],
+  ])('is false for %s', (_description, filePath) => {
+    expect(isNodeModulesPath(filePath)).toBe(false);
   });
 });
