@@ -95,10 +95,12 @@ async function nextCommits(
     firstCommittedAtSeconds,
     commitsWithBuilds,
     commitsWithoutBuilds,
+    firstParentBaseline,
   }: {
     firstCommittedAtSeconds: number;
     commitsWithBuilds: string[];
     commitsWithoutBuilds: string[];
+    firstParentBaseline?: boolean;
   }
 ) {
   // We want the next limit commits that aren't "covered" by `commitsWithBuilds`
@@ -106,6 +108,7 @@ async function nextCommits(
   // so we ask enough that we'll definitely get `limit` unknown commits
   const command = `git rev-list HEAD \
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
+      ${firstParentBaseline ? '--first-parent' : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
   const commitsString = await execGitCommand(deps, command);
   const commits = commitsString?.split('\n').filter(Boolean);
@@ -133,10 +136,12 @@ async function step(
     firstCommittedAtSeconds,
     commitsWithBuilds,
     commitsWithoutBuilds,
+    firstParentBaseline,
   }: {
     firstCommittedAtSeconds: number;
     commitsWithBuilds: string[];
     commitsWithoutBuilds: string[];
+    firstParentBaseline?: boolean;
   }
 ) {
   const { options, client, log } = deps;
@@ -151,6 +156,7 @@ async function step(
       firstCommittedAtSeconds,
       commitsWithBuilds,
       commitsWithoutBuilds,
+      firstParentBaseline,
     }
   );
 
@@ -180,6 +186,7 @@ async function step(
     firstCommittedAtSeconds,
     commitsWithBuilds: [...commitsWithBuilds, ...newCommitsWithBuilds],
     commitsWithoutBuilds: [...commitsWithoutBuilds, ...(newCommitsWithoutBuilds || [])],
+    firstParentBaseline,
   });
 }
 
@@ -207,6 +214,8 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
  * @param deps Dependencies (log, client, options).
  * @param options Additional options for changing function flow.
  * @param options.git Git information for the current build.
+ * @param options.firstParentBaseline Only walk the first-parent (mainline) history when looking
+ * for ancestor commits with builds.
  * @param options.ignoreLastBuildOnBranch Ignore the last Chromatic build associated with this
  * branch.
  *
@@ -216,7 +225,11 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
 // eslint-disable-next-line complexity, max-statements
 export async function getParentCommits(
   deps: Pick<Deps, 'options' | 'client' | 'log'>,
-  { git, ignoreLastBuildOnBranch = false }: { git: Git; ignoreLastBuildOnBranch?: boolean | string }
+  {
+    git,
+    firstParentBaseline = false,
+    ignoreLastBuildOnBranch = false,
+  }: { git: Git; firstParentBaseline?: boolean; ignoreLastBuildOnBranch?: boolean | string }
 ) {
   const { options, client, log } = deps;
   const { branch, committedAt } = git;
@@ -275,6 +288,7 @@ export async function getParentCommits(
       firstCommittedAtSeconds: firstBuild.committedAt && firstBuild.committedAt / 1000,
       commitsWithBuilds: initialCommitsWithBuilds,
       commitsWithoutBuilds: [],
+      firstParentBaseline,
     }
   );
 

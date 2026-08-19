@@ -47,6 +47,9 @@ inputs:
   fileHashing:
     description: 'Whether to apply file hashing to skip uploading unchanged files (default: true)'
     required: false
+  firstParentBaseline:
+    description: 'Resolve the baseline by walking only the first-parent (mainline) history: boolean or branch name/glob'
+    required: false
   forceRebuild:
     description: 'Do not skip build when a rebuild is detected'
     required: false

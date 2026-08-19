@@ -32,6 +32,7 @@ export interface Flags {
   exitOnceUploaded?: string;
   exitZeroOnChanges?: string;
   externals?: string[];
+  firstParentBaseline?: string;
   ignoreLastBuildOnBranch?: string;
   onlyChanged?: string;
   onlyStoryFiles?: string[];
@@ -107,6 +108,7 @@ export interface Options extends Configuration {
   exitZeroOnChanges: boolean | string;
   exitOnceUploaded: boolean | string;
   isLocalBuild: boolean;
+  firstParentBaseline: boolean | string;
   ignoreLastBuildOnBranch: Flags['ignoreLastBuildOnBranch'];
   preserveMissingSpecs: boolean;
   originalArgv: string[];

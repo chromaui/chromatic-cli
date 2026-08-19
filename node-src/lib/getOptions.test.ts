@@ -56,6 +56,7 @@ describe('getOptions', () => {
       junitReport: undefined,
       zip: undefined,
 
+      firstParentBaseline: undefined,
       ignoreLastBuildOnBranch: undefined,
       preserveMissingSpecs: undefined,
 
@@ -122,6 +123,15 @@ describe('getOptions', () => {
       debug: true,
       interactive: false,
       storybookLogFile: false,
+    });
+  });
+
+  it('accepts a branch glob or a bare flag for --first-parent-baseline', async () => {
+    expect(getOptions(getContext(['--first-parent-baseline', 'main']))).toMatchObject({
+      firstParentBaseline: 'main',
+    });
+    expect(getOptions(getContext(['--first-parent-baseline']))).toMatchObject({
+      firstParentBaseline: true,
     });
   });
 

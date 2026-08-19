@@ -53,6 +53,7 @@ export interface GitInfoInput {
   interactive: boolean;
   isLocalBuild: boolean;
   skip: boolean | string;
+  firstParentBaseline?: boolean | string;
   ignoreLastBuildOnBranch?: string;
   onlyChanged: boolean | string;
   externals?: string[];
@@ -145,6 +146,7 @@ export async function gatherGitInfo(
     interactive,
     isLocalBuild,
     skip,
+    firstParentBaseline,
     ignoreLastBuildOnBranch,
     onlyChanged,
     externals,
@@ -231,6 +233,7 @@ export async function gatherGitInfo(
     { log, client, options },
     {
       git,
+      firstParentBaseline: git.matchesBranch(firstParentBaseline || false),
       ignoreLastBuildOnBranch: git.matchesBranch(ignoreLastBuildOnBranch || false),
     }
   );
@@ -428,6 +431,7 @@ export const extractGitInfoInput = (ctx: Context): GitInfoInput => ({
   interactive: ctx.options.interactive,
   isLocalBuild: ctx.options.isLocalBuild,
   skip: ctx.options.skip,
+  firstParentBaseline: ctx.options.firstParentBaseline,
   ignoreLastBuildOnBranch: ctx.options.ignoreLastBuildOnBranch,
   onlyChanged: ctx.options.onlyChanged,
   externals: ctx.options.externals,
