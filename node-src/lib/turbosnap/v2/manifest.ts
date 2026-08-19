@@ -205,6 +205,6 @@ export function writeManifest(
 ) {
   projectFiles.writeFile(
     path.join(outputDirectory, 'turbosnap-manifest.json'),
-    JSON.stringify(serializeManifest(manifest))
+    JSON.stringify(serializeManifest(manifest), undefined, 2)
   );
 }

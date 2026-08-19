@@ -235,7 +235,9 @@ describe('writeManifest', () => {
 
     writeManifest(manifest, outputDirectory, outOfGraph.projectFiles);
 
-    expect(disk.writtenFiles?.[manifestPath]).toBe(JSON.stringify(serializeManifest(manifest)));
+    expect(disk.writtenFiles?.[manifestPath]).toBe(
+JSON.stringify(serializeManifest(manifest), undefined, 2)
+);
   });
 
   it('writes a payload that round-trips through JSON.parse', async () => {
