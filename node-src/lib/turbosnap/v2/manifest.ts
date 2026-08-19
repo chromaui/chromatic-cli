@@ -157,37 +157,48 @@ export async function buildManifest(
  * @returns The JSON-safe manifest object.
  */
 export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
-  const storyFiles: ManifestFile['storyFiles'] = Object.fromEntries(manifest.storyFileHashes);
-  const storybookFileHashes: ManifestFile['storybookFileHashes'] = Object.fromEntries(
-    manifest.storybookFileHashes
-  );
-
-  const files: ManifestFile['files'] = {};
-  for (const [filePath, file] of manifest.files) {
-    if (file.hash === '') continue;
-    files[filePath] = {
-      hash: file.hash,
-      dependencies: [...file.dependencies]
-        .filter((dependency) => manifest.files.get(dependency)?.hash)
-        .sort(),
-    };
-  }
-
-  // Sorted so a manifest diff between two runs shows only real membership changes. Mapped over the
-  // entries rather than named by hand, so a new FileAttribution home can't be silently dropped here.
-  const attribution = Object.fromEntries(
-    Object.entries(manifest.attribution).map(([key, files]) => [key, [...files].sort()])
-  ) as ManifestFile['attribution'];
-
   return {
     storybookHash: manifest.storybookHash,
-    storybookFileHashes,
-    storybookConfigFiles: Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles),
-    staticFiles: Object.fromEntries(manifest.outOfGraphFiles.staticFiles),
-    storyFiles,
-    attribution,
-    files,
+    storybookFileHashes: sortByKey(Object.fromEntries(manifest.storybookFileHashes)),
+    storybookConfigFiles: sortByKey(
+      Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles)
+    ),
+    staticFiles: sortByKey(Object.fromEntries(manifest.outOfGraphFiles.staticFiles)),
+    storyFiles: sortByKey(Object.fromEntries(manifest.storyFileHashes)),
+    attribution: sortByKey(
+      Object.fromEntries(
+        Object.entries(manifest.attribution).map(([key, filePaths]) => [
+          key,
+          [...filePaths].sort(comparePaths),
+        ])
+      )
+    ) as ManifestFile['attribution'],
+    files: sortByKey(serializeFiles(manifest.files)),
   };
+}
+
+function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['files'] {
+  const serialized: ManifestFile['files'] = {};
+  for (const [filePath, file] of files) {
+    if (file.hash === '') {
+      continue;
+    }
+    serialized[filePath] = {
+      hash: file.hash,
+      dependencies: [...file.dependencies]
+        .filter((dependency) => files.get(dependency)?.hash)
+        .sort(comparePaths),
+    };
+  }
+  return serialized;
+}
+
+function sortByKey<Value>(record: Record<string, Value>): Record<string, Value> {
+  return Object.fromEntries(Object.entries(record).sort(([a], [b]) => comparePaths(a, b)));
+}
+
+function comparePaths(a: FilePath, b: FilePath): number {
+  return a.localeCompare(b);
 }
 
 /**

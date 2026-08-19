@@ -89,6 +89,31 @@ describe('serializeManifest', () => {
     ]);
   });
 
+  it('sorts the file keys so two builds of the same Storybook serialize identically', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const zulu = '/repo/packages/ui/src/zulu.ts';
+    const alpha = '/repo/packages/ui/src/alpha.ts';
+    const { outOfGraph } = createFixture({
+      isAbsent: syntheticAbsent,
+      fileHashes: { [story]: 'S', [zulu]: 'Z', [alpha]: 'A' },
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: zulu, reasons: [{ moduleName: story }] },
+        { id: 3, name: alpha, reasons: [{ moduleName: story }] },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+
+    expect(Object.keys(serialized.files)).toEqual([
+      './src/alpha.ts',
+      './src/Button.stories.tsx',
+      './src/zulu.ts',
+    ]);
+  });
+
   it('keeps synthetic transit nodes in memory while omitting them from serialization', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';
@@ -236,8 +261,8 @@ describe('writeManifest', () => {
     writeManifest(manifest, outputDirectory, outOfGraph.projectFiles);
 
     expect(disk.writtenFiles?.[manifestPath]).toBe(
-JSON.stringify(serializeManifest(manifest), undefined, 2)
-);
+      JSON.stringify(serializeManifest(manifest), undefined, 2)
+    );
   });
 
   it('writes a payload that round-trips through JSON.parse', async () => {
