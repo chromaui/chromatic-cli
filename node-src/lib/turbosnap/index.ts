@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-import path from 'path';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
@@ -8,6 +7,7 @@ import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
+import { getManifestOutputDirectory } from './v2/manifest';
 import { realProjectFiles } from './v2/projectFiles';
 
 /**
@@ -40,7 +40,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
       graphqlClient: ctx.client,
       buildId: ctx.announcedBuild.id,
       stats,
-      manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
+      manifestOutputDirectory: getManifestOutputDirectory(ctx.sourceDir),
       projectRoot: ctx.storybook.projectRoot,
       configDir: ctx.storybook.configDir,
       staticDirs: ctx.storybook.staticDirs,
