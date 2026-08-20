@@ -24,8 +24,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   if (!ctx.fileInfo?.statsPath) {
     // If we don't know the SB version, we should assume we don't support `--stats-json`
     const nonLegacyStatsSupported =
-      ctx.storybook?.version &&
-      semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
+      ctx.storybook.version && semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
 
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
