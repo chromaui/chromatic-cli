@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import GraphQLClient from '../../../io/graphqlClient';
@@ -30,7 +29,7 @@ const CONFIG_ENTRY = './storybook-config-entry.js';
 // is what keeps a test from having to list every source file its stats name.
 const SYNTHETIC = ['storybook-stories.js', 'storybook-config-entry.js', '|lazy|'];
 
-const manifestOutputDirectory = '/repo/packages/ui/storybook-static';
+const manifestPath = '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json';
 
 function setup() {
   const disk: InMemoryDisk = {
@@ -138,7 +137,7 @@ function trace({ projectFiles, runQuery }: Fixture, patchFiles: Partial<ProjectF
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),
-    manifestOutputDirectory,
+    manifestPath,
     projectRoot,
     configDir: configDirectory,
     staticDirs: [`${configDirectory}/static`],
@@ -165,7 +164,6 @@ function uploaded({ runQuery }: Fixture) {
 
 // The diagnostic manifest as written, or undefined when none was written.
 function writtenManifest({ disk }: Fixture) {
-  const contents =
-    disk.writtenFiles?.[path.join(manifestOutputDirectory, 'turbosnap-manifest.json')];
+  const contents = disk.writtenFiles?.[manifestPath];
   return contents === undefined ? undefined : JSON.parse(contents);
 }
