@@ -88,6 +88,33 @@ describe('uploadMetadataFiles', () => {
     expect(logResumeCallOrder).toBeGreaterThan(uploadFilesCallOrder);
   });
 
+  it('uploads the TurboSnap Manifest from the internal build directory', async () => {
+    const runQuery = vi.fn().mockResolvedValue({
+      uploadMetadata: { info: { targets: [] }, userErrors: [] },
+    });
+    const ctx = {
+      ...baseContext,
+      sourceDir: '/repo/storybook-static',
+      announcedBuild: { id: '1' },
+      build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
+      client: { runQuery },
+    } as any;
+
+    await uploadMetadataFiles(ctx);
+
+    expect(runQuery).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        files: expect.arrayContaining([
+          {
+            contentLength: 100,
+            filePath: '.chromatic/turbosnap-manifest.json',
+          },
+        ]),
+      })
+    );
+  });
+
   it('does not throw when the upload fails, reporting to Sentry and resuming the log', async () => {
     vi.mocked(uploadFiles).mockRejectedValueOnce(new Error('network boom'));
 

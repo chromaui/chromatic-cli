@@ -36,6 +36,7 @@ export async function uploadMetadataFiles(ctx: Context) {
         ctx.options.logFile,
         ctx.options.diagnosticsFile,
         ctx.options.storybookLogFile,
+        ctx.sourceDir && path.join(ctx.sourceDir, '.chromatic', 'turbosnap-manifest.json'),
         await findStorybookConfigFile(ctx.options.storybookConfigDir, MAIN_CONFIG_PATTERN).catch(
           () => undefined
         ),
