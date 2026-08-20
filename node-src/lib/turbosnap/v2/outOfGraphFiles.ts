@@ -1,5 +1,4 @@
-import path from 'path';
-
+import { AbsolutePath } from '../../../types';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
@@ -7,13 +6,13 @@ import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY, StorybookFileKey } from './stor
 
 /**
  * Where to look for the out-of-graph inputs, and what to read them with. The directories are
- * project-root-relative, as they arrive on `ctx.storybook`.
+ * absolute, as they arrive on `ctx.storybook`.
  */
 export interface OutOfGraphInput {
-  /** The Storybook config directory, e.g. `.storybook`. */
-  configDir: string;
-  /** The configured static directories, e.g. `['.storybook/static']`. Empty when unset. */
-  staticDirs: string[];
+  /** The absolute Storybook config directory. */
+  configDir: AbsolutePath;
+  /** The absolute configured static directories. Empty when unset. */
+  staticDirs: AbsolutePath[];
   /** How to read the disk; required, so no caller can silently get the real one. */
   projectFiles: ProjectFiles;
 }
@@ -57,12 +56,8 @@ export async function hashOutOfGraphFiles(
   input: OutOfGraphInput,
   projectRoot: string
 ): Promise<OutOfGraphFiles> {
-  const staticDirectories = input.staticDirs.map((directory) =>
-    path.resolve(projectRoot, directory)
-  );
-
-  const configPaths = input.projectFiles.listTree(path.resolve(projectRoot, input.configDir));
-  const staticFilePaths = staticDirectories.flatMap((directory) =>
+  const configPaths = input.projectFiles.listTree(input.configDir);
+  const staticFilePaths = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
   );
 

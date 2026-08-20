@@ -13,8 +13,8 @@ const h64ToString = (value: string) => `h(${value})`;
 // mutates its disk between two sweeps reuses the same input.
 function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): OutOfGraphInput {
   return {
-    configDir: '.storybook',
-    staticDirs: ['.storybook/static'],
+    configDir: `${projectRoot}/.storybook`,
+    staticDirs: [`${projectRoot}/.storybook/static`],
     projectFiles: inMemoryProjectFiles(disk),
     ...overrides,
   };
@@ -95,7 +95,7 @@ describe('hashOutOfGraphFiles', () => {
     };
 
     const { staticFiles } = await hashOutOfGraphFiles(
-      makeInput(disk, { staticDirs: ['public', 'assets'] }),
+      makeInput(disk, { staticDirs: [`${projectRoot}/public`, `${projectRoot}/assets`] }),
       projectRoot
     );
 
@@ -231,9 +231,10 @@ describe('rollUpOutOfGraphFiles', () => {
         '/repo/packages/ui/.storybook/static/logo.svg': 'A',
       },
     };
-    const input = makeInput(disk);
-    const before = await rollUp(input);
+    const before = await rollUp(makeInput(disk));
 
+    // The project moved, so its absolute directories moved with it.
+    const movedRoot = '/repo/apps/web';
     disk.directories = {
       '/repo/apps/web/.storybook': ['main.ts', 'static'],
       '/repo/apps/web/.storybook/static': ['logo.svg'],
@@ -242,7 +243,13 @@ describe('rollUpOutOfGraphFiles', () => {
       '/repo/apps/web/.storybook/main.ts': 'M',
       '/repo/apps/web/.storybook/static/logo.svg': 'A',
     };
-    const after = await rollUp(input, '/repo/apps/web');
+    const after = await rollUp(
+      makeInput(disk, {
+        configDir: `${movedRoot}/.storybook`,
+        staticDirs: [`${movedRoot}/.storybook/static`],
+      }),
+      movedRoot
+    );
 
     expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
     expect(after.get('staticFiles')).toBe(before.get('staticFiles'));

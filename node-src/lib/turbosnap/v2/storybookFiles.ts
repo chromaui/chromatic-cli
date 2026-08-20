@@ -22,13 +22,13 @@ import {
  * detached root). `configDir` is a project setting, not always `.storybook`.
  *
  * @param filePath The canonical manifest path to test.
- * @param configDirectory The project's Storybook config directory, project-root-relative.
+ * @param configDirectory The canonical manifest path of the project's Storybook config directory.
  *
  * @returns Whether the path is the project's preview config file.
  */
-function isPreviewConfig(filePath: FilePath, configDirectory: string): boolean {
+function isPreviewConfig(filePath: FilePath, configDirectory: FilePath): boolean {
   const { dir, base } = path.posix.parse(filePath);
-  return dir === `./${configDirectory}` && PREVIEW_CONFIG_PATTERN.test(base);
+  return dir === configDirectory && PREVIEW_CONFIG_PATTERN.test(base);
 }
 
 /**
@@ -59,8 +59,8 @@ export interface FileAttribution {
  * @param files The map of files to their hashes and dependencies.
  * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
  * @param storyFileNames The detected story files.
- * @param configDirectory The project's Storybook config directory, project-root-relative (e.g.
- * `.storybook`).
+ * @param configDirectory The canonical manifest path of the project's Storybook config directory
+ * (e.g. `./.storybook`).
  * @param h64ToString The hash function.
  *
  * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
@@ -70,7 +70,7 @@ export function collectStorybookFiles(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
   storyFileNames: Set<FilePath>,
-  configDirectory: string,
+  configDirectory: FilePath,
   h64ToString: (input: string) => string
 ): { storybookFileHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
   // The union of every story's subtree, used to tell Storybook globals apart from story code.

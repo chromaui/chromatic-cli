@@ -16,6 +16,7 @@ import {
   OutOfGraphInput,
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
+import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
@@ -112,7 +113,7 @@ export async function buildManifest(
     files,
     hashes,
     storyFiles,
-    outOfGraph.configDir,
+    normalizeStatsPath(outOfGraph.configDir, projectRoot),
     h64ToString
   );
 

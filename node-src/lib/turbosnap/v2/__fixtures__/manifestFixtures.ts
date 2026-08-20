@@ -39,7 +39,11 @@ export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
   const projectFiles = inMemoryProjectFiles(disk);
   return {
     disk,
-    outOfGraph: { configDir: '.storybook', staticDirs: ['.storybook/static'], projectFiles },
+    outOfGraph: {
+      configDir: `${projectRoot}/.storybook`,
+      staticDirs: [`${projectRoot}/.storybook/static`],
+      projectFiles,
+    },
     statsContext: { projectRoot, statsRoot: projectRoot, projectFiles },
   };
 }

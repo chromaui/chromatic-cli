@@ -5,7 +5,7 @@ import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from './storybookFileKey
 import { collectStorybookFiles } from './storybookFiles';
 
 // The config dir most tests don't care about; only the configDir-specific tests below vary it.
-const DEFAULT_CONFIG_DIR = '.storybook';
+const DEFAULT_CONFIG_DIR = './.storybook';
 
 // An identity "hash" so a roll-up is readable as the set of paths that went into it, which is what
 // makes the contents of the shared `preview` roll-up visible.
@@ -109,7 +109,7 @@ describe('collectStorybookFiles', () => {
       files,
       makeHashes(['./src/preview.ts']),
       new Set(),
-      'src',
+      './src',
       identity
     );
 
@@ -135,7 +135,7 @@ describe('collectStorybookFiles', () => {
       files,
       hashes,
       new Set(['./src/Button.stories.tsx', './src/Badge.stories.tsx']),
-      'config',
+      './config',
       identity
     );
 
