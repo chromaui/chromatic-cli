@@ -195,42 +195,29 @@ function comparePaths(a: FilePath, b: FilePath): number {
 }
 
 /**
- * Locates the internal directory that holds the Manifest for a Storybook build.
+ * Locates the serialized Manifest inside a Storybook build directory. The Manifest lives in the
+ * internal `.chromatic` directory, which is excluded from the build upload and uploaded separately
+ * as build metadata.
  *
  * @param sourceDirectory The Storybook build output directory.
  *
- * @returns The absolute internal metadata directory.
- */
-export function getManifestOutputDirectory(sourceDirectory: string): string {
-  return path.join(sourceDirectory, '.chromatic');
-}
-
-/**
- * Locates the serialized Manifest within its output directory.
- *
- * @param outputDirectory The directory that holds the Manifest.
- *
  * @returns The absolute Manifest path.
  */
-export function getManifestPath(outputDirectory: string): string {
-  return path.join(outputDirectory, 'turbosnap-manifest.json');
+export function getManifestPath(sourceDirectory: string): string {
+  return path.join(sourceDirectory, '.chromatic', 'turbosnap-manifest.json');
 }
 
 /**
- * Writes the entire manifest to a file in the output directory. This is uploaded to S3 for
- * debugging.
+ * Writes the entire manifest to a file. This is uploaded to S3 for debugging.
  *
  * @param manifest The manifest to write.
- * @param outputDirectory The directory to write the manifest file to.
+ * @param manifestPath The path to write the manifest file to.
  * @param projectFiles How to write the disk.
  */
 export function writeManifest(
   manifest: TurboSnapManifest,
-  outputDirectory: string,
+  manifestPath: string,
   projectFiles: ProjectFiles
 ) {
-  projectFiles.writeFile(
-    getManifestPath(outputDirectory),
-    JSON.stringify(serializeManifest(manifest))
-  );
+  projectFiles.writeFile(manifestPath, JSON.stringify(serializeManifest(manifest)));
 }

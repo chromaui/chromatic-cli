@@ -11,7 +11,7 @@ interface TraceChangedFilesInput {
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
-  manifestOutputDirectory: string;
+  manifestPath: string;
   projectRoot: string;
   configDir: AbsolutePath;
   staticDirs: AbsolutePath[];
@@ -30,7 +30,7 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  *
  * @param input The input to run TurboSnap 2.0.
  * @param input.stats The preview stats file, read by the caller because v1 traces the same one.
- * @param input.manifestOutputDirectory The directory to write the manifest file to.
+ * @param input.manifestPath The path to write the manifest file to.
  * @param input.projectRoot The absolute Storybook project root used to read source files off disk
  * and to anchor manifest keys.
  * @param input.configDir The absolute Storybook config directory, hashed off disk because it is
@@ -62,7 +62,7 @@ export async function traceChangedFiles(
   // The manifest is written to the Storybook build output so it can be uploaded with other
   // diagnostic files.
   try {
-    writeManifest(manifest, input.manifestOutputDirectory, input.projectFiles);
+    writeManifest(manifest, input.manifestPath, input.projectFiles);
   } catch (error) {
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to write manifest'],

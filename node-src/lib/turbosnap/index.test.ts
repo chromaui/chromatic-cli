@@ -126,7 +126,7 @@ describe('traceChangedFiles', () => {
       graphqlClient: ctx.client,
       buildId: 'head-build',
       stats,
-      manifestOutputDirectory: '/repo/packages/ui/storybook-static/.chromatic',
+      manifestPath: '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json',
       projectRoot: ctx.storybook.projectRoot,
       configDir: ctx.storybook.configDir,
       staticDirs: ctx.storybook.staticDirs,

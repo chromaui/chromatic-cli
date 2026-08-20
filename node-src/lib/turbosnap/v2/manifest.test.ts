@@ -1,4 +1,3 @@
-import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
@@ -7,7 +6,7 @@ import {
   manifestWithPreview,
   syntheticAbsent,
 } from './__fixtures__/manifestFixtures';
-import { buildManifest, serializeManifest, writeManifest } from './manifest';
+import { buildManifest, getManifestPath, serializeManifest, writeManifest } from './manifest';
 
 describe('serializeManifest', () => {
   it('converts the manifest maps and sets into JSON-safe objects and arrays', async () => {
@@ -249,15 +248,22 @@ describe('serializeManifest', () => {
   });
 });
 
+describe('getManifestPath', () => {
+  it('places the manifest in the internal directory of the Storybook build', () => {
+    expect(getManifestPath('/repo/packages/ui/storybook-static')).toBe(
+      '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json'
+    );
+  });
+});
+
 describe('writeManifest', () => {
-  const outputDirectory = '/repo/packages/ui/chromatic';
-  const manifestPath = path.join(outputDirectory, 'turbosnap-manifest.json');
+  const manifestPath = '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json';
 
   it('writes the serialized manifest as JSON to turbosnap-manifest.json in the output directory', async () => {
     const { disk, input } = createFixture();
     const manifest = await manifestWithPreview('preview.ts');
 
-    writeManifest(manifest, outputDirectory, input.projectFiles);
+    writeManifest(manifest, manifestPath, input.projectFiles);
 
     expect(disk.writtenFiles?.[manifestPath]).toBe(JSON.stringify(serializeManifest(manifest)));
   });
@@ -266,7 +272,7 @@ describe('writeManifest', () => {
     const { disk, input } = createFixture();
     // The file is uploaded to S3 and read back for debugging, so it has to be valid JSON with the
     // Maps and Sets already flattened.
-    writeManifest(await manifestWithPreview('preview.ts'), outputDirectory, input.projectFiles);
+    writeManifest(await manifestWithPreview('preview.ts'), manifestPath, input.projectFiles);
 
     const payload = disk.writtenFiles?.[manifestPath] ?? '';
 
