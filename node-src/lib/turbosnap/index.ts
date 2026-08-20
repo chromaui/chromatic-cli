@@ -1,9 +1,14 @@
+import * as Sentry from '@sentry/node';
+import path from 'path';
 import semver from 'semver';
 
+import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
+import { traceChangedFiles as traceChangedFilesV2 } from './v2';
+import { realProjectFiles } from './v2/projectFiles';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
@@ -25,5 +30,27 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
   }
 
-  return traceChangedFilesV1(ctx);
+  const statsPath = ctx.fileInfo.statsPath;
+  const stats = await readStatsFile(statsPath);
+
+  // V2 catches every anticipated failure itself. A rejection here is a defect in those guards: it
+  // must be observable, but it must never affect the v1 decision or the customer's build.
+  try {
+    await traceChangedFilesV2({
+      graphqlClient: ctx.client,
+      buildId: ctx.announcedBuild.id,
+      stats,
+      manifestOutputDirectory: path.join(ctx.sourceDir, '.chromatic'),
+      projectRoot: ctx.storybook.projectRoot,
+      configDir: ctx.storybook.configDir,
+      staticDirs: ctx.storybook.staticDirs,
+      projectFiles: realProjectFiles(),
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      fingerprint: ['TurboSnap v2', 'Failed to trace changed files'],
+    });
+  }
+
+  return traceChangedFilesV1(ctx, stats, statsPath);
 }
