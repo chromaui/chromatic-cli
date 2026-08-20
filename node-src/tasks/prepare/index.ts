@@ -42,8 +42,9 @@ export async function prepareProject(
 
   await validateAndroidArtifact({ sourceDir, browsers: input.browsers });
 
-  // TurboSnap reads the freshly-validated stats file; validateFiles may have corrected the directory.
+  // TurboSnap reads the freshly validated paths; validateFiles may have corrected the directory.
   input.turboSnapContext.fileInfo = fileInfo;
+  input.turboSnapContext.sourceDir = sourceDir;
   const { onlyStoryFiles } = await traceChangedFiles(deps, {
     turboSnapContext: input.turboSnapContext,
   });
