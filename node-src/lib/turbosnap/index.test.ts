@@ -23,8 +23,10 @@ vi.mock('./v2', () => ({
   traceChangedFiles: vi.fn(),
 }));
 
+const projectFiles = { kind: 'real-project-files' };
+
 vi.mock('./v2/projectFiles', () => ({
-  realProjectFiles: vi.fn(() => ({ kind: 'real-project-files' })),
+  realProjectFiles: vi.fn(),
 }));
 
 const stats = { modules: [] };
@@ -53,6 +55,7 @@ function makeContext() {
 }
 
 beforeEach(() => {
+  vi.mocked(realProjectFiles).mockReturnValue(projectFiles as any);
   vi.mocked(readStatsFile).mockResolvedValue(stats);
   vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
   vi.mocked(traceChangedFilesV1).mockResolvedValue(v1Result);
@@ -87,12 +90,7 @@ describe('traceChangedFiles', () => {
   });
 
   it('throws if the stats file is not found', async () => {
-    const ctx = {
-      options: {},
-      sourceDir: '/static/',
-      git: { changedFiles: ['./example.js'] },
-      turboSnap: {},
-    } as any;
+    const ctx = { ...makeContext(), fileInfo: undefined };
 
     await expect(traceChangedFiles(ctx)).rejects.toThrow('TurboSnap requires a stats file');
 
@@ -115,8 +113,6 @@ describe('traceChangedFiles', () => {
 
   it('reads the stats once and gives the same graph and Storybook paths to both generations', async () => {
     const ctx = makeContext();
-    const projectFiles = realProjectFiles();
-    vi.mocked(realProjectFiles).mockReturnValue(projectFiles as any);
 
     await traceChangedFiles(ctx);
 
