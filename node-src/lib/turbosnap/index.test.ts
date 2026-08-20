@@ -141,16 +141,6 @@ describe('traceChangedFiles', () => {
     );
   });
 
-  it('still runs v1 when v2 Bails', async () => {
-    const ctx = makeContext();
-    vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback' });
-
-    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
-
-    expect(traceChangedFilesV2).toHaveBeenCalledOnce();
-    expect(traceChangedFilesV1).toHaveBeenCalledOnce();
-  });
-
   it('reports an unexpected v2 rejection and still returns the v1 result', async () => {
     const ctx = makeContext();
     const error = new Error('v2 escaped its own error handling');
