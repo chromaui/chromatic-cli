@@ -202,6 +202,28 @@ function comparePaths(a: FilePath, b: FilePath): number {
 }
 
 /**
+ * Locates the internal directory that holds the Manifest for a Storybook build.
+ *
+ * @param sourceDirectory The Storybook build output directory.
+ *
+ * @returns The absolute internal metadata directory.
+ */
+export function getManifestOutputDirectory(sourceDirectory: string): string {
+  return path.join(sourceDirectory, '.chromatic');
+}
+
+/**
+ * Locates the serialized Manifest within its output directory.
+ *
+ * @param outputDirectory The directory that holds the Manifest.
+ *
+ * @returns The absolute Manifest path.
+ */
+export function getManifestPath(outputDirectory: string): string {
+  return path.join(outputDirectory, 'turbosnap-manifest.json');
+}
+
+/**
  * Writes the entire manifest to a file in the output directory. This is uploaded to S3 for
  * debugging.
  *
@@ -215,7 +237,7 @@ export function writeManifest(
   projectFiles: ProjectFiles
 ) {
   projectFiles.writeFile(
-    path.join(outputDirectory, 'turbosnap-manifest.json'),
+    getManifestPath(outputDirectory),
     JSON.stringify(serializeManifest(manifest))
   );
 }
