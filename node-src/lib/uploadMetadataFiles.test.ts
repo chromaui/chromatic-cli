@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/node';
+import { stat } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from './testLogger';
@@ -112,6 +113,33 @@ describe('uploadMetadataFiles', () => {
           },
         ]),
       })
+    );
+  });
+
+  it('omits the TurboSnap Manifest when the build did not write one', async () => {
+    vi.mocked(stat).mockImplementation((filePath, callback: any) =>
+      String(filePath).endsWith('turbosnap-manifest.json')
+        ? callback(new Error('ENOENT'), undefined)
+        : callback(null, { size: 100 })
+    );
+    const runQuery = vi.fn().mockResolvedValue({
+      uploadMetadata: { info: { targets: [] }, userErrors: [] },
+    });
+    const ctx = {
+      ...baseContext,
+      options: { logFile: 'chromatic.log' },
+      sourceDir: '/repo/storybook-static',
+      announcedBuild: { id: '1' },
+      build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
+      client: { runQuery },
+    } as any;
+
+    await uploadMetadataFiles(ctx);
+
+    const { files } = runQuery.mock.calls[0][1];
+    expect(files).toContainEqual(expect.objectContaining({ filePath: '.chromatic/chromatic.log' }));
+    expect(files).not.toContainEqual(
+      expect.objectContaining({ filePath: '.chromatic/turbosnap-manifest.json' })
     );
   });
 
