@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
+import { mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 
@@ -22,7 +22,7 @@ export interface ProjectFiles {
   ): Promise<Record<AbsolutePath, FileHash>>;
   /** Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. */
   listTree(absoluteDirectory: AbsolutePath): AbsolutePath[];
-  /** Writes the contents to the file, creating or overwriting it. */
+  /** Writes the contents to the file, creating parent directories and overwriting it if present. */
   writeFile(absolutePath: AbsolutePath, contents: string): void;
 }
 
@@ -41,8 +41,10 @@ export function realProjectFiles(): ProjectFiles {
     packageVersion: readPackageVersion,
     hashAll: hashFileContents,
     listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(absoluteDirectory),
-    writeFile: (absolutePath: AbsolutePath, contents: string) =>
-      writeFileSync(absolutePath, contents),
+    writeFile: (absolutePath: AbsolutePath, contents: string) => {
+      mkdirSync(path.dirname(absolutePath), { recursive: true });
+      writeFileSync(absolutePath, contents);
+    },
   };
 }
 

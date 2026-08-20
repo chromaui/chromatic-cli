@@ -266,7 +266,7 @@ describe('realProjectFiles writeFile', () => {
     const root = temporaryDirectory();
     const filePath = path.join(root, 'storybook-static/.chromatic/turbosnap-manifest.json');
 
-    realProjectFiles(log).writeFile(filePath, '{"storybookHash":"abc"}');
+    realProjectFiles().writeFile(filePath, '{"storybookHash":"abc"}');
 
     expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
   });
