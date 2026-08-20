@@ -262,6 +262,15 @@ describe('realProjectFiles hashAll', () => {
 });
 
 describe('realProjectFiles writeFile', () => {
+  it('creates absent parent directories before writing', () => {
+    const root = temporaryDirectory();
+    const filePath = path.join(root, 'storybook-static/.chromatic/turbosnap-manifest.json');
+
+    realProjectFiles(log).writeFile(filePath, '{"storybookHash":"abc"}');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
+  });
+
   it('writes the contents to the path, readable back as the same bytes', () => {
     const root = temporaryDirectory();
     const filePath = path.join(root, 'turbosnap-manifest.json');
