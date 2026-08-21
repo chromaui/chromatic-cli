@@ -31,6 +31,8 @@ const { STORYBOOK_BASE_DIR } = process.env;
  * The main entrypoint for `chromatic turbosnap-manifest`.
  *
  * @param argv A list of arguments passed.
+ *
+ * @returns Nothing
  */
 export async function main(argv: string[]) {
   const cli = meow(
@@ -89,7 +91,7 @@ export async function main(argv: string[]) {
     if (!existsSync(statsPath)) {
       log.error(`No stats file at ${statsPath}\n`);
       log.error(cli.help);
-      process.exit(1);
+      return process.exit(1);
     }
 
     const manifest = await buildManifest(await readStatsFile(statsPath), {
