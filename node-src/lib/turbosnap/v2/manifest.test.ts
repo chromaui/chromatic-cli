@@ -5,14 +5,13 @@ import { Stats } from '../../../types';
 import {
   createFixture,
   manifestWithPreview,
-  projectRoot,
   syntheticAbsent,
 } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest, writeManifest } from './manifest';
 
 describe('serializeManifest', () => {
   it('converts the manifest maps and sets into JSON-safe objects and arrays', async () => {
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       fileHashes: {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
         '/repo/packages/ui/src/helper.ts': 'H',
@@ -33,7 +32,7 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const manifest = await buildManifest(stats, input);
     const serialized = serializeManifest(manifest);
 
     // JSON-safe: storyFiles is a plain object, dependencies is an array.
@@ -48,7 +47,7 @@ describe('serializeManifest', () => {
   it('emits storybookFileHashes as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';
-    const { outOfGraph } = createFixture({ fileHashes: { [story]: 'S', [preview]: 'P' } });
+    const { input } = createFixture({ fileHashes: { [story]: 'S', [preview]: 'P' } });
     const stats: Stats = {
       modules: [
         { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
@@ -56,7 +55,7 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const manifest = await buildManifest(stats, input);
     const serialized = serializeManifest(manifest);
 
     expect(serialized.storybookFileHashes.preview).toBe(
@@ -70,7 +69,7 @@ describe('serializeManifest', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const alpha = '/repo/packages/ui/src/alpha.ts';
     const zulu = '/repo/packages/ui/src/zulu.ts';
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       fileHashes: { [story]: 'S', [alpha]: 'A', [zulu]: 'Z' },
     });
     const stats: Stats = {
@@ -81,7 +80,7 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     expect(serialized.files['./src/Button.stories.tsx'].dependencies).toEqual([
       './src/alpha.ts',
@@ -93,7 +92,7 @@ describe('serializeManifest', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const zulu = '/repo/packages/ui/src/zulu.ts';
     const alpha = '/repo/packages/ui/src/alpha.ts';
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: { [story]: 'S', [zulu]: 'Z', [alpha]: 'A' },
     });
@@ -105,7 +104,7 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     expect(Object.keys(serialized.files)).toEqual([
       './src/alpha.ts',
@@ -118,7 +117,7 @@ describe('serializeManifest', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';
     const helper = '/repo/packages/ui/src/helper.ts';
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: { [story]: 'S', [helper]: 'H' },
     });
@@ -130,7 +129,7 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const manifest = await buildManifest(stats, input);
 
     expect(manifest.files.get('./src/Button.stories.tsx')?.dependencies).toContain(synthetic);
     expect(manifest.files.get(synthetic)?.dependencies).toContain('./src/helper.ts');
@@ -147,7 +146,7 @@ describe('serializeManifest', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';
     const helper = '/repo/packages/ui/src/helper.ts';
-    const { disk, outOfGraph } = createFixture({
+    const { disk, input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: { [story]: 'S', [helper]: 'H1' },
     });
@@ -159,10 +158,10 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const before = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const before = serializeManifest(await buildManifest(stats, input));
 
     disk.fileHashes = { [story]: 'S', [helper]: 'H2' };
-    const after = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const after = serializeManifest(await buildManifest(stats, input));
 
     for (const file of Object.values(before.files)) {
       expect(file.dependencies.every((dependency) => dependency in before.files)).toBe(true);
@@ -187,7 +186,7 @@ describe('serializeManifest', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';
     const helper = '/repo/packages/ui/src/helper.ts';
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: { [story]: 'S', [helper]: 'H' },
     });
@@ -202,7 +201,7 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     // The helper is published with its own hash, so a debug reader can diff it...
     expect(serialized.files['./src/helper.ts'].hash).toBe('H');
@@ -217,7 +216,7 @@ describe('serializeManifest', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const synthetic = 'virtual:bridge';
     const helper = '/repo/packages/ui/src/helper.ts';
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: { [story]: 'S', [helper]: 'H' },
     });
@@ -240,8 +239,8 @@ describe('serializeManifest', () => {
       ],
     };
 
-    const bridged = serializeManifest(await buildManifest(withLeaf, projectRoot, outOfGraph));
-    const plain = serializeManifest(await buildManifest(withoutLeaf, projectRoot, outOfGraph));
+    const bridged = serializeManifest(await buildManifest(withLeaf, input));
+    const plain = serializeManifest(await buildManifest(withoutLeaf, input));
 
     // Identical after pruning, so the story hash is the only place the leaf can show up.
     expect(bridged.files).toEqual(plain.files);
@@ -255,23 +254,19 @@ describe('writeManifest', () => {
   const manifestPath = path.join(outputDirectory, 'turbosnap-manifest.json');
 
   it('writes the serialized manifest as JSON to turbosnap-manifest.json in the output directory', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     const manifest = await manifestWithPreview('preview.ts');
 
-    writeManifest(manifest, outputDirectory, outOfGraph.projectFiles);
+    writeManifest(manifest, outputDirectory, input.projectFiles);
 
     expect(disk.writtenFiles?.[manifestPath]).toBe(JSON.stringify(serializeManifest(manifest)));
   });
 
   it('writes a payload that round-trips through JSON.parse', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     // The file is uploaded to S3 and read back for debugging, so it has to be valid JSON with the
     // Maps and Sets already flattened.
-    writeManifest(
-      await manifestWithPreview('preview.ts'),
-      outputDirectory,
-      outOfGraph.projectFiles
-    );
+    writeManifest(await manifestWithPreview('preview.ts'), outputDirectory, input.projectFiles);
 
     const payload = disk.writtenFiles?.[manifestPath] ?? '';
 

@@ -1,21 +1,14 @@
-import { AbsolutePath } from '../../../types';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
+import { ManifestInput } from './manifestInput';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY, StorybookFileKey } from './storybookFileKeys';
 
-/**
- * Where to look for the out-of-graph inputs, and what to read them with. The directories are
- * absolute, as they arrive on `ctx.storybook`.
- */
-export interface OutOfGraphInput {
-  /** The absolute Storybook config directory. */
-  configDir: AbsolutePath;
-  /** The absolute configured static directories. Empty when unset. */
-  staticDirs: AbsolutePath[];
-  /** How to read the disk; required, so no caller can silently get the real one. */
-  projectFiles: ProjectFiles;
-}
+/** The part of {@link ManifestInput} the out-of-graph sweep reads: where to look, and what with. */
+export type OutOfGraphInput = Pick<
+  ManifestInput,
+  'projectRoot' | 'configDir' | 'staticDirs' | 'projectFiles'
+>;
 
 /**
  * The content hash of every out-of-graph file, keyed by canonical manifest path. These are the S3-only
@@ -47,15 +40,11 @@ export interface OutOfGraphFiles {
  * failure mode this mechanism exists to remove.
  *
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
- * @param projectRoot The absolute Storybook project root used to locate files and name them.
  *
  * @returns The content hash of every config file and every static file, keyed by canonical manifest
  * path.
  */
-export async function hashOutOfGraphFiles(
-  input: OutOfGraphInput,
-  projectRoot: string
-): Promise<OutOfGraphFiles> {
+export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOfGraphFiles> {
   const configPaths = input.projectFiles.listTree(input.configDir);
   const staticFilePaths = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
@@ -68,10 +57,10 @@ export async function hashOutOfGraphFiles(
   return {
     storybookConfigFiles: await hashByManifestPath(
       configPaths.filter((filePath) => !staticFileSet.has(filePath)),
-      projectRoot,
+      input.projectRoot,
       input.projectFiles
     ),
-    staticFiles: await hashByManifestPath(staticFilePaths, projectRoot, input.projectFiles),
+    staticFiles: await hashByManifestPath(staticFilePaths, input.projectRoot, input.projectFiles),
   };
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture, projectRoot } from './__fixtures__/manifestFixtures';
+import { createFixture } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
 
 /**
@@ -105,22 +105,22 @@ function goldenFixture() {
 
 describe('manifest golden hashes', () => {
   it('publishes the same storybookHash for the frozen fixture', async () => {
-    const { outOfGraph } = goldenFixture();
-    const manifest = await buildManifest(GOLDEN_STATS, projectRoot, outOfGraph);
+    const { input } = goldenFixture();
+    const manifest = await buildManifest(GOLDEN_STATS, input);
 
     expect(manifest.storybookHash).toBe(GOLDEN_STORYBOOK_HASH);
   });
 
   it('publishes the same per-story hashes for the frozen fixture', async () => {
-    const { outOfGraph } = goldenFixture();
-    const manifest = await buildManifest(GOLDEN_STATS, projectRoot, outOfGraph);
+    const { input } = goldenFixture();
+    const manifest = await buildManifest(GOLDEN_STATS, input);
 
     expect(Object.fromEntries(manifest.storyFileHashes)).toEqual(GOLDEN_STORY_FILES);
   });
 
   it('publishes the same storybookFileHashes for the frozen fixture', async () => {
-    const { outOfGraph } = goldenFixture();
-    const manifest = await buildManifest(GOLDEN_STATS, projectRoot, outOfGraph);
+    const { input } = goldenFixture();
+    const manifest = await buildManifest(GOLDEN_STATS, input);
 
     expect(Object.fromEntries(manifest.storybookFileHashes)).toEqual(GOLDEN_STORYBOOK_FILES);
   });

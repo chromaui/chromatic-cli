@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture, manifestWithPreview, projectRoot } from './__fixtures__/manifestFixtures';
+import { createFixture, manifestWithPreview } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
 
 // These suites are about how a hash responds: what moves it, what leaves it alone, and what stays
@@ -10,7 +10,7 @@ import { buildManifest } from './manifest';
 
 describe('buildManifest', () => {
   it('keys story files by their canonical project-root-relative path', async () => {
-    const { outOfGraph } = createFixture();
+    const { input } = createFixture();
     const stats: Stats = {
       modules: [
         {
@@ -26,7 +26,7 @@ describe('buildManifest', () => {
       ],
     };
 
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const manifest = await buildManifest(stats, input);
 
     expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/Button.stories.tsx']);
     expect(manifest.files.has('./src/Button.stories.tsx')).toBe(true);
@@ -46,12 +46,12 @@ describe('buildManifest leaf inclusion', () => {
   };
 
   it('changes the story hash when a leaf dependency content changes', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     disk.fileHashes = { [story]: 'S', [leaf]: 'T1' };
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const before = await buildManifest(stats, input);
 
     disk.fileHashes = { [story]: 'S', [leaf]: 'T2' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
       before.storyFileHashes.get('./src/Button.stories.tsx')
@@ -61,7 +61,7 @@ describe('buildManifest leaf inclusion', () => {
 
 describe('buildManifest relocation stability', () => {
   it('changes nothing at all when the whole project moves', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     const before = await (async () => {
       disk.fileHashes = {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
@@ -82,8 +82,7 @@ describe('buildManifest relocation stability', () => {
             },
           ],
         },
-        '/repo/packages/ui',
-        outOfGraph
+        input
       );
     })();
 
@@ -107,8 +106,7 @@ describe('buildManifest relocation stability', () => {
             },
           ],
         },
-        '/repo/apps/web/ui',
-        outOfGraph
+        { ...input, projectRoot: '/repo/apps/web/ui' }
       );
     })();
 
@@ -136,7 +134,7 @@ describe('buildManifest relocation stability', () => {
   });
 
   it('re-keys a story file and moves the gate when the file is renamed within the project', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     // An autotitled story derives its title, and so its story IDs, from its path: moving
     // `lib/Badge/AutoTitle.stories.tsx` to `lib/Renamed/` renames every story it holds without
     // changing a byte. The snapshots are keyed by those IDs, so the gate has to move.
@@ -150,8 +148,7 @@ describe('buildManifest relocation stability', () => {
             { id: 2, name: helper, reasons: [{ moduleName: story }] },
           ],
         },
-        projectRoot,
-        outOfGraph
+        input
       );
     }
 
@@ -173,7 +170,7 @@ describe('buildManifest relocation stability', () => {
   });
 
   it('moves a story hash when a dependency moves within the project', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     const story = '/repo/packages/ui/src/Button.stories.tsx';
 
     // Build 1: deps a.ts and b.ts sort as [Button, a, b].
@@ -190,8 +187,7 @@ describe('buildManifest relocation stability', () => {
           { id: 3, name: '/repo/packages/ui/src/b.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     // Build 2: a.ts moved to z.ts (content unchanged). A module's own path reaches the output — it
@@ -210,8 +206,7 @@ describe('buildManifest relocation stability', () => {
           { id: 3, name: '/repo/packages/ui/src/b.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
@@ -220,7 +215,7 @@ describe('buildManifest relocation stability', () => {
   });
 
   it('moves a story hash when an external dependency relocates further from the project', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     const story = '/repo/packages/ui/src/Button.stories.tsx';
 
     // Build 1: theme.ts lives in a sibling package. Anchored at the git root it keys as
@@ -236,8 +231,7 @@ describe('buildManifest relocation stability', () => {
           { id: 2, name: '/repo/packages/shared/theme.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     // Build 2: the repo is restructured so theme.ts moves up to the repo root ('shared/theme.ts'),
@@ -255,8 +249,7 @@ describe('buildManifest relocation stability', () => {
           { id: 2, name: '/repo/shared/theme.ts', reasons: [{ moduleName: story }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
@@ -265,7 +258,7 @@ describe('buildManifest relocation stability', () => {
   });
 
   it('recaptures every dependent and moves the gate when a shared module moves with its bytes intact', async () => {
-    const { disk, outOfGraph } = createFixture();
+    const { disk, input } = createFixture();
     // The measured v1-parity regression: `Badge.tsx` -> `Badge/index.tsx` left the gate SAME and
     // recaptured 0 stories, while a tracing v1 recaptured both importers. Neither importer's bytes
     // change — only the moved module's path does.
@@ -285,8 +278,7 @@ describe('buildManifest relocation stability', () => {
             },
           ],
         },
-        projectRoot,
-        outOfGraph
+        input
       );
     };
 
@@ -303,7 +295,7 @@ describe('buildManifest relocation stability', () => {
   });
 
   it('produces the same storybookHash regardless of module iteration order', async () => {
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       fileHashes: {
         '/repo/packages/ui/src/A.stories.tsx': 'HA',
         '/repo/packages/ui/src/B.stories.tsx': 'HB',
@@ -322,8 +314,8 @@ describe('buildManifest relocation stability', () => {
       ],
     };
 
-    const first = await buildManifest(forwards, projectRoot, outOfGraph);
-    const second = await buildManifest(backwards, projectRoot, outOfGraph);
+    const first = await buildManifest(forwards, input);
+    const second = await buildManifest(backwards, input);
 
     expect(second.storybookHash).toBe(first.storybookHash);
   });

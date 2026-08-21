@@ -24,9 +24,9 @@ describe('buildManifest with a require-context in the graph', () => {
   };
 
   it('keeps the require-context glob in memory and excludes it from the serialized files', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: globAbsent });
+    const { disk, input } = createFixture({ isAbsent: globAbsent });
     disk.fileHashes = { [story]: 'S' };
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const manifest = await buildManifest(stats, input);
     const serialized = serializeManifest(manifest);
 
     expect([...manifest.files.keys()].some((key) => key.includes('lazy'))).toBe(true);
@@ -36,7 +36,7 @@ describe('buildManifest with a require-context in the graph', () => {
   });
 
   it('serializes the same manifest when only the require-context identity gains a concatenation suffix', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: globAbsent });
+    const { disk, input } = createFixture({ isAbsent: globAbsent });
     const statsWithContext = (storyImporter: string): Stats => ({
       modules: [
         { id: 1, name: storyImporter, reasons: [{ moduleName: './storybook-stories.js' }] },
@@ -45,11 +45,9 @@ describe('buildManifest with a require-context in the graph', () => {
     });
     disk.fileHashes = { [story]: 'S' };
 
-    const plain = serializeManifest(
-      await buildManifest(statsWithContext(glob), projectRoot, outOfGraph)
-    );
+    const plain = serializeManifest(await buildManifest(statsWithContext(glob), input));
     const concatenated = serializeManifest(
-      await buildManifest(statsWithContext(`${glob} + 1 modules`), projectRoot, outOfGraph)
+      await buildManifest(statsWithContext(`${glob} + 1 modules`), input)
     );
 
     expect(concatenated).toEqual(plain);
@@ -75,11 +73,11 @@ describe('buildManifest story hashing behind a bare-named require-context', () =
   };
 
   it('rolls the story implementation into the story hash', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: syntheticAbsent });
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
     disk.fileHashes = { [story]: 'S', [impl]: 'B' };
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const before = await buildManifest(stats, input);
     disk.fileHashes = { [story]: 'S', [impl]: 'B2' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storyFileHashes.get('./src/lib/Button.stories.tsx')).not.toBe(
       before.storyFileHashes.get('./src/lib/Button.stories.tsx')
@@ -114,10 +112,10 @@ describe('buildManifest attribution', () => {
   };
 
   it('records each real file under the hashing home it landed in', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: syntheticAbsent });
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
     disk.fileHashes = { ...hashes };
 
-    const { attribution } = await buildManifest(stats, projectRoot, outOfGraph);
+    const { attribution } = await buildManifest(stats, input);
 
     expect([...attribution.storyReachable].sort()).toEqual([
       './node_modules/moment/moment.js',
@@ -139,7 +137,7 @@ describe('buildManifest attribution', () => {
     const lazyGlob = './src/lib/ lazy namespace object';
     const throughGlob = '/repo/packages/ui/src/lib/Widget.stories.tsx';
 
-    const { disk, outOfGraph } = createFixture({ isAbsent: syntheticAbsent });
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
     disk.fileHashes = { [throughGlob]: 'W' };
     const manifest = await buildManifest(
       {
@@ -148,8 +146,7 @@ describe('buildManifest attribution', () => {
           { id: 2, name: throughGlob, reasons: [{ moduleName: lazyGlob }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     expect([...manifest.attribution.storyReachable]).toEqual(['./src/lib/Widget.stories.tsx']);
@@ -161,10 +158,10 @@ describe('buildManifest attribution', () => {
   });
 
   it('omits synthetic nodes from every set', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: syntheticAbsent });
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
     disk.fileHashes = { ...hashes };
 
-    const { attribution } = await buildManifest(stats, projectRoot, outOfGraph);
+    const { attribution } = await buildManifest(stats, input);
 
     const all = [
       ...attribution.storyReachable,
@@ -176,10 +173,10 @@ describe('buildManifest attribution', () => {
   });
 
   it('serializes each set as a sorted, JSON-safe array', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: syntheticAbsent });
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
     disk.fileHashes = { ...hashes };
 
-    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     expect(serialized.attribution.previewSubtree).toEqual([
       './.storybook/preview.ts',
@@ -230,11 +227,11 @@ describe('buildManifest attribution closure', () => {
   }
 
   it('attributes a file that is hashed only inside a concatenated module', async () => {
-    const { disk, outOfGraph } = createFixture({
+    const { disk, input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: hashes('H1'),
     });
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const before = await buildManifest(stats, input);
 
     expect([...before.attribution.storybookGlobals].sort()).toEqual([
       './src/probe/hiddenInner.tsx',
@@ -242,7 +239,7 @@ describe('buildManifest attribution closure', () => {
     ]);
 
     disk.fileHashes = hashes('H2');
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     // Editing the inner file used to leave the manifest byte-identical.
     expect(after.storybookFileHashes.get(globalsKey)).not.toBe(
@@ -252,8 +249,8 @@ describe('buildManifest attribution closure', () => {
   });
 
   it('lands every hashed file in exactly one attribution home', async () => {
-    const { outOfGraph } = createFixture({ isAbsent: syntheticAbsent, fileHashes: hashes('H1') });
-    const { attribution } = await buildManifest(stats, projectRoot, outOfGraph);
+    const { input } = createFixture({ isAbsent: syntheticAbsent, fileHashes: hashes('H1') });
+    const { attribution } = await buildManifest(stats, input);
 
     // The story and preview subtrees are disjoint in this graph, so each file has one home only.
     const homes = Object.entries(attribution);
@@ -266,8 +263,8 @@ describe('buildManifest attribution closure', () => {
   });
 
   it('leaves no dependency reference outside the serialized graph', async () => {
-    const { outOfGraph } = createFixture({ isAbsent: syntheticAbsent, fileHashes: hashes('H1') });
-    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const { input } = createFixture({ isAbsent: syntheticAbsent, fileHashes: hashes('H1') });
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     for (const file of Object.values(serialized.files)) {
       expect(file.dependencies.every((dependency) => dependency in serialized.files)).toBe(true);
@@ -299,9 +296,9 @@ describe('buildManifest attribution of swept node_modules stories', () => {
   };
 
   it('leaves the swept story subtree in the globals catch-all rather than draining it', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: globAbsent });
+    const { disk, input } = createFixture({ isAbsent: globAbsent });
     disk.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const manifest = await buildManifest(stats, input);
     // The drain: were the swept story a story file, its subtree would be story-reachable and so
     // absent from the catch-all, and a change to the shared runtime would move nothing the Index
     // can match.
@@ -315,11 +312,11 @@ describe('buildManifest attribution of swept node_modules stories', () => {
   });
 
   it('recaptures a change to a shared runtime file the swept story imports', async () => {
-    const { disk, outOfGraph } = createFixture({ isAbsent: globAbsent });
+    const { disk, input } = createFixture({ isAbsent: globAbsent });
     disk.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const before = await buildManifest(stats, input);
     disk.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R2' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storybookFileHashes.get('storybookGlobals')).not.toBe(
       before.storybookFileHashes.get('storybookGlobals')

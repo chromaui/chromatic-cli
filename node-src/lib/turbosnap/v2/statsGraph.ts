@@ -1,15 +1,18 @@
 import { Stats } from '../../../types';
 import { FileHash, FilePath, TurboSnapFile } from './graph';
+import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
   canonicalImporters,
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
-  StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { detectStoryFiles } from './storyDetection';
+
+/** The part of {@link ManifestInput} reading the stats file needs: the two roots, and the disk. */
+export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'projectFiles'>;
 
 /**
  * What the builder's stats file says it emitted, read into one canonical graph. Builder spellings —
@@ -38,18 +41,13 @@ export interface StatsGraph {
  * is what the hashes answer.
  *
  * @param stats The stats file to parse.
- * @param context The context the stats file was built in, which is needed to resolve module paths to absolute files
- * @param context.projectRoot The absolute Storybook project root that module paths anchor against.
- * @param context.statsRoot The absolute directory relative stats paths are named from.
- * @param context.projectFiles How to read the disk.
+ * @param context The context the stats file was built in, which is needed to resolve module paths to
+ * absolute files; see {@link StatsContext}.
  *
  * @returns The unpruned graph; see {@link StatsGraph}.
  */
-export async function readStatsGraph(
-  stats: Stats,
-  context: StatsRoots & { projectFiles: ProjectFiles }
-): Promise<StatsGraph> {
-  const { projectRoot, statsRoot, projectFiles } = context;
+export async function readStatsGraph(stats: Stats, context: StatsContext): Promise<StatsGraph> {
+  const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
   const hashes = await hashFiles(stats, projectRoot, statsRoot, projectFiles);
 

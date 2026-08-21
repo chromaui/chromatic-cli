@@ -10,12 +10,8 @@ import {
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
-import {
-  hashOutOfGraphFiles,
-  OutOfGraphFiles,
-  OutOfGraphInput,
-  rollUpOutOfGraphFiles,
-} from './outOfGraphFiles';
+import { ManifestInput } from './manifestInput';
+import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { readStatsGraph } from './statsGraph';
@@ -81,26 +77,16 @@ interface ManifestFile {
  * {@link readStatsGraph}'s job; everything here works in canonical paths.
  *
  * @param stats The stats file to parse.
- * @param projectRoot The absolute Storybook project root that module paths anchor against.
- * @param outOfGraph Where to find the Storybook inputs that are never bundler inputs; see
- * {@link OutOfGraphInput}.
- * @param statsRoot The absolute directory relative stats paths are named from. Defaults to the
- * project root.
+ * @param input Where the project is and what to read it with; see {@link ManifestInput}.
  *
  * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
  * and Storybook hash.
  */
 export async function buildManifest(
   stats: Stats,
-  projectRoot: string,
-  outOfGraph: OutOfGraphInput,
-  statsRoot = projectRoot
+  input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  const { files, hashes, storyFiles } = await readStatsGraph(stats, {
-    projectRoot,
-    statsRoot,
-    projectFiles: outOfGraph.projectFiles,
-  });
+  const { files, hashes, storyFiles } = await readStatsGraph(stats, input);
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
@@ -119,7 +105,7 @@ export async function buildManifest(
     files,
     hashes,
     storyReachable,
-    normalizeStatsPath(outOfGraph.configDir, projectRoot),
+    normalizeStatsPath(input.configDir, input.projectRoot),
     h64ToString
   );
 
@@ -127,12 +113,12 @@ export async function buildManifest(
   // upgrade there. Track the version instead; it is a plain string, not a hash.
   storybookFileHashes.set(
     STORYBOOK_VERSION_KEY,
-    resolveStorybookVersion(projectRoot, outOfGraph.projectFiles)
+    resolveStorybookVersion(input.projectRoot, input.projectFiles)
   );
 
   // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const outOfGraphFiles = await hashOutOfGraphFiles(outOfGraph, projectRoot);
+  const outOfGraphFiles = await hashOutOfGraphFiles(input);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookFileHashes.set(key, hash);
   }

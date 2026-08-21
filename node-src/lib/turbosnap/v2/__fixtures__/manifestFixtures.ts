@@ -1,6 +1,5 @@
 import { buildManifest } from '../manifest';
-import { OutOfGraphInput } from '../outOfGraphFiles';
-import { ProjectFiles } from '../projectFiles';
+import { ManifestInput } from '../manifestInput';
 import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles.fake';
 
 // Manifest keys anchor at the project root, so a file inside the project keys as `./src/...` and one
@@ -11,18 +10,10 @@ export const projectRoot = '/repo/packages/ui';
 // release cannot move a manifest these suites assert on.
 export const storybookVersion = '9.1.20';
 
-/** The context readStatsGraph takes; the same in-memory disk backs it and the out-of-graph sweep. */
-interface StatsContext {
-  projectRoot: string;
-  statsRoot: string;
-  projectFiles: ProjectFiles;
-}
-
-/** A fresh disk and the adapters that read it, so each test owns its own state and nothing leaks. */
+/** A fresh disk and the input that reads it, so each test owns its own state and nothing leaks. */
 export interface ManifestFixture {
   disk: InMemoryDisk;
-  outOfGraph: OutOfGraphInput;
-  statsContext: StatsContext;
+  input: ManifestInput;
 }
 
 /**
@@ -32,19 +23,18 @@ export interface ManifestFixture {
  *
  * @param overrides The disk to read; the installed Storybook version is seeded unless overridden.
  *
- * @returns The disk and the out-of-graph and stats adapters that read it.
+ * @returns The disk and the manifest input that reads it.
  */
 export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
   const disk: InMemoryDisk = { packageVersions: { storybook: storybookVersion }, ...overrides };
-  const projectFiles = inMemoryProjectFiles(disk);
   return {
     disk,
-    outOfGraph: {
+    input: {
+      projectRoot,
       configDir: `${projectRoot}/.storybook`,
       staticDirs: [`${projectRoot}/.storybook/static`],
-      projectFiles,
+      projectFiles: inMemoryProjectFiles(disk),
     },
-    statsContext: { projectRoot, statsRoot: projectRoot, projectFiles },
   };
 }
 
@@ -83,7 +73,7 @@ export function syntheticAbsent(candidate: string): boolean {
  * @returns The manifest.
  */
 export function manifestWithPreview(previewFile: string) {
-  const { outOfGraph } = createFixture({
+  const { input } = createFixture({
     fileHashes: {
       '/repo/packages/ui/src/Button.stories.tsx': 'S',
       [`/repo/packages/ui/.storybook/${previewFile}`]: 'P',
@@ -104,7 +94,6 @@ export function manifestWithPreview(previewFile: string) {
         },
       ],
     },
-    projectRoot,
-    outOfGraph
+    input
   );
 }

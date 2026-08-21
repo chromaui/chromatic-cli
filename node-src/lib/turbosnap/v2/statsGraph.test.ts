@@ -27,25 +27,25 @@ describe('readStatsGraph concatenated modules', () => {
   };
 
   it('keys the story by its root file, stripping the concatenation suffix', async () => {
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       fileHashes: {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(concatenatedStory, statsContext);
+    const graph = await readStatsGraph(concatenatedStory, input);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
   });
 
   it('records each concatenated sub-file as a dependency of the root file, hashed by its own bytes', async () => {
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       fileHashes: {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(concatenatedStory, statsContext);
+    const graph = await readStatsGraph(concatenatedStory, input);
 
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
       './src/Button.tsx'
@@ -76,7 +76,7 @@ describe('readStatsGraph concatenated modules', () => {
   it('roots a module at its own name when `modules` holds contexts rather than concatenated files', async () => {
     // The glob has no file on disk, which is what would promote the record to a story importer if
     // the root were read from `modules`.
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       isAbsent: (candidate) => candidate.includes('*.js'),
       fileHashes: {
         '/repo/packages/ui/node_modules/storybook/dist/csf/index.js': 'C',
@@ -84,7 +84,7 @@ describe('readStatsGraph concatenated modules', () => {
       },
     });
 
-    const graph = await readStatsGraph(contextsInModules, statsContext);
+    const graph = await readStatsGraph(contextsInModules, input);
 
     // The record keys by its own name, so it stays a real file rather than becoming a story
     // importer, and the module it imports is not a story file.
@@ -100,7 +100,7 @@ describe('readStatsGraph unhashable paths', () => {
     // it throws EISDIR, which would fail the whole manifest to an internalError bail.
     const directory = '/repo/packages/ui/node_modules/@storybook/react/dist/';
 
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       fileHashes: { [story]: 'S' },
       // The record's `modules` entry is a directory on disk; reading it throws EISDIR, so the adapter
       // reports it as not a file and the sweep skips it.
@@ -113,7 +113,7 @@ describe('readStatsGraph unhashable paths', () => {
           { id: 2, name: story, modules: [{ name: directory }], reasons: [] },
         ],
       },
-      statsContext
+      input
     );
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
@@ -127,13 +127,10 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
     const stats = (storyImporter: string): Stats => ({
       modules: [{ id: 1, name: story, reasons: [{ moduleName: storyImporter }] }],
     });
-    const { statsContext } = createFixture({ fileHashes: { [story]: 'S' } });
+    const { input } = createFixture({ fileHashes: { [story]: 'S' } });
 
-    const plain = await readStatsGraph(stats('./storybook-stories.js'), statsContext);
-    const concatenated = await readStatsGraph(
-      stats('./storybook-stories.js + 1 modules'),
-      statsContext
-    );
+    const plain = await readStatsGraph(stats('./storybook-stories.js'), input);
+    const concatenated = await readStatsGraph(stats('./storybook-stories.js + 1 modules'), input);
 
     expect(concatenated).toEqual(plain);
   });
@@ -167,13 +164,13 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
   };
 
   it('recovers the concatenated child file from nameForCondition and hashes its own bytes', async () => {
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       fileHashes: {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(rspackConcatenatedStory, statsContext);
+    const graph = await readStatsGraph(rspackConcatenatedStory, input);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
@@ -191,10 +188,10 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
         { id: 2, name: implementation, reasons: [{ moduleName: story }] },
       ],
     };
-    const { statsContext } = createFixture({ fileHashes: { [story]: 'S', [implementation]: 'B' } });
+    const { input } = createFixture({ fileHashes: { [story]: 'S', [implementation]: 'B' } });
 
-    const full = await readStatsGraph(rspackConcatenatedStory, statsContext);
-    const shimmed = await readStatsGraph(shimmedStats, statsContext);
+    const full = await readStatsGraph(rspackConcatenatedStory, input);
+    const shimmed = await readStatsGraph(shimmedStats, input);
 
     expect(shimmed).toEqual(full);
   });
@@ -202,7 +199,7 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
 
 describe('readStatsGraph missing names', () => {
   it('skips reasons with a null moduleName without dropping the story', async () => {
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       fileHashes: { '/repo/packages/ui/src/Button.stories.tsx': 'S' },
     });
     const stats: Stats = {
@@ -219,13 +216,13 @@ describe('readStatsGraph missing names', () => {
       ],
     };
 
-    const graph = await readStatsGraph(stats, statsContext);
+    const graph = await readStatsGraph(stats, input);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
   });
 
   it('uses module.modules when module.name is absent', async () => {
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       fileHashes: {
         '/repo/packages/ui/src/Button.stories.tsx': 'S',
         '/repo/packages/ui/src/Button.tsx': 'B',
@@ -245,7 +242,7 @@ describe('readStatsGraph missing names', () => {
       ],
     };
 
-    const graph = await readStatsGraph(stats, statsContext);
+    const graph = await readStatsGraph(stats, input);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
@@ -259,7 +256,7 @@ describe('readStatsGraph unhashable files', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const missing = '/repo/packages/ui/src/missing.ts';
 
-    const { statsContext } = createFixture({
+    const { input } = createFixture({
       isAbsent: (candidate) => candidate === missing,
       // The missing file has a content hash on the fixture disk, so this pins that absence wins
       // over the bytes: a name with no file contributes nothing, whatever it would have hashed to.
@@ -272,7 +269,7 @@ describe('readStatsGraph unhashable files', () => {
           { id: 2, name: missing, reasons: [{ moduleName: story }] },
         ],
       },
-      statsContext
+      input
     );
 
     expect(graph.hashes.has('./src/missing.ts')).toBe(false);
@@ -283,14 +280,14 @@ describe('readStatsGraph unhashable files', () => {
 describe('readStatsGraph hashing failures', () => {
   it('treats a file omitted from the hash result as not real', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
-    const { statsContext } = createFixture();
+    const { input } = createFixture();
 
     const graph = await readStatsGraph(
       { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
       {
-        ...statsContext,
+        ...input,
         projectFiles: {
-          ...statsContext.projectFiles,
+          ...input.projectFiles,
           hashAll: async () => ({}),
         },
       }
@@ -304,7 +301,7 @@ describe('readStatsGraph hashing failures', () => {
   it('fails the read rather than returning a graph missing a file it could not read', async () => {
     // Unreadability is a bug, not an answer: a manifest built without those bytes would silently
     // under-capture, so this propagates to the entry point and bails TurboSnap to v1.
-    const { statsContext } = createFixture();
+    const { input } = createFixture();
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const unreadable = new Error(`Could not hash ${story}: EACCES: permission denied`);
 
@@ -313,9 +310,9 @@ describe('readStatsGraph hashing failures', () => {
       await readStatsGraph(
         { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
         {
-          ...statsContext,
+          ...input,
           projectFiles: {
-            ...statsContext.projectFiles,
+            ...input.projectFiles,
             hashAll: () => Promise.reject(unreadable),
           },
         }

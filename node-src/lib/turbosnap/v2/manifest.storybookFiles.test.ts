@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture, projectRoot } from './__fixtures__/manifestFixtures';
+import { createFixture } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
 describe('buildManifest storybookFiles', () => {
@@ -47,28 +47,28 @@ describe('buildManifest storybookFiles', () => {
   };
 
   it('keys the preview subtree under the `preview` category', async () => {
-    const { outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
+    const { input } = createFixture({ fileHashes: { ...baseHashes } });
 
-    const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const manifest = await buildManifest(makeStats(), input);
 
     expect([...manifest.storybookFileHashes.keys()]).toContain(previewKey);
   });
 
   it('rolls orphan globals into a single catch-all entry', async () => {
-    const { outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
+    const { input } = createFixture({ fileHashes: { ...baseHashes } });
 
-    const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const manifest = await buildManifest(makeStats(), input);
 
     expect([...manifest.storybookFileHashes.keys()]).toContain(globalsKey);
   });
 
   it('changes the catch-all entry when an orphan global content changes', async () => {
-    const { disk, outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
-    const before = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const before = await buildManifest(makeStats(), input);
 
     // reactDom is reached only via the framework's preview annotations, so it lands in the bucket.
     disk.fileHashes = { ...baseHashes, [reactDom]: 'RD2' };
-    const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const after = await buildManifest(makeStats(), input);
 
     expect(after.storybookFileHashes.get(globalsKey)).not.toBe(
       before.storybookFileHashes.get(globalsKey)
@@ -76,11 +76,11 @@ describe('buildManifest storybookFiles', () => {
   });
 
   it('changes the storybook hash when the preview config changes, leaving story hashes pure', async () => {
-    const { disk, outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
-    const before = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const before = await buildManifest(makeStats(), input);
 
     disk.fileHashes = { ...baseHashes, [preview]: 'P2' };
-    const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const after = await buildManifest(makeStats(), input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
     // Pure per-story hashes: a config change must not perturb any individual story's hash. The
@@ -89,23 +89,23 @@ describe('buildManifest storybookFiles', () => {
   });
 
   it('changes the storybook hash when an orphan global changes', async () => {
-    const { disk, outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
-    const before = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const before = await buildManifest(makeStats(), input);
 
     disk.fileHashes = { ...baseHashes, [entryPreview]: 'EP2' };
-    const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const after = await buildManifest(makeStats(), input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
     expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
   });
 
   it('keeps a story dependency out of the catch-all, scoping the change to that story', async () => {
-    const { disk, outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
-    const before = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const before = await buildManifest(makeStats(), input);
 
     // moment lives only in Button's subtree, so it is story-reachable and must not be bucketed.
     disk.fileHashes = { ...baseHashes, [moment]: 'M2' };
-    const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const after = await buildManifest(makeStats(), input);
 
     expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
       before.storyFileHashes.get('./src/Button.stories.tsx')
@@ -119,13 +119,13 @@ describe('buildManifest storybookFiles', () => {
   });
 
   it('attributes a preview-subtree change to the preview entry, not the catch-all', async () => {
-    const { disk, outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
-    const before = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const before = await buildManifest(makeStats(), input);
 
     // theme.ts is reached only through preview.ts, so it belongs to the keyed preview entry. Landing
     // in both would double-count it and destroy the backend's attribution.
     disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
-    const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const after = await buildManifest(makeStats(), input);
 
     expect(after.storybookFileHashes.get(previewKey)).not.toBe(
       before.storybookFileHashes.get(previewKey)
@@ -137,15 +137,14 @@ describe('buildManifest storybookFiles', () => {
 
   it('omits the preview entry when the graph has no preview config', async () => {
     // Real case: a Storybook project with no `.storybook/preview.*` in its graph at all.
-    const { outOfGraph } = createFixture({ fileHashes: { [buttonStory]: 'S1' } });
+    const { input } = createFixture({ fileHashes: { [buttonStory]: 'S1' } });
     const manifest = await buildManifest(
       {
         modules: [
           { id: 1, name: buttonStory, reasons: [{ moduleName: './storybook-stories.js' }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     expect([...manifest.storybookFileHashes.keys()]).not.toContain(previewKey);
@@ -154,7 +153,7 @@ describe('buildManifest storybookFiles', () => {
   it('omits the catch-all entry when every global is synthetic', async () => {
     // The stories entry is the only non-story node here, and it has no file on disk, so there is
     // nothing real to bucket and no empty entry should appear.
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       isAbsent: (candidate) => candidate.includes('storybook-stories.js'),
       fileHashes: { [buttonStory]: 'S1' },
     });
@@ -164,8 +163,7 @@ describe('buildManifest storybookFiles', () => {
           { id: 1, name: buttonStory, reasons: [{ moduleName: './storybook-stories.js' }] },
         ],
       },
-      projectRoot,
-      outOfGraph
+      input
     );
 
     // The version entry is unconditional, so it is the only key left once the catch-all is gone.
@@ -173,7 +171,7 @@ describe('buildManifest storybookFiles', () => {
   });
 
   it('records the installed Storybook version as its own entry, verbatim rather than hashed', async () => {
-    const { outOfGraph } = createFixture({
+    const { input } = createFixture({
       // The value is deliberately legible: the preview core runtime is served outside the module graph
       // on webpack and rspack, so a version is the only signal of a Storybook upgrade there, and
       // keeping it readable means the manifest itself says which Storybook produced the build.
@@ -181,7 +179,7 @@ describe('buildManifest storybookFiles', () => {
       fileHashes: { ...baseHashes },
     });
 
-    const manifest = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const manifest = await buildManifest(makeStats(), input);
 
     expect(manifest.storybookFileHashes.get('storybookVersion')).toBe('10.6.0-alpha.3');
   });
@@ -189,15 +187,15 @@ describe('buildManifest storybookFiles', () => {
   it('changes the storybookHash when only the Storybook version changes', async () => {
     // A Storybook upgrade that touches no graph file must still force a recapture, which is the
     // whole point of the entry: on webpack and rspack no file hash can see it.
-    const { disk, outOfGraph } = createFixture({
+    const { disk, input } = createFixture({
       fileHashes: { ...baseHashes },
       packageVersions: { storybook: '9.1.19' },
     });
-    const before = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const before = await buildManifest(makeStats(), input);
 
     disk.fileHashes = { ...baseHashes };
     disk.packageVersions = { storybook: '9.1.20' };
-    const after = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const after = await buildManifest(makeStats(), input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
     // Only the Storybook-wide gate moves; no individual story subtree changed.
@@ -205,10 +203,10 @@ describe('buildManifest storybookFiles', () => {
   });
 
   it('produces identical storybookFiles and storybook hash when building the same stats twice', async () => {
-    const { disk, outOfGraph } = createFixture({ fileHashes: { ...baseHashes } });
-    const first = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const first = await buildManifest(makeStats(), input);
     disk.fileHashes = { ...baseHashes };
-    const second = await buildManifest(makeStats(), projectRoot, outOfGraph);
+    const second = await buildManifest(makeStats(), input);
 
     expect([...second.storybookFileHashes]).toEqual([...first.storybookFileHashes]);
     expect(second.storybookHash).toBe(first.storybookHash);
@@ -235,19 +233,19 @@ describe('buildManifest out-of-graph inputs', () => {
   }
 
   it('emits a synthetic entry per out-of-graph section', async () => {
-    const { outOfGraph } = fixtureWithAssets();
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const { input } = fixtureWithAssets();
+    const manifest = await buildManifest(stats, input);
 
     expect([...manifest.storybookFileHashes.keys()]).toContain('storybookConfigFiles');
     expect([...manifest.storybookFileHashes.keys()]).toContain('staticFiles');
   });
 
   it('moves the storybook hash when main.ts changes, leaving story hashes untouched', async () => {
-    const { disk, outOfGraph } = fixtureWithAssets();
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const { disk, input } = fixtureWithAssets();
+    const before = await buildManifest(stats, input);
 
     disk.fileHashes = { ...disk.fileHashes, [mainConfig]: 'M2' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     // This is the v1-parity regression the mechanism exists to close: v1 bails on any configDir
     // edit, while v2 previously produced a byte-identical manifest.
@@ -256,18 +254,18 @@ describe('buildManifest out-of-graph inputs', () => {
   });
 
   it('moves the storybook hash when a static asset changes', async () => {
-    const { disk, outOfGraph } = fixtureWithAssets();
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const { disk, input } = fixtureWithAssets();
+    const before = await buildManifest(stats, input);
 
     disk.fileHashes = { ...disk.fileHashes, [staticAsset]: 'A2' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
   it('moves the storybook hash when a static asset is renamed without changing its bytes', async () => {
-    const { disk, outOfGraph } = fixtureWithAssets();
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const { disk, input } = fixtureWithAssets();
+    const before = await buildManifest(stats, input);
 
     // Static assets are served by URL, so the same bytes at a new path render differently. A
     // content-only roll-up left both `staticFiles` and the storybook hash byte-identical here.
@@ -277,13 +275,13 @@ describe('buildManifest out-of-graph inputs', () => {
     };
     const renamed = '/repo/packages/ui/.storybook/static/sw.js';
     disk.fileHashes = { [story]: 'S', [mainConfig]: 'M', [renamed]: 'A' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
   it('moves the storybook hash when two static assets swap contents', async () => {
-    const { disk, outOfGraph } = fixtureWithAssets();
+    const { disk, input } = fixtureWithAssets();
     disk.directories = {
       '/repo/packages/ui/.storybook': ['main.ts', 'static'],
       '/repo/packages/ui/.storybook/static': ['a.png', 'b.png'],
@@ -293,18 +291,18 @@ describe('buildManifest out-of-graph inputs', () => {
       '/repo/packages/ui/.storybook/static/b.png',
     ];
     disk.fileHashes = { [story]: 'S', [mainConfig]: 'M', [a]: 'A', [b]: 'B' };
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const before = await buildManifest(stats, input);
 
     // The multiset of contents is unchanged, so only path-sensitive hashing sees this.
     disk.fileHashes = { [story]: 'S', [mainConfig]: 'M', [a]: 'B', [b]: 'A' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
   it('keeps out-of-graph files out of files and attribution, so they miss the globals catch-all', async () => {
-    const { outOfGraph } = fixtureWithAssets();
-    const manifest = await buildManifest(stats, projectRoot, outOfGraph);
+    const { input } = fixtureWithAssets();
+    const manifest = await buildManifest(stats, input);
 
     // The catch-all is defined by absence from storyReachable/previewSubtree, which these satisfy by
     // construction — entering `files` would double-hash them into `storybookGlobals`.
@@ -316,8 +314,8 @@ describe('buildManifest out-of-graph inputs', () => {
   });
 
   it('serializes the per-file detail sections for the debug view', async () => {
-    const { outOfGraph } = fixtureWithAssets();
-    const serialized = serializeManifest(await buildManifest(stats, projectRoot, outOfGraph));
+    const { input } = fixtureWithAssets();
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     expect(serialized.storybookConfigFiles).toEqual({ './.storybook/main.ts': 'M' });
     expect(serialized.staticFiles).toEqual({
@@ -328,17 +326,17 @@ describe('buildManifest out-of-graph inputs', () => {
   });
 
   it('covers a preview.* the builder elided, which has no graph-rolled entry at all', async () => {
-    const { disk, outOfGraph } = fixtureWithAssets();
+    const { disk, input } = fixtureWithAssets();
     // marketing-ui's preview.ts is 0 lines, so vite emits no module for it: v2 had no entry and
     // missed where v1 bails. Hashing the config dir off disk closes that unconditionally.
     disk.directories = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] };
     const preview = '/repo/packages/ui/.storybook/preview.ts';
     disk.fileHashes = { [story]: 'S', [mainConfig]: 'M', [preview]: 'P1' };
-    const before = await buildManifest(stats, projectRoot, outOfGraph);
+    const before = await buildManifest(stats, input);
     expect(before.storybookFileHashes.has('preview')).toBe(false);
 
     disk.fileHashes = { ...disk.fileHashes, [preview]: 'P2' };
-    const after = await buildManifest(stats, projectRoot, outOfGraph);
+    const after = await buildManifest(stats, input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });

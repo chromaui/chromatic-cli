@@ -13,6 +13,7 @@ const h64ToString = (value: string) => `h(${value})`;
 // mutates its disk between two sweeps reuses the same input.
 function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): OutOfGraphInput {
   return {
+    projectRoot,
     configDir: `${projectRoot}/.storybook`,
     staticDirs: [`${projectRoot}/.storybook/static`],
     projectFiles: inMemoryProjectFiles(disk),
@@ -20,8 +21,8 @@ function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): Ou
   };
 }
 
-async function rollUp(input: OutOfGraphInput, theProjectRoot = projectRoot) {
-  return rollUpOutOfGraphFiles(await hashOutOfGraphFiles(input, theProjectRoot), h64ToString);
+async function rollUp(input: OutOfGraphInput) {
+  return rollUpOutOfGraphFiles(await hashOutOfGraphFiles(input), h64ToString);
 }
 
 describe('hashOutOfGraphFiles', () => {
@@ -33,7 +34,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk), projectRoot);
+    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
 
     expect([...storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
@@ -47,7 +48,7 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk), projectRoot);
+    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
 
     // The graph-rolled `.storybook/preview.ts` entry covers its *imports*; this covers its bytes,
     // which is what closes the empty-preview.ts case where the builder elides the module entirely.
@@ -62,10 +63,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(
-      makeInput(disk),
-      projectRoot
-    );
+    const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
 
     // Static wins over the config dir, mirroring v1 testing isStaticFile before isStorybookFile.
     expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
@@ -77,10 +75,7 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(
-      makeInput(disk, { staticDirs: [] }),
-      projectRoot
-    );
+    const { staticFiles } = await hashOutOfGraphFiles(makeInput(disk, { staticDirs: [] }));
 
     expect(staticFiles.size).toBe(0);
   });
@@ -95,8 +90,7 @@ describe('hashOutOfGraphFiles', () => {
     };
 
     const { staticFiles } = await hashOutOfGraphFiles(
-      makeInput(disk, { staticDirs: [`${projectRoot}/public`, `${projectRoot}/assets`] }),
-      projectRoot
+      makeInput(disk, { staticDirs: [`${projectRoot}/public`, `${projectRoot}/assets`] })
     );
 
     expect([...staticFiles.keys()]).toEqual(['./assets/font.woff2', './public/logo.svg']);
@@ -245,10 +239,10 @@ describe('rollUpOutOfGraphFiles', () => {
     };
     const after = await rollUp(
       makeInput(disk, {
+        projectRoot: movedRoot,
         configDir: `${movedRoot}/.storybook`,
         staticDirs: [`${movedRoot}/.storybook/static`],
-      }),
-      movedRoot
+      })
     );
 
     expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
