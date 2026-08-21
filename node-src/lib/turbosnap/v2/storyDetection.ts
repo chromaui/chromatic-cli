@@ -1,6 +1,6 @@
-import { AbsolutePath, Stats } from '../../../types';
+import { Stats } from '../../../types';
 import { FilePath } from './graph';
-import { normalizeStatsPath, rootFilePath } from './paths';
+import { canonicalImporters, normalizeStatsPath, rootFilePath, StatsRoots } from './paths';
 
 /**
  * Whether a canonical path has a real file on disk. You can use things that adhere to this
@@ -14,11 +14,7 @@ export interface OnDiskFiles {
  * What story detection needs to resolve stats paths and tell real files apart from the
  * require-context glob.
  */
-interface StoryDetectionContext {
-  // The absolute Storybook project root that module paths anchor against.
-  projectRoot: AbsolutePath;
-  // The directory relative stats paths are named from.
-  statsRoot: AbsolutePath;
+interface StoryDetectionContext extends StatsRoots {
   // Which canonical paths have a real file on disk.
   onDiskFiles: OnDiskFiles;
 }
@@ -123,7 +119,7 @@ interface ProcessedModule {
  * @returns The processed modules.
  */
 function processModules(context: StoryDetectionContext, stats: Stats): ProcessedModule[] {
-  const { projectRoot, statsRoot, onDiskFiles } = context;
+  const { onDiskFiles } = context;
   const processed: ProcessedModule[] = [];
 
   for (const module of stats.modules) {
@@ -132,16 +128,12 @@ function processModules(context: StoryDetectionContext, stats: Stats): Processed
       continue;
     }
 
-    const filePath = rootFilePath(module, projectRoot, statsRoot);
+    const filePath = rootFilePath(module, context);
     if (!filePath) {
       continue;
     }
 
-    // Entry reasons carry a null moduleName, so drop those before canonicalising.
-    const importers = (module.reasons ?? [])
-      .map((reason) => reason.moduleName)
-      .filter((name): name is FilePath => typeof name === 'string')
-      .map((name) => normalizeStatsPath(name, projectRoot, statsRoot));
+    const importers = canonicalImporters(module, context);
 
     processed.push({
       rawName: module.name,

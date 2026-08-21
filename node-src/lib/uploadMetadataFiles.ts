@@ -7,7 +7,11 @@ import { main as trimStatsFile } from '../../bin-src/trimStatsFile';
 import { Context, FileDesc } from '../types';
 import metadataHtml from '../ui/html/metadata.html';
 import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
-import { findStorybookConfigFile, MAIN_CONFIG_PATTERN } from './getStorybookMetadata';
+import {
+  findStorybookConfigFile,
+  MAIN_CONFIG_PATTERN,
+  PREVIEW_CONFIG_PATTERN,
+} from './getStorybookMetadata';
 import { uploadMetadata } from './upload';
 
 const fileSize = (path: string): Promise<number> =>
@@ -35,7 +39,7 @@ export async function uploadMetadataFiles(ctx: Context) {
         await findStorybookConfigFile(ctx.options.storybookConfigDir, MAIN_CONFIG_PATTERN).catch(
           () => undefined
         ),
-        await findStorybookConfigFile(ctx.options.storybookConfigDir, /^preview\.[jt]sx?$/).catch(
+        await findStorybookConfigFile(ctx.options.storybookConfigDir, PREVIEW_CONFIG_PATTERN).catch(
           () => undefined
         ),
         ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),

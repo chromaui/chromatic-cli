@@ -1,0 +1,124 @@
+import path from 'path';
+
+import { PREVIEW_CONFIG_PATTERN } from '../../getStorybookMetadata';
+import {
+  collectTransitiveDependencies,
+  FileHash,
+  FilePath,
+  rollUpFileHashes,
+  TurboSnapFile,
+} from './graph';
+import {
+  STORYBOOK_GLOBALS_KEY,
+  STORYBOOK_PREVIEW_KEY,
+  StorybookFileKey,
+} from './storybookFileKeys';
+
+/**
+ * Whether a canonical manifest path is the project's `<configDir>/preview.*` config file. Canonical
+ * in-project keys start `./`, so a preview under node_modules (keyed elsewhere) is not mistaken for
+ * the project's. Path matching is the only consistent way to find it: the config-entry import edge is
+ * spelled three incompatible ways across builders (vite has no such edge at all, leaving preview a
+ * detached root). `configDir` is a project setting, not always `.storybook`.
+ *
+ * @param filePath The canonical manifest path to test.
+ * @param configDirectory The canonical manifest path of the project's Storybook config directory.
+ *
+ * @returns Whether the path is the project's preview config file.
+ */
+function isPreviewConfig(filePath: FilePath, configDirectory: FilePath): boolean {
+  const { dir, base } = path.posix.parse(filePath);
+  return dir === configDirectory && PREVIEW_CONFIG_PATTERN.test(base);
+}
+
+/**
+ * Which of the three hashing homes each real file landed in, recorded by the same pass that builds
+ * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
+ * over that graph cannot reconstruct these sets — it reports attributed files as orphans.
+ *
+ * The sets are closed over `hashes`: every hashed file lands in a home, and `storybookGlobals` holds
+ * exactly the ones in neither of the others. A file can be both story-reachable and in a preview
+ * subtree, so the two named homes are not mutually exclusive.
+ */
+export interface FileAttribution {
+  /** Files in neither of the above, rolled into the {@link STORYBOOK_GLOBALS_KEY} catch-all. */
+  storybookGlobals: Set<FilePath>;
+  /** Files in a `.storybook/preview.*` subtree, hashed into the shared `preview` `storybookFileHashes` entry. */
+  previewSubtree: Set<FilePath>;
+  /** Files in some story's transitive subtree, hashed into that story's `storyFiles` entry. */
+  storyReachable: Set<FilePath>;
+}
+
+/**
+ * Builds the file-hash entries of the `storybookFileHashes` section: a rolled-up hash for each Storybook
+ * config file that no story imports. Every hashable file lands in exactly one hashing home — a
+ * story's own subtree, the shared {@link STORYBOOK_PREVIEW_KEY} entry, or the {@link STORYBOOK_GLOBALS_KEY}
+ * catch-all — so nothing goes unhashed and the backend can still attribute a change to the preview
+ * config or to a Storybook/framework global.
+ *
+ * @param files The map of files to their hashes and dependencies.
+ * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
+ * @param storyReachable The union of every story's transitive subtree. The caller unions these as it
+ * hashes each story, so the story graph is walked once rather than here again. Synthetic nodes are
+ * filtered out of the attribution below.
+ * @param configDirectory The canonical manifest path of the project's Storybook config directory
+ * (e.g. `./.storybook`).
+ * @param h64ToString The hash function.
+ *
+ * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
+ * which of the three hashing homes each real file landed in.
+ */
+export function collectStorybookFiles(
+  files: Map<FilePath, TurboSnapFile>,
+  hashes: Map<FilePath, FileHash>,
+  storyReachable: Set<FilePath>,
+  configDirectory: FilePath,
+  h64ToString: (input: string) => string
+): { storybookFileHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
+  // Every preview config subtree, unioned into one `preview` roll-up rather than one entry per path,
+  // so the map stays a homogeneous set of category roll-ups (preview, globals, config, static). The
+  // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview
+  // leak to keep apart.
+  const storybookFileHashes = new Map<StorybookFileKey, FileHash>();
+  const previewSubtree = new Set<FilePath>();
+  let hasPreview = false;
+  for (const filePath of files.keys()) {
+    if (!hashes.has(filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
+    hasPreview = true;
+    collectTransitiveDependencies(files, filePath, previewSubtree);
+  }
+  if (hasPreview) {
+    storybookFileHashes.set(
+      STORYBOOK_PREVIEW_KEY,
+      rollUpFileHashes(hashes, previewSubtree, h64ToString)
+    );
+  }
+
+  // Everything else real goes in one catch-all bucket. Membership is defined by *absence* from the
+  // story graph and the preview subtree rather than by an import edge, because those edges are
+  // unreliable — vite has no config-to-preview edge and rspack drops importer edges. Framework
+  // preview annotations and the React runtime land here, and they affect rendering, so leaving them
+  // unhashed would be a real blind spot.
+  // Derived from `hashes`, not from `files`: a file inside a concatenated module is hashed but only
+  // recorded as a dependency of the concatenation root, so filtering `files` would hash it nowhere.
+  const orphanGlobals = [...hashes.keys()].filter(
+    (filePath) => !storyReachable.has(filePath) && !previewSubtree.has(filePath)
+  );
+  if (orphanGlobals.length > 0) {
+    storybookFileHashes.set(
+      STORYBOOK_GLOBALS_KEY,
+      rollUpFileHashes(hashes, orphanGlobals, h64ToString)
+    );
+  }
+
+  // Report only real files, matching how the catch-all is defined, so the three sets cover exactly
+  // the hashed files. The walks pass through synthetic nodes (globs, externals, virtual modules),
+  // which have no hash. A file can be both story-reachable and in a preview subtree.
+  const attribution: FileAttribution = {
+    storyReachable: new Set([...storyReachable].filter((filePath) => hashes.has(filePath))),
+    previewSubtree: new Set([...previewSubtree].filter((filePath) => hashes.has(filePath))),
+    storybookGlobals: new Set(orphanGlobals),
+  };
+
+  return { storybookFileHashes, attribution };
+}

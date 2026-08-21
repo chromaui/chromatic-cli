@@ -1,4 +1,12 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -111,6 +119,24 @@ describe('realProjectFiles listTree', () => {
       path.join(root, 'static/vendor/a.png'),
       path.join(root, 'static/vendor/b.png'),
     ]);
+  });
+
+  it('lists the same target through every symlink alias and reflects alias removal', async () => {
+    const root = temporaryDirectory();
+    write(root, 'vendor/assets/logo.svg');
+    mkdirSync(path.join(root, 'static'));
+    symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/brand'));
+    symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/legacy'));
+
+    const before = realProjectFiles().listTree(path.join(root, 'static'));
+    rmSync(path.join(root, 'static/legacy'));
+    const after = realProjectFiles().listTree(path.join(root, 'static'));
+
+    expect(before.sort()).toEqual([
+      path.join(root, 'static/brand/logo.svg'),
+      path.join(root, 'static/legacy/logo.svg'),
+    ]);
+    expect(after).toEqual([path.join(root, 'static/brand/logo.svg')]);
   });
 
   it('contributes nothing for a broken symlink, finishing the rest of the sweep', async () => {
@@ -232,6 +258,26 @@ describe('realProjectFiles hashAll', () => {
     }
 
     expect(err?.message).toContain(unreadable);
+  });
+});
+
+describe('realProjectFiles writeFile', () => {
+  it('writes the contents to the path, readable back as the same bytes', () => {
+    const root = temporaryDirectory();
+    const filePath = path.join(root, 'turbosnap-manifest.json');
+
+    realProjectFiles().writeFile(filePath, '{"storybookHash":"abc"}');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
+  });
+
+  it('overwrites an existing file rather than appending', () => {
+    const root = temporaryDirectory();
+    const filePath = write(root, 'turbosnap-manifest.json', 'stale');
+
+    realProjectFiles().writeFile(filePath, 'fresh');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('fresh');
   });
 });
 

@@ -20,6 +20,8 @@ export interface InMemoryDisk {
    * having to list every source file its stats fixture names.
    */
   isAbsent?: (absolutePath: AbsolutePath) => boolean;
+  /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
+  writtenFiles?: Record<AbsolutePath, string>;
 }
 
 /**
@@ -72,5 +74,9 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       );
     },
     listTree,
+    writeFile: (absolutePath: AbsolutePath, contents: string) => {
+      disk.writtenFiles ??= {};
+      disk.writtenFiles[absolutePath] = contents;
+    },
   };
 }
