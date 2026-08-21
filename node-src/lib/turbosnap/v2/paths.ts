@@ -88,6 +88,23 @@ export function rootFilePath(module: Module, roots: StatsRoots): FilePath | unde
   return canonicalFileNames(module, roots)[0];
 }
 
+// A `node_modules` segment anywhere in a path. Matched segment-wise rather than by substring so a
+// file merely named `node_modules` is not mistaken for one inside the directory. Tolerant of both
+// separators and of the segment being terminal, so it reads raw stats names (Windows backslashes)
+// and canonical keys alike.
+const NODE_MODULES_SEGMENT = /(?:^|[\\/])node_modules(?:[\\/]|$)/;
+
+/**
+ * Whether a path passes through a `node_modules` directory.
+ *
+ * @param filePath The path to test, raw or canonical.
+ *
+ * @returns Whether the path contains a `node_modules` segment.
+ */
+export function isNodeModulesPath(filePath: string): boolean {
+  return NODE_MODULES_SEGMENT.test(filePath);
+}
+
 /**
  * Strips a trailing ` + N modules` suffix from a concatenated module's name, leaving the root file.
  *

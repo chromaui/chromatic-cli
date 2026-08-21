@@ -65,7 +65,7 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
 }
 
 /**
- * Rolls each out-of-graph section up into the single `storybookFileHashes` entry the Index compares.
+ * Rolls each out-of-graph section up into the single `storybookConfigHashes` entry the Index compares.
  *
  * The two sections are deliberately independent of each other and of `.storybook/preview.*`'s
  * graph-rolled entry: bytes-changed and imports-changed are different failure modes, so `preview.*` is
@@ -84,7 +84,7 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
  * @param outOfGraphFiles The per-file hashes to roll up.
  * @param h64ToString The hash function.
  *
- * @returns The synthetic `storybookFileHashes` entries, keyed by {@link STORYBOOK_CONFIG_KEY} and
+ * @returns The synthetic `storybookConfigHashes` entries, keyed by {@link STORYBOOK_CONFIG_KEY} and
  * {@link STATIC_FILES_KEY}.
  */
 export function rollUpOutOfGraphFiles(

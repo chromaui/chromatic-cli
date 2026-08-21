@@ -118,10 +118,10 @@ describe('manifest golden hashes', () => {
     expect(Object.fromEntries(manifest.storyFileHashes)).toEqual(GOLDEN_STORY_FILES);
   });
 
-  it('publishes the same storybookFileHashes for the frozen fixture', async () => {
+  it('publishes the same storybookConfigHashes for the frozen fixture', async () => {
     const { input } = goldenFixture();
     const manifest = await buildManifest(GOLDEN_STATS, input);
 
-    expect(Object.fromEntries(manifest.storybookFileHashes)).toEqual(GOLDEN_STORYBOOK_FILES);
+    expect(Object.fromEntries(manifest.storybookConfigHashes)).toEqual(GOLDEN_STORYBOOK_FILES);
   });
 });

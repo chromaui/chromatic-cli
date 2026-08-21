@@ -126,8 +126,8 @@ describe('buildManifest relocation stability', () => {
 
     // The `preview` roll-up folds in each file's path as well as its bytes, so renaming preview.ts to
     // preview.tsx moves the rolled-up value even though its key stays `preview`...
-    expect(after.storybookFileHashes.get('preview')).not.toBe(
-      before.storybookFileHashes.get('preview')
+    expect(after.storybookConfigHashes.get('preview')).not.toBe(
+      before.storybookConfigHashes.get('preview')
     );
     // ...and that value feeds the gate, so the rename shows up in the storybook hash too.
     expect(after.storybookHash).not.toBe(before.storybookHash);
