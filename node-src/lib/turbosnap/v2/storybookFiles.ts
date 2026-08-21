@@ -58,7 +58,9 @@ export interface FileAttribution {
  *
  * @param files The map of files to their hashes and dependencies.
  * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
- * @param storyFileNames The detected story files.
+ * @param storyReachable The union of every story's transitive subtree. The caller unions these as it
+ * hashes each story, so the story graph is walked once rather than here again. Synthetic nodes are
+ * filtered out of the attribution below.
  * @param configDirectory The canonical manifest path of the project's Storybook config directory
  * (e.g. `./.storybook`).
  * @param h64ToString The hash function.
@@ -69,16 +71,10 @@ export interface FileAttribution {
 export function collectStorybookFiles(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
-  storyFileNames: Set<FilePath>,
+  storyReachable: Set<FilePath>,
   configDirectory: FilePath,
   h64ToString: (input: string) => string
 ): { storybookFileHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
-  // The union of every story's subtree, used to tell Storybook globals apart from story code.
-  const storyReachable = new Set<FilePath>();
-  for (const storyFile of storyFileNames) {
-    collectTransitiveDependencies(files, storyFile, storyReachable);
-  }
-
   // Every preview config subtree, unioned into one `preview` roll-up rather than one entry per path,
   // so the map stays a homogeneous set of category roll-ups (preview, globals, config, static). The
   // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview

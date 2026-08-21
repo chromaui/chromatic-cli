@@ -134,7 +134,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       hashes,
-      new Set(['./src/Button.stories.tsx', './src/Badge.stories.tsx']),
+      new Set(['./src/Button.stories.tsx', './src/Badge.stories.tsx', shared]),
       './config',
       identity
     );
@@ -192,7 +192,7 @@ describe('collectStorybookFiles', () => {
     const { storybookFileHashes } = collectStorybookFiles(
       files,
       makeHashes(['./src/a.stories.tsx', './src/button.tsx']),
-      new Set(['./src/a.stories.tsx']),
+      new Set(['./src/a.stories.tsx', './src/button.tsx']),
       DEFAULT_CONFIG_DIR,
       identity
     );
@@ -227,7 +227,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       hashes,
-      new Set(['./src/a.stories.tsx']),
+      new Set(['./src/a.stories.tsx', './src/button.tsx']),
       DEFAULT_CONFIG_DIR,
       identity
     );
@@ -252,7 +252,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      new Set(['./src/a.stories.tsx']),
+      new Set(['./src/a.stories.tsx', shared]),
       DEFAULT_CONFIG_DIR,
       identity
     );
@@ -274,7 +274,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/a.stories.tsx', './.storybook/preview.ts']),
-      new Set(['./src/a.stories.tsx']),
+      new Set(['./src/a.stories.tsx', 'virtual:stories']),
       DEFAULT_CONFIG_DIR,
       identity
     );
