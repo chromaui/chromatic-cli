@@ -126,7 +126,7 @@ function listFilesRecursively(
   try {
     realDirectory = realpathSync(directory);
   } catch (error) {
-    log.warn(`Failed to resolve ${directory} when listing files`, error);
+    log.debug(`Failed to resolve ${directory} when listing files`, error);
     return [];
   }
 
@@ -140,7 +140,7 @@ function listFilesRecursively(
     try {
       entries = readdirSync(directory, { withFileTypes: true });
     } catch (error) {
-      log.warn(`Failed to read directory ${directory} when listing files`, error);
+      log.debug(`Failed to read directory ${directory} when listing files`, error);
       return [];
     }
 
@@ -162,7 +162,7 @@ function listFilesRecursively(
         }
         return stats.isFile() ? [entryPath] : [];
       } catch (error) {
-        log.warn(`Failed to stat ${entryPath} when listing files`, error);
+        log.debug(`Failed to stat ${entryPath} when listing files`, error);
         return [];
       }
     });

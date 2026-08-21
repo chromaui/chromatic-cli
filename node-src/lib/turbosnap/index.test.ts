@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
+import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -39,6 +40,7 @@ const v1Result = {
 
 function makeContext() {
   return {
+    log: new TestLogger(),
     turboSnap: {},
     options: {},
     git: { changedFiles: ['./src/Button.tsx'] },
@@ -119,6 +121,7 @@ describe('traceChangedFiles', () => {
     expect(readStatsFile).toHaveBeenCalledOnce();
     expect(readStatsFile).toHaveBeenCalledWith(ctx.fileInfo.statsPath);
     expect(traceChangedFilesV2).toHaveBeenCalledWith({
+      log: ctx.log,
       graphqlClient: ctx.client,
       buildId: 'head-build',
       stats,
