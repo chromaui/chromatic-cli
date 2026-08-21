@@ -109,6 +109,14 @@ export async function buildManifest(
     normalizeStatsPath(input.configDir, input.projectRoot),
     h64ToString
   );
+  if (attribution.previewSubtree.size > 0) {
+    input.log.debug(`Found preview config subtree with ${attribution.previewSubtree.size} files`);
+  }
+  if (attribution.storybookGlobals.size > 0) {
+    input.log.debug(
+      `Found ${attribution.storybookGlobals.size} global files not linked to a story`
+    );
+  }
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
   // upgrade there. Track the version instead; it is a plain string, not a hash.
@@ -123,11 +131,13 @@ export async function buildManifest(
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
+  if (input.staticDirs.length > 0) {
+    input.log.debug(
+      `Hashed ${outOfGraphFiles.staticFiles.size} static files in static directories: ${input.staticDirs.join(', ')}`
+    );
+  }
   input.log.debug(
-    `Hashed ${outOfGraphFiles.staticFiles.size} static files in ${input.staticDirs.join(', ')}`
-  );
-  input.log.debug(
-    `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+    `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in config directory: ${input.configDir}`
   );
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story

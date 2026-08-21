@@ -46,7 +46,7 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
 export async function traceChangedFiles(
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesV2Result> {
-  let manifest;
+  let manifest: TurboSnapManifest;
   try {
     manifest = await buildManifest(input.stats, {
       log: input.log,
@@ -56,62 +56,49 @@ export async function traceChangedFiles(
       projectFiles: input.projectFiles,
     });
   } catch (error) {
-    input.log.error('Failed to build manifest for TurboSnap v2', error);
+    input.log.debug(
+      'Failed to build manifest for TurboSnap v2; this does not affect TurboSnap v1',
+      error
+    );
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to build manifest'],
     });
     return { status: 'fallback' };
   }
-  logManifestOutput(input.log, manifest);
+  input.log.debug('Generated manifest for TurboSnap v2');
 
   // The manifest is written to the Storybook build output so it can be uploaded with other
   // diagnostic files.
   try {
     writeManifest(manifest, input.manifestPath, input.projectFiles);
   } catch (error) {
-    input.log.error('Failed to write manifest for TurboSnap v2', error);
+    input.log.debug(
+      'Failed to write manifest for TurboSnap v2; this does not affect TurboSnap v1',
+      error
+    );
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to write manifest'],
     });
     return { status: 'fallback' };
   }
+  input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
 
   try {
     // We currently don't care about the output of this function because we'll always fallback to
     // run TurboSnap v1
     await uploadHashes(input.graphqlClient, input.buildId, manifest);
   } catch (error) {
-    input.log.error('Failed to upload hashes for TurboSnap v2', error);
+    input.log.debug(
+      'Failed to upload hashes for TurboSnap v2; this does not affect TurboSnap v1',
+      error
+    );
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to upload hashes'],
     });
     return { status: 'fallback' };
   }
+  input.log.debug('Uploaded hashes for TurboSnap v2 to Chromatic');
 
   // Until we want to lean on the v2 output, we always fallback to v1.
   return { status: 'fallback' };
-}
-
-function logManifestOutput(log: Logger, manifest: TurboSnapManifest) {
-  log.debug('Generated hashes for Storybook project:');
-  log.debug('Full project (rolled up): ' + manifest.storybookHash);
-  log.debug('Storybook config (rolled up):');
-  for (const [key, hash] of manifest.storybookConfigHashes) {
-    log.debug(`  ${key}: ${hash}`);
-  }
-
-  log.debug('Storybook config files:');
-  for (const [key, hash] of manifest.outOfGraphFiles.storybookConfigFiles) {
-    log.debug(`  ${key}: ${hash}`);
-  }
-
-  log.debug('Static files:');
-  for (const [key, hash] of manifest.outOfGraphFiles.staticFiles) {
-    log.debug(`  ${key}: ${hash}`);
-  }
-
-  log.debug('Story files (rolled up):');
-  for (const [key, hash] of manifest.storyFileHashes) {
-    log.debug(`  ${key}: ${hash}`);
-  }
 }
