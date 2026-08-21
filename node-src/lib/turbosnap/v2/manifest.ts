@@ -87,6 +87,7 @@ export async function buildManifest(
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
   const { files, hashes, storyFiles } = await readStatsGraph(stats, input);
+  input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
@@ -122,6 +123,12 @@ export async function buildManifest(
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
+  input.log.debug(
+    `Hashed ${outOfGraphFiles.staticFiles.size} static files in ${input.staticDirs.join(', ')}`
+  );
+  input.log.debug(
+    `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+  );
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
   // file plus every `storybookConfigHashes` entry, so additions, removals and renames are all visible
@@ -195,20 +202,29 @@ function comparePaths(a: FilePath, b: FilePath): number {
 }
 
 /**
- * Writes the entire manifest to a file in the output directory. This is uploaded to S3 for
- * debugging.
+ * Locates the serialized Manifest inside a Storybook build directory. The Manifest lives in the
+ * internal `.chromatic` directory, which is excluded from the build upload and uploaded separately
+ * as build metadata.
+ *
+ * @param sourceDirectory The Storybook build output directory.
+ *
+ * @returns The absolute Manifest path.
+ */
+export function getManifestPath(sourceDirectory: string): string {
+  return path.join(sourceDirectory, '.chromatic', 'turbosnap-manifest.json');
+}
+
+/**
+ * Writes the entire manifest to a file. This is uploaded to S3 for debugging.
  *
  * @param manifest The manifest to write.
- * @param outputDirectory The directory to write the manifest file to.
+ * @param manifestPath The path to write the manifest file to.
  * @param projectFiles How to write the disk.
  */
 export function writeManifest(
   manifest: TurboSnapManifest,
-  outputDirectory: string,
+  manifestPath: string,
   projectFiles: ProjectFiles
 ) {
-  projectFiles.writeFile(
-    path.join(outputDirectory, 'turbosnap-manifest.json'),
-    JSON.stringify(serializeManifest(manifest))
-  );
+  projectFiles.writeFile(manifestPath, JSON.stringify(serializeManifest(manifest)));
 }

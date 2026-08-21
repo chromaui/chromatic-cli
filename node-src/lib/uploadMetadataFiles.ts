@@ -12,6 +12,7 @@ import {
   MAIN_CONFIG_PATTERN,
   PREVIEW_CONFIG_PATTERN,
 } from './getStorybookMetadata';
+import { getManifestPath } from './turbosnap/v2/manifest';
 import { uploadMetadata } from './upload';
 
 const fileSize = (path: string): Promise<number> =>
@@ -36,6 +37,7 @@ export async function uploadMetadataFiles(ctx: Context) {
         ctx.options.logFile,
         ctx.options.diagnosticsFile,
         ctx.options.storybookLogFile,
+        ctx.sourceDir && getManifestPath(ctx.sourceDir),
         await findStorybookConfigFile(ctx.options.storybookConfigDir, MAIN_CONFIG_PATTERN).catch(
           () => undefined
         ),

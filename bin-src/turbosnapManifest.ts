@@ -95,12 +95,13 @@ export async function main(argv: string[]) {
     }
 
     const manifest = await buildManifest(await readStatsFile(statsPath), {
+      log,
       projectRoot,
       configDir: path.resolve(projectRoot, cli.flags.configDir),
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
         path.resolve(projectRoot, directory)
       ),
-      projectFiles: realProjectFiles(),
+      projectFiles: realProjectFiles(log),
     });
 
     process.stdout.write(JSON.stringify(serializeManifest(manifest), undefined, 2));
