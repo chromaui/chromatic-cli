@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
+import TestLogger from '../../testLogger';
 import { traceChangedFiles } from './index';
 import { ProjectFiles } from './projectFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
@@ -133,6 +134,7 @@ describe('traceChangedFiles', () => {
 // `patchFiles` override replaces adapter methods for the paths only a failing read or write reaches.
 function trace({ projectFiles, runQuery }: Fixture, patchFiles: Partial<ProjectFiles> = {}) {
   return traceChangedFiles({
+    log: new TestLogger(),
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),

@@ -2,12 +2,14 @@ import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
+import type { Logger } from '../../log';
 import { TraceChangedFilesResult } from '../types';
-import { buildManifest, writeManifest } from './manifest';
+import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ProjectFiles } from './projectFiles';
 import { uploadHashes } from './uploadHashes';
 
 interface TraceChangedFilesInput {
+  log: Logger;
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
@@ -47,23 +49,27 @@ export async function traceChangedFiles(
   let manifest;
   try {
     manifest = await buildManifest(input.stats, {
+      log: input.log,
       projectRoot: input.projectRoot,
       configDir: input.configDir,
       staticDirs: input.staticDirs,
       projectFiles: input.projectFiles,
     });
   } catch (error) {
+    input.log.error('Failed to build manifest for TurboSnap v2', error);
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to build manifest'],
     });
     return { status: 'fallback' };
   }
+  logManifestOutput(input.log, manifest);
 
   // The manifest is written to the Storybook build output so it can be uploaded with other
   // diagnostic files.
   try {
     writeManifest(manifest, input.manifestOutputDirectory, input.projectFiles);
   } catch (error) {
+    input.log.error('Failed to write manifest for TurboSnap v2', error);
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to write manifest'],
     });
@@ -75,6 +81,7 @@ export async function traceChangedFiles(
     // run TurboSnap v1
     await uploadHashes(input.graphqlClient, input.buildId, manifest);
   } catch (error) {
+    input.log.error('Failed to upload hashes for TurboSnap v2', error);
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to upload hashes'],
     });
@@ -83,4 +90,28 @@ export async function traceChangedFiles(
 
   // Until we want to lean on the v2 output, we always fallback to v1.
   return { status: 'fallback' };
+}
+
+function logManifestOutput(log: Logger, manifest: TurboSnapManifest) {
+  log.debug('Generated hashes for Storybook project:');
+  log.debug('Full project (rolled up): ' + manifest.storybookHash);
+  log.debug('Storybook config (rolled up):');
+  for (const [key, hash] of manifest.storybookConfigHashes) {
+    log.debug(`  ${key}: ${hash}`);
+  }
+
+  log.debug('Storybook config files:');
+  for (const [key, hash] of manifest.outOfGraphFiles.storybookConfigFiles) {
+    log.debug(`  ${key}: ${hash}`);
+  }
+
+  log.debug('Static files:');
+  for (const [key, hash] of manifest.outOfGraphFiles.staticFiles) {
+    log.debug(`  ${key}: ${hash}`);
+  }
+
+  log.debug('Story files (rolled up):');
+  for (const [key, hash] of manifest.storyFileHashes) {
+    log.debug(`  ${key}: ${hash}`);
+  }
 }

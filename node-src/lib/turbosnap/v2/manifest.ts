@@ -87,6 +87,7 @@ export async function buildManifest(
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
   const { files, hashes, storyFiles } = await readStatsGraph(stats, input);
+  input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
@@ -122,6 +123,12 @@ export async function buildManifest(
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
+  input.log.debug(
+    `Hashed ${outOfGraphFiles.staticFiles.size} static files in ${input.staticDirs.join(', ')}`
+  );
+  input.log.debug(
+    `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+  );
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
   // file plus every `storybookConfigHashes` entry, so additions, removals and renames are all visible
