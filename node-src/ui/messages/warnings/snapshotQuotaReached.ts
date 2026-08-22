@@ -6,7 +6,7 @@ import link from '../../components/link';
 
 export default ({ billingUrl }: { billingUrl: string }) =>
   dedent(chalk`
-    ${warning} {bold Snapshot quota reached}
-    This build is limited because your account is out of snapshots for the month.
+    ${warning} {bold Billed snapshot limit reached}
+    This build is limited because your account reached its billed snapshot limit for this billing period.
     Visit ${link(billingUrl)} to upgrade your plan.
   `);

@@ -167,7 +167,7 @@ export const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
 
   switch (status) {
     case 'FAILED':
-      testCase.error('Server error while taking snapshot, please try again', status);
+      testCase.error('Server error while capturing snapshot, please try again', status);
       break;
     case 'BROKEN':
       testCase.error('Snapshot is broken due to an error in your Storybook', status);

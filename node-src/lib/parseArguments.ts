@@ -23,8 +23,8 @@ export default function parseArguments(argv: string[]) {
       --project-token, -t <token>               The unique code for your project. Alternatively, set CHROMATIC_PROJECT_TOKEN.
 
     Storybook options
-      --build-script-name, -b [name]            The npm script that builds your Storybook we should take snapshots against. Use this if your Storybook build script is named differently. [build-storybook]
-      --build-command <command>                 The command that builds your Storybook we should take snapshots against. Use this if your Storybook build command does not exist in "scripts" of your package.json (like using NX). Requires --output-dir.
+      --build-script-name, -b [name]            The npm script Chromatic uses to build your Storybook before capturing snapshots. Use this if your Storybook build script is named differently. [build-storybook]
+      --build-command <command>                 The command Chromatic uses to build your Storybook before capturing snapshots. Use this if your Storybook build command does not exist in "scripts" of your package.json (like using NX). Requires --output-dir.
       --output-dir, -o <dirname>                Relative path to target directory for building your Storybook, in case you want to preserve it. Otherwise a temporary directory is used if possible.
       --storybook-build-dir, -d <dirname>       If you have already built your Storybook, provide the path to the static build directory.
 
@@ -34,10 +34,10 @@ export default function parseArguments(argv: string[]) {
       --ci                                      Mark this build as a CI build. Alternatively, set the 'CI' environment variable (present in most CI systems). This option implies --no-interactive.
       --config-file, -c <path>                  Path to a configuration file containing the options listed in JSON format. Uses "chromatic.config.json" by default.
       --exit-once-uploaded [branch]             Exit with 0 once the built version has been published to Chromatic. Only for [branch], if specified. Globs are supported via picomatch.
-      --exit-zero-on-changes [branch]           If all snapshots render but there are visual changes, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
+      --exit-zero-on-changes [branch]           If all tests render successfully but visual changes are found, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --externals <filepath>                    Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --ignore-last-build-on-branch <branch>    Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
-      --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be inherited from the prior commit.
+      --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. All other snapshots will be copied with TurboSnap.
       --only-story-files <filepath>             Only run a single story or a subset of stories by their filename(s). Specify the full path to the story file relative to the root of your Storybook project. Globs are supported via picomatch. This flag can be specified multiple times.
       --only-story-names <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This flag can be specified multiple times.
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.

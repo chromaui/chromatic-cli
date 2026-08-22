@@ -23,14 +23,14 @@ export default ({
   }
 
   const captures = pluralize('snapshot', build.actualCaptureCount, true);
-  const turboSnaps = pluralize('TurboSnap', build.inheritedCaptureCount, true);
+  const turboSnaps = pluralize('snapshot', build.inheritedCaptureCount, true);
   return !options.interactive || skipSnapshots
     ? dedent(chalk`
       ${success} {bold TurboSnap enabled}
-      Capturing ${captures}, copying ${turboSnaps}.
+      Capturing ${captures}; copying ${turboSnaps} with TurboSnap.
     `)
     : dedent(chalk`
       ${success} {bold TurboSnap enabled}
-      Captured ${captures}, copied ${turboSnaps}.
+      Captured ${captures}; copied ${turboSnaps} with TurboSnap.
     `);
 };
