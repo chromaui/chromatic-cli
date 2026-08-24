@@ -4,16 +4,17 @@ import { dedent } from 'ts-dedent';
 import { info } from '../../components/icons';
 import link from '../../components/link';
 
-const providers = {
+const providers: Record<string, string> = {
   github: 'GitHub',
   gitlab: 'GitLab',
   bitbucket: 'Bitbucket',
+  ado: 'Azure DevOps',
 };
 
 export default (provider: string) =>
   dedent(chalk`
     ${info} {bold Speed up Continuous Integration}
-    Your project is linked to ${providers[provider]} so Chromatic will report results there.
-    This means you can add the option \`with: exitOnceUploaded: true\` to your workflow to skip waiting for build results.
+    Your project is linked to ${providers[provider] ?? provider ?? 'your Git provider'} so Chromatic will report results there.
+    This means you can add the \`exitOnceUploaded\` option to skip waiting for build results.
     Read more here: ${link('https://www.chromatic.com/docs/configure/')}
   `);
