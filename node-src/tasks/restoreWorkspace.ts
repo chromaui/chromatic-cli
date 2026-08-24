@@ -1,5 +1,5 @@
 import { checkoutPrevious, discardChanges } from '../git/git';
-import installDependencies from '../lib/installDependencies';
+import { installDependencies } from '../lib/installDependencies';
 import { Deps } from '../types';
 import { pending, success } from '../ui/tasks/restoreWorkspace';
 
