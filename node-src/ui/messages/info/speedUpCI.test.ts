@@ -7,6 +7,6 @@ describe('speedUpCI', () => {
     expect(speedUpCI('github')).toContain('GitHub');
     expect(speedUpCI('gitlab')).toContain('GitLab');
     expect(speedUpCI('bitbucket')).toContain('Bitbucket');
-    expect(speedUpCI('ado')).toContain('Azure DevOps');
+    expect(speedUpCI('azure')).toContain('Azure DevOps');
   });
 });

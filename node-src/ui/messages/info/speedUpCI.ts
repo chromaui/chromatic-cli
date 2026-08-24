@@ -8,7 +8,7 @@ const providers = {
   github: 'GitHub',
   gitlab: 'GitLab',
   bitbucket: 'Bitbucket',
-  ado: 'Azure DevOps',
+  azure: 'Azure DevOps',
 };
 
 export default (provider: string) =>

@@ -5,5 +5,5 @@ export default {
 };
 
 export const SpeedUpCI = () => speedUpCI('github');
-export const SpeedUpCIAdo = () => speedUpCI('ado');
+export const SpeedUpCIAzure = () => speedUpCI('azure');
 export const SpeedUpCIUnknown = () => speedUpCI('unknown-provider');
