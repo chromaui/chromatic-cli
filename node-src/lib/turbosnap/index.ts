@@ -35,7 +35,9 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   // V2 catches every anticipated failure itself. A rejection here is a defect in those guards: it
   // must be observable, but it must never affect the v1 decision or the customer's build.
   try {
+    ctx.log.debug('Tracing changed files with TurboSnap v2');
     await traceChangedFilesV2({
+      log: ctx.log,
       graphqlClient: ctx.client,
       buildId: ctx.announcedBuild.id,
       stats,
@@ -43,13 +45,18 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
       projectRoot: ctx.storybook.projectRoot,
       configDir: ctx.storybook.configDir,
       staticDirs: ctx.storybook.staticDirs,
-      projectFiles: realProjectFiles(),
+      projectFiles: realProjectFiles(ctx.log),
     });
   } catch (error) {
+    ctx.log.error(
+      'Failed to trace changed files with TurboSnap v2; this does not affect TurboSnap v1',
+      error
+    );
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to trace changed files'],
     });
   }
 
+  ctx.log.debug('Tracing changed files with TurboSnap v1');
   return traceChangedFilesV1(ctx, stats, statsPath);
 }
