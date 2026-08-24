@@ -1,22 +1,10 @@
-import { SpawnOptions } from 'child_process';
-import { spawn } from 'yarn-or-npm';
+import { parseNi, run } from '@antfu/ni';
 
-const installDependencies = (options?: SpawnOptions) =>
-  new Promise((resolve, reject) => {
-    let stdout = '';
-    let stderr = '';
-    const child = spawn(['install'], options);
-    child.stdout?.on('data', (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr?.on('data', (chunk) => {
-      stderr += chunk;
-    });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code === 0) resolve(stdout);
-      else reject(stderr);
-    });
-  });
-
-export default installDependencies;
+/**
+ * Install dependencies using the package manager specified in the project's package.json.
+ *
+ * @returns A promise that resolves when the command completes.
+ */
+export function installDependencies() {
+  return run(parseNi, [], { programmatic: true });
+}
