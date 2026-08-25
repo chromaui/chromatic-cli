@@ -1,22 +1,17 @@
-import { SpawnOptions } from 'child_process';
-import { spawn } from 'yarn-or-npm';
+import { getCliCommand, parseNi } from '@antfu/ni';
 
-const installDependencies = (options?: SpawnOptions) =>
-  new Promise((resolve, reject) => {
-    let stdout = '';
-    let stderr = '';
-    const child = spawn(['install'], options);
-    child.stdout?.on('data', (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr?.on('data', (chunk) => {
-      stderr += chunk;
-    });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code === 0) resolve(stdout);
-      else reject(stderr);
-    });
-  });
+import { runCommand } from './shell/shell';
 
-export default installDependencies;
+/**
+ * Install dependencies using the package manager specified in the project's package.json.
+ *
+ * @returns The result of the install command.
+ */
+export async function installDependencies() {
+  const command = await getCliCommand(parseNi, [], { programmatic: true });
+  if (!command) {
+    throw new Error('Unable to determine the package manager install command');
+  }
+
+  return runCommand(command, { timeout: 10 * 60 * 1000 });
+}

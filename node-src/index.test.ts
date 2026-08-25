@@ -340,7 +340,7 @@ vi.mock('./git/getParentCommits', () => ({
 }));
 
 vi.mock('./lib/installDependencies', () => ({
-  default: vi.fn(() => Promise.resolve('')),
+  installDependencies: vi.fn(() => Promise.resolve('')),
 }));
 
 const getCommit = vi.mocked(git.getCommit);

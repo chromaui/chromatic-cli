@@ -1,5 +1,5 @@
 import { checkout, findMergeBase, getUpdateMessage, isClean, isUpToDate } from '../git/git';
-import installDependencies from '../lib/installDependencies';
+import { installDependencies } from '../lib/installDependencies';
 import { exitCodes, TaskFailure } from '../lib/setExitCode';
 import { Context, Deps, TaskFunction } from '../types';
 import mergeBaseNotFound from '../ui/messages/errors/mergeBaseNotFound';
