@@ -1,3 +1,27 @@
+# v18.6.0 (Tue Aug 25 2026)
+
+#### 🚀 Enhancement
+
+- Support PNPM when installing dependencies [#1462](https://github.com/chromaui/chromatic-cli/pull/1462) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add subcommand to generate v2 manifest [#1456](https://github.com/chromaui/chromatic-cli/pull/1456) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add runner entrypoint [#1453](https://github.com/chromaui/chromatic-cli/pull/1453) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Upload TurboSnap manifest to Index [#1444](https://github.com/chromaui/chromatic-cli/pull/1444) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Build the full TurboSnap manifest [#1442](https://github.com/chromaui/chromatic-cli/pull/1442) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add story detection [#1441](https://github.com/chromaui/chromatic-cli/pull/1441) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add Storybook version detection [#1440](https://github.com/chromaui/chromatic-cli/pull/1440) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add helpers to parse `preview-stats.json` [#1436](https://github.com/chromaui/chromatic-cli/pull/1436) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Ignore Claude worktrees [#1448](https://github.com/chromaui/chromatic-cli/pull/1448) ([@codykaup](https://github.com/codykaup))
+- Remove `actions/checkout` version from logs [#1447](https://github.com/chromaui/chromatic-cli/pull/1447) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.5.0 (Wed Aug 19 2026)
 
 #### 🚀 Enhancement
