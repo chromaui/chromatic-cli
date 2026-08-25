@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
-import installDeps from '../lib/installDependencies';
+import { installDependencies as unmockedInstallDependencies } from '../lib/installDependencies';
 import TestLogger from '../lib/testLogger';
 import { runRestoreWorkspace } from './restoreWorkspace';
 
@@ -10,7 +10,7 @@ vi.mock('../lib/installDependencies');
 
 const checkoutPrevious = vi.mocked(git.checkoutPrevious);
 const discardChanges = vi.mocked(git.discardChanges);
-const installDependencies = vi.mocked(installDeps);
+const installDependencies = vi.mocked(unmockedInstallDependencies);
 
 describe('runRestoreWorkspace', () => {
   it('discards changes, checks out the previous branch and reinstalls dependencies', async () => {

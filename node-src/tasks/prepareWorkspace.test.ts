@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import * as git from '../git/git';
-import installDeps from '../lib/installDependencies';
+import { installDependencies as unmockedInstallDependencies } from '../lib/installDependencies';
 import { TaskFailure } from '../lib/setExitCode';
 import TestLogger from '../lib/testLogger';
 import { runPrepareWorkspace } from './prepareWorkspace';
@@ -13,7 +13,7 @@ const checkout = vi.mocked(git.checkout);
 const isClean = vi.mocked(git.isClean);
 const isUpToDate = vi.mocked(git.isUpToDate);
 const findMergeBase = vi.mocked(git.findMergeBase);
-const installDependencies = vi.mocked(installDeps);
+const installDependencies = vi.mocked(unmockedInstallDependencies);
 
 const log = new TestLogger();
 const input = { patchHeadRef: 'head', patchBaseRef: 'base' };
