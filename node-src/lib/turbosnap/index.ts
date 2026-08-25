@@ -20,7 +20,6 @@ import { realProjectFiles } from './v2/projectFiles';
  */
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return { status: 'skipped' };
-  if (!ctx.git.changedFiles) return { status: 'skipped' };
   if (!ctx.fileInfo?.statsPath) {
     // If we don't know the SB version, we should assume we don't support `--stats-json`
     const nonLegacyStatsSupported =
@@ -55,6 +54,10 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     Sentry.captureException(error, {
       fingerprint: ['TurboSnap v2', 'Failed to trace changed files'],
     });
+  }
+
+  if (!ctx.git.changedFiles || ctx.git.changedFiles.length === 0) {
+    return { status: 'skipped' };
   }
 
   ctx.log.debug('Tracing changed files with TurboSnap v1');

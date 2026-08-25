@@ -12,7 +12,7 @@ interface SetBuildCommandInput {
   sourceDir: string;
   flags: Context['flags'];
   storybook?: Context['storybook'];
-  changedFiles?: string[];
+  turboSnap?: Context['turboSnap'];
 }
 
 const isStatsFlagSupported = (storybook?: Context['storybook']) => {
@@ -40,7 +40,7 @@ export const setBuildCommand = async (
     buildCommandOptions.push(`--output-dir=${input.sourceDir}`);
   }
 
-  if (input.changedFiles) {
+  if (input.turboSnap && !input.turboSnap.unavailable) {
     if (isStatsFlagSupported(input.storybook)) {
       buildCommandOptions.push(`${getStatsFlag(input.storybook)}=${input.sourceDir}`);
     } else {

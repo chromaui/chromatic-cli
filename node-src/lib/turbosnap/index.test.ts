@@ -78,18 +78,18 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
   });
 
-  it('returns skipped without running either generation when there are no changed files', async () => {
-    const ctx = {
-      git: {},
-      turboSnap: {},
-    } as any;
+  it.each([[], undefined])(
+    'returns skipped and only runs TurboSnap v2 when there are no changed files (arg: %s)',
+    async (changedFiles) => {
+      const ctx = { ...makeContext(), git: { changedFiles } };
 
-    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+      await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
 
-    expect(readStatsFile).not.toHaveBeenCalled();
-    expect(traceChangedFilesV2).not.toHaveBeenCalled();
-    expect(traceChangedFilesV1).not.toHaveBeenCalled();
-  });
+      expect(readStatsFile).toHaveBeenCalled();
+      expect(traceChangedFilesV2).toHaveBeenCalled();
+      expect(traceChangedFilesV1).not.toHaveBeenCalled();
+    }
+  );
 
   it('throws if the stats file is not found', async () => {
     const ctx = { ...makeContext(), fileInfo: undefined };
