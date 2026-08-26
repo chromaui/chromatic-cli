@@ -369,11 +369,27 @@ describe('uploadProject', () => {
       });
     });
 
-    it('skips the task without uploading when the build is SKIPPED', async () => {
+    it('halts the pipeline without uploading when the build is SKIPPED, carrying the queried build fields', async () => {
+      // In the case of a bypassed build, we query for all the information counts to return to the CLI/Action caller.
+      const skippedBuild = {
+        webUrl: 'https://www.chromatic.com/build?appId=abc&number=96',
+        specCount: 5,
+        componentCount: 3,
+        testCount: 5,
+        changeCount: 0,
+        errorCount: 0,
+        actualTestCount: 0,
+        interactionTestFailuresCount: 0,
+        actualCaptureCount: 0,
+        inheritedCaptureCount: 12,
+      };
       const client = { runQuery: vi.fn() };
-      client.runQuery.mockResolvedValue({
-        uploadBuild: { build: { id: '2', status: 'SKIPPED' }, userErrors: [] },
-      });
+      client.runQuery
+        .mockResolvedValueOnce({
+          uploadBuild: { build: { id: '2', status: 'SKIPPED' }, userErrors: [] },
+        })
+        .mockResolvedValueOnce({ prepareBuild: true })
+        .mockResolvedValueOnce({ app: { build: skippedBuild } });
 
       const ctx = {
         client,
@@ -383,13 +399,51 @@ describe('uploadProject', () => {
         sourceDir: '/static/',
         options: {},
         fileInfo,
-        announcedBuild: { id: '1' },
+        announcedBuild: { id: '1', number: 42, reportToken: 'report-token' },
         onlyStoryFiles: [],
       } as any;
       const result = await runUpload(ctx);
 
-      expect(result).toEqual({ kind: 'skip' });
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringMatching(/SkippedBuildQuery/),
+        { number: 42 },
+        { headers: { Authorization: 'Bearer report-token' } }
+      );
+      expect(result).toEqual({
+        kind: 'partial',
+        output: expect.objectContaining({ skippedByTurboSnap: true, skippedBuild }),
+      });
       expect(http.fetch).not.toHaveBeenCalled();
+    });
+
+    it('still halts the pipeline with an undefined skippedBuild when the query throws', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery
+        .mockResolvedValueOnce({
+          uploadBuild: { build: { id: '2', status: 'SKIPPED' }, userErrors: [] },
+        })
+        .mockResolvedValueOnce({ prepareBuild: true })
+        .mockRejectedValueOnce(new Error('skipped build query failed'));
+
+      const ctx = {
+        client,
+        env: environment,
+        log,
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo,
+        announcedBuild: { id: '1', number: 42, reportToken: 'report-token' },
+        onlyStoryFiles: [],
+      } as any;
+      const result = await runUpload(ctx);
+
+      expect(result).toEqual({
+        kind: 'partial',
+        output: expect.objectContaining({ skippedByTurboSnap: true, skippedBuild: undefined }),
+      });
+      expect(vi.mocked(Sentry.captureException)).toHaveBeenCalled();
+      expect(http.fetch).not.toHaveBeenCalled(); // we're not checking for sentinel files
     });
 
     it('logs the TurboSnap skip messages with ancestor build details when SKIPPED', async () => {
@@ -476,7 +530,7 @@ describe('uploadProject', () => {
       } as any;
       const result = await runUpload(ctx);
 
-      expect(result).toEqual({ kind: 'skip' });
+      expect(result).toMatchObject({ kind: 'partial', output: { skippedByTurboSnap: true } });
       expect(skipLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to prepare skipped build 2'),
         error

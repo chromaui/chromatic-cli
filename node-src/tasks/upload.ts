@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { uploadBuild } from '../lib/upload';
+import { SkippedBuildFields, uploadBuild } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, Deps, FileDesc, TaskResult } from '../types';
@@ -22,6 +22,7 @@ export interface UploadOutput {
   uploadedFiles: number;
   skippedByTurboSnap?: boolean;
   ancestorBuild?: Context['ancestorBuild'];
+  skippedBuild?: SkippedBuildFields;
 }
 
 const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
@@ -45,27 +46,40 @@ const uploadAndWaitForSentinels = async (
   ctx: Context,
   files: FileDesc[]
 ): Promise<UploadOutput> => {
-  const { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap, ancestorBuild } =
-    await uploadBuild(ctx, files, {
-      onProgress: throttle(
-        (progress, total) => {
-          const percentage = Math.round((progress / total) * 100);
-          deps.report({
-            output: uploading(ctx, { percentage }).output,
-            progress: { progress, total, unit: 'bytes' },
-          });
-        },
-        // Avoid spamming the logs with progress updates in non-interactive mode
-        ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
-      ),
-      onError: (error: Error, path?: string) => {
-        throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
+  const {
+    sentinelUrls,
+    uploadedBytes,
+    uploadedFiles,
+    skippedByTurboSnap,
+    ancestorBuild,
+    skippedBuild,
+  } = await uploadBuild(ctx, files, {
+    onProgress: throttle(
+      (progress, total) => {
+        const percentage = Math.round((progress / total) * 100);
+        deps.report({
+          output: uploading(ctx, { percentage }).output,
+          progress: { progress, total, unit: 'bytes' },
+        });
       },
-    });
+      // Avoid spamming the logs with progress updates in non-interactive mode
+      ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
+    ),
+    onError: (error: Error, path?: string) => {
+      throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
+    },
+  });
 
   // A TurboSnap-skipped build uploads nothing and has no sentinels to wait for.
   if (skippedByTurboSnap || sentinelUrls.length === 0) {
-    return { sentinelUrls, uploadedBytes, uploadedFiles, skippedByTurboSnap, ancestorBuild };
+    return {
+      sentinelUrls,
+      uploadedBytes,
+      uploadedFiles,
+      skippedByTurboSnap,
+      ancestorBuild,
+      skippedBuild,
+    };
   }
 
   deps.report({ output: finalizing(ctx).output });
@@ -83,17 +97,20 @@ const uploadAndWaitForSentinels = async (
   return { sentinelUrls, uploadedBytes, uploadedFiles };
 };
 
-// A fully-TurboSnapped build halts the pipeline (kind:'skip'). The upload frame renders bare; the
-// two TurboSnap success messages are logged here so they flush as free-standing blocks below the
-// task frames (verify/snapshot never run to log them themselves).
+// A bypassed build halts the pipeline early (kind:'partial' sets ctx.skip). The upload frame
+// renders bare; the success message is logged here so it flushes as a free-standing block below the
+// task frames (verify/snapshot never run to log them themselves). The queried skipped-build fields
+// are carried on the partial output so they land on ctx.build for the action outputs, since verify
+// never runs to populate them.
 const skipTurboSnapped = (
   deps: Deps,
   ctx: Context,
-  ancestorBuild: UploadOutput['ancestorBuild']
-): TaskResult<UploadOutput> => {
+  output: UploadOutput
+): TaskResult<UploadOutput, UploadOutput> => {
+  const { ancestorBuild } = output;
   deps.log.info(turboSnapEnabled({ ...ctx, skip: true, ancestorBuild }));
   deps.log.info(buildFullyTurboSnapped({ ancestorBuild }));
-  return { kind: 'skip' };
+  return { kind: 'partial', output };
 };
 
 /**
@@ -107,7 +124,7 @@ const skipTurboSnapped = (
 export async function uploadProject(
   deps: Deps,
   input: UploadInput
-): Promise<TaskResult<UploadOutput>> {
+): Promise<TaskResult<UploadOutput, UploadOutput>> {
   const ctx = input.uploadContext;
 
   if (ctx.options.dryRun) {
@@ -117,7 +134,7 @@ export async function uploadProject(
   try {
     const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, true));
     if (output.skippedByTurboSnap) {
-      return skipTurboSnapped(deps, ctx, output.ancestorBuild);
+      return skipTurboSnapped(deps, ctx, output);
     }
     return { kind: 'continue', output };
   } catch {
@@ -126,7 +143,7 @@ export async function uploadProject(
     // results are discarded simply by running again.
     const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, false));
     if (output.skippedByTurboSnap) {
-      return skipTurboSnapped(deps, ctx, output.ancestorBuild);
+      return skipTurboSnapped(deps, ctx, output);
     }
     return { kind: 'continue', output };
   }
@@ -138,4 +155,10 @@ export const applyUploadOutput = (ctx: Context, output: UploadOutput) => {
   ctx.sentinelUrls = output.sentinelUrls;
   ctx.uploadedBytes = output.uploadedBytes;
   ctx.uploadedFiles = output.uploadedFiles;
+};
+
+export const applyUploadPartial = (ctx: Context, output: UploadOutput) => {
+  // A bypassed build halts the pipeline here, so verify never runs to populate a full build object.
+  // Apply the fields we queried from the skipped build so the index.ts outputs block reads them.
+  ctx.build = { ...ctx.build, ...output.skippedBuild } as Context['build'];
 };
