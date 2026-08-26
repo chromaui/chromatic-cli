@@ -9,7 +9,7 @@ import { Module } from 'node:module';
  *
  * @param from Input of `require.resolve(<from>)`
  * @param to Output of the mocked call, as in `const to = require.resolve(<from>)`
- * @param error
+ * @param error Optional error to throw instead of returning `to`
  *
  * @returns `function restore()` that restores mock back to original implementation
  */

@@ -60,24 +60,15 @@ describe('getE2EBuildCommand', () => {
         patchModulePath(PLAYWRIGHT_BUILD_ARCHIVE_BINARY, '/path/to/playwright-bin'),
         patchModulePath(CYPRESS_BUILD_ARCHIVE_BINARY, '/path/to/cypress-bin'),
       ];
-      onTestFinished(() => void cleanups.reverse().map((cleanup) => cleanup()));
+      onTestFinished(() => {
+        for (const cleanup of cleanups.reverse()) {
+          cleanup();
+        }
+      });
 
       const command = await getE2EBuildCommand(deps, 'playwright', ['--output-dir=./source-dir/']);
 
       expect(command).toBe(`node /path/to/playwright-bin --output-dir=./source-dir/`);
-    });
-
-    it('throws original package resolving errors', async () => {
-      const restore = patchModulePath(
-        PLAYWRIGHT_BUILD_ARCHIVE_BINARY,
-        'any',
-        new Error('ERR_PACKAGE_PATH_NOT_EXPORTED')
-      );
-      onTestFinished(restore);
-
-      await expect(
-        getE2EBuildCommand(deps, 'playwright', ['--output-dir=./source-dir/'])
-      ).rejects.toThrow('ERR_PACKAGE_PATH_NOT_EXPORTED');
     });
 
     it("fallbacks to invoke E2E package via package manager when it's not installed", async () => {

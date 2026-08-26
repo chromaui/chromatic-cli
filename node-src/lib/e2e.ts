@@ -53,14 +53,12 @@ export async function getE2EBuildCommand(
         projectRequire.resolve(`${dependencyName}/bin/${buildBinName}`),
         ...buildCommandOptions,
       ].join(' ');
-    } catch (err) {
-      if (err.code !== 'MODULE_NOT_FOUND') {
-        throw err;
-      }
+    } catch {
+      // Ignore error and fallback to package manager
     }
 
     // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec the binary directly.
-    // This will fail if user has both `@chromatic-com/playwright` and `@chromatic-com/cypress` installed.
+    // This will fail if user has multiple packages that define identically named `build-archive-storybook` bin.
     return await getCliCommand(parseNexec, [buildBinName, ...buildCommandOptions], {
       programmatic: true,
     });
