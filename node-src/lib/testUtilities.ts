@@ -9,16 +9,21 @@ import { Module } from 'node:module';
  *
  * @param from Input of `require.resolve(<from>)`
  * @param to Output of the mocked call, as in `const to = require.resolve(<from>)`
+ * @param error
  *
  * @returns `function restore()` that restores mock back to original implementation
  */
-export function patchModulePath(from: string, to: string) {
+export function patchModulePath(from: string, to: string, error?: Error) {
   // @ts-expect-error -- untyped
   const original = Module._resolveFilename;
 
   // @ts-expect-error -- untyped
   Module._resolveFilename = (request: string, parent: NodeModule) => {
     if (request === from) {
+      if (error) {
+        throw error;
+      }
+
       return to;
     }
 
