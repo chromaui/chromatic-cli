@@ -1,3 +1,16 @@
+# v18.6.1 (Thu Aug 27 2026)
+
+#### 🐛 Bug Fix
+
+- [CHDX-1120] Align CLI snapshot terminology [#1461](https://github.com/chromaui/chromatic-cli/pull/1461) ([@domyen](https://github.com/domyen) [@winkerVSbecks](https://github.com/winkerVSbecks))
+
+#### Authors: 2
+
+- Dominic Nguyen ([@domyen](https://github.com/domyen))
+- Varun Vachhar ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+---
+
 # v18.6.0 (Tue Aug 25 2026)
 
 #### 🚀 Enhancement
