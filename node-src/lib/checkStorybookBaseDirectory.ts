@@ -5,6 +5,7 @@ import path from 'path';
 import { getRepositoryRoot } from '../git/git';
 import { Context, Stats } from '../types';
 import { invalidStorybookBaseDirectory } from '../ui/messages/errors/invalidStorybookBaseDirectory';
+import { turboSnapDisabledVitest } from '../ui/messages/errors/turboSnapDisabledVitest';
 import { exitCodes, setExitCode } from './setExitCode';
 
 /**
@@ -24,10 +25,19 @@ export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   const { storybookBaseDir: storybookBaseDirectory = path.relative(repositoryRoot, '') } =
     ctx.options;
 
-  // Find all js(x)/ts(x) files in stats that are not in node_modules
+  // Find all js(x)/ts(x) files in stats that are not in node_modules, and are not Storybook's virtual files
   const sourceModuleFiles = stats.modules.filter(
-    (module: any) => !module.name.includes('node_modules') && /\.(js|jsx|ts|tsx)$/.test(module.name)
+    (module: any) =>
+      !module.name.includes('node_modules') &&
+      module.name !== './storybook-stories.js' && // builder-webpack5 virtual file
+      /\.(js|jsx|ts|tsx)$/.test(module.name)
   );
+
+  // This can happen if `vitest run` is run without the chromaticPlugin({ turboSnap: true })
+  // and `chromatic --vitest --only-changed` is run afterwards.
+  if (ctx.options.vitest && sourceModuleFiles.length === 0) {
+    throw new Error(turboSnapDisabledVitest());
+  }
 
   // GitHub Actions seems to have a default ulimit of 1024, so we limit concurrency to stay under
   const limitConcurrency = pLimit(1000);

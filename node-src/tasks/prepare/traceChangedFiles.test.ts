@@ -134,4 +134,21 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(err.message).toBe('Could not retrieve dependent story files.\nstats file not found');
   });
+
+  it('wraps the missing stats file error without recording a bail reason in Vitest run', async () => {
+    const ctx = turboSnapContext();
+    ctx.options.vitest = true;
+    const missingStatsError = new Error('stats file not found');
+    traceChangedFilesTurbosnap.mockRejectedValue(missingStatsError);
+
+    let err;
+    try {
+      await traceChangedFiles(deps(), { turboSnapContext: ctx });
+    } catch (error) {
+      err = error;
+    }
+
+    expect(ctx.turboSnap.bailReason).toBeUndefined();
+    expect(err.message).toBe('Could not retrieve dependent test files.\nstats file not found');
+  });
 });
