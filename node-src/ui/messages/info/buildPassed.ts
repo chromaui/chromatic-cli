@@ -15,8 +15,8 @@ export default (ctx: Context) => {
 
   if (ctx.isOnboarding) {
     const foundString = isE2EBuild(ctx.options)
-      ? `We found ${e2eTests} and took ${snapshots}.`
-      : `We found ${components} with ${stories} and took ${snapshots}.`;
+      ? `We found ${e2eTests} and captured ${snapshots}.`
+      : `We found ${components} with ${stories} and captured ${snapshots}.`;
 
     return dedent(chalk`
       ${success} {bold Build passed. Welcome to Chromatic!}
