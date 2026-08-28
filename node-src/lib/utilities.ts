@@ -75,7 +75,9 @@ export const isPackageManifestFile = (filePath: string) =>
   [/(^|\/)package\.json$/].some((re) => re.test(filePath));
 
 export const isPackageLockFile = (filePath: string) =>
-  [/(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/].some((re) => re.test(filePath));
+  [/(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/, /(^|\/)pnpm-lock\.yaml$/].some((re) =>
+    re.test(filePath)
+  );
 
 export const isPackageMetadataFile = (filePath: string) =>
   isPackageManifestFile(filePath) || isPackageLockFile(filePath);
