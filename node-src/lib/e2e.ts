@@ -1,3 +1,6 @@
+import { createRequire } from 'node:module';
+import path from 'node:path';
+
 import { AGENTS, getCliCommand, Runner } from '@antfu/ni';
 
 import { Deps } from '../types';
@@ -39,15 +42,28 @@ export async function getE2EBuildCommand(
   flag: 'playwright' | 'cypress' | 'vitest',
   buildCommandOptions: string[]
 ) {
-  // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec
-  // the binary directly.
+  const dependencyName = `@chromatic-com/${flag}`;
+
   if (deps.options.inAction) {
+    // Try resolving the binary from working directory first, then fallback to package manager.
+    try {
+      const projectRequire = createRequire(path.join(process.cwd(), 'package.json'));
+      return [
+        'node',
+        projectRequire.resolve(`${dependencyName}/bin/${buildBinName}`),
+        ...buildCommandOptions,
+      ].join(' ');
+    } catch {
+      // Ignore error and fallback to package manager
+    }
+
+    // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec the binary directly.
+    // This will fail if user has multiple packages that define identically named `build-archive-storybook` bin.
     return await getCliCommand(parseNexec, [buildBinName, ...buildCommandOptions], {
       programmatic: true,
     });
   }
 
-  const dependencyName = `@chromatic-com/${flag}`;
   try {
     return [
       'node',
