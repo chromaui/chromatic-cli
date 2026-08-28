@@ -1,3 +1,15 @@
+# v18.7.0 (Fri Aug 28 2026)
+
+#### 🚀 Enhancement
+
+- TurboSnap v2 release (runs alongside v1) [#1463](https://github.com/chromaui/chromatic-cli/pull/1463) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.6.2 (Fri Aug 28 2026)
 
 #### 🐛 Bug Fix
