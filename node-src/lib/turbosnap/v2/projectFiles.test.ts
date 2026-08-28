@@ -11,6 +11,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import TestLogger from '../../testLogger';
 import { realProjectFiles } from './projectFiles';
 
 // The real adapter's whole job is knowing what the disk means, so these run against real temporary
@@ -18,6 +19,7 @@ import { realProjectFiles } from './projectFiles';
 // symlink semantics can only prove the fake follows them.
 let temporaryDirectories: string[] = [];
 let lockedDirectories: string[] = [];
+const log = new TestLogger();
 
 afterEach(() => {
   // Unlock the directories before removal because it's required in order to remove them.
@@ -87,7 +89,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/logo.svg');
     write(root, 'static/nested/deep/font.woff2');
 
-    const files = realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'static'));
 
     expect(files.sort()).toEqual([
       path.join(root, 'static/logo.svg'),
@@ -101,7 +103,7 @@ describe('realProjectFiles listTree', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(target, path.join(root, 'static/logo.svg'));
 
-    const files = realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
@@ -113,7 +115,7 @@ describe('realProjectFiles listTree', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(path.join(root, 'node_modules/pkg/dist'), path.join(root, 'static/vendor'));
 
-    const files = realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'static'));
 
     expect(files.sort()).toEqual([
       path.join(root, 'static/vendor/a.png'),
@@ -128,9 +130,9 @@ describe('realProjectFiles listTree', () => {
     symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/brand'));
     symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/legacy'));
 
-    const before = realProjectFiles().listTree(path.join(root, 'static'));
+    const before = realProjectFiles(log).listTree(path.join(root, 'static'));
     rmSync(path.join(root, 'static/legacy'));
-    const after = realProjectFiles().listTree(path.join(root, 'static'));
+    const after = realProjectFiles(log).listTree(path.join(root, 'static'));
 
     expect(before.sort()).toEqual([
       path.join(root, 'static/brand/logo.svg'),
@@ -144,7 +146,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/keep.svg');
     symlinkSync(path.join(root, 'gone.svg'), path.join(root, 'static/logo.svg'));
 
-    const files = realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/keep.svg')]);
   });
@@ -154,7 +156,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/logo.svg');
     symlinkSync(path.join(root, 'static'), path.join(root, 'static/loop'));
 
-    const files = realProjectFiles().listTree(path.join(root, 'static'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
@@ -162,7 +164,7 @@ describe('realProjectFiles listTree', () => {
   it('is empty for a directory that does not exist, since a missing staticDir is not an error', async () => {
     const root = temporaryDirectory();
 
-    const files = realProjectFiles().listTree(path.join(root, 'absent'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'absent'));
 
     expect(files).toEqual([]);
   });
@@ -174,7 +176,7 @@ describe('realProjectFiles listTree', () => {
     // different point than a missing directory.
     lock(path.join(root, 'locked'));
 
-    const files = realProjectFiles().listTree(path.join(root, 'locked'));
+    const files = realProjectFiles(log).listTree(path.join(root, 'locked'));
 
     expect(files).toEqual([]);
   });
@@ -185,8 +187,8 @@ describe('realProjectFiles isFile and isDirectory', () => {
     const root = temporaryDirectory();
     const filePath = write(root, 'src/Button.tsx');
 
-    expect(realProjectFiles().isFile(filePath)).toBe(true);
-    expect(realProjectFiles().isDirectory(filePath)).toBe(false);
+    expect(realProjectFiles(log).isFile(filePath)).toBe(true);
+    expect(realProjectFiles(log).isDirectory(filePath)).toBe(false);
   });
 
   it('reads a directory as a directory and not a file, which is what keeps EISDIR out of hashing', () => {
@@ -196,16 +198,16 @@ describe('realProjectFiles isFile and isDirectory', () => {
     write(root, 'node_modules/@storybook/react/dist/entry-preview.js');
     const directoryNamedAsAModule = path.join(root, 'node_modules/@storybook/react/dist');
 
-    expect(realProjectFiles().isFile(directoryNamedAsAModule)).toBe(false);
-    expect(realProjectFiles().isDirectory(directoryNamedAsAModule)).toBe(true);
+    expect(realProjectFiles(log).isFile(directoryNamedAsAModule)).toBe(false);
+    expect(realProjectFiles(log).isDirectory(directoryNamedAsAModule)).toBe(true);
   });
 
   it('reads an absent path as false for both', () => {
     const root = temporaryDirectory();
     const absent = path.join(root, 'src/gone.tsx');
 
-    expect(realProjectFiles().isFile(absent)).toBe(false);
-    expect(realProjectFiles().isDirectory(absent)).toBe(false);
+    expect(realProjectFiles(log).isFile(absent)).toBe(false);
+    expect(realProjectFiles(log).isDirectory(absent)).toBe(false);
   });
 
   it('reads a symlink to a file as a file', () => {
@@ -214,7 +216,7 @@ describe('realProjectFiles isFile and isDirectory', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(target, path.join(root, 'static/logo.svg'));
 
-    expect(realProjectFiles().isFile(path.join(root, 'static/logo.svg'))).toBe(true);
+    expect(realProjectFiles(log).isFile(path.join(root, 'static/logo.svg'))).toBe(true);
   });
 });
 
@@ -224,7 +226,7 @@ describe('realProjectFiles hashAll', () => {
     const button = write(root, 'src/Button.tsx');
     const header = write(root, 'src/Header.tsx');
 
-    const hashes = await realProjectFiles().hashAll([button, header]);
+    const hashes = await realProjectFiles(log).hashAll([button, header]);
 
     expect(Object.keys(hashes).sort()).toEqual([button, header].sort());
     expect(hashes[button]).not.toBe(hashes[header]);
@@ -235,13 +237,13 @@ describe('realProjectFiles hashAll', () => {
     const original = write(root, 'src/Button.tsx', 'export const Button = () => null;');
     const copy = write(root, 'src/copy/Button.tsx', 'export const Button = () => null;');
 
-    const hashes = await realProjectFiles().hashAll([original, copy]);
+    const hashes = await realProjectFiles(log).hashAll([original, copy]);
 
     expect(hashes[original]).toBe(hashes[copy]);
   });
 
   it('hashes nothing for no paths', async () => {
-    expect(await realProjectFiles().hashAll([])).toEqual({});
+    expect(await realProjectFiles(log).hashAll([])).toEqual({});
   });
 
   it('read errors throw with the file that it failed to read', async () => {
@@ -252,7 +254,7 @@ describe('realProjectFiles hashAll', () => {
 
     let err: Error | undefined;
     try {
-      await realProjectFiles().hashAll([readable, unreadable]);
+      await realProjectFiles(log).hashAll([readable, unreadable]);
     } catch (error) {
       err = error as Error;
     }
@@ -262,11 +264,20 @@ describe('realProjectFiles hashAll', () => {
 });
 
 describe('realProjectFiles writeFile', () => {
+  it('creates absent parent directories before writing', () => {
+    const root = temporaryDirectory();
+    const filePath = path.join(root, 'storybook-static/.chromatic/turbosnap-manifest.json');
+
+    realProjectFiles(log).writeFile(filePath, '{"storybookHash":"abc"}');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
+  });
+
   it('writes the contents to the path, readable back as the same bytes', () => {
     const root = temporaryDirectory();
     const filePath = path.join(root, 'turbosnap-manifest.json');
 
-    realProjectFiles().writeFile(filePath, '{"storybookHash":"abc"}');
+    realProjectFiles(log).writeFile(filePath, '{"storybookHash":"abc"}');
 
     expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
   });
@@ -275,7 +286,7 @@ describe('realProjectFiles writeFile', () => {
     const root = temporaryDirectory();
     const filePath = write(root, 'turbosnap-manifest.json', 'stale');
 
-    realProjectFiles().writeFile(filePath, 'fresh');
+    realProjectFiles(log).writeFile(filePath, 'fresh');
 
     expect(readFileSync(filePath, 'utf8')).toBe('fresh');
   });
@@ -286,7 +297,7 @@ describe('realProjectFiles packageVersion', () => {
     const root = temporaryDirectory();
     install(root, 'storybook', { name: 'storybook', version: '9.1.20' });
 
-    expect(realProjectFiles().packageVersion(root, 'storybook')).toBe('9.1.20');
+    expect(realProjectFiles(log).packageVersion(root, 'storybook')).toBe('9.1.20');
   });
 
   it('walks up from the directory, so a workspace-hoisted install is found', () => {
@@ -295,7 +306,7 @@ describe('realProjectFiles packageVersion', () => {
     mkdirSync(projectRoot, { recursive: true });
     install(repositoryRoot, 'storybook', { name: 'storybook', version: '9.1.20' });
 
-    expect(realProjectFiles().packageVersion(projectRoot, 'storybook')).toBe('9.1.20');
+    expect(realProjectFiles(log).packageVersion(projectRoot, 'storybook')).toBe('9.1.20');
   });
 
   it('reports no version for a package that does not export its own manifest', () => {
@@ -308,19 +319,19 @@ describe('realProjectFiles packageVersion', () => {
       exports: { '.': './index.js' },
     });
 
-    expect(realProjectFiles().packageVersion(root, 'sealed')).toBeUndefined();
+    expect(realProjectFiles(log).packageVersion(root, 'sealed')).toBeUndefined();
   });
 
   it('reports no version for a package whose manifest has none', () => {
     const root = temporaryDirectory();
     install(root, 'storybook', { name: 'storybook' });
 
-    expect(realProjectFiles().packageVersion(root, 'storybook')).toBeUndefined();
+    expect(realProjectFiles(log).packageVersion(root, 'storybook')).toBeUndefined();
   });
 
   it('reports no version for a package that is not installed', () => {
     const root = temporaryDirectory();
 
-    expect(realProjectFiles().packageVersion(root, '@storybook/builder-vite')).toBeUndefined();
+    expect(realProjectFiles(log).packageVersion(root, '@storybook/builder-vite')).toBeUndefined();
   });
 });

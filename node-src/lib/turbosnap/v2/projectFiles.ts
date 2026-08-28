@@ -1,9 +1,11 @@
-import { readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
+import { mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
+import { Dirent } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
+import { Logger } from '../../log';
 import { FileHash } from './graph';
 
 /**
@@ -22,7 +24,7 @@ export interface ProjectFiles {
   ): Promise<Record<AbsolutePath, FileHash>>;
   /** Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. */
   listTree(absoluteDirectory: AbsolutePath): AbsolutePath[];
-  /** Writes the contents to the file, creating or overwriting it. */
+  /** Writes the contents to the file, creating parent directories and overwriting it if present. */
   writeFile(absolutePath: AbsolutePath, contents: string): void;
 }
 
@@ -30,9 +32,11 @@ export interface ProjectFiles {
  * The adapter backed by the real disk. Constructed explicitly by the caller, never defaulted: a
  * default is exactly how a test would silently read the machine it runs on.
  *
+ * @param log The logger to use.
+ *
  * @returns An adapter to read from the real file system.
  */
-export function realProjectFiles(): ProjectFiles {
+export function realProjectFiles(log: Logger): ProjectFiles {
   return {
     isFile: (absolutePath: AbsolutePath) =>
       statSync(absolutePath, { throwIfNoEntry: false })?.isFile() ?? false,
@@ -40,9 +44,11 @@ export function realProjectFiles(): ProjectFiles {
       statSync(absolutePath, { throwIfNoEntry: false })?.isDirectory() ?? false,
     packageVersion: readPackageVersion,
     hashAll: hashFileContents,
-    listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(absoluteDirectory),
-    writeFile: (absolutePath: AbsolutePath, contents: string) =>
-      writeFileSync(absolutePath, contents),
+    listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(log, absoluteDirectory),
+    writeFile: (absolutePath: AbsolutePath, contents: string) => {
+      mkdirSync(path.dirname(absolutePath), { recursive: true });
+      writeFileSync(absolutePath, contents);
+    },
   };
 }
 
@@ -104,6 +110,7 @@ function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
  * contributes nothing rather than throwing: a configured-but-missing `staticDir` is not an error, and
  * v1 never matches such a path either. The same holds for a broken symlink, whose target can't be read.
  *
+ * @param log The logger to use.
  * @param directory The absolute directory to walk.
  * @param ancestorDirectories Resolved real paths in the current branch, so a symlink cycle
  * terminates without suppressing sibling aliases to the same directory.
@@ -111,13 +118,15 @@ function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
  * @returns The absolute path of every file found.
  */
 function listFilesRecursively(
+  log: Logger,
   directory: AbsolutePath,
   ancestorDirectories = new Set<AbsolutePath>()
 ): AbsolutePath[] {
   let realDirectory;
   try {
     realDirectory = realpathSync(directory);
-  } catch {
+  } catch (error) {
+    log.debug(`Failed to resolve ${directory} when listing files`, error);
     return [];
   }
 
@@ -130,14 +139,15 @@ function listFilesRecursively(
     let entries;
     try {
       entries = readdirSync(directory, { withFileTypes: true });
-    } catch {
+    } catch (error) {
+      log.debug(`Failed to read directory ${directory} when listing files`, error);
       return [];
     }
 
-    return entries.flatMap((entry) => {
+    return entries.flatMap((entry: Dirent) => {
       const entryPath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        return listFilesRecursively(entryPath, ancestorDirectories);
+        return listFilesRecursively(log, entryPath, ancestorDirectories);
       }
       if (entry.isFile()) {
         return [entryPath];
@@ -148,10 +158,11 @@ function listFilesRecursively(
       try {
         const stats = statSync(entryPath);
         if (stats.isDirectory()) {
-          return listFilesRecursively(entryPath, ancestorDirectories);
+          return listFilesRecursively(log, entryPath, ancestorDirectories);
         }
         return stats.isFile() ? [entryPath] : [];
-      } catch {
+      } catch (error) {
+        log.debug(`Failed to stat ${entryPath} when listing files`, error);
         return [];
       }
     });

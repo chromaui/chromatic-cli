@@ -57,6 +57,7 @@ describe('turbosnap-manifest', () => {
     expect(buildManifest).toHaveBeenCalledWith(
       { modules: [] },
       {
+        log: testLogger,
         projectRoot: '/repo',
         configDir: '/repo/.storybook',
         staticDirs: [],

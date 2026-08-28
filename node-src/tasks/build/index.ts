@@ -17,6 +17,7 @@ export interface BuildInput {
   projectId?: string;
   runtimeMetadata?: Context['runtimeMetadata'];
   git: Context['git'];
+  turboSnap?: Context['turboSnap'];
 }
 
 export interface BuildOutput {
@@ -88,7 +89,7 @@ async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResul
       sourceDir,
       flags: input.flags,
       storybook: input.storybook,
-      changedFiles: input.git.changedFiles,
+      turboSnap: input.turboSnap,
     }
   );
 
@@ -144,6 +145,7 @@ export const extractBuildInput = (ctx: Context): BuildInput => ({
   projectId: ctx.announcedBuild?.app?.id,
   runtimeMetadata: ctx.runtimeMetadata,
   git: ctx.git,
+  turboSnap: ctx.turboSnap,
 });
 
 export const applyBuildOutput = (ctx: Context, output: BuildOutput) => {

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { exitCodes } from '../../setExitCode';
 import TestLogger from '../../testLogger';
-import { traceChangedFiles } from '.';
+import { traceChangedFiles as traceChangedFilesV1 } from '.';
 import { classifyTagsFromError as classifyTagsFromErrorDep } from './classifyBailRootCause';
 import {
   BaselineCheckoutFailedError,
@@ -29,17 +29,6 @@ vi.mock('./findChangedDependencies', async (importOriginal) => {
 vi.mock('./findChangedPackageFiles');
 vi.mock('./getDependentStoryFiles');
 vi.mock('./classifyBailRootCause');
-vi.mock('../../../tasks/readStatsFile', () => ({
-  readStatsFile: () =>
-    Promise.resolve({
-      modules: [
-        {
-          id: '../../../__mocks__/storybookBaseDir/test.ts',
-          name: '../../../__mocks__/storybookBaseDir/test.ts',
-        },
-      ],
-    }),
-}));
 
 const getDependentStoryFiles = vi.mocked(getDependentStoryFilesDep);
 const findChangedPackageFiles = vi.mocked(findChangedPackageFilesDep);
@@ -51,6 +40,17 @@ const captureException = vi.mocked(Sentry.captureException);
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
 const http = { fetch: vi.fn() };
+const statsPath = '/static/preview-stats.json';
+const stats = {
+  modules: [
+    {
+      id: '../../../__mocks__/storybookBaseDir/test.ts',
+      name: '../../../__mocks__/storybookBaseDir/test.ts',
+    },
+  ],
+};
+
+const traceChangedFiles = (ctx: any) => traceChangedFilesV1(ctx, stats, statsPath);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -341,23 +341,5 @@ describe('traceChangedFiles', () => {
     expect(result.status).toBe('bailed');
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(ctx.git.changedDependencyNames).toBeUndefined();
-  });
-
-  it('throws if stats file is not found', async () => {
-    const packageMetadataChanges = [{ changedFiles: ['./package.json'], commit: 'abcdef' }];
-    const ctx = {
-      options: {},
-      sourceDir: '/static/',
-      git: { changedFiles: ['./example.js', './package.json'], packageMetadataChanges },
-      turboSnap: {},
-    } as any;
-
-    let err;
-    try {
-      await traceChangedFiles(ctx);
-    } catch (error) {
-      err = error;
-    }
-    expect(err.message).toContain('TurboSnap requires a stats file');
   });
 });

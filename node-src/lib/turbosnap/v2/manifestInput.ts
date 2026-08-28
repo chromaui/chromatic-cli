@@ -1,4 +1,5 @@
 import { AbsolutePath } from '../../../types';
+import { Logger } from '../../log';
 import { ProjectFiles } from './projectFiles';
 
 /**
@@ -9,6 +10,8 @@ import { ProjectFiles } from './projectFiles';
  * same project. Each stage narrows it to the fields it actually uses with a `Pick`.
  */
 export interface ManifestInput {
+  /** The logger to use for logging. */
+  log: Logger;
   /** The absolute Storybook project root that canonical manifest keys are relative to. */
   projectRoot: AbsolutePath;
   /**

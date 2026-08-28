@@ -1,9 +1,9 @@
 import * as Sentry from '@sentry/node';
-import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
+import TestLogger from '../../testLogger';
 import { traceChangedFiles } from './index';
 import { ProjectFiles } from './projectFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
@@ -29,7 +29,7 @@ const CONFIG_ENTRY = './storybook-config-entry.js';
 // is what keeps a test from having to list every source file its stats name.
 const SYNTHETIC = ['storybook-stories.js', 'storybook-config-entry.js', '|lazy|'];
 
-const manifestOutputDirectory = '/repo/packages/ui/storybook-static';
+const manifestPath = '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json';
 
 function setup() {
   const disk: InMemoryDisk = {
@@ -133,10 +133,11 @@ describe('traceChangedFiles', () => {
 // `patchFiles` override replaces adapter methods for the paths only a failing read or write reaches.
 function trace({ projectFiles, runQuery }: Fixture, patchFiles: Partial<ProjectFiles> = {}) {
   return traceChangedFiles({
+    log: new TestLogger(),
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),
-    manifestOutputDirectory,
+    manifestPath,
     projectRoot,
     configDir: configDirectory,
     staticDirs: [`${configDirectory}/static`],
@@ -163,7 +164,6 @@ function uploaded({ runQuery }: Fixture) {
 
 // The diagnostic manifest as written, or undefined when none was written.
 function writtenManifest({ disk }: Fixture) {
-  const contents =
-    disk.writtenFiles?.[path.join(manifestOutputDirectory, 'turbosnap-manifest.json')];
+  const contents = disk.writtenFiles?.[manifestPath];
   return contents === undefined ? undefined : JSON.parse(contents);
 }

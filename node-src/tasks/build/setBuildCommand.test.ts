@@ -26,7 +26,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '6.2.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
 
@@ -47,7 +47,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '6.2.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
 
@@ -68,7 +68,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '6.2.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
 
@@ -80,6 +80,54 @@ describe('setBuildCommand', () => {
     expect(result).toEqual('pnpm run build:storybook');
   });
 
+  it('emits the stats file when TurboSnap is enabled', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const result = await setBuildCommand(
+      { ...baseDeps, options: { buildScriptName: 'build:storybook' } },
+      { ...baseInput, sourceDir: './source-dir/', turboSnap: {} }
+    );
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
+  });
+
+  it('emits the stats file when TurboSnap bailed on a rebuild', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const result = await setBuildCommand(
+      { ...baseDeps, options: { buildScriptName: 'build:storybook' } },
+      { ...baseInput, sourceDir: './source-dir/', turboSnap: { status: 'bailed' } }
+    );
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
+  });
+
+  it('does not emit the stats file when TurboSnap is unavailable', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const result = await setBuildCommand(
+      { ...baseDeps, options: { buildScriptName: 'build:storybook' } },
+      { ...baseInput, sourceDir: './source-dir/', turboSnap: { unavailable: true } }
+    );
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
+  });
+
   it('uses --build-command, if set', async () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
@@ -89,7 +137,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '6.2.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
 
@@ -105,7 +153,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '6.1.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
     expect(log.warn).toHaveBeenCalledWith(
@@ -122,7 +170,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '8.4.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
 
@@ -143,7 +191,7 @@ describe('setBuildCommand', () => {
         ...baseInput,
         sourceDir: './source-dir/',
         storybook: { version: '8.5.0' },
-        changedFiles: ['./index.js'],
+        turboSnap: {},
       }
     );
 
@@ -160,7 +208,7 @@ describe('setBuildCommand', () => {
 
     const result = await setBuildCommand(
       { ...baseDeps, options: { buildScriptName: 'build:storybook' } },
-      { ...baseInput, sourceDir: './source-dir/', changedFiles: ['./index.js'] }
+      { ...baseInput, sourceDir: './source-dir/', turboSnap: {} }
     );
 
     expect(getCliCommand).toHaveBeenCalledWith(

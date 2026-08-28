@@ -1,3 +1,4 @@
+import TestLogger from '../../../testLogger';
 import { buildManifest } from '../manifest';
 import { ManifestInput } from '../manifestInput';
 import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles.fake';
@@ -30,6 +31,7 @@ export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
   return {
     disk,
     input: {
+      log: new TestLogger(),
       projectRoot,
       configDir: `${projectRoot}/.storybook`,
       staticDirs: [`${projectRoot}/.storybook/static`],

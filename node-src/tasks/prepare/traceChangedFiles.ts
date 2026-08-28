@@ -39,7 +39,6 @@ export async function traceChangedFiles(
   const ctx = input.turboSnapContext;
 
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return {};
-  if (!ctx.git.changedFiles) return {};
 
   deps.report(tracing({ git: ctx.git, options: deps.options }));
 
