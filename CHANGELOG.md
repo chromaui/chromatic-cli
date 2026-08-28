@@ -1,3 +1,15 @@
+# v18.6.2 (Fri Aug 28 2026)
+
+#### 🐛 Bug Fix
+
+- Return capture counts on bypassed builds [#1467](https://github.com/chromaui/chromatic-cli/pull/1467) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.6.1 (Thu Aug 27 2026)
 
 #### 🐛 Bug Fix
