@@ -5,6 +5,7 @@ import {
   canonicalFileNames,
   canonicalImporters,
   isNodeModulesPath,
+  isSyntheticFile,
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
@@ -140,11 +141,11 @@ function ensureFile(
  * Resolves a stats module path to the absolute on-disk file to hash, or undefined when there is
  * nothing hashable there.
  *
- * Virtual modules (e.g. Vite's `virtual:` entries) have no on-disk location. Skipping them is stats
- * policy, which is why it is asked here rather than of the disk. Beyond that, only a regular file is
- * hashable, and what counts as one is the module's rule; see {@link ProjectFiles.isFile}. Skipping a
- * name with no file loses no evidence, because such a name is never a source file and so can never be
- * edited as one.
+ * Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs) have no on-disk
+ * location. Skipping them is stats policy, which is why it is asked here rather than of the disk.
+ * Beyond that, only a regular file is hashable, and what counts as one is the module's rule; see
+ * {@link ProjectFiles.isFile}. Skipping a name with no file loses no evidence, because such a name is
+ * never a source file and so can never be edited as one.
  *
  * @param rawPath The module name from the stats file.
  * @param statsRoot The directory relative stats paths are named from.
@@ -157,7 +158,7 @@ function hashableAbsolutePath(
   statsRoot: string,
   projectFiles: ProjectFiles
 ): string | undefined {
-  if (rawPath.includes('virtual:')) return undefined;
+  if (isSyntheticFile(rawPath)) return undefined;
   const absolutePath = resolveStatsPath(rawPath, statsRoot);
   return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
 }

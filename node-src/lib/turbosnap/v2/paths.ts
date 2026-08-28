@@ -106,6 +106,19 @@ export function isNodeModulesPath(filePath: string): boolean {
 }
 
 /**
+ * Whether a file path names a synthetic module whose contents do not exist as a file on disk.
+ *
+ * @param path The module name from the stats file.
+ *
+ * @returns Whether the path must not be resolved or read from disk.
+ */
+export function isSyntheticFile(path: FilePath): boolean {
+  // Note: The file path of the data: "files" start with `data:image/svg+xml` or similar rather than
+  // a directory path.
+  return path.includes('virtual:') || path.startsWith('data:');
+}
+
+/**
  * Strips a trailing ` + N modules` suffix from a concatenated module's name, leaving the root file.
  *
  * @param statsPath The module name from the stats file.
@@ -120,8 +133,8 @@ export function stripConcatenatedModuleSuffix(statsPath: FilePath): FilePath {
  * Converts a stats module path into the canonical manifest key: a POSIX path relative to the
  * Storybook project root. Relative stats paths are first resolved from `statsRoot`, because a
  * builder may name them from the repository root even though manifest keys anchor at the project.
- * Virtual modules (e.g. Vite's `virtual:` entries) have no on-disk location and are returned
- * unchanged.
+ * Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs) have no on-disk
+ * location and are returned unchanged.
  *
  * @param statsPath The module name from the stats file (relative like `./src/x` or absolute).
  * @param projectRoot The absolute Storybook project root to anchor against.
@@ -134,7 +147,7 @@ export function normalizeStatsPath(
   projectRoot: AbsolutePath,
   statsRoot: AbsolutePath = projectRoot
 ): FilePath {
-  if (statsPath.includes('virtual:')) {
+  if (isSyntheticFile(statsPath)) {
     return statsPath;
   }
 
