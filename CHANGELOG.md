@@ -1,3 +1,15 @@
+# v18.7.1 (Fri Aug 28 2026)
+
+#### 🐛 Bug Fix
+
+- fix: `chromaui/action` to resolve correct E2E package when multiple are installed [#1465](https://github.com/chromaui/chromatic-cli/pull/1465) ([@AriPerkkio](https://github.com/AriPerkkio))
+
+#### Authors: 1
+
+- Ari Perkkiö ([@AriPerkkio](https://github.com/AriPerkkio))
+
+---
+
 # v18.7.0 (Fri Aug 28 2026)
 
 #### 🚀 Enhancement
