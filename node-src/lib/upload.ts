@@ -80,6 +80,48 @@ mutation PrepareBuild(
 }
 `;
 
+// If the build is skipped, we need to pull some of the build stats separately so we can return them
+// to the CLI/Action output. These line up with the fields in the return shape of `run()` in
+// node-src/index.ts.
+const SkippedBuildQuery = `
+  query SkippedBuildQuery($number: Int!) {
+    app {
+      build(number: $number) {
+        specCount
+        componentCount
+        testCount
+        changeCount
+        errorCount: testCount(statuses: [BROKEN])
+        actualTestCount: testCount(statuses: [IN_PROGRESS])
+        interactionTestFailuresCount
+        actualCaptureCount
+        inheritedCaptureCount
+      }
+    }
+  }
+`;
+
+export type SkippedBuildFields = Partial<
+  Pick<
+    NonNullable<Context['build']>,
+    | 'specCount'
+    | 'componentCount'
+    | 'testCount'
+    | 'changeCount'
+    | 'errorCount'
+    | 'actualTestCount'
+    | 'interactionTestFailuresCount'
+    | 'actualCaptureCount'
+    | 'inheritedCaptureCount'
+  >
+>;
+
+interface SkippedBuildQueryResult {
+  app: {
+    build: SkippedBuildFields;
+  };
+}
+
 interface UploadBuildMutationResult {
   uploadBuild: {
     info?: {
@@ -160,6 +202,7 @@ export interface UploadBuildResult {
     webUrl: string;
     snapshotCount: number;
   };
+  skippedBuild?: SkippedBuildFields;
 }
 
 /**
@@ -274,6 +317,23 @@ export async function uploadBuild(
           Sentry.captureException(err);
         });
 
+      // Query the skipped build for some stats that we'll return to the CLI/Action output.
+      let skippedBuild: SkippedBuildFields | undefined;
+      try {
+        const { app } = await ctx.client.runQuery<SkippedBuildQueryResult>(
+          SkippedBuildQuery,
+          { number: ctx.announcedBuild.number },
+          { headers: { Authorization: `Bearer ${ctx.announcedBuild.reportToken}` } }
+        );
+        skippedBuild = app.build;
+      } catch (err) {
+        ctx.log.error(
+          `Failed to query fields for skipped build ${uploadBuild.build?.id}, continuing`,
+          err
+        );
+        Sentry.captureException(err);
+      }
+
       return {
         sentinelUrls,
         uploadedBytes,
@@ -281,6 +341,7 @@ export async function uploadBuild(
         skippedByTurboSnap: true,
         // In this case, we should only have a single ancestor build.
         ancestorBuild: uploadBuild.build.ancestorBuilds?.[0],
+        skippedBuild,
       };
     }
 
