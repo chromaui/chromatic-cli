@@ -1,3 +1,16 @@
+# v18.7.2 (Mon Aug 31 2026)
+
+#### 🐛 Bug Fix
+
+- Add Sentry tags to TurboSnap v2 events [#1469](https://github.com/chromaui/chromatic-cli/pull/1469) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Filter data URLs [#1470](https://github.com/chromaui/chromatic-cli/pull/1470) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.7.1 (Fri Aug 28 2026)
 
 #### 🐛 Bug Fix
