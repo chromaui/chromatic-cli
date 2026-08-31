@@ -36,6 +36,7 @@ export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   // This can happen if `vitest run` is run without the chromaticPlugin({ turboSnap: true })
   // and `chromatic --vitest --only-changed` is run afterwards.
   if (ctx.options.vitest && sourceModuleFiles.length === 0) {
+    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
     throw new Error(turboSnapDisabledVitest());
   }
 
