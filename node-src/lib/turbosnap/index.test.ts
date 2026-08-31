@@ -8,8 +8,11 @@ import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 import { realProjectFiles } from './v2/projectFiles';
 
+const { scopeSetTag } = vi.hoisted(() => ({ scopeSetTag: vi.fn() }));
+
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
+  withScope: vi.fn(async (callback) => callback({ setTag: scopeSetTag })),
 }));
 
 vi.mock('../../tasks/readStatsFile', () => ({
@@ -162,5 +165,12 @@ describe('traceChangedFiles', () => {
 
     expect(traceChangedFilesV2).toHaveBeenCalledOnce();
     expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it('tags the v2 run so its Sentry events can be isolated', async () => {
+    await traceChangedFiles(makeContext());
+
+    expect(Sentry.withScope).toHaveBeenCalledOnce();
+    expect(scopeSetTag).toHaveBeenCalledWith('turbosnap', 'v2');
   });
 });

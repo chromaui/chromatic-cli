@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context } from '../../types';
+import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
@@ -31,20 +31,36 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
 
-  // V2 catches every anticipated failure itself. A rejection here is a defect in those guards: it
-  // must be observable, but it must never affect the v1 decision or the customer's build.
+  // V2 runs for its side effects only; it never affects the v1 decision or the customer's build.
+  await runTurboSnapV2(ctx, stats);
+
+  if (!ctx.git.changedFiles || ctx.git.changedFiles.length === 0) {
+    return { status: 'skipped' };
+  }
+
+  ctx.log.debug('Tracing changed files with TurboSnap v1');
+  return traceChangedFilesV1(ctx, stats, statsPath);
+}
+
+async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
   try {
-    ctx.log.debug('Tracing changed files with TurboSnap v2');
-    await traceChangedFilesV2({
-      log: ctx.log,
-      graphqlClient: ctx.client,
-      buildId: ctx.announcedBuild.id,
-      stats,
-      manifestPath: getManifestPath(ctx.sourceDir),
-      projectRoot: ctx.storybook.projectRoot,
-      configDir: ctx.storybook.configDir,
-      staticDirs: ctx.storybook.staticDirs,
-      projectFiles: realProjectFiles(ctx.log),
+    // Run TurboSnap v2 with scoped Sentry tags so all events from v2 are tagged the same. Then the
+    // scope is removed once this function returns.
+    await Sentry.withScope(async (scope) => {
+      scope.setTag('turbosnap', 'v2');
+      ctx.log.debug('Tracing changed files with TurboSnap v2');
+
+      await traceChangedFilesV2({
+        log: ctx.log,
+        graphqlClient: ctx.client,
+        buildId: ctx.announcedBuild.id,
+        stats,
+        manifestPath: getManifestPath(ctx.sourceDir),
+        projectRoot: ctx.storybook.projectRoot,
+        configDir: ctx.storybook.configDir,
+        staticDirs: ctx.storybook.staticDirs,
+        projectFiles: realProjectFiles(ctx.log),
+      });
     });
   } catch (error) {
     ctx.log.error(
@@ -55,11 +71,4 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
       fingerprint: ['TurboSnap v2', 'Failed to trace changed files'],
     });
   }
-
-  if (!ctx.git.changedFiles || ctx.git.changedFiles.length === 0) {
-    return { status: 'skipped' };
-  }
-
-  ctx.log.debug('Tracing changed files with TurboSnap v1');
-  return traceChangedFilesV1(ctx, stats, statsPath);
 }
