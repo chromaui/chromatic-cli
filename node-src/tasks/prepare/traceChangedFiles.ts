@@ -1,5 +1,6 @@
 import * as turbosnap from '@cli/turbosnap';
 
+import { isE2EBuild } from '../../lib/e2eUtils';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
 import { Context, Deps } from '../../types';
 import { bailed, traced, tracing } from '../../ui/tasks/prepare';
@@ -37,6 +38,7 @@ export async function traceChangedFiles(
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesOutput> {
   const ctx = input.turboSnapContext;
+  const type = isE2EBuild(ctx.options) ? 'test' : 'story';
 
   if (!ctx.turboSnap || ctx.turboSnap.unavailable) return {};
 
@@ -68,7 +70,7 @@ export async function traceChangedFiles(
     if (!deps.options.interactive) {
       if (!deps.options.traceChanged) {
         deps.log.info(
-          `Found affected story files:\n${Object.entries(result.onlyStoryFiles)
+          `Found affected ${type} files:\n${Object.entries(result.onlyStoryFiles)
             .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
             .join('\n')}`
         );
@@ -87,8 +89,8 @@ export async function traceChangedFiles(
     if (!deps.options.interactive) {
       const { statsPath } = ctx.fileInfo ?? {};
       const { changedFiles } = ctx.git;
-      deps.log.info('Failed to retrieve dependent story files', { statsPath, changedFiles, err });
+      deps.log.info(`Failed to retrieve dependent ${type} files`, { statsPath, changedFiles, err });
     }
-    throw rewriteErrorMessage(err, `Could not retrieve dependent story files.\n${err.message}`);
+    throw rewriteErrorMessage(err, `Could not retrieve dependent ${type} files.\n${err.message}`);
   }
 }
