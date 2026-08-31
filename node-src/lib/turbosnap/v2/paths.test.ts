@@ -5,6 +5,7 @@ import {
   canonicalFileNames,
   canonicalImporters,
   isNodeModulesPath,
+  isSyntheticFile,
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
@@ -175,6 +176,12 @@ describe('canonicalImporters', () => {
 });
 
 describe('normalizeStatsPath', () => {
+  it('leaves inline data URLs unchanged', () => {
+    const dataUrl = 'data:font/ttf;base64,AAAAAAAAAAAAAAAAAA';
+
+    expect(normalizeStatsPath(dataUrl, projectRoot)).toBe(dataUrl);
+  });
+
   it('keeps a project-relative path as-is, with its ./ prefix', () => {
     expect(normalizeStatsPath('./src/Button.stories.tsx', projectRoot)).toBe(
       './src/Button.stories.tsx'
@@ -263,5 +270,15 @@ describe('isNodeModulesPath', () => {
     ['an empty path', ''],
   ])('is false for %s', (_description, filePath) => {
     expect(isNodeModulesPath(filePath)).toBe(false);
+  });
+});
+
+describe('isSyntheticFile', () => {
+  it('recognizes an inline data URL by its leading scheme', () => {
+    expect(isSyntheticFile('data:font/ttf;base64,AAAAAAAAAAAAAAAAAA')).toBe(true);
+  });
+
+  it('does not mistake a real path containing data: for a synthetic module', () => {
+    expect(isSyntheticFile('/repo/packages/data:exports/src/font.ts')).toBe(false);
   });
 });

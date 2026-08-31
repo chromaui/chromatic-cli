@@ -94,6 +94,33 @@ describe('readStatsGraph concatenated modules', () => {
 });
 
 describe('readStatsGraph unhashable paths', () => {
+  it('skips an inline data URL rather than treating it as a file path', async () => {
+    const dataUrl = `data:font/ttf;base64,AAAAAAAAAAAAAAAAAA`;
+    const { input } = createFixture();
+
+    const graph = await readStatsGraph(
+      { modules: [{ id: 1, name: dataUrl, reasons: [] }] },
+      {
+        ...input,
+        projectFiles: {
+          ...input.projectFiles,
+          isFile: (absolutePath) => {
+            if (absolutePath.includes(dataUrl)) {
+              throw new Error('ENAMETOOLONG: name too long');
+            }
+            return input.projectFiles.isFile(absolutePath);
+          },
+        },
+      }
+    );
+
+    expect(graph.hashes.size).toBe(0);
+    expect(
+      graph.files.has(dataUrl),
+      'expected dataUrl to be in the list of files found in the graph'
+    ).toBe(true);
+  });
+
   it('skips a module named after a directory rather than failing the read', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     // rspack names one record after a directory on `storybook-builder-rsbuild` 3.3.0/3.3.1. Reading
