@@ -13,18 +13,18 @@ const getContext: any = (baselineCommits: string[]) => ({
   git: { baselineCommits },
 });
 
-async function getMockedDependencies(headName: string, baseName: string) {
+async function getMockedDependencies(headName: string, baseName: string, lockfile = 'yarn.lock') {
   const ctx = getContext();
   return {
     head: await getDependencies(ctx, {
       rootPath: path.join(__dirname, `../../../__mocks__/dependencyChanges/${headName}`),
       manifestPath: 'package.json',
-      lockfilePath: 'yarn.lock',
+      lockfilePath: lockfile,
     }),
     base: await getDependencies(ctx, {
       rootPath: path.join(__dirname, `../../../__mocks__/dependencyChanges/${baseName}`),
       manifestPath: 'package.json',
-      lockfilePath: 'yarn.lock',
+      lockfilePath: lockfile,
     }),
   };
 }
@@ -70,5 +70,21 @@ describe('compareBaseline', () => {
     const baselineChanges = await compareBaseline(head, base);
 
     expect(baselineChanges).toEqual(new Set(['husky']));
+  });
+
+  // Regression test for pnpm catalogs: bumping a catalog-pinned version only changes
+  // pnpm-lock.yaml (the `catalogs:` and `importers:` entries) -- package.json keeps the
+  // `catalog:` specifier unchanged. Fixtures were generated with a real `pnpm install
+  // --lockfile-only` after editing pnpm-workspace.yaml's catalog, not hand-written, so this
+  // exercises the real snyk pnpm lockfile parser against a real catalog-format lockfile.
+  it('finds changed dependency names for a pnpm catalog version bump', async () => {
+    const { head, base } = await getMockedDependencies(
+      'pnpm-catalog-after',
+      'pnpm-catalog-before',
+      'pnpm-lock.yaml'
+    );
+    const baselineChanges = await compareBaseline(head, base);
+
+    expect(baselineChanges).toEqual(new Set(['is-odd', 'is-number']));
   });
 });
