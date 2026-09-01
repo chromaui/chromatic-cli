@@ -143,7 +143,7 @@ describe('traceChangedFiles', () => {
 
     let err;
     try {
-      await traceChangedFiles(deps(), { turboSnapContext: ctx });
+      await traceChangedFiles({ ...deps(), options: { vitest: true } }, { turboSnapContext: ctx });
     } catch (error) {
       err = error;
     }

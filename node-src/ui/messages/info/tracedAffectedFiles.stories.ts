@@ -71,6 +71,18 @@ export const TracedAffectedFiles = () =>
     } as any
   );
 
+export const TracedAffectedFilesE2E = () =>
+  tracedAffectedFiles(
+    {
+      options: { playwright: true, storybookBaseDir: 'src' },
+      turboSnap: { tracedPaths: new Set(tracedPaths) },
+    } as any,
+    {
+      changedFiles: ['src/app/dashboard/index.ts'],
+      affectedModules,
+    } as any
+  );
+
 export const TracedAffectedFilesExpanded = () =>
   tracedAffectedFiles(
     {

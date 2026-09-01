@@ -1,10 +1,9 @@
 import path from 'path';
 import pluralize from 'pluralize';
 
-import { isE2EBuild } from '../../lib/e2eUtils';
 import { isPackageManifestFile } from '../../lib/utilities';
 import { Context } from '../../types';
-import { buildType } from './utilities';
+import { buildType, capitalize, testType } from './utilities';
 
 export const initial = (ctx: Context) => ({
   status: 'initial',
@@ -93,11 +92,10 @@ export const invalidReactNative = (
 
 export const tracing = (ctx: Pick<Context, 'git' | 'options'>) => {
   const files = pluralize('file', ctx.git.changedFiles?.length, true);
-  const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
 
   return {
     status: 'updating',
-    title: `Retrieving ${testType} files affected by recent changes`,
+    title: `Retrieving ${testType(ctx)} files affected by recent changes`,
     output: `Traversing dependencies for ${files} that changed since the last build`,
   };
 };
@@ -127,12 +125,11 @@ export const bailed = (ctx: Pick<Context, 'turboSnap'>) => {
 };
 
 export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
-  const testType = isE2EBuild(ctx.options) ? 'test' : 'story';
-  const files = pluralize(`${testType} file`, ctx.onlyStoryFiles?.length, true);
+  const files = pluralize(`${testType(ctx)} file`, ctx.onlyStoryFiles?.length, true);
 
   return {
     status: 'updating',
-    title: `Retrieved ${testType} files affected by recent changes`,
+    title: `Retrieved ${testType(ctx)} files affected by recent changes`,
     output: `Found ${files} affected by recent changes`,
   };
 };
@@ -147,6 +144,6 @@ export const success = (ctx: Context) => {
   return {
     status: 'success',
     title: 'Preparation complete',
-    output: `${buildType(ctx)} files validated and prepared for upload`,
+    output: `${capitalize(buildType(ctx))} files validated and prepared for upload`,
   };
 };
