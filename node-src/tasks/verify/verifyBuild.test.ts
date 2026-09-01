@@ -242,4 +242,39 @@ describe('verifyBuild', () => {
       Viewport width in mode 'w30000h1000' is out of range [200, 2560]"
     `);
   });
+
+  it('logs Vitest test run build failure reasons and throws error with exit code of 23', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      app: {
+        build: {
+          startedAt: Date.now(),
+          failureReason: "Viewport width in mode 'w30000h1000' is out of range [200, 2560]",
+        },
+      },
+    });
+
+    await expect(
+      verifyBuild(buildDeps(client), {
+        ...defaultInput,
+        options: { ...defaultInput.options, vitest: true },
+      })
+    ).rejects.toThrow(
+      expect.objectContaining({
+        message: 'Failed to publish build',
+        exitCode: exitCodes.STORYBOOK_BROKEN,
+      })
+    );
+
+    const warning = log.warn.mock.calls[0][0];
+    expect(warning).toMatchInlineSnapshot(`
+      "✖ Failed to process your Vitest test run
+      This is usually caused by an issue with your test or configuration, not Chromatic.
+      Review the error below, then update the affected test or configuration and rerun Vitest.
+
+      Viewport width in mode 'w30000h1000' is out of range [200, 2560]
+
+      View the published archives at https://61b0a4b8ebf0e344c2aa231c-wdooytetbw.dev-chromatic.com/"
+    `);
+  });
 });

@@ -21,5 +21,14 @@ const storybookUrl = 'https://61b0a4b8ebf0e344c2aa231c-wdooytetbw.dev-chromatic.
 
 export const BrokenStorybook = () => brokenStorybook(ctx, { failureReason, storybookUrl });
 
+export const BrokenStorybookVitest = () =>
+  brokenStorybook(
+    { ...ctx, options: { vitest: true } },
+    {
+      failureReason: "Viewport width in mode 'w30000h1000' is out of range [200, 2560]",
+      storybookUrl,
+    }
+  );
+
 export const BrokenStorybookReactNative = () =>
   brokenStorybook({ ...ctx, isReactNativeApp: true }, { failureReason, storybookUrl });
