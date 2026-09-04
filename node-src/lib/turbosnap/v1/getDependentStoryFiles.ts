@@ -349,6 +349,22 @@ export async function getDependentStoryFiles(
 
   // First, check the files that have changed according to git
   tracedFiles.map((posixPath) => traceName(posixPath));
+
+  for (const file of tracedFiles) {
+    // We want to add MDX files that changed into the affectedModuleIds, but only if
+    // these are part of the storybook build.
+    if (!file.endsWith('.mdx')) {
+      continue;
+    }
+
+    const module_ = modulesByName.get(file);
+    if (!module_?.id) {
+      continue;
+    }
+
+    affectedModuleIds.add(module_.id);
+  }
+
   // If more were found during that process, check them too.
   while (toCheck.length > 0) {
     const [id, tracePath] = toCheck.pop() as TraceToCheck;
