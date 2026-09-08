@@ -57,9 +57,7 @@ export async function traceChangedFiles(
     });
   } catch (error) {
     input.log.error('Failed to build manifest for TurboSnap v2', error);
-    Sentry.captureException(error, {
-      fingerprint: ['TurboSnap v2', 'Failed to build manifest'],
-    });
+    Sentry.captureException(error);
     return { status: 'fallback' };
   }
   input.log.debug('Generated manifest for TurboSnap v2');
@@ -70,9 +68,7 @@ export async function traceChangedFiles(
     writeManifest(manifest, input.manifestPath, input.projectFiles);
   } catch (error) {
     input.log.error('Failed to write manifest for TurboSnap v2', error);
-    Sentry.captureException(error, {
-      fingerprint: ['TurboSnap v2', 'Failed to write manifest'],
-    });
+    Sentry.captureException(error);
     return { status: 'fallback' };
   }
   input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
@@ -83,9 +79,7 @@ export async function traceChangedFiles(
     await uploadHashes(input.graphqlClient, input.buildId, manifest);
   } catch (error) {
     input.log.error('Failed to upload hashes for TurboSnap v2', error);
-    Sentry.captureException(error, {
-      fingerprint: ['TurboSnap v2', 'Failed to upload hashes'],
-    });
+    Sentry.captureException(error);
     return { status: 'fallback' };
   }
   input.log.debug('Uploaded hashes for TurboSnap v2 to Chromatic');

@@ -67,8 +67,6 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
       'Failed to trace changed files with TurboSnap v2; this does not affect TurboSnap v1',
       error
     );
-    Sentry.captureException(error, {
-      fingerprint: ['TurboSnap v2', 'Failed to trace changed files'],
-    });
+    Sentry.captureException(error);
   }
 }

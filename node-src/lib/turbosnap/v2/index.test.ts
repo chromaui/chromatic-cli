@@ -96,7 +96,7 @@ describe('traceChangedFiles', () => {
       })
     ).resolves.toEqual({ status: 'fallback' });
 
-    expect(Sentry.captureException).toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(error);
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
@@ -112,7 +112,7 @@ describe('traceChangedFiles', () => {
       })
     ).resolves.toEqual({ status: 'fallback' });
 
-    expect(Sentry.captureException).toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(error);
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
@@ -123,7 +123,7 @@ describe('traceChangedFiles', () => {
 
     await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
 
-    expect(Sentry.captureException).toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(error);
     // The manifest is still written before the upload, so the failure remains debuggable.
     expect(writtenManifest(fixture).storyFiles).toEqual({ [STORY]: expect.any(String) });
   });
