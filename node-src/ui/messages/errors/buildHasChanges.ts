@@ -11,19 +11,17 @@ export default ({ build, exitCode, isOnboarding }) => {
   const changes: any[] = [];
   if (build.changeCount > 0) {
     changes.push(
-      chalk`${error} {bold Found ${pluralize('visual changes', build.changeCount, true)}}`
+      chalk`${error} {bold ${pluralize('visual changes', build.changeCount, true)} must be accepted as baseline.} Review at ${link(url)}`
     );
   }
   if (build.accessibilityChangeCount > 0) {
     changes.push(
-      chalk`${error} {bold Found ${pluralize('accessibility changes', build.accessibilityChangeCount, true)}}`
+      chalk`${error} {bold ${pluralize('accessibility changes', build.accessibilityChangeCount, true)} must be accepted as baseline.} Review at ${link(url)}`
     );
   }
 
   return dedent(chalk`
     ${changes.join('\n')}
-
-    Review the changes at ${link(url)}
     
     ${info} For CI/CD use cases, this command failed with exit code ${exitCode}
     Pass {bold --exit-zero-on-changes} to succeed this command regardless of changes.
