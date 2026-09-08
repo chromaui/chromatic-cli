@@ -7,6 +7,7 @@ import link from '../../components/link';
 
 export default ({ build, exitCode, isOnboarding }) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
+  const unstableUrl = `${url}#unstable`;
 
   const changes: any[] = [];
   if (build.changeCount > 0) {
@@ -17,6 +18,11 @@ export default ({ build, exitCode, isOnboarding }) => {
   if (build.accessibilityChangeCount > 0) {
     changes.push(
       chalk`${error} {bold ${pluralize('accessibility changes', build.accessibilityChangeCount, true)} must be accepted as baseline.} Review at ${link(url)}`
+    );
+  }
+  if (build.ignoredCount > 0) {
+    changes.push(
+      chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${build.ignoredCount > 1 ? 'were' : 'was'} ignored in this build.} Review at ${link(unstableUrl)}`
     );
   }
 
