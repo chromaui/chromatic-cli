@@ -122,4 +122,21 @@ describe('checkStorybookBaseDir', () => {
     getRepositoryRoot.mockResolvedValueOnce(path.resolve(process.cwd(), '..'));
     await expect(checkStorybookBaseDirectory(ctx, stats)).resolves.toBeUndefined();
   });
+
+  it('should throw an error if no source modules exists in Vitest run', async () => {
+    const ctx = getContext();
+    ctx.options.vitest = true;
+
+    const stats = {
+      modules: [{ id: null, name: './storybook-stories.js' }], // builder-webpack5 virtual file
+    };
+
+    await expect(() => checkStorybookBaseDirectory(ctx, stats)).rejects
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: ✖ TurboSnap failed
+      Vitest run did not produce source file information for TurboSnap.
+      Make sure you've enabled chromaticPlugin({ turboSnap: true }) in your test Vitest configuration before running tests.
+      ℹ Read more at https://www.chromatic.com/docs/vitest/turbosnap]
+    `);
+  });
 });

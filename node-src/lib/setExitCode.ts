@@ -1,7 +1,7 @@
 import { Context } from '../types';
 
 /**
- * Keep this in sync with https://github.com/chromaui/chromatic-docs/blob/main/cli.md#exit-codes
+ * Keep this in sync with https://github.com/chromaui/chromatic-docs/blob/main/src/content/configuration/cli.mdx#exit-codes
  */
 export const exitCodes = {
   // Generic results
