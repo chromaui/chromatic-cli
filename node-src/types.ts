@@ -448,6 +448,7 @@ export interface Context {
     errorCount: number;
     accessibilityChangeCount: number;
     interactionTestFailuresCount: number;
+    ignoredCount?: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
     turboSnapEnabled?: boolean;
