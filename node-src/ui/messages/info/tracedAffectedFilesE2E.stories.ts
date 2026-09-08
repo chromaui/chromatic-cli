@@ -1,16 +1,16 @@
 import tracedAffectedFiles from './tracedAffectedFiles';
 
 export default {
-  title: 'CLI/Messages/Info',
+  title: 'CLI/Messages/Info/E2E',
 };
 
 const rootPath = './chromatic-cli';
 const tracedPaths = [
-  'src/app/dashboard/index.ts + 3 modules\nsrc/app/settings/Settings.stories.tsx + 2 modules',
-  'src/app/dashboard/index.ts + 3 modules\nsrc/app/payment/Payment.stories.tsx',
-  'src/app/dashboard/index.ts + 3 modules\nsrc/actions/index.ts\nsrc/app/components/Login.story.tsx + 1 modules',
-  'src/app/dashboard/index.ts + 3 modules\nsrc/actions/index.ts\nsrc/app/index.ts\nsrc/app/settings/Settings.stories.tsx + 2 modules',
-  'src/app/dashboard/index.ts + 3 modules\nsrc/actions/utils.ts + 5 modules\nsrc/app/components/Provider.tsx\nsrc/app/payment/Modal.tsx + 2 modules\nsrc/app/payment/Modal.stories.tsx',
+  'src/app/dashboard/index.ts + 3 modules\nsrc/app/settings/Settings.test.ts + 2 modules',
+  'src/app/dashboard/index.ts + 3 modules\nsrc/app/payment/Payment.test.ts',
+  'src/app/dashboard/index.ts + 3 modules\nsrc/actions/index.ts\nsrc/app/components/Login.test.ts',
+  'src/app/dashboard/index.ts + 3 modules\nsrc/actions/index.ts\nsrc/app/index.ts\nsrc/app/settings/Settings.test.ts + 2 modules',
+  'src/app/dashboard/index.ts + 3 modules\nsrc/actions/utils.ts + 5 modules\nsrc/app/components/Provider.ts\nsrc/app/payment/Modal.ts + 2 modules\nsrc/app/payment/Modal.test.ts',
 ];
 
 const modulesByName = {
@@ -23,14 +23,14 @@ const modulesByName = {
       { name: 'src/hooks/useEvent.ts' },
     ],
   },
-  'src/app/settings/Settings.stories.tsx + 2 modules': {
+  'src/app/settings/Settings.test.ts + 2 modules': {
     id: 2,
-    name: 'src/app/settings/Settings.stories.tsx + 2 modules',
+    name: 'src/app/settings/Settings.test.ts + 2 modules',
     modules: [{ name: 'src/app/settings/Settings.tsx' }, { name: 'src/app/settings/DarkMode.tsx' }],
   },
-  'src/app/components/Login.story.tsx + 1 modules': {
+  'src/app/components/Login.test.ts + 1 modules': {
     id: 3,
-    name: 'src/app/components/Login.story.tsx + 1 modules',
+    name: 'src/app/components/Login.test.ts + 1 modules',
     modules: [{ name: 'src/app/components/Login.tsx' }],
   },
   'src/actions/utils.ts + 5 modules': {
@@ -44,10 +44,10 @@ const modulesByName = {
       { name: 'src/utils/comments/index.ts' },
     ],
   },
-  'src/app/payment/Modal.tsx + 2 modules': {
+  'src/app/payment/Modal.ts + 2 modules': {
     id: 5,
-    name: 'src/app/payment/Modal.tsx + 2 modules',
-    modules: [{ name: 'src/app/components/Modal.tsx' }, { name: 'src/actions/state.ts' }],
+    name: 'src/app/payment/Modal.ts + 2 modules',
+    modules: [{ name: 'src/app/components/Modal.ts' }, { name: 'src/actions/state.ts' }],
   },
 };
 
@@ -62,7 +62,7 @@ const affectedModules = Object.fromEntries(
 export const TracedAffectedFiles = () =>
   tracedAffectedFiles(
     {
-      options: { storybookBaseDir: 'src' },
+      options: { storybookBaseDir: 'src', vitest: true },
       turboSnap: { tracedPaths: new Set(tracedPaths) },
     } as any,
     {
@@ -74,8 +74,9 @@ export const TracedAffectedFiles = () =>
 export const TracedAffectedFilesExpanded = () =>
   tracedAffectedFiles(
     {
-      options: { traceChanged: 'expanded' },
+      options: { traceChanged: 'expanded', vitest: true },
       turboSnap: { rootPath, tracedPaths: new Set(tracedPaths) },
+      vitest: true,
     } as any,
     {
       changedFiles: ['src/app/dashboard/index.ts'],
@@ -88,7 +89,7 @@ export const TracedAffectedFilesExpanded = () =>
 export const TracedAffectedFilesExpandedUntraced = () =>
   tracedAffectedFiles(
     {
-      options: { traceChanged: 'expanded' },
+      options: { traceChanged: 'expanded', vitest: true },
       turboSnap: { rootPath, tracedPaths: new Set(tracedPaths) },
       untracedFiles: [
         { filepath: 'src/stories/Button.jsx', glob: '**/stories/**' },
@@ -107,7 +108,7 @@ export const TracedAffectedFilesExpandedUntraced = () =>
 export const TracedAffectedFilesExpandedBailed = () =>
   tracedAffectedFiles(
     {
-      options: { traceChanged: 'expanded' },
+      options: { traceChanged: 'expanded', vitest: true },
       turboSnap: {
         rootPath,
         tracedPaths: new Set(tracedPaths),
@@ -127,7 +128,7 @@ export const TracedAffectedFilesExpandedBailed = () =>
 export const TracedAffectedFilesCompact = () =>
   tracedAffectedFiles(
     {
-      options: { traceChanged: 'compact' },
+      options: { traceChanged: 'compact', vitest: true },
     } as any,
     {
       changedFiles: ['src/app/dashboard/index.ts'],
