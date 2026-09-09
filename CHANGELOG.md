@@ -1,3 +1,19 @@
+# v18.7.3 (Wed Sep 09 2026)
+
+#### 🐛 Bug Fix
+
+- Remove TurboSnap v2 Sentry fingerprinting [#1480](https://github.com/chromaui/chromatic-cli/pull/1480) ([@codykaup](https://github.com/codykaup))
+- Expand E2E verbiage [#1474](https://github.com/chromaui/chromatic-cli/pull/1474) ([@codykaup](https://github.com/codykaup))
+- fix: build failures not to reference Storybook when in Vitest run [#1473](https://github.com/chromaui/chromatic-cli/pull/1473) ([@AriPerkkio](https://github.com/AriPerkkio))
+- fix: descriptive TurboSnap errors in Vitest runs [#1468](https://github.com/chromaui/chromatic-cli/pull/1468) ([@AriPerkkio](https://github.com/AriPerkkio) [@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Ari Perkkiö ([@AriPerkkio](https://github.com/AriPerkkio))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.7.2 (Mon Aug 31 2026)
 
 #### 🐛 Bug Fix
