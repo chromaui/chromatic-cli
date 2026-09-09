@@ -3,17 +3,16 @@ import pluralize from 'pluralize';
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { getDuration } from '../../lib/tasks';
 import { Context } from '../../types';
-
-const testType = (ctx: Context) => (isE2EBuild(ctx.options) ? 'test suite' : 'stories');
+import { suiteType, testType } from './utilities';
 
 export const initial = (ctx: Context) => ({
   status: 'initial',
-  title: `Test your ${testType(ctx)}`,
+  title: `Test your ${suiteType(ctx)}`,
 });
 
 export const dryRun = (ctx: Context) => ({
   status: 'skipped',
-  title: `Test your ${testType(ctx)}`,
+  title: `Test your ${suiteType(ctx)}`,
   output: 'Skipped due to --dry-run',
 });
 
@@ -55,7 +54,7 @@ export const pending = (
   if (!build) {
     return {
       status: 'pending',
-      title: `Test your ${isE2EBuild(options) ? 'test suite' : 'stories'}`,
+      title: `Test your ${suiteType({ options })}`,
       output: 'This may take a few minutes',
     };
   }
@@ -68,8 +67,12 @@ export const pending = (
   }
 
   const { errors, e2eErrors, tests, skips } = stats(ctx);
+  // The output string already contains `tests` so E2E would say `Running N tests for tests...`
+  // which is a redundant. Instead, we only add the unit if it's a Storybook build so it says
+  // `Running N tests...`.
+  const unit = isE2EBuild(options) ? '' : ` for ${pluralize(testType(ctx))}`;
   const matching = options.onlyStoryNames
-    ? ` for stories matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
+    ? `${unit} matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
     : '';
   const affected = onlyStoryFiles ? ' affected by recent changes' : '';
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
@@ -152,7 +155,7 @@ export const buildCanceled = (ctx: Context) => {
 export const skipped = (ctx: Context) => {
   return {
     status: 'skipped',
-    title: `Test your ${testType(ctx)}`,
+    title: `Test your ${suiteType(ctx)}`,
     output: ctx.isPublishOnly
       ? `No UI tests or UI review enabled`
       : `Skipped due to ${ctx.options.list ? '--list' : '--exit-once-uploaded'}`,

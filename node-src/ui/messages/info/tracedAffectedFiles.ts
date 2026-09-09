@@ -4,6 +4,7 @@ import pluralize from 'pluralize';
 import { groupUntracedFilesByGlob } from '../../../lib/utilities';
 import { Context, Module, TurboSnap } from '../../../types';
 import { info } from '../../components/icons';
+import { testType } from '../../tasks/utilities';
 
 const printFilePath = (filepath: string, basedir: string, expanded: boolean) => {
   const result =
@@ -27,8 +28,6 @@ export const traceSuggestions = `If you are having trouble with tracing, please 
   3. Make sure you have the correct storybook config file path.\nYou can either set the flags storybook-base-dir or storybook-config-dir to help TurboSnap find the correct storybook config file.\n
 `;
 
-// TODO: refactor this function
-
 export default (
   ctx: Context,
   {
@@ -51,7 +50,11 @@ export default (
   const printPath = (filepath: string) => printFilePath(filepath, basedir, expanded);
 
   const changed = pluralize('changed files', changedFiles.length, true);
-  const affected = pluralize('affected story files', Object.keys(affectedModules).length, true);
+  const affected = pluralize(
+    `affected ${testType(ctx)} files`,
+    Object.keys(affectedModules).length,
+    true
+  );
 
   let directoryDebug;
 
@@ -126,7 +129,7 @@ export default (
       }${results}\n${indent}∟ ${printPath(part)}${note}${printModules(part, indent)}`;
     }
 
-    return results + chalk`\n${'  '.repeat(parts.length)}∟ {cyan [story index]}`;
+    return results + chalk`\n${'  '.repeat(parts.length)}∟ {cyan [${testType(ctx)} index]}`;
   });
 
   const note = chalk`\n\nSet {bold ${flag}} to {bold 'expanded'} to reveal underlying modules.`;

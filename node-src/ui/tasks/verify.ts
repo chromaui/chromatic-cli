@@ -1,8 +1,7 @@
 import pluralize from 'pluralize';
 
-import { isE2EBuild } from '../../lib/e2eUtils';
 import { Context } from '../../types';
-import { buildType } from './utilities';
+import { buildType, testType } from './utilities';
 
 export const initial = (ctx: Context) => ({
   status: 'initial',
@@ -31,19 +30,21 @@ export const runOnlyFiles = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) =
   status: 'pending',
   title: 'Starting partial build',
   output: ctx.options.onlyStoryFiles
-    ? `Snapshots will be limited to story files matching ${ctx.options.onlyStoryFiles
+    ? `Snapshots will be limited to ${testType(ctx)} files matching ${ctx.options.onlyStoryFiles
         .map((v) => `'${v}'`)
         .join(', ')}`
-    : `Snapshots will be limited to ${ctx.onlyStoryFiles?.length} story files affected by recent changes`,
+    : `Snapshots will be limited to ${pluralize(
+        `${testType(ctx)} files`,
+        ctx.onlyStoryFiles?.length,
+        true
+      )} affected by recent changes`,
 });
 
 export const runOnlyNames = (ctx: Pick<Context, 'options'>) => {
-  const testType = isE2EBuild(ctx.options) ? 'tests' : 'stories';
-
   return {
     status: 'pending',
     title: 'Starting partial build',
-    output: `Snapshots will be limited to ${testType} matching ${ctx.options.onlyStoryNames
+    output: `Snapshots will be limited to ${pluralize(testType(ctx))} matching ${ctx.options.onlyStoryNames
       ?.map((v) => `'${v}'`)
       .join(', ')}`,
   };
