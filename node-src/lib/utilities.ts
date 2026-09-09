@@ -71,6 +71,17 @@ export const groupUntracedFilesByGlob = (untracedFiles: NonNullable<Context['unt
     .join('\n');
 };
 
+/**
+ * Whether a file is a documentation file.
+ *
+ * @param filePath The path to the file.
+ *
+ * @returns True if the file is a documentation file.
+ */
+export function isDocumentationFile(filePath: string) {
+  return ['.md', '.txt'].some((extension) => filePath.toLowerCase().endsWith(extension));
+}
+
 export const isPackageManifestFile = (filePath: string) =>
   [/(^|\/)package\.json$/].some((re) => re.test(filePath));
 
