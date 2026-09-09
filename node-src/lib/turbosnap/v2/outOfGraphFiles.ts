@@ -1,3 +1,4 @@
+import { isDocumentationFile } from '../../utilities';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { normalizeStatsPath } from './paths';
@@ -49,14 +50,16 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
   const staticFilePaths = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
   );
-
-  // A file can only belong to one section, so collect the static directories first and filter them
-  // out later.
   const staticFileSet = new Set(staticFilePaths);
 
   return {
+    // A file belongs only to one section, so a file in a static dir is not a config file.
+    // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
+    // Storybook, so it stays out of the config roll-up too.
     storybookConfigFiles: await hashByManifestPath(
-      configPaths.filter((filePath) => !staticFileSet.has(filePath)),
+      configPaths.filter(
+        (filePath) => !staticFileSet.has(filePath) && !isDocumentationFile(filePath)
+      ),
       input.projectRoot,
       input.projectFiles
     ),

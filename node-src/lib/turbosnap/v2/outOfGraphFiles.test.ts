@@ -70,6 +70,35 @@ describe('hashOutOfGraphFiles', () => {
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/mockServiceWorker.js']);
   });
 
+  it('skips documentation files anywhere in the config dir', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'README.md', 'NOTES.TXT', 'nested'],
+        '/repo/packages/ui/.storybook/nested': ['guide.md'],
+      },
+    };
+
+    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+
+    // Docs in the config dir shouldn't affect the built Storybook, so they stay out of the roll-up
+    // hash.
+    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+  });
+
+  // This matches the behavior of v1 which only ignores docs in the config dir.
+  it('keeps documentation files in a static dir', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['terms.md'],
+      },
+    };
+
+    const { staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
+
+    expect([...staticFiles.keys()]).toEqual(['./.storybook/static/terms.md']);
+  });
+
   it('returns an empty static section when staticDirs is unset', async () => {
     const disk: InMemoryDisk = {
       directories: { '/repo/packages/ui/.storybook': ['main.ts'] },

@@ -14,7 +14,7 @@ import tracedAffectedFiles from '../../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { posix } from '../../posix';
-import { isPackageManifestFile, matchesFile } from '../../utilities';
+import { isDocumentationFile, isPackageManifestFile, matchesFile } from '../../utilities';
 import { TraceChangedFilesResult } from '../types';
 import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
@@ -27,11 +27,6 @@ const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
 
 const isPackageLockFile = (name: string) =>
   SUPPORTED_LOCK_FILES.some((lockfile) => name.endsWith(lockfile));
-
-// Documentation files inside the config dir (e.g. `.storybook/README.md`) don't affect the built
-// Storybook, so a change to them shouldn't trigger a full rebuild.
-const isDocumentationFile = (name: string) =>
-  ['.md', '.txt'].some((extension) => name.toLowerCase().endsWith(extension));
 
 const isUserModule = (module_: Module | Reason) =>
   (module_ as Module).id !== undefined &&

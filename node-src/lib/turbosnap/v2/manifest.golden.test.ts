@@ -70,15 +70,19 @@ const GOLDEN_FILE_HASHES = {
   [entryPreview]: '1111111111111111',
   '/repo/packages/ui/.storybook/main.ts': '2222222222222222',
   '/repo/packages/ui/.storybook/static/mockServiceWorker.js': '3333333333333333',
+  // Documentation in the static dir is included
+  '/repo/packages/ui/.storybook/static/README.md': '4444444444444444',
+  // Documentation in the config dir is NOT included
+  '/repo/packages/ui/.storybook/README.md': '5555555555555555',
 };
 
 const GOLDEN_DIRECTORY_TREE = {
-  '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'theme.ts', 'static'],
-  '/repo/packages/ui/.storybook/static': ['mockServiceWorker.js'],
+  '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'theme.ts', 'README.md', 'static'],
+  '/repo/packages/ui/.storybook/static': ['mockServiceWorker.js', 'README.md'],
 };
 
 // The published values. See the header before touching these.
-const GOLDEN_STORYBOOK_HASH = 'd86162bf43ae36ba';
+const GOLDEN_STORYBOOK_HASH = 'e1e50323c00bf67a';
 
 const GOLDEN_STORY_FILES: Record<string, string> = {
   './src/Button.stories.tsx': '7b79c90e28f3ac31',
@@ -90,7 +94,7 @@ const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
   storybookGlobals: '372009144b241f17',
   storybookVersion: '9.1.20',
   storybookConfigFiles: 'ccdd11764306552f',
-  staticFiles: 'c9527f087ba3d740',
+  staticFiles: '44658ab79756b51f',
 };
 
 function goldenFixture() {
