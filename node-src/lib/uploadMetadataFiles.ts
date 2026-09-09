@@ -82,7 +82,7 @@ export async function uploadMetadataFiles(ctx: Context) {
     // Log the error but don't rethrow to fail upwards. This step is a best-effort stage and
     // shouldn't impact the build pipeline.
     ctx.log.debug('Failed to upload metadata files to Chromatic', err);
-    Sentry.captureException(err, { fingerprint: ['UploadMetadataFilesError'] });
+    Sentry.captureException(err);
   }
 }
 

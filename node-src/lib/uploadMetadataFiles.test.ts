@@ -167,9 +167,7 @@ describe('uploadMetadataFiles', () => {
 
     await expect(uploadMetadataFiles(ctx)).resolves.toBeUndefined();
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-      fingerprint: ['UploadMetadataFilesError'],
-    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
     expect(ctx.log.resume).toHaveBeenCalled();
   });
 });

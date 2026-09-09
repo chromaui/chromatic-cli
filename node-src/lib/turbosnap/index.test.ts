@@ -154,9 +154,7 @@ describe('traceChangedFiles', () => {
 
     await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(error, {
-      fingerprint: ['TurboSnap v2', 'Failed to trace changed files'],
-    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(error);
     expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
