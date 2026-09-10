@@ -10,17 +10,28 @@ export default ({ build, exitCode, isOnboarding }) => {
   const unstableUrl = `${url}#unstable`;
 
   const changes: any[] = [];
-  if (build.changeCount > 0) {
+
+  if (build.changeCount > 0 && build.accessibilityChangeCount > 0) {
     changes.push(
-      chalk`${error} {bold ${pluralize('visual changes', build.changeCount, true)} must be accepted as baseline.} Review at ${link(url)}`
+      chalk`${error} {bold ${pluralize('visual and accessibility changes', build.changeCount + build.accessibilityChangeCount, true)} must be accepted as ${pluralize('baseline', build.changeCount + build.accessibilityChangeCount, false)}.} Review at ${link(url)}`
     );
+  } else {
+    if (build.changeCount > 0) {
+      changes.push(
+        chalk`${error} {bold ${pluralize('visual changes', build.changeCount, true)} must be accepted as ${pluralize('baseline', build.changeCount, false)}.} Review at ${link(url)}`
+      );
+    }
+    if (build.accessibilityChangeCount > 0) {
+      changes.push(
+        chalk`${error} {bold ${pluralize('accessibility changes', build.accessibilityChangeCount, true)} must be accepted as ${pluralize('baseline', build.accessibilityChangeCount, false)}.} Review at ${link(url)}`
+      );
+    }
   }
-  if (build.accessibilityChangeCount > 0) {
-    changes.push(
-      chalk`${error} {bold ${pluralize('accessibility changes', build.accessibilityChangeCount, true)} must be accepted as baseline.} Review at ${link(url)}`
-    );
-  }
+
   if (build.ignoredCount > 0) {
+    if (build.changeCount > 0 || build.accessibilityChangeCount > 0) {
+      changes.push(''); // blank line for spacing
+    }
     changes.push(
       chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${build.ignoredCount > 1 ? 'were' : 'was'} ignored in this build.} Review at ${link(unstableUrl)}`
     );
