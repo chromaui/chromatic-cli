@@ -121,6 +121,33 @@ describe('readStatsGraph unhashable paths', () => {
     ).toBe(true);
   });
 
+  it('asks the disk about a NUL-escaped filename by its real name', async () => {
+    // Webpack escapes a literal `#` in a filename as `\0#`, so we need to unescape it to get the
+    // real path on disk.
+    const escaped = '/repo/packages/ui/node_modules/es5-ext/array/\0#/e-index-of.js';
+    const onDisk = '/repo/packages/ui/node_modules/es5-ext/array/#/e-index-of.js';
+
+    const { input } = createFixture({ fileHashes: { [onDisk]: 'E' } });
+    const graph = await readStatsGraph(
+      { modules: [{ id: 1, name: escaped, reasons: [] }] },
+      {
+        ...input,
+        projectFiles: {
+          ...input.projectFiles,
+          isFile: (absolutePath) => {
+            if (absolutePath.includes('\0')) {
+              throw new TypeError("The argument 'path' must be a string without null bytes (\0)");
+            }
+            return input.projectFiles.isFile(absolutePath);
+          },
+        },
+      }
+    );
+
+    expect(graph.hashes.get('./node_modules/es5-ext/array/#/e-index-of.js')).toBe('E');
+    expect(graph.files.has('./node_modules/es5-ext/array/#/e-index-of.js')).toBe(true);
+  });
+
   it('skips a module named after a directory rather than failing the read', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     // rspack names one record after a directory on `storybook-builder-rsbuild` 3.3.0/3.3.1. Reading

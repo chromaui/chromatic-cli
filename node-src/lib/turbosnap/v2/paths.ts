@@ -168,7 +168,7 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
 
 /**
  * Resolves a stats module path to an absolute on-disk path for hashing, anchoring relative paths at
- * the Storybook project root.
+ * the Storybook project root. Escape markers are removed first; see {@link stripNullBytes}.
  *
  * @param statsPath The module name from the stats file.
  * @param statsRoot The absolute directory relative stats paths are named from.
@@ -176,6 +176,18 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * @returns The absolute path to the file on disk.
  */
 export function resolveStatsPath(statsPath: FilePath, statsRoot: AbsolutePath): AbsolutePath {
-  const stripped = stripConcatenatedModuleSuffix(statsPath);
+  const stripped = stripNullBytes(stripConcatenatedModuleSuffix(statsPath));
   return path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
+}
+
+/**
+ * Removes the NUL bytes webpack uses to escape a path (`#` is `\0#`), leaving the name the file has
+ * on disk.
+ *
+ * @param statsPath The module name from the stats file.
+ *
+ * @returns The name with the escape markers removed.
+ */
+function stripNullBytes(statsPath: FilePath): FilePath {
+  return statsPath.replaceAll('\0', '');
 }
