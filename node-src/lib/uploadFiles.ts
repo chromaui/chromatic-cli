@@ -26,7 +26,7 @@ export async function uploadFiles(
 
   await Promise.all(
     targets.map(({ contentLength, filePath, formAction, formFields, localPath }) => {
-      let fileProgress = 0; // The bytes uploaded for this this particular file
+      let fileProgress = 0; // The bytes uploaded for this particular file
 
       ctx.log.debug(`Uploading ${filePath} (${filesize(contentLength)}) to ${formAction}`);
 
