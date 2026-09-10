@@ -1260,6 +1260,90 @@ describe('getDependentStoryFiles', () => {
     );
     expect(result.turboSnap.bailReason).toBeUndefined();
   });
+
+  describe('MDX files', () => {
+    // If MDX files change, we want to include them in onlyStoryFiles so that a new storybook gets
+    // uploaded and we generate a build with the updated MDX content.
+    it('includes a changed MDX file that is part of the Storybook build', async () => {
+      const changedFiles = ['src/Introduction.mdx'];
+      const modules = [
+        {
+          id: './src/Introduction.mdx',
+          name: './src/Introduction.mdx',
+          reasons: [],
+        },
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/Introduction.mdx': ['src/Introduction.mdx'],
+        },
+      });
+      expect(result.turboSnap.bailReason).toBeUndefined();
+    });
+
+    it('does not include a changed MDX file that is not part of the Storybook build', async () => {
+      const changedFiles = ['docs/unrelated.mdx'];
+      const modules = [
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {},
+      });
+    });
+
+    it('still respects --untraced for a changed MDX file that would otherwise be included directly', async () => {
+      const changedFiles = ['src/Introduction.mdx'];
+      const modules = [
+        {
+          id: './src/Introduction.mdx',
+          name: './src/Introduction.mdx',
+          reasons: [],
+        },
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: CSF_GLOB }],
+        },
+        {
+          id: CSF_GLOB,
+          name: CSF_GLOB,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext({ untraced: ['**/*.mdx'] });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {},
+        untracedFiles: [{ filepath: 'src/Introduction.mdx', glob: '**/*.mdx' }],
+      });
+    });
+  });
 });
 
 describe('normalizePath', () => {
