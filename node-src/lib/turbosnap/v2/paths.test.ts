@@ -227,6 +227,12 @@ describe('normalizeStatsPath', () => {
     expect(normalizeStatsPath('./src/a.ts + 1 module', projectRoot)).toBe('./src/a.ts');
   });
 
+  it('keys a NUL-escaped filename by the name it really has on disk', () => {
+    expect(normalizeStatsPath('./node_modules/es5-ext/array/\0#/e-index-of.js', projectRoot)).toBe(
+      './node_modules/es5-ext/array/#/e-index-of.js'
+    );
+  });
+
   it('resolves a relative stats path against statsRoot, not the project root', () => {
     // A builder may name relative paths from the repository root even though manifest keys anchor at
     // the project, so the same file has to normalize back to a project-relative key.
@@ -244,6 +250,29 @@ describe('resolveStatsPath', () => {
   it('returns an absolute path unchanged', () => {
     expect(resolveStatsPath('/repo/packages/shared/theme.ts', projectRoot)).toBe(
       '/repo/packages/shared/theme.ts'
+    );
+  });
+
+  it.each([
+    [
+      "webpack's escape for a literal hash",
+      './node_modules/es5-ext/array/\0#/e-index-of.js',
+      '/repo/packages/ui/node_modules/es5-ext/array/#/e-index-of.js',
+    ],
+    ['several escapes in one path', './a/\0#/b/\0#/c.js', '/repo/packages/ui/a/#/b/#/c.js'],
+    ['a marker with nothing after it', './src/Button.tsx\0', '/repo/packages/ui/src/Button.tsx'],
+    [
+      'an escape alongside a concatenation suffix',
+      './node_modules/es5-ext/array/\0#/e-index-of.js + 2 modules',
+      '/repo/packages/ui/node_modules/es5-ext/array/#/e-index-of.js',
+    ],
+  ])('strips %s', (_name, statsPath, expected) => {
+    expect(resolveStatsPath(statsPath, projectRoot)).toBe(expected);
+  });
+
+  it('leaves an unescaped hash alone, since webpack reads it as a fragment', () => {
+    expect(resolveStatsPath('./src/Button.tsx#fragment', projectRoot)).toBe(
+      '/repo/packages/ui/src/Button.tsx#fragment'
     );
   });
 });
