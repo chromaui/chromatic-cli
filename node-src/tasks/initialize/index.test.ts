@@ -89,7 +89,7 @@ describe('initialize', () => {
 describe('extractInitializeInput', () => {
   it('extracts announceBuild input fields from context', () => {
     const ctx = {
-      git: { commit: 'abc123', parentCommits: ['def456'] },
+      git: { rootPath: '/repo', commit: 'abc123', parentCommits: ['def456'] },
       turboSnap: { unavailable: false },
       rebuildForBuildId: 'build-id',
       storybook: { version: '7.0.0' },

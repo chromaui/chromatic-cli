@@ -1,4 +1,5 @@
 import { createAnalyticsClient } from '@cli/analytics';
+import { trySetComponentOwnersIfPresent } from '@cli/componentowners';
 import { validateStorybookReactNativeVersion } from '@cli/react-native/validateStorybookVersion';
 
 import { AnnouncedBuild, Context, Deps, RuntimeMetadata, TaskResult } from '../../types';
@@ -11,9 +12,6 @@ import { getRuntimeMetadata } from './getRuntimeMetadata';
 type InitializeDeps = Pick<Deps, 'log' | 'env' | 'client' | 'options' | 'pkg'>;
 
 interface InitializeInput {
-  // currently, only announceBuild takes any input, but I'm structuring this way to match the
-  // structure of other tasks. If other subtasks within initialize need input in the future,
-  // this is where it goes.
   partialAnnounceBuildInput: Omit<AnnounceBuildInput, 'environment' | 'runtimeMetadata'>; // omitted fields come from subtasks
 }
 
@@ -42,6 +40,16 @@ export async function initialize(
     environment,
     runtimeMetadata,
   });
+  const { rootPath } = input.partialAnnounceBuildInput.git;
+  // rootPath is always set at this point. Context god object techdebt just
+  // prevents TS from knowing that here. The if check just narrows the type.
+  if (rootPath) {
+    await trySetComponentOwnersIfPresent(deps, rootPath, announcedBuild.id);
+  } else {
+    deps.log.warn(
+      'git.rootPath unexpectedly undefined. Should have been set in the gitInfo task upstream.'
+    );
+  }
   return { kind: 'continue', output: { environment, runtimeMetadata, announcedBuild } };
 }
 
