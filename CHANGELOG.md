@@ -1,3 +1,16 @@
+# v18.8.1 (Fri Sep 11 2026)
+
+#### 🐛 Bug Fix
+
+- Ignore `ENAMETOOLONG` errors [#1485](https://github.com/chromaui/chromatic-cli/pull/1485) ([@codykaup](https://github.com/codykaup))
+- Strip webpack escape characters in file paths [#1484](https://github.com/chromaui/chromatic-cli/pull/1484) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.8.0 (Thu Sep 10 2026)
 
 #### 🚀 Enhancement
