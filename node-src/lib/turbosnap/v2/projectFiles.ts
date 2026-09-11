@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
-import { Dirent } from 'fs';
+import { Dirent, Stats } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 
@@ -13,7 +13,9 @@ import { FileHash } from './graph';
  * live here rather than at each call site.
  */
 export interface ProjectFiles {
+  /** False when the path names are too long. Every other failure throws. */
   isFile(absolutePath: AbsolutePath): boolean;
+  /** False when the path names are too long. Every other failure throws. */
   isDirectory(absolutePath: AbsolutePath): boolean;
   /** Undefined when unresolvable; resolves the package manifest, not a dist path. */
   packageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined;
@@ -38,10 +40,9 @@ export interface ProjectFiles {
  */
 export function realProjectFiles(log: Logger): ProjectFiles {
   return {
-    isFile: (absolutePath: AbsolutePath) =>
-      statSync(absolutePath, { throwIfNoEntry: false })?.isFile() ?? false,
+    isFile: (absolutePath: AbsolutePath) => statFile(log, absolutePath)?.isFile() ?? false,
     isDirectory: (absolutePath: AbsolutePath) =>
-      statSync(absolutePath, { throwIfNoEntry: false })?.isDirectory() ?? false,
+      statFile(log, absolutePath)?.isDirectory() ?? false,
     packageVersion: readPackageVersion,
     hashAll: hashFileContents,
     listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(log, absoluteDirectory),
@@ -50,6 +51,21 @@ export function realProjectFiles(log: Logger): ProjectFiles {
       writeFileSync(absolutePath, contents);
     },
   };
+}
+
+function statFile(log: Logger, absolutePath: AbsolutePath): Stats | undefined {
+  try {
+    return statSync(absolutePath, { throwIfNoEntry: false });
+  } catch (error) {
+    // If the file path is too long, then it's likely not a real file so we skip it.
+    if (error.code === 'ENAMETOOLONG') {
+      log.debug(
+        `Unable to read file path of ${absolutePath.length} characters, skipping since it's not likely to be a real file`
+      );
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 /**

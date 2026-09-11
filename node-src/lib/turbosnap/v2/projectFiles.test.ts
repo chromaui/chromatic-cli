@@ -210,6 +210,32 @@ describe('realProjectFiles isFile and isDirectory', () => {
     expect(realProjectFiles(log).isDirectory(absent)).toBe(false);
   });
 
+  it('ignores a name too long for the file system', () => {
+    // Some builders name a module after their whole loader chain instead of a real file path that
+    // lives on disk. It's unlikely for a real file path to be larger than ENAMETOOLONG so we'll
+    // simply ignore it and move on.
+    const root = temporaryDirectory();
+    const tooLongToName = path.join(root, `styles.module.css?source=${'A'.repeat(26_000)}`);
+
+    expect(realProjectFiles(log).isFile(tooLongToName)).toBe(false);
+    expect(realProjectFiles(log).isDirectory(tooLongToName)).toBe(false);
+  });
+
+  it("throws for a failure that isn't the name being too long, because a file we cannot read is a real error", () => {
+    const root = temporaryDirectory();
+    const unreadable = write(root, 'locked/Secret.tsx');
+    // Locking the directory, not the file: stat reads the name from its parent, so an unreadable
+    // file still stats fine while an unsearchable directory fails with EACCES.
+    lock(path.join(root, 'locked'));
+
+    expect(() => realProjectFiles(log).isFile(unreadable)).toThrow(
+      expect.objectContaining({ code: 'EACCES' })
+    );
+    expect(() => realProjectFiles(log).isDirectory(unreadable)).toThrow(
+      expect.objectContaining({ code: 'EACCES' })
+    );
+  });
+
   it('reads a symlink to a file as a file', () => {
     const root = temporaryDirectory();
     const target = write(root, 'vendor/real-logo.svg');
