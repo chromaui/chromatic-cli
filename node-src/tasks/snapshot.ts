@@ -27,6 +27,7 @@ const SnapshotBuildQuery = `
         testCount
         changeCount
         errorCount: testCount(statuses: [BROKEN])
+        ignoredCount: testCount(statuses: [IGNORED])
         completedAt
       }
     }
@@ -43,6 +44,7 @@ interface BuildQueryResult {
       testCount: number;
       changeCount: number;
       errorCount: number;
+      ignoredCount: number;
       completedAt?: number;
     };
   };
