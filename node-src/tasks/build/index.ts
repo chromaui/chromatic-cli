@@ -84,7 +84,7 @@ async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResul
   );
 
   const buildCommand = await setBuildCommand(
-    { options: deps.options, log: deps.log },
+    { options: deps.options, log: deps.log, env: deps.env },
     {
       sourceDir,
       flags: input.flags,

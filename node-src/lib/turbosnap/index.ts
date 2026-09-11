@@ -19,27 +19,44 @@ import { realProjectFiles } from './v2/projectFiles';
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
  */
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
-  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return { status: 'skipped' };
-  if (!ctx.fileInfo?.statsPath) {
-    // If we don't know the SB version, we should assume we don't support `--stats-json`
-    const nonLegacyStatsSupported =
-      ctx.storybook.version && semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
+  const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
 
-    throw new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
+  if (!ctx.fileInfo?.statsPath) {
+    if (runTurboSnapV1) {
+      throw missingStatsFileError(ctx);
+    }
+
+    ctx.log.debug('No stats file; skipping TurboSnap hash collection');
+    return { status: 'skipped' };
   }
 
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
 
   // V2 runs for its side effects only; it never affects the v1 decision or the customer's build.
-  await runTurboSnapV2(ctx, stats);
+  if (shouldCollectHashes(ctx)) {
+    await runTurboSnapV2(ctx, stats);
+  }
 
-  if (!ctx.git.changedFiles || ctx.git.changedFiles.length === 0) {
+  if (!runTurboSnapV1 || !ctx.git.changedFiles || ctx.git.changedFiles.length === 0) {
     return { status: 'skipped' };
   }
 
   ctx.log.debug('Tracing changed files with TurboSnap v1');
   return traceChangedFilesV1(ctx, stats, statsPath);
+}
+
+function missingStatsFileError(ctx: Context) {
+  // If we don't know the SB version, we should assume we don't support `--stats-json`
+  const nonLegacyStatsSupported =
+    ctx.storybook.version && semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
+
+  return new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
+}
+
+// Asks the filesystem, never what the user requested.
+function shouldCollectHashes(ctx: Context) {
+  return !ctx.env.CHROMATIC_TURBOSNAP_DISABLE_HASHES && !!ctx.fileInfo?.statsPath;
 }
 
 async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {

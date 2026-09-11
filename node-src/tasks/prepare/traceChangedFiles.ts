@@ -27,7 +27,7 @@ export interface TraceChangedFilesOutput {
  * @param deps - Logger, options, and the mid-task reporter.
  * @param input - The CLI context the TurboSnap lib reads; trace results are written back to it.
  *
- * @returns The affected story files, or none when TurboSnap is unavailable or bailed.
+ * @returns The affected story files, or none when TurboSnap was not requested or bailed.
  *
  * @throws {Error} if stats file is missing or tracing fails
  */
@@ -39,9 +39,13 @@ export async function traceChangedFiles(
 ): Promise<TraceChangedFilesOutput> {
   const ctx = input.turboSnapContext;
 
-  if (!ctx.turboSnap || ctx.turboSnap.unavailable) return {};
+  // The lib still collects hashes when this is false, and that build must stay silent and must
+  // never fail because of it.
+  const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
 
-  deps.report(tracing({ git: ctx.git, options: deps.options }));
+  if (runTurboSnapV1) {
+    deps.report(tracing({ git: ctx.git, options: deps.options }));
+  }
 
   try {
     const result = await turbosnap.traceChangedFiles(ctx);
@@ -85,6 +89,10 @@ export async function traceChangedFiles(
     deps.report(traced({ options: deps.options, onlyStoryFiles: escaped }));
     return { onlyStoryFiles: escaped };
   } catch (err) {
+    if (!runTurboSnapV1) {
+      return {};
+    }
+
     if (!deps.options.interactive) {
       const { statsPath } = ctx.fileInfo ?? {};
       const { changedFiles } = ctx.git;

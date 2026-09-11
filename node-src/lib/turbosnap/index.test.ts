@@ -46,6 +46,7 @@ function makeContext() {
     log: new TestLogger(),
     turboSnap: {},
     options: {},
+    env: {},
     git: { changedFiles: ['./src/Button.tsx'] },
     fileInfo: { statsPath: '/repo/packages/ui/storybook-static/preview-stats.json' },
     client: { runQuery: vi.fn() },
@@ -67,18 +68,44 @@ beforeEach(() => {
 });
 
 describe('traceChangedFiles', () => {
-  it('returns skipped without running either generation when TurboSnap is unavailable', async () => {
-    const ctx = {
-      options: {},
-      git: {},
-      turboSnap: { unavailable: true },
-    } as any;
+  it('collects hashes but skips v1 when TurboSnap is unavailable', async () => {
+    const ctx = { ...makeContext(), turboSnap: { unavailable: true } };
+
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+
+    expect(readStatsFile).toHaveBeenCalledOnce();
+    expect(traceChangedFilesV2).toHaveBeenCalledOnce();
+    expect(traceChangedFilesV1).not.toHaveBeenCalled();
+  });
+
+  it('stays silent for a prebuilt Storybook when TurboSnap is not requested', async () => {
+    const ctx = { ...makeContext(), turboSnap: undefined, fileInfo: undefined };
 
     await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
 
     expect(readStatsFile).not.toHaveBeenCalled();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
+  });
+
+  it.each(['noAncestorBuild', 'rebuild', 'invalidChangedFiles', 'changedExternalFiles'])(
+    'collects hashes for v2 even when v1 recorded the bail reason %s',
+    async (bailReason) => {
+      const ctx = { ...makeContext(), turboSnap: { [bailReason]: true } };
+
+      await traceChangedFiles(ctx);
+
+      expect(traceChangedFilesV2).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('does not collect hashes when the off switch is set', async () => {
+    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true } };
+
+    await traceChangedFiles(ctx);
+
+    expect(traceChangedFilesV2).not.toHaveBeenCalled();
+    expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
   it.each([[], undefined])(
@@ -94,7 +121,7 @@ describe('traceChangedFiles', () => {
     }
   );
 
-  it('throws if the stats file is not found', async () => {
+  it('throws if the stats file is not found and the user asked for TurboSnap', async () => {
     const ctx = { ...makeContext(), fileInfo: undefined };
 
     await expect(traceChangedFiles(ctx)).rejects.toThrow('TurboSnap requires a stats file');

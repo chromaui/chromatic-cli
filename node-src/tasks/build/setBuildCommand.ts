@@ -6,7 +6,7 @@ import { getPackageManagerRunCommand } from '../../lib/getPackageManager';
 import { Context, Deps } from '../../types';
 import { resolveE2EFramework } from './resolveE2EFramework';
 
-type SetBuildCommandDeps = Pick<Deps, 'options' | 'log'>;
+type SetBuildCommandDeps = Pick<Deps, 'options' | 'log' | 'env'>;
 
 interface SetBuildCommandInput {
   sourceDir: string;
@@ -29,6 +29,43 @@ const getStatsFlag = (storybook?: Context['storybook']) => {
     : '--webpack-stats-json';
 };
 
+function isTurboSnapRequested(turboSnap?: Context['turboSnap']) {
+  return Boolean(turboSnap && !turboSnap.unavailable);
+}
+
+/**
+ * Decide whether the build command gets the stats flag. Each condition after the TurboSnap check
+ * blocks the always-on path only: a user who asked for TurboSnap keeps the flag in every case,
+ * because without the stats file `turbosnap/index.ts` throws `missingStatsFile`.
+ */
+function shouldAddStatsFlag(
+  deps: SetBuildCommandDeps,
+  input: SetBuildCommandInput,
+  buildCommand?: string
+) {
+  if (!isStatsFlagSupported(input.storybook)) {
+    return false;
+  }
+
+  if (isTurboSnapRequested(input.turboSnap)) {
+    return true;
+  }
+
+  if (deps.env.CHROMATIC_TURBOSNAP_DISABLE_HASHES) {
+    return false;
+  }
+
+  if (isE2EBuild(deps.options)) {
+    return false;
+  }
+
+  if (buildCommand) {
+    return false;
+  }
+
+  return true;
+}
+
 export const setBuildCommand = async (
   deps: SetBuildCommandDeps,
   input: SetBuildCommandInput
@@ -40,12 +77,10 @@ export const setBuildCommand = async (
     buildCommandOptions.push(`--output-dir=${input.sourceDir}`);
   }
 
-  if (input.turboSnap && !input.turboSnap.unavailable) {
-    if (isStatsFlagSupported(input.storybook)) {
-      buildCommandOptions.push(`${getStatsFlag(input.storybook)}=${input.sourceDir}`);
-    } else {
-      deps.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
-    }
+  if (shouldAddStatsFlag(deps, input, buildCommand)) {
+    buildCommandOptions.push(`${getStatsFlag(input.storybook)}=${input.sourceDir}`);
+  } else if (isTurboSnapRequested(input.turboSnap)) {
+    deps.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
   if (buildCommand) {
