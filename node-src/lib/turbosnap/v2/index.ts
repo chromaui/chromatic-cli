@@ -8,8 +8,15 @@ import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ProjectFiles } from './projectFiles';
 import { uploadHashes } from './uploadHashes';
 
+/**
+ * The level a v2 failure is logged at. We do this because we don't need logs showing up if the
+ * user didn't request TurboSnap for the build. Debug logs are fine.
+ */
+export type FailureLogLevel = 'error' | 'debug';
+
 interface TraceChangedFilesInput {
   log: Logger;
+  failureLogLevel: FailureLogLevel;
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
@@ -40,6 +47,8 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * @param input.staticDirs The absolute static directories, hashed off disk for the same reason.
  * @param input.projectFiles How to read the disk; see {@link ProjectFiles}. Required rather than
  * defaulted, so a caller cannot silently reach the real disk.
+ * @param input.failureLogLevel The level to log a v2 failure at, required rather than defaulted so a
+ * caller cannot pick a level by accident.
  *
  * @returns The TurboSnap result.
  */
@@ -56,9 +65,7 @@ export async function traceChangedFiles(
       projectFiles: input.projectFiles,
     });
   } catch (error) {
-    input.log.error('Failed to build manifest for TurboSnap v2', error);
-    Sentry.captureException(error);
-    return { status: 'fallback' };
+    return failed(input, 'Failed to build manifest for TurboSnap v2', error);
   }
   input.log.debug('Generated manifest for TurboSnap v2');
 
@@ -67,23 +74,34 @@ export async function traceChangedFiles(
   try {
     writeManifest(manifest, input.manifestPath, input.projectFiles);
   } catch (error) {
-    input.log.error('Failed to write manifest for TurboSnap v2', error);
-    Sentry.captureException(error);
-    return { status: 'fallback' };
+    return failed(input, 'Failed to write manifest for TurboSnap v2', error);
   }
   input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
 
   try {
-    // We currently don't care about the output of this function because we'll always fallback to
-    // run TurboSnap v1
-    await uploadHashes(input.graphqlClient, input.buildId, manifest);
+    const response = await uploadHashes(input.graphqlClient, input.buildId, manifest);
+    // The Index refuses in the payload rather than as a GraphQL error, so a refusal resolves instead
+    // of throwing. We ignore the build it returns, but `errors` says whether the upload happened.
+    if (response.errors?.length) {
+      const messages = response.errors.map((error) => error.message ?? 'unknown error').join('; ');
+      throw new Error(`The backend API rejected the hash upload: ${messages}`);
+    }
   } catch (error) {
-    input.log.error('Failed to upload hashes for TurboSnap v2', error);
-    Sentry.captureException(error);
-    return { status: 'fallback' };
+    return failed(input, 'Failed to upload hashes for TurboSnap v2', error);
   }
+
   input.log.debug('Uploaded hashes for TurboSnap v2 to Chromatic');
 
   // Until we want to lean on the v2 output, we always fallback to v1.
+  return { status: 'fallback' };
+}
+
+function failed(
+  input: Pick<TraceChangedFilesInput, 'log' | 'failureLogLevel'>,
+  message: string,
+  error: unknown
+): TraceChangedFilesV2Result {
+  input.log[input.failureLogLevel](message, error);
+  Sentry.captureException(error);
   return { status: 'fallback' };
 }

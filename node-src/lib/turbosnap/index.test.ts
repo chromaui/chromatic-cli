@@ -152,6 +152,7 @@ describe('traceChangedFiles', () => {
     expect(readStatsFile).toHaveBeenCalledWith(ctx.fileInfo.statsPath);
     expect(traceChangedFilesV2).toHaveBeenCalledWith({
       log: ctx.log,
+      failureLogLevel: 'error',
       graphqlClient: ctx.client,
       buildId: 'head-build',
       stats,
@@ -174,16 +175,26 @@ describe('traceChangedFiles', () => {
     );
   });
 
-  it('reports an unexpected v2 rejection and still returns the v1 result', async () => {
-    const ctx = makeContext();
-    const error = new Error('v2 escaped its own error handling');
-    vi.mocked(traceChangedFilesV2).mockRejectedValue(error);
+  // An error that escaped v2's own handling takes the same level as one it handled, so a user who
+  // never asked for TurboSnap is not shown a failure of an optimisation they never heard of.
+  it.each([
+    ['error', {}],
+    ['debug', undefined],
+  ])(
+    'reports an unexpected v2 rejection at %s and still returns the v1 result',
+    async (level, turboSnap) => {
+      const ctx = { ...makeContext(), turboSnap };
+      const error = new Error('v2 escaped its own error handling');
+      vi.mocked(traceChangedFilesV2).mockRejectedValue(error);
 
-    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+      await expect(traceChangedFiles(ctx)).resolves.toEqual(
+        turboSnap ? v1Result : { status: 'skipped' }
+      );
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(error);
-    expect(traceChangedFilesV1).toHaveBeenCalledOnce();
-  });
+      expect(ctx.log[level]).toHaveBeenCalledWith(expect.any(String), error);
+      expect(Sentry.captureException).toHaveBeenCalledWith(error);
+    }
+  );
 
   it('does not report an exception when v2 succeeds', async () => {
     await traceChangedFiles(makeContext());
@@ -198,4 +209,23 @@ describe('traceChangedFiles', () => {
     expect(Sentry.withScope).toHaveBeenCalledOnce();
     expect(scopeSetTag).toHaveBeenCalledWith('turbosnap', 'v2');
   });
+
+  // The user sees a failure of the feature they asked for; they never see a failure of an
+  // optimisation for a build they have not heard of.
+  it.each([
+    ['error', {}, 'true'],
+    ['debug', undefined, 'false'],
+  ])(
+    'gives v2 the %s log level and tags the run when turboSnap is %o',
+    async (failureLogLevel, turboSnap, tag) => {
+      const ctx = { ...makeContext(), turboSnap };
+
+      await traceChangedFiles(ctx);
+
+      expect(traceChangedFilesV2).toHaveBeenCalledWith(
+        expect.objectContaining({ failureLogLevel })
+      );
+      expect(scopeSetTag).toHaveBeenCalledWith('turbosnap_requested', tag);
+    }
+  );
 });

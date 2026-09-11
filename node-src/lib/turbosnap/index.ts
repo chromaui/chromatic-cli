@@ -60,15 +60,23 @@ function shouldCollectHashes(ctx: Context) {
 }
 
 async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
+  // Set the default log level for v2 so errors don't show up in the interactive flow when the user
+  // didn't request TurboSnap.
+  const turboSnapRequested = !!ctx.turboSnap;
+  const failureLogLevel = turboSnapRequested ? 'error' : 'debug';
+
   try {
     // Run TurboSnap v2 with scoped Sentry tags so all events from v2 are tagged the same. Then the
     // scope is removed once this function returns.
     await Sentry.withScope(async (scope) => {
       scope.setTag('turbosnap', 'v2');
+      // Without this, a refusal from a silent build and one from an opted-in build look the same.
+      scope.setTag('turbosnap_requested', turboSnapRequested ? 'true' : 'false');
       ctx.log.debug('Tracing changed files with TurboSnap v2');
 
       await traceChangedFilesV2({
         log: ctx.log,
+        failureLogLevel,
         graphqlClient: ctx.client,
         buildId: ctx.announcedBuild.id,
         stats,
@@ -80,7 +88,9 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
       });
     });
   } catch (error) {
-    ctx.log.error(
+    // An error that escaped v2's own handling is the same kind of failure, so it takes the same
+    // level rather than always printing.
+    ctx.log[failureLogLevel](
       'Failed to trace changed files with TurboSnap v2; this does not affect TurboSnap v1',
       error
     );

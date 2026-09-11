@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
 import TestLogger from '../../testLogger';
-import { traceChangedFiles } from './index';
+import { FailureLogLevel, traceChangedFiles } from './index';
 import { ProjectFiles } from './projectFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
 
@@ -43,7 +43,7 @@ function setup() {
   const runQuery = vi.fn().mockResolvedValue({
     buildUploadHashes: { build: { turboSnapStatus: 'APPLIED', turboSnapMechanism: 'HASH_BASED' } },
   });
-  return { disk, projectFiles: inMemoryProjectFiles(disk), runQuery };
+  return { disk, log: new TestLogger(), projectFiles: inMemoryProjectFiles(disk), runQuery };
 }
 
 type Fixture = ReturnType<typeof setup>;
@@ -127,13 +127,75 @@ describe('traceChangedFiles', () => {
     // The manifest is still written before the upload, so the failure remains debuggable.
     expect(writtenManifest(fixture).storyFiles).toEqual({ [STORY]: expect.any(String) });
   });
+
+  it('falls back without logging success when the Index refuses the upload', async () => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({
+      buildUploadHashes: {
+        errors: [{ message: 'Uploading hashes is only allowed for announced builds.' }],
+      },
+    });
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('Uploading hashes is only allowed for announced builds.'),
+      })
+    );
+    expect(fixture.log.debug).not.toHaveBeenCalledWith(
+      expect.stringContaining('Uploaded hashes for TurboSnap v2')
+    );
+  });
+
+  it.each<[FailureLogLevel, FailureLogLevel]>([
+    ['error', 'debug'],
+    ['debug', 'error'],
+  ])('logs a refusal at the level the caller gave (%s)', async (level, otherLevel) => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({
+      buildUploadHashes: { errors: [{ message: 'Uploading hashes is not allowed.' }] },
+    });
+
+    await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log[level]).toHaveBeenCalledWith(
+      'Failed to upload hashes for TurboSnap v2',
+      expect.objectContaining({
+        message: expect.stringContaining('Uploading hashes is not allowed'),
+      })
+    );
+    expect(fixture.log[otherLevel]).not.toHaveBeenCalledWith(
+      'Failed to upload hashes for TurboSnap v2',
+      expect.anything()
+    );
+  });
+
+  it('names the refusal even when the Index sends an error without a message', async () => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({ buildUploadHashes: { errors: [{}] } });
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      'Failed to upload hashes for TurboSnap v2',
+      expect.objectContaining({
+        message: 'The backend API rejected the hash upload: unknown error',
+      })
+    );
+  });
 });
 
 // Runs the entry point against the fixture's disk, with the fake client as its only network. A
 // `patchFiles` override replaces adapter methods for the paths only a failing read or write reaches.
-function trace({ projectFiles, runQuery }: Fixture, patchFiles: Partial<ProjectFiles> = {}) {
+function trace(
+  { log, projectFiles, runQuery }: Fixture,
+  patchFiles: Partial<ProjectFiles> = {},
+  failureLogLevel: FailureLogLevel = 'error'
+) {
   return traceChangedFiles({
-    log: new TestLogger(),
+    log,
+    failureLogLevel,
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),
