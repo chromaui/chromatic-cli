@@ -45,7 +45,7 @@ export interface Stories {
 /**
  * Which of the three hashing homes each real file landed in, recorded by the same pass that builds
  * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
- * over that graph cannot reconstruct these sets — it reports attributed files as orphans.
+ * over that graph cannot reconstruct these sets — it reports attributed files as unreachable.
  *
  * The sets are closed over `hashes`: every hashed file lands in at least one home. None of the three
  * is exclusive of the others. A file can be both story-reachable and in a preview subtree, and
