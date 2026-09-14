@@ -208,6 +208,12 @@ export async function commitExists(deps: GitDeps, commit: string) {
  * requested by hash, so this is a last attempt to recover a baseline before falling back to a
  * replacement build.
  *
+ * `--depth=1` bounds the transfer to the commit and its tree: diffing against the baseline
+ * needs no ancestry, and an unbounded fetch could otherwise download all missing history
+ * reachable from the orphaned commit — costly in shallow clones where the baseline diverged
+ * before the shallow boundary. On a full clone this records a shallow graft for the fetched
+ * commit only, which is inert: the commit was orphaned, so nothing traverses its parents.
+ *
  * @param deps Function dependencies.
  * @param commit The commit hash to fetch.
  *
@@ -215,7 +221,7 @@ export async function commitExists(deps: GitDeps, commit: string) {
  */
 export async function fetchCommit(deps: GitDeps, commit: string) {
   try {
-    await execGitCommand(deps, `git fetch --no-tags origin "${commit}"`);
+    await execGitCommand(deps, `git fetch --no-tags --depth=1 origin "${commit}"`);
     return true;
   } catch {
     return false;

@@ -25,7 +25,7 @@ export interface BuildWithCommitInfo {
  * @returns The changed files against the recovered commit, or undefined if recovery failed.
  */
 async function recoverOrphanedCommit(
-  deps: Pick<Deps, 'log'>,
+  deps: Pick<Deps, 'log'> & { options?: Deps['options'] },
   build: BuildWithCommitInfo,
   error: unknown
 ): Promise<string[] | undefined> {
@@ -59,7 +59,7 @@ async function recoverOrphanedCommit(
  * @returns A list of changed files for the build, adding a replacement build if necessary.
  */
 export async function getChangedFilesWithReplacement(
-  deps: Pick<Deps, 'log' | 'client'>,
+  deps: Pick<Deps, 'log' | 'client'> & { options?: Deps['options'] },
   build: BuildWithCommitInfo
 ): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommitInfo }> {
   try {
