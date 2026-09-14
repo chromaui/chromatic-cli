@@ -1,32 +1,72 @@
 import { describe, expect, it } from 'vitest';
 
-import { inMemoryProjectFiles } from './projectFiles.fake';
+import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
 import { resolveStorybookVersion } from './storybookVersion';
 
-const projectRoot = '/repo/packages/ui';
+const configDirectory = '/repo/packages/ui/.storybook';
+const projectRoot = '/repo';
+
+function input(disk: InMemoryDisk = {}, storybookVersion?: string) {
+  return { configDir: configDirectory, projectFiles: inMemoryProjectFiles(disk), storybookVersion };
+}
 
 describe('resolveStorybookVersion', () => {
   it('reads the version from the `storybook` package when both are available', () => {
     const disk = { packageVersions: { storybook: '9.1.20', '@storybook/core': '8.6.18' } };
 
-    expect(resolveStorybookVersion(projectRoot, inMemoryProjectFiles(disk))).toBe('9.1.20');
+    expect(resolveStorybookVersion(input(disk))).toBe('9.1.20');
   });
 
   it('falls back to `@storybook/core` when the `storybook` meta-package cannot be resolved', () => {
     const disk = { packageVersions: { '@storybook/core': '8.6.18' } };
 
-    expect(resolveStorybookVersion(projectRoot, inMemoryProjectFiles(disk))).toBe('8.6.18');
+    expect(resolveStorybookVersion(input(disk))).toBe('8.6.18');
   });
 
-  it('throws when no Storybook package can be resolved because the Storybook version is required', () => {
+  it('resolves from the config directory, not the project root', () => {
+    // A workspace where `storybook` is installed only under the package that owns `.storybook`, and
+    // the project root resolves a different one. Only the config directory's install is Storybook's.
+    const disk = {
+      packageVersionsByDirectory: {
+        [configDirectory]: { storybook: '10.2.16' },
+        [projectRoot]: { storybook: '9.1.20' },
+      },
+    };
+
+    expect(resolveStorybookVersion(input(disk))).toBe('10.2.16');
+  });
+
+  it('falls back to the version the CLI detected when no install can be resolved', () => {
+    expect(resolveStorybookVersion(input({}, '10.5.0'))).toBe('10.5.0');
+  });
+
+  it('prefers the installed version over the version the CLI detected', () => {
+    const disk = { packageVersions: { storybook: '9.1.20' } };
+
+    expect(resolveStorybookVersion(input(disk, '^9.0.0'))).toBe('9.1.20');
+  });
+
+  it('refuses a detected version that is a semver range because we cannot detect patch versions (where the lock file updates but package.json did not)', () => {
     let err: Error | undefined;
     try {
-      resolveStorybookVersion(projectRoot, inMemoryProjectFiles({}));
+      resolveStorybookVersion(input({}, '^9.0.0'));
+    } catch (error) {
+      err = error as Error;
+    }
+
+    expect(err?.message).toContain('the CLI detected `^9.0.0`, which is not a concrete version');
+  });
+
+  it('throws when no Storybook version is known because the Storybook version is required', () => {
+    let err: Error | undefined;
+    try {
+      resolveStorybookVersion(input());
     } catch (error) {
       err = error as Error;
     }
 
     expect(err?.message).toContain('Could not resolve a Storybook version');
-    expect(err?.message).toContain(projectRoot);
+    expect(err?.message).toContain(configDirectory);
+    expect(err?.message).toContain('the CLI did not detect one');
   });
 });

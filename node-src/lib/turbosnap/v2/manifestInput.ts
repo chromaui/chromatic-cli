@@ -25,4 +25,10 @@ export interface ManifestInput {
   configDir: AbsolutePath;
   /** The absolute configured static directories. Empty when unset. */
   staticDirs: AbsolutePath[];
+  /**
+   * The Storybook version the CLI already detected (`ctx.storybook.version`). Only a fallback for
+   * when no install can be resolved from disk, and only when it is a concrete version rather than
+   * the semver range this can also hold; see `resolveStorybookVersion`.
+   */
+  storybookVersion?: string;
 }
