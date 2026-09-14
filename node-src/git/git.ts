@@ -201,6 +201,28 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
+ * Fetch a single commit from the `origin` remote by hash.
+ *
+ * A rebase or amend leaves a baseline build's commit orphaned: unreachable from every ref, so
+ * no ordinary fetch restores it. Most Git hosts (GitHub included) still serve such commits when
+ * requested by hash, so this is a last attempt to recover a baseline before falling back to a
+ * replacement build.
+ *
+ * @param deps Function dependencies.
+ * @param commit The commit hash to fetch.
+ *
+ * @returns True if the fetch succeeded.
+ */
+export async function fetchCommit(deps: GitDeps, commit: string) {
+  try {
+    await execGitCommand(deps, `git fetch --no-tags origin "${commit}"`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Get the changed files of a single commit or between two.
  *
  * @param deps Function dependencies.
