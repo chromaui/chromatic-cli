@@ -37,7 +37,7 @@ import { buildManifest } from './manifest';
  */
 
 // A fixture exercising every section that feeds a published hash: two stories with a shared and a
-// private dependency, a preview config with its own subtree, an orphan global reached only through
+// private dependency, a preview config with its own subtree, a global reached only through
 // the framework's preview annotations, and both out-of-graph sweeps. The fixture hashes the builder's
 // generated entries as real files, so the globals roll-up is seeded with the config entry and its
 // forward closure folds the preview subtree in as well. Frozen — changing the fixture

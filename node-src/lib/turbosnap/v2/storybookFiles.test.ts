@@ -176,7 +176,7 @@ describe('collectStorybookFiles', () => {
     expect(storybookConfigHashes.get(STORYBOOK_PREVIEW_KEY)).toContain('themeB');
   });
 
-  it('rolls files reached by no story and no preview into the catch-all', () => {
+  it('rolls files reached by no story and no preview into globals', () => {
     const files = makeFiles({ './node_modules/react-dom/index.js': [] });
 
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
@@ -191,7 +191,7 @@ describe('collectStorybookFiles', () => {
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/react-dom/index.js']);
   });
 
-  it('omits the catch-all entirely when every file has a home', () => {
+  it('omits the globals entry entirely when every file has a home', () => {
     const files = makeFiles({
       './src/a.stories.tsx': ['./src/button.tsx'],
       './src/button.tsx': [],
@@ -211,9 +211,9 @@ describe('collectStorybookFiles', () => {
     expect([...storybookConfigHashes.keys()]).toEqual([]);
   });
 
-  it('rolls a file hashed but absent from the graph into the catch-all', () => {
+  it('rolls a file hashed but absent from the graph into globals', () => {
     // A file inside a concatenated module is hashed but recorded only under the concatenation root,
-    // so deriving the catch-all from `files` rather than `hashes` would leave it hashed nowhere.
+    // so seeding globals from `files` rather than `hashes` would leave it hashed nowhere.
     const { attribution } = collectStorybookFiles(
       makeFiles({}),
       makeHashes(['./src/inlined.ts']),

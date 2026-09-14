@@ -90,7 +90,7 @@ describe('buildManifest attribution', () => {
   const storyDep = '/repo/packages/ui/node_modules/moment/moment.js';
   const preview = '/repo/packages/ui/.storybook/preview.ts';
   const previewHelper = '/repo/packages/ui/.storybook/theme.ts';
-  const orphan = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
+  const entryPreview = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
   const configEntry = './storybook-config-entry.js';
 
   const stats: Stats = {
@@ -99,7 +99,7 @@ describe('buildManifest attribution', () => {
       { id: 2, name: storyDep, reasons: [{ moduleName: story }] },
       { id: 3, name: preview, reasons: [{ moduleName: configEntry }] },
       { id: 4, name: previewHelper, reasons: [{ moduleName: preview }] },
-      { id: 5, name: orphan, reasons: [{ moduleName: configEntry }] },
+      { id: 5, name: entryPreview, reasons: [{ moduleName: configEntry }] },
     ],
   };
 
@@ -108,7 +108,7 @@ describe('buildManifest attribution', () => {
     [storyDep]: 'M',
     [preview]: 'P',
     [previewHelper]: 'PT',
-    [orphan]: 'EP',
+    [entryPreview]: 'EP',
   };
 
   it('records each real file under the hashing home it landed in', async () => {
@@ -133,7 +133,7 @@ describe('buildManifest attribution', () => {
   it('reports a file reached only through a synthetic node as story-reachable', async () => {
     // The defect this exists to prevent: pruning runs after hashing, so the written graph has a hole
     // where the require-context was. A reachability walk over it calls a correctly-attributed file
-    // an orphan — the artifact behind the false "moment is in the bucket" reading.
+    // unreachable — the artifact behind the false "moment is in globals" reading.
     const lazyGlob = './src/lib/ lazy namespace object';
     const throughGlob = '/repo/packages/ui/src/lib/Widget.stories.tsx';
 
@@ -192,12 +192,12 @@ describe('buildManifest attribution closure', () => {
   const storyDep = '/repo/packages/ui/src/lib/Badge/Badge.tsx';
   const preview = '/repo/packages/ui/.storybook/preview.ts';
   const previewHelper = '/repo/packages/ui/.storybook/test.ts';
-  const orphanRoot = '/repo/packages/ui/src/probe/orphanRoot.tsx';
+  const globalRoot = '/repo/packages/ui/src/probe/globalRoot.tsx';
   const hiddenInner = '/repo/packages/ui/src/probe/hiddenInner.tsx';
   const globalsKey = 'storybookGlobals';
   const configEntry = './storybook-config-entry.js';
 
-  // A concatenated module whose root is itself an orphan global. The inner file is hashed, but it is
+  // A concatenated module whose root is itself a Storybook global. The inner file is hashed, but it is
   // only recorded as a dependency of the root and never gets an entry of its own, so attribution
   // closed over `files` could not see it.
   const stats: Stats = {
@@ -208,8 +208,8 @@ describe('buildManifest attribution closure', () => {
       { id: 4, name: previewHelper, reasons: [{ moduleName: preview }] },
       {
         id: 5,
-        name: `${orphanRoot} + 1 modules`,
-        modules: [{ name: orphanRoot }, { name: hiddenInner }],
+        name: `${globalRoot} + 1 modules`,
+        modules: [{ name: globalRoot }, { name: hiddenInner }],
         reasons: [{ moduleName: configEntry }],
       },
     ],
@@ -221,7 +221,7 @@ describe('buildManifest attribution closure', () => {
       [storyDep]: 'B',
       [preview]: 'P',
       [previewHelper]: 'PT',
-      [orphanRoot]: 'O',
+      [globalRoot]: 'O',
       [hiddenInner]: innerHash,
     };
   }
@@ -234,8 +234,8 @@ describe('buildManifest attribution closure', () => {
     const before = await buildManifest(stats, input);
 
     expect([...before.attribution.storybookGlobals].sort()).toEqual([
+      './src/probe/globalRoot.tsx',
       './src/probe/hiddenInner.tsx',
-      './src/probe/orphanRoot.tsx',
     ]);
 
     disk.fileHashes = hashes('H2');
@@ -269,7 +269,7 @@ describe('buildManifest attribution closure', () => {
     for (const file of Object.values(serialized.files)) {
       expect(file.dependencies.every((dependency) => dependency in serialized.files)).toBe(true);
     }
-    expect(serialized.files['./src/probe/orphanRoot.tsx'].dependencies).toEqual([
+    expect(serialized.files['./src/probe/globalRoot.tsx'].dependencies).toEqual([
       './src/probe/hiddenInner.tsx',
     ]);
   });
@@ -295,12 +295,12 @@ describe('buildManifest attribution of swept node_modules stories', () => {
     ],
   };
 
-  it('leaves the swept story subtree in the globals catch-all rather than draining it', async () => {
+  it('leaves the swept story subtree in globals rather than draining it', async () => {
     const { disk, input } = createFixture({ isAbsent: globAbsent });
     disk.fileHashes = { [story]: 'S', [swept]: 'W', [shared]: 'R' };
     const manifest = await buildManifest(stats, input);
     // The drain: were the swept story a story file, its subtree would be story-reachable and so
-    // absent from the catch-all, and a change to the shared runtime would move nothing the Index
+    // absent from globals, and a change to the shared runtime would move nothing the Index
     // can match.
     expect([...manifest.attribution.storybookGlobals]).toEqual(
       expect.arrayContaining([
