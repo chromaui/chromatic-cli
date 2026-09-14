@@ -65,6 +65,12 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
   const turboSnapRequested = !!ctx.turboSnap;
   const failureLogLevel = turboSnapRequested ? 'error' : 'debug';
 
+  if (!turboSnapRequested) {
+    ctx.log.debug(
+      'Running TurboSnap v2 to populate file hashes for future TurboSnap builds. This will not affect what stories are captured.'
+    );
+  }
+
   try {
     // Run TurboSnap v2 with scoped Sentry tags so all events from v2 are tagged the same. Then the
     // scope is removed once this function returns.
