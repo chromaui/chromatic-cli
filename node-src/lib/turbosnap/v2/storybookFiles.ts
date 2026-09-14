@@ -32,16 +32,33 @@ function isPreviewConfig(filePath: FilePath, configDirectory: FilePath): boolean
 }
 
 /**
+ * What the caller already learned about the stories while hashing them, passed in rather than walked
+ * again here.
+ */
+export interface Stories {
+  /** The story files themselves, where the globals walk stops. */
+  storyFiles: Set<FilePath>;
+  /** The union of every story's transitive subtree. */
+  reachable: Set<FilePath>;
+}
+
+/**
  * Which of the three hashing homes each real file landed in, recorded by the same pass that builds
  * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
  * over that graph cannot reconstruct these sets — it reports attributed files as orphans.
  *
- * The sets are closed over `hashes`: every hashed file lands in a home, and `storybookGlobals` holds
- * exactly the ones in neither of the others. A file can be both story-reachable and in a preview
- * subtree, so the two named homes are not mutually exclusive.
+ * The sets are closed over `hashes`: every hashed file lands in at least one home. None of the three
+ * is exclusive of the others. A file can be both story-reachable and in a preview subtree, and
+ * `storybookGlobals` is the forward closure of the files in neither of those, so a file a story
+ * imports can also be in globals when a Storybook runtime file imports it too. The overlap is
+ * correct, not double counting: a story's entry answers "which stories changed" and the globals
+ * entry answers "did something that reaches every story change", and one file can answer both.
  */
 export interface FileAttribution {
-  /** Files in neither of the above, rolled into the {@link STORYBOOK_GLOBALS_KEY} catch-all. */
+  /**
+   * Files that can affect every story: everything in no story or preview subtree, plus what those
+   * files import. Hashed into the shared {@link STORYBOOK_GLOBALS_KEY} `storybookConfigHashes` entry.
+   */
   storybookGlobals: Set<FilePath>;
   /** Files in a `.storybook/preview.*` subtree, hashed into the shared `preview` `storybookConfigHashes` entry. */
   previewSubtree: Set<FilePath>;
@@ -50,17 +67,21 @@ export interface FileAttribution {
 }
 
 /**
- * Builds the file-hash entries of the `storybookConfigHashes` section: a rolled-up hash for each Storybook
- * config file that no story imports. Every hashable file lands in exactly one hashing home — a
- * story's own subtree, the shared {@link STORYBOOK_PREVIEW_KEY} entry, or the {@link STORYBOOK_GLOBALS_KEY}
- * catch-all — so nothing goes unhashed and the backend can still attribute a change to the preview
- * config or to a Storybook/framework global.
+ * Builds the file-hash entries of the `storybookConfigHashes` section: one rolled-up hash for the
+ * preview config subtree and one for the Storybook globals. Every hashable file lands in at least one
+ * hashing home — a story's own subtree, the shared {@link STORYBOOK_PREVIEW_KEY} entry, or the
+ * {@link STORYBOOK_GLOBALS_KEY} roll-up — so nothing goes unhashed and the backend can still
+ * attribute a change to the preview config or to a Storybook/framework global.
+ *
+ * The globals roll-up is seeded with the files that are not story-reachable and not in a preview
+ * subtree, then extended with everything those files import, stopping at story files. A file a
+ * story also imports stays in globals, because a change there still reaches every story.
  *
  * @param files The map of files to their hashes and dependencies.
  * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
- * @param storyReachable The union of every story's transitive subtree. The caller unions these as it
- * hashes each story, so the story graph is walked once rather than here again. Synthetic nodes are
- * filtered out of the attribution below.
+ * @param stories The story files and their unioned subtrees; see {@link Stories}. The caller unions
+ * the subtrees as it hashes each story, so the story graph is walked once rather than here again.
+ * Synthetic nodes are filtered out of the attribution below.
  * @param configDirectory The canonical manifest path of the project's Storybook config directory
  * (e.g. `./.storybook`).
  * @param h64ToString The hash function.
@@ -71,7 +92,7 @@ export interface FileAttribution {
 export function collectStorybookFiles(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
-  storyReachable: Set<FilePath>,
+  stories: Stories,
   configDirectory: FilePath,
   h64ToString: (input: string) => string
 ): { storybookConfigHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
@@ -94,30 +115,28 @@ export function collectStorybookFiles(
     );
   }
 
-  // Everything else real goes in one catch-all bucket. Membership is defined by *absence* from the
-  // story graph and the preview subtree rather than by an import edge, because those edges are
-  // unreliable — vite has no config-to-preview edge and rspack drops importer edges. Framework
-  // preview annotations and the React runtime land here, and they affect rendering, so leaving them
-  // unhashed would be a real blind spot.
-  // Derived from `hashes`, not from `files`: a file inside a concatenated module is hashed but only
-  // recorded as a dependency of the concatenation root, so filtering `files` would hash it nowhere.
-  const orphanGlobals = [...hashes.keys()].filter(
-    (filePath) => !storyReachable.has(filePath) && !previewSubtree.has(filePath)
-  );
-  if (orphanGlobals.length > 0) {
+  const globalsClosure = new Set<FilePath>();
+  for (const filePath of hashes.keys()) {
+    if (stories.reachable.has(filePath) || previewSubtree.has(filePath)) {
+      continue;
+    }
+    collectTransitiveDependencies(files, filePath, globalsClosure, stories.storyFiles);
+  }
+  const globals = new Set([...globalsClosure].filter((filePath) => hashes.has(filePath)));
+  if (globals.size > 0) {
     storybookConfigHashes.set(
       STORYBOOK_GLOBALS_KEY,
-      rollUpFileHashes(hashes, orphanGlobals, h64ToString)
+      rollUpFileHashes(hashes, globals, h64ToString)
     );
   }
 
-  // Report only real files, matching how the catch-all is defined, so the three sets cover exactly
+  // Report only real files, matching how the globals set is defined, so the three sets cover exactly
   // the hashed files. The walks pass through synthetic nodes (globs, externals, virtual modules),
-  // which have no hash. A file can be both story-reachable and in a preview subtree.
+  // which have no hash. A file can be in more than one home.
   const attribution: FileAttribution = {
-    storyReachable: new Set([...storyReachable].filter((filePath) => hashes.has(filePath))),
+    storyReachable: new Set([...stories.reachable].filter((filePath) => hashes.has(filePath))),
     previewSubtree: new Set([...previewSubtree].filter((filePath) => hashes.has(filePath))),
-    storybookGlobals: new Set(orphanGlobals),
+    storybookGlobals: globals,
   };
 
   return { storybookConfigHashes, attribution };

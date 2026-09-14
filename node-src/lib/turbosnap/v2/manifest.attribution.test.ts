@@ -323,3 +323,74 @@ describe('buildManifest attribution of swept node_modules stories', () => {
     );
   });
 });
+
+describe('buildManifest globals closure on a webpack-shaped graph', () => {
+  // The builder's generated entries are not files on disk, so nothing seeds the walk from them. The
+  // framework's preview runtime is a real file that no story reaches, so it is a seed, and it imports
+  // the React runtime that every story also imports. A React upgrade must move the globals digest.
+  const story = '/repo/packages/ui/src/lib/Button/Button.stories.tsx';
+  const impl = '/repo/packages/ui/src/lib/Button/Button.tsx';
+  const preview = '/repo/packages/ui/.storybook/preview.ts';
+  const decorator = '/repo/packages/ui/.storybook/decorator.ts';
+  const entryPreview = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
+  const react = '/repo/packages/ui/node_modules/react/index.js';
+  const configEntry = './storybook-config-entry.js';
+  const glob = './src/lib/ lazy namespace object';
+  const globalsKey = 'storybookGlobals';
+
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: glob, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: story, reasons: [{ moduleName: glob }] },
+      { id: 3, name: impl, reasons: [{ moduleName: story }] },
+      { id: 4, name: react, reasons: [{ moduleName: impl }, { moduleName: entryPreview }] },
+      { id: 5, name: preview, reasons: [{ moduleName: configEntry }] },
+      { id: 6, name: decorator, reasons: [{ moduleName: preview }] },
+      { id: 7, name: entryPreview, reasons: [{ moduleName: configEntry }] },
+    ],
+  };
+  const hashes = {
+    [story]: 'S',
+    [impl]: 'B',
+    [preview]: 'P',
+    [decorator]: 'D',
+    [entryPreview]: 'EP',
+    [react]: 'R',
+  };
+
+  it('puts the React runtime in both the story subtree and globals', async () => {
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
+    disk.fileHashes = { ...hashes };
+
+    const { attribution } = await buildManifest(stats, input);
+
+    expect(attribution.storyReachable.has('./node_modules/react/index.js')).toBe(true);
+    expect([...attribution.storybookGlobals].sort()).toEqual([
+      './node_modules/@storybook/react/dist/entry-preview.js',
+      './node_modules/react/index.js',
+    ]);
+  });
+
+  it('moves the globals digest when the React runtime changes', async () => {
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
+    disk.fileHashes = { ...hashes };
+    const before = await buildManifest(stats, input);
+    disk.fileHashes = { ...hashes, [react]: 'R2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storybookConfigHashes.get(globalsKey)).not.toBe(
+      before.storybookConfigHashes.get(globalsKey)
+    );
+  });
+
+  it('keeps the preview subtree and the story implementation out of globals', async () => {
+    const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
+    disk.fileHashes = { ...hashes };
+
+    const { attribution } = await buildManifest(stats, input);
+
+    expect(attribution.storybookGlobals.has('./.storybook/preview.ts')).toBe(false);
+    expect(attribution.storybookGlobals.has('./.storybook/decorator.ts')).toBe(false);
+    expect(attribution.storybookGlobals.has('./src/lib/Button/Button.tsx')).toBe(false);
+  });
+});
