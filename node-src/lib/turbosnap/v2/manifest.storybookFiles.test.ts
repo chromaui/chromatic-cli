@@ -118,19 +118,26 @@ describe('buildManifest storybookFiles', () => {
     );
   });
 
-  it('attributes a preview-subtree change to the preview entry, not the catch-all', async () => {
+  it('reports a preview-subtree file under globals too, since the config entry imports the preview', async () => {
+    const { input } = createFixture({ fileHashes: { ...baseHashes } });
+
+    const manifest = await buildManifest(makeStats(), input);
+
+    expect(manifest.attribution.previewSubtree.has('./.storybook/theme.ts')).toBe(true);
+    expect(manifest.attribution.storybookGlobals.has('./.storybook/theme.ts')).toBe(true);
+  });
+
+  it('moves both the preview and the globals entry when a preview-subtree file changes', async () => {
     const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
     const before = await buildManifest(makeStats(), input);
 
-    // theme.ts is reached only through preview.ts, so it belongs to the keyed preview entry. Landing
-    // in both would double-count it and destroy the backend's attribution.
     disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
     const after = await buildManifest(makeStats(), input);
 
     expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
       before.storybookConfigHashes.get(previewKey)
     );
-    expect(after.storybookConfigHashes.get(globalsKey)).toBe(
+    expect(after.storybookConfigHashes.get(globalsKey)).not.toBe(
       before.storybookConfigHashes.get(globalsKey)
     );
   });

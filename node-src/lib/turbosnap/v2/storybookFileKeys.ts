@@ -11,7 +11,10 @@
  */
 export const STORYBOOK_PREVIEW_KEY = 'preview';
 
-/** Every orphan global, rolled up; see {@link collectStorybookFiles}. */
+/**
+ * Every file that can affect every story, rolled up: the files in no story and no preview
+ * subtree, plus everything they import. See {@link collectStorybookFiles}.
+ */
 export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
 
 /**
