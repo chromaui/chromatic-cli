@@ -1,5 +1,4 @@
-import { AbsolutePath } from '../../../types';
-import { ProjectFiles } from './projectFiles';
+import { ManifestInput } from './manifestInput';
 
 // The packages that own Storybook's preview runtime, most-preferred first. Both report the same
 // lockstep version when present; the order is about which one a given install can resolve.
@@ -22,17 +21,21 @@ const STORYBOOK_CORE_PACKAGES = [
  * resolves relative to the working directory without walking up to a hoisted install, and can be a
  * bare semver range rather than a concrete version.
  *
- * @param projectRoot The absolute Storybook project root to resolve from.
- * @param projectFiles How to read the disk.
+ * We resolve from the config directory, because that is the package directory that should've
+ * been used to build the Storybook. It then walks up every ancestor `node_modules` to find the
+ * first package it can resolve.
+ *
+ * @param input Where to resolve from and what to read the disk with.
+ * @param input.configDir The absolute Storybook config directory to resolve from.
+ * @param input.projectFiles How to read the disk.
  *
  * @returns The installed Storybook version (e.g. `9.1.20`).
  */
 export function resolveStorybookVersion(
-  projectRoot: AbsolutePath,
-  projectFiles: ProjectFiles
+  input: Pick<ManifestInput, 'configDir' | 'projectFiles'>
 ): string {
   for (const packageName of STORYBOOK_CORE_PACKAGES) {
-    const version = projectFiles.packageVersion(projectRoot, packageName);
+    const version = input.projectFiles.packageVersion(input.configDir, packageName);
     if (version) {
       return version;
     }
@@ -41,6 +44,6 @@ export function resolveStorybookVersion(
   // Without a version there is no gate on a Storybook upgrade, so refuse to build a manifest that
   // would silently under-capture.
   throw new Error(
-    `Could not resolve a Storybook version from ${projectRoot}: none of ${STORYBOOK_CORE_PACKAGES.join(', ')} could be resolved with a version.`
+    `Could not resolve a Storybook version from ${input.configDir}: none of ${STORYBOOK_CORE_PACKAGES.join(', ')} could be resolved with a version.`
   );
 }

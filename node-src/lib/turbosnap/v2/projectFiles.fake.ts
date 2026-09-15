@@ -16,6 +16,12 @@ export interface InMemoryDisk {
   /** Installed version per package name, whatever directory it is resolved from. */
   packageVersions?: Record<string, string>;
   /**
+   * Installed version per package name, per absolute directory it is resolved from, for a suite
+   * whose assertion turns on which directory was asked. A directory with no entry for the package
+   * falls through to `packageVersions`.
+   */
+  packageVersionsByDirectory?: Record<AbsolutePath, Record<string, string>>;
+  /**
    * Whether a path has no file on disk. Everything else is a file, which is what keeps a suite from
    * having to list every source file its stats fixture names.
    */
@@ -59,7 +65,8 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
   return {
     isFile,
     isDirectory,
-    packageVersion: (_fromDirectory: AbsolutePath, packageName: string) =>
+    packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
+      disk.packageVersionsByDirectory?.[fromDirectory]?.[packageName] ??
       disk.packageVersions?.[packageName],
     hashAll: async (absolutePaths: AbsolutePath[]) => {
       // The real reader throws for anything it cannot read, so refusing here too keeps the callers'
