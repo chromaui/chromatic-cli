@@ -14,8 +14,8 @@ describe('buildManifest storybookFiles', () => {
   const preview = '/repo/packages/ui/.storybook/preview.ts';
   const previewHelper = '/repo/packages/ui/.storybook/theme.ts';
   const configEntry = './storybook-config-entry.js';
-  // An orphan global: Storybook wires the framework's preview annotations into the config entry
-  // alongside preview.ts, so it is neither story-reachable nor in the preview subtree.
+  // A Storybook global: the framework's preview annotations are wired into the config entry
+  // alongside preview.ts, so they are neither story-reachable nor in the preview subtree.
   const entryPreview = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
   const reactDom = '/repo/packages/ui/node_modules/react-dom/index.js';
 
@@ -54,7 +54,7 @@ describe('buildManifest storybookFiles', () => {
     expect([...manifest.storybookConfigHashes.keys()]).toContain(previewKey);
   });
 
-  it('rolls orphan globals into a single catch-all entry', async () => {
+  it('rolls the globals into a single storybookGlobals entry', async () => {
     const { input } = createFixture({ fileHashes: { ...baseHashes } });
 
     const manifest = await buildManifest(makeStats(), input);
@@ -62,11 +62,11 @@ describe('buildManifest storybookFiles', () => {
     expect([...manifest.storybookConfigHashes.keys()]).toContain(globalsKey);
   });
 
-  it('changes the catch-all entry when an orphan global content changes', async () => {
+  it('changes the globals entry when a global file changes', async () => {
     const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
     const before = await buildManifest(makeStats(), input);
 
-    // reactDom is reached only via the framework's preview annotations, so it lands in the bucket.
+    // reactDom is reached only via the framework's preview annotations, so it lands in globals.
     disk.fileHashes = { ...baseHashes, [reactDom]: 'RD2' };
     const after = await buildManifest(makeStats(), input);
 
@@ -88,7 +88,7 @@ describe('buildManifest storybookFiles', () => {
     expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
   });
 
-  it('changes the storybook hash when an orphan global changes', async () => {
+  it('changes the storybook hash when a global changes', async () => {
     const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
     const before = await buildManifest(makeStats(), input);
 
@@ -99,11 +99,11 @@ describe('buildManifest storybookFiles', () => {
     expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
   });
 
-  it('keeps a story dependency out of the catch-all, scoping the change to that story', async () => {
+  it('keeps a story-only dependency out of globals, scoping the change to that story', async () => {
     const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
     const before = await buildManifest(makeStats(), input);
 
-    // moment lives only in Button's subtree, so it is story-reachable and must not be bucketed.
+    // moment lives only in Button's subtree, so it is story-reachable and must stay out of globals.
     disk.fileHashes = { ...baseHashes, [moment]: 'M2' };
     const after = await buildManifest(makeStats(), input);
 
@@ -118,12 +118,21 @@ describe('buildManifest storybookFiles', () => {
     );
   });
 
-  it('attributes a preview-subtree change to the preview entry, not the catch-all', async () => {
+  it('keeps a preview-subtree file out of globals although the config entry reaches it', async () => {
+    // The globals walk reaches these files through the config entry, but the dedicated `preview`
+    // roll-up already tracks them. They should not also be included in `storybookGlobals`.
+    const { input } = createFixture({ fileHashes: { ...baseHashes } });
+
+    const manifest = await buildManifest(makeStats(), input);
+
+    expect(manifest.attribution.previewSubtree.has('./.storybook/theme.ts')).toBe(true);
+    expect(manifest.attribution.storybookGlobals.has('./.storybook/theme.ts')).toBe(false);
+  });
+
+  it('moves the preview entry, not the globals entry, when a preview-subtree file changes', async () => {
     const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
     const before = await buildManifest(makeStats(), input);
 
-    // theme.ts is reached only through preview.ts, so it belongs to the keyed preview entry. Landing
-    // in both would double-count it and destroy the backend's attribution.
     disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
     const after = await buildManifest(makeStats(), input);
 
@@ -133,6 +142,8 @@ describe('buildManifest storybookFiles', () => {
     expect(after.storybookConfigHashes.get(globalsKey)).toBe(
       before.storybookConfigHashes.get(globalsKey)
     );
+    // `storybookHash` includes the preview hash, so it still changes when the globals hash does not.
+    expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
   it('omits the preview entry when the graph has no preview config', async () => {
@@ -150,9 +161,9 @@ describe('buildManifest storybookFiles', () => {
     expect([...manifest.storybookConfigHashes.keys()]).not.toContain(previewKey);
   });
 
-  it('omits the catch-all entry when every global is synthetic', async () => {
+  it('omits the globals entry when every global is synthetic', async () => {
     // The stories entry is the only non-story node here, and it has no file on disk, so there is
-    // nothing real to bucket and no empty entry should appear.
+    // nothing real to put in globals and no empty entry should appear.
     const { input } = createFixture({
       isAbsent: (candidate) => candidate.includes('storybook-stories.js'),
       fileHashes: { [buttonStory]: 'S1' },
@@ -166,7 +177,7 @@ describe('buildManifest storybookFiles', () => {
       input
     );
 
-    // The version entry is unconditional, so it is the only key left once the catch-all is gone.
+    // The version entry is unconditional, so it is the only key left once the globals entry is gone.
     expect([...manifest.storybookConfigHashes.keys()]).toEqual(['storybookVersion']);
   });
 
@@ -300,11 +311,11 @@ describe('buildManifest out-of-graph inputs', () => {
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
-  it('keeps out-of-graph files out of files and attribution, so they miss the globals catch-all', async () => {
+  it('keeps out-of-graph files out of files and attribution, so they miss the globals roll-up', async () => {
     const { input } = fixtureWithAssets();
     const manifest = await buildManifest(stats, input);
 
-    // The catch-all is defined by absence from storyReachable/previewSubtree, which these satisfy by
+    // The globals seed is defined by absence from storyReachable/previewSubtree, which these satisfy by
     // construction — entering `files` would double-hash them into `storybookGlobals`.
     expect(manifest.files.has('./.storybook/main.ts')).toBe(false);
     expect(manifest.attribution.storybookGlobals.has('./.storybook/main.ts')).toBe(false);

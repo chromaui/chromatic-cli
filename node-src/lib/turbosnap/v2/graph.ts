@@ -89,19 +89,21 @@ export function hashEntryIdentity([path, hash]: [FilePath, FileHash]): string {
  * @param files The map of files to their hashes and dependencies.
  * @param filePath The file to collect the transitive dependencies of.
  * @param dependencies The set of dependencies to add to.
+ * @param stopAt Files the walk does not include (nor their dependencies).
  *
  * @returns A set of all the files that the given file transitively depends on.
  */
 export function collectTransitiveDependencies(
   files: Map<FilePath, TurboSnapFile>,
   filePath: FilePath,
-  dependencies = new Set<FilePath>()
+  dependencies = new Set<FilePath>(),
+  stopAt = new Set<FilePath>()
 ) {
   const unvisited: FilePath[] = [filePath];
 
   while (unvisited.length > 0) {
     const current = unvisited.pop();
-    if (current === undefined || dependencies.has(current)) {
+    if (current === undefined || dependencies.has(current) || stopAt.has(current)) {
       continue;
     }
 

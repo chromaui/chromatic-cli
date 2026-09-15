@@ -31,7 +31,7 @@ export interface TurboSnapManifest {
   storybookHash: string;
   /**
    * A rolled-up hash for each Storybook-wide category: the `preview` subtree, the `storybookGlobals`
-   * catch-all, the `storybookConfigFiles` and `staticFiles` out-of-graph sweeps, and the Storybook
+   * roll-up, the `storybookConfigFiles` and `staticFiles` out-of-graph sweeps, and the Storybook
    * version (the plain version string, not a hash of it).
    */
   storybookConfigHashes: Map<StorybookFileKey, FileHash | StorybookVersion>;
@@ -39,7 +39,7 @@ export interface TurboSnapManifest {
   storyFileHashes: Map<FilePath, FileHash>;
   /**
    * Which hashing home each real file landed in (story subtree, preview subtree, or the globals
-   * catch-all). A diagnostic record for the S3 manifest; it feeds no hash.
+   * roll-up). A diagnostic record for the S3 manifest; it feeds no hash.
    */
   attribution: FileAttribution;
   /**
@@ -86,7 +86,7 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  const { files, hashes, storyFiles } = await readStatsGraph(stats, input);
+  const { files, hashes, storyFiles, globalRoots } = await readStatsGraph(stats, input);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
@@ -105,14 +105,17 @@ export async function buildManifest(
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
     files,
     hashes,
-    storyReachable,
+    { reachable: storyReachable, storyFiles },
     normalizeStatsPath(input.configDir, input.projectRoot),
+    globalRoots,
     h64ToString
   );
   input.log.debug(
     `Attributed ${attribution.previewSubtree.size} files to the preview config subtree`
   );
-  input.log.debug(`Found ${attribution.storybookGlobals.size} global files not linked to a story`);
+  input.log.debug(
+    `Found ${attribution.storybookGlobals.size} files in Storybook globals (files that could impact rendering across the entire Storybook)`
+  );
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
   // upgrade there. Track the version instead; it is a plain string, not a hash.
