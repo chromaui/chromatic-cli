@@ -47,17 +47,16 @@ export interface Stories {
  * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
  * over that graph cannot reconstruct these sets — it reports attributed files as unreachable.
  *
- * The sets are closed over `hashes`: every hashed file lands in at least one home. None of the three
- * is exclusive of the others. A file can be both story-reachable and in a preview subtree, and
- * `storybookGlobals` is the forward closure of the files in neither of those, so a file a story
- * imports can also be in globals when a Storybook runtime file imports it too. The overlap is
- * correct, not double counting: a story's entry answers "which stories changed" and the globals
- * entry answers "did something that reaches every story change", and one file can answer both.
+ * Every hashed file belongs to at least one set, and the sets can overlap. For example, a file belongs
+ * to both `storyReachable` and `storybookGlobals` when it is imported by a story and by Storybook's
+ * global composition code. This is intentional: the story hash identifies the affected story, while
+ * the globals hash records that the same change can affect every story.
  */
 export interface FileAttribution {
   /**
-   * Files that can affect every story: everything in no story or preview subtree, plus what those
-   * files import. Hashed into the shared {@link STORYBOOK_GLOBALS_KEY} `storybookConfigHashes` entry.
+   * Files that can affect every story: what the builder's global composition roots reach, plus
+   * everything in no story or preview subtree and what those files import. Hashed into the shared
+   * {@link STORYBOOK_GLOBALS_KEY} `storybookConfigHashes` entry.
    */
   storybookGlobals: Set<FilePath>;
   /** Files in a `.storybook/preview.*` subtree, hashed into the shared `preview` `storybookConfigHashes` entry. */
@@ -73,9 +72,19 @@ export interface FileAttribution {
  * {@link STORYBOOK_GLOBALS_KEY} roll-up — so nothing goes unhashed and the backend can still
  * attribute a change to the preview config or to a Storybook/framework global.
  *
- * The globals roll-up is seeded with the files that are not story-reachable and not in a preview
- * subtree, then extended with everything those files import, stopping at story files. A file a
- * story also imports stays in globals, because a change there still reaches every story.
+ * The globals roll-up starts from two kinds of roots:
+ *
+ * - Builder-generated composition roots. Their dependencies are Storybook's preview annotations,
+ *   which are loaded for every story.
+ * - Hashed files that belong to neither a story subtree nor the preview subtree. This fallback is
+ *   needed when builder stats omit the edge from the composition root.
+ *
+ * From each root, the walk follows dependencies but stops at story files. A composition root can also
+ * discover the stories, and following that branch would incorrectly classify all story code as
+ * global.
+ *
+ * Files reached from a composition root remain global even when a story also imports them. Files in
+ * the preview subtree are excluded because preview has its own Storybook-wide roll-up.
  *
  * @param files The map of files to their hashes and dependencies.
  * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
@@ -84,6 +93,8 @@ export interface FileAttribution {
  * Synthetic nodes are filtered out of the attribution below.
  * @param configDirectory The canonical manifest path of the project's Storybook config directory
  * (e.g. `./.storybook`).
+ * @param globalRoots Builder-generated composition roots detected by the stats reader. Keeping the
+ * detection outside this function lets it work with builder-neutral graph paths.
  * @param h64ToString The hash function.
  *
  * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
@@ -94,6 +105,7 @@ export function collectStorybookFiles(
   hashes: Map<FilePath, FileHash>,
   stories: Stories,
   configDirectory: FilePath,
+  globalRoots: Set<FilePath>,
   h64ToString: (input: string) => string
 ): { storybookConfigHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
   // Every preview config subtree, unioned into one `preview` roll-up rather than one entry per path,
@@ -116,13 +128,18 @@ export function collectStorybookFiles(
   }
 
   const globalsClosure = new Set<FilePath>();
+  for (const globalRoot of globalRoots) {
+    collectTransitiveDependencies(files, globalRoot, globalsClosure, stories.storyFiles);
+  }
   for (const filePath of hashes.keys()) {
     if (stories.reachable.has(filePath) || previewSubtree.has(filePath)) {
       continue;
     }
     collectTransitiveDependencies(files, filePath, globalsClosure, stories.storyFiles);
   }
-  const globals = new Set([...globalsClosure].filter((filePath) => hashes.has(filePath)));
+  const globals = new Set(
+    [...globalsClosure].filter((filePath) => hashes.has(filePath) && !previewSubtree.has(filePath))
+  );
   if (globals.size > 0) {
     storybookConfigHashes.set(
       STORYBOOK_GLOBALS_KEY,

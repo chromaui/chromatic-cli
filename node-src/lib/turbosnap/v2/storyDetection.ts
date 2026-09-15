@@ -45,7 +45,7 @@ const STORIES_ENTRY_FILES = new Set([
 // Config entry files import the story require-context. They import non-story files too (e.g.
 // `.storybook/preview.ts`), so they only help locate the context — they are not treated as direct
 // story importers.
-const CONFIG_ENTRY_FILES = new Set([
+export const CONFIG_ENTRY_FILES = new Set([
   './storybook-config-entry.js',
   './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
   './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',

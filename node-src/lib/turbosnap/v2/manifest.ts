@@ -86,7 +86,7 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  const { files, hashes, storyFiles } = await readStatsGraph(stats, input);
+  const { files, hashes, storyFiles, globalRoots } = await readStatsGraph(stats, input);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
@@ -107,6 +107,7 @@ export async function buildManifest(
     hashes,
     { reachable: storyReachable, storyFiles },
     normalizeStatsPath(input.configDir, input.projectRoot),
+    globalRoots,
     h64ToString
   );
   input.log.debug(
