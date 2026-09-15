@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { FileHash, FilePath, TurboSnapFile } from './graph';
@@ -6,6 +7,10 @@ import { collectStorybookFiles } from './storybookFiles';
 
 // The config dir most tests don't care about; only the configDir-specific tests below vary it.
 const DEFAULT_CONFIG_DIR = './.storybook';
+
+// Most tests exercise the fallback for graphs without a detected composition root. Tests that need
+// a composition root pass one explicitly in the final suite.
+const NO_GLOBAL_ROOTS = new Set<FilePath>();
 
 // An identity "hash" so a roll-up is readable as the set of paths that went into it, which is what
 // makes the contents of the shared `preview` roll-up visible.
@@ -41,6 +46,7 @@ describe('collectStorybookFiles', () => {
       hashes,
       { reachable: new Set(['./src/a.stories.tsx']), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -62,6 +68,7 @@ describe('collectStorybookFiles', () => {
       makeHashes(previews),
       { reachable: new Set(), storyFiles: new Set() },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -78,6 +85,7 @@ describe('collectStorybookFiles', () => {
       makeHashes(['./src/preview.ts']),
       { reachable: new Set(), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -95,6 +103,7 @@ describe('collectStorybookFiles', () => {
       makeHashes([...files.keys()]),
       { reachable: new Set(), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -115,6 +124,7 @@ describe('collectStorybookFiles', () => {
       makeHashes(['./src/preview.ts']),
       { reachable: new Set(), storyFiles: storiesIn(files) },
       './src',
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -144,6 +154,7 @@ describe('collectStorybookFiles', () => {
         storyFiles: storiesIn(files),
       },
       './config',
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -167,6 +178,7 @@ describe('collectStorybookFiles', () => {
       hashes,
       { reachable: new Set(), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -184,6 +196,7 @@ describe('collectStorybookFiles', () => {
       makeHashes(['./node_modules/react-dom/index.js']),
       { reachable: new Set(), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -205,6 +218,7 @@ describe('collectStorybookFiles', () => {
         storyFiles: storiesIn(files),
       },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -219,6 +233,7 @@ describe('collectStorybookFiles', () => {
       makeHashes(['./src/inlined.ts']),
       { reachable: new Set(), storyFiles: new Set() },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -243,6 +258,7 @@ describe('collectStorybookFiles', () => {
         storyFiles: storiesIn(files),
       },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -268,6 +284,7 @@ describe('collectStorybookFiles', () => {
       makeHashes([...files.keys()]),
       { reachable: new Set(['./src/a.stories.tsx', shared]), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -293,6 +310,7 @@ describe('collectStorybookFiles', () => {
         storyFiles: storiesIn(files),
       },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -308,6 +326,7 @@ describe('collectStorybookFiles', () => {
       new Map(),
       { reachable: new Set(), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -329,6 +348,7 @@ describe('collectStorybookFiles', () => {
       makeHashes([...files.keys()]),
       { reachable: storyReachable, storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -339,6 +359,7 @@ describe('collectStorybookFiles', () => {
       changedHashes,
       { reachable: storyReachable, storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -372,6 +393,7 @@ describe('collectStorybookFiles', () => {
         storyFiles: storiesIn(files),
       },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -396,6 +418,7 @@ describe('collectStorybookFiles', () => {
       makeHashes([...files.keys()]),
       { reachable: new Set(['./src/a.stories.tsx', button]), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -405,9 +428,9 @@ describe('collectStorybookFiles', () => {
     expect(attribution.storybookGlobals.has('./src/a.stories.tsx')).toBe(false);
   });
 
-  it('walks the globals closure through the preview config', () => {
-    // The preview is part of the render pipeline, so a preview change moves the globals digest too;
-    // its files stay in the `preview` roll-up as well.
+  it('leaves the preview subtree to its own roll-up when the globals closure reaches it', () => {
+    // The globals walk reaches the preview through Storybook's core entry. Preview files are removed
+    // from globals because the separate `preview` roll-up already tracks them.
     const files = makeFiles({
       './node_modules/@storybook/core/entry.js': ['./.storybook/preview.ts'],
       './.storybook/preview.ts': ['./.storybook/theme.ts'],
@@ -419,14 +442,11 @@ describe('collectStorybookFiles', () => {
       makeHashes([...files.keys()]),
       { reachable: new Set(), storyFiles: storiesIn(files) },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
-    expect([...attribution.storybookGlobals].sort()).toEqual([
-      './.storybook/preview.ts',
-      './.storybook/theme.ts',
-      './node_modules/@storybook/core/entry.js',
-    ]);
+    expect([...attribution.storybookGlobals]).toEqual(['./node_modules/@storybook/core/entry.js']);
     expect([...attribution.previewSubtree].sort()).toEqual([
       './.storybook/preview.ts',
       './.storybook/theme.ts',
@@ -445,6 +465,7 @@ describe('collectStorybookFiles', () => {
       makeHashes([...files.keys()]),
       { reachable: new Set(), storyFiles: new Set() },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
@@ -474,9 +495,80 @@ describe('collectStorybookFiles', () => {
         storyFiles: storiesIn(files),
       },
       DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
       identity
     );
 
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/react-dom/index.js']);
   });
+});
+
+describe('collectStorybookFiles with a detected global composition root', () => {
+  // `configEntry` represents a builder-generated module that loads global preview annotations. It is
+  // synthetic, so it has no content hash and must be passed as an explicit traversal root. The story
+  // also imports one annotation, which verifies that a file can be both global and story-reachable.
+  const configEntry = './storybook-config-entry.js';
+  const annotation = './local-addon/preview.js';
+  const runtime = './local-addon/runtime.js';
+  const story = './src/a.stories.tsx';
+  const storyOnlyHelper = './src/format.ts';
+
+  const graph = {
+    [configEntry]: [annotation, './.storybook/preview.ts'],
+    [annotation]: [runtime],
+    [runtime]: [],
+    [story]: [annotation, storyOnlyHelper],
+    [storyOnlyHelper]: [],
+    './.storybook/preview.ts': [],
+  };
+
+  // Only real files have hashes; the synthetic composition root does not.
+  const realFiles = [annotation, runtime, story, storyOnlyHelper, './.storybook/preview.ts'];
+
+  function collect() {
+    const files = makeFiles(graph);
+    return collectStorybookFiles(
+      files,
+      makeHashes(realFiles),
+      {
+        reachable: new Set([story, annotation, runtime, storyOnlyHelper]),
+        storyFiles: new Set([story]),
+      },
+      DEFAULT_CONFIG_DIR,
+      new Set([configEntry]),
+      identity
+    );
+  }
+
+  it('keeps an annotation and its runtime global although a story reaches them too', () => {
+    const { attribution } = collect();
+
+    expect(attribution.storybookGlobals.has(annotation)).toBe(true);
+    expect(attribution.storybookGlobals.has(runtime)).toBe(true);
+    expect(attribution.storyReachable.has(annotation)).toBe(true);
+    expect(attribution.storyReachable.has(runtime)).toBe(true);
+  });
+
+  it('leaves a helper only the story imports out of globals', () => {
+    const { attribution } = collect();
+
+    expect(attribution.storybookGlobals.has(storyOnlyHelper)).toBe(false);
+    expect(attribution.storyReachable.has(storyOnlyHelper)).toBe(true);
+  });
+
+  it('leaves the preview the root reaches in the preview set alone', () => {
+    const { attribution } = collect();
+
+    expect(attribution.previewSubtree.has('./.storybook/preview.ts')).toBe(true);
+    expect(attribution.storybookGlobals.has('./.storybook/preview.ts')).toBe(false);
+  });
+
+  it.each(['storyReachable', 'previewSubtree', 'storybookGlobals'] as const)(
+    'reports no synthetic node in %s',
+    (setName) => {
+      const { attribution } = collect();
+
+      expect([...attribution[setName]]).not.toContain(configEntry);
+    }
+  );
 });

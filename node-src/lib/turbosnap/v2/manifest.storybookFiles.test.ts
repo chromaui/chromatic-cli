@@ -118,16 +118,18 @@ describe('buildManifest storybookFiles', () => {
     );
   });
 
-  it('reports a preview-subtree file under globals too, since the config entry imports the preview', async () => {
+  it('keeps a preview-subtree file out of globals although the config entry reaches it', async () => {
+    // The globals walk reaches these files through the config entry, but the dedicated `preview`
+    // roll-up already tracks them. They should not also be included in `storybookGlobals`.
     const { input } = createFixture({ fileHashes: { ...baseHashes } });
 
     const manifest = await buildManifest(makeStats(), input);
 
     expect(manifest.attribution.previewSubtree.has('./.storybook/theme.ts')).toBe(true);
-    expect(manifest.attribution.storybookGlobals.has('./.storybook/theme.ts')).toBe(true);
+    expect(manifest.attribution.storybookGlobals.has('./.storybook/theme.ts')).toBe(false);
   });
 
-  it('moves both the preview and the globals entry when a preview-subtree file changes', async () => {
+  it('moves the preview entry, not the globals entry, when a preview-subtree file changes', async () => {
     const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
     const before = await buildManifest(makeStats(), input);
 
@@ -137,9 +139,11 @@ describe('buildManifest storybookFiles', () => {
     expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
       before.storybookConfigHashes.get(previewKey)
     );
-    expect(after.storybookConfigHashes.get(globalsKey)).not.toBe(
+    expect(after.storybookConfigHashes.get(globalsKey)).toBe(
       before.storybookConfigHashes.get(globalsKey)
     );
+    // `storybookHash` includes the preview hash, so it still changes when the globals hash does not.
+    expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
   it('omits the preview entry when the graph has no preview config', async () => {
