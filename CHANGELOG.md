@@ -1,3 +1,15 @@
+# v18.9.0 (Tue Sep 15 2026)
+
+#### 🚀 Enhancement
+
+- Always upload TurboSnap v2 hashes [#1490](https://github.com/chromaui/chromatic-cli/pull/1490) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.8.1 (Fri Sep 11 2026)
 
 #### 🐛 Bug Fix
