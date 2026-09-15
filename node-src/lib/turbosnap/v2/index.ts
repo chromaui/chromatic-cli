@@ -25,7 +25,6 @@ interface TraceChangedFilesInput {
   configDir: AbsolutePath;
   staticDirs: AbsolutePath[];
   projectFiles: ProjectFiles;
-  storybookVersion?: string;
 }
 
 /**
@@ -50,8 +49,6 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * defaulted, so a caller cannot silently reach the real disk.
  * @param input.failureLogLevel The level to log a v2 failure at, required rather than defaulted so a
  * caller cannot pick a level by accident.
- * @param input.storybookVersion The Storybook version the CLI already detected, used only when no
- * install can be resolved from disk and only when it is a concrete version.
  *
  * @returns The TurboSnap result.
  */
@@ -66,7 +63,6 @@ export async function traceChangedFiles(
       configDir: input.configDir,
       staticDirs: input.staticDirs,
       projectFiles: input.projectFiles,
-      storybookVersion: input.storybookVersion,
     });
   } catch (error) {
     return failed(input, 'Failed to build manifest for TurboSnap v2', error);
