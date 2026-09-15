@@ -46,6 +46,7 @@ function makeContext() {
     log: new TestLogger(),
     turboSnap: {},
     options: {},
+    env: {},
     git: { changedFiles: ['./src/Button.tsx'] },
     fileInfo: { statsPath: '/repo/packages/ui/storybook-static/preview-stats.json' },
     client: { runQuery: vi.fn() },
@@ -67,18 +68,44 @@ beforeEach(() => {
 });
 
 describe('traceChangedFiles', () => {
-  it('returns skipped without running either generation when TurboSnap is unavailable', async () => {
-    const ctx = {
-      options: {},
-      git: {},
-      turboSnap: { unavailable: true },
-    } as any;
+  it('collects hashes but skips v1 when TurboSnap is unavailable', async () => {
+    const ctx = { ...makeContext(), turboSnap: { unavailable: true } };
+
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+
+    expect(readStatsFile).toHaveBeenCalledOnce();
+    expect(traceChangedFilesV2).toHaveBeenCalledOnce();
+    expect(traceChangedFilesV1).not.toHaveBeenCalled();
+  });
+
+  it('stays silent for a prebuilt Storybook when TurboSnap is not requested', async () => {
+    const ctx = { ...makeContext(), turboSnap: undefined, fileInfo: undefined };
 
     await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
 
     expect(readStatsFile).not.toHaveBeenCalled();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
+  });
+
+  it.each(['noAncestorBuild', 'rebuild', 'invalidChangedFiles', 'changedExternalFiles'])(
+    'collects hashes for v2 even when v1 recorded the bail reason %s',
+    async (bailReason) => {
+      const ctx = { ...makeContext(), turboSnap: { [bailReason]: true } };
+
+      await traceChangedFiles(ctx);
+
+      expect(traceChangedFilesV2).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('does not collect hashes when the off switch is set', async () => {
+    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true } };
+
+    await traceChangedFiles(ctx);
+
+    expect(traceChangedFilesV2).not.toHaveBeenCalled();
+    expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
   it.each([[], undefined])(
@@ -94,7 +121,7 @@ describe('traceChangedFiles', () => {
     }
   );
 
-  it('throws if the stats file is not found', async () => {
+  it('throws if the stats file is not found and the user asked for TurboSnap', async () => {
     const ctx = { ...makeContext(), fileInfo: undefined };
 
     await expect(traceChangedFiles(ctx)).rejects.toThrow('TurboSnap requires a stats file');
@@ -125,6 +152,7 @@ describe('traceChangedFiles', () => {
     expect(readStatsFile).toHaveBeenCalledWith(ctx.fileInfo.statsPath);
     expect(traceChangedFilesV2).toHaveBeenCalledWith({
       log: ctx.log,
+      failureLogLevel: 'error',
       graphqlClient: ctx.client,
       buildId: 'head-build',
       stats,
@@ -147,16 +175,26 @@ describe('traceChangedFiles', () => {
     );
   });
 
-  it('reports an unexpected v2 rejection and still returns the v1 result', async () => {
-    const ctx = makeContext();
-    const error = new Error('v2 escaped its own error handling');
-    vi.mocked(traceChangedFilesV2).mockRejectedValue(error);
+  // An error that escaped v2's own handling takes the same level as one it handled, so a user who
+  // never asked for TurboSnap is not shown a failure of an optimisation they never heard of.
+  it.each([
+    ['error', {}],
+    ['debug', undefined],
+  ])(
+    'reports an unexpected v2 rejection at %s and still returns the v1 result',
+    async (level, turboSnap) => {
+      const ctx = { ...makeContext(), turboSnap };
+      const error = new Error('v2 escaped its own error handling');
+      vi.mocked(traceChangedFilesV2).mockRejectedValue(error);
 
-    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+      await expect(traceChangedFiles(ctx)).resolves.toEqual(
+        turboSnap ? v1Result : { status: 'skipped' }
+      );
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(error);
-    expect(traceChangedFilesV1).toHaveBeenCalledOnce();
-  });
+      expect(ctx.log[level]).toHaveBeenCalledWith(expect.any(String), error);
+      expect(Sentry.captureException).toHaveBeenCalledWith(error);
+    }
+  );
 
   it('does not report an exception when v2 succeeds', async () => {
     await traceChangedFiles(makeContext());
@@ -171,4 +209,23 @@ describe('traceChangedFiles', () => {
     expect(Sentry.withScope).toHaveBeenCalledOnce();
     expect(scopeSetTag).toHaveBeenCalledWith('turbosnap', 'v2');
   });
+
+  // The user sees a failure of the feature they asked for; they never see a failure of an
+  // optimisation for a build they have not heard of.
+  it.each([
+    ['error', {}, 'true'],
+    ['debug', undefined, 'false'],
+  ])(
+    'gives v2 the %s log level and tags the run when turboSnap is %o',
+    async (failureLogLevel, turboSnap, tag) => {
+      const ctx = { ...makeContext(), turboSnap };
+
+      await traceChangedFiles(ctx);
+
+      expect(traceChangedFilesV2).toHaveBeenCalledWith(
+        expect.objectContaining({ failureLogLevel })
+      );
+      expect(scopeSetTag).toHaveBeenCalledWith('turbosnap_requested', tag);
+    }
+  );
 });

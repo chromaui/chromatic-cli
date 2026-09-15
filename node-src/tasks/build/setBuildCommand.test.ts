@@ -9,7 +9,7 @@ vi.mock('@antfu/ni');
 
 const getCliCommand = vi.mocked(getCliCommandDefault);
 
-const baseDeps = { options: {}, log: new TestLogger() } as any;
+const baseDeps = { options: {}, log: new TestLogger(), env: {} } as any;
 const baseInput = { flags: {} } as any;
 
 beforeEach(() => {
@@ -112,7 +112,7 @@ describe('setBuildCommand', () => {
     expect(result).toEqual('npm run build:storybook');
   });
 
-  it('does not emit the stats file when TurboSnap is unavailable', async () => {
+  it('emits the stats file even when TurboSnap is unavailable', async () => {
     getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
 
     const result = await setBuildCommand(
@@ -122,7 +122,7 @@ describe('setBuildCommand', () => {
 
     expect(getCliCommand).toHaveBeenCalledWith(
       expect.anything(),
-      ['build:storybook', '--output-dir=./source-dir/'],
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
       { programmatic: true }
     );
     expect(result).toEqual('npm run build:storybook');
@@ -159,6 +159,94 @@ describe('setBuildCommand', () => {
     expect(log.warn).toHaveBeenCalledWith(
       'Storybook version 6.2.0 or later is required to use the --only-changed flag'
     );
+  });
+
+  it('stays silent when the Storybook version is unsupported and TurboSnap was not requested', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+    const log = new TestLogger();
+
+    const result = await setBuildCommand(
+      { ...baseDeps, options: { buildScriptName: 'build:storybook' }, log },
+      { ...baseInput, sourceDir: './source-dir/', storybook: { version: '6.1.0' } }
+    );
+
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
+  });
+
+  it('emits the stats file for an E2E build that requested TurboSnap', async () => {
+    const revertPatch = patchModulePath(
+      '@chromatic-com/vitest/bin/build-archive-storybook',
+      'path/to/@chromatic-com/vitest/bin/build-archive-storybook'
+    );
+    onTestFinished(revertPatch);
+
+    const result = await setBuildCommand(
+      {
+        ...baseDeps,
+        options: { vitest: true, buildScriptName: 'build:storybook', inAction: false },
+      },
+      { ...baseInput, sourceDir: './source-dir/', turboSnap: {} }
+    );
+
+    expect(result).toEqual(
+      'node path/to/@chromatic-com/vitest/bin/build-archive-storybook --output-dir=./source-dir/ --webpack-stats-json=./source-dir/'
+    );
+  });
+
+  it('does not emit the stats file when the off switch is set and TurboSnap was not requested', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const result = await setBuildCommand(
+      {
+        ...baseDeps,
+        options: { buildScriptName: 'build:storybook' },
+        env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true },
+      },
+      { ...baseInput, sourceDir: './source-dir/', storybook: { version: '6.2.0' } }
+    );
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
+  });
+
+  it('does not emit the stats file for --build-command without a TurboSnap request', async () => {
+    const result = await setBuildCommand(
+      { ...baseDeps, options: { buildCommand: 'make build-storybook' } },
+      { ...baseInput, sourceDir: './source-dir/', storybook: { version: '6.2.0' } }
+    );
+
+    expect(getCliCommand).not.toHaveBeenCalled();
+    expect(result).toEqual('make build-storybook ');
+  });
+
+  it('emits the stats file when the off switch is set but TurboSnap was requested', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const result = await setBuildCommand(
+      {
+        ...baseDeps,
+        options: { buildScriptName: 'build:storybook' },
+        env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true },
+      },
+      { ...baseInput, sourceDir: './source-dir/', storybook: { version: '6.2.0' }, turboSnap: {} }
+    );
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/', '--webpack-stats-json=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
   });
 
   it('uses the correct flag for webpack stats for < 8.5.0', async () => {

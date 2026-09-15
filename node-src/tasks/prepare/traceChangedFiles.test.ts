@@ -135,6 +135,25 @@ describe('traceChangedFiles', () => {
     expect(err.message).toBe('Could not retrieve dependent story files.\nstats file not found');
   });
 
+  it('swallows the error for a user who did not ask for TurboSnap', async () => {
+    const ctx = { ...turboSnapContext(), turboSnap: undefined };
+    const d = deps();
+    traceChangedFilesTurbosnap.mockRejectedValue(new Error('stats file is unreadable'));
+
+    let err;
+    let result;
+    try {
+      result = await traceChangedFiles(d, { turboSnapContext: ctx });
+    } catch (error) {
+      err = error;
+    }
+
+    expect(err).toBeUndefined();
+    expect(result).toStrictEqual({});
+    expect(d.log.info).not.toHaveBeenCalled();
+    expect(d.report).not.toHaveBeenCalled();
+  });
+
   it('wraps the missing stats file error without recording a bail reason in Vitest run', async () => {
     const ctx = turboSnapContext();
     ctx.options.vitest = true;
