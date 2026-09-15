@@ -369,7 +369,7 @@ export async function gatherGitInfo(
       const changedFilesWithInfo = await Promise.all(
         baselineBuilds.map(async (build) => {
           const changedFilesWithReplacement = await getChangedFilesWithReplacement(
-            { log, client },
+            { log, client, options },
             build
           );
           return { build, ...changedFilesWithReplacement };
