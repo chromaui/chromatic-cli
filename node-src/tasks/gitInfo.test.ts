@@ -7,6 +7,8 @@ import { getChangedFilesWithReplacement as getChangedFilesWithReplacementUnmocke
 import * as getCommitInfo from '../git/getCommitAndBranch';
 import { getParentCommits as getParentCommitsUnmocked } from '../git/getParentCommits';
 import * as git from '../git/git';
+import { validateTestedCheckout } from '../git/validateBaselineCheckout';
+import { validateRequiredBaseline } from '../git/validateRequiredBaseline';
 import { getHasRouter as getHasRouterUnmocked } from '../lib/getHasRouter';
 import TestLogger from '../lib/testLogger';
 import {
@@ -48,6 +50,8 @@ vi.mock('@sentry/node', () => ({
 }));
 vi.mock('../git/getCommitAndBranch');
 vi.mock('../git/git');
+vi.mock('../git/validateBaselineCheckout');
+vi.mock('../git/validateRequiredBaseline');
 vi.mock('../git/getParentCommits');
 vi.mock('../git/getBaselineBuilds');
 vi.mock('../git/getChangedFilesWithReplacement');
@@ -129,6 +133,60 @@ beforeEach(() => {
 });
 
 describe('gatherGitInfo', () => {
+  it.each([{ requireBaseline: 'a'.repeat(40) }, { bypassIfUnchanged: true }])(
+    'stops opted-in invocations before legacy parent discovery and success shortcuts: %j',
+    async (options) => {
+      getCommitAndBranch.mockResolvedValue({ ...commitInfo, fromCI: true });
+      vi.mocked(validateRequiredBaseline).mockResolvedValue('a'.repeat(40));
+      const deps = buildDeps({ options: { ...buildDeps().options, ...options } });
+      const result = await gatherGitInfo(deps, buildInput());
+      expectKind(result, 'continue');
+      expect(result.output.baselineWorkflow).toMatchObject({
+        state: 'UNSUPPORTED',
+        reason: 'BASELINE_FEATURE_UNSUPPORTED',
+      });
+      expect(getParentCommits).not.toHaveBeenCalled();
+      expect(getBaselineBuilds).not.toHaveBeenCalled();
+      expect(getChangedFilesWithReplacement).not.toHaveBeenCalled();
+      expect(client.runQuery).not.toHaveBeenCalled();
+      expect(validateTestedCheckout).toHaveBeenCalledWith(expect.anything(), commitInfo.commit);
+    }
+  );
+
+  it('rejects an active skip glob before the server skip mutation', async () => {
+    const deps = buildDeps({ options: { ...buildDeps().options, bypassIfUnchanged: true } });
+    await expect(gatherGitInfo(deps, buildInput({ skip: 'some*' }))).rejects.toMatchObject({
+      exitCode: 254,
+    });
+    expect(client.runQuery).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-CI invocations', async () => {
+    await expect(
+      gatherGitInfo(
+        buildDeps({ options: { ...buildDeps().options, bypassIfUnchanged: true } }),
+        buildInput()
+      )
+    ).rejects.toThrow('committed Storybook CI builds');
+  });
+
+  it('retains the validation result in diagnostics before raising the unavailable failure', async () => {
+    getCommitAndBranch.mockResolvedValue({ ...commitInfo, fromCI: true });
+    const result = await gatherGitInfo(
+      buildDeps({ options: { ...buildDeps().options, bypassIfUnchanged: true } }),
+      buildInput()
+    );
+    expectKind(result, 'continue');
+    const ctx = { runtime: {} } as any;
+    expect(() => applyGitInfoOutput(ctx, result.output)).toThrow(
+      'server protocol is not integrated'
+    );
+    expect(ctx.baselineWorkflow).toMatchObject({
+      state: 'UNSUPPORTED',
+      reason: 'BASELINE_FEATURE_UNSUPPORTED',
+    });
+  });
+
   it('returns continue with the git info', async () => {
     const result = await gatherGitInfo(buildDeps(), buildInput());
     expectKind(result, 'continue');

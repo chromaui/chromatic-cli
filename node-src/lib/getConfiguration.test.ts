@@ -12,6 +12,24 @@ beforeEach(() => {
   mockedExistsSync.mockReset();
 });
 
+it('accepts baseline workflow configuration fields', async () => {
+  mockedReadFile.mockReturnValue(
+    JSON.stringify({ requireBaseline: 'a'.repeat(40), bypassIfUnchanged: true })
+  );
+  expect(await getConfiguration()).toMatchObject({
+    requireBaseline: 'a'.repeat(40),
+    bypassIfUnchanged: true,
+  });
+});
+
+it.each([{ requireBaseline: true }, { bypassIfUnchanged: 'true' }])(
+  'rejects incorrectly typed baseline workflow configuration %j',
+  async (configuration) => {
+    mockedReadFile.mockReturnValue(JSON.stringify(configuration));
+    await expect(getConfiguration()).rejects.toThrow();
+  }
+);
+
 it('reads basic JSON configuration successfully', async () => {
   mockedReadFile.mockReturnValue(
     JSON.stringify({

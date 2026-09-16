@@ -26,6 +26,18 @@ beforeEach(() => {
 });
 
 describe('execGitCommand', () => {
+  it('passes argument arrays without a shell, preserving literal arguments', async () => {
+    execa.mockResolvedValue({ stdout: 'literal value' } as any);
+
+    await execGitCommand(ctx, ['git', 'show', 'a path; $(command)'], { shell: true });
+
+    expect(execa).toHaveBeenCalledWith(
+      'git',
+      ['show', 'a path; $(command)'],
+      expect.objectContaining({ shell: false })
+    );
+  });
+
   it('returns execa output if it works', async () => {
     execa.mockResolvedValue({
       all: Buffer.from('some output'),

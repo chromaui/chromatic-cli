@@ -34,26 +34,32 @@ function getGitTimeout(depOptions: GitDeps['options']): number {
  * @param deps Standard context object.
  * @param deps.log Standard context logger.
  * @param deps.options Options object for the Git command.
- * @param command The command to execute.
+ * @param command The command to execute. Argument arrays always run without a shell.
  * @param options Execa options
  *
  * @returns The result of the command from the terminal.
  */
 export async function execGitCommand(
   { log, options: depOptions }: GitDeps,
-  command: string,
+  command: string | string[],
   options?: Options
 ) {
+  const commandDescription = typeof command === 'string' ? command : command.join(' ');
   try {
-    log.debug(`execGitCommand: ${command}`);
+    log.debug(`execGitCommand: ${commandDescription}`);
     const timeout = getGitTimeout(depOptions);
-    const { all, stdout } = await runCommand(command, { timeout, ...defaultOptions, ...options });
+    const { all, stdout } = await runCommand(command, {
+      timeout,
+      ...defaultOptions,
+      ...options,
+      ...(Array.isArray(command) && { shell: false }),
+    });
     // If the caller sets `all: false`, then `stdout` will be the output. Otherwise, `all` will
     // contain interleaved stdout and stderr.
     const output = all ?? stdout;
 
     if (output === undefined) {
-      throw new Error(`Unexpected missing git command output for command: '${command}'`);
+      throw new Error(`Unexpected missing git command output for command: '${commandDescription}'`);
     }
 
     const result = output.toString();
@@ -65,15 +71,15 @@ export async function execGitCommand(
     log.debug(`execGitCommand error: ${message}`);
 
     if (message.includes('not a git repository')) {
-      throw new Error(gitNotInitialized({ command }));
+      throw new Error(gitNotInitialized({ command: commandDescription }));
     }
 
     if (message.includes('git not found')) {
-      throw new Error(gitNotInstalled({ command }));
+      throw new Error(gitNotInstalled({ command: commandDescription }));
     }
 
     if (message.includes('does not have any commits yet')) {
-      throw new Error(gitNoCommits({ command }));
+      throw new Error(gitNoCommits({ command: commandDescription }));
     }
 
     throw error;
