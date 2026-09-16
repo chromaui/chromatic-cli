@@ -44,9 +44,10 @@ export interface StatsGraph {
 // load annotations from `vite-app.js`; Storybook 10 loads them through `project-annotations.js`.
 // Include both the raw virtual IDs and the resolved IDs that begin with `/virtual:`.
 //
-// Storybook 10.3.0 and later omit `project-annotations.js` and its edges from the stats. The
-// globals fallback can still find a disconnected annotation, but not one that a story also imports;
-// in that case the graph contains no evidence that the file is global.
+// Storybook 10.3.0 up to the release that includes storybookjs/storybook#36345 omits
+// `project-annotations.js` and its edges from the stats. There, the globals fallback can still find
+// a disconnected annotation, but not one that a story also imports; the graph contains no evidence
+// that the file is global.
 const VITE_COMPOSITION_ROOTS = new Set([
   '/virtual:/@storybook/builder-vite/vite-app.js',
   'virtual:@storybook/builder-vite/vite-app.js',
