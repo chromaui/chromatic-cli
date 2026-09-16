@@ -1,3 +1,15 @@
+# v18.9.1 (Wed Sep 16 2026)
+
+#### 🐛 Bug Fix
+
+- Read Storybook version from config directory then fallback [#1491](https://github.com/chromaui/chromatic-cli/pull/1491) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.9.0 (Tue Sep 15 2026)
 
 #### 🚀 Enhancement
