@@ -44,7 +44,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes } = collectStorybookFiles(
       files,
       hashes,
-      { reachable: new Set(['./src/a.stories.tsx']), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -66,7 +66,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
       makeFiles(Object.fromEntries(previews.map((p) => [p, []]))),
       makeHashes(previews),
-      { reachable: new Set(), storyFiles: new Set() },
+      new Set(),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -83,7 +83,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/preview.ts']),
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -101,7 +101,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -122,7 +122,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/preview.ts']),
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       './src',
       NO_GLOBAL_ROOTS,
       identity
@@ -149,10 +149,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       hashes,
-      {
-        reachable: new Set(['./src/Button.stories.tsx', './src/Badge.stories.tsx', shared]),
-        storyFiles: storiesIn(files),
-      },
+      storiesIn(files),
       './config',
       NO_GLOBAL_ROOTS,
       identity
@@ -176,7 +173,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes } = collectStorybookFiles(
       files,
       hashes,
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -194,7 +191,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
       files,
       makeHashes(['./node_modules/react-dom/index.js']),
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -213,10 +210,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes } = collectStorybookFiles(
       files,
       makeHashes(['./src/a.stories.tsx', './src/button.tsx']),
-      {
-        reachable: new Set(['./src/a.stories.tsx', './src/button.tsx']),
-        storyFiles: storiesIn(files),
-      },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -231,7 +225,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       makeFiles({}),
       makeHashes(['./src/inlined.ts']),
-      { reachable: new Set(), storyFiles: new Set() },
+      new Set(),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -253,10 +247,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       hashes,
-      {
-        reachable: new Set(['./src/a.stories.tsx', './src/button.tsx']),
-        storyFiles: storiesIn(files),
-      },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -282,7 +273,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      { reachable: new Set(['./src/a.stories.tsx', shared]), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -305,10 +296,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes(['./src/a.stories.tsx', './.storybook/preview.ts']),
-      {
-        reachable: new Set(['./src/a.stories.tsx', 'virtual:stories']),
-        storyFiles: storiesIn(files),
-      },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -324,7 +312,7 @@ describe('collectStorybookFiles', () => {
     const { storybookConfigHashes } = collectStorybookFiles(
       files,
       new Map(),
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -341,12 +329,11 @@ describe('collectStorybookFiles', () => {
       [entryPreview]: [react],
       [react]: [],
     });
-    const storyReachable = new Set(['./src/a.stories.tsx', react]);
 
     const before = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      { reachable: storyReachable, storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -357,7 +344,7 @@ describe('collectStorybookFiles', () => {
     const after = collectStorybookFiles(
       files,
       changedHashes,
-      { reachable: storyReachable, storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -388,10 +375,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       hashes,
-      {
-        reachable: new Set(['./src/a.stories.tsx', './src/button.tsx']),
-        storyFiles: storiesIn(files),
-      },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -416,7 +400,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      { reachable: new Set(['./src/a.stories.tsx', button]), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -440,7 +424,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      { reachable: new Set(), storyFiles: storiesIn(files) },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -463,7 +447,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      { reachable: new Set(), storyFiles: new Set() },
+      new Set(),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -486,14 +470,7 @@ describe('collectStorybookFiles', () => {
     const { attribution } = collectStorybookFiles(
       files,
       makeHashes([...files.keys()]),
-      {
-        reachable: new Set([
-          './src/a.stories.tsx',
-          './src/button.tsx',
-          './node_modules/lodash/index.js',
-        ]),
-        storyFiles: storiesIn(files),
-      },
+      storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       identity
@@ -530,10 +507,7 @@ describe('collectStorybookFiles with a detected global composition root', () => 
     return collectStorybookFiles(
       files,
       makeHashes(realFiles),
-      {
-        reachable: new Set([story, annotation, runtime, storyOnlyHelper]),
-        storyFiles: new Set([story]),
-      },
+      new Set([story]),
       DEFAULT_CONFIG_DIR,
       new Set([configEntry]),
       identity

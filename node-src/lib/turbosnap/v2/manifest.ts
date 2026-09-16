@@ -91,21 +91,15 @@ export async function buildManifest(
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
-  const storyReachable = new Set<FilePath>();
-
   for (const storyFile of storyFiles) {
     const subtree = collectTransitiveDependencies(files, storyFile);
     storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
-
-    for (const filePath of subtree) {
-      storyReachable.add(filePath);
-    }
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
     files,
     hashes,
-    { reachable: storyReachable, storyFiles },
+    storyFiles,
     normalizeStatsPath(input.configDir, input.projectRoot),
     globalRoots,
     h64ToString

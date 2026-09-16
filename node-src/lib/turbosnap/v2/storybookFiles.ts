@@ -32,17 +32,6 @@ function isPreviewConfig(filePath: FilePath, configDirectory: FilePath): boolean
 }
 
 /**
- * What the caller already learned about the stories while hashing them, passed in rather than walked
- * again here.
- */
-export interface Stories {
-  /** The story files themselves, where the globals walk stops. */
-  storyFiles: Set<FilePath>;
-  /** The union of every story's transitive subtree. */
-  reachable: Set<FilePath>;
-}
-
-/**
  * Which of the three hashing homes each real file landed in, recorded by the same pass that builds
  * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
  * over that graph cannot reconstruct these sets — it reports attributed files as unreachable.
@@ -88,9 +77,9 @@ export interface FileAttribution {
  *
  * @param files The map of files to their hashes and dependencies.
  * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
- * @param stories The story files and their unioned subtrees; see {@link Stories}. The caller unions
- * the subtrees as it hashes each story, so the story graph is walked once rather than here again.
- * Synthetic nodes are filtered out of the attribution below.
+ * @param storyFiles The canonical paths of the story files. Their subtrees are walked here, so the
+ * story-reachable set always agrees with `files`. Synthetic nodes are filtered out of the
+ * attribution below.
  * @param configDirectory The canonical manifest path of the project's Storybook config directory
  * (e.g. `./.storybook`).
  * @param globalRoots Builder-generated composition roots detected by the stats reader. Keeping the
@@ -103,7 +92,7 @@ export interface FileAttribution {
 export function collectStorybookFiles(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
-  stories: Stories,
+  storyFiles: Set<FilePath>,
   configDirectory: FilePath,
   globalRoots: Set<FilePath>,
   h64ToString: (input: string) => string
@@ -127,16 +116,19 @@ export function collectStorybookFiles(
     );
   }
 
-  const globalsClosure = new Set<FilePath>();
-  for (const globalRoot of globalRoots) {
-    collectTransitiveDependencies(files, globalRoot, globalsClosure, stories.storyFiles);
+  const storyReachable = new Set<FilePath>();
+  for (const storyFile of storyFiles) {
+    collectTransitiveDependencies(files, storyFile, storyReachable);
   }
-  for (const filePath of hashes.keys()) {
-    if (stories.reachable.has(filePath) || previewSubtree.has(filePath)) {
-      continue;
-    }
-    collectTransitiveDependencies(files, filePath, globalsClosure, stories.storyFiles);
-  }
+
+  const globalsClosure = collectGlobalsClosure(
+    files,
+    globalRoots,
+    storyFiles,
+    [...hashes.keys()].filter(
+      (filePath) => !storyReachable.has(filePath) && !previewSubtree.has(filePath)
+    )
+  );
   const globals = new Set(
     [...globalsClosure].filter((filePath) => hashes.has(filePath) && !previewSubtree.has(filePath))
   );
@@ -151,10 +143,35 @@ export function collectStorybookFiles(
   // the hashed files. The walks pass through synthetic nodes (globs, externals, virtual modules),
   // which have no hash. A file can be in more than one home.
   const attribution: FileAttribution = {
-    storyReachable: new Set([...stories.reachable].filter((filePath) => hashes.has(filePath))),
+    storyReachable: new Set([...storyReachable].filter((filePath) => hashes.has(filePath))),
     previewSubtree: new Set([...previewSubtree].filter((filePath) => hashes.has(filePath))),
     storybookGlobals: globals,
   };
 
   return { storybookConfigHashes, attribution };
+}
+
+/**
+ * Walks the globals closure from the builder's composition roots and from the hashed files that
+ * belong to no story subtree and no preview subtree. Both walks stop at story files, so a root that
+ * also discovers the stories does not pull story code into globals.
+ *
+ * @param files The map of files to their hashes and dependencies.
+ * @param globalRoots Builder-generated composition roots detected by the stats reader.
+ * @param storyFiles The story files, where every walk stops.
+ * @param unhomedFiles The hashed files in no story subtree and no preview subtree.
+ *
+ * @returns Every path the walks reached, synthetic nodes included.
+ */
+function collectGlobalsClosure(
+  files: Map<FilePath, TurboSnapFile>,
+  globalRoots: Set<FilePath>,
+  storyFiles: Set<FilePath>,
+  unhomedFiles: FilePath[]
+): Set<FilePath> {
+  const closure = new Set<FilePath>();
+  for (const root of [...globalRoots, ...unhomedFiles]) {
+    collectTransitiveDependencies(files, root, closure, storyFiles);
+  }
+  return closure;
 }
