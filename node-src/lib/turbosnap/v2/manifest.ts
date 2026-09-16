@@ -116,10 +116,7 @@ export async function buildManifest(
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
   // upgrade there. Track the version instead; it is a plain string, not a hash.
-  storybookConfigHashes.set(
-    STORYBOOK_VERSION_KEY,
-    resolveStorybookVersion(input.projectRoot, input.projectFiles)
-  );
+  storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
 
   // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
