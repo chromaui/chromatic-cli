@@ -551,6 +551,60 @@ describe('buildManifest globals through the builder config entry', () => {
     expect(attribution.storybookGlobals.has('./src/Button.stories.tsx')).toBe(false);
     expect(attribution.storyReachable.has('./src/Button.tsx')).toBe(true);
   });
+  it.each([
+    ['the story does not import the addon', false],
+    ['the story imports the addon', true],
+  ])(
+    'keeps a runtime upgrade global when the story imports the runtime directly and %s',
+    async (_, storyImportsAddon) => {
+      // The story imports the runtime itself, not only through the addon. The runtime is
+      // story-reachable either way, so only the walk from the config entry keeps it global.
+      const runtime = '/repo/packages/ui/node_modules/example-runtime/index.js';
+      const stats: Stats = {
+        modules: [
+          { id: 1, name: glob, reasons: [{ moduleName: './storybook-stories.js' }] },
+          { id: 2, name: importingStory, reasons: [{ moduleName: glob }] },
+          { id: 3, name: otherStory, reasons: [{ moduleName: glob }] },
+          {
+            id: 4,
+            name: addonAnnotation,
+            reasons: storyImportsAddon
+              ? [{ moduleName: configEntry }, { moduleName: importingStory }]
+              : [{ moduleName: configEntry }],
+          },
+          {
+            id: 5,
+            name: runtime,
+            reasons: [{ moduleName: addonAnnotation }, { moduleName: importingStory }],
+          },
+        ],
+      };
+      const runtimeHashes = {
+        [importingStory]: 'S1',
+        [otherStory]: 'S2',
+        [addonAnnotation]: 'A',
+        [runtime]: 'R1',
+      };
+      const { disk, input } = createFixture({
+        isAbsent: syntheticAbsent,
+        fileHashes: { ...runtimeHashes },
+      });
+      const before = await buildManifest(stats, input);
+
+      disk.fileHashes = { ...runtimeHashes, [runtime]: 'R2' };
+      const after = await buildManifest(stats, input);
+
+      expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+        before.storyFileHashes.get('./src/Button.stories.tsx')
+      );
+      expect(after.storyFileHashes.get('./src/Badge.stories.tsx')).toBe(
+        before.storyFileHashes.get('./src/Badge.stories.tsx')
+      );
+      expect(after.storybookConfigHashes.get('storybookGlobals')).not.toBe(
+        before.storybookConfigHashes.get('storybookGlobals')
+      );
+    }
+  );
 });
 
 describe('buildManifest globals through a Vite composition root', () => {
