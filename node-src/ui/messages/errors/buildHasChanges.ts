@@ -7,23 +7,38 @@ import link from '../../components/link';
 
 export default ({ build, exitCode, isOnboarding }) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
+  const unstableUrl = `${url}#unstable`;
 
   const changes: any[] = [];
-  if (build.changeCount > 0) {
+
+  if (build.changeCount > 0 && build.accessibilityChangeCount > 0) {
     changes.push(
-      chalk`${error} {bold Found ${pluralize('visual changes', build.changeCount, true)}}`
+      chalk`${error} {bold ${pluralize('visual and accessibility changes', build.changeCount + build.accessibilityChangeCount, true)} must be accepted as ${pluralize('baseline', build.changeCount + build.accessibilityChangeCount, false)}.} Review at ${link(url)}`
     );
+  } else {
+    if (build.changeCount > 0) {
+      changes.push(
+        chalk`${error} {bold ${pluralize('visual changes', build.changeCount, true)} must be accepted as ${pluralize('baseline', build.changeCount, false)}.} Review at ${link(url)}`
+      );
+    }
+    if (build.accessibilityChangeCount > 0) {
+      changes.push(
+        chalk`${error} {bold ${pluralize('accessibility changes', build.accessibilityChangeCount, true)} must be accepted as ${pluralize('baseline', build.accessibilityChangeCount, false)}.} Review at ${link(url)}`
+      );
+    }
   }
-  if (build.accessibilityChangeCount > 0) {
+
+  if (build.ignoredCount > 0) {
+    if (build.changeCount > 0 || build.accessibilityChangeCount > 0) {
+      changes.push(''); // blank line for spacing
+    }
     changes.push(
-      chalk`${error} {bold Found ${pluralize('accessibility changes', build.accessibilityChangeCount, true)}}`
+      chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${build.ignoredCount > 1 ? 'were' : 'was'} ignored in this build.} Review at ${link(unstableUrl)}`
     );
   }
 
   return dedent(chalk`
     ${changes.join('\n')}
-
-    Review the changes at ${link(url)}
     
     ${info} For CI/CD use cases, this command failed with exit code ${exitCode}
     Pass {bold --exit-zero-on-changes} to succeed this command regardless of changes.
