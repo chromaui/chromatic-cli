@@ -25,10 +25,7 @@ export interface ProjectFiles {
   isFile(absolutePath: AbsolutePath): boolean;
   /** False when the path names are too long. Every other failure throws. */
   isDirectory(absolutePath: AbsolutePath): boolean;
-  /**
-   * Undefined when unresolvable, logging the cause if it fails to resolve; resolves the package
-   * manifest.
-   */
+  /** Resolves the package manifest. Undefined when unresolvable. */
   packageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined;
   /** Throws, naming the path, when a file cannot be read. `concurrency` bounds parallel reads. */
   hashAll(
