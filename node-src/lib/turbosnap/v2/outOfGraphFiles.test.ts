@@ -233,7 +233,7 @@ describe('rollUpOutOfGraphFiles', () => {
     expect(after.get('storybookConfigFiles')).not.toBe(before.get('storybookConfigFiles'));
   });
 
-  it('omits a section that has no files, matching how the globals catch-all behaves', async () => {
+  it('omits a section that has no files, matching how the globals roll-up behaves', async () => {
     const disk: InMemoryDisk = {
       directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
     };

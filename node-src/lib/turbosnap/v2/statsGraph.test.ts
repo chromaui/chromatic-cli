@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
@@ -437,5 +438,77 @@ describe('countNodeModulesFiles', () => {
     };
 
     expect(countNodeModulesFiles(stats)).toBe(2);
+  });
+});
+
+describe('readStatsGraph global composition roots', () => {
+  // Builders use different names for the generated modules that load preview annotations. These
+  // cases verify that each supported name resolves to the canonical path stored in the graph.
+  const annotation = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
+
+  function statsImportedFrom(rootSpelling: string): Stats {
+    return { modules: [{ id: 1, name: annotation, reasons: [{ moduleName: rootSpelling }] }] };
+  }
+
+  it.each([
+    // Webpack, plus Rsbuild's version without the leading `./`.
+    ['./storybook-config-entry.js', './storybook-config-entry.js'],
+    ['storybook-config-entry.js', './storybook-config-entry.js'],
+    // Rspack and Rsbuild cache the generated entry under `node_modules`.
+    [
+      './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
+      './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
+    ],
+    [
+      './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
+      './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
+    ],
+    // Vite's app module, plus the annotations module used by Storybook 10. Stats may report either
+    // the raw virtual ID or its resolved form.
+    [
+      '/virtual:/@storybook/builder-vite/vite-app.js',
+      '/virtual:/@storybook/builder-vite/vite-app.js',
+    ],
+    ['virtual:@storybook/builder-vite/vite-app.js', 'virtual:@storybook/builder-vite/vite-app.js'],
+    [
+      '/virtual:/@storybook/builder-vite/project-annotations.js',
+      '/virtual:/@storybook/builder-vite/project-annotations.js',
+    ],
+    [
+      'virtual:@storybook/builder-vite/project-annotations.js',
+      'virtual:@storybook/builder-vite/project-annotations.js',
+    ],
+  ])('recognizes %s as a global composition root', async (spelling, canonical) => {
+    const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
+
+    const graph = await readStatsGraph(statsImportedFrom(spelling), input);
+
+    expect([...graph.globalRoots]).toEqual([canonical]);
+  });
+
+  it('finds the same root when stats paths are anchored outside the project root', async () => {
+    // In this monorepo fixture, relative stats paths start at `/repo` while the Storybook project is
+    // under `/repo/packages/ui`. The root must therefore be stored with a `../../` prefix.
+    const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
+
+    const graph = await readStatsGraph(statsImportedFrom('./storybook-config-entry.js'), {
+      ...input,
+      statsRoot: '/repo',
+    });
+
+    expect([...graph.globalRoots]).toEqual(['../../storybook-config-entry.js']);
+  });
+
+  it('reports no root when the graph contains none', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const { input } = createFixture({ fileHashes: { [story]: 'S' } });
+
+    const graph = await readStatsGraph(
+      { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
+      input
+    );
+
+    // The stories entry loads story modules, not global annotations, so it is not a global root.
+    expect([...graph.globalRoots]).toEqual([]);
   });
 });

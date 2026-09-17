@@ -11,7 +11,18 @@
  */
 export const STORYBOOK_PREVIEW_KEY = 'preview';
 
-/** Every orphan global, rolled up; see {@link collectStorybookFiles}. */
+/**
+ * Every file that can affect every story, rolled up. The flow goes:
+ *
+ * 1. We walk from the builder entry point until we reach story files, collecting the dependencies
+ *    of each file (these are all part of Storybook rendering)
+ * 2. We locate remaining files that are not part of story dependencies and collect their
+ *    dependencies (these are files that could be part of the builder entry point walk but the
+ *    builder graph is disconnected)
+ * 3. We roll up the hashes of all files found in steps 1 and 2 into a single hash, which is stored
+ *    under this key. This ensures that any change in these files will trigger a rebuild of the
+ *    Storybook preview.
+ */
 export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
 
 /**

@@ -37,8 +37,10 @@ import { buildManifest } from './manifest';
  */
 
 // A fixture exercising every section that feeds a published hash: two stories with a shared and a
-// private dependency, a preview config with its own subtree, an orphan global reached only through
-// the framework's preview annotations, and both out-of-graph sweeps. Frozen — changing the fixture
+// private dependency, a preview config with its own subtree, a global reached only through
+// the framework's preview annotations, and both out-of-graph sweeps. The generated config entry is a
+// synthetic global root, so its forward closure seeds the globals roll-up, and the preview subtree is
+// then subtracted to keep the two Storybook-wide categories apart. Frozen — changing the fixture
 // changes the golden values without any recipe change, which defeats the point of the test.
 const buttonStory = '/repo/packages/ui/src/Button.stories.tsx';
 const headerStory = '/repo/packages/ui/src/Header.stories.tsx';

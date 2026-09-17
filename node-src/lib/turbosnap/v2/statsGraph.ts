@@ -9,9 +9,10 @@ import {
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
+  StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { detectStoryFiles } from './storyDetection';
+import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
 /** The part of {@link ManifestInput} reading the stats file needs: the two roots, and the disk. */
 export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'projectFiles'>;
@@ -32,7 +33,27 @@ export interface StatsGraph {
   hashes: Map<FilePath, FileHash>;
   /** The canonical paths the builder's entries identify as story files. */
   storyFiles: Set<FilePath>;
+  /**
+   * Known builder-generated modules that load preview annotations for every story. The paths are
+   * canonical and include only roots present in this graph; see {@link detectGlobalRoots}.
+   */
+  globalRoots: Set<FilePath>;
 }
+
+// Vite uses virtual composition roots instead of `storybook-config-entry.js`. Storybook 8 and 9
+// load annotations from `vite-app.js`; Storybook 10 loads them through `project-annotations.js`.
+// Include both the raw virtual IDs and the resolved IDs that begin with `/virtual:`.
+//
+// Storybook 10.3.0 up to the release that includes storybookjs/storybook#36345 omits
+// `project-annotations.js` and its edges from the stats. There, the globals fallback can still find
+// a disconnected annotation, but not one that a story also imports; the graph contains no evidence
+// that the file is global.
+const VITE_COMPOSITION_ROOTS = new Set([
+  '/virtual:/@storybook/builder-vite/vite-app.js',
+  'virtual:@storybook/builder-vite/vite-app.js',
+  '/virtual:/@storybook/builder-vite/project-annotations.js',
+  'virtual:@storybook/builder-vite/project-annotations.js',
+]);
 
 /**
  * Reads a stats file into the graph the manifest rolls up: what each module is, what it depends on,
@@ -73,7 +94,7 @@ export async function readStatsGraph(stats: Stats, context: StatsContext): Promi
     }
   }
 
-  return { files, hashes, storyFiles };
+  return { files, hashes, storyFiles, globalRoots: detectGlobalRoots(files, roots) };
 }
 
 /**
@@ -90,6 +111,33 @@ export function countNodeModulesFiles(stats: Stats): number {
     count += moduleFileNames(module).filter((name) => isNodeModulesPath(name)).length;
   }
   return count;
+}
+
+/**
+ * Finds known builder-generated modules that load preview annotations for every story. Walking from
+ * these roots identifies global files by reachability instead of by filename: an annotation can live
+ * anywhere, and an unrelated story dependency can also be named `preview.ts`.
+ *
+ * Only known root names qualify. Other synthetic modules do not necessarily affect every story.
+ *
+ * @param files The unpruned canonical graph. Composition roots are usually synthetic and therefore
+ * absent from the content hashes, but they are retained in this graph.
+ * @param roots The filesystem roots used to resolve builder-specific module names; see
+ * {@link StatsRoots}.
+ *
+ * @returns The canonical paths of the global composition roots present in the graph.
+ */
+function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoots): Set<FilePath> {
+  // The config entry loads the preview annotations on webpack/rspack, so it is a global root here
+  // as well as the locator of the story require-context in story detection. The Vite roots load
+  // preview annotations only, so they stay out of story detection and the two sets are not merged.
+  //
+  // Normalize the known builder-specific names the same way as every other stats path before
+  // comparing them with the graph's canonical keys.
+  const known = [...CONFIG_ENTRY_FILES, ...VITE_COMPOSITION_ROOTS].map((name) =>
+    normalizeStatsPath(name, roots.projectRoot, roots.statsRoot)
+  );
+  return new Set(known.filter((filePath) => files.has(filePath)));
 }
 
 /**
