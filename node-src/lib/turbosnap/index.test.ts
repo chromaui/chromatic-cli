@@ -8,11 +8,16 @@ import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 import { realProjectFiles } from './v2/projectFiles';
 
-const { scopeSetTag } = vi.hoisted(() => ({ scopeSetTag: vi.fn() }));
+const { scopeSetTag, scopeSetContext } = vi.hoisted(() => ({
+  scopeSetTag: vi.fn(),
+  scopeSetContext: vi.fn(),
+}));
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),
-  withScope: vi.fn(async (callback) => callback({ setTag: scopeSetTag })),
+  withScope: vi.fn(async (callback) =>
+    callback({ setTag: scopeSetTag, setContext: scopeSetContext })
+  ),
 }));
 
 vi.mock('../../tasks/readStatsFile', () => ({
@@ -208,6 +213,26 @@ describe('traceChangedFiles', () => {
 
     expect(Sentry.withScope).toHaveBeenCalledOnce();
     expect(scopeSetTag).toHaveBeenCalledWith('turbosnap', 'v2');
+  });
+
+  // A v2 failure report has to say where the run looked for Storybook and whether the build was
+  // prebuilt, or we're flying blind trying to fix the bug.
+  it.each([
+    ['/repo/packages/ui/storybook-static', 'true'],
+    [undefined, 'false'],
+  ])('records where the run looked when storybookBuildDir is %s', async (buildDirectory, tag) => {
+    const ctx = makeContext();
+    ctx.options.storybookBuildDir = buildDirectory;
+
+    await traceChangedFiles(ctx);
+
+    expect(scopeSetTag).toHaveBeenCalledWith('storybook_build_dir', tag);
+    expect(scopeSetContext).toHaveBeenCalledWith('turbosnap_v2', {
+      cwd: process.cwd(),
+      projectRoot: '/repo/packages/ui',
+      configDir: '/repo/packages/ui/.storybook',
+      storybookBuildDir: buildDirectory,
+    });
   });
 
   // The user sees a failure of the feature they asked for; they never see a failure of an

@@ -355,9 +355,17 @@ describe('realProjectFiles packageVersion', () => {
     expect(realProjectFiles(log).packageVersion(root, 'storybook')).toBeUndefined();
   });
 
-  it('reports no version for a package that is not installed', () => {
+  it('reports no version for a package that is not installed, logging the cause at debug', () => {
     const root = temporaryDirectory();
 
     expect(realProjectFiles(log).packageVersion(root, '@storybook/builder-vite')).toBeUndefined();
+    expect(log.debug).toHaveBeenCalledWith(
+      `Could not resolve @storybook/builder-vite from ${root}`,
+      expect.objectContaining({ code: 'MODULE_NOT_FOUND' })
+    );
+    expect(log.debug).toHaveBeenCalledWith(
+      'Directories checked:',
+      expect.arrayContaining([`${path.join(root, 'node_modules')} (missing)`])
+    );
   });
 });

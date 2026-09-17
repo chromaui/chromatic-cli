@@ -78,6 +78,15 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
       scope.setTag('turbosnap', 'v2');
       // Without this, a refusal from a silent build and one from an opted-in build look the same.
       scope.setTag('turbosnap_requested', turboSnapRequested ? 'true' : 'false');
+      // A prebuilt Storybook may run where nothing is installed, so add a tag so we can filter in Sentry.
+      scope.setTag('storybook_build_dir', ctx.options.storybookBuildDir ? 'true' : 'false');
+      // Add context fields to help us figure out why we're unable to detect Storybook paths.
+      scope.setContext('turbosnap_v2', {
+        cwd: process.cwd(),
+        projectRoot: ctx.storybook.projectRoot,
+        configDir: ctx.storybook.configDir,
+        storybookBuildDir: ctx.options.storybookBuildDir,
+      });
       ctx.log.debug('Tracing changed files with TurboSnap v2');
 
       await traceChangedFilesV2({
