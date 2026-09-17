@@ -15,6 +15,8 @@ const configurationSchema = z
     projectToken: z.string(), // deprecated
 
     onlyChanged: z.union([z.string(), z.boolean()]),
+    requireBaseline: z.string(),
+    bypassIfUnchanged: z.boolean(),
     onlyStoryFiles: z.array(z.string()),
     onlyStoryNames: z.array(z.string()),
     traceChanged: z.union([z.string(), z.boolean()]),
