@@ -17,7 +17,10 @@ export interface ProjectFiles {
   isFile(absolutePath: AbsolutePath): boolean;
   /** False when the path names are too long. Every other failure throws. */
   isDirectory(absolutePath: AbsolutePath): boolean;
-  /** Undefined when unresolvable; resolves the package manifest, not a dist path. */
+  /**
+   * Undefined when unresolvable, logging the cause if it fails to resolve; resolves the package
+   * manifest.
+   */
   packageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined;
   /** Throws, naming the path, when a file cannot be read. `concurrency` bounds parallel reads. */
   hashAll(
@@ -43,7 +46,8 @@ export function realProjectFiles(log: Logger): ProjectFiles {
     isFile: (absolutePath: AbsolutePath) => statFile(log, absolutePath)?.isFile() ?? false,
     isDirectory: (absolutePath: AbsolutePath) =>
       statFile(log, absolutePath)?.isDirectory() ?? false,
-    packageVersion: readPackageVersion,
+    packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
+      readPackageVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
     listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(log, absoluteDirectory),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
@@ -71,19 +75,25 @@ function statFile(log: Logger, absolutePath: AbsolutePath): Stats | undefined {
 /**
  * Reads a package's installed version from its own `package.json`, resolved from a directory.
  *
+ * @param log The logger to record a resolution failure with.
  * @param fromDirectory The absolute directory to resolve from.
  * @param packageName The package to read the version of.
  *
  * @returns The installed version, or undefined when the package cannot be resolved or read.
  */
-function readPackageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined {
+function readPackageVersion(
+  log: Logger,
+  fromDirectory: AbsolutePath,
+  packageName: string
+): string | undefined {
   const requireFromDirectory = createRequire(path.join(fromDirectory, 'package.json'));
 
   try {
     const packageJsonPath = requireFromDirectory.resolve(`${packageName}/package.json`);
     const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
     return version;
-  } catch {
+  } catch (error) {
+    log.debug(`Could not resolve ${packageName} from ${fromDirectory}`, error);
     return undefined;
   }
 }
