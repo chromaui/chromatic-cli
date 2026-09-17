@@ -42,8 +42,9 @@ export function resolveStorybookVersion(
   }
 
   // Without a version there is no gate on a Storybook upgrade, so refuse to build a manifest that
-  // would silently under-capture.
+  // would silently under-capture. Not finding a Storybook dependency usually means nothing is
+  // installed so we'll inform the customer accordingly.
   throw new Error(
-    `Could not resolve a Storybook version from ${input.configDir}: none of ${STORYBOOK_CORE_PACKAGES.join(', ')} could be resolved with a version.`
+    `Could not resolve a Storybook version from ${input.configDir}: none of ${STORYBOOK_CORE_PACKAGES.join(', ')} could be resolved with a version. TurboSnap hashes installed dependencies and need to be installed before running Chromatic, even for a prebuilt Storybook.`
   );
 }

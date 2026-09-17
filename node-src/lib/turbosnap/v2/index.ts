@@ -1,6 +1,4 @@
 import * as Sentry from '@sentry/node';
-import { createRequire } from 'module';
-import path from 'path';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
@@ -67,7 +65,6 @@ export async function traceChangedFiles(
       projectFiles: input.projectFiles,
     });
   } catch (error) {
-    adviseOnMissingInstall(input);
     return failed(input, 'Failed to build manifest for TurboSnap v2', error);
   }
   input.log.debug('Generated manifest for TurboSnap v2');
@@ -97,54 +94,6 @@ export async function traceChangedFiles(
 
   // Until we want to lean on the v2 output, we always fallback to v1.
   return { status: 'fallback' };
-}
-
-/**
- * Explains a manifest failure that comes from running without installing dependencies. The manifest
- * hashes installed dependencies, so not having those means v2 cannot work. The message is at the
- * same level as the failure: the user who asked for TurboSnap gets it as an error, while a user who
- * did not gets a debug line about what they are missing.
- *
- * @param input Where the Storybook config lives, how to read the disk, and how to log.
- * @param input.log The logger to write to.
- * @param input.failureLogLevel The level v2 failures are logged at for this build.
- * @param input.configDir The absolute Storybook config directory to look for an install above.
- * @param input.projectFiles How to read the disk.
- */
-function adviseOnMissingInstall(
-  input: Pick<TraceChangedFilesInput, 'log' | 'failureLogLevel' | 'configDir' | 'projectFiles'>
-) {
-  if (hasNodeModulesAbove(input.configDir, input.projectFiles)) {
-    return;
-  }
-
-  const advice =
-    input.failureLogLevel === 'error'
-      ? 'Install dependencies before running Chromatic so TurboSnap can trace this build, even when the Storybook is prebuilt.'
-      : 'Dependency hashes were not uploaded for this build, so enabling TurboSnap later may take longer to reach full results. Install dependencies before running Chromatic to avoid this, even when the Storybook is prebuilt.';
-  input.log[input.failureLogLevel](
-    `No node_modules directory was found above ${input.configDir}. ${advice}`
-  );
-}
-
-/**
- * Whether any directory Node's `require` would search from here exists. That is every ancestor's
- * `node_modules`, so a hoisted monorepo install counts, plus Node's global module folders.
- *
- * This is a different question from whether a package resolved. An install can exist and still
- * lack the package we asked for, and the manifest can fail for reasons other than resolution. Only
- * a missing install makes "install your dependencies" the right advice.
- *
- * @param directory The absolute directory to resolve from.
- * @param projectFiles How to read the disk.
- *
- * @returns Whether node_modules exist anywhere `require` would look.
- */
-function hasNodeModulesAbove(directory: AbsolutePath, projectFiles: ProjectFiles): boolean {
-  const searchPaths = createRequire(path.join(directory, 'package.json')).resolve.paths(
-    'storybook'
-  );
-  return searchPaths?.some((searchPath) => projectFiles.isDirectory(searchPath)) ?? false;
 }
 
 function failed(
