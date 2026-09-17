@@ -1,3 +1,15 @@
+# v18.9.2 (Thu Sep 17 2026)
+
+#### 🐛 Bug Fix
+
+- Upgrade bundled Lodash to 4.18.1 [#1495](https://github.com/chromaui/chromatic-cli/pull/1495) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v18.9.1 (Wed Sep 16 2026)
 
 #### 🐛 Bug Fix
