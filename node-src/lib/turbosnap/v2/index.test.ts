@@ -100,6 +100,46 @@ describe('traceChangedFiles', () => {
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
+  it('tells a user who asked for TurboSnap to install dependencies when no node_modules exists', async () => {
+    const fixture = setup();
+    // A checkout with no install anywhere: the version lookup fails and no ancestor has node_modules.
+    fixture.disk.packageVersions = {};
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      expect.stringContaining(`No node_modules directory was found above ${configDirectory}`)
+    );
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      expect.stringContaining('Install dependencies before running Chromatic so TurboSnap')
+    );
+  });
+
+  it('tells a user who did not ask for TurboSnap what the missing install costs them, at debug', async () => {
+    const fixture = setup();
+    fixture.disk.packageVersions = {};
+
+    await expect(trace(fixture, {}, 'debug')).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log.debug).toHaveBeenCalledWith(
+      expect.stringContaining('Dependency hashes were not uploaded for this build')
+    );
+    expect(fixture.log.error).not.toHaveBeenCalled();
+  });
+
+  it('does not mention installing when a hoisted install exists above the config directory', async () => {
+    const fixture = setup();
+    fixture.disk.packageVersions = {};
+    // The install is two levels up, as in a monorepo whose root hoists dependencies.
+    fixture.disk.directories = { ...fixture.disk.directories, '/repo/node_modules': ['react'] };
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log.error).not.toHaveBeenCalledWith(
+      expect.stringContaining('No node_modules directory was found')
+    );
+  });
+
   it('falls back without uploading when writing the manifest fails', async () => {
     const fixture = setup();
     const error = new Error('the manifest directory is gone');
