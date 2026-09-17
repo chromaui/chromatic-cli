@@ -1,3 +1,15 @@
+# v18.9.3 (Thu Sep 17 2026)
+
+#### 🐛 Bug Fix
+
+- Determine globals by their imports [#1489](https://github.com/chromaui/chromatic-cli/pull/1489) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.9.2 (Thu Sep 17 2026)
 
 #### 🐛 Bug Fix
