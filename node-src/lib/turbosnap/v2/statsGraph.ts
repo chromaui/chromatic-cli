@@ -128,6 +128,10 @@ export function countNodeModulesFiles(stats: Stats): number {
  * @returns The canonical paths of the global composition roots present in the graph.
  */
 function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoots): Set<FilePath> {
+  // The config entry loads the preview annotations on webpack/rspack, so it is a global root here
+  // as well as the locator of the story require-context in story detection. The Vite roots load
+  // preview annotations only, so they stay out of story detection and the two sets are not merged.
+  //
   // Normalize the known builder-specific names the same way as every other stats path before
   // comparing them with the graph's canonical keys.
   const known = [...CONFIG_ENTRY_FILES, ...VITE_COMPOSITION_ROOTS].map((name) =>
