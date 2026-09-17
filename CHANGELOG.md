@@ -1,3 +1,15 @@
+# v18.9.4 (Thu Sep 17 2026)
+
+#### 🐛 Bug Fix
+
+- Add TurboSnap v2 context to Sentry and log Storybook resolution paths [#1496](https://github.com/chromaui/chromatic-cli/pull/1496) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.9.3 (Thu Sep 17 2026)
 
 #### 🐛 Bug Fix
