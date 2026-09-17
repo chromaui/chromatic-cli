@@ -1,4 +1,12 @@
-import { mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from 'fs';
 import { Dirent, Stats } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
@@ -94,6 +102,14 @@ function readPackageVersion(
     return version;
   } catch (error) {
     log.debug(`Could not resolve ${packageName} from ${fromDirectory}`, error);
+    // Marking which candidates exist tells a checkout with no install apart from one whose install
+    // lacks the package.
+    log.debug(
+      'Directories checked:',
+      requireFromDirectory.resolve
+        .paths(`${packageName}/package.json`)
+        ?.map((directory) => (existsSync(directory) ? directory : `${directory} (missing)`))
+    );
     return undefined;
   }
 }

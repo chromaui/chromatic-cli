@@ -363,5 +363,9 @@ describe('realProjectFiles packageVersion', () => {
       `Could not resolve @storybook/builder-vite from ${root}`,
       expect.objectContaining({ code: 'MODULE_NOT_FOUND' })
     );
+    expect(log.debug).toHaveBeenCalledWith(
+      'Directories checked:',
+      expect.arrayContaining([`${path.join(root, 'node_modules')} (missing)`])
+    );
   });
 });
