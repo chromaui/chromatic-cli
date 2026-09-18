@@ -1231,6 +1231,207 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
+  describe('modules that normalize to one name', () => {
+    const viteEntry = '/virtual:/@storybook/builder-vite/storybook-stories.js';
+    const storiesModules = (storyFile: string) => [
+      {
+        id: storyFile,
+        name: storyFile,
+        reasons: [{ moduleName: viteEntry }],
+      },
+      {
+        id: viteEntry,
+        name: viteEntry,
+        reasons: [{ moduleName: '/virtual:/@storybook/builder-vite/vite-app.js' }],
+      },
+    ];
+
+    const vueModules = [
+      {
+        id: './src/Foo.vue',
+        name: './src/Foo.vue',
+        reasons: [{ moduleName: './src/Foo.stories.ts' }],
+      },
+      {
+        id: './src/Foo.vue?vue&type=style&index=0&lang.css',
+        name: './src/Foo.vue?vue&type=style&index=0&lang.css',
+        reasons: [{ moduleName: './src/Foo.vue' }],
+      },
+    ];
+
+    it.each([
+      ['plain node first', vueModules],
+      ['sub-module first', [...vueModules].reverse()],
+    ])('merges a Vue SFC with its style sub-module, %s', async (_, sfcModules) => {
+      const changedFiles = ['src/Foo.vue'];
+      const modules = [...sfcModules, ...storiesModules('./src/Foo.stories.ts')];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/Foo.stories.ts': ['src/Foo.stories.ts'],
+        },
+      });
+    });
+
+    const svelteStoryModules = [
+      ...storiesModules('./src/Button.stories.svelte'),
+      {
+        id: './src/Button.stories.svelte?svelte&type=style&lang.css',
+        name: './src/Button.stories.svelte?svelte&type=style&lang.css',
+        reasons: [{ moduleName: './src/Button.stories.svelte' }],
+      },
+    ];
+
+    it.each([
+      ['plain node first', svelteStoryModules],
+      ['sub-module first', [...svelteStoryModules].reverse()],
+    ])('reports a Svelte CSF story file under its plain id, %s', async (_, modules) => {
+      const changedFiles = ['src/Button.stories.svelte'];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/Button.stories.svelte': ['src/Button.stories.svelte'],
+        },
+      });
+    });
+
+    const reactProxyModules = [
+      {
+        id: '\0./node_modules/react/index.js?commonjs-es-import',
+        name: '\0./node_modules/react/index.js?commonjs-es-import',
+        reasons: [{ moduleName: './src/Button.tsx' }],
+      },
+      {
+        id: '\0./node_modules/react/index.js?commonjs-module',
+        name: '\0./node_modules/react/index.js?commonjs-module',
+        reasons: [{ moduleName: '\0./node_modules/react/index.js?commonjs-es-import' }],
+      },
+    ];
+
+    it.each([
+      ['es-import proxy first', reactProxyModules],
+      ['commonjs-module proxy first', [...reactProxyModules].reverse()],
+    ])(
+      'merges two proxies of one dependency file with different queries, %s',
+      async (_, proxies) => {
+        const changedFiles = [];
+        const changedDependencies = ['react'];
+        const modules = [
+          ...proxies,
+          {
+            id: './src/Button.tsx',
+            name: './src/Button.tsx',
+            reasons: [{ moduleName: './src/Button.stories.tsx' }],
+          },
+          ...storiesModules('./src/Button.stories.tsx'),
+        ];
+        const ctx = getContext();
+        const result = await getDependentStoryFiles(
+          ctx,
+          { modules },
+          statsPath,
+          changedFiles,
+          changedDependencies
+        );
+        expect(result).toMatchObject({
+          status: 'traced',
+          onlyStoryFiles: {
+            './src/Button.stories.tsx': ['src/Button.stories.tsx'],
+          },
+        });
+      }
+    );
+
+    it('folds a proxy into the dependency file it proxies', async () => {
+      const changedFiles = [];
+      const changedDependencies = ['react'];
+      const modules = [
+        {
+          id: './node_modules/react/index.js',
+          name: './node_modules/react/index.js',
+          reasons: [{ moduleName: '\0./node_modules/react/index.js?commonjs-es-import' }],
+        },
+        {
+          id: '\0./node_modules/react/index.js?commonjs-es-import',
+          name: '\0./node_modules/react/index.js?commonjs-es-import',
+          reasons: [{ moduleName: './src/Button.tsx' }],
+        },
+        {
+          id: './src/Button.tsx',
+          name: './src/Button.tsx',
+          reasons: [{ moduleName: './src/Button.stories.tsx' }],
+        },
+        ...storiesModules('./src/Button.stories.tsx'),
+      ];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(
+        ctx,
+        { modules },
+        statsPath,
+        changedFiles,
+        changedDependencies
+      );
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/Button.stories.tsx': ['src/Button.stories.tsx'],
+        },
+      });
+      expect(result.turboSnap.tracedFiles).toEqual(['node_modules/react/index.js']);
+    });
+
+    it('keeps the last of equally plain modules, so an rsbuild id-only stub does not win', async () => {
+      const changedFiles = ['src/Button.stories.tsx'];
+      const modules = [
+        { id: 'src/Button.stories.tsx', name: 'src/Button.stories.tsx', reasons: [] },
+        ...storiesModules('./src/Button.stories.tsx'),
+      ];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/Button.stories.tsx': ['src/Button.stories.tsx'],
+        },
+      });
+    });
+
+    it('keeps webpack context module names intact', async () => {
+      const changedFiles = ['src/foo.js'];
+      const lazyGlob = String.raw`./src lazy ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$ + 2 modules`;
+      const modules = [
+        {
+          id: './src/foo.js',
+          name: './src/foo.js',
+          reasons: [{ moduleName: './src/foo.stories.js' }],
+        },
+        {
+          id: './src/foo.stories.js',
+          name: './src/foo.stories.js',
+          reasons: [{ moduleName: lazyGlob }],
+        },
+        {
+          id: lazyGlob,
+          name: lazyGlob,
+          reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
+        },
+      ];
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/foo.stories.js': ['src/foo.stories.js'],
+        },
+      });
+      expect(result.turboSnap.globs).toEqual([lazyGlob.replace('./', '')]);
+    });
+  });
+
   it('does not set bailSubreason when there are no changed dependencies', async () => {
     const changedFiles = ['package.json'];
     const changedDependencies: string[] = [];
