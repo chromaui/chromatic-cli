@@ -1,7 +1,10 @@
 import * as Sentry from '@sentry/node';
+import path from 'path';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
+import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
+import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import type { Logger } from '../../log';
 import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
@@ -55,6 +58,11 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
 export async function traceChangedFiles(
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesV2Result> {
+  if (!hasValidStorybookConfigDirectory(input)) {
+    input.log[input.failureLogLevel](missingStorybookConfig(input.configDir));
+    return { status: 'fallback' };
+  }
+
   let manifest: TurboSnapManifest;
   try {
     manifest = await buildManifest(input.stats, {
@@ -104,4 +112,16 @@ function failed(
   input.log[input.failureLogLevel](message, error);
   Sentry.captureException(error);
   return { status: 'fallback' };
+}
+
+function hasValidStorybookConfigDirectory(
+  input: Pick<TraceChangedFilesInput, 'configDir' | 'projectFiles'>
+): boolean {
+  // Storybook requires the main config, so a directory without one is not a config directory.
+  return input.projectFiles
+    .listTree(input.configDir)
+    .some(
+      (file) =>
+        path.dirname(file) === input.configDir && MAIN_CONFIG_PATTERN.test(path.basename(file))
+    );
 }
