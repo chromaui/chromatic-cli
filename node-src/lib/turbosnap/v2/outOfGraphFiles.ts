@@ -75,7 +75,8 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
  * covered twice on purpose and neither entry has to be complete alone.
  *
  * A section with no files contributes no entry at all, matching how the `storybookGlobals` roll-up
- * is omitted when empty.
+ * is omitted when empty. The Index owns the contract for uploading the manifest so any missing
+ * required field is rejected.
  *
  * Both roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook
