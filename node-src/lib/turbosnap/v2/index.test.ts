@@ -71,9 +71,11 @@ describe('traceChangedFiles', () => {
       storybookConfigFiles: expect.any(String),
       staticFiles: expect.any(String),
     });
+    // The static dir is nested in the config dir, so its asset is in both detail sections.
     expect(writtenManifest(fixture).storybookConfigFiles).toEqual({
       './.storybook/main.ts': expect.any(String),
       [PREVIEW]: expect.any(String),
+      './.storybook/static/logo.svg': expect.any(String),
     });
     expect(writtenManifest(fixture).staticFiles).toEqual({
       './.storybook/static/logo.svg': expect.any(String),

@@ -50,16 +50,14 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
   const staticFilePaths = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
   );
-  const staticFileSet = new Set(staticFilePaths);
 
   return {
-    // A file belongs only to one section, so a file in a static dir is not a config file.
+    // A config file inside a declared static dir stays a config file, so the config section is
+    // never emptied by `staticDirs` pointing at the config dir. It lands in both sections.
     // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
-    // Storybook, so it stays out of the config roll-up too.
+    // Storybook, so it stays out of the config roll-up.
     storybookConfigFiles: await hashByManifestPath(
-      configPaths.filter(
-        (filePath) => !staticFileSet.has(filePath) && !isDocumentationFile(filePath)
-      ),
+      configPaths.filter((filePath) => !isDocumentationFile(filePath)),
       input.projectRoot,
       input.projectFiles
     ),

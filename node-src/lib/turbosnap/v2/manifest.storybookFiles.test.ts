@@ -328,7 +328,11 @@ describe('buildManifest out-of-graph inputs', () => {
     const { input } = fixtureWithAssets();
     const serialized = serializeManifest(await buildManifest(stats, input));
 
-    expect(serialized.storybookConfigFiles).toEqual({ './.storybook/main.ts': 'M' });
+    // The static dir is nested in the config dir, so the asset is in both detail sections.
+    expect(serialized.storybookConfigFiles).toEqual({
+      './.storybook/main.ts': 'M',
+      './.storybook/static/mockServiceWorker.js': 'A',
+    });
     expect(serialized.staticFiles).toEqual({
       './.storybook/static/mockServiceWorker.js': 'A',
     });

@@ -55,7 +55,7 @@ describe('hashOutOfGraphFiles', () => {
     expect(storybookConfigFiles.has('./.storybook/preview.ts')).toBe(true);
   });
 
-  it('gives static files their own section, excluding them from the config sweep', async () => {
+  it('gives static files their own section, and keeps them in the config sweep when nested in the config dir', async () => {
     const disk: InMemoryDisk = {
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
@@ -65,9 +65,27 @@ describe('hashOutOfGraphFiles', () => {
 
     const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
 
-    // Static wins over the config dir, mirroring v1 testing isStaticFile before isStorybookFile.
-    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/static/mockServiceWorker.js',
+    ]);
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/mockServiceWorker.js']);
+  });
+
+  it('keeps config files in the config section when the config dir itself is a static dir', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+    };
+
+    const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { staticDirs: [`${projectRoot}/.storybook`] })
+    );
+
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/preview.ts',
+    ]);
+    expect([...staticFiles.keys()]).toEqual(['./.storybook/main.ts', './.storybook/preview.ts']);
   });
 
   it('skips documentation files anywhere in the config dir', async () => {
@@ -155,15 +173,15 @@ describe('rollUpOutOfGraphFiles', () => {
   });
 
   it('moves the static roll-up when a static file content changes, leaving the config roll-up alone', async () => {
-    const staticFile = '/repo/packages/ui/.storybook/static/logo.svg';
+    const staticFile = '/repo/packages/ui/public/logo.svg';
     const disk: InMemoryDisk = {
       directories: {
-        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
-        '/repo/packages/ui/.storybook/static': ['logo.svg'],
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['logo.svg'],
       },
       fileHashes: { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A1' },
     };
-    const input = makeInput(disk);
+    const input = makeInput(disk, { staticDirs: [`${projectRoot}/public`] });
     const before = await rollUp(input);
 
     disk.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A2' };
