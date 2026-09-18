@@ -100,6 +100,24 @@ describe('traceChangedFiles', () => {
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
+  it.each<FailureLogLevel>(['error', 'debug'])(
+    'surfaces the install advice at the %s level when Storybook cannot be resolved',
+    async (level) => {
+      const fixture = setup();
+      // A checkout with nothing installed: the version lookup is the first thing to notice.
+      fixture.disk.packageVersions = {};
+
+      await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
+
+      expect(fixture.log[level]).toHaveBeenCalledWith(
+        'Failed to build manifest for TurboSnap v2',
+        expect.objectContaining({
+          message: expect.stringContaining('must be installed before running Chromatic'),
+        })
+      );
+    }
+  );
+
   it('falls back without uploading when writing the manifest fails', async () => {
     const fixture = setup();
     const error = new Error('the manifest directory is gone');

@@ -46,5 +46,6 @@ describe('resolveStorybookVersion', () => {
 
     expect(err?.message).toContain('Could not resolve a Storybook version');
     expect(err?.message).toContain(configDirectory);
+    expect(err?.message).toContain('must be installed before running Chromatic');
   });
 });
