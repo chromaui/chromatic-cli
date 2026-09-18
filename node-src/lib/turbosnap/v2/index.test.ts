@@ -112,7 +112,7 @@ describe('traceChangedFiles', () => {
       expect(fixture.log[level]).toHaveBeenCalledWith(
         'Failed to build manifest for TurboSnap v2',
         expect.objectContaining({
-          message: expect.stringContaining('need to be installed before running Chromatic'),
+          message: expect.stringContaining('must be installed before running Chromatic'),
         })
       );
     }
