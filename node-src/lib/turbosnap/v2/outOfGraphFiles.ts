@@ -50,16 +50,14 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
   const staticFilePaths = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
   );
-  const staticFileSet = new Set(staticFilePaths);
 
   return {
-    // A file belongs only to one section, so a file in a static dir is not a config file.
+    // A config file inside a declared static dir stays a config file, so the config section is
+    // never emptied by `staticDirs` pointing at the config dir. It lands in both sections.
     // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
-    // Storybook, so it stays out of the config roll-up too.
+    // Storybook, so it stays out of the config roll-up.
     storybookConfigFiles: await hashByManifestPath(
-      configPaths.filter(
-        (filePath) => !staticFileSet.has(filePath) && !isDocumentationFile(filePath)
-      ),
+      configPaths.filter((filePath) => !isDocumentationFile(filePath)),
       input.projectRoot,
       input.projectFiles
     ),
@@ -75,7 +73,8 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
  * covered twice on purpose and neither entry has to be complete alone.
  *
  * A section with no files contributes no entry at all, matching how the `storybookGlobals` roll-up
- * is omitted when empty.
+ * is omitted when empty. The Index owns the contract for uploading the manifest so any missing
+ * required field is rejected.
  *
  * Both roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook
