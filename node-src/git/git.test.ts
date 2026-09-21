@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
@@ -293,8 +294,53 @@ describe('findFilesFromRepositoryRoot', () => {
 });
 
 describe('checkoutFile', () => {
+  it('shows the file at the reference when it is a regular file', async () => {
+    execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
+    execGitCommand.mockResolvedValueOnce('');
+
+    await checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(1, ctx, 'git ls-tree abc123 -- "package.json"');
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:package.json" > /tmp/fake-target'
+    );
+  });
+
+  it('follows committed symlinks to the linked file', async () => {
+    execGitCommand.mockResolvedValueOnce('120000 blob abc123\tpackages/app/pnpm-lock.yaml');
+    execGitCommand.mockResolvedValueOnce('../../shared/pnpm-lock.yaml\n');
+    execGitCommand.mockResolvedValueOnce('100644 blob def456\tshared/pnpm-lock.yaml');
+    execGitCommand.mockResolvedValueOnce('');
+
+    await checkoutFile(ctx, 'abc123', 'packages/app/pnpm-lock.yaml', '/tmp/anywhere');
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      2,
+      ctx,
+      'git show "abc123:packages/app/pnpm-lock.yaml"'
+    );
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:shared/pnpm-lock.yaml" > /tmp/fake-target'
+    );
+  });
+
+  it('wraps a symlink cycle in BaselineCheckoutFailedError', async () => {
+    execGitCommand.mockResolvedValueOnce('120000 blob abc123\ta/one');
+    execGitCommand.mockResolvedValueOnce('../b/two\n');
+    execGitCommand.mockResolvedValueOnce('120000 blob def456\tb/two');
+    execGitCommand.mockResolvedValueOnce('../a/one\n');
+
+    await expect(checkoutFile(ctx, 'abc123', 'a/one', '/tmp/anywhere')).rejects.toMatchObject({
+      name: 'BaselineCheckoutFailedError',
+      cause: { message: 'Symbolic link cycle: abc123:a/one' },
+    });
+  });
+
   it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {
     const cause = new Error('git show failed');
+    execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
     execGitCommand.mockRejectedValueOnce(cause);
 
     let err;
