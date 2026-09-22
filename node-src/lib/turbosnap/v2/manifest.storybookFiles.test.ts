@@ -177,8 +177,12 @@ describe('buildManifest storybookFiles', () => {
       input
     );
 
-    // The version entry is unconditional, so it is the only key left once the globals entry is gone.
-    expect([...manifest.storybookConfigHashes.keys()]).toEqual(['storybookVersion']);
+    // The version and config-file entries are unconditional, so they are the only keys left once
+    // the globals entry is gone.
+    expect([...manifest.storybookConfigHashes.keys()]).toEqual([
+      'storybookVersion',
+      'storybookConfigFiles',
+    ]);
   });
 
   it('records the installed Storybook version as its own entry, verbatim rather than hashed', async () => {
@@ -328,7 +332,11 @@ describe('buildManifest out-of-graph inputs', () => {
     const { input } = fixtureWithAssets();
     const serialized = serializeManifest(await buildManifest(stats, input));
 
-    expect(serialized.storybookConfigFiles).toEqual({ './.storybook/main.ts': 'M' });
+    // The static dir is nested in the config dir, so the asset is in both detail sections.
+    expect(serialized.storybookConfigFiles).toEqual({
+      './.storybook/main.ts': 'M',
+      './.storybook/static/mockServiceWorker.js': 'A',
+    });
     expect(serialized.staticFiles).toEqual({
       './.storybook/static/mockServiceWorker.js': 'A',
     });

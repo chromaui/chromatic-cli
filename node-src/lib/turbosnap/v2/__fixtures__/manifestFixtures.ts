@@ -22,12 +22,17 @@ export interface ManifestFixture {
  * test constructs its own, so there is no shared disk to reset between tests. The returned `disk` is
  * still mutable, for the before/after-edit suites that build, change a hash, and build again.
  *
- * @param overrides The disk to read; the installed Storybook version is seeded unless overridden.
+ * @param overrides The disk to read; the installed Storybook version and a config dir holding
+ * `main.ts` are seeded unless overridden, since the manifest refuses to build without a main config.
  *
  * @returns The disk and the manifest input that reads it.
  */
 export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
-  const disk: InMemoryDisk = { packageVersions: { storybook: storybookVersion }, ...overrides };
+  const disk: InMemoryDisk = {
+    packageVersions: { storybook: storybookVersion },
+    directories: { [`${projectRoot}/.storybook`]: ['main.ts'] },
+    ...overrides,
+  };
   return {
     disk,
     input: {

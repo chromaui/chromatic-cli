@@ -87,6 +87,7 @@ describe('buildManifest relocation stability', () => {
     })();
 
     const after = await (async () => {
+      disk.directories = { '/repo/apps/web/ui/.storybook': ['main.ts'] };
       disk.fileHashes = {
         '/repo/apps/web/ui/src/Button.stories.tsx': 'S',
         '/repo/apps/web/ui/src/helper.ts': 'H',
@@ -106,7 +107,12 @@ describe('buildManifest relocation stability', () => {
             },
           ],
         },
-        { ...input, projectRoot: '/repo/apps/web/ui' }
+        {
+          ...input,
+          projectRoot: '/repo/apps/web/ui',
+          configDir: '/repo/apps/web/ui/.storybook',
+          staticDirs: ['/repo/apps/web/ui/.storybook/static'],
+        }
       );
     })();
 
