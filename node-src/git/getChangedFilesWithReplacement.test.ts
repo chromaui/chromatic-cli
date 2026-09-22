@@ -9,13 +9,21 @@ import {
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import * as gitModule from './git';
 
-vi.mock('./git', () => ({
-  getChangedFiles: vi.fn((_: unknown, hash: string) => {
-    if (/exists/.test(hash)) return ['changed', 'files'];
-    throw new AncestorMissingError(hash, { cause: new Error(`fatal: bad object ${hash}`) });
-  }),
-  commitExists: vi.fn((_: unknown, hash: string) => /exists/.test(hash)),
-}));
+vi.mock('./git', () => {
+  const fetched = new Set<string>();
+  return {
+    getChangedFiles: vi.fn((_: unknown, hash: string) => {
+      if (/exists/.test(hash) || fetched.has(hash)) return ['changed', 'files'];
+      throw new AncestorMissingError(hash, { cause: new Error(`fatal: bad object ${hash}`) });
+    }),
+    commitExists: vi.fn((_: unknown, hash: string) => /exists/.test(hash) || fetched.has(hash)),
+    fetchCommit: vi.fn((_: unknown, hash: string) => {
+      if (!/fetchable/.test(hash)) return false;
+      fetched.add(hash);
+      return true;
+    }),
+  };
+});
 
 const mockedGetChangedFiles = vi.mocked(gitModule.getChangedFiles);
 
@@ -25,6 +33,23 @@ describe('getChangedFilesWithReplacements', () => {
     client.runQuery.mockReset();
   });
   const context = { client, log: new TestLogger() } as any;
+
+  it('fetches an orphaned commit by hash and retries, without using a replacement', async () => {
+    expect(
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'missing-but-fetchable',
+        uncommittedHash: '',
+        isLocalBuild: false,
+      })
+    ).toEqual({
+      changedFiles: ['changed', 'files'],
+    });
+
+    expect(gitModule.fetchCommit).toHaveBeenCalledWith(context, 'missing-but-fetchable');
+    expect(client.runQuery).not.toHaveBeenCalled();
+  });
 
   it('passes changedFiles on through on the happy path', async () => {
     expect(
