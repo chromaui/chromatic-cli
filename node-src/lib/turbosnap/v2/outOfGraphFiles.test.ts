@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { hashOutOfGraphFiles, OutOfGraphInput, rollUpOutOfGraphFiles } from './outOfGraphFiles';
+import {
+  hashOutOfGraphFiles,
+  MissingStorybookConfigError,
+  OutOfGraphInput,
+  rollUpOutOfGraphFiles,
+} from './outOfGraphFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
 
 const projectRoot = '/repo/packages/ui';
@@ -86,6 +91,24 @@ describe('hashOutOfGraphFiles', () => {
       './.storybook/preview.ts',
     ]);
     expect([...staticFiles.keys()]).toEqual(['./.storybook/main.ts', './.storybook/preview.ts']);
+  });
+
+  it.each<[string, InMemoryDisk['directories']]>([
+    ['is not on disk', {}],
+    ['has no main config', { '/repo/packages/ui/.storybook': ['preview.ts'] }],
+    [
+      'only has a main config in a nested directory',
+      {
+        '/repo/packages/ui/.storybook': ['nested'],
+        '/repo/packages/ui/.storybook/nested': ['main.ts'],
+      },
+    ],
+  ])('refuses to sweep when the config dir %s', async (_, directories) => {
+    // Storybook requires main.*, so a directory without one is not a config directory. Refusing here
+    // is what guarantees the config section is never empty.
+    await expect(hashOutOfGraphFiles(makeInput({ directories }))).rejects.toThrow(
+      MissingStorybookConfigError
+    );
   });
 
   it('skips documentation files anywhere in the config dir', async () => {
@@ -237,15 +260,21 @@ describe('rollUpOutOfGraphFiles', () => {
 
   it('moves the config roll-up when a config file is renamed without changing its bytes', async () => {
     const disk: InMemoryDisk = {
-      directories: { '/repo/packages/ui/.storybook': ['preview-head.html'] },
-      fileHashes: { '/repo/packages/ui/.storybook/preview-head.html': 'H' },
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview-head.html'] },
+      fileHashes: {
+        '/repo/packages/ui/.storybook/main.ts': 'M',
+        '/repo/packages/ui/.storybook/preview-head.html': 'H',
+      },
     };
     const input = makeInput(disk);
     const before = await rollUp(input);
 
     // Storybook loads config files by name, so the same bytes under a new name inject elsewhere.
-    disk.directories = { '/repo/packages/ui/.storybook': ['preview-body.html'] };
-    disk.fileHashes = { '/repo/packages/ui/.storybook/preview-body.html': 'H' };
+    disk.directories = { '/repo/packages/ui/.storybook': ['main.ts', 'preview-body.html'] };
+    disk.fileHashes = {
+      '/repo/packages/ui/.storybook/main.ts': 'M',
+      '/repo/packages/ui/.storybook/preview-body.html': 'H',
+    };
     const after = await rollUp(input);
 
     expect(after.get('storybookConfigFiles')).not.toBe(before.get('storybookConfigFiles'));

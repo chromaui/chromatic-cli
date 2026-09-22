@@ -30,9 +30,10 @@ type TurboSnapMechanism = 'GIT_BASED' | 'HASH_BASED';
  *
  * `storybookConfigHashes` is a map of Storybook-wide category roll-ups to their hashes. The Index
  * requires `storybookVersion` and `storybookConfigFiles`; the remaining categories (`preview`,
- * `storybookGlobals`, `staticFiles`) ride its catch-all. The CLI does not enforce the required keys
- * itself because the Index owns the contract. Every value is a string, so the manifest's `FileHash
- * | StorybookVersion` entries map onto it directly.
+ * `storybookGlobals`, `staticFiles`) ride its catch-all. The manifest build guarantees both required
+ * keys are present (see `hashOutOfGraphFiles` and `storybookVersion`), so the CLI does not re-check
+ * them here. Every value is a string, so the manifest's `FileHash | StorybookVersion` entries map
+ * onto it directly.
  */
 interface BuildUploadHashesInput {
   buildId: string;

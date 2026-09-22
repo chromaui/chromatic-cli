@@ -177,8 +177,12 @@ describe('buildManifest storybookFiles', () => {
       input
     );
 
-    // The version entry is unconditional, so it is the only key left once the globals entry is gone.
-    expect([...manifest.storybookConfigHashes.keys()]).toEqual(['storybookVersion']);
+    // The version and config-file entries are unconditional, so they are the only keys left once
+    // the globals entry is gone.
+    expect([...manifest.storybookConfigHashes.keys()]).toEqual([
+      'storybookVersion',
+      'storybookConfigFiles',
+    ]);
   });
 
   it('records the installed Storybook version as its own entry, verbatim rather than hashed', async () => {

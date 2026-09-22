@@ -1,3 +1,6 @@
+import path from 'path';
+
+import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import { isDocumentationFile } from '../../utilities';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
@@ -23,6 +26,17 @@ export interface OutOfGraphFiles {
 }
 
 /**
+ * Thrown when the Storybook config directory holds no `main.*` file. Storybook requires that file,
+ * so a directory without one is not a valid Storybook config directory.
+ */
+export class MissingStorybookConfigError extends Error {
+  constructor(public readonly configDirectory: string) {
+    super(`No Storybook main config file found in ${configDirectory}`);
+    this.name = 'MissingStorybookConfigError';
+  }
+}
+
+/**
  * Content-hashes every file in the Storybook config directory and every file in the configured static
  * directories.
  *
@@ -43,10 +57,16 @@ export interface OutOfGraphFiles {
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  *
  * @returns The content hash of every config file and every static file, keyed by canonical manifest
- * path.
+ * path. `storybookConfigFiles` is never empty: it always holds at least the main config.
+ *
+ * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file.
  */
 export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOfGraphFiles> {
   const configPaths = input.projectFiles.listTree(input.configDir);
+  if (!configPaths.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
+    throw new MissingStorybookConfigError(input.configDir);
+  }
+
   const staticFilePaths = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
   );
@@ -72,9 +92,11 @@ export async function hashOutOfGraphFiles(input: OutOfGraphInput): Promise<OutOf
  * graph-rolled entry: bytes-changed and imports-changed are different failure modes, so `preview.*` is
  * covered twice on purpose and neither entry has to be complete alone.
  *
- * A section with no files contributes no entry at all, matching how the `storybookGlobals` roll-up
- * is omitted when empty. The Index owns the contract for uploading the manifest so any missing
- * required field is rejected.
+ * The static section contributes no entry when it has no files, matching how the `storybookGlobals`
+ * roll-up is omitted when empty. The config section always contributes one, because
+ * {@link hashOutOfGraphFiles} refuses to build it without the main config and never drops the main
+ * config into another section, which is what keeps the Index's required `storybookConfigFiles`
+ * satisfied.
  *
  * Both roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook
@@ -102,6 +124,12 @@ export function rollUpOutOfGraphFiles(
     sections
       .filter(([, files]) => files.size > 0)
       .map(([key, files]) => [key, rollUpEntryHashes([...files], h64ToString)])
+  );
+}
+
+function isMainConfigFile(filePath: string, configDirectory: string): boolean {
+  return (
+    path.dirname(filePath) === configDirectory && MAIN_CONFIG_PATTERN.test(path.basename(filePath))
   );
 }
 
