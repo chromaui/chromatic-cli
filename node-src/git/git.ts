@@ -489,7 +489,10 @@ async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileN
 
   while (!visited.has(current)) {
     visited.add(current);
-    const entry = await execGitCommand(deps, `git ls-tree ${reference} -- "${current}"`);
+    const entry = await execGitCommand(
+      deps,
+      `git ls-tree --full-tree ${reference} -- "${current}"`
+    );
     if (!entry?.startsWith(SYMLINK_MODE)) {
       return current;
     }

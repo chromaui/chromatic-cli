@@ -300,7 +300,11 @@ describe('checkoutFile', () => {
 
     await checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
 
-    expect(execGitCommand).toHaveBeenNthCalledWith(1, ctx, 'git ls-tree abc123 -- "package.json"');
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      1,
+      ctx,
+      'git ls-tree --full-tree abc123 -- "package.json"'
+    );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
       'git show "abc123:package.json" > /tmp/fake-target'
