@@ -1,0 +1,14 @@
+lockfileVersion: 5.4
+
+specifiers:
+  is-number: ^7.0.0
+
+dependencies:
+  is-number: 7.0.0
+
+packages:
+
+  /is-number/7.0.0:
+    resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvB2owWTEVXNLD8zG4EMID80l2MjJAEDplMlZ+WIZcY7zTFfqfR1cM/7EmHk2Q==}
+    engines: {node: '>=0.12.0'}
+    dev: false
