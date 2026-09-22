@@ -430,8 +430,13 @@ export async function checkout(deps: GitDeps, reference: string) {
 
 const limitConcurrency = pLimit(10);
 
+// Tree entry mode git assigns to symbolic links, as printed by `git ls-tree`
+// (regular files are 100644/100755, directories 040000, submodules 160000).
+const SYMLINK_MODE = '120000';
+
 /**
- * Checkout a file at the given reference and write the results to a temporary file.
+ * Checkout a file at the given reference and write the results to a temporary file. If the path is
+ * a committed symlink, the linked file is checked out rather than the link itself.
  *
  * @param deps Function dependencies.
  * @param deps.log The logger found on the context object.
@@ -457,13 +462,46 @@ export async function checkoutFile(
 
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
     try {
-      await execGitCommand(deps, `git show ${pathspec} > ${targetFileName}`);
+      const resolvedFileName = await resolveSymlinkAtReference(deps, reference, fileName);
+      await execGitCommand(deps, `git show "${reference}:${resolvedFileName}" > ${targetFileName}`);
     } catch (error) {
       throw new BaselineCheckoutFailedError(pathspec, { cause: error });
     }
 
     return targetFileName;
   });
+}
+
+/**
+ * Follow committed symlinks at the given reference until reaching a regular file. `git show` on a
+ * symlink outputs the link target string rather than the linked file's contents, which is wrong
+ * for e.g. a `pnpm-lock.yaml` symlinked to a shared lockfile elsewhere in a monorepo.
+ *
+ * @param deps Function dependencies.
+ * @param reference The reference (usually a commit or branch) to resolve the path at.
+ * @param fileName The repository-relative path to resolve.
+ *
+ * @returns The repository-relative path of the regular file the symlink chain points to.
+ */
+async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileName: string) {
+  const visited = new Set<string>();
+  let current = fileName;
+
+  while (!visited.has(current)) {
+    visited.add(current);
+    const entry = await execGitCommand(
+      deps,
+      `git ls-tree --full-tree ${reference} -- "${current}"`
+    );
+    if (!entry?.startsWith(SYMLINK_MODE)) {
+      return current;
+    }
+
+    const target = await execGitCommand(deps, `git show "${reference}:${current}"`);
+    current = path.posix.join(path.posix.dirname(current), target.trim());
+  }
+
+  throw new Error(`Symbolic link cycle: ${reference}:${fileName}`);
 }
 
 /**
