@@ -7,7 +7,7 @@ import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '..
 import { Context } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { compareBaseline } from './compareBaseline';
-import { getDependencies } from './getDependencies';
+import { getDependencies, getImporter } from './getDependencies';
 
 const PACKAGE_JSON = 'package.json';
 
@@ -133,10 +133,14 @@ export const findChangedDependencies = async (ctx: Context) => {
           fs.copyFileSync(absoluteManifestPath, temporaryManifestPath);
           fs.copyFileSync(absoluteLockfilePath, temporaryLockfilePath);
 
+          // The copies above flatten the pair into one directory, so remember where the manifest
+          // sat relative to the lockfile; pnpm lockfiles are keyed by that path.
+          const importer = getImporter(manifestPath, lockfilePath);
           const headDependencies = await getDependencies(ctx, {
             rootPath: tmpdir,
             manifestPath: temporaryManifestPath,
             lockfilePath: temporaryLockfilePath,
+            importer,
           });
 
           ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
@@ -157,6 +161,7 @@ export const findChangedDependencies = async (ctx: Context) => {
                   rootPath: tmpdir,
                   manifestPath: await checkoutFile(ctx, reference, manifestPath, tmpdir),
                   lockfilePath: await checkoutFile(ctx, reference, lockfilePath, tmpdir),
+                  importer,
                 });
 
                 ctx.log.debug({ reference }, `Found baseline dependencies`);

@@ -4,7 +4,11 @@ import {
   mkdtempSync as unMockedMkdtempSync,
   statSync as unMockedStatSync,
 } from 'fs';
-import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
+import {
+  buildDepTreeFromFiles,
+  getPnpmLockfileParser,
+  parsePnpmWorkspaceProject,
+} from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -36,6 +40,8 @@ const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
 const buildDepTree = vi.mocked(buildDepTreeFromFiles);
+const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
+const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
 const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGraph);
 
@@ -53,6 +59,8 @@ afterEach(() => {
   checkoutFile.mockReset();
   findFilesFromRepositoryRoot.mockReset();
   buildDepTree.mockReset();
+  pnpmLockfileParser.mockReset();
+  pnpmWorkspaceProject.mockReset();
   inspect.mockReset();
   createChangedPackagesGraph.mockReset();
 });
@@ -398,5 +406,32 @@ describe('findChangedDependencies', () => {
       '/root/subdir/package-lock.json',
       `${tmpdir}/package-lock.json`
     );
+  });
+
+  it('resolves pnpm workspace manifests against their own lockfile importer', async () => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, ...patterns) => {
+      if (patterns[0] === 'package.json') return Promise.resolve(['package.json']);
+      if (patterns[0] === '**/package.json') return Promise.resolve(['packages/ui/package.json']);
+      // Only the root has a lockfile; nested lookups use full paths and find nothing.
+      return Promise.resolve(patterns.includes('pnpm-lock.yaml') ? ['pnpm-lock.yaml'] : []);
+    });
+    // Match the real checkoutFile, which keeps the file name so the lockfile kind stays detectable.
+    checkoutFile.mockImplementation((_ctx, _commit, file, directory) =>
+      Promise.resolve(`${directory}/${file.split('/').at(-1)}`)
+    );
+    pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
+    pnpmWorkspaceProject.mockResolvedValue({ getDepPkgs: () => [] } as any);
+    mockChangedPackagesGraph(['moment@2.31.0']);
+
+    const context = getContext({
+      git: { packageMetadataChanges: [{ changedFiles: ['pnpm-lock.yaml'], commit: 'A' }] },
+    });
+
+    await expect(findChangedDependencies(context)).resolves.toEqual(['moment']);
+
+    // HEAD and baseline for both the root and the nested package.
+    const importers = pnpmWorkspaceProject.mock.calls.map((call) => call[3]).sort();
+    expect(importers).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
+    expect(inspect).not.toHaveBeenCalled();
   });
 });
