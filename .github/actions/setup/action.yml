@@ -1,0 +1,14 @@
+name: Setup
+description: Set up Node and Yarn, then install the repo's dependencies. Expects the repo to be checked out already.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .tool-versions
+    - run: corepack enable
+      shell: bash
+    - name: Install dependencies
+      run: yarn install --immutable
+      shell: bash
