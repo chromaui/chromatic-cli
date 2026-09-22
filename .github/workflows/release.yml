@@ -34,17 +34,12 @@ jobs:
         uses: actions/checkout@v7
         with:
           token: ${{ secrets.GH_TOKEN }}
-      - run: corepack enable
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22.22.3"
+      - uses: ./.github/actions/setup
       - name: Prepare repository
         run: git fetch --unshallow --tags
         # Update NPM since we're using trusted publishing and need a newer version
       - name: Update NPM
         run: npm install -g npm@latest
-      - name: Install dependencies
-        run: yarn install --immutable
       - name: Create Release
         run: yarn run release
         env:

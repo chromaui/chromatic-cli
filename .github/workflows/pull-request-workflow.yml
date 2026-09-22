@@ -32,18 +32,15 @@ jobs:
 
   chromatic:
     uses: ./.github/workflows/chromatic-prod.yml
-    needs: lint-and-test
     secrets:
       CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-action:
     uses: ./.github/workflows/smoke-test-action.yml
-    needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test:
     uses: ./.github/workflows/smoke-test.yml
-    needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
