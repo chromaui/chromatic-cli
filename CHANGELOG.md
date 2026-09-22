@@ -1,3 +1,16 @@
+# v18.9.5 (Tue Sep 22 2026)
+
+#### 🐛 Bug Fix
+
+- Follow committed symlinks when checking out baseline lockfiles [#1501](https://github.com/chromaui/chromatic-cli/pull/1501) ([@codykaup](https://github.com/codykaup))
+- Advise users when TurboSnap v2 runs without dependencies [#1498](https://github.com/chromaui/chromatic-cli/pull/1498) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.9.4 (Thu Sep 17 2026)
 
 #### 🐛 Bug Fix
