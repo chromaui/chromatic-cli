@@ -3,9 +3,19 @@ import path from 'path';
 import { inspect } from 'snyk-nodejs-plugin';
 
 import { Context } from '../../../types';
+import { PNPM_LOCK_FILE } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 
 export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
+
+// The same options `snyk-nodejs-plugin` uses when it drives the pnpm parser for us.
+const PNPM_PARSE_OPTIONS = {
+  includeDevDeps: true,
+  includeOptionalDeps: true,
+  includePeerDeps: true,
+  pruneWithinTopLevelDeps: true,
+  strictOutOfSync: false,
+};
 
 export interface BaselineConfig {
   rootPath: string;

@@ -8,8 +8,8 @@ import { describe, expect, it, Mock, vi } from 'vitest';
 import packageJson from '../../../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../../../git/git';
 import TestLogger from '../../testLogger';
+import { SUPPORTED_LOCK_FILES } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
-import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
