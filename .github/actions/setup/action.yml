@@ -9,6 +9,19 @@ runs:
         node-version-file: .tool-versions
     - run: corepack enable
       shell: bash
+    # Caching node_modules directly (rather than the Yarn download cache) skips the fetch
+    # and link steps entirely. This is safe because enableScripts is off in .yarnrc.yml,
+    # so nothing in node_modules is built for a specific machine. package.json is part of
+    # the key so that a change to it still triggers the --immutable lockfile check.
+    - name: Restore node_modules
+      id: node-modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          .yarn/install-state.gz
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.tool-versions', '.yarnrc.yml', 'package.json', 'yarn.lock') }}
     - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
       run: yarn install --immutable
       shell: bash
