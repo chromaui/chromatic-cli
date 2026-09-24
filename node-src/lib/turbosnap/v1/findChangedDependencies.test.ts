@@ -4,11 +4,7 @@ import {
   mkdtempSync as unMockedMkdtempSync,
   statSync as unMockedStatSync,
 } from 'fs';
-import {
-  buildDepTreeFromFiles,
-  getPnpmLockfileParser,
-  parsePnpmWorkspaceProject,
-} from 'snyk-nodejs-lockfile-parser';
+import { getPnpmLockfileParser, parsePnpmWorkspaceProject } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -39,7 +35,6 @@ mkdtempSync.mockReturnValue(tmpdir);
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
-const buildDepTree = vi.mocked(buildDepTreeFromFiles);
 const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
 const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
@@ -58,7 +53,6 @@ afterEach(() => {
   getRepositoryRoot.mockReset();
   checkoutFile.mockReset();
   findFilesFromRepositoryRoot.mockReset();
-  buildDepTree.mockReset();
   pnpmLockfileParser.mockReset();
   pnpmWorkspaceProject.mockReset();
   inspect.mockReset();
@@ -155,7 +149,6 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns nothing when dependency tree is empty', async () => {
-    buildDepTree.mockResolvedValue({ dependencies: {} });
     mockInspect(/* HEAD */ [], /* Baseline A */ []);
     mockChangedPackagesGraph([]);
 
