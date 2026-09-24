@@ -22,12 +22,6 @@ const PNPM_PARSE_OPTIONS = {
   strictOutOfSync: false,
 };
 
-export interface BaselineConfig {
-  rootPath: string;
-  manifestPath: string;
-  lockfilePath: string;
-}
-
 /**
  * The pnpm lockfile keys each workspace package by its directory relative to the lockfile, which
  * pnpm calls the importer.
