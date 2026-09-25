@@ -394,25 +394,23 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(patterns.includes('pnpm-lock.yaml') ? ['pnpm-lock.yaml'] : []);
     });
     pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
-    pnpmWorkspaceProject.mockResolvedValue({ getDepPkgs: () => [] } as any);
+    const importers: string[] = [];
+    pnpmWorkspaceProject.mockImplementation(async (_manifest, _lockfile, _options, importer) => {
+      importers.push(importer);
+      return { getDepPkgs: () => [] } as any;
+    });
     mockChangedPackagesGraph(['moment@2.31.0']);
 
     const context = getContext({
       git: { packageMetadataChanges: [{ changedFiles: ['pnpm-lock.yaml'], commit: 'A' }] },
     });
 
+    // The changed dependency comes from the mocked graph comparison; the assertions on the
+    // importer are what exercise the pnpm path.
     await expect(findChangedDependencies(context)).resolves.toEqual(['moment']);
 
     // HEAD and baseline for both the root and the nested package.
-    expect(pnpmWorkspaceProject).toHaveBeenCalledTimes(4);
-    for (const importer of ['.', 'packages/ui']) {
-      expect(pnpmWorkspaceProject).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
-        expect.anything(),
-        importer
-      );
-    }
+    expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
     expect(inspect).not.toHaveBeenCalled();
   });
 });
