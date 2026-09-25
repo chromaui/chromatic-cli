@@ -5,9 +5,23 @@ import { dedent } from 'ts-dedent';
 import { error, info } from '../../components/icons';
 import link from '../../components/link';
 
+const ignoredTestsUrl = (displayUrl: string, isOnboarding: boolean) => {
+  if (isOnboarding) {
+    return displayUrl;
+  }
+
+  try {
+    const url = new URL(displayUrl);
+    url.searchParams.set('expandIgnored', 'true');
+    return url.toString();
+  } catch {
+    return displayUrl;
+  }
+};
+
 export default ({ build, exitCode, isOnboarding }) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
-  const unstableUrl = `${url}#unstable`;
+  const ignoredUrl = ignoredTestsUrl(url, isOnboarding);
 
   const changes: any[] = [];
 
@@ -33,7 +47,7 @@ export default ({ build, exitCode, isOnboarding }) => {
       changes.push(''); // blank line for spacing
     }
     changes.push(
-      chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${build.ignoredCount > 1 ? 'were' : 'was'} ignored in this build.} Review at ${link(unstableUrl)}`
+      chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${build.ignoredCount > 1 ? 'were' : 'was'} ignored in this build.} Review at ${link(ignoredUrl)}`
     );
   }
 
