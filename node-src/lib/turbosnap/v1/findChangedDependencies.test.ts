@@ -50,8 +50,7 @@ beforeEach(() => {
   findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
     Promise.resolve(file.startsWith('**') ? [] : [file])
   );
-  // always checkout files with the result path of "<commit>.<file>"
-  checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+  checkoutFile.mockResolvedValue('');
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
