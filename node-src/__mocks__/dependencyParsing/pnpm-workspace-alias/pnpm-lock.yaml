@@ -1,0 +1,19 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/app:
+    dependencies:
+      theme:
+        specifier: workspace:red@*
+        version: link:../red
+
+  packages/blue: {}
+
+  packages/red: {}

@@ -5,7 +5,8 @@ import {
   readFileSync as unMockedReadFileSync,
   statSync as unMockedStatSync,
 } from 'fs';
-import { getPnpmLockfileParser, parsePnpmWorkspaceProject } from 'snyk-nodejs-lockfile-parser';
+import { getPnpmLockfileParser, parsePkgJson } from 'snyk-nodejs-lockfile-parser';
+import { buildDepGraphPnpm } from 'snyk-nodejs-lockfile-parser/dist/dep-graph-builders/pnpm/build-dep-graph-pnpm';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -16,6 +17,7 @@ import TestLogger from '../../testLogger';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
+vi.mock('snyk-nodejs-lockfile-parser/dist/dep-graph-builders/pnpm/build-dep-graph-pnpm');
 vi.mock('snyk-nodejs-plugin');
 vi.mock('@snyk/dep-graph');
 vi.mock('yarn-or-npm');
@@ -40,7 +42,8 @@ const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
 const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
-const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
+const pnpmPackageJson = vi.mocked(parsePkgJson);
+const pnpmDepGraph = vi.mocked(buildDepGraphPnpm);
 const inspect = vi.mocked(snyk.inspect);
 const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGraph);
 
@@ -57,7 +60,8 @@ afterEach(() => {
   checkoutFile.mockReset();
   findFilesFromRepositoryRoot.mockReset();
   pnpmLockfileParser.mockReset();
-  pnpmWorkspaceProject.mockReset();
+  pnpmPackageJson.mockReset();
+  pnpmDepGraph.mockReset();
   inspect.mockReset();
   createChangedPackagesGraph.mockReset();
 });
@@ -394,9 +398,10 @@ describe('findChangedDependencies', () => {
       return Promise.resolve(patterns.includes('pnpm-lock.yaml') ? ['pnpm-lock.yaml'] : []);
     });
     pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
+    pnpmPackageJson.mockReturnValue({ name: 'pkg', version: '1.0.0' });
     const importers: string[] = [];
-    pnpmWorkspaceProject.mockImplementation(async (_manifest, _lockfile, _options, importer) => {
-      importers.push(importer);
+    pnpmDepGraph.mockImplementation(async (_parser, _manifest, _options, importer) => {
+      importers.push(importer as string);
       return { getDepPkgs: () => [] } as any;
     });
     mockChangedPackagesGraph(['moment@2.31.0']);

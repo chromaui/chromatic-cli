@@ -1,11 +1,8 @@
 import { copyFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'fs';
 import os from 'os';
 import path from 'path';
-import {
-  getPnpmLockfileParser,
-  parsePnpmProject,
-  parsePnpmWorkspaceProject,
-} from 'snyk-nodejs-lockfile-parser';
+import { getPnpmLockfileParser, parsePkgJson, parsePnpmProject } from 'snyk-nodejs-lockfile-parser';
+import { buildDepGraphPnpm } from 'snyk-nodejs-lockfile-parser/dist/dep-graph-builders/pnpm/build-dep-graph-pnpm';
 import { inspect } from 'snyk-nodejs-plugin';
 
 import { Context } from '../../../types';
@@ -74,22 +71,40 @@ async function parsePnpmLockfile(absoluteManifestPath: string, absoluteLockfileP
     const manifest = readFileSync(absoluteManifestPath, 'utf8');
     const lockfile = readFileSync(absoluteLockfilePath, 'utf8');
 
-    // Parsing the YAML here and again inside the parser below is cheap at our 10 MB cap, and
-    // simpler than catching the workspace parser's failure and retrying.
-    const isWorkspaceMember = Object.hasOwn(getPnpmLockfileParser(lockfile).importers, importer);
+    const parser = getPnpmLockfileParser(lockfile);
 
-    // The workspace parser throws when the importer has no entry: standalone lockfiles before v9
+    // Resolving against an importer the lockfile lacks throws: standalone lockfiles before v9
     // have no importers table, and a `package.json` outside the workspace globs is never
     // installed. Fall back to the single-project parser, which resolves against the root importer
     // when there is one and otherwise keeps the manifest's raw specifiers. That matches how the
     // yarn and npm parsers treat manifests the lockfile can't place, rather than failing.
-    return isWorkspaceMember
-      ? await parsePnpmWorkspaceProject(manifest, lockfile, PNPM_PARSE_OPTIONS, importer)
-      : await parsePnpmProject(manifest, lockfile, PNPM_PARSE_OPTIONS);
+    if (!Object.hasOwn(parser.importers, importer)) {
+      return await parsePnpmProject(manifest, lockfile, PNPM_PARSE_OPTIONS);
+    }
+
+    const packageJson = parsePkgJson(manifest);
+    parser.workspaceArgs = {
+      isWorkspace: true,
+      projectsVersionMap: {
+        ...getWorkspaceLinkIdentities(Object.keys(parser.importers)),
+        [importer]: { name: packageJson.name, version: packageJson.version },
+      },
+    };
+    return await buildDepGraphPnpm(parser, packageJson, PNPM_PARSE_OPTIONS, importer);
   } catch (error) {
     throw new LockFileParseFailedError(absoluteLockfilePath, { cause: error });
   }
 }
+
+// A `link:` dependency becomes a graph node named after the dependent's alias for it, with the
+// version the parser finds for the link target in this map. Without an entry the version is
+// 'undefined', so re-pointing the alias at another workspace package changes nothing in the
+// graph. The target's real version wouldn't distinguish two packages at the same version either,
+// so the importer path stands in for it. Nothing needs to be read from the target's manifest.
+const getWorkspaceLinkIdentities = (importers: string[]) =>
+  Object.fromEntries(
+    importers.map((importer) => [importer, { name: importer, version: `link:${importer}` }])
+  );
 
 // The pnpm lockfile keys each workspace package by its directory relative to the lockfile, which
 // pnpm calls the importer. `.` when they share a directory. The key always uses forward slashes,

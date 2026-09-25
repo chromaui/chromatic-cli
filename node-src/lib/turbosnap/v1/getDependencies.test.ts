@@ -9,6 +9,7 @@ import packageJson from '../../../__mocks__/dependencyChanges/plain/package.json
 import { checkoutFile } from '../../../git/git';
 import TestLogger from '../../testLogger';
 import { SUPPORTED_LOCK_FILES } from '../../utilities';
+import { compareBaseline } from './compareBaseline';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
@@ -193,10 +194,8 @@ describe('getDependencies in a pnpm workspace', () => {
   it('resolves catalog specifiers and keeps workspace links stable', async () => {
     const dependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
 
-    // A `workspace:` link has no version in the lockfile, so the parser reports the string
-    // 'undefined'. It is the same on HEAD and baseline, so it never shows up as a change.
     expect(dependencies.getDepPkgs()).toEqual([
-      { name: '@myorg/shared', version: 'undefined' },
+      { name: '@myorg/shared', version: 'link:packages/shared' },
       { name: 'moment', version: '2.30.1' },
     ]);
   });
@@ -222,6 +221,49 @@ describe('getDependencies in a pnpm workspace', () => {
     });
 
     expect(dependencies.getDepPkgs()).toEqual([{ name: 'is-number', version: '7.0.0' }]);
+  });
+});
+
+describe('getDependencies with an aliased pnpm workspace dependency', () => {
+  const fixturePath = path.join(
+    __dirname,
+    '../../../__mocks__/dependencyParsing/pnpm-workspace-alias'
+  );
+  const manifestPath = 'packages/app/package.json';
+  const lockfilePath = 'pnpm-lock.yaml';
+
+  it('identifies the link by the workspace package it points at', async () => {
+    const dependencies = await getDependencies(ctx, {
+      rootPath: fixturePath,
+      manifestPath,
+      lockfilePath,
+    });
+
+    expect(dependencies.getDepPkgs()).toEqual([{ name: 'theme', version: 'link:packages/red' }]);
+  });
+
+  it('reports the alias as changed when it is pointed at another workspace package', async () => {
+    const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-pnpm-'));
+    try {
+      fs.cpSync(fixturePath, rootPath, { recursive: true });
+      const lockfile = path.join(rootPath, lockfilePath);
+      fs.writeFileSync(
+        lockfile,
+        fs.readFileSync(lockfile, 'utf8').replace('link:../red', 'link:../blue')
+      );
+
+      const head = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
+      const baseline = await getDependencies(ctx, {
+        rootPath: fixturePath,
+        manifestPath,
+        lockfilePath,
+      });
+
+      expect(head.getDepPkgs()).toEqual([{ name: 'theme', version: 'link:packages/blue' }]);
+      await expect(compareBaseline(head, baseline)).resolves.toEqual(new Set(['theme']));
+    } finally {
+      fs.rmSync(rootPath, { recursive: true, force: true });
+    }
   });
 });
 
