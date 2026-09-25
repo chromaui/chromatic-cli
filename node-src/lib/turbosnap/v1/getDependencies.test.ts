@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
-import { describe, expect, it, Mock, vi } from 'vitest';
+import { afterAll, describe, expect, it, Mock, vi } from 'vitest';
 
 import packageJson from '../../../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../../../git/git';
@@ -63,11 +63,13 @@ describe('getDependencies', () => {
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
 
     const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+    await checkoutFile(ctx, commit, 'package.json', tmpdir);
+    await checkoutFile(ctx, commit, 'yarn.lock', tmpdir);
 
     const dependencies = await getDependencies(ctx, {
       rootPath: tmpdir,
-      manifestPath: await checkoutFile(ctx, commit, 'package.json', tmpdir),
-      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock', tmpdir),
+      manifestPath: 'package.json',
+      lockfilePath: 'yarn.lock',
     });
 
     const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
@@ -224,8 +226,10 @@ describe('getDependencies in a pnpm workspace', () => {
 });
 
 describe('getDependencies with an unparseable pnpm lockfile', () => {
+  const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-pnpm-'));
+  afterAll(() => fs.rmSync(rootPath, { recursive: true, force: true }));
+
   it('wraps the parser failure in LockFileParseFailedError with cause', async () => {
-    const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-pnpm-'));
     fs.writeFileSync(path.join(rootPath, 'package.json'), JSON.stringify({ name: 'broken' }));
     fs.writeFileSync(path.join(rootPath, 'pnpm-lock.yaml'), "lockfileVersion: '42.0'\n");
 

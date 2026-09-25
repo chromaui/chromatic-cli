@@ -2,6 +2,7 @@ import snykGraph from '@snyk/dep-graph';
 import {
   copyFileSync as unMockedCopyFileSync,
   mkdtempSync as unMockedMkdtempSync,
+  readFileSync as unMockedReadFileSync,
   statSync as unMockedStatSync,
 } from 'fs';
 import { getPnpmLockfileParser, parsePnpmWorkspaceProject } from 'snyk-nodejs-lockfile-parser';
@@ -31,6 +32,9 @@ copyFileSync.mockReturnValue(undefined);
 
 const mkdtempSync = unMockedMkdtempSync as Mock;
 mkdtempSync.mockReturnValue(tmpdir);
+
+const readFileSync = unMockedReadFileSync as Mock;
+readFileSync.mockReturnValue('');
 
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
@@ -401,8 +405,15 @@ describe('findChangedDependencies', () => {
     await expect(findChangedDependencies(context)).resolves.toEqual(['moment']);
 
     // HEAD and baseline for both the root and the nested package.
-    const importers = pnpmWorkspaceProject.mock.calls.map((call) => call[3]).sort();
-    expect(importers).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
+    expect(pnpmWorkspaceProject).toHaveBeenCalledTimes(4);
+    for (const importer of ['.', 'packages/ui']) {
+      expect(pnpmWorkspaceProject).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.anything(),
+        importer
+      );
+    }
     expect(inspect).not.toHaveBeenCalled();
   });
 });
