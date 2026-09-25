@@ -10,7 +10,7 @@ import { checkoutFile } from '../../../git/git';
 import TestLogger from '../../testLogger';
 import { SUPPORTED_LOCK_FILES } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
-import { getDependencies, getImporter, MAX_LOCK_FILE_SIZE } from './getDependencies';
+import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -183,30 +183,13 @@ describe('getDependencies', () => {
   });
 });
 
-describe('getImporter', () => {
-  it('is the manifest directory relative to the lockfile directory', () => {
-    expect(getImporter('packages/ui/package.json', 'pnpm-lock.yaml')).toBe('packages/ui');
-    expect(getImporter('apps/web/package.json', 'apps/pnpm-lock.yaml')).toBe('web');
-  });
-
-  it('is the current directory when they sit side by side', () => {
-    expect(getImporter('package.json', 'pnpm-lock.yaml')).toBe('.');
-    expect(getImporter('sub/package.json', 'sub/pnpm-lock.yaml')).toBe('.');
-  });
-});
-
 describe('getDependencies in a pnpm workspace', () => {
   const rootPath = path.join(__dirname, '../../../__mocks__/dependencyChanges/pnpm-workspace');
   const manifestPath = 'packages/ui/package.json';
   const lockfilePath = 'pnpm-lock.yaml';
 
   it('resolves catalog and workspace specifiers against the manifest importer', async () => {
-    const dependencies = await getDependencies(ctx, {
-      rootPath,
-      manifestPath,
-      lockfilePath,
-      importer: getImporter(manifestPath, lockfilePath),
-    });
+    const dependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
 
     // A `workspace:` link has no version in the lockfile, so the parser reports the string
     // 'undefined'. It is stable across HEAD and baseline, so it never shows up as a change.
@@ -219,9 +202,8 @@ describe('getDependencies in a pnpm workspace', () => {
   it('leaves specifiers unresolved when the manifest is not a workspace member', async () => {
     const dependencies = await getDependencies(ctx, {
       rootPath,
-      manifestPath,
+      manifestPath: 'packages/not-a-member/package.json',
       lockfilePath,
-      importer: 'packages/not-a-member',
     });
 
     expect(dependencies.getDepPkgs()).toEqual([
@@ -230,7 +212,7 @@ describe('getDependencies in a pnpm workspace', () => {
     ]);
   });
 
-  it('still resolves the root manifest without an importer', async () => {
+  it('resolves the root manifest against the root importer', async () => {
     const dependencies = await getDependencies(ctx, {
       rootPath,
       manifestPath: 'package.json',

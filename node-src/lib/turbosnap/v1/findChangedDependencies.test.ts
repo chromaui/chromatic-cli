@@ -255,25 +255,11 @@ describe('findChangedDependencies', () => {
       expect.arrayContaining(['react', 'lodash'])
     );
 
-    // Root manifest and lock files are checked
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/A.yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
-
-    // Subpackage manifest and lock files are checked
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/A.yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
+    // HEAD and baseline, for both the root and the subpackage.
+    expect(inspect).toHaveBeenCalledTimes(4);
+    for (const file of ['package.json', 'yarn.lock', 'subdir/package.json', 'subdir/yarn.lock']) {
+      expect(checkoutFile).toHaveBeenCalledWith(expect.anything(), 'A', file, tmpdir);
+    }
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
@@ -349,17 +335,13 @@ describe('findChangedDependencies', () => {
 
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
-    expect(inspect).toHaveBeenCalledWith(
-      `${tmpdir}/A.subdir`,
-      `${tmpdir}/A.subdir/package-lock.json`,
-      {
-        dev: true,
-        strictOutOfSync: false,
-      }
-    );
+    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/package-lock.json`, {
+      dev: true,
+      strictOutOfSync: false,
+    });
   });
 
-  it('handles relative paths correctly when copying files to temp directory', async () => {
+  it('resolves manifest and lockfile paths against the repository root', async () => {
     // Mock the repository root to be different from current working directory
     getRepositoryRoot.mockResolvedValue('/root/subdir');
 
@@ -408,10 +390,6 @@ describe('findChangedDependencies', () => {
       // Only the root has a lockfile; nested lookups use full paths and find nothing.
       return Promise.resolve(patterns.includes('pnpm-lock.yaml') ? ['pnpm-lock.yaml'] : []);
     });
-    // Match the real checkoutFile, which keeps the file name so the lockfile kind stays detectable.
-    checkoutFile.mockImplementation((_ctx, _commit, file, directory) =>
-      Promise.resolve(`${directory}/${file.split('/').at(-1)}`)
-    );
     pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
     pnpmWorkspaceProject.mockResolvedValue({ getDepPkgs: () => [] } as any);
     mockChangedPackagesGraph(['moment@2.31.0']);

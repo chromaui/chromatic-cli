@@ -1,0 +1,8 @@
+{
+  "name": "@myorg/not-a-member",
+  "version": "0.0.1",
+  "dependencies": {
+    "@myorg/shared": "workspace:*",
+    "moment": "catalog:"
+  }
+}
