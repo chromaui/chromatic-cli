@@ -27,6 +27,7 @@ export const stats = ({
     testCount: number;
     changeCount: number;
     errorCount: number;
+    ignoredCount?: number;
   };
 }) => {
   return {
