@@ -33,16 +33,13 @@ import {
 } from './git';
 
 vi.mock('./execGit');
-vi.mock('fs/promises', () => ({ readFile: vi.fn() }));
-vi.mock('tmp-promise', () => ({
-  file: vi.fn().mockResolvedValue({ path: '/tmp/fake-target' }),
-}));
+vi.mock('fs/promises', () => ({ mkdir: vi.fn(), readFile: vi.fn() }));
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
-const { readFile } = vi.mocked(await import('fs/promises'));
+const { mkdir, readFile } = vi.mocked(await import('fs/promises'));
 
 const ctx = { log: new TestLogger() };
 
@@ -307,7 +304,21 @@ describe('checkoutFile', () => {
     );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
-      'git show "abc123:package.json" > /tmp/fake-target'
+      'git show "abc123:package.json" > /tmp/anywhere/package.json'
+    );
+  });
+
+  it('keeps the repository-relative path of the file under tmpdir', async () => {
+    execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackages/ui/package.json');
+    execGitCommand.mockResolvedValueOnce('');
+
+    const target = await checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
+
+    expect(target).toBe('/tmp/anywhere/packages/ui/package.json');
+    expect(mkdir).toHaveBeenCalledWith('/tmp/anywhere/packages/ui', { recursive: true });
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:packages/ui/package.json" > /tmp/anywhere/packages/ui/package.json'
     );
   });
 
@@ -324,9 +335,10 @@ describe('checkoutFile', () => {
       ctx,
       'git show "abc123:packages/app/pnpm-lock.yaml"'
     );
+    // The linked file's contents land at the symlink's own path, which is where callers look.
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
-      'git show "abc123:shared/pnpm-lock.yaml" > /tmp/fake-target'
+      'git show "abc123:shared/pnpm-lock.yaml" > /tmp/anywhere/packages/app/pnpm-lock.yaml'
     );
   });
 

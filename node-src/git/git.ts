@@ -1,9 +1,8 @@
 /* eslint-disable max-lines */
-import { readFile } from 'fs/promises';
+import { mkdir, readFile } from 'fs/promises';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
-import { file as temporaryFile } from 'tmp-promise';
 
 import {
   AncestorMissingError,
@@ -435,16 +434,17 @@ const limitConcurrency = pLimit(10);
 const SYMLINK_MODE = '120000';
 
 /**
- * Checkout a file at the given reference and write the results to a temporary file. If the path is
- * a committed symlink, the linked file is checked out rather than the link itself.
+ * Checkout a file at the given reference and write it to the same relative path under `tmpdir`,
+ * so files checked out together keep their layout from the repository. If the path is a committed
+ * symlink, the linked file is checked out rather than the link itself.
  *
  * @param deps Function dependencies.
  * @param deps.log The logger found on the context object.
  * @param reference The reference (usually a commit or branch) to the file version in Git.
- * @param fileName The name of the file to check out.
- * @param tmpdir The directory to write the temporary file to.
+ * @param fileName The repository-relative path of the file to check out.
+ * @param tmpdir The directory to write the file to.
  *
- * @returns The temporary file path of the checked out file.
+ * @returns The absolute path of the checked out file.
  */
 export async function checkoutFile(
   deps: GitDeps,
@@ -455,10 +455,8 @@ export async function checkoutFile(
   const pathspec = `${reference}:${fileName}`;
 
   return limitConcurrency(async () => {
-    const { path: targetFileName } = await temporaryFile({
-      name: path.basename(fileName),
-      tmpdir,
-    });
+    const targetFileName = path.join(tmpdir, fileName);
+    await mkdir(path.dirname(targetFileName), { recursive: true });
 
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
     try {
