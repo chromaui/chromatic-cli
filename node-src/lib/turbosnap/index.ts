@@ -38,7 +38,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     await runTurboSnapV2(ctx, stats);
   }
 
-  if (!runTurboSnapV1 || !ctx.git.changedFiles || ctx.git.changedFiles.length === 0) {
+  if (!runTurboSnapV1 || !ctx.git.changedFiles) {
     return { status: 'skipped' };
   }
 
