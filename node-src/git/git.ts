@@ -461,7 +461,10 @@ export async function checkoutFile(
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
     try {
       const resolvedFileName = await resolveSymlinkAtReference(deps, reference, fileName);
-      await execGitCommand(deps, `git show "${reference}:${resolvedFileName}" > ${targetFileName}`);
+      await execGitCommand(
+        deps,
+        `git show "${reference}:${resolvedFileName}" > "${targetFileName}"`
+      );
     } catch (error) {
       throw new BaselineCheckoutFailedError(pathspec, { cause: error });
     }

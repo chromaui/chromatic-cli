@@ -304,7 +304,7 @@ describe('checkoutFile', () => {
     );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
-      'git show "abc123:package.json" > /tmp/anywhere/package.json'
+      'git show "abc123:package.json" > "/tmp/anywhere/package.json"'
     );
   });
 
@@ -318,7 +318,7 @@ describe('checkoutFile', () => {
     expect(mkdir).toHaveBeenCalledWith('/tmp/anywhere/packages/ui', { recursive: true });
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
-      'git show "abc123:packages/ui/package.json" > /tmp/anywhere/packages/ui/package.json'
+      'git show "abc123:packages/ui/package.json" > "/tmp/anywhere/packages/ui/package.json"'
     );
   });
 
@@ -338,7 +338,7 @@ describe('checkoutFile', () => {
     // The linked file's contents land at the symlink's own path, which is where callers look.
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
-      'git show "abc123:shared/pnpm-lock.yaml" > /tmp/anywhere/packages/app/pnpm-lock.yaml'
+      'git show "abc123:shared/pnpm-lock.yaml" > "/tmp/anywhere/packages/app/pnpm-lock.yaml"'
     );
   });
 
