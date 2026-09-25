@@ -154,6 +154,24 @@ describe('findChangedPackageFiles', () => {
       await findChangedPackageFiles(ctx, [{ commit: 'A', changedFiles: ['package.json'] }])
     ).toStrictEqual(['package.json']);
   });
+
+  it('considers pnpm-lock.yaml changed since its YAML contents cannot be parsed as JSON', async () => {
+    // pnpm-lock.yaml is YAML, not JSON, so it can never be diffed via arePackageDependenciesEqual;
+    // it should always fall into the "can't be traced, treat as changed" path, the same way a
+    // yarn.lock change woul dbe treated
+    execGitCommand.mockImplementation(async (_, input) => {
+      const regexResults = /show\s([^:]*):(.*)/g.exec(input);
+      if (!regexResults) return '';
+      const [, commit] = regexResults;
+      return commit === 'A'
+        ? "lockfileVersion: '9.0'\ncatalogs:\n  default:\n    react: 18.2.0\n"
+        : "lockfileVersion: '9.0'\ncatalogs:\n  default:\n    react: 18.3.0\n";
+    });
+
+    expect(
+      await findChangedPackageFiles(ctx, [{ commit: 'A', changedFiles: ['pnpm-lock.yaml'] }])
+    ).toStrictEqual(['pnpm-lock.yaml']);
+  });
 });
 
 describe('arePackageDependenciesEqual', () => {

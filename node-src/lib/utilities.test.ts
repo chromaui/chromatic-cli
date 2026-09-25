@@ -1,7 +1,13 @@
 import chalk from 'chalk';
 import { describe, expect, it } from 'vitest';
 
-import { groupUntracedFilesByGlob, isPackageManifestFile, matchesFile } from './utilities';
+import {
+  groupUntracedFilesByGlob,
+  isPackageLockFile,
+  isPackageManifestFile,
+  isPackageMetadataFile,
+  matchesFile,
+} from './utilities';
 
 chalk.level = 0;
 
@@ -81,5 +87,65 @@ describe('isPackageManifestFile', () => {
 
   it('returns false for non-package-manifest files in directory', () => {
     expect(isPackageManifestFile('path/to/something.json')).toBe(false);
+  });
+});
+
+describe('isPackageLockFile', () => {
+  it('returns true for package-lock.json at root', () => {
+    expect(isPackageLockFile('package-lock.json')).toBe(true);
+  });
+
+  it('returns true for yarn.lock at root', () => {
+    expect(isPackageLockFile('yarn.lock')).toBe(true);
+  });
+
+  it('returns true for yarn.lock in a directory', () => {
+    expect(isPackageLockFile('path/to/yarn.lock')).toBe(true);
+  });
+
+  it('returns true for pnpm-lock.yaml at root', () => {
+    expect(isPackageLockFile('pnpm-lock.yaml')).toBe(true);
+  });
+
+  it('returns true for pnpm-lock.yaml in a directory', () => {
+    expect(isPackageLockFile('path/to/pnpm-lock.yaml')).toBe(true);
+  });
+
+  it('returns false for non-lock files at root', () => {
+    expect(isPackageLockFile('something.yaml')).toBe(false);
+  });
+
+  it('returns false for non-lock files in a directory', () => {
+    expect(isPackageLockFile('path/to/something.yaml')).toBe(false);
+  });
+
+  it('returns false for pnpm-workspace.yaml', () => {
+    expect(isPackageLockFile('pnpm-workspace.yaml')).toBe(false);
+  });
+});
+
+describe('isPackageMetadataFile', () => {
+  it('returns true for package.json', () => {
+    expect(isPackageMetadataFile('package.json')).toBe(true);
+  });
+
+  it('returns true for package-lock.json', () => {
+    expect(isPackageMetadataFile('package-lock.json')).toBe(true);
+  });
+
+  it('returns true for yarn.lock', () => {
+    expect(isPackageMetadataFile('yarn.lock')).toBe(true);
+  });
+
+  it('returns true for pnpm-lock.yaml', () => {
+    expect(isPackageMetadataFile('pnpm-lock.yaml')).toBe(true);
+  });
+
+  it('returns true for pnpm-lock.yaml in a monorepo subdirectory', () => {
+    expect(isPackageMetadataFile('packages/app/pnpm-lock.yaml')).toBe(true);
+  });
+
+  it('returns false for unrelated files', () => {
+    expect(isPackageMetadataFile('src/index.ts')).toBe(false);
   });
 });
