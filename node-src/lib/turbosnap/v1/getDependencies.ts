@@ -29,9 +29,10 @@ const PNPM_PARSE_OPTIONS = {
  *
  * @param ctx The context set when executing the CLI.
  * @param options Where to find the files.
- * @param options.rootPath The directory the other paths are relative to.
- * @param options.manifestPath The repository-relative path to a `package.json`.
- * @param options.lockfilePath The repository-relative path to the lockfile it is installed from.
+ * @param options.rootPath The directory the other paths are relative to. Its layout must mirror
+ * the repository, because the manifest's position relative to the lockfile identifies it.
+ * @param options.manifestPath The path to a `package.json`, relative to `rootPath`.
+ * @param options.lockfilePath The path to the lockfile it is installed from, relative to `rootPath`.
  *
  * @returns The dependency graph.
  */
@@ -100,7 +101,10 @@ async function inspectLockfile(absoluteManifestPath: string, absoluteLockfilePat
   let result: Awaited<ReturnType<typeof inspect>>;
   try {
     // `inspect` ignores the manifest path it is given and reads the `package.json` next to the
-    // lockfile, so copy the pair into a directory of their own before handing them over.
+    // lockfile, so copy the pair into a directory of their own before handing them over. For
+    // baselines this copies files that were just checked out into another temporary directory.
+    // That is two small files per baseline, which we accept to keep this function's contract the
+    // same for every lockfile type.
     const temporaryLockfilePath = path.join(tmpdir, path.basename(absoluteLockfilePath));
     copyFileSync(absoluteManifestPath, path.join(tmpdir, path.basename(absoluteManifestPath)));
     copyFileSync(absoluteLockfilePath, temporaryLockfilePath);
