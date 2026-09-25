@@ -443,8 +443,6 @@ const SYMLINK_MODE = '120000';
  * @param reference The reference (usually a commit or branch) to the file version in Git.
  * @param fileName The repository-relative path of the file to check out.
  * @param tmpdir The directory to write the file to.
- *
- * @returns The absolute path of the checked out file.
  */
 export async function checkoutFile(
   deps: GitDeps,
@@ -454,7 +452,7 @@ export async function checkoutFile(
 ) {
   const pathspec = `${reference}:${fileName}`;
 
-  return limitConcurrency(async () => {
+  await limitConcurrency(async () => {
     const targetFileName = path.join(tmpdir, fileName);
     await mkdir(path.dirname(targetFileName), { recursive: true });
 
@@ -468,8 +466,6 @@ export async function checkoutFile(
     } catch (error) {
       throw new BaselineCheckoutFailedError(pathspec, { cause: error });
     }
-
-    return targetFileName;
   });
 }
 

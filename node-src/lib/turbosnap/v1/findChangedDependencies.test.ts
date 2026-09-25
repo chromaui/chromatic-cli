@@ -50,7 +50,7 @@ beforeEach(() => {
   findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
     Promise.resolve(file.startsWith('**') ? [] : [file])
   );
-  checkoutFile.mockResolvedValue('');
+  checkoutFile.mockResolvedValue();
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();

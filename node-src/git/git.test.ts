@@ -312,9 +312,8 @@ describe('checkoutFile', () => {
     execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackages/ui/package.json');
     execGitCommand.mockResolvedValueOnce('');
 
-    const target = await checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
+    await checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
 
-    expect(target).toBe('/tmp/anywhere/packages/ui/package.json');
     expect(mkdir).toHaveBeenCalledWith('/tmp/anywhere/packages/ui', { recursive: true });
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
