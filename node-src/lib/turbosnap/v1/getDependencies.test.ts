@@ -258,3 +258,19 @@ describe('getDependencies with a standalone pnpm v5 lockfile', () => {
     expect(dependencies.getDepPkgs()).toEqual([{ name: 'is-number', version: '7.0.0' }]);
   });
 });
+
+describe('getDependencies with a pnpm 12 multi-document lockfile', () => {
+  it('resolves the manifest against the project document, not the packageManager document', async () => {
+    const dependencies = await getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../../../__mocks__/dependencyParsing/pnpm-multi-document'),
+      manifestPath: 'package.json',
+      lockfilePath: 'pnpm-lock.yaml',
+    });
+
+    expect(dependencies.getDepPkgs()).toEqual([
+      { name: 'polished', version: '3.4.2' },
+      { name: '@babel/runtime', version: '7.29.7' },
+      { name: 'typescript', version: '3.7.3' },
+    ]);
+  });
+});
