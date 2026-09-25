@@ -188,11 +188,11 @@ describe('getDependencies in a pnpm workspace', () => {
   const manifestPath = 'packages/ui/package.json';
   const lockfilePath = 'pnpm-lock.yaml';
 
-  it('resolves catalog and workspace specifiers against the manifest importer', async () => {
+  it('resolves catalog specifiers and keeps workspace links stable', async () => {
     const dependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
 
     // A `workspace:` link has no version in the lockfile, so the parser reports the string
-    // 'undefined'. It is stable across HEAD and baseline, so it never shows up as a change.
+    // 'undefined'. It is the same on HEAD and baseline, so it never shows up as a change.
     expect(dependencies.getDepPkgs()).toEqual([
       { name: '@myorg/shared', version: 'undefined' },
       { name: 'moment', version: '2.30.1' },

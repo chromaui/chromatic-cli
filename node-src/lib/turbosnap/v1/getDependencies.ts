@@ -75,8 +75,9 @@ async function parsePnpmLockfile(absoluteManifestPath: string, absoluteLockfileP
 
     // The workspace parser throws when the importer has no entry: standalone lockfiles before v9
     // have no importers table, and a `package.json` outside the workspace globs is never
-    // installed. The yarn and npm parsers keep raw specifiers for manifests the lockfile can't
-    // place rather than failing, so fall back to the parser that does the same for pnpm.
+    // installed. Fall back to the single-project parser, which resolves against the root importer
+    // when there is one and otherwise keeps the manifest's raw specifiers. That matches how the
+    // yarn and npm parsers treat manifests the lockfile can't place, rather than failing.
     // This parses the YAML a second time (the parsers below parse it again internally). Cheap
     // enough at our 10 MB cap, and simpler than catching the parser's failure and retrying.
     const isWorkspaceMember = Object.hasOwn(getPnpmLockfileParser(lockfile).importers, importer);
