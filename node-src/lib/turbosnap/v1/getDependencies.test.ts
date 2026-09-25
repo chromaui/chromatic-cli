@@ -3,13 +3,13 @@ import os from 'os';
 import path from 'path';
 import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
-import { describe, expect, it, Mock, vi } from 'vitest';
+import { afterAll, describe, expect, it, Mock, vi } from 'vitest';
 
 import packageJson from '../../../__mocks__/dependencyChanges/plain/package.json';
 import { checkoutFile } from '../../../git/git';
 import TestLogger from '../../testLogger';
+import { SUPPORTED_LOCK_FILES } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
-import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,11 +63,13 @@ describe('getDependencies', () => {
     const commit = 'e61c2688597a6fda61a7057c866ebfabde955784';
 
     const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
+    await checkoutFile(ctx, commit, 'package.json', tmpdir);
+    await checkoutFile(ctx, commit, 'yarn.lock', tmpdir);
 
     const dependencies = await getDependencies(ctx, {
       rootPath: tmpdir,
-      manifestPath: await checkoutFile(ctx, commit, 'package.json', tmpdir),
-      lockfilePath: await checkoutFile(ctx, commit, 'yarn.lock', tmpdir),
+      manifestPath: 'package.json',
+      lockfilePath: 'yarn.lock',
     });
 
     const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
@@ -180,5 +182,79 @@ describe('getDependencies', () => {
 
     await expect(promise).rejects.toBeInstanceOf(LockFileParseFailedError);
     await expect(promise).rejects.toMatchObject({ cause });
+  });
+});
+
+describe('getDependencies in a pnpm workspace', () => {
+  const rootPath = path.join(__dirname, '../../../__mocks__/dependencyChanges/pnpm-workspace');
+  const manifestPath = 'packages/ui/package.json';
+  const lockfilePath = 'pnpm-lock.yaml';
+
+  it('resolves catalog specifiers and keeps workspace links stable', async () => {
+    const dependencies = await getDependencies(ctx, { rootPath, manifestPath, lockfilePath });
+
+    // A `workspace:` link has no version in the lockfile, so the parser reports the string
+    // 'undefined'. It is the same on HEAD and baseline, so it never shows up as a change.
+    expect(dependencies.getDepPkgs()).toEqual([
+      { name: '@myorg/shared', version: 'undefined' },
+      { name: 'moment', version: '2.30.1' },
+    ]);
+  });
+
+  it('leaves specifiers unresolved when the manifest is not a workspace member', async () => {
+    const dependencies = await getDependencies(ctx, {
+      rootPath,
+      manifestPath: 'packages/not-a-member/package.json',
+      lockfilePath,
+    });
+
+    expect(dependencies.getDepPkgs()).toEqual([
+      { name: '@myorg/shared', version: 'workspace:*' },
+      { name: 'moment', version: 'catalog:' },
+    ]);
+  });
+
+  it('resolves the root manifest against the root importer', async () => {
+    const dependencies = await getDependencies(ctx, {
+      rootPath,
+      manifestPath: 'package.json',
+      lockfilePath,
+    });
+
+    expect(dependencies.getDepPkgs()).toEqual([{ name: 'is-number', version: '7.0.0' }]);
+  });
+});
+
+describe('getDependencies with an unparseable pnpm lockfile', () => {
+  const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic-pnpm-'));
+  afterAll(() => fs.rmSync(rootPath, { recursive: true, force: true }));
+
+  it('wraps the parser failure in LockFileParseFailedError with cause', async () => {
+    fs.writeFileSync(path.join(rootPath, 'package.json'), JSON.stringify({ name: 'broken' }));
+    fs.writeFileSync(path.join(rootPath, 'pnpm-lock.yaml'), "lockfileVersion: '42.0'\n");
+
+    const promise = getDependencies(ctx, {
+      rootPath,
+      manifestPath: 'package.json',
+      lockfilePath: 'pnpm-lock.yaml',
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(LockFileParseFailedError);
+    await expect(promise).rejects.toMatchObject({
+      lockfilePath: path.join(rootPath, 'pnpm-lock.yaml'),
+      cause: expect.any(Error),
+    });
+  });
+});
+
+describe('getDependencies with a standalone pnpm v5 lockfile', () => {
+  it('resolves the manifest even though the lockfile has no importers table', async () => {
+    const dependencies = await getDependencies(ctx, {
+      rootPath: path.join(__dirname, '../../../__mocks__/dependencyChanges/pnpm-v5'),
+      manifestPath: 'package.json',
+      lockfilePath: 'pnpm-lock.yaml',
+    });
+
+    expect(dependencies.getDepPkgs()).toEqual([{ name: 'is-number', version: '7.0.0' }]);
   });
 });
