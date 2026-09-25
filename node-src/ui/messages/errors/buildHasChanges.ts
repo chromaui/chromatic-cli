@@ -23,37 +23,23 @@ export default ({ build, exitCode, isOnboarding }) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
   const ignoredUrl = ignoredTestsUrl(url, isOnboarding);
 
-  const changes: any[] = [];
+  const changeKinds = [
+    build.changeCount > 0 && 'visual',
+    build.accessibilityChangeCount > 0 && 'accessibility',
+  ].filter(Boolean);
+  const changeTotal = (build.changeCount || 0) + (build.accessibilityChangeCount || 0);
 
-  if (build.changeCount > 0 && build.accessibilityChangeCount > 0) {
-    changes.push(
-      chalk`${error} {bold ${pluralize('visual and accessibility changes', build.changeCount + build.accessibilityChangeCount, true)} must be accepted as ${pluralize('baseline', build.changeCount + build.accessibilityChangeCount, false)}.} Review at ${link(url)}`
-    );
-  } else {
-    if (build.changeCount > 0) {
-      changes.push(
-        chalk`${error} {bold ${pluralize('visual changes', build.changeCount, true)} must be accepted as ${pluralize('baseline', build.changeCount, false)}.} Review at ${link(url)}`
-      );
-    }
-    if (build.accessibilityChangeCount > 0) {
-      changes.push(
-        chalk`${error} {bold ${pluralize('accessibility changes', build.accessibilityChangeCount, true)} must be accepted as ${pluralize('baseline', build.accessibilityChangeCount, false)}.} Review at ${link(url)}`
-      );
-    }
-  }
+  const changesLine =
+    changeTotal > 0 &&
+    chalk`${error} {bold ${pluralize(`${changeKinds.join(' and ')} changes`, changeTotal, true)} must be accepted as ${pluralize('baseline', changeTotal)}.} Review at ${link(url)}`;
 
-  if (build.ignoredCount > 0) {
-    if (build.changeCount > 0 || build.accessibilityChangeCount > 0) {
-      changes.push(''); // blank line for spacing
-    }
-    changes.push(
-      chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${build.ignoredCount > 1 ? 'were' : 'was'} ignored in this build.} Review at ${link(ignoredUrl)}`
-    );
-  }
+  const ignoredLine =
+    build.ignoredCount > 0 &&
+    chalk`{bold ${pluralize('test', build.ignoredCount, true)} ${pluralize('was', build.ignoredCount)} ignored in this build.} Review at ${link(ignoredUrl)}`;
 
   return dedent(chalk`
-    ${changes.join('\n')}
-    
+    ${[changesLine, ignoredLine].filter(Boolean).join('\n\n')}
+
     ${info} For CI/CD use cases, this command failed with exit code ${exitCode}
     Pass {bold --exit-zero-on-changes} to succeed this command regardless of changes.
     Pass {bold --auto-accept-changes} to succeed and automatically accept any changes.
