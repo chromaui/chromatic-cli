@@ -31,15 +31,21 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     return { status: 'skipped' };
   }
 
+  const collectHashes = shouldCollectHashes(ctx);
+  const traceWithV1 = runTurboSnapV1 && !!ctx.git.changedFiles;
+  if (!collectHashes && !traceWithV1) {
+    return { status: 'skipped' };
+  }
+
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
 
   // V2 runs for its side effects only; it never affects the v1 decision or the customer's build.
-  if (shouldCollectHashes(ctx)) {
+  if (collectHashes) {
     await runTurboSnapV2(ctx, stats);
   }
 
-  if (!runTurboSnapV1 || !ctx.git.changedFiles) {
+  if (!traceWithV1) {
     return { status: 'skipped' };
   }
 
