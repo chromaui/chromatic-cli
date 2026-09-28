@@ -113,18 +113,26 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
-  it.each([[], undefined])(
-    'returns skipped and only runs TurboSnap v2 when there are no changed files (arg: %s)',
-    async (changedFiles) => {
-      const ctx = { ...makeContext(), git: { changedFiles } };
+  it('returns skipped and only runs TurboSnap v2 when changed files are unknown', async () => {
+    const ctx = { ...makeContext(), git: { changedFiles: undefined } };
 
-      await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
 
-      expect(readStatsFile).toHaveBeenCalled();
-      expect(traceChangedFilesV2).toHaveBeenCalled();
-      expect(traceChangedFilesV1).not.toHaveBeenCalled();
-    }
-  );
+    expect(readStatsFile).toHaveBeenCalled();
+    expect(traceChangedFilesV2).toHaveBeenCalled();
+    expect(traceChangedFilesV1).not.toHaveBeenCalled();
+  });
+
+  // An empty list means nothing changed, so v1 must run and trace zero story files. Skipping here
+  // would leave `onlyStoryFiles` unset and capture every story instead of copying them all.
+  it('runs TurboSnap v1 when the changed files list is empty', async () => {
+    const ctx = { ...makeContext(), git: { changedFiles: [] } };
+
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual(v1Result);
+
+    expect(traceChangedFilesV2).toHaveBeenCalled();
+    expect(traceChangedFilesV1).toHaveBeenCalledOnce();
+  });
 
   it('throws if the stats file is not found and the user asked for TurboSnap', async () => {
     const ctx = { ...makeContext(), fileInfo: undefined };
