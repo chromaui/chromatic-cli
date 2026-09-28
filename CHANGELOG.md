@@ -1,3 +1,19 @@
+# v18.10.0 (Mon Sep 28 2026)
+
+#### 🚀 Enhancement
+
+- Parse PNPM lock files and support PNPM workspaces [#1502](https://github.com/chromaui/chromatic-cli/pull/1502) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Parse PNPM 12 multi-document lockfiles [#1505](https://github.com/chromaui/chromatic-cli/pull/1505) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.9.6 (Mon Sep 28 2026)
 
 #### 🐛 Bug Fix
