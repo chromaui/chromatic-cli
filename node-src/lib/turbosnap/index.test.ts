@@ -113,6 +113,14 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
+  it('does not collect hashes when onlyChanged is explicitly false', async () => {
+    const ctx = { ...makeContext(), turboSnap: undefined, options: { onlyChanged: false } };
+
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+
+    expect(traceChangedFilesV2).not.toHaveBeenCalled();
+  });
+
   it('returns skipped and only runs TurboSnap v2 when changed files are unknown', async () => {
     const ctx = { ...makeContext(), git: { changedFiles: undefined } };
 

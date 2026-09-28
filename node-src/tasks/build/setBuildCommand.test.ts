@@ -219,6 +219,22 @@ describe('setBuildCommand', () => {
     expect(result).toEqual('npm run build:storybook');
   });
 
+  it('does not emit the stats file when onlyChanged is explicitly false', async () => {
+    getCliCommand.mockReturnValue(Promise.resolve('npm run build:storybook'));
+
+    const result = await setBuildCommand(
+      { ...baseDeps, options: { buildScriptName: 'build:storybook', onlyChanged: false } },
+      { ...baseInput, sourceDir: './source-dir/', storybook: { version: '6.2.0' } }
+    );
+
+    expect(getCliCommand).toHaveBeenCalledWith(
+      expect.anything(),
+      ['build:storybook', '--output-dir=./source-dir/'],
+      { programmatic: true }
+    );
+    expect(result).toEqual('npm run build:storybook');
+  });
+
   it('does not emit the stats file for --build-command without a TurboSnap request', async () => {
     const result = await setBuildCommand(
       { ...baseDeps, options: { buildCommand: 'make build-storybook' } },

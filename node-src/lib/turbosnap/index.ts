@@ -4,6 +4,7 @@ import semver from 'semver';
 import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
+import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -56,7 +57,7 @@ function missingStatsFileError(ctx: Context) {
 
 // Asks the filesystem, never what the user requested.
 function shouldCollectHashes(ctx: Context) {
-  return !ctx.env.CHROMATIC_TURBOSNAP_DISABLE_HASHES && !!ctx.fileInfo?.statsPath;
+  return !isHashCollectionDisabled(ctx) && !!ctx.fileInfo?.statsPath;
 }
 
 async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
