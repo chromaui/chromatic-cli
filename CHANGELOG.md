@@ -1,3 +1,17 @@
+# v18.9.6 (Mon Sep 28 2026)
+
+#### 🐛 Bug Fix
+
+- Run TurboSnap v1 when no files changed [#1508](https://github.com/chromaui/chromatic-cli/pull/1508) ([@codykaup](https://github.com/codykaup))
+- Remove unused dependencies [#1503](https://github.com/chromaui/chromatic-cli/pull/1503) ([@codykaup](https://github.com/codykaup))
+- Speed up CI installs and run checks in parallel [#1504](https://github.com/chromaui/chromatic-cli/pull/1504) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.9.5 (Tue Sep 22 2026)
 
 #### 🐛 Bug Fix
