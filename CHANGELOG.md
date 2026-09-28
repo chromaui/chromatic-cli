@@ -1,3 +1,15 @@
+# v18.10.1 (Mon Sep 28 2026)
+
+#### 🐛 Bug Fix
+
+- Advise users when the Storybook config directory is invalid [#1499](https://github.com/chromaui/chromatic-cli/pull/1499) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.10.0 (Mon Sep 28 2026)
 
 #### 🚀 Enhancement
