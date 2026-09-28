@@ -23,6 +23,6 @@ export interface ManifestInput {
   projectFiles: ProjectFiles;
   /** The absolute Storybook config directory, as it arrives on `ctx.storybook`. */
   configDir: AbsolutePath;
-  /** The absolute configured static directories. Empty when unset. */
+  /** The absolute configured static directories, or single static files. Empty when unset. */
   staticDirs: AbsolutePath[];
 }
