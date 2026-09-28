@@ -71,9 +71,11 @@ describe('traceChangedFiles', () => {
       storybookConfigFiles: expect.any(String),
       staticFiles: expect.any(String),
     });
+    // The static dir is nested in the config dir, so its asset is in both detail sections.
     expect(writtenManifest(fixture).storybookConfigFiles).toEqual({
       './.storybook/main.ts': expect.any(String),
       [PREVIEW]: expect.any(String),
+      './.storybook/static/logo.svg': expect.any(String),
     });
     expect(writtenManifest(fixture).staticFiles).toEqual({
       './.storybook/static/logo.svg': expect.any(String),
@@ -188,6 +190,25 @@ describe('traceChangedFiles', () => {
       expect.anything()
     );
   });
+
+  it.each<FailureLogLevel>(['error', 'debug'])(
+    'falls back to v1 and advises --storybook-config-dir when the config dir has no main config (%s)',
+    async (level) => {
+      const fixture = setup();
+      fixture.disk.directories = { [configDirectory]: ['preview.ts'] };
+
+      await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
+
+      expect(fixture.log[level]).toHaveBeenCalledWith(expect.stringContaining(configDirectory));
+      expect(fixture.log[level]).toHaveBeenCalledWith(
+        expect.stringContaining('--storybook-config-dir')
+      );
+      // A misconfigured project is the user's to fix, not a CLI bug to report.
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(fixture.runQuery).not.toHaveBeenCalled();
+      expect(writtenManifest(fixture)).toBeUndefined();
+    }
+  );
 
   it('names the refusal even when the Index sends an error without a message', async () => {
     const fixture = setup();

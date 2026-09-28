@@ -2,9 +2,11 @@ import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
+import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
 import type { Logger } from '../../log';
 import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
+import { MissingStorybookConfigError } from './outOfGraphFiles';
 import { ProjectFiles } from './projectFiles';
 import { uploadHashes } from './uploadHashes';
 
@@ -65,6 +67,11 @@ export async function traceChangedFiles(
       projectFiles: input.projectFiles,
     });
   } catch (error) {
+    // A misconfigured project is the user's to fix, not a bug to report.
+    if (error instanceof MissingStorybookConfigError) {
+      input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
+      return { status: 'fallback' };
+    }
     return failed(input, 'Failed to build manifest for TurboSnap v2', error);
   }
   input.log.debug('Generated manifest for TurboSnap v2');
