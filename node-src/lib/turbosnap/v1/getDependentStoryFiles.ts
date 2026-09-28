@@ -21,9 +21,26 @@ import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 type FilePath = string;
 type NormalizedName = string;
 type TraceToCheck = (string | number | string[])[];
+// One entry per normalized name: the module that represents the group, and the union of the
+// normalized reasons of every module in the group.
+interface MergedModule {
+  module: Module;
+  reasons: NormalizedName[];
+}
 
 // Ignore these while tracing dependencies
 const INTERNALS = [/\/webpack\/runtime\//, /^\(webpack\)/];
+
+const PROXY_PREFIX_REGEX = /^\0/;
+const URL_PARAM_REGEX = /\?.*/;
+// Webpack context module names contain `?` inside a regex, not a query string.
+const CSF_REGEX = /\s+(sync|lazy)\s+/;
+
+const hasQueryParameters = (name: string) => URL_PARAM_REGEX.test(name) && !CSF_REGEX.test(name);
+
+// A module name that maps to a real file on its own, without a proxy prefix or a query string.
+const isPlainModuleName = (name: string) =>
+  !PROXY_PREFIX_REGEX.test(name) && !hasQueryParameters(name);
 
 const isPackageLockFile = (name: string) =>
   SUPPORTED_LOCK_FILES.some((lockfile) => name.endsWith(lockfile));
@@ -113,13 +130,11 @@ export async function getDependentStoryFiles(
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
   const normalize = (posixPath: FilePath): NormalizedName => {
-    const CSF_REGEX = /\s+(sync|lazy)\s+/g;
-    const URL_PARAM_REGEX = /(\?.*)/g;
-    const newPath = normalizePath(posixPath, rootPath, projectRoot);
+    // A leading NUL marks a bundler proxy of a real file (e.g. Vite's
+    // `\0./node_modules/react/index.js?commonjs-es-import`), so fold it into that file.
+    const newPath = normalizePath(posixPath.replace(PROXY_PREFIX_REGEX, ''), rootPath, projectRoot);
     // Trim query params such as `?ngResource` which are sometimes present
-    return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
-      ? newPath.replaceAll(URL_PARAM_REGEX, '')
-      : newPath;
+    return hasQueryParameters(newPath) ? newPath.replace(URL_PARAM_REGEX, '') : newPath;
   };
 
   const storybookDirectory = relativeTo(rootPath, configDirectory);
@@ -164,48 +179,65 @@ export async function getDependentStoryFiles(
     !storiesEntryFiles.includes(name) &&
     !isDocumentationFile(name);
 
-  stats.modules
-    .filter((module_) => isUserModule(module_))
-    // TODO: refactor this function
-    // eslint-disable-next-line complexity
-    .map((module_) => {
-      const normalizedName = normalize(module_.name);
-      modulesByName.set(normalizedName, module_);
-      namesById.set(module_.id, normalizedName);
+  const userModules = stats.modules.filter((module_) => isUserModule(module_));
 
-      const packageName = getPackageName(module_.name);
-      if (packageName) {
-        // Track all modules from any node_modules directory by their package name, so we can mark
-        // all those files "changed" if a dependency (version) changes, while still being able to
-        // "untrace" certain files (or globs) in those packages.
-        if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
-        nodeModules.get(packageName)?.push(normalizedName);
-      }
+  // Several stats modules can normalize to one name: a Vue/Svelte SFC and its `?type=style`
+  // sub-module, or a file and its `\0` proxies. Merge them under one entry so a trace that reaches
+  // the name continues through every importer of every node.
+  const mergedModulesByName = new Map<NormalizedName, MergedModule>();
+  for (const module_ of userModules) {
+    const normalizedName = normalize(module_.name);
+    const reasons = (module_.reasons ?? [])
+      .map((reason) => reason.moduleName)
+      .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
+      .map((moduleName) => normalize(moduleName))
+      .filter((reasonName) => reasonName && reasonName !== normalizedName);
 
-      if (module_.modules) {
-        for (const m of module_.modules) {
-          modulesByName.set(normalize(m.name), module_);
-        }
-      }
+    const merged = mergedModulesByName.get(normalizedName);
+    if (!merged) {
+      mergedModulesByName.set(normalizedName, { module: module_, reasons });
+      continue;
+    }
+    // The plain file's id is what the backend matches against a story's `parameters.fileName`.
+    // Between equally plain modules the last one wins, as it did before merging.
+    if (isPlainModuleName(module_.name) || !isPlainModuleName(merged.module.name)) {
+      merged.module = module_;
+    }
+    for (const reason of reasons) {
+      if (!merged.reasons.includes(reason)) merged.reasons.push(reason);
+    }
+  }
 
-      const normalizedReasons = module_.reasons
-        ?.map((reason) => reason.moduleName)
-        .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
-        .map((moduleName) => normalize(moduleName))
-        .filter((reasonName) => reasonName && reasonName !== normalizedName);
-      if (normalizedReasons) {
-        reasonsById.set(module_.id, normalizedReasons);
-      }
+  for (const module_ of userModules) {
+    const normalizedName = normalize(module_.name);
+    const merged = mergedModulesByName.get(normalizedName) as MergedModule;
+    modulesByName.set(normalizedName, merged.module);
+    namesById.set(module_.id, normalizedName);
+    reasonsById.set(module_.id, merged.reasons);
 
-      if (
-        !isStorybookFile(normalizedName) &&
-        reasonsById
-          .get(module_.id)
-          ?.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
-      ) {
-        csfGlobsByName.add(normalizedName);
+    const packageName = getPackageName(module_.name);
+    if (packageName) {
+      // Track all modules from any node_modules directory by their package name, so we can mark
+      // all those files "changed" if a dependency (version) changes, while still being able to
+      // "untrace" certain files (or globs) in those packages.
+      if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
+      const packageModules = nodeModules.get(packageName) as NormalizedName[];
+      if (!packageModules.includes(normalizedName)) packageModules.push(normalizedName);
+    }
+
+    if (module_.modules) {
+      for (const m of module_.modules) {
+        modulesByName.set(normalize(m.name), module_);
       }
-    });
+    }
+
+    if (
+      !isStorybookFile(normalizedName) &&
+      merged.reasons.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
+    ) {
+      csfGlobsByName.add(normalizedName);
+    }
+  }
 
   if (csfGlobsByName.size === 0) {
     // Check for misconfigured Storybook configDir. Only applicable to v6 store because v7 store
