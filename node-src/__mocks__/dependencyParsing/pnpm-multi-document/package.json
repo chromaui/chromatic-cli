@@ -1,0 +1,12 @@
+{
+  "name": "pnpm-multi-document",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.6.0",
+  "dependencies": {
+    "polished": "3.4.2"
+  },
+  "devDependencies": {
+    "typescript": "3.7.3"
+  }
+}
