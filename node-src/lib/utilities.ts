@@ -85,8 +85,13 @@ export function isDocumentationFile(filePath: string) {
 export const isPackageManifestFile = (filePath: string) =>
   [/(^|\/)package\.json$/].some((re) => re.test(filePath));
 
+export const PNPM_LOCK_FILE = 'pnpm-lock.yaml';
+export const SUPPORTED_LOCK_FILES = ['yarn.lock', PNPM_LOCK_FILE, 'package-lock.json'];
+
 export const isPackageLockFile = (filePath: string) =>
-  [/(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/].some((re) => re.test(filePath));
+  SUPPORTED_LOCK_FILES.some(
+    (lockfile) => filePath === lockfile || filePath.endsWith(`/${lockfile}`)
+  );
 
 export const isPackageMetadataFile = (filePath: string) =>
   isPackageManifestFile(filePath) || isPackageLockFile(filePath);

@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { ChangedPackageFilesBailReason, InvalidChangedFilesBailReason } from '../../../types';
+import { SUPPORTED_LOCK_FILES } from '../../utilities';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
@@ -11,7 +12,6 @@ import {
   NetworkError,
   ReplacementFailedError,
 } from './errors';
-import { SUPPORTED_LOCK_FILES } from './findChangedDependencies';
 
 /**
  * Detect which supported lockfile kind a given path corresponds to.

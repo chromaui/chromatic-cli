@@ -1,7 +1,13 @@
 import chalk from 'chalk';
 import { describe, expect, it } from 'vitest';
 
-import { groupUntracedFilesByGlob, isPackageManifestFile, matchesFile } from './utilities';
+import {
+  groupUntracedFilesByGlob,
+  isPackageLockFile,
+  isPackageManifestFile,
+  isPackageMetadataFile,
+  matchesFile,
+} from './utilities';
 
 chalk.level = 0;
 
@@ -81,5 +87,32 @@ describe('isPackageManifestFile', () => {
 
   it('returns false for non-package-manifest files in directory', () => {
     expect(isPackageManifestFile('path/to/something.json')).toBe(false);
+  });
+});
+
+describe('isPackageLockFile', () => {
+  it.each(['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'])(
+    'returns true for %s at the root or in a directory',
+    (lockfile) => {
+      expect(isPackageLockFile(lockfile)).toBe(true);
+      expect(isPackageLockFile(`path/to/${lockfile}`)).toBe(true);
+    }
+  );
+
+  it('returns false for other files', () => {
+    expect(isPackageLockFile('pnpm-workspace.yaml')).toBe(false);
+    expect(isPackageLockFile('not-yarn.lock')).toBe(false);
+  });
+});
+
+describe('isPackageMetadataFile', () => {
+  it('recognizes manifests and lockfiles', () => {
+    expect(isPackageMetadataFile('packages/ui/package.json')).toBe(true);
+    expect(isPackageMetadataFile('pnpm-lock.yaml')).toBe(true);
+  });
+
+  it('does not recognize other package manager files', () => {
+    expect(isPackageMetadataFile('pnpm-workspace.yaml')).toBe(false);
+    expect(isPackageMetadataFile('.npmrc')).toBe(false);
   });
 });
