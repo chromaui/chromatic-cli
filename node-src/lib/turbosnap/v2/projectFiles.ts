@@ -34,7 +34,8 @@ export interface ProjectFiles {
   ): Promise<Record<AbsolutePath, FileHash>>;
   /**
    * Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. A path
-   * that names a single file lists that file alone.
+   * that names a single file lists that file alone. Throws when the path itself cannot be stat'd for
+   * a reason other than absence, matching `isFile` and `isDirectory`.
    */
   listTree(absolutePath: AbsolutePath): AbsolutePath[];
   /** Writes the contents to the file, creating parent directories and overwriting it if present. */
@@ -155,6 +156,10 @@ function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
  * @param absolutePath The absolute directory to walk, or the absolute file to list.
  *
  * @returns The absolute path of every file found.
+ *
+ * @throws {Error} When the path itself cannot be stat'd for a reason other than absence, such as a
+ * symlink cycle at the path or a permission error, since those are the `isFile` and `isDirectory`
+ * rules.
  */
 function listTree(log: Logger, absolutePath: AbsolutePath): AbsolutePath[] {
   return statFile(log, absolutePath)?.isFile()
