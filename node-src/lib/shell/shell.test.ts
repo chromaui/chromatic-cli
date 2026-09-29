@@ -23,4 +23,9 @@ describe('runCommand', () => {
   it('times out and kills the process', async () => {
     await expect(runCommand('sleep 60', { timeout: 200 })).rejects.toThrow(/timed out/);
   });
+
+  it('marks the timeout error with isTimeout', async () => {
+    const error: any = await runCommand('sleep 60', { timeout: 200 }).catch((e) => e);
+    expect(error.isTimeout).toBe(true);
+  });
 });
