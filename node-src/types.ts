@@ -446,7 +446,6 @@ export interface Context {
     testCount: number;
     changeCount: number;
     errorCount: number;
-    accessibilityChangeCount: number;
     interactionTestFailuresCount: number;
     ignoredCount?: number;
     pendingCount?: number;
