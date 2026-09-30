@@ -85,12 +85,15 @@ describe('snapshotProject', () => {
     expect(ctx.exitCode).toBe(0);
   });
 
-  it('queries the ignored test count and sets it on context', async () => {
-    const build = { app: {}, number: 1, features: {}, reportToken: 'report-token' };
+  it('queries the counts and keeps the verify-time features on the completed build', async () => {
+    const features = { uiTests: true, uiReview: false, accessibilityTests: { enabled: true } };
+    const build = { app: {}, number: 1, features, reportToken: 'report-token' };
     const ctx = { ...createBaseTestContext(), build } as any;
 
     ctx.client.runQuery.mockReturnValueOnce({
-      app: { build: { ignoredCount: 3, status: 'PASSED', completedAt: 1 } },
+      app: {
+        build: { ignoredCount: 3, pendingCount: 2, status: 'PASSED', completedAt: 1 },
+      },
     });
 
     await runSnapshot(ctx);
@@ -99,7 +102,18 @@ describe('snapshotProject', () => {
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );
-    expect(ctx.build.ignoredCount).toBe(3);
+    for (const field of [
+      'pendingCount: testCount(statuses: [PENDING])',
+      'acceptedCount: testCount(statuses: [ACCEPTED])',
+      'deniedCount: testCount(statuses: [DENIED])',
+    ]) {
+      expect(ctx.client.runQuery).toHaveBeenCalledWith(
+        expect.stringContaining(field),
+        { number: 1 },
+        { headers: { Authorization: `Bearer report-token` } }
+      );
+    }
+    expect(ctx.build).toMatchObject({ ignoredCount: 3, pendingCount: 2, features });
   });
 
   it('sets exitCode to 1 when build has changes', async () => {
