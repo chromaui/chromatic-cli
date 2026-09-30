@@ -50,14 +50,23 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
   }
 
-  function listTree(absoluteDirectory: AbsolutePath): AbsolutePath[] {
-    const entries = disk.directories?.[absoluteDirectory];
+  // A path is a file for the purposes of listing only when its parent directory names it. The
+  // "everything else is a file" default is for source files the stats fixture names; applying it here
+  // would turn a configured-but-missing static directory into a file.
+  function isListedFile(absolutePath: AbsolutePath): boolean {
+    return Boolean(
+      disk.directories?.[path.dirname(absolutePath)]?.includes(path.basename(absolutePath))
+    );
+  }
+
+  function listTree(absolutePath: AbsolutePath): AbsolutePath[] {
+    const entries = disk.directories?.[absolutePath];
     if (!entries) {
-      return [];
+      return isListedFile(absolutePath) ? [absolutePath] : [];
     }
 
     return entries.flatMap((name) => {
-      const entryPath = path.join(absoluteDirectory, name);
+      const entryPath = path.join(absolutePath, name);
       return disk.directories?.[entryPath] ? listTree(entryPath) : [entryPath];
     });
   }

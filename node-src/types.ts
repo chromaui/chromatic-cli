@@ -273,7 +273,7 @@ export interface StorybookPaths {
   projectRoot: AbsolutePath;
   /** The absolute directory containing Storybook's configuration. */
   configDir: AbsolutePath;
-  /** The absolute directories Storybook serves as static assets. */
+  /** The absolute directories, or single files, Storybook serves as static assets. */
   staticDirs: AbsolutePath[];
 }
 
