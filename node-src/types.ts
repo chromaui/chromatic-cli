@@ -499,6 +499,8 @@ export interface Context {
     componentCount: number;
     testCount: number;
     changeCount: number;
+    pendingCount?: number;
+    ignoredCount?: number;
     errorCount: number;
     actualTestCount: number;
     actualCaptureCount: number;
