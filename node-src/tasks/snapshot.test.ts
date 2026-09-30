@@ -85,6 +85,23 @@ describe('snapshotProject', () => {
     expect(ctx.exitCode).toBe(0);
   });
 
+  it('queries the ignored test count and sets it on context', async () => {
+    const build = { app: {}, number: 1, features: {}, reportToken: 'report-token' };
+    const ctx = { ...createBaseTestContext(), build } as any;
+
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: { build: { ignoredCount: 3, status: 'PASSED', completedAt: 1 } },
+    });
+
+    await runSnapshot(ctx);
+    expect(ctx.client.runQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ignoredCount: testCount(statuses: [IGNORED])'),
+      { number: 1 },
+      { headers: { Authorization: `Bearer report-token` } }
+    );
+    expect(ctx.build.ignoredCount).toBe(3);
+  });
+
   it('sets exitCode to 1 when build has changes', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = { ...createBaseTestContext(), build, announcedBuild: build } as any;
