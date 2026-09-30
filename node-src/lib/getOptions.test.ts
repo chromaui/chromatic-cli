@@ -29,6 +29,74 @@ const getContext = (argv: string[]): Context => {
 };
 
 describe('getOptions', () => {
+  describe('baseline workflow groundwork', () => {
+    const sha = 'a'.repeat(40);
+
+    it('reads both options from CLI flags and enables tracing for bypass', () => {
+      expect(
+        getOptions(getContext(['--require-baseline', sha, '--bypass-if-unchanged']))
+      ).toMatchObject({
+        requireBaseline: sha,
+        bypassIfUnchanged: true,
+        onlyChanged: true,
+      });
+    });
+
+    it('preserves CLI-over-config and programmatic-over-CLI precedence', () => {
+      const ctx = getContext(['--require-baseline', sha, '--no-bypass-if-unchanged']);
+      ctx.configuration = { requireBaseline: 'b'.repeat(40), bypassIfUnchanged: true };
+      expect(getOptions(ctx)).toMatchObject({ requireBaseline: sha, bypassIfUnchanged: false });
+      ctx.extraOptions = { requireBaseline: 'c'.repeat(40), bypassIfUnchanged: true };
+      expect(getOptions(ctx)).toMatchObject({
+        requireBaseline: 'c'.repeat(40),
+        bypassIfUnchanged: true,
+      });
+    });
+
+    it('rejects an explicitly disabled onlyChanged after applying precedence', () => {
+      const ctx = getContext(['--bypass-if-unchanged']);
+      ctx.configuration = { onlyChanged: false };
+      expect(() => getOptions(ctx)).toThrow('onlyChanged: false');
+      const override = getContext(['--bypass-if-unchanged', '--only-changed']);
+      override.configuration = { onlyChanged: false };
+      expect(getOptions(override).onlyChanged).toBe(true);
+    });
+
+    it('enables tracing even when an existing branch glob would exclude main', () => {
+      expect(
+        getOptions(getContext(['--bypass-if-unchanged', '--only-changed=feature/*'])).onlyChanged
+      ).toBe(true);
+    });
+
+    it.each(['--skip', '--patch-build=feature...main', '--playwright', '--cypress', '--vitest'])(
+      'rejects the unsupported combination %s',
+      (flag) => {
+        expect(() => getOptions(getContext(['--require-baseline', sha, flag]))).toThrow();
+        expect(() => getOptions(getContext(['--bypass-if-unchanged', flag]))).toThrow();
+      }
+    );
+
+    it.each(['', 'abc123', 'HEAD', 'a'.repeat(40) + ';echo bad'])(
+      'rejects malformed required commit %s',
+      (value) =>
+        expect(() => getOptions(getContext([`--require-baseline=${value}`]))).toThrow(
+          'full Git commit ID'
+        )
+    );
+
+    it('rejects unsupported programmatic modes', () => {
+      for (const extraOptions of [
+        { isLocalBuild: true },
+        { url: 'http://localhost:6006' },
+        { reactNative: {} },
+      ]) {
+        const ctx = getContext(['--bypass-if-unchanged']);
+        ctx.extraOptions = extraOptions;
+        expect(() => getOptions(ctx)).toThrow('committed Storybook CI builds');
+      }
+    });
+  });
+
   it('sets reasonable defaults', async () => {
     expect(getOptions(getContext(['--project-token', 'cli-code']))).toMatchObject({
       projectToken: 'cli-code',

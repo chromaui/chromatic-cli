@@ -18,14 +18,22 @@ import {
   getUserEmail,
   getVersion,
 } from '../git/git';
+import { validateTestedCheckout } from '../git/validateBaselineCheckout';
+import { validateRequiredBaseline } from '../git/validateRequiredBaseline';
+import {
+  baselineWorkflowUnavailable,
+  hasBaselineWorkflow,
+  validateBaselineWorkflowSkip,
+} from '../lib/baselineWorkflow';
 import { getHasRouter } from '../lib/getHasRouter';
 import matchesBranch from '../lib/matchesBranch';
-import { exitCodes, setExitCode } from '../lib/setExitCode';
+import { exitCodes, setExitCode, TaskFailure } from '../lib/setExitCode';
 import { captureBailException } from '../lib/turbosnap/v1/captureBailException';
 import { classifyInvalidChangedFilesDetail } from '../lib/turbosnap/v1/classifyBailDetail';
 import { isPackageMetadataFile, matchesFile } from '../lib/utilities';
 import {
   BaselineBuild,
+  BaselineWorkflow,
   Context,
   Deps,
   Git,
@@ -55,6 +63,7 @@ export interface GitInfoInput {
   fromCI: boolean;
   interactive: boolean;
   isLocalBuild: boolean;
+  isReactNativeApp?: boolean;
   skip: boolean | string;
   ignoreLastBuildOnBranch?: string;
   onlyChanged: boolean | string;
@@ -72,6 +81,7 @@ export interface GitInfoOutput {
   build?: BaselineBuild;
   setForceRebuild: boolean;
   rebuildForBuildId?: string;
+  baselineWorkflow?: BaselineWorkflow;
 }
 
 export type GitInfoPartial =
@@ -246,6 +256,37 @@ export async function gatherGitInfo(
   const { branch, commit, slug } = git;
 
   git.matchesBranch = (glob: string | boolean) => matchesBranch(branch, glob);
+
+  if (hasBaselineWorkflow(options)) {
+    validateBaselineWorkflowSkip({ ...options, skip }, branch);
+    if (!git.fromCI || isLocalBuild || input.isReactNativeApp) {
+      throw new TaskFailure('Baseline workflows support only committed Storybook CI builds.', {
+        exitCode: exitCodes.INVALID_OPTIONS,
+        userError: true,
+      });
+    }
+    await validateTestedCheckout({ log, options }, commit);
+    const requiredCommit = options.requireBaseline
+      ? await validateRequiredBaseline({ log, options }, options.requireBaseline, commit)
+      : undefined;
+    // Groundwork only: never fall through to legacy ancestry/skip behavior before
+    // the authenticated server resolution and announcement protocol is integrated.
+    return {
+      kind: 'continue',
+      output: {
+        git,
+        projectMetadata,
+        isOnboarding: false,
+        setForceRebuild: false,
+        baselineWorkflow: {
+          requiredCommit,
+          bypassIfUnchanged: !!options.bypassIfUnchanged,
+          state: 'UNSUPPORTED',
+          reason: 'BASELINE_FEATURE_UNSUPPORTED',
+        },
+      },
+    };
+  }
 
   if (git.matchesBranch(skip)) {
     const { title, output } = skippingBuild(git);
@@ -462,6 +503,7 @@ export const extractGitInfoInput = (ctx: Context): GitInfoInput => ({
   fromCI: ctx.options.fromCI,
   interactive: ctx.options.interactive,
   isLocalBuild: ctx.options.isLocalBuild,
+  isReactNativeApp: ctx.isReactNativeApp,
   skip: ctx.options.skip,
   ignoreLastBuildOnBranch: ctx.options.ignoreLastBuildOnBranch,
   onlyChanged: ctx.options.onlyChanged,
@@ -472,6 +514,10 @@ export const extractGitInfoInput = (ctx: Context): GitInfoInput => ({
 export const applyGitInfoOutput = (ctx: Context, output: GitInfoOutput) => {
   ctx.git = output.git;
   ctx.projectMetadata = output.projectMetadata;
+  if (output.baselineWorkflow) {
+    ctx.baselineWorkflow = output.baselineWorkflow;
+    throw baselineWorkflowUnavailable(output.baselineWorkflow, output.git.commit);
+  }
   ctx.isOnboarding = output.isOnboarding;
   if (output.turboSnap) ctx.turboSnap = output.turboSnap;
   // Have to cast as unknown first here, as there's not enough overlap to direct cast. This value gets overwritten

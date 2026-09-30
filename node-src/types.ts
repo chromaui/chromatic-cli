@@ -26,6 +26,8 @@ export interface Flags {
 
   // Chromatic options
   autoAcceptChanges?: string;
+  requireBaseline?: string;
+  bypassIfUnchanged?: boolean;
   branchName?: string;
   ci?: boolean;
   configFile?: string;
@@ -254,6 +256,14 @@ export interface ProjectMetadata {
   numberOfAppFiles?: number;
 }
 
+/** Local groundwork diagnostics; this is not a server protocol response. */
+export interface BaselineWorkflow {
+  requiredCommit?: string;
+  bypassIfUnchanged: boolean;
+  state: 'UNSUPPORTED';
+  reason: 'BASELINE_FEATURE_UNSUPPORTED';
+}
+
 export interface BaselineBuild {
   id: string;
   number: number;
@@ -414,6 +424,7 @@ export interface Context {
   runtimeErrors?: Error[];
   runtimeWarnings?: Error[];
   runtimeMetadata?: RuntimeMetadata;
+  baselineWorkflow?: BaselineWorkflow;
   analytics?: AnalyticsClient;
   /** @deprecated Will be removed in the next major. */
   environment?: Record<string, string>;

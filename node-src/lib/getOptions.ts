@@ -13,6 +13,7 @@ import invalidRepositorySlug from '../ui/messages/errors/invalidRepositorySlug';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
+import { validateBaselineWorkflowOptions } from './baselineWorkflow';
 import { isE2EBuild } from './e2eUtils';
 
 export const DEFAULT_LOG_FILE = 'chromatic.log';
@@ -124,6 +125,8 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
   // We need to strip out undefined because they otherwise they override anyway
   const optionsFromFlags = stripUndefined({
     projectToken: takeLast(flags.projectToken),
+    requireBaseline: flags.requireBaseline,
+    bypassIfUnchanged: flags.bypassIfUnchanged,
 
     onlyChanged: trueIfSet(flags.onlyChanged),
     onlyStoryFiles: undefinedIfEmpty(ensureArray(flags.onlyStoryFiles)),
@@ -200,6 +203,9 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
       !!process.stdout.isTTY &&
       process.env.NODE_ENV !== 'test',
   };
+
+  validateBaselineWorkflowOptions(partialOptions);
+  if (partialOptions.bypassIfUnchanged) partialOptions.onlyChanged = true;
 
   if (partialOptions.debug) {
     log.setLevel('debug');

@@ -18,6 +18,8 @@ import {
   getUncommittedHash,
   getUserEmail,
 } from './git/git';
+import { validateCleanCheckout } from './git/validateBaselineCheckout';
+import { hasBaselineWorkflow, validateBaselineWorkflowSkip } from './lib/baselineWorkflow';
 import checkForUpdates from './lib/checkForUpdates';
 import checkNodeVersion from './lib/checkNodeVersion';
 import checkPackageJson from './lib/checkPackageJson';
@@ -30,7 +32,7 @@ import LoggingRenderer from './lib/loggingRenderer';
 import matchesBranch from './lib/matchesBranch';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
-import { exitCodes, setExitCode } from './lib/setExitCode';
+import { exitCodes, setExitCode, TaskFailure } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
 import { rewriteErrorMessage } from './lib/utilities';
 import {
@@ -193,7 +195,11 @@ export async function runAll(initialContext: InitialContext) {
       formattedError: fatalError(initialContext, [err].flat()),
       originalError: err,
     });
-    setExitCode(initialContext, exitCodes.INVALID_OPTIONS, true);
+    setExitCode(
+      initialContext,
+      err instanceof TaskFailure ? err.exitCode : exitCodes.INVALID_OPTIONS,
+      true
+    );
   };
 
   let ctx: Context;
@@ -220,7 +226,7 @@ export async function runAll(initialContext: InitialContext) {
     ctx = initialContext as Context;
     ctx.options = getOptions(ctx, partialOptions);
     ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
-    ctx.log.setLogFile(ctx.options.logFile);
+    await initializeBuildLog(ctx);
 
     setExitCode(ctx, exitCodes.OK);
   } catch (err) {
@@ -296,6 +302,11 @@ function isTurboSnapEnabled(ctx: Context): boolean {
   return !!ctx.turboSnap;
 }
 
+async function initializeBuildLog(ctx: Context) {
+  if (hasBaselineWorkflow(ctx.options)) await validateCleanCheckout(ctx);
+  ctx.log.setLogFile(ctx.options.logFile);
+}
+
 async function shouldSkipWithoutProjectToken(
   ctx: InitialContext,
   partialOptions: Partial<Options>
@@ -318,6 +329,8 @@ async function shouldSkipWithoutProjectToken(
   if (!matchesBranch(branch, partialOptions.skip)) {
     return false;
   }
+
+  validateBaselineWorkflowSkip(partialOptions, branch);
 
   return true;
 }
