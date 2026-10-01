@@ -61,7 +61,7 @@ function missingStatsFileError(ctx: Context) {
   return new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
 }
 
-// Asks the filesystem, never what the user requested.
+// Runs unless the user explicitly opts out of TurboSnap.
 function shouldCollectHashes(ctx: Context) {
   return !isHashCollectionDisabled(ctx) && !!ctx.fileInfo?.statsPath;
 }
