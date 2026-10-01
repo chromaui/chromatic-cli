@@ -9,21 +9,21 @@ import {
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import * as gitModule from './git';
 
-vi.mock('./git', () => {
-  const fetched = new Set<string>();
-  return {
-    getChangedFiles: vi.fn((_: unknown, hash: string) => {
-      if (/exists/.test(hash) || fetched.has(hash)) return ['changed', 'files'];
-      throw new AncestorMissingError(hash, { cause: new Error(`fatal: bad object ${hash}`) });
-    }),
-    commitExists: vi.fn((_: unknown, hash: string) => /exists/.test(hash) || fetched.has(hash)),
-    fetchCommit: vi.fn((_: unknown, hash: string) => {
-      if (!/fetchable/.test(hash)) return false;
-      fetched.add(hash);
-      return true;
-    }),
-  };
-});
+const { fetched } = vi.hoisted(() => ({ fetched: new Set<string>() }));
+
+vi.mock('./git', () => ({
+  getChangedFiles: vi.fn((_: unknown, hash: string) => {
+    if (/exists/.test(hash) || fetched.has(hash)) return ['changed', 'files'];
+    throw new AncestorMissingError(hash, { cause: new Error(`fatal: bad object ${hash}`) });
+  }),
+  commitExists: vi.fn((_: unknown, hash: string) => /exists/.test(hash) || fetched.has(hash)),
+  fetchCommit: vi.fn((_: unknown, hash: string) => {
+    if (!/fetchable/.test(hash)) return false;
+    // Simulate a fetch that succeeds but leaves the commit undiffable.
+    if (!/undiffable/.test(hash)) fetched.add(hash);
+    return true;
+  }),
+}));
 
 const mockedGetChangedFiles = vi.mocked(gitModule.getChangedFiles);
 
@@ -31,6 +31,7 @@ describe('getChangedFilesWithReplacements', () => {
   const client = { runQuery: vi.fn() } as any;
   beforeEach(() => {
     client.runQuery.mockReset();
+    fetched.clear();
   });
   const context = { client, log: new TestLogger() } as any;
 
@@ -49,6 +50,32 @@ describe('getChangedFilesWithReplacements', () => {
 
     expect(gitModule.fetchCommit).toHaveBeenCalledWith(context, 'missing-but-fetchable');
     expect(client.runQuery).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a replacement when the fetched commit still cannot be diffed', async () => {
+    const replacementBuild = {
+      id: 'replacement',
+      number: 2,
+      commit: 'exists',
+      uncommittedHash: '',
+    };
+    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+
+    expect(
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'missing-fetchable-but-undiffable',
+        uncommittedHash: '',
+        isLocalBuild: false,
+      })
+    ).toEqual({
+      changedFiles: ['changed', 'files'],
+      replacementBuild,
+    });
+
+    expect(gitModule.fetchCommit).toHaveBeenCalledWith(context, 'missing-fetchable-but-undiffable');
+    expect(client.runQuery).toHaveBeenCalled();
   });
 
   it('passes changedFiles on through on the happy path', async () => {

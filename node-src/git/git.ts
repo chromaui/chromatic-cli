@@ -208,11 +208,12 @@ export async function commitExists(deps: GitDeps, commit: string) {
  * requested by hash, so this is a last attempt to recover a baseline before falling back to a
  * replacement build.
  *
- * `--depth=1` bounds the transfer to the commit and its tree: diffing against the baseline
- * needs no ancestry, and an unbounded fetch could otherwise download all missing history
- * reachable from the orphaned commit — costly in shallow clones where the baseline diverged
- * before the shallow boundary. On a full clone this records a shallow graft for the fetched
- * commit only, which is inert: the commit was orphaned, so nothing traverses its parents.
+ * In a shallow clone, `--depth=1` bounds the transfer to the commit and its tree: diffing
+ * against the baseline needs no ancestry, and an unbounded fetch could otherwise download all
+ * missing history reachable from the orphaned commit. A full clone is fetched without a depth so
+ * that no shallow graft is recorded, which could later truncate history if the commit became
+ * reachable again (e.g. the branch is force-pushed back); there, only the orphaned objects are
+ * missing anyway.
  *
  * @param deps Function dependencies.
  * @param commit The commit hash to fetch.
@@ -220,10 +221,19 @@ export async function commitExists(deps: GitDeps, commit: string) {
  * @returns True if the fetch succeeded.
  */
 export async function fetchCommit(deps: GitDeps, commit: string) {
+  // Git commands run through a shell, so only ever interpolate a well-formed commit hash.
+  if (!/^[\da-f]{7,64}$/i.test(commit)) {
+    deps.log.debug(`Not fetching invalid commit hash '${commit}'`);
+    return false;
+  }
+
   try {
-    await execGitCommand(deps, `git fetch --no-tags --depth=1 origin "${commit}"`);
+    const cloneDepth = await getCloneDepth(deps).catch(() => 'full');
+    const depth = cloneDepth === 'shallow' ? ' --depth=1' : '';
+    await execGitCommand(deps, `git fetch --no-tags${depth} origin "${commit}"`);
     return true;
-  } catch {
+  } catch (error) {
+    deps.log.debug(`Failed to fetch commit ${commit} from origin: ${error.message}`);
     return false;
   }
 }

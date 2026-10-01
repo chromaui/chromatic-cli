@@ -18,7 +18,10 @@ export interface BuildWithCommitInfo {
  * hosts still serve it when requested by hash. Recovering it keeps the exact baseline diff,
  * where a replacement build can only widen it.
  *
- * @param deps Dependencies (log).
+ * Only an `AncestorMissingError` is recoverable this way. A `BaselineDirtyError` means the commit
+ * exists locally but the baseline was built with uncommitted changes, which no fetch can restore.
+ *
+ * @param deps Dependencies (log, and options for the git timeout).
  * @param build The build whose commit went missing locally.
  * @param error The error thrown while diffing against the build's commit.
  *
