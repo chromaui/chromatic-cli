@@ -202,6 +202,20 @@ export interface VisitedCommit {
 /** Whether the clone has full or truncated commit history. */
 export type CloneDepth = 'full' | 'shallow';
 
+/** The account's billed snapshot usage for the current billing period. */
+export interface AccountUsage {
+  /** Billed snapshots so far this period (fractional, as TurboSnaps bill at a multiplier). */
+  billableSnapshots: number;
+  /** Snapshots included in the plan (monthly limit plus bonus), if the plan has a limit. */
+  limit?: number;
+  /** `billableSnapshots / limit`, where 1 means the included snapshots are used up. */
+  utilization?: number;
+  /** Start of the billing period, as a timestamp in milliseconds. */
+  periodStart: number;
+  /** End of the billing period, as a timestamp in milliseconds. */
+  periodEnd: number;
+}
+
 /**
  * Whether git objects are fully present or filtered at clone time.
  * - `'full'` — all objects fetched (standard clone)
@@ -419,6 +433,7 @@ export interface Context {
   environment?: Record<string, string>;
   reportPath?: string;
   isPublishOnly?: boolean;
+  accountUsage?: AccountUsage;
   isOnboarding: boolean;
   isReactNativeApp?: boolean;
   turboSnapAvailability?: string;

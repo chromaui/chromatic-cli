@@ -26,6 +26,19 @@ describe('applyVerifyOutput', () => {
     expect(ctx.exitCode).toBe(undefined);
   });
 
+  it('applies account usage to context', () => {
+    const ctx = {} as any;
+    const accountUsage = {
+      billableSnapshots: 10,
+      limit: 100,
+      utilization: 0.1,
+      periodStart: 1,
+      periodEnd: 2,
+    };
+    applyVerifyOutput(ctx, { ...baseOutput, accountUsage });
+    expect(ctx.accountUsage).toEqual(accountUsage);
+  });
+
   it('applies a limit exit code', () => {
     const ctx = {} as any;
     applyVerifyOutput(ctx, {

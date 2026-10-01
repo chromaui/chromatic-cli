@@ -1,5 +1,7 @@
 import { exitCodes, setExitCode } from '../../lib/setExitCode';
-import { Context, Deps, TaskResult } from '../../types';
+import { AccountUsage, Context, Deps, TaskResult } from '../../types';
+import accountUsageMessage from '../../ui/messages/info/accountUsage';
+import { getAccountUsage } from './getAccountUsage';
 import { publishBuild } from './publishBuild';
 import { verifyBuild } from './verifyBuild';
 
@@ -22,6 +24,7 @@ export interface VerifyOutput {
   isPublishOnly: boolean;
   skipSnapshots: boolean;
   limitExitCode?: { code: number; userError: boolean };
+  accountUsage?: AccountUsage;
 }
 
 /**
@@ -60,9 +63,22 @@ export async function verifyProject(
     isReactNativeApp: input.isReactNativeApp,
   });
 
+  const accountUsage = await getAccountUsage(deps);
+  if (accountUsage) {
+    deps.log.info(accountUsageMessage(accountUsage));
+  }
+
   return {
     kind: 'continue',
-    output: { announcedBuild, storybookUrl, build, isPublishOnly, skipSnapshots, limitExitCode },
+    output: {
+      announcedBuild,
+      storybookUrl,
+      build,
+      isPublishOnly,
+      skipSnapshots,
+      limitExitCode,
+      accountUsage,
+    },
   };
 }
 
@@ -82,6 +98,7 @@ export const applyVerifyOutput = (ctx: Context, output: VerifyOutput) => {
   ctx.storybookUrl = output.storybookUrl;
   ctx.build = output.build;
   ctx.isPublishOnly = output.isPublishOnly;
+  ctx.accountUsage = output.accountUsage;
 
   // Ordering on the setExitCode calls matters: a limit code first, then OK overrides it when the
   // build is publish-only / listed / exiting once uploaded. If we add a third case, refactor.
