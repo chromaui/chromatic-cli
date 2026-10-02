@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import 'any-observable/register/zen';
 
 import * as Sentry from '@sentry/node';
@@ -25,6 +24,7 @@ import { isE2EBuild } from './lib/e2eUtils';
 import { emailHash } from './lib/emailHash';
 import getEnvironment from './lib/getEnvironment';
 import getOptions, { DEFAULT_DIAGNOSTICS_FILE, getPartialOptions } from './lib/getOptions';
+import getRunOutput, { Output } from './lib/getRunOutput';
 import { createLogger } from './lib/log';
 import LoggingRenderer from './lib/loggingRenderer';
 import matchesBranch from './lib/matchesBranch';
@@ -66,22 +66,6 @@ import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 // Make keys of `T` outside of `R` optional.
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
 
-interface Output {
-  code: number;
-  url: string;
-  buildUrl: string;
-  storybookUrl: string;
-  specCount: number;
-  componentCount: number;
-  testCount: number;
-  changeCount: number;
-  errorCount: number;
-  interactionTestFailuresCount: number;
-  actualTestCount: number;
-  actualCaptureCount: number;
-  inheritedCaptureCount: number;
-}
-
 export type { Configuration, Context, Flags, Options, TaskName } from './types';
 
 export type InitialContext = Omit<
@@ -112,8 +96,6 @@ export type InitialContext = Omit<
  *
  * @returns An object with details from the result of the new build.
  */
-// TODO: refactor this function
-// eslint-disable-next-line complexity
 export async function run({
   argv = [],
   flags,
@@ -156,24 +138,7 @@ export async function run({
 
   await runAll(ctx);
 
-  return {
-    // Keep this in sync with the configured outputs in action.yml
-    code: ctx.exitCode,
-    url: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
-    buildUrl: ctx.build?.webUrl ?? ctx.rebuildForBuild?.webUrl,
-    storybookUrl: ctx.build?.storybookUrl || ctx.storybookUrl,
-    specCount: ctx.build?.specCount ?? ctx.rebuildForBuild?.specCount,
-    componentCount: ctx.build?.componentCount ?? ctx.rebuildForBuild?.componentCount,
-    testCount: ctx.build?.testCount ?? ctx.rebuildForBuild?.testCount,
-    changeCount: ctx.build?.changeCount ?? ctx.rebuildForBuild?.changeCount,
-    errorCount: ctx.build?.errorCount ?? ctx.rebuildForBuild?.errorCount,
-    interactionTestFailuresCount:
-      ctx.build?.interactionTestFailuresCount ?? ctx.rebuildForBuild?.interactionTestFailuresCount,
-    actualTestCount: ctx.build?.actualTestCount ?? ctx.rebuildForBuild?.actualTestCount,
-    actualCaptureCount: ctx.build?.actualCaptureCount ?? ctx.rebuildForBuild?.actualCaptureCount,
-    inheritedCaptureCount:
-      ctx.build?.inheritedCaptureCount ?? ctx.rebuildForBuild?.inheritedCaptureCount,
-  };
+  return getRunOutput(ctx);
 }
 
 /**

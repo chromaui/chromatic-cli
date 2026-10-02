@@ -16,6 +16,8 @@ import buildPassedMessage from '../ui/messages/info/buildPassed';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
+// `pendingCount`, `acceptedCount` and `deniedCount` are counted by test status, so IGNORED tests are
+// excluded by construction. `changeCount` is counted by test result and includes ignored tests.
 const SnapshotBuildQuery = `
   query SnapshotBuildQuery($number: Int!) {
     app {
@@ -27,6 +29,10 @@ const SnapshotBuildQuery = `
         testCount
         changeCount
         errorCount: testCount(statuses: [BROKEN])
+        ignoredCount: testCount(statuses: [IGNORED])
+        pendingCount: testCount(statuses: [PENDING])
+        acceptedCount: testCount(statuses: [ACCEPTED])
+        deniedCount: testCount(statuses: [DENIED])
         completedAt
       }
     }
@@ -43,6 +49,10 @@ interface BuildQueryResult {
       testCount: number;
       changeCount: number;
       errorCount: number;
+      ignoredCount: number;
+      pendingCount: number;
+      acceptedCount: number;
+      deniedCount: number;
       completedAt?: number;
     };
   };

@@ -62,6 +62,9 @@ const VerifyBuildQuery = `
           uiTests
           uiReview
           isReactNativeApp
+          accessibilityTests {
+            enabled
+          }
         }
         autoAcceptChanges
         turboSnapEnabled
