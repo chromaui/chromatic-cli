@@ -8,7 +8,7 @@ import link from '../../components/link';
 
 export default ({ build, exitCode, isOnboarding }) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
-  // Only PENDING, ACCEPTED and DENIED builds reach this message, so the fallback is defensive.
+  // Falls back when the count for the build status is missing or zero.
   const summary = changeStatus(build) ?? 'This build has changes';
   const changesLine = chalk`${error} {bold ${summary}.} Review at ${link(url)}`;
   const ignoredLine = ignoredTests({ ignoredCount: build.ignoredCount, url, isOnboarding });

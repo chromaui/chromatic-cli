@@ -23,8 +23,9 @@ interface IgnoredTestsParameters {
   isOnboarding: boolean;
 }
 
-// The one line every end-of-run message uses to report ignored tests, so the wording and the
-// `expandIgnored` link have a single home. Returns nothing when no tests were ignored.
+// The line the passed and has-changes messages use to report ignored tests, so the wording and the
+// `expandIgnored` link have a single home. Errored builds leave it out on purpose. Returns nothing
+// when no tests were ignored.
 export default ({ ignoredCount = 0, url, isOnboarding }: IgnoredTestsParameters) => {
   if (ignoredCount < 1) {
     return;
