@@ -115,6 +115,7 @@ async function run() {
     const fileHashing = getInput('fileHashing');
     const forceRebuild = getInput('forceRebuild');
     const ignoreLastBuildOnBranch = getInput('ignoreLastBuildOnBranch');
+    const ignoreMergedPrBuilds = getInput('ignoreMergedPrBuilds');
     const logFile = getInput('logFile');
     const logLevel = getInput('logLevel');
     const logPrefix = getInput('logPrefix');
@@ -182,6 +183,7 @@ async function run() {
         fileHashing: maybe(fileHashing, true),
         forceRebuild: maybe(forceRebuild),
         ignoreLastBuildOnBranch: maybe(ignoreLastBuildOnBranch),
+        ignoreMergedPrBuilds: maybe(ignoreMergedPrBuilds),
         interactive: false,
         logFile: maybe(logFile),
         logLevel: maybe(logLevel),
