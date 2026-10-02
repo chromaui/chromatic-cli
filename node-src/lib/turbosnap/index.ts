@@ -4,6 +4,7 @@ import semver from 'semver';
 import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
+import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -30,15 +31,21 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     return { status: 'skipped' };
   }
 
+  const collectHashes = shouldCollectHashes(ctx);
+  const traceWithV1 = runTurboSnapV1 && !!ctx.git.changedFiles;
+  if (!collectHashes && !traceWithV1) {
+    return { status: 'skipped' };
+  }
+
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
 
   // V2 runs for its side effects only; it never affects the v1 decision or the customer's build.
-  if (shouldCollectHashes(ctx)) {
+  if (collectHashes) {
     await runTurboSnapV2(ctx, stats);
   }
 
-  if (!runTurboSnapV1 || !ctx.git.changedFiles) {
+  if (!traceWithV1) {
     return { status: 'skipped' };
   }
 
@@ -54,9 +61,9 @@ function missingStatsFileError(ctx: Context) {
   return new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
 }
 
-// Asks the filesystem, never what the user requested.
+// Runs unless the user explicitly opts out of TurboSnap.
 function shouldCollectHashes(ctx: Context) {
-  return !ctx.env.CHROMATIC_TURBOSNAP_DISABLE_HASHES && !!ctx.fileInfo?.statsPath;
+  return !isHashCollectionDisabled(ctx) && !!ctx.fileInfo?.statsPath;
 }
 
 async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
