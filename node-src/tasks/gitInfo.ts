@@ -109,6 +109,8 @@ const LastBuildQuery = `
         testCount
         changeCount
         errorCount: testCount(statuses: [BROKEN])
+        pendingCount: testCount(statuses: [PENDING])
+        ignoredCount: testCount(statuses: [IGNORED])
         actualTestCount: testCount(statuses: [IN_PROGRESS])
         actualCaptureCount
         inheritedCaptureCount

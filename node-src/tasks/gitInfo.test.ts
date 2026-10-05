@@ -263,6 +263,26 @@ describe('gatherGitInfo', () => {
     expect(result.output.storybookUrl).toEqual(lastBuild.storybookUrl);
   });
 
+  it('queries pending and ignored counts for the build it may rebuild', async () => {
+    getParentCommits.mockResolvedValue({
+      ancestorCommits: [commitInfo.commit],
+      visitedCommits: [],
+    });
+    client.runQuery.mockReturnValue({ app: { lastBuild: { id: 'parent', status: 'ACCEPTED' } } });
+
+    await gatherGitInfo(buildDeps(), buildInput());
+
+    for (const field of [
+      'pendingCount: testCount(statuses: [PENDING])',
+      'ignoredCount: testCount(statuses: [IGNORED])',
+    ]) {
+      expect(client.runQuery).toHaveBeenCalledWith(
+        expect.stringContaining(field),
+        expect.anything()
+      );
+    }
+  });
+
   it('returns skip-commit partial when skip matches branch and mutation succeeds', async () => {
     client.runQuery.mockResolvedValue(true);
     const report = vi.fn();
