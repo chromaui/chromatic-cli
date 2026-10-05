@@ -25,7 +25,7 @@ describe('runCommand', () => {
   });
 
   it('marks the timeout error with isTimeout', async () => {
-    const error: any = await runCommand('sleep 60', { timeout: 200 }).catch((e) => e);
+    const error: any = await runCommand('sleep 60', { timeout: 200 }).catch((error_) => error_);
     expect(error.isTimeout).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import semver from 'semver';
 import { getE2EBuildCommand } from '../../lib/e2e';
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../../lib/getPackageManager';
+import { isHashCollectionDisabled } from '../../lib/turbosnap/isHashCollectionDisabled';
 import { Context, Deps } from '../../types';
 import { resolveE2EFramework } from './resolveE2EFramework';
 
@@ -51,7 +52,7 @@ function shouldAddStatsFlag(
     return true;
   }
 
-  if (deps.env.CHROMATIC_TURBOSNAP_DISABLE_HASHES) {
+  if (isHashCollectionDisabled(deps)) {
     return false;
   }
 

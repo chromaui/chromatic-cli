@@ -32,8 +32,12 @@ export interface ProjectFiles {
     absolutePaths: AbsolutePath[],
     concurrency?: number
   ): Promise<Record<AbsolutePath, FileHash>>;
-  /** Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. */
-  listTree(absoluteDirectory: AbsolutePath): AbsolutePath[];
+  /**
+   * Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. A path
+   * that names a single file lists that file alone. Throws when the path itself cannot be stat'd for
+   * a reason other than absence, matching `isFile` and `isDirectory`.
+   */
+  listTree(absolutePath: AbsolutePath): AbsolutePath[];
   /** Writes the contents to the file, creating parent directories and overwriting it if present. */
   writeFile(absolutePath: AbsolutePath, contents: string): void;
 }
@@ -54,7 +58,7 @@ export function realProjectFiles(log: Logger): ProjectFiles {
     packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
       readPackageVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
-    listTree: (absoluteDirectory: AbsolutePath) => listFilesRecursively(log, absoluteDirectory),
+    listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       mkdirSync(path.dirname(absolutePath), { recursive: true });
       writeFileSync(absolutePath, contents);
@@ -142,6 +146,25 @@ async function hashFileContents(
  */
 function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
   return error?.path ? String(error.path) : `one of the ${absolutePaths.length} files hashed`;
+}
+
+/**
+ * Lists the files a path names: every file under a directory, or the file itself. Storybook accepts a
+ * single file as a `staticDirs` entry and serves it at its basename, so the sweep has to see it too.
+ *
+ * @param log The logger to use.
+ * @param absolutePath The absolute directory to walk, or the absolute file to list.
+ *
+ * @returns The absolute path of every file found.
+ *
+ * @throws {Error} When the path itself cannot be stat'd for a reason other than absence, such as a
+ * symlink cycle at the path or a permission error, since those are the `isFile` and `isDirectory`
+ * rules.
+ */
+function listTree(log: Logger, absolutePath: AbsolutePath): AbsolutePath[] {
+  return statFile(log, absolutePath)?.isFile()
+    ? [absolutePath]
+    : listFilesRecursively(log, absolutePath);
 }
 
 /**

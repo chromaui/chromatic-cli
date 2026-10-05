@@ -161,6 +161,15 @@ describe('realProjectFiles listTree', () => {
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
 
+  it('lists a single file when the path names one, since a staticDirs entry may name a file', async () => {
+    const root = temporaryDirectory();
+    const filePath = write(root, 'favicon.ico');
+
+    const files = realProjectFiles(log).listTree(filePath);
+
+    expect(files).toEqual([filePath]);
+  });
+
   it('is empty for a directory that does not exist, since a missing staticDir is not an error', async () => {
     const root = temporaryDirectory();
 

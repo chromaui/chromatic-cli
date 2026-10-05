@@ -77,6 +77,21 @@ describe('hashOutOfGraphFiles', () => {
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/mockServiceWorker.js']);
   });
 
+  it('hashes a static entry that names a single file, which Storybook serves at its basename', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui': ['favicon.ico'],
+        '/repo/packages/ui/.storybook': ['main.ts'],
+      },
+    };
+
+    const { staticFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { staticDirs: [`${projectRoot}/favicon.ico`] })
+    );
+
+    expect([...staticFiles.keys()]).toEqual(['./favicon.ico']);
+  });
+
   it('keeps config files in the config section when the config dir itself is a static dir', async () => {
     const disk: InMemoryDisk = {
       directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },

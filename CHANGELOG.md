@@ -1,3 +1,16 @@
+# v18.10.2 (Fri Oct 02 2026)
+
+#### 🐛 Bug Fix
+
+- Skip TurboSnap v2 hash collection when TurboSnap is explicitly disabled [#1511](https://github.com/chromaui/chromatic-cli/pull/1511) ([@codykaup](https://github.com/codykaup))
+- Hash single-file `staticDirs` entries in the TurboSnap v2 manifest [#1509](https://github.com/chromaui/chromatic-cli/pull/1509) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.10.1 (Mon Sep 28 2026)
 
 #### 🐛 Bug Fix
