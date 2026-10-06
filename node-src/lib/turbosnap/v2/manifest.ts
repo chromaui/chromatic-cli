@@ -49,7 +49,8 @@ export interface TurboSnapManifest {
   outOfGraphFiles: OutOfGraphFiles;
   /**
    * The unpruned graph parsed from `preview-stats.json`, including synthetic transit nodes used by
-   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized.
+   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized; files v2 skipped
+   * stay, with an empty hash, so the written graph keeps the edges that run through them.
    */
   files: Map<FilePath, TurboSnapFile>;
   /**
@@ -188,21 +189,35 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
         ])
       )
     ) as ManifestFile['attribution'],
-    files: sortByKey(serializeFiles(manifest.files)),
+    files: sortByKey(serializeFiles(manifest.files, manifest.skippedFiles)),
     skippedFiles: [...manifest.skippedFiles].sort(comparePaths),
   };
 }
 
-function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['files'] {
+/**
+ * Serializes the graph without its synthetic nodes. A skipped file also has no hash, but it is a real
+ * file that a story can import tracked files through, so it stays in the written graph to keep that
+ * path visible.
+ *
+ * @param files The unpruned graph.
+ * @param skippedFiles The on-disk files v2 skipped hashing.
+ *
+ * @returns The graph of real files, each with its hash and the real files it depends on.
+ */
+function serializeFiles(
+  files: Map<FilePath, TurboSnapFile>,
+  skippedFiles: Set<FilePath>
+): ManifestFile['files'] {
+  const isRealFile = (filePath: FilePath) =>
+    Boolean(files.get(filePath)?.hash) || skippedFiles.has(filePath);
+
   const serialized: ManifestFile['files'] = {};
   for (const [filePath, file] of files) {
-    if (file.hash === '') {
-      continue;
-    }
+    if (!isRealFile(filePath)) continue;
     serialized[filePath] = {
       hash: file.hash,
       dependencies: [...file.dependencies]
-        .filter((dependency) => files.get(dependency)?.hash)
+        .filter((dependency) => isRealFile(dependency))
         .sort(comparePaths),
     };
   }

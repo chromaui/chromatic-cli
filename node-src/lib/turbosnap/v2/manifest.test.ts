@@ -69,6 +69,34 @@ describe('serializeManifest', () => {
     expect(serialized.staticFiles).toEqual({});
   });
 
+  it('keeps a file git ignores in the graph, unhashed, so the edges through it survive', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const barrel = '/repo/packages/ui/src/generated/index.ts';
+    const button = '/repo/packages/ui/src/Button.tsx';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [barrel]: 'G', [button]: 'B' },
+      isIgnored: (candidate) => candidate === barrel,
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: barrel, reasons: [{ moduleName: story }] },
+        { id: 3, name: button, reasons: [{ moduleName: barrel }] },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, input));
+
+    expect(serialized.files['./src/Button.stories.tsx'].dependencies).toEqual([
+      './src/generated/index.ts',
+    ]);
+    expect(serialized.files['./src/generated/index.ts']).toEqual({
+      hash: '',
+      dependencies: ['./src/Button.tsx'],
+    });
+    expect(serialized.files['./src/Button.tsx'].hash).toBe('B');
+  });
+
   it('emits storybookConfigHashes as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';
