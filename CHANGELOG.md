@@ -1,3 +1,15 @@
+# v18.11.0 (Mon Oct 05 2026)
+
+#### 🚀 Enhancement
+
+- Communicate the number of ignored tests [#1481](https://github.com/chromaui/chromatic-cli/pull/1481) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v18.10.2 (Fri Oct 02 2026)
 
 #### 🐛 Bug Fix
