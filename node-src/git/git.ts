@@ -535,6 +535,70 @@ export async function getRepositoryRoot(deps: GitDeps) {
 }
 
 /**
+ * The paths git ignores, answered by absolute path; see {@link getIgnoredPaths}.
+ *
+ * The match is exact: git names paths as it tracks them, so a path reached through a symlink never
+ * lines up with the listing and is answered as not ignored. Callers resolve symlinks before asking;
+ * one that doesn't errs on the side of hashing more, never less.
+ */
+export interface IgnoredPaths {
+  has(absolutePath: string): boolean;
+}
+
+/**
+ * Lists what git ignores: every untracked path in the repository that `.gitignore` or another exclude
+ * source matches. A tracked file is never ignored, whatever the patterns say, and nor is any path
+ * outside the repository.
+ *
+ * The listing is bounded by the repository's tracked shape rather than by what the ignored
+ * directories hold: a directory with nothing but ignored content comes back as one entry, so
+ * `node_modules` is one line, not a hundred thousand. That is what makes one listing cheaper than
+ * one `git check-ignore` call, which also refuses any path that passes through a symlink.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns The listing, queried by absolute path.
+ */
+export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
+  const repositoryRoot = await getRepositoryRoot(deps);
+  // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
+  // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path.
+  const output = await execGitCommand(
+    deps,
+    'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
+    { all: false }
+  );
+
+  // A wholly ignored directory keeps its trailing slash, which `path.join` preserves as the native
+  // separator, so an entry ending in a separator covers everything beneath it.
+  const ignored = new Set(
+    output
+      .split(NULL_BYTE)
+      .filter(Boolean)
+      .map((entry) => path.join(repositoryRoot, entry))
+  );
+
+  return {
+    has: (absolutePath) => {
+      if (ignored.has(absolutePath)) {
+        return true;
+      }
+
+      let directory = absolutePath;
+      while (directory !== path.dirname(directory)) {
+        directory = path.dirname(directory);
+
+        if (ignored.has(directory + path.sep)) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+  };
+}
+
+/**
  * Find all files that match the given patterns within the repository.
  *
  * @param deps Function dependencies.
