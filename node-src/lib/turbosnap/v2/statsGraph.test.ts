@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
@@ -461,5 +462,86 @@ describe('readStatsGraph global composition roots', () => {
 
     // The stories entry loads story modules, not global annotations, so it is not a global root.
     expect([...graph.globalRoots]).toEqual([]);
+  });
+});
+
+describe('readStatsGraph skipped files', () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const generated = '/repo/packages/ui/src/generated/schema.ts';
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: generated, reasons: [{ moduleName: story }] },
+    ],
+  };
+
+  it('keeps a file git ignores in the graph as a node with no hash, and records it', async () => {
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [generated]: 'G' },
+      isIgnored: (candidate) => candidate === generated,
+    });
+
+    const graph = await readStatsGraph(stats, input);
+
+    expect(graph.hashes.has('./src/generated/schema.ts')).toBe(false);
+    expect(graph.files.get('./src/generated/schema.ts')?.hash).toBe('');
+    expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
+      './src/generated/schema.ts',
+    ]);
+    expect([...graph.skippedFiles]).toEqual(['./src/generated/schema.ts']);
+  });
+
+  it('still detects a story file git ignores as a story file', async () => {
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [generated]: 'G' },
+      isIgnored: (candidate) => candidate === story,
+    });
+
+    const graph = await readStatsGraph(stats, input);
+
+    expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
+    expect(graph.hashes.has('./src/Button.stories.tsx')).toBe(false);
+  });
+
+  it('hashes a Storybook config file even though git ignores it', async () => {
+    const preview = '/repo/packages/ui/.storybook/preview.ts';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [preview]: 'P' },
+      isIgnored: (candidate) => candidate === preview,
+    });
+
+    const graph = await readStatsGraph(
+      {
+        modules: [
+          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+          { id: 2, name: preview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
+        ],
+      },
+      input
+    );
+
+    expect(graph.hashes.get('./.storybook/preview.ts')).toBe('P');
+    expect([...graph.skippedFiles]).toEqual([]);
+  });
+
+  it('hashes a node_modules file even though git ignores it', async () => {
+    const dependency = '/repo/packages/ui/node_modules/react/index.js';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [dependency]: 'R' },
+      isIgnored: (candidate) => candidate === dependency,
+    });
+
+    const graph = await readStatsGraph(
+      {
+        modules: [
+          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+          { id: 2, name: dependency, reasons: [{ moduleName: story }] },
+        ],
+      },
+      input
+    );
+
+    expect(graph.hashes.get('./node_modules/react/index.js')).toBe('R');
+    expect([...graph.skippedFiles]).toEqual([]);
   });
 });
