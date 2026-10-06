@@ -989,4 +989,103 @@ describe('getParentCommits', () => {
       expect(visited[commitMap.C.hash].isShallowBoundary).toBe(false);
     });
   });
+
+  describe('ignoreMergedPrBuilds', () => {
+    it('does not inject the head build of a merged PR that is missing from the index', async () => {
+      // []: has build, <>: is squash merge, (): current commit
+      //
+      //  [MISSING]     [branch]  no longer in the repository
+      //
+      //  [A]- C -<(D)> [main]    D is the squash merge commit for "branch"
+      const repository = repositories.twoRoots;
+      await checkoutCommit('D', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['A', 'main'],
+          ['MISSING', 'branch'],
+        ],
+        prs: [['D', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      // Without the option, the merged-PR block appends the missing head build commit.
+      const { ancestorCommits: defaultParents } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+      expectCommitsToEqualNames(defaultParents, ['MISSING', 'A'], repository);
+
+      // With the option, MISSING is not injected.
+      const { ancestorCommits: parentCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { ignoreMergedPrBuilds: true })
+      );
+      expectCommitsToEqualNames(parentCommits, ['A'], repository);
+    });
+
+    it('does not inject the head build of a merged PR that is not an ancestor of HEAD', async () => {
+      // []: has build, <>: is squash merge, (): current commit
+      //
+      //  [B]           [branch]  in the repository, but not an ancestor of D
+      //
+      //  [A]- C -<(D)> [main]    D is the squash merge commit for "branch"
+      const repository = repositories.twoRoots;
+      await checkoutCommit('D', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['A', 'main'],
+          ['B', 'branch'],
+        ],
+        prs: [['D', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      // Without the option, B is injected even though it is not reachable from HEAD.
+      const { ancestorCommits: defaultParents } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+      expectCommitsToEqualNames(defaultParents, ['B', 'A'], repository);
+
+      // With the option, only the genuine mainline ancestor remains.
+      const { ancestorCommits: parentCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { ignoreMergedPrBuilds: true })
+      );
+      expectCommitsToEqualNames(parentCommits, ['A'], repository);
+    });
+
+    it('still reports the PR merge commit as isMergePoint', async () => {
+      // The option suppresses merged-PR baselines only; merge-point metadata is unaffected.
+      //  A - B -[C]      [main]
+      //            \
+      //            (E)   [main, squash merge of branch]
+      //           /
+      //         [D]      [branch]
+      const repository = repositories.simpleLoop;
+      await checkoutCommit('E', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['C', 'main'],
+          ['D', 'branch'],
+        ],
+        prs: [['E', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      const { visitedCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git, { ignoreMergedPrBuilds: true })
+      );
+
+      const { commitMap } = repository;
+      const visited = Object.fromEntries(visitedCommits.map((v) => [v.commit, v]));
+
+      expect(visited[commitMap.E.hash].isMergePoint).toBe(true);
+      expect(visited[commitMap.C.hash].isMergePoint).toBe(false);
+    });
+  });
 });
