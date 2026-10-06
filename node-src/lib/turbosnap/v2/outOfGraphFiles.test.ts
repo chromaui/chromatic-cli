@@ -182,6 +182,72 @@ describe('hashOutOfGraphFiles', () => {
   });
 });
 
+describe('hashOutOfGraphFiles skipped files', () => {
+  it('drops a static file git ignores and records it', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['logo.svg', 'bundle.css'],
+      },
+      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
+    };
+
+    const { staticFiles, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { staticDirs: [`${projectRoot}/public`] })
+    );
+
+    expect([...staticFiles.keys()]).toEqual(['./public/logo.svg']);
+    expect([...skippedFiles]).toEqual(['./public/bundle.css']);
+  });
+
+  it('hashes config files git ignores, since a generated preview still shapes every story', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+      isIgnored: (candidate) => candidate.endsWith('preview.ts'),
+    };
+
+    const { storybookConfigFiles, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk));
+
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/preview.ts',
+    ]);
+    expect(skippedFiles.size).toBe(0);
+  });
+
+  it('builds when git ignores the main config, because the config dir is hashed regardless', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      isIgnored: (candidate) => candidate.endsWith('main.ts'),
+    };
+
+    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+
+    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+  });
+
+  it('hashes an ignored file in a static dir inside the config dir, since the config dir is never skipped', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['bundle.css'],
+      },
+      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
+    };
+
+    const { storybookConfigFiles, staticFiles, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk)
+    );
+
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/static/bundle.css',
+    ]);
+    expect([...staticFiles.keys()]).toEqual(['./.storybook/static/bundle.css']);
+    expect(skippedFiles.size).toBe(0);
+  });
+});
+
 describe('rollUpOutOfGraphFiles', () => {
   it('rolls each section into its own synthetic entry', async () => {
     const disk: InMemoryDisk = {
