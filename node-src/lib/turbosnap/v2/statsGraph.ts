@@ -242,8 +242,7 @@ async function hashFiles(
 
   const hashes = new Map<FilePath, FileHash>();
   for (const [normalizedName, absolutePath] of normalizedToAbsolute) {
-    const hash = fileHashes[absolutePath];
-    if (hash) hashes.set(normalizedName, hash);
+    hashes.set(normalizedName, fileHashes[absolutePath]);
   }
 
   return hashes;

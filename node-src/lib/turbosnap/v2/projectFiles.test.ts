@@ -1,10 +1,13 @@
 import { mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { getFileHashes } from '../../getFileHashes';
 import TestLogger from '../../testLogger';
 import { lock, temporaryDirectory, write } from './__fixtures__/temporaryDisk';
 import { realProjectFiles } from './projectFiles';
+
+vi.mock('../../getFileHashes', { spy: true });
 
 const log = new TestLogger();
 
@@ -231,6 +234,15 @@ describe('realProjectFiles hashAll', () => {
     }
 
     expect(err?.message).toContain(unreadable);
+  });
+
+  it('throws, naming the file, when no hash comes back for it, since a silent gap would read as a skipped file', async () => {
+    const button = write(temporaryDirectory(), 'src/Button.tsx');
+    vi.mocked(getFileHashes).mockResolvedValueOnce({});
+
+    await expect(realProjectFiles({ log }).hashAll([button])).rejects.toThrow(
+      `No hash was produced for ${button}`
+    );
   });
 });
 

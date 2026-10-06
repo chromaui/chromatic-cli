@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
@@ -329,54 +328,6 @@ describe('readStatsGraph unhashable files', () => {
 
     expect(graph.hashes.has('./src/missing.ts')).toBe(false);
     expect(graph.files.get('./src/missing.ts')?.hash).toBe('');
-  });
-});
-
-describe('readStatsGraph hashing failures', () => {
-  it('treats a file omitted from the hash result as not real', async () => {
-    const story = '/repo/packages/ui/src/Button.stories.tsx';
-    const { input } = createFixture();
-
-    const graph = await readStatsGraph(
-      { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
-      {
-        ...input,
-        projectFiles: {
-          ...input.projectFiles,
-          hashAll: async () => ({}),
-        },
-      }
-    );
-
-    expect(graph.hashes.has('./src/Button.stories.tsx')).toBe(false);
-    expect(graph.files.get('./src/Button.stories.tsx')?.hash).toBe('');
-    expect([...graph.storyFiles]).toEqual([]);
-  });
-
-  it('fails the read rather than returning a graph missing a file it could not read', async () => {
-    // Unreadability is a bug, not an answer: a manifest built without those bytes would silently
-    // under-capture, so this propagates to the entry point and bails TurboSnap to v1.
-    const { input } = createFixture();
-    const story = '/repo/packages/ui/src/Button.stories.tsx';
-    const unreadable = new Error(`Could not hash ${story}: EACCES: permission denied`);
-
-    let err: Error | undefined;
-    try {
-      await readStatsGraph(
-        { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
-        {
-          ...input,
-          projectFiles: {
-            ...input.projectFiles,
-            hashAll: () => Promise.reject(unreadable),
-          },
-        }
-      );
-    } catch (error) {
-      err = error as Error;
-    }
-
-    expect(err?.message).toContain(story);
   });
 });
 

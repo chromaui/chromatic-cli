@@ -29,7 +29,10 @@ export interface ProjectFiles {
   isDirectory(absolutePath: AbsolutePath): boolean;
   /** Resolves the package manifest. Undefined when unresolvable. */
   packageVersion(fromDirectory: AbsolutePath, packageName: string): string | undefined;
-  /** Throws, naming the path, when a file cannot be read. `concurrency` bounds parallel reads. */
+  /**
+   * A hash for every path given. Throws, naming the path, when a file cannot be read or no hash came
+   * back for it. `concurrency` bounds parallel reads.
+   */
   hashAll(
     absolutePaths: AbsolutePath[],
     concurrency?: number
@@ -176,11 +179,19 @@ async function hashFileContents(
 ): Promise<Record<AbsolutePath, FileHash>> {
   if (absolutePaths.length === 0) return {};
 
+  let hashes: Record<AbsolutePath, FileHash>;
   try {
-    return await getFileHashes({ files: absolutePaths, concurrency });
+    hashes = await getFileHashes({ files: absolutePaths, concurrency });
   } catch (error) {
     throw new Error(`Could not hash ${namePathThatFailed(error, absolutePaths)}: ${error.message}`);
   }
+
+  // A silent gap would leave a real file with no hash, which a graph built over it would then treat
+  // as skipped and under-capture, so the promise of a hash per path is enforced here, once.
+  const missing = absolutePaths.find((absolutePath) => !hashes[absolutePath]);
+  if (missing) throw new Error(`No hash was produced for ${missing}`);
+
+  return hashes;
 }
 
 /**
