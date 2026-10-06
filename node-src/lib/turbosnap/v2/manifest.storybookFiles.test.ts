@@ -118,6 +118,20 @@ describe('buildManifest storybookFiles', () => {
     );
   });
 
+  it('keeps the preview subtree rolled up when git ignores the preview config', async () => {
+    // A generated preview.ts still shapes every story, so it is hashed and stays the preview root.
+    const { input } = createFixture({
+      fileHashes: { ...baseHashes },
+      isIgnored: (candidate) => candidate === preview,
+    });
+
+    const manifest = await buildManifest(makeStats(), input);
+
+    expect(manifest.attribution.previewSubtree.has('./.storybook/preview.ts')).toBe(true);
+    expect(manifest.attribution.previewSubtree.has('./.storybook/theme.ts')).toBe(true);
+    expect(manifest.skippedFiles.size).toBe(0);
+  });
+
   it('keeps a preview-subtree file out of globals although the config entry reaches it', async () => {
     // The globals walk reaches these files through the config entry, but the dedicated `preview`
     // roll-up already tracks them. They should not also be included in `storybookGlobals`.

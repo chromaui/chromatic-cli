@@ -52,6 +52,11 @@ export interface TurboSnapManifest {
    * roll-ups. Synthetic nodes are omitted only when the manifest is serialized.
    */
   files: Map<FilePath, TurboSnapFile>;
+  /**
+   * The on-disk files, in the graph or swept, that v2 skipped hashing; see `findSkippedFiles`. A
+   * diagnostic record for the S3 manifest.
+   */
+  skippedFiles: Set<FilePath>;
 }
 
 /**
@@ -69,6 +74,7 @@ interface ManifestFile {
   storyFiles: Record<FilePath, FileHash>;
   attribution: Record<keyof FileAttribution, FilePath[]>;
   files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
+  skippedFiles: FilePath[];
 }
 
 /**
@@ -86,7 +92,13 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  const { files, hashes, storyFiles, globalRoots } = await readStatsGraph(stats, input);
+  const {
+    files,
+    hashes,
+    storyFiles,
+    globalRoots,
+    skippedFiles: skippedGraphFiles,
+  } = await readStatsGraph(stats, input);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
@@ -117,7 +129,7 @@ export async function buildManifest(
 
   // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const outOfGraphFiles = await hashOutOfGraphFiles(input);
+  const { skippedFiles: skippedStaticFiles, ...outOfGraphFiles } = await hashOutOfGraphFiles(input);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
@@ -126,6 +138,10 @@ export async function buildManifest(
   );
   input.log.debug(
     `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+  );
+  const skippedFiles = new Set([...skippedGraphFiles, ...skippedStaticFiles]);
+  input.log.debug(
+    `Skipped ${skippedFiles.size} of the project's own files that git ignores (dependencies, node_modules and the Storybook config directory are always hashed)`
   );
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
@@ -142,6 +158,7 @@ export async function buildManifest(
     attribution,
     outOfGraphFiles,
     files,
+    skippedFiles,
   };
 }
 
@@ -172,6 +189,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
       )
     ) as ManifestFile['attribution'],
     files: sortByKey(serializeFiles(manifest.files)),
+    skippedFiles: [...manifest.skippedFiles].sort(comparePaths),
   };
 }
 

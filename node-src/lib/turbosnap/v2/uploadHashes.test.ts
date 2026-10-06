@@ -21,7 +21,11 @@ const manifest: TurboSnapManifest = {
     previewSubtree: new Set(['./.storybook/preview.ts']),
     storybookGlobals: new Set(),
   },
-  outOfGraphFiles: { storybookConfigFiles: new Map(), staticFiles: new Map() },
+  outOfGraphFiles: {
+    storybookConfigFiles: new Map(),
+    staticFiles: new Map(),
+  },
+  skippedFiles: new Set(),
 };
 
 beforeEach(() => {

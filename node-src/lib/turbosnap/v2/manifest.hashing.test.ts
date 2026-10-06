@@ -57,6 +57,95 @@ describe('buildManifest leaf inclusion', () => {
       before.storyFileHashes.get('./src/Button.stories.tsx')
     );
   });
+
+  it('leaves the story hash alone when a leaf dependency git ignores changes content', async () => {
+    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === leaf });
+    disk.fileHashes = { [story]: 'S', [leaf]: 'T1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [story]: 'S', [leaf]: 'T2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+    expect(after.storybookHash).toBe(before.storybookHash);
+  });
+});
+
+describe('buildManifest through a file git ignores', () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const barrel = '/repo/packages/ui/src/generated/index.ts';
+  const button = '/repo/packages/ui/src/Button.tsx';
+
+  // The barrel is generated and git ignores it, but it re-exports the tracked Button.tsx. The story
+  // only reaches Button.tsx through the barrel.
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: barrel, reasons: [{ moduleName: story }] },
+      { id: 3, name: button, reasons: [{ moduleName: barrel }] },
+    ],
+  };
+
+  it('changes the story hash when a tracked file behind the ignored file changes content', async () => {
+    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === barrel });
+    disk.fileHashes = { [story]: 'S', [barrel]: 'G', [button]: 'B1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [story]: 'S', [barrel]: 'G', [button]: 'B2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+  });
+
+  it('changes the story hash when the ignored file is removed from the import graph', async () => {
+    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === barrel });
+    disk.fileHashes = { [story]: 'S', [barrel]: 'G', [button]: 'B' };
+    const before = await buildManifest(stats, input);
+
+    const withoutBarrel: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 3, name: button, reasons: [{ moduleName: story }] },
+      ],
+    };
+    const after = await buildManifest(withoutBarrel, input);
+
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+  });
+});
+
+describe("buildManifest through a workspace package's build output", () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const built = '/repo/packages/icons/dist/index.js';
+
+  // The bundler resolves `@acme/icons` through its node_modules link to the package's gitignored
+  // `dist`, so that is the only form of the package the graph holds.
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: built, reasons: [{ moduleName: story }] },
+    ],
+  };
+
+  it('changes the story hash when the build output changes content, even though git ignores it', async () => {
+    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === built });
+    disk.fileHashes = { [story]: 'S', [built]: 'D1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [story]: 'S', [built]: 'D2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+    expect([...after.skippedFiles]).toEqual([]);
+  });
 });
 
 describe('buildManifest relocation stability', () => {

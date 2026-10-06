@@ -46,6 +46,7 @@ export async function findSkippedFiles(
   const realPaths = new Map(
     absolutePaths.map((absolutePath) => [absolutePath, projectFiles.realPath(absolutePath)])
   );
+  // The debug line in `buildManifest` spells this policy out next to the count; keep it in step.
   const candidates = [...realPaths.values()].filter(
     (realPath) => !isNodeModulesPath(realPath) && !realPath.startsWith(configDirectory)
   );

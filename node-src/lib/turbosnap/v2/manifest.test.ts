@@ -43,6 +43,32 @@ describe('serializeManifest', () => {
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 
+  it('lists the files git ignores, from the graph and the sweeps, as one sorted array', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const generated = '/repo/packages/ui/src/generated/schema.ts';
+    const { input } = createFixture({
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['bundle.css'],
+      },
+      fileHashes: { [story]: 'S', [generated]: 'G' },
+      isIgnored: (candidate) => candidate.includes('generated') || candidate.endsWith('bundle.css'),
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: generated, reasons: [{ moduleName: story }] },
+      ],
+    };
+
+    const serialized = serializeManifest(
+      await buildManifest(stats, { ...input, staticDirs: ['/repo/packages/ui/public'] })
+    );
+
+    expect(serialized.skippedFiles).toEqual(['./public/bundle.css', './src/generated/schema.ts']);
+    expect(serialized.staticFiles).toEqual({});
+  });
+
   it('emits storybookConfigHashes as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';
