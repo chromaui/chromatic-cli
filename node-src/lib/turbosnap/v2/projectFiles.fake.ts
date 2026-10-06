@@ -23,7 +23,9 @@ export interface InMemoryDisk {
   packageVersionsByDirectory?: Record<AbsolutePath, Record<string, string>>;
   /**
    * Whether a path has no file on disk. Everything else is a file, which is what keeps a suite from
-   * having to list every source file its stats fixture names.
+   * having to list every source file its stats fixture names. The one exception is a `package.json`,
+   * which is a file only when its directory lists it: one marks the boundary of a package, so a
+   * suite says where the packages are.
    */
   isAbsent?: (absolutePath: AbsolutePath) => boolean;
   /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
@@ -58,6 +60,7 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
   }
 
   function isFile(absolutePath: AbsolutePath): boolean {
+    if (path.basename(absolutePath) === 'package.json') return isListedFile(absolutePath);
     return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
   }
 
