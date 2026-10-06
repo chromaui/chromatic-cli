@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, symlinkSync } from 'fs';
+import { mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 
@@ -312,5 +312,30 @@ describe('realProjectFiles packageVersion', () => {
       'Directories checked:',
       expect.arrayContaining([`${path.join(root, 'node_modules')} (missing)`])
     );
+  });
+});
+
+describe('realProjectFiles realPath', () => {
+  it('resolves a path through a symlinked directory to the file it leads to, as a base dir linked from apps/ would be', () => {
+    const root = realpathSync(temporaryDirectory());
+    const button = write(root, 'packages/ui/Button.tsx');
+    mkdirSync(path.join(root, 'apps'));
+    symlinkSync(path.join(root, 'packages/ui'), path.join(root, 'apps/storybook'));
+
+    expect(realProjectFiles(log).realPath(path.join(root, 'apps/storybook/Button.tsx'))).toBe(
+      button
+    );
+  });
+
+  it('returns a real path unchanged', () => {
+    const button = write(realpathSync(temporaryDirectory()), 'Button.tsx');
+
+    expect(realProjectFiles(log).realPath(button)).toBe(button);
+  });
+
+  it('returns a path to nothing as given, since there is nothing to resolve', () => {
+    const absent = path.join(realpathSync(temporaryDirectory()), 'missing.tsx');
+
+    expect(realProjectFiles(log).realPath(absent)).toBe(absent);
   });
 });

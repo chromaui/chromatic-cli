@@ -40,6 +40,11 @@ export interface ProjectFiles {
   listTree(absolutePath: AbsolutePath): AbsolutePath[];
   /** Writes the contents to the file, creating parent directories and overwriting it if present. */
   writeFile(absolutePath: AbsolutePath, contents: string): void;
+  /**
+   * The path a symlink leads to, or the path itself when it leads nowhere or is not a link. Lets two
+   * names for one file (a bundler's resolved path and a configured link path) be compared as one.
+   */
+  realPath(absolutePath: AbsolutePath): AbsolutePath;
 }
 
 /**
@@ -63,7 +68,24 @@ export function realProjectFiles(log: Logger): ProjectFiles {
       mkdirSync(path.dirname(absolutePath), { recursive: true });
       writeFileSync(absolutePath, contents);
     },
+    realPath,
   };
+}
+
+/**
+ * Resolves a path to the file it leads to, through any symlinks (a base dir linked from `apps/`, a
+ * static dir linked from a package). A path that can't be resolved is returned as is.
+ *
+ * @param absolutePath The path to resolve.
+ *
+ * @returns The real path, or the given path when there is nothing there to resolve.
+ */
+function realPath(absolutePath: AbsolutePath): AbsolutePath {
+  try {
+    return realpathSync(absolutePath);
+  } catch {
+    return absolutePath;
+  }
 }
 
 function statFile(log: Logger, absolutePath: AbsolutePath): Stats | undefined {

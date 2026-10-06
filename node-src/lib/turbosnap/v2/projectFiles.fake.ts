@@ -94,5 +94,7 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       disk.writtenFiles ??= {};
       disk.writtenFiles[absolutePath] = contents;
     },
+    // Symlinks are not modelled, so every path is already the real one.
+    realPath: (absolutePath: AbsolutePath) => absolutePath,
   };
 }
