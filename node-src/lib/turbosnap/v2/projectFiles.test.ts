@@ -1,65 +1,12 @@
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'fs';
-import { tmpdir } from 'os';
+import { mkdirSync, readFileSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import TestLogger from '../../testLogger';
+import { lock, temporaryDirectory, write } from './__fixtures__/temporaryDisk';
 import { realProjectFiles } from './projectFiles';
 
-// The real adapter's whole job is knowing what the disk means, so these run against real temporary
-// directories: real symlinks, a real cycle and a real unreadable directory. A fake that simulates
-// symlink semantics can only prove the fake follows them.
-let temporaryDirectories: string[] = [];
-let lockedDirectories: string[] = [];
 const log = new TestLogger();
-
-afterEach(() => {
-  // Unlock the directories before removal because it's required in order to remove them.
-  for (const directory of lockedDirectories) {
-    chmodSync(directory, 0o755);
-  }
-  for (const directory of temporaryDirectories) {
-    rmSync(directory, { recursive: true, force: true });
-  }
-  // Reset the lists, so the next test's cleanup doesn't chmod a path this one already removed.
-  temporaryDirectories = [];
-  lockedDirectories = [];
-});
-
-/**
- * Creates a temporary directory in the system's temporary directory.
- *
- * @returns The absolute path of the directory.
- */
-function temporaryDirectory(): string {
-  const directory = mkdtempSync(path.join(tmpdir(), 'chromatic-project-files-'));
-  temporaryDirectories.push(directory);
-  return directory;
-}
-
-/**
- * Writes a file, creating its parent directories.
- *
- * @param root The directory to write within.
- * @param relativePath The file's path relative to `root`.
- * @param content The bytes to write, its own path by default so two files differ.
- *
- * @returns The absolute path written.
- */
-function write(root: string, relativePath: string, content = relativePath): string {
-  const absolutePath = path.join(root, relativePath);
-  mkdirSync(path.dirname(absolutePath), { recursive: true });
-  writeFileSync(absolutePath, content);
-  return absolutePath;
-}
 
 /**
  * "Installs" a package under a directory's `node_modules` to match a real repository structure.
@@ -70,17 +17,6 @@ function write(root: string, relativePath: string, content = relativePath): stri
  */
 function install(root: string, packageName: string, packageJson: Record<string, unknown>) {
   write(root, `node_modules/${packageName}/package.json`, JSON.stringify(packageJson));
-}
-
-/**
- * Updates the permissions of the path so it's unreadable, so a test can test failed read
- * operations.
- *
- * @param absolutePath The file or directory to lock.
- */
-function lock(absolutePath: string) {
-  lockedDirectories.push(absolutePath);
-  chmodSync(absolutePath, 0o000);
 }
 
 describe('realProjectFiles listTree', () => {
