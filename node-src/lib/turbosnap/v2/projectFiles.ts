@@ -11,14 +11,16 @@ import { Dirent, Stats } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 
+import { GitDeps } from '../../../git/execGit';
+import { getIgnoredPaths, IgnoredPaths } from '../../../git/git';
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
 import { Logger } from '../../log';
 import { FileHash } from './graph';
 
 /**
- * Every disk read TurboSnap v2 makes, behind one interface, so the rules about what the disk means
- * live here rather than at each call site.
+ * Every disk and git read TurboSnap v2 makes, behind one interface, so the rules about what the disk
+ * means live here rather than at each call site.
  */
 export interface ProjectFiles {
   /** False when the path names are too long. Every other failure throws. */
@@ -45,17 +47,35 @@ export interface ProjectFiles {
    * names for one file (a bundler's resolved path and a configured link path) be compared as one.
    */
   realPath(absolutePath: AbsolutePath): AbsolutePath;
+  /**
+   * The subset of the paths git ignores: untracked files that `.gitignore` or another exclude source
+   * matches. A tracked file is never ignored, whatever the patterns say, and nor is a path outside
+   * the repository. Paths are matched as git names them, so a path reached through a symlink is
+   * answered as not ignored; resolve it with `realPath` first. Rejects when git cannot answer: a
+   * guess of "nothing is ignored" would hash every generated file as a real change, which is the
+   * over-capture the skip rule exists to prevent.
+   */
+  ignoredFiles(absolutePaths: AbsolutePath[]): Promise<Set<AbsolutePath>>;
 }
 
 /**
- * The adapter backed by the real disk. Constructed explicitly by the caller, never defaulted: a
- * default is exactly how a test would silently read the machine it runs on.
+ * The adapter backed by the real disk and the repository the CLI runs in. Constructed explicitly by
+ * the caller, never defaulted: a default is exactly how a test would silently read the machine it
+ * runs on.
  *
- * @param log The logger to use.
+ * @param deps The logger, and the options the git commands read their timeout from.
+ * @param deps.log The logger to use.
+ * @param deps.options The options to pass to the git commands.
+ * @param deps.options.gitTimeout The timeout in milliseconds for the git commands.
  *
  * @returns An adapter to read from the real file system.
  */
-export function realProjectFiles(log: Logger): ProjectFiles {
+export function realProjectFiles(deps: GitDeps): ProjectFiles {
+  const { log } = deps;
+
+  // Defined here to cache the result of the git command when there are multiple calls to `ignoredFiles`.
+  let ignoredPaths: Promise<IgnoredPaths> | undefined;
+
   return {
     isFile: (absolutePath: AbsolutePath) => statFile(log, absolutePath)?.isFile() ?? false,
     isDirectory: (absolutePath: AbsolutePath) =>
@@ -69,6 +89,11 @@ export function realProjectFiles(log: Logger): ProjectFiles {
       writeFileSync(absolutePath, contents);
     },
     realPath,
+    ignoredFiles: async (absolutePaths: AbsolutePath[]) => {
+      ignoredPaths ??= getIgnoredPaths(deps);
+      const ignored = await ignoredPaths;
+      return new Set(absolutePaths.filter((absolutePath) => ignored.has(absolutePath)));
+    },
   };
 }
 

@@ -28,6 +28,8 @@ export interface InMemoryDisk {
   isAbsent?: (absolutePath: AbsolutePath) => boolean;
   /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
   writtenFiles?: Record<AbsolutePath, string>;
+  /** Whether git ignores a path. Nothing is ignored unless a suite says so. */
+  isIgnored?: (absolutePath: AbsolutePath) => boolean;
 }
 
 /**
@@ -46,10 +48,6 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     return Boolean(disk.directories?.[absolutePath]);
   }
 
-  function isFile(absolutePath: AbsolutePath): boolean {
-    return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
-  }
-
   // A path is a file for the purposes of listing only when its parent directory names it. The
   // "everything else is a file" default is for source files the stats fixture names; applying it here
   // would turn a configured-but-missing static directory into a file.
@@ -57,6 +55,10 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     return Boolean(
       disk.directories?.[path.dirname(absolutePath)]?.includes(path.basename(absolutePath))
     );
+  }
+
+  function isFile(absolutePath: AbsolutePath): boolean {
+    return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
   }
 
   function listTree(absolutePath: AbsolutePath): AbsolutePath[] {
@@ -96,5 +98,7 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     },
     // Symlinks are not modelled, so every path is already the real one.
     realPath: (absolutePath: AbsolutePath) => absolutePath,
+    ignoredFiles: async (absolutePaths: AbsolutePath[]) =>
+      new Set(absolutePaths.filter((absolutePath) => disk.isIgnored?.(absolutePath))),
   };
 }
