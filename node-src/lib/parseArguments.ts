@@ -29,6 +29,8 @@ export default function parseArguments(argv: string[]) {
       --storybook-build-dir, -d <dirname>       If you have already built your Storybook, provide the path to the static build directory.
 
     Chromatic options
+      --require-baseline <sha>                  Validate an exact main baseline dependency (experimental groundwork; server integration pending).
+      --bypass-if-unchanged                     Request verified inheritance of unchanged inputs (experimental groundwork; server integration pending).
       --auto-accept-changes [branch]            If there are any changes to the build, automatically accept them. Only for [branch], if specified. Globs are supported via picomatch.
       --branch-name <branch>                    Override the branch name. Only meant to be used for unsupported CI integrations and fixing cross-fork PR comparisons. Also accepts <owner>:<branch> format.
       --ci                                      Mark this build as a CI build. Alternatively, set the 'CI' environment variable (present in most CI systems). This option implies --no-interactive.
@@ -90,6 +92,8 @@ export default function parseArguments(argv: string[]) {
 
         // Chromatic options
         autoAcceptChanges: { type: 'string' },
+        requireBaseline: { type: 'string' },
+        bypassIfUnchanged: { type: 'boolean' },
         branchName: { type: 'string' },
         ci: { type: 'boolean' },
         configFile: { type: 'string', alias: 'c' },

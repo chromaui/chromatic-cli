@@ -10,14 +10,14 @@ import { treeKill } from './treeKill';
  * 1. Buffered mode: await the result to get stdout/stderr after completion
  * 2. Streaming mode: access .stdout/.stderr properties during execution (requires buffer: false)
  *
- * @param command The command to run.
+ * @param command The command to run, or an executable followed by literal arguments.
  * @param options Execa options. Note: `timeout` is handled internally.
  *
  * @returns An execa `ResultPromise` with .kill() and timeout overwritten.
  */
-export function runCommand(command: string, options: Options = {}): ResultPromise {
+export function runCommand(command: string | string[], options: Options = {}): ResultPromise {
   const { timeout, ...optionsWithoutTimeout } = options;
-  const [cmd, ...args] = parseCommandString(command);
+  const [cmd, ...args] = typeof command === 'string' ? parseCommandString(command) : command;
   const subprocess = execa(cmd, args, optionsWithoutTimeout);
 
   subprocess.kill = () => {

@@ -11,10 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 
 import { getGitInfo, run, runAll, shouldUploadMetadata } from '.';
 import * as git from './git/git';
+import { validateCleanCheckout, validateTestedCheckout } from './git/validateBaselineCheckout';
+import { validateRequiredBaseline } from './git/validateRequiredBaseline';
 import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
+import { TaskFailure } from './lib/setExitCode';
 import TestLogger from './lib/testLogger';
 import { patchModulePath } from './lib/testUtilities';
 import { uploadFiles } from './lib/uploadFiles';
@@ -41,6 +44,8 @@ beforeEach(() => {
 });
 
 vi.mock('dns');
+vi.mock('./git/validateBaselineCheckout');
+vi.mock('./git/validateRequiredBaseline');
 vi.mock('execa', async (importOriginal) => {
   const actual = await importOriginal<typeof import('execa')>();
   return {
@@ -451,6 +456,72 @@ it('returns 0 with a warning when skip is enabled and project token is missing',
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runAll(ctx);
   expectSkipNoProjectToken(ctx);
+});
+
+it.each(['--require-baseline=' + 'a'.repeat(40), '--bypass-if-unchanged'])(
+  'rejects tokenless --skip for %s',
+  async (flag) => {
+    const ctx = getContext([flag, '--skip']);
+    ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+    await runAll(ctx);
+    expect(ctx.exitCode).toBe(254);
+    expect(ctx.testLogger.errors[0]).toMatch(/--skip cannot be combined/);
+  }
+);
+
+it('rejects a matching tokenless skip glob in a baseline workflow', async () => {
+  getBranch.mockResolvedValue('dependabot/npm');
+  const ctx = getContext(['--bypass-if-unchanged', '--skip=dependabot/**']);
+  ctx.env.CHROMATIC_PROJECT_TOKEN = '';
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(254);
+  expect(ctx.testLogger.errors[0]).toMatch(/--skip matches this branch/);
+});
+
+it.each([
+  '--exit-zero-on-changes',
+  '--exit-once-uploaded',
+  '--force-rebuild',
+  '--ignore-last-build-on-branch=branch',
+  '--dry-run',
+])('preserves unsupported-workflow failure with %s', async (flag) => {
+  const ctx = getContext([
+    '--project-token=asdf1234',
+    '--ci',
+    '--require-baseline=' + 'a'.repeat(40),
+    '--diagnostics-file',
+    flag,
+  ]);
+  vi.mocked(validateRequiredBaseline).mockResolvedValue('a'.repeat(40));
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(3);
+  expect(ctx.baselineWorkflow).toMatchObject({
+    state: 'UNSUPPORTED',
+    requiredCommit: 'a'.repeat(40),
+  });
+  expect(validateCleanCheckout).toHaveBeenCalled();
+  expect(validateTestedCheckout).toHaveBeenCalled();
+  expect(announcedBuild).toBeUndefined();
+  expect(
+    fetch.mock.calls.some(([, init]) => String(init?.body).includes('AnnounceBuildMutation'))
+  ).toBe(false);
+  expect(jsonfile.writeFile).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ baselineWorkflow: ctx.baselineWorkflow, exitCode: 3 }),
+    expect.anything()
+  );
+});
+
+it('preserves the dirty-checkout exit code before opening the build log', async () => {
+  const ctx = getContext(['--project-token=asdf1234', '--ci', '--bypass-if-unchanged']);
+  vi.mocked(validateCleanCheckout).mockRejectedValueOnce(
+    new TaskFailure('Checkout is dirty', { exitCode: 101 })
+  );
+  await runAll(ctx);
+  expect(ctx.exitCode).toBe(101);
+  expect(
+    fetch.mock.calls.some(([, init]) => String(init?.body).includes('CreateAppTokenMutation'))
+  ).toBe(false);
 });
 
 it('returns 0 with a warning when skip matches the current branch and project token is missing', async () => {
