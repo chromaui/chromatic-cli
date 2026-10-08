@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { getFileHashes } from '../../getFileHashes';
 import TestLogger from '../../testLogger';
-import { lock, temporaryDirectory, write } from './__fixtures__/temporaryDisk';
+import { lock, repository, temporaryDirectory, track, write } from './__fixtures__/temporaryDisk';
 import { realProjectFiles } from './projectFiles';
 
 vi.mock('../../getFileHashes', { spy: true });
@@ -127,6 +127,34 @@ describe('realProjectFiles listTree', () => {
     const files = realProjectFiles({ log }).listTree(path.join(root, 'locked'));
 
     expect(files).toEqual([]);
+  });
+});
+
+describe('realProjectFiles trackedFiles', () => {
+  it('lists every indexed file under the root, absolute, and nothing unindexed', async () => {
+    const root = repository();
+    track(root, 'tailwind.config.js');
+    track(root, 'packages/ui/src/styles/main.scss');
+    write(root, 'packages/ui/node_modules/left-pad/index.js');
+    write(root, 'untracked.scss');
+
+    const files = await Array.fromAsync(realProjectFiles({ log }).trackedFiles(root));
+
+    expect(files.sort()).toEqual([
+      path.join(root, 'packages/ui/src/styles/main.scss'),
+      path.join(root, 'tailwind.config.js'),
+    ]);
+  });
+
+  it('keeps an indexed file that was deleted from the working tree, for the caller to filter', async () => {
+    const root = repository();
+    track(root, 'tailwind.config.js');
+    rmSync(path.join(root, 'tailwind.config.js'));
+
+    const files = await Array.fromAsync(realProjectFiles({ log }).trackedFiles(root));
+
+    expect(files).toEqual([path.join(root, 'tailwind.config.js')]);
+    expect(realProjectFiles({ log }).isFile(files[0])).toBe(false);
   });
 });
 

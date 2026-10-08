@@ -12,15 +12,19 @@ import { createRequire } from 'module';
 import path from 'path';
 
 import { GitDeps } from '../../../git/execGit';
-import { getIgnoredPaths, IgnoredPaths } from '../../../git/git';
+import {
+  getIgnoredPaths,
+  IgnoredPaths,
+  trackedFiles as trackedRelativePaths,
+} from '../../../git/git';
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
 import { Logger } from '../../log';
 import { FileHash } from './graph';
 
 /**
- * Every disk and git read TurboSnap v2 makes, behind one interface, so the rules about what the disk
- * means live here rather than at each call site.
+ * Every read of the project TurboSnap v2 makes, disk and git index alike, behind one interface, so
+ * the rules about what the project means live here rather than at each call site.
  */
 export interface ProjectFiles {
   /** False when the path names are too long. Every other failure throws. */
@@ -43,6 +47,12 @@ export interface ProjectFiles {
    * a reason other than absence, matching `isFile` and `isDirectory`.
    */
   listTree(absolutePath: AbsolutePath): AbsolutePath[];
+  /**
+   * Every path in the git index under the repository root, absolute, streamed as git lists it so a
+   * monorepo's index never has to be held whole. Includes paths whose file is gone from disk and
+   * submodule roots, so a caller that hashes the result filters with `isFile`.
+   */
+  trackedFiles(gitRoot: AbsolutePath): AsyncIterable<AbsolutePath>;
   /** Writes the contents to the file, creating parent directories and overwriting it if present. */
   writeFile(absolutePath: AbsolutePath, contents: string): void;
   /**
@@ -87,6 +97,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
       readPackageVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
     listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
+    trackedFiles: (gitRoot: AbsolutePath) => trackedFiles(deps, gitRoot),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       mkdirSync(path.dirname(absolutePath), { recursive: true });
       writeFileSync(absolutePath, contents);
@@ -204,6 +215,23 @@ async function hashFileContents(
  */
 function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
   return error?.path ? String(error.path) : `one of the ${absolutePaths.length} files hashed`;
+}
+
+/**
+ * Streams every path in the git index under the repository root. The index rather than the disk,
+ * because the disk under a repository root holds `node_modules`, build output and everything else
+ * `.gitignore` excludes, none of which a user's glob means; the index is also exactly the universe
+ * v1's git diff drew changed files from.
+ *
+ * @param deps The logger, and the options the git command reads its timeout from.
+ * @param gitRoot The absolute repository root.
+ *
+ * @yields {AbsolutePath} The absolute path of each indexed entry.
+ */
+async function* trackedFiles(deps: GitDeps, gitRoot: AbsolutePath): AsyncIterable<AbsolutePath> {
+  for await (const relativePath of trackedRelativePaths(deps, gitRoot)) {
+    yield path.join(gitRoot, relativePath);
+  }
 }
 
 /**
