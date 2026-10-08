@@ -14,6 +14,7 @@ import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
   execGitCommand,
   execGitCommandCountLines,
+  execGitCommandEntries,
   execGitCommandOneLine,
   GitDeps,
 } from './execGit';
@@ -625,6 +626,22 @@ export async function findFilesFromRepositoryRoot(
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
   const files = await execGitCommand(deps, gitCommand);
   return files?.split(NULL_BYTE).filter(Boolean);
+}
+
+/**
+ * Every path in the git index, relative to the repository root, streamed rather than listed: a
+ * monorepo's index can run to millions of entries, more than fits in one command result.
+ *
+ * @param deps Function dependencies.
+ * @param repoRoot The root path of the repository (usually from `getRepositoryRoot()`).
+ *
+ * @returns Every indexed path, relative to `repoRoot`, as git lists it. Includes paths whose file is
+ * gone from the working tree and submodule roots, since the index still names them.
+ */
+export function trackedFiles(deps: GitDeps, repoRoot: string): AsyncIterable<string> {
+  // Run from the root because git lists only the current directory's subtree, and the CLI may run
+  // from a subdirectory.
+  return execGitCommandEntries(deps, 'git ls-files --full-name -z', { cwd: repoRoot });
 }
 
 /**
