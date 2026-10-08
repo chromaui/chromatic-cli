@@ -50,7 +50,7 @@ export interface TurboSnapManifest {
   /**
    * The unpruned graph parsed from `preview-stats.json`, including synthetic transit nodes used by
    * roll-ups. Synthetic nodes are omitted only when the manifest is serialized; files v2 skipped
-   * stay, with an empty hash, so the written graph keeps the edges that run through them.
+   * stay, hashed as `SKIPPED_HASH`, so the written graph keeps the edges that run through them.
    */
   files: Map<FilePath, TurboSnapFile>;
   /**
@@ -189,27 +189,22 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
         ])
       )
     ) as ManifestFile['attribution'],
-    files: sortByKey(serializeFiles(manifest.files, manifest.skippedFiles)),
+    files: sortByKey(serializeFiles(manifest.files)),
     skippedFiles: [...manifest.skippedFiles].sort(comparePaths),
   };
 }
 
 /**
- * Serializes the graph without its synthetic nodes. A skipped file also has no hash, but it is a real
- * file that a story can import tracked files through, so it stays in the written graph to keep that
- * path visible.
+ * Serializes the graph without its synthetic nodes: an empty hash means there is no file on disk. A
+ * skipped file keeps its sentinel hash and stays: it is a real file that a story can import tracked
+ * files through, so the written graph keeps that path visible.
  *
  * @param files The unpruned graph.
- * @param skippedFiles The on-disk files v2 skipped hashing.
  *
  * @returns The graph of real files, each with its hash and the real files it depends on.
  */
-function serializeFiles(
-  files: Map<FilePath, TurboSnapFile>,
-  skippedFiles: Set<FilePath>
-): ManifestFile['files'] {
-  const isRealFile = (filePath: FilePath) =>
-    Boolean(files.get(filePath)?.hash) || skippedFiles.has(filePath);
+function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['files'] {
+  const isRealFile = (filePath: FilePath) => Boolean(files.get(filePath)?.hash);
 
   const serialized: ManifestFile['files'] = {};
   for (const [filePath, file] of files) {

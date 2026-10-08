@@ -54,8 +54,8 @@ export class MissingStorybookConfigError extends Error {
  *
  * Static files are hashed unbounded, with no size or count cap: a cap is a silent gap, which is the
  * failure mode this mechanism exists to remove. The project's own static files that git ignores are the
- * one exception, and the config directory is hashed whether git ignores its files or not; see
- * {@link findSkippedFiles}.
+ * one exception, left out of the roll-up entirely like every skipped file (see `SKIPPED_HASH`), and
+ * the config directory is hashed whether git ignores its files or not; see {@link findSkippedFiles}.
  *
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  *

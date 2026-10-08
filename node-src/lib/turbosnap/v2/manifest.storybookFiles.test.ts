@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture } from './__fixtures__/manifestFixtures';
+import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
 
 describe('buildManifest storybookFiles', () => {
@@ -239,6 +239,78 @@ describe('buildManifest storybookFiles', () => {
 
     expect([...second.storybookConfigHashes]).toEqual([...first.storybookConfigHashes]);
     expect(second.storybookHash).toBe(first.storybookHash);
+  });
+});
+
+describe('buildManifest attribution of files git ignores', () => {
+  // One generated file in each hashing home: imported by a story, by the preview config, and only by
+  // the builder's config entry (a synthetic globals root, so the globals walk is its only way in).
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const preview = '/repo/packages/ui/.storybook/preview.ts';
+  const storyData = '/repo/packages/ui/src/generated/story-data.json';
+  const previewData = '/repo/packages/ui/src/generated/preview-data.json';
+  const globalData = '/repo/packages/ui/src/generated/global-data.json';
+  const configEntry = './storybook-config-entry.js';
+
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: storyData, reasons: [{ moduleName: story }] },
+      { id: 3, name: preview, reasons: [{ moduleName: configEntry }] },
+      { id: 4, name: previewData, reasons: [{ moduleName: preview }] },
+      { id: 5, name: globalData, reasons: [{ moduleName: configEntry }] },
+    ],
+  };
+
+  function fixture() {
+    return createFixture({
+      fileHashes: { [story]: 'S', [preview]: 'P' },
+      isAbsent: syntheticAbsent,
+      isIgnored: (candidate) => candidate.includes('generated'),
+    });
+  }
+
+  it('lands a skipped file in no hashing home, whichever one reaches it', async () => {
+    const manifest = await buildManifest(stats, fixture().input);
+
+    // The walks did reach the skipped files: their importers are home, with the edges intact.
+    expect(
+      manifest.files
+        .get('./src/Button.stories.tsx')
+        ?.dependencies.has('./src/generated/story-data.json')
+    ).toBe(true);
+    expect(manifest.attribution.storyReachable.has('./src/Button.stories.tsx')).toBe(true);
+    expect(manifest.attribution.previewSubtree.has('./.storybook/preview.ts')).toBe(true);
+
+    expect(manifest.attribution.storyReachable.has('./src/generated/story-data.json')).toBe(false);
+    expect(manifest.attribution.previewSubtree.has('./src/generated/preview-data.json')).toBe(
+      false
+    );
+    expect(manifest.attribution.storybookGlobals.has('./src/generated/global-data.json')).toBe(
+      false
+    );
+    expect([...manifest.skippedFiles].sort()).toEqual([
+      './src/generated/global-data.json',
+      './src/generated/preview-data.json',
+      './src/generated/story-data.json',
+    ]);
+  });
+
+  it('leaves every roll-up alone when the skipped files leave the graph', async () => {
+    const { input } = fixture();
+    const before = await buildManifest(stats, input);
+    const after = await buildManifest(
+      {
+        modules: stats.modules.filter(
+          (module) => ![storyData, previewData, globalData].includes(module.name)
+        ),
+      },
+      input
+    );
+
+    expect(after.storybookHash).toBe(before.storybookHash);
+    expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
+    expect([...after.storybookConfigHashes]).toEqual([...before.storybookConfigHashes]);
   });
 });
 

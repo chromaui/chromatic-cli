@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
 import { createFixture } from './__fixtures__/manifestFixtures';
+import { SKIPPED_HASH } from './graph';
 import { countNodeModulesFiles, readStatsGraph } from './statsGraph';
 
 // These suites are about builder spellings: what webpack, rspack and Vite each call the same file,
@@ -475,7 +476,7 @@ describe('readStatsGraph skipped files', () => {
     ],
   };
 
-  it('keeps a file git ignores in the graph as a node with no hash, and records it', async () => {
+  it('keeps a file git ignores in the graph as a node with the skipped hash, and records it', async () => {
     const { input } = createFixture({
       fileHashes: { [story]: 'S', [generated]: 'G' },
       isIgnored: (candidate) => candidate === generated,
@@ -483,8 +484,8 @@ describe('readStatsGraph skipped files', () => {
 
     const graph = await readStatsGraph(stats, input);
 
-    expect(graph.hashes.has('./src/generated/schema.ts')).toBe(false);
-    expect(graph.files.get('./src/generated/schema.ts')?.hash).toBe('');
+    expect(graph.hashes.get('./src/generated/schema.ts')).toBe(SKIPPED_HASH);
+    expect(graph.files.get('./src/generated/schema.ts')?.hash).toBe(SKIPPED_HASH);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
       './src/generated/schema.ts',
     ]);
@@ -500,7 +501,7 @@ describe('readStatsGraph skipped files', () => {
     const graph = await readStatsGraph(stats, input);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
-    expect(graph.hashes.has('./src/Button.stories.tsx')).toBe(false);
+    expect(graph.hashes.get('./src/Button.stories.tsx')).toBe(SKIPPED_HASH);
   });
 
   it('hashes a Storybook config file even though git ignores it', async () => {

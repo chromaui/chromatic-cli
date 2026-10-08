@@ -73,6 +73,35 @@ describe('buildManifest leaf inclusion', () => {
   });
 });
 
+describe('buildManifest of a story file git ignores', () => {
+  const story = '/repo/packages/ui/src/generated/Button.stories.tsx';
+  const button = '/repo/packages/ui/src/Button.tsx';
+
+  // The story file is generated and git ignores it, but it is still a story file, and the tracked
+  // Button.tsx it imports is what its hash must follow.
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: button, reasons: [{ moduleName: story }] },
+    ],
+  };
+
+  it('changes the story hash when a tracked import changes content, and not when the story file does', async () => {
+    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === story });
+    disk.fileHashes = { [story]: 'S1', [button]: 'B1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [story]: 'S2', [button]: 'B1' };
+    const storyEdited = await buildManifest(stats, input);
+    disk.fileHashes = { [story]: 'S1', [button]: 'B2' };
+    const importEdited = await buildManifest(stats, input);
+
+    const key = './src/generated/Button.stories.tsx';
+    expect(storyEdited.storyFileHashes.get(key)).toBe(before.storyFileHashes.get(key));
+    expect(importEdited.storyFileHashes.get(key)).not.toBe(before.storyFileHashes.get(key));
+  });
+});
+
 describe('buildManifest through a file git ignores', () => {
   const story = '/repo/packages/ui/src/Button.stories.tsx';
   const barrel = '/repo/packages/ui/src/generated/index.ts';
@@ -101,7 +130,8 @@ describe('buildManifest through a file git ignores', () => {
     );
   });
 
-  it('changes the story hash when the ignored file is removed from the import graph', async () => {
+  it('leaves the story hash alone when the ignored file is removed from the import graph', async () => {
+    // Button.tsx is still imported, now directly. The barrel contributed nothing, not even its path.
     const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === barrel });
     disk.fileHashes = { [story]: 'S', [barrel]: 'G', [button]: 'B' };
     const before = await buildManifest(stats, input);
@@ -114,7 +144,7 @@ describe('buildManifest through a file git ignores', () => {
     };
     const after = await buildManifest(withoutBarrel, input);
 
-    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
       before.storyFileHashes.get('./src/Button.stories.tsx')
     );
   });

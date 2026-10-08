@@ -4,10 +4,12 @@ import {
   collectTransitiveDependencies,
   FileHash,
   FilePath,
+  hasContentHash,
   hashEntryIdentities,
   hashEntryIdentity,
   rollUpEntryHashes,
   rollUpFileHashes,
+  SKIPPED_HASH,
   TurboSnapFile,
 } from './graph';
 
@@ -130,6 +132,15 @@ describe('rollUpFileHashes', () => {
     );
   });
 
+  it('leaves a skipped file out entirely, path included', () => {
+    // A generated file is often renamed every build, so even its path must not reach the roll-up.
+    const withSkipped = new Map([...hashes, ['./generated/chunk.abc123.js', SKIPPED_HASH]]);
+
+    expect(rollUpFileHashes(withSkipped, ['./a.ts', './generated/chunk.abc123.js'], identity)).toBe(
+      rollUpFileHashes(withSkipped, ['./a.ts'], identity)
+    );
+  });
+
   it('substitutes an empty content hash for a file with no entry in `hashes`', () => {
     // Synthetic nodes (globs, externals, virtual modules) are walked but never hashed. They still
     // contribute their path, so the roll-up records that they were part of the subtree.
@@ -149,6 +160,25 @@ describe('rollUpFileHashes', () => {
     expect(rollUpFileHashes(hashes, ['./a.ts'], identity)).not.toBe(
       rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity)
     );
+  });
+});
+
+describe('hasContentHash', () => {
+  const hashes = new Map<FilePath, FileHash>([
+    ['./a.ts', 'H1'],
+    ['./generated/schema.ts', SKIPPED_HASH],
+  ]);
+
+  it('is true for a file whose bytes were hashed', () => {
+    expect(hasContentHash(hashes, './a.ts')).toBe(true);
+  });
+
+  it('is false for a file v2 skipped', () => {
+    expect(hasContentHash(hashes, './generated/schema.ts')).toBe(false);
+  });
+
+  it('is false for a path with no file on disk', () => {
+    expect(hasContentHash(hashes, './lazy lazy recursive')).toBe(false);
   });
 });
 

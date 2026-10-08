@@ -1,5 +1,5 @@
 import { AbsolutePath, Stats } from '../../../types';
-import { FileHash, FilePath, TurboSnapFile } from './graph';
+import { FileHash, FilePath, SKIPPED_HASH, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
@@ -32,14 +32,15 @@ export type StatsContext = Pick<
  * The graph is *unpruned*: synthetic nodes with no file on disk (require-context globs, externals,
  * virtual modules) are still members, because they are members of the subtrees the roll-ups walk.
  * {@link serializeManifest} filters them only when the manifest is written. Files v2 skips are
- * members too, with no hash; `skippedFiles` is what tells them apart from synthetic nodes.
+ * members too, hashed as {@link SKIPPED_HASH}, which is what tells them apart from synthetic nodes.
  */
 export interface StatsGraph {
   /** Every module path, with its content hash and the paths it depends on. */
   files: Map<FilePath, TurboSnapFile>;
   /**
-   * Content hashes keyed by canonical path; a missing entry means there is no file on disk, or v2
-   * skipped the file; see {@link findSkippedFiles}.
+   * An entry for every on-disk file, keyed by canonical path: its content hash, or
+   * {@link SKIPPED_HASH} when v2 skipped the file (see {@link findSkippedFiles}). A missing entry
+   * means there is no file on disk.
    */
   hashes: Map<FilePath, FileHash>;
   /** The canonical paths of the on-disk files v2 skipped hashing. */
@@ -74,7 +75,7 @@ const VITE_COMPOSITION_ROOTS = new Set([
  *
  * Locating files on disk happens here rather than in the caller because story detection depends on
  * it: telling a story file apart from a require-context glob is asking whether there is a real file
- * on disk. Hashing follows from the same lookup, minus the files v2 skips.
+ * on disk. Hashing follows from the same lookup.
  *
  * @param stats The stats file to parse.
  * @param context The context the stats file was built in, which is needed to resolve module paths to
@@ -86,8 +87,7 @@ export async function readStatsGraph(stats: Stats, context: StatsContext): Promi
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
   const onDiskFiles = locateOnDiskFiles(stats, roots, projectFiles);
-  const { hashable, skippedFiles } = await dropSkippedFiles(onDiskFiles, context);
-  const hashes = await hashFiles(hashable, projectFiles);
+  const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, context);
 
   // Story detection sees every file on disk, skipped or not: a generated story file is still a
   // story file, so its stories keep a hash that moves with the tracked files they import.
@@ -165,7 +165,7 @@ function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoot
  * @param files The map of files to their hashes and dependencies, mutated in place.
  * @param rootPath The canonical path of the concatenation root.
  * @param concatenated The canonical paths of the other files bundled into the same module.
- * @param hashes The content hashes keyed by canonical file path.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  */
 function linkConcatenatedFiles(
   files: Map<FilePath, TurboSnapFile>,
@@ -185,7 +185,7 @@ function linkConcatenatedFiles(
  *
  * @param files The map of files to their hashes and dependencies.
  * @param filePath The file to get or create an entry for.
- * @param hashes The content hashes keyed by canonical file path.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  *
  * @returns The file's graph entry.
  */
@@ -268,46 +268,33 @@ function locateOnDiskFiles(
 }
 
 /**
- * Splits the on-disk files into the ones to hash and the ones v2 skips.
+ * Hashes every on-disk file, keyed by canonical path. A file v2 skips gets {@link SKIPPED_HASH} in
+ * place of a content hash, so the one invariant the graph relies on, an entry per on-disk file, is
+ * established where the skip is decided rather than by every caller.
  *
  * @param onDiskFiles The absolute path of each on-disk file, keyed by canonical path.
- * @param context The config directory, and how to ask git; see {@link SkipContext}.
+ * @param context The config directory, and how to ask git and read the disk; see {@link SkipContext}.
  *
- * @returns The files to hash, keyed the same way, and the canonical paths of the skipped files.
+ * @returns The hash of every on-disk file, and the canonical paths of the skipped files.
  */
-async function dropSkippedFiles(
+async function hashOnDiskFiles(
   onDiskFiles: Map<FilePath, AbsolutePath>,
   context: SkipContext
-): Promise<{ hashable: Map<FilePath, AbsolutePath>; skippedFiles: Set<FilePath> }> {
+): Promise<{ hashes: Map<FilePath, FileHash>; skippedFiles: Set<FilePath> }> {
   const skipped = await findSkippedFiles([...onDiskFiles.values()], context);
+  const fileHashes = await context.projectFiles.hashAll(
+    [...onDiskFiles.values()].filter((absolutePath) => !skipped.has(absolutePath))
+  );
 
-  const hashable = new Map<FilePath, AbsolutePath>();
+  const hashes = new Map<FilePath, FileHash>();
   const skippedFiles = new Set<FilePath>();
   for (const [filePath, absolutePath] of onDiskFiles) {
     if (skipped.has(absolutePath)) {
       skippedFiles.add(filePath);
+      hashes.set(filePath, SKIPPED_HASH);
     } else {
-      hashable.set(filePath, absolutePath);
+      hashes.set(filePath, fileHashes[absolutePath]);
     }
   }
-  return { hashable, skippedFiles };
-}
-
-/**
- * Hashes every file to hash, keyed by canonical path.
- *
- * @param hashable The absolute path of each file to hash, keyed by canonical path.
- * @param projectFiles How to read the disk.
- *
- * @returns The content hash of every file given.
- */
-async function hashFiles(
-  hashable: Map<FilePath, AbsolutePath>,
-  projectFiles: ProjectFiles
-): Promise<Map<FilePath, FileHash>> {
-  const fileHashes = await projectFiles.hashAll([...hashable.values()]);
-
-  return new Map(
-    [...hashable].map(([filePath, absolutePath]) => [filePath, fileHashes[absolutePath]])
-  );
+  return { hashes, skippedFiles };
 }

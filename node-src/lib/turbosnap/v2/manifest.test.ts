@@ -69,7 +69,7 @@ describe('serializeManifest', () => {
     expect(serialized.staticFiles).toEqual({});
   });
 
-  it('keeps a file git ignores in the graph, unhashed, so the edges through it survive', async () => {
+  it('keeps a file git ignores in the graph, marked skipped, so the edges through it survive', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const barrel = '/repo/packages/ui/src/generated/index.ts';
     const button = '/repo/packages/ui/src/Button.tsx';
@@ -91,7 +91,7 @@ describe('serializeManifest', () => {
       './src/generated/index.ts',
     ]);
     expect(serialized.files['./src/generated/index.ts']).toEqual({
-      hash: '',
+      hash: '<skipped>',
       dependencies: ['./src/Button.tsx'],
     });
     expect(serialized.files['./src/Button.tsx'].hash).toBe('B');
