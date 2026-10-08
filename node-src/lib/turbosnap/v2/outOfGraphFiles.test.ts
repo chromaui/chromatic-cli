@@ -26,8 +26,13 @@ function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): Ou
   };
 }
 
+async function sweep(input: OutOfGraphInput) {
+  const { outOfGraphFiles } = await hashOutOfGraphFiles(input);
+  return outOfGraphFiles;
+}
+
 async function rollUp(input: OutOfGraphInput) {
-  return rollUpOutOfGraphFiles(await hashOutOfGraphFiles(input), h64ToString);
+  return rollUpOutOfGraphFiles(await sweep(input), h64ToString);
 }
 
 describe('hashOutOfGraphFiles', () => {
@@ -39,7 +44,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
 
     expect([...storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
@@ -53,7 +58,7 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
 
     // The graph-rolled `.storybook/preview.ts` entry covers its *imports*; this covers its bytes,
     // which is what closes the empty-preview.ts case where the builder elides the module entirely.
@@ -68,7 +73,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles, staticFiles } = await sweep(makeInput(disk));
 
     expect([...storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
@@ -85,7 +90,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(
+    const { staticFiles } = await sweep(
       makeInput(disk, { staticDirs: [`${projectRoot}/favicon.ico`] })
     );
 
@@ -97,7 +102,7 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
     };
 
-    const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(
+    const { storybookConfigFiles, staticFiles } = await sweep(
       makeInput(disk, { staticDirs: [`${projectRoot}/.storybook`] })
     );
 
@@ -134,7 +139,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
 
     // Docs in the config dir shouldn't affect the built Storybook, so they stay out of the roll-up
     // hash.
@@ -150,7 +155,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { staticFiles } = await sweep(makeInput(disk));
 
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/terms.md']);
   });
@@ -160,7 +165,7 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(makeInput(disk, { staticDirs: [] }));
+    const { staticFiles } = await sweep(makeInput(disk, { staticDirs: [] }));
 
     expect(staticFiles.size).toBe(0);
   });
@@ -174,11 +179,82 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(
+    const { staticFiles } = await sweep(
       makeInput(disk, { staticDirs: [`${projectRoot}/public`, `${projectRoot}/assets`] })
     );
 
     expect([...staticFiles.keys()]).toEqual(['./assets/font.woff2', './public/logo.svg']);
+  });
+});
+
+describe('hashOutOfGraphFiles skipped files', () => {
+  it('drops a static file git ignores and records it', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['logo.svg', 'bundle.css'],
+      },
+      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
+    };
+
+    const {
+      outOfGraphFiles: { staticFiles },
+      skippedFiles,
+    } = await hashOutOfGraphFiles(makeInput(disk, { staticDirs: [`${projectRoot}/public`] }));
+
+    expect([...staticFiles.keys()]).toEqual(['./public/logo.svg']);
+    expect([...skippedFiles]).toEqual([['./public/bundle.css', 'gitignored']]);
+  });
+
+  it('hashes config files git ignores, since a generated preview still shapes every story', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+      isIgnored: (candidate) => candidate.endsWith('preview.ts'),
+    };
+
+    const {
+      outOfGraphFiles: { storybookConfigFiles },
+      skippedFiles,
+    } = await hashOutOfGraphFiles(makeInput(disk));
+
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/preview.ts',
+    ]);
+    expect(skippedFiles.size).toBe(0);
+  });
+
+  it('builds when git ignores the main config, because the config dir is hashed regardless', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      isIgnored: (candidate) => candidate.endsWith('main.ts'),
+    };
+
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
+
+    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+  });
+
+  it('hashes an ignored file in a static dir inside the config dir, since the config dir is never skipped', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['bundle.css'],
+      },
+      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
+    };
+
+    const {
+      outOfGraphFiles: { storybookConfigFiles, staticFiles },
+      skippedFiles,
+    } = await hashOutOfGraphFiles(makeInput(disk));
+
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/static/bundle.css',
+    ]);
+    expect([...staticFiles.keys()]).toEqual(['./.storybook/static/bundle.css']);
+    expect(skippedFiles.size).toBe(0);
   });
 });
 

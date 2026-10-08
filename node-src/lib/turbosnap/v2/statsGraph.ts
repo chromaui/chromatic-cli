@@ -1,5 +1,5 @@
-import { Stats } from '../../../types';
-import { FileHash, FilePath, TurboSnapFile } from './graph';
+import { AbsolutePath, Stats } from '../../../types';
+import { FileHash, FilePath, SKIPPED_HASH, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
@@ -12,10 +12,17 @@ import {
   StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
+import { findSkippedFiles, SkipContext, SkipReason } from './skippedFiles';
 import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
-/** The part of {@link ManifestInput} reading the stats file needs: the two roots, and the disk. */
-export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'projectFiles'>;
+/**
+ * The part of {@link ManifestInput} reading the stats file needs: the two roots, the config directory
+ * the skip rule reads, and the disk.
+ */
+export type StatsContext = Pick<
+  ManifestInput,
+  'projectRoot' | 'statsRoot' | 'configDir' | 'projectFiles'
+>;
 
 /**
  * What the builder's stats file says it emitted, read into one canonical graph. Builder spellings —
@@ -24,13 +31,20 @@ export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'pr
  *
  * The graph is *unpruned*: synthetic nodes with no file on disk (require-context globs, externals,
  * virtual modules) are still members, because they are members of the subtrees the roll-ups walk.
- * {@link serializeManifest} filters them only when the manifest is written.
+ * {@link serializeManifest} filters them only when the manifest is written. Files v2 skips are
+ * members too, hashed as {@link SKIPPED_HASH}, which is what tells them apart from synthetic nodes.
  */
 export interface StatsGraph {
   /** Every module path, with its content hash and the paths it depends on. */
   files: Map<FilePath, TurboSnapFile>;
-  /** Content hashes keyed by canonical path; a missing entry means there is no file on disk. */
+  /**
+   * An entry for every on-disk file, keyed by canonical path: its content hash, or
+   * {@link SKIPPED_HASH} when v2 skipped the file (see {@link findSkippedFiles}). A missing entry
+   * means there is no file on disk.
+   */
   hashes: Map<FilePath, FileHash>;
+  /** The on-disk files v2 skipped hashing, keyed by canonical path, each with its reason. */
+  skippedFiles: Map<FilePath, SkipReason>;
   /** The canonical paths the builder's entries identify as story files. */
   storyFiles: Set<FilePath>;
   /**
@@ -59,9 +73,9 @@ const VITE_COMPOSITION_ROOTS = new Set([
  * Reads a stats file into the graph the manifest rolls up: what each module is, what it depends on,
  * what it hashes to and which modules are story files.
  *
- * Hashing happens here rather than in the caller because story detection depends on it: telling a
- * story file apart from a require-context glob is asking whether there is a real file on disk, which
- * is what the hashes answer.
+ * Locating files on disk happens here rather than in the caller because story detection depends on
+ * it: telling a story file apart from a require-context glob is asking whether there is a real file
+ * on disk. Hashing follows from the same lookup.
  *
  * @param stats The stats file to parse.
  * @param context The context the stats file was built in, which is needed to resolve module paths to
@@ -72,9 +86,12 @@ const VITE_COMPOSITION_ROOTS = new Set([
 export async function readStatsGraph(stats: Stats, context: StatsContext): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
-  const hashes = await hashFiles(stats, projectRoot, statsRoot, projectFiles);
+  const onDiskFiles = locateOnDiskFiles(stats, roots, projectFiles);
+  const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, context);
 
-  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles: hashes }, stats);
+  // Story detection sees every file on disk, skipped or not: a generated story file is still a
+  // story file, so its stories keep a hash that moves with the tracked files they import.
+  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles }, stats);
 
   const files = new Map<FilePath, TurboSnapFile>();
   for (const module of stats.modules) {
@@ -94,7 +111,7 @@ export async function readStatsGraph(stats: Stats, context: StatsContext): Promi
     }
   }
 
-  return { files, hashes, storyFiles, globalRoots: detectGlobalRoots(files, roots) };
+  return { files, hashes, storyFiles, globalRoots: detectGlobalRoots(files, roots), skippedFiles };
 }
 
 /**
@@ -148,7 +165,7 @@ function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoot
  * @param files The map of files to their hashes and dependencies, mutated in place.
  * @param rootPath The canonical path of the concatenation root.
  * @param concatenated The canonical paths of the other files bundled into the same module.
- * @param hashes The content hashes keyed by canonical file path.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  */
 function linkConcatenatedFiles(
   files: Map<FilePath, TurboSnapFile>,
@@ -168,7 +185,7 @@ function linkConcatenatedFiles(
  *
  * @param files The map of files to their hashes and dependencies.
  * @param filePath The file to get or create an entry for.
- * @param hashes The content hashes keyed by canonical file path.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  *
  * @returns The file's graph entry.
  */
@@ -211,12 +228,20 @@ function hashableAbsolutePath(
   return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
 }
 
-async function hashFiles(
+/**
+ * Finds the file on disk behind every path the stats file names, keyed by canonical path.
+ *
+ * @param stats The stats file to parse.
+ * @param roots The roots to anchor against; see {@link StatsRoots}.
+ * @param projectFiles How to read the disk.
+ *
+ * @returns The absolute on-disk path of each hashable file, keyed by its canonical path.
+ */
+function locateOnDiskFiles(
   stats: Stats,
-  projectRoot: string,
-  statsRoot: string,
+  roots: StatsRoots,
   projectFiles: ProjectFiles
-): Promise<Map<FilePath, FileHash>> {
+): Map<FilePath, AbsolutePath> {
   // Collect every referenced module path once, expanding concatenated modules into their real
   // files and skipping importers with a null moduleName.
   const rawPaths = new Set<FilePath>();
@@ -229,22 +254,49 @@ async function hashFiles(
     }
   }
 
-  // Map each hashable file's canonical project-relative name to its absolute on-disk path.
-  const normalizedToAbsolute = new Map<FilePath, string>();
+  const onDiskFiles = new Map<FilePath, AbsolutePath>();
   for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, statsRoot, projectFiles);
+    const absolutePath = hashableAbsolutePath(rawPath, roots.statsRoot, projectFiles);
     if (absolutePath) {
-      normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
+      onDiskFiles.set(
+        normalizeStatsPath(rawPath, roots.projectRoot, roots.statsRoot),
+        absolutePath
+      );
     }
   }
+  return onDiskFiles;
+}
 
-  const fileHashes = await projectFiles.hashAll([...normalizedToAbsolute.values()]);
+/**
+ * Hashes every on-disk file, keyed by canonical path. A file v2 skips gets {@link SKIPPED_HASH} in
+ * place of a content hash, so the one invariant the graph relies on, an entry per on-disk file, is
+ * established where the skip is decided rather than by every caller.
+ *
+ * @param onDiskFiles The absolute path of each on-disk file, keyed by canonical path.
+ * @param context The config directory, and how to ask git and read the disk; see {@link SkipContext}.
+ *
+ * @returns The hash of every on-disk file, and the skipped files with their reasons, both keyed by
+ * canonical path.
+ */
+async function hashOnDiskFiles(
+  onDiskFiles: Map<FilePath, AbsolutePath>,
+  context: SkipContext
+): Promise<{ hashes: Map<FilePath, FileHash>; skippedFiles: Map<FilePath, SkipReason> }> {
+  const skipped = await findSkippedFiles([...onDiskFiles.values()], context);
+  const fileHashes = await context.projectFiles.hashAll(
+    [...onDiskFiles.values()].filter((absolutePath) => !skipped.has(absolutePath))
+  );
 
   const hashes = new Map<FilePath, FileHash>();
-  for (const [normalizedName, absolutePath] of normalizedToAbsolute) {
-    const hash = fileHashes[absolutePath];
-    if (hash) hashes.set(normalizedName, hash);
+  const skippedFiles = new Map<FilePath, SkipReason>();
+  for (const [filePath, absolutePath] of onDiskFiles) {
+    const reason = skipped.get(absolutePath);
+    if (reason === undefined) {
+      hashes.set(filePath, fileHashes[absolutePath]);
+    } else {
+      skippedFiles.set(filePath, reason);
+      hashes.set(filePath, SKIPPED_HASH);
+    }
   }
-
-  return hashes;
+  return { hashes, skippedFiles };
 }

@@ -23,11 +23,15 @@ export interface InMemoryDisk {
   packageVersionsByDirectory?: Record<AbsolutePath, Record<string, string>>;
   /**
    * Whether a path has no file on disk. Everything else is a file, which is what keeps a suite from
-   * having to list every source file its stats fixture names.
+   * having to list every source file its stats fixture names. The one exception is a `package.json`,
+   * which is a file only when its directory lists it: one marks the boundary of a package, so a
+   * suite says where the packages are.
    */
   isAbsent?: (absolutePath: AbsolutePath) => boolean;
   /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
   writtenFiles?: Record<AbsolutePath, string>;
+  /** Whether git ignores a path. Nothing is ignored unless a suite says so. */
+  isIgnored?: (absolutePath: AbsolutePath) => boolean;
 }
 
 /**
@@ -46,10 +50,6 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     return Boolean(disk.directories?.[absolutePath]);
   }
 
-  function isFile(absolutePath: AbsolutePath): boolean {
-    return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
-  }
-
   // A path is a file for the purposes of listing only when its parent directory names it. The
   // "everything else is a file" default is for source files the stats fixture names; applying it here
   // would turn a configured-but-missing static directory into a file.
@@ -57,6 +57,11 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     return Boolean(
       disk.directories?.[path.dirname(absolutePath)]?.includes(path.basename(absolutePath))
     );
+  }
+
+  function isFile(absolutePath: AbsolutePath): boolean {
+    if (path.basename(absolutePath) === 'package.json') return isListedFile(absolutePath);
+    return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
   }
 
   function listTree(absolutePath: AbsolutePath): AbsolutePath[] {
@@ -94,5 +99,9 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       disk.writtenFiles ??= {};
       disk.writtenFiles[absolutePath] = contents;
     },
+    // Symlinks are not modelled, so every path is already the real one.
+    realPath: (absolutePath: AbsolutePath) => absolutePath,
+    ignoredFiles: async (absolutePaths: AbsolutePath[]) =>
+      new Set(absolutePaths.filter((absolutePath) => disk.isIgnored?.(absolutePath))),
   };
 }

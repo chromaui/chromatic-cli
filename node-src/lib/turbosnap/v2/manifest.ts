@@ -14,6 +14,7 @@ import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
+import { SkipReason } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
@@ -49,9 +50,15 @@ export interface TurboSnapManifest {
   outOfGraphFiles: OutOfGraphFiles;
   /**
    * The unpruned graph parsed from `preview-stats.json`, including synthetic transit nodes used by
-   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized.
+   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized; files v2 skipped
+   * stay, hashed as `SKIPPED_HASH`, so the written graph keeps the edges that run through them.
    */
   files: Map<FilePath, TurboSnapFile>;
+  /**
+   * The on-disk files, in the graph or swept, that v2 skipped hashing, each with its reason; see
+   * `findSkippedFiles`. A diagnostic record for the S3 manifest; it feeds no hash.
+   */
+  skippedFiles: Map<FilePath, SkipReason>;
 }
 
 /**
@@ -69,6 +76,7 @@ interface ManifestFile {
   storyFiles: Record<FilePath, FileHash>;
   attribution: Record<keyof FileAttribution, FilePath[]>;
   files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
+  skippedFiles: Record<FilePath, SkipReason>;
 }
 
 /**
@@ -86,7 +94,13 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  const { files, hashes, storyFiles, globalRoots } = await readStatsGraph(stats, input);
+  const {
+    files,
+    hashes,
+    storyFiles,
+    globalRoots,
+    skippedFiles: skippedGraphFiles,
+  } = await readStatsGraph(stats, input);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
@@ -117,7 +131,7 @@ export async function buildManifest(
 
   // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
   // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const outOfGraphFiles = await hashOutOfGraphFiles(input);
+  const { outOfGraphFiles, skippedFiles: skippedStaticFiles } = await hashOutOfGraphFiles(input);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
@@ -126,6 +140,10 @@ export async function buildManifest(
   );
   input.log.debug(
     `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+  );
+  const skippedFiles = new Map([...skippedGraphFiles, ...skippedStaticFiles]);
+  input.log.debug(
+    `Skipped hashing ${skippedFiles.size} files; the manifest's skippedFiles lists each with its reason`
   );
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
@@ -142,6 +160,7 @@ export async function buildManifest(
     attribution,
     outOfGraphFiles,
     files,
+    skippedFiles,
   };
 }
 
@@ -172,19 +191,29 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
       )
     ) as ManifestFile['attribution'],
     files: sortByKey(serializeFiles(manifest.files)),
+    skippedFiles: sortByKey(Object.fromEntries(manifest.skippedFiles)),
   };
 }
 
+/**
+ * Serializes the graph without its synthetic nodes: an empty hash means there is no file on disk. A
+ * skipped file keeps its sentinel hash and stays: it is a real file that a story can import tracked
+ * files through, so the written graph keeps that path visible.
+ *
+ * @param files The unpruned graph.
+ *
+ * @returns The graph of real files, each with its hash and the real files it depends on.
+ */
 function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['files'] {
+  const isRealFile = (filePath: FilePath) => Boolean(files.get(filePath)?.hash);
+
   const serialized: ManifestFile['files'] = {};
   for (const [filePath, file] of files) {
-    if (file.hash === '') {
-      continue;
-    }
+    if (!isRealFile(filePath)) continue;
     serialized[filePath] = {
       hash: file.hash,
       dependencies: [...file.dependencies]
-        .filter((dependency) => files.get(dependency)?.hash)
+        .filter((dependency) => isRealFile(dependency))
         .sort(comparePaths),
     };
   }

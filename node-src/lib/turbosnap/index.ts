@@ -106,7 +106,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
         projectRoot: ctx.storybook.projectRoot,
         configDir: ctx.storybook.configDir,
         staticDirs: ctx.storybook.staticDirs,
-        projectFiles: realProjectFiles(ctx.log),
+        projectFiles: realProjectFiles({ log: ctx.log, options: ctx.options }),
       });
     });
   } catch (error) {

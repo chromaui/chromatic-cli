@@ -19,6 +19,7 @@ import {
   getCloneFilter,
   getCommit,
   getCommittedFileCount,
+  getIgnoredPaths,
   getNumberOfCommitters,
   getRepositoryCreationDate,
   getShallowBoundaryCommits,
@@ -263,6 +264,42 @@ describe('getChangedFilesWithStatus', () => {
       ctx,
       'git --no-pager diff --name-status --no-relative --find-renames=20% abc123 HEAD -- ":(glob,top)**/pnpm-lock.yaml"'
     );
+  });
+});
+
+describe('getIgnoredPaths', () => {
+  it('answers by absolute path, covering everything under a wholly ignored directory', async () => {
+    // first call from getRepositoryRoot()
+    execGitCommand.mockResolvedValueOnce('/root');
+    execGitCommand.mockResolvedValueOnce(
+      ['generated/', 'debug.log', 'node_modules/'].join(NULL_BYTE) + NULL_BYTE
+    );
+
+    const ignored = await getIgnoredPaths(ctx);
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      2,
+      ctx,
+      'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
+      { all: false }
+    );
+    expect(ignored.has('/root/generated/schema.ts')).toBe(true);
+    expect(ignored.has('/root/generated/deep/schema.ts')).toBe(true);
+    expect(ignored.has('/root/debug.log')).toBe(true);
+    expect(ignored.has('/root/node_modules/react/index.js')).toBe(true);
+
+    expect(ignored.has('/root/src/Button.tsx')).toBe(false);
+    expect(ignored.has('/root/generated-docs/index.md')).toBe(false);
+    expect(ignored.has('/elsewhere/generated/schema.ts')).toBe(false);
+  });
+
+  it('ignores nothing when git lists nothing', async () => {
+    execGitCommand.mockResolvedValueOnce('/root');
+    execGitCommand.mockResolvedValueOnce('');
+
+    const ignored = await getIgnoredPaths(ctx);
+
+    expect(ignored.has('/root/src/Button.tsx')).toBe(false);
   });
 });
 

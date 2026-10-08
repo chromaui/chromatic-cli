@@ -101,7 +101,7 @@ export async function main(argv: string[]) {
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
         path.resolve(projectRoot, directory)
       ),
-      projectFiles: realProjectFiles(log),
+      projectFiles: realProjectFiles({ log }),
     });
 
     process.stdout.write(JSON.stringify(serializeManifest(manifest), undefined, 2));

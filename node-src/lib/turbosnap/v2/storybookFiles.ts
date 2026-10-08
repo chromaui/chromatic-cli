@@ -5,6 +5,7 @@ import {
   collectTransitiveDependencies,
   FileHash,
   FilePath,
+  hasContentHash,
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
@@ -76,7 +77,8 @@ export interface FileAttribution {
  * the preview subtree are excluded because preview has its own Storybook-wide roll-up.
  *
  * @param files The map of files to their hashes and dependencies.
- * @param hashes The content hashes keyed by canonical file path; a missing entry means no real file.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
+ * A missing entry means no file on disk; see `hasContentHash`.
  * @param storyFiles The canonical paths of the story files. Their subtrees are walked here, so the
  * story-reachable set always agrees with `files`. Synthetic nodes are filtered out of the
  * attribution below.
@@ -105,7 +107,7 @@ export function collectStorybookFiles(
   const previewSubtree = new Set<FilePath>();
   let hasPreview = false;
   for (const filePath of files.keys()) {
-    if (!hashes.has(filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
+    if (!hasContentHash(hashes, filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
     hasPreview = true;
     collectTransitiveDependencies(files, filePath, previewSubtree);
   }
@@ -126,11 +128,16 @@ export function collectStorybookFiles(
     globalRoots,
     storyFiles,
     [...hashes.keys()].filter(
-      (filePath) => !storyReachable.has(filePath) && !previewSubtree.has(filePath)
+      (filePath) =>
+        hasContentHash(hashes, filePath) &&
+        !storyReachable.has(filePath) &&
+        !previewSubtree.has(filePath)
     )
   );
   const globals = new Set(
-    [...globalsClosure].filter((filePath) => hashes.has(filePath) && !previewSubtree.has(filePath))
+    [...globalsClosure].filter(
+      (filePath) => hasContentHash(hashes, filePath) && !previewSubtree.has(filePath)
+    )
   );
   if (globals.size > 0) {
     storybookConfigHashes.set(
@@ -139,12 +146,16 @@ export function collectStorybookFiles(
     );
   }
 
-  // Report only real files, matching how the globals set is defined, so the three sets cover exactly
-  // the hashed files. The walks pass through synthetic nodes (globs, externals, virtual modules),
-  // which have no hash. A file can be in more than one home.
+  // Report only content-hashed files, matching how the globals set is defined, so the three sets cover
+  // exactly the files that feed a hash. The walks pass through synthetic nodes (globs, externals,
+  // virtual modules) and skipped files, which feed none. A file can be in more than one home.
   const attribution: FileAttribution = {
-    storyReachable: new Set([...storyReachable].filter((filePath) => hashes.has(filePath))),
-    previewSubtree: new Set([...previewSubtree].filter((filePath) => hashes.has(filePath))),
+    storyReachable: new Set(
+      [...storyReachable].filter((filePath) => hasContentHash(hashes, filePath))
+    ),
+    previewSubtree: new Set(
+      [...previewSubtree].filter((filePath) => hasContentHash(hashes, filePath))
+    ),
     storybookGlobals: globals,
   };
 
