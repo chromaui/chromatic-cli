@@ -6,7 +6,7 @@ import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { findSkippedFiles } from './skippedFiles';
+import { findSkippedFiles, SkipReason } from './skippedFiles';
 import { STATIC_FILES_KEY, STORYBOOK_CONFIG_KEY, StorybookFileKey } from './storybookFileKeys';
 
 /** The part of {@link ManifestInput} the out-of-graph sweep reads: where to look, and what with. */
@@ -60,15 +60,15 @@ export class MissingStorybookConfigError extends Error {
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  *
  * @returns The content hash of every config file and every static file, keyed by canonical manifest
- * path, and the canonical paths of the swept static files that were skipped instead; see
- * {@link findSkippedFiles}. `storybookConfigFiles` is never empty: it always holds at least the main
- * config.
+ * path, beside the swept static files that were skipped instead, keyed the same way with the reason;
+ * see {@link findSkippedFiles}. `storybookConfigFiles` is never empty: it always holds at least the
+ * main config.
  *
  * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file.
  */
 export async function hashOutOfGraphFiles(
   input: OutOfGraphInput
-): Promise<OutOfGraphFiles & { skippedFiles: Set<FilePath> }> {
+): Promise<{ outOfGraphFiles: OutOfGraphFiles; skippedFiles: Map<FilePath, SkipReason> }> {
   const configTree = input.projectFiles.listTree(input.configDir);
   if (!configTree.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
     throw new MissingStorybookConfigError(input.configDir);
@@ -81,18 +81,23 @@ export async function hashOutOfGraphFiles(
   const staticFilePaths = staticTree.filter((filePath) => !skipped.has(filePath));
 
   return {
-    // A config file inside a declared static dir stays a config file, so the config section is
-    // never emptied by `staticDirs` pointing at the config dir. It lands in both sections.
-    // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
-    // Storybook, so it stays out of the config roll-up.
-    storybookConfigFiles: await hashByManifestPath(
-      configTree.filter((filePath) => !isDocumentationFile(filePath)),
-      input.projectRoot,
-      input.projectFiles
-    ),
-    staticFiles: await hashByManifestPath(staticFilePaths, input.projectRoot, input.projectFiles),
-    skippedFiles: new Set(
-      [...skipped].map((absolutePath) => normalizeStatsPath(absolutePath, input.projectRoot))
+    outOfGraphFiles: {
+      // A config file inside a declared static dir stays a config file, so the config section is
+      // never emptied by `staticDirs` pointing at the config dir. It lands in both sections.
+      // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
+      // Storybook, so it stays out of the config roll-up.
+      storybookConfigFiles: await hashByManifestPath(
+        configTree.filter((filePath) => !isDocumentationFile(filePath)),
+        input.projectRoot,
+        input.projectFiles
+      ),
+      staticFiles: await hashByManifestPath(staticFilePaths, input.projectRoot, input.projectFiles),
+    },
+    skippedFiles: new Map(
+      [...skipped].map(([absolutePath, reason]) => [
+        normalizeStatsPath(absolutePath, input.projectRoot),
+        reason,
+      ])
     ),
   };
 }

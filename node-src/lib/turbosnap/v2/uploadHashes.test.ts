@@ -25,7 +25,7 @@ const manifest: TurboSnapManifest = {
     storybookConfigFiles: new Map(),
     staticFiles: new Map(),
   },
-  skippedFiles: new Set(),
+  skippedFiles: new Map(),
 };
 
 beforeEach(() => {

@@ -12,7 +12,7 @@ import {
   StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { findSkippedFiles, SkipContext } from './skippedFiles';
+import { findSkippedFiles, SkipContext, SkipReason } from './skippedFiles';
 import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
 /**
@@ -43,8 +43,8 @@ export interface StatsGraph {
    * means there is no file on disk.
    */
   hashes: Map<FilePath, FileHash>;
-  /** The canonical paths of the on-disk files v2 skipped hashing. */
-  skippedFiles: Set<FilePath>;
+  /** The on-disk files v2 skipped hashing, keyed by canonical path, each with its reason. */
+  skippedFiles: Map<FilePath, SkipReason>;
   /** The canonical paths the builder's entries identify as story files. */
   storyFiles: Set<FilePath>;
   /**
@@ -275,25 +275,27 @@ function locateOnDiskFiles(
  * @param onDiskFiles The absolute path of each on-disk file, keyed by canonical path.
  * @param context The config directory, and how to ask git and read the disk; see {@link SkipContext}.
  *
- * @returns The hash of every on-disk file, and the canonical paths of the skipped files.
+ * @returns The hash of every on-disk file, and the skipped files with their reasons, both keyed by
+ * canonical path.
  */
 async function hashOnDiskFiles(
   onDiskFiles: Map<FilePath, AbsolutePath>,
   context: SkipContext
-): Promise<{ hashes: Map<FilePath, FileHash>; skippedFiles: Set<FilePath> }> {
+): Promise<{ hashes: Map<FilePath, FileHash>; skippedFiles: Map<FilePath, SkipReason> }> {
   const skipped = await findSkippedFiles([...onDiskFiles.values()], context);
   const fileHashes = await context.projectFiles.hashAll(
     [...onDiskFiles.values()].filter((absolutePath) => !skipped.has(absolutePath))
   );
 
   const hashes = new Map<FilePath, FileHash>();
-  const skippedFiles = new Set<FilePath>();
+  const skippedFiles = new Map<FilePath, SkipReason>();
   for (const [filePath, absolutePath] of onDiskFiles) {
-    if (skipped.has(absolutePath)) {
-      skippedFiles.add(filePath);
-      hashes.set(filePath, SKIPPED_HASH);
-    } else {
+    const reason = skipped.get(absolutePath);
+    if (reason === undefined) {
       hashes.set(filePath, fileHashes[absolutePath]);
+    } else {
+      skippedFiles.set(filePath, reason);
+      hashes.set(filePath, SKIPPED_HASH);
     }
   }
   return { hashes, skippedFiles };

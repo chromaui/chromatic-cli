@@ -12,6 +12,12 @@ import { ProjectFiles } from './projectFiles';
 export type SkipContext = Pick<ManifestInput, 'projectRoot' | 'configDir' | 'projectFiles'>;
 
 /**
+ * Why v2 skipped hashing a file. Diagnostic only: it feeds no roll-up, so a file changing reason never
+ * moves a hash. One value today; more are expected (untraced, externals).
+ */
+export type SkipReason = 'gitignored';
+
+/**
  * The files among the given paths that TurboSnap v2 skips hashing: the project's own files that git
  * ignores. "Ignored" is git's answer; "skipped" is our policy on top of it.
  *
@@ -33,12 +39,12 @@ export type SkipContext = Pick<ManifestInput, 'projectRoot' | 'configDir' | 'pro
  * @param absolutePaths The paths to test.
  * @param context Where the project is, and how to ask git and the disk.
  *
- * @returns The subset of paths v2 skips.
+ * @returns The subset of paths v2 skips, each with its {@link SkipReason}.
  */
 export async function findSkippedFiles(
   absolutePaths: AbsolutePath[],
   context: SkipContext
-): Promise<Set<AbsolutePath>> {
+): Promise<Map<AbsolutePath, SkipReason>> {
   const { projectFiles } = context;
   const projectRoot = projectFiles.realPath(context.projectRoot);
   const configDirectory = projectFiles.realPath(context.configDir) + path.sep;
@@ -46,17 +52,16 @@ export async function findSkippedFiles(
   const realPaths = new Map(
     absolutePaths.map((absolutePath) => [absolutePath, projectFiles.realPath(absolutePath)])
   );
-  // The debug line in `buildManifest` spells this policy out next to the count; keep it in step.
   const candidates = [...realPaths.values()].filter(
     (realPath) => !isNodeModulesPath(realPath) && !realPath.startsWith(configDirectory)
   );
   const ignored = await projectFiles.ignoredFiles(candidates);
   const isProjectDirectory = memoizedProjectDirectoryCheck(projectRoot, projectFiles);
 
-  return new Set(
+  return new Map(
     [...realPaths]
       .filter(([, realPath]) => ignored.has(realPath) && isProjectDirectory(path.dirname(realPath)))
-      .map(([absolutePath]) => absolutePath)
+      .map(([absolutePath]): [AbsolutePath, SkipReason] => [absolutePath, 'gitignored'])
   );
 }
 

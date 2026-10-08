@@ -289,7 +289,7 @@ describe('buildManifest attribution of files git ignores', () => {
     expect(manifest.attribution.storybookGlobals.has('./src/generated/global-data.json')).toBe(
       false
     );
-    expect([...manifest.skippedFiles].sort()).toEqual([
+    expect([...manifest.skippedFiles.keys()].sort()).toEqual([
       './src/generated/global-data.json',
       './src/generated/preview-data.json',
       './src/generated/story-data.json',

@@ -43,7 +43,7 @@ describe('serializeManifest', () => {
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 
-  it('lists the files git ignores, from the graph and the sweeps, as one sorted array', async () => {
+  it('records why each file was skipped, from the graph and the sweeps, as one sorted object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const generated = '/repo/packages/ui/src/generated/schema.ts';
     const { input } = createFixture({
@@ -65,7 +65,10 @@ describe('serializeManifest', () => {
       await buildManifest(stats, { ...input, staticDirs: ['/repo/packages/ui/public'] })
     );
 
-    expect(serialized.skippedFiles).toEqual(['./public/bundle.css', './src/generated/schema.ts']);
+    expect(Object.entries(serialized.skippedFiles)).toEqual([
+      ['./public/bundle.css', 'gitignored'],
+      ['./src/generated/schema.ts', 'gitignored'],
+    ]);
     expect(serialized.staticFiles).toEqual({});
   });
 

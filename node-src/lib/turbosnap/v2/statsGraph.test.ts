@@ -489,7 +489,7 @@ describe('readStatsGraph skipped files', () => {
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
       './src/generated/schema.ts',
     ]);
-    expect([...graph.skippedFiles]).toEqual(['./src/generated/schema.ts']);
+    expect([...graph.skippedFiles]).toEqual([['./src/generated/schema.ts', 'gitignored']]);
   });
 
   it('still detects a story file git ignores as a story file', async () => {

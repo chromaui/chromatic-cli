@@ -15,25 +15,25 @@ function context(disk: InMemoryDisk) {
 }
 
 describe('findSkippedFiles', () => {
-  it('skips the files git ignores', async () => {
+  it('skips the files git ignores, recording why', async () => {
     const skipped = await findSkippedFiles(
       [generated, source],
       context({ isIgnored: (candidate) => candidate === generated })
     );
 
-    expect([...skipped]).toEqual([generated]);
+    expect([...skipped]).toEqual([[generated, 'gitignored']]);
   });
 
   it('never skips a node_modules file, however git sees it', async () => {
     const skipped = await findSkippedFiles([installed, source], context({ isIgnored: () => true }));
 
-    expect([...skipped]).toEqual([source]);
+    expect([...skipped.keys()]).toEqual([source]);
   });
 
   it('never skips a file in the Storybook config directory, however git sees it', async () => {
     const skipped = await findSkippedFiles([preview, source], context({ isIgnored: () => true }));
 
-    expect([...skipped]).toEqual([source]);
+    expect([...skipped.keys()]).toEqual([source]);
   });
 
   it("never skips another package's file under the project root, since a workspace package's build output is a dependency", async () => {
@@ -47,7 +47,7 @@ describe('findSkippedFiles', () => {
       })
     );
 
-    expect([...skipped]).toEqual([generated]);
+    expect([...skipped.keys()]).toEqual([generated]);
   });
 
   it('never skips a file outside the project root, since it cannot be one of the project’s own', async () => {
@@ -55,7 +55,7 @@ describe('findSkippedFiles', () => {
 
     const skipped = await findSkippedFiles([built, generated], context({ isIgnored: () => true }));
 
-    expect([...skipped]).toEqual([generated]);
+    expect([...skipped.keys()]).toEqual([generated]);
   });
 
   it('judges every rule by where a file really lives, since a bundler names files by real path while the project is named as configured', async () => {
@@ -75,7 +75,7 @@ describe('findSkippedFiles', () => {
       projectFiles,
     });
 
-    expect([...skipped]).toEqual([linkedGenerated]);
+    expect([...skipped.keys()]).toEqual([linkedGenerated]);
   });
 
   it('asks git by real path and answers by the path it was given', async () => {
@@ -97,6 +97,6 @@ describe('findSkippedFiles', () => {
     });
 
     expect(asked).toEqual([generated]);
-    expect([...skipped]).toEqual([linked]);
+    expect([...skipped.keys()]).toEqual([linked]);
   });
 });
