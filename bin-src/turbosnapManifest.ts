@@ -13,7 +13,7 @@ import { readStatsFile } from '../node-src/tasks/readStatsFile';
  * Utility to build the TurboSnap v2 manifest from a preview-stats.json and print it to stdout.
  *
  * Command:
- *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir]
+ *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals]
  *
  * Usage example:
  *   npx chromatic turbosnap-manifest -b packages/ui > turbosnap-manifest.json
@@ -38,13 +38,14 @@ export async function main(argv: string[]) {
   const cli = meow(
     `
     Usage
-      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir]
+      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals]
 
     Options
       --stats-file, -s <filepath>           Path to preview-stats.json, relative to the Storybook project root. (default: 'storybook-static/preview-stats.json')
       --storybook-base-dir, -b <dirname>    Relative path from repository root to Storybook project root. Alternatively, set STORYBOOK_BASE_DIR. Use when your Storybook is located in a subdirectory of your repository. (default: the current directory)
       --config-dir, -c <dirname>            Storybook config directory, relative to the Storybook project root. (default: '.storybook')
       --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook project root. (default: none)
+      --externals <glob>                    Glob of files that disable TurboSnap when changed, relative to the repository root. Can be specified multiple times. (default: none)
     `,
     {
       argv,
@@ -70,6 +71,10 @@ export async function main(argv: string[]) {
         staticDir: {
           type: 'string',
         },
+        externals: {
+          type: 'string',
+          isMultiple: true,
+        },
       },
     }
   );
@@ -79,9 +84,10 @@ export async function main(argv: string[]) {
   const log = createLogger({}, { logPrefix: '', logLevel: 'error' });
 
   try {
+    const gitRoot = await getRepositoryRoot({ log });
     const projectRoot = getStorybookProjectRoot({
       storybookBaseDir: cli.flags.storybookBaseDir,
-      gitRootPath: await getRepositoryRoot({ log }),
+      gitRootPath: gitRoot,
     });
 
     // The stats file is the one input with no default that works everywhere, so a project whose
@@ -97,10 +103,12 @@ export async function main(argv: string[]) {
     const manifest = await buildManifest(await readStatsFile(statsPath), {
       log,
       projectRoot,
+      gitRoot,
       configDir: path.resolve(projectRoot, cli.flags.configDir),
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
         path.resolve(projectRoot, directory)
       ),
+      externals: (cli.flags.externals ?? []).filter(Boolean),
       projectFiles: realProjectFiles({ log }),
     });
 

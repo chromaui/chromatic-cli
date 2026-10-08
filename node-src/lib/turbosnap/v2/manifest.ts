@@ -32,8 +32,8 @@ export interface TurboSnapManifest {
   storybookHash: string;
   /**
    * A rolled-up hash for each Storybook-wide category: the `preview` subtree, the `storybookGlobals`
-   * roll-up, the `storybookConfigFiles` and `staticFiles` out-of-graph sweeps, and the Storybook
-   * version (the plain version string, not a hash of it).
+   * roll-up, the `storybookConfigFiles`, `staticFiles` and `externals` out-of-graph sweeps, and the
+   * Storybook version (the plain version string, not a hash of it).
    */
   storybookConfigHashes: Map<StorybookFileKey, FileHash | StorybookVersion>;
   /** Rolled-up hash per story file, covering only that story's own transitive subtree. */
@@ -45,7 +45,7 @@ export interface TurboSnapManifest {
   attribution: FileAttribution;
   /**
    * The per-file detail behind the out-of-graph roll-ups, serialized as the top-level
-   * `storybookConfigFiles` and `staticFiles` maps.
+   * `storybookConfigFiles`, `staticFiles` and `externals` maps.
    */
   outOfGraphFiles: OutOfGraphFiles;
   /**
@@ -73,6 +73,7 @@ interface ManifestFile {
   storybookConfigHashes: Record<FilePath, FileHash | StorybookVersion>;
   storybookConfigFiles: Record<FilePath, FileHash>;
   staticFiles: Record<FilePath, FileHash>;
+  externals: Record<FilePath, FileHash>;
   storyFiles: Record<FilePath, FileHash>;
   attribution: Record<keyof FileAttribution, FilePath[]>;
   files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
@@ -129,8 +130,8 @@ export async function buildManifest(
   // upgrade there. Track the version instead; it is a plain string, not a hash.
   storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
 
-  // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
-  // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
+  // Storybook's config directory, static assets and the user's externals are never bundler inputs, so
+  // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
   const { outOfGraphFiles, skippedFiles: skippedStaticFiles } = await hashOutOfGraphFiles(input);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
@@ -140,6 +141,9 @@ export async function buildManifest(
   );
   input.log.debug(
     `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+  );
+  input.log.debug(
+    `Hashed ${outOfGraphFiles.externals.size} external files from ${input.externals.length} --externals globs`
   );
   const skippedFiles = new Map([...skippedGraphFiles, ...skippedStaticFiles]);
   input.log.debug(
@@ -181,6 +185,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
       Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles)
     ),
     staticFiles: sortByKey(Object.fromEntries(manifest.outOfGraphFiles.staticFiles)),
+    externals: sortByKey(Object.fromEntries(manifest.outOfGraphFiles.externals)),
     storyFiles: sortByKey(Object.fromEntries(manifest.storyFileHashes)),
     attribution: sortByKey(
       Object.fromEntries(
