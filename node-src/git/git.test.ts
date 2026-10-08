@@ -155,6 +155,22 @@ describe('getSlug', () => {
     execGitCommand.mockResolvedValue('https://gitlab.com/group/_git/repo.git');
     expect(await getSlug(ctx)).toBe('_git/repo');
   });
+
+  it('decodes percent-encoded Azure DevOps project and repo names', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/My%20Project/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+
+    execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/My%20Project/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/My%20Project/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+  });
+
+  it('keeps malformed percent-encoding in Azure DevOps remote urls as-is', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/bad%zz/_git/repo');
+    expect(await getSlug(ctx)).toBe('bad%zz/repo');
+  });
 });
 
 describe('hasPreviousCommit', () => {
