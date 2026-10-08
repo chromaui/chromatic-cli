@@ -150,6 +150,11 @@ describe('getSlug', () => {
     execGitCommand.mockResolvedValue('https://github.com/owner/my_git_repo.git');
     expect(await getSlug(ctx)).toBe('owner/my_git_repo');
   });
+
+  it('does not drop a _git path segment for non-Azure DevOps remotes', async () => {
+    execGitCommand.mockResolvedValue('https://gitlab.com/group/_git/repo.git');
+    expect(await getSlug(ctx)).toBe('_git/repo');
+  });
 });
 
 describe('hasPreviousCommit', () => {
