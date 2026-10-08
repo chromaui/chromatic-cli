@@ -48,6 +48,10 @@ export async function getUserEmail(deps: GitDeps) {
  * The slug consists of the last two parts of the URL, at least for GitHub, GitLab and Bitbucket,
  * and is typically followed by `.git`. The regex matches the last two parts between slashes, and
  * ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
+ * Azure DevOps HTTPS remotes (`.../<project>/_git/<repo>`) produce `<project>/<repo>` just like
+ * Azure DevOps SSH remotes do. Short-form HTTPS remotes (`.../_git/<repo>`) omit the project when
+ * it shares the repo's name, so they produce `<repo>/<repo>`. Azure DevOps project and repo names
+ * may contain spaces, so their percent-encoded segments are decoded.
  *
  * @param deps Function dependencies.
  *
@@ -56,8 +60,43 @@ export async function getUserEmail(deps: GitDeps) {
 export async function getSlug(deps: GitDeps) {
   const result = await execGitCommand(deps, `git config --get remote.origin.url`);
   const downcasedResult = result?.toLowerCase() || '';
-  const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
-  return slug;
+  const [, genericSlug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
+  if (!/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) return genericSlug;
+
+  const slug = getAzureHttpsSlug(downcasedResult) ?? genericSlug;
+  return slug
+    ?.split('/')
+    .map((segment) => safeDecode(segment))
+    .join('/');
+}
+
+// Returns `<project>/<repo>` for Azure DevOps HTTPS remotes, or undefined for any other remote
+function getAzureHttpsSlug(remoteUrl: string) {
+  if (!remoteUrl.includes('/_git/')) return undefined;
+  let url: URL;
+  try {
+    url = new URL(remoteUrl);
+  } catch {
+    return undefined;
+  }
+  const segments = url.pathname.split('/').filter(Boolean);
+  const gitIndex = segments.indexOf('_git');
+  const repo = segments[gitIndex + 1]?.replace(/\.git$/, '');
+  if (!repo) return undefined;
+  // Skip the org on dev.azure.com, or the optional DefaultCollection on visualstudio.com
+  const prefixLength =
+    url.hostname === 'dev.azure.com' || segments[0] === 'defaultcollection' ? 1 : 0;
+  // Short-form URLs omit the project when it shares the repo's name
+  const project = gitIndex > prefixLength ? segments[gitIndex - 1] : repo;
+  return `${project}/${repo}`;
+}
+
+function safeDecode(segment: string) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 }
 
 // NOTE: At some point we should check that the commit has been pushed to the

@@ -134,6 +134,67 @@ describe('getSlug', () => {
     execGitCommand.mockResolvedValue('https://gitlab.com/foo/bar.baz.git');
     expect(await getSlug(ctx)).toBe('foo/bar.baz');
   });
+
+  it('handles Azure DevOps remote urls', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/project/_git/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+
+    execGitCommand.mockResolvedValue('https://org@dev.azure.com/org/project/_git/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+
+    execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/project/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+  });
+
+  it('does not alter repo names containing _git', async () => {
+    execGitCommand.mockResolvedValue('https://github.com/owner/my_git_repo.git');
+    expect(await getSlug(ctx)).toBe('owner/my_git_repo');
+  });
+
+  it('does not drop a _git path segment for non-Azure DevOps remotes', async () => {
+    execGitCommand.mockResolvedValue('https://gitlab.com/group/_git/repo.git');
+    expect(await getSlug(ctx)).toBe('_git/repo');
+  });
+
+  it('decodes percent-encoded Azure DevOps project and repo names', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/My%20Project/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+
+    execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/My%20Project/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/My%20Project/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+  });
+
+  it('keeps malformed percent-encoding in Azure DevOps remote urls as-is', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/bad%zz/_git/repo');
+    expect(await getSlug(ctx)).toBe('bad%zz/repo');
+  });
+
+  it('uses the repo name as the project for short-form Azure DevOps remote urls', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://org@dev.azure.com/org/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/DefaultCollection/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my repo/my repo');
+  });
+
+  it('skips the DefaultCollection segment in visualstudio.com remote urls', async () => {
+    execGitCommand.mockResolvedValue(
+      'https://org.visualstudio.com/DefaultCollection/project/_git/repo'
+    );
+    expect(await getSlug(ctx)).toBe('project/repo');
+  });
 });
 
 describe('hasPreviousCommit', () => {
