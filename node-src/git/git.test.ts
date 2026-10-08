@@ -281,7 +281,7 @@ describe('getIgnoredPaths', () => {
       2,
       ctx,
       'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
-      { all: false }
+      { all: false, logResult: false }
     );
     expect(ignored.has('/root/generated/schema.ts')).toBe(true);
     expect(ignored.has('/root/generated/deep/schema.ts')).toBe(true);

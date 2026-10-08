@@ -11,6 +11,12 @@ import { DEFAULT_GIT_TIMEOUT_SECONDS } from './constants';
 
 export type GitDeps = Pick<Deps, 'log'> & { options?: { gitTimeout?: number } };
 
+/**
+ * Execa options plus `logResult`, which is on by default. Turn it off for a command whose output is
+ * unbounded, such as a full file listing, so the debug log is not flooded with it.
+ */
+type ExecGitOptions = Options & { logResult?: boolean };
+
 const defaultOptions: Options = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
   all: true, // interleave stdout and stderr
@@ -35,14 +41,15 @@ function getGitTimeout(depOptions: GitDeps['options']): number {
  * @param deps.log Standard context logger.
  * @param deps.options Options object for the Git command.
  * @param command The command to execute.
- * @param options Execa options
+ * @param options Execa options, plus `logResult`; see {@link ExecGitOptions}.
+ * @param options.logResult Whether to write the command's output to the debug log.
  *
  * @returns The result of the command from the terminal.
  */
 export async function execGitCommand(
   { log, options: depOptions }: GitDeps,
   command: string,
-  options?: Options
+  { logResult = true, ...options }: ExecGitOptions = {}
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
@@ -57,7 +64,9 @@ export async function execGitCommand(
     }
 
     const result = output.toString();
-    log.debug(`execGitCommand result: '${result}'`);
+    if (logResult) {
+      log.debug(`execGitCommand result: '${result}'`);
+    }
     return result;
   } catch (error) {
     const { message } = error;

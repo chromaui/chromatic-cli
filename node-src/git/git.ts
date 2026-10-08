@@ -562,11 +562,12 @@ export interface IgnoredPaths {
 export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
   // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
-  // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path.
+  // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path. The listing is
+  // unbounded, so it stays out of the debug log.
   const output = await execGitCommand(
     deps,
     'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
-    { all: false }
+    { all: false, logResult: false }
   );
 
   // A wholly ignored directory keeps its trailing slash, which `path.join` preserves as the native
