@@ -24,8 +24,10 @@ interface TraceChangedFilesInput {
   stats: Stats;
   manifestPath: string;
   projectRoot: string;
+  gitRoot: AbsolutePath | undefined;
   configDir: AbsolutePath;
   staticDirs: AbsolutePath[];
+  externals: string[];
   projectFiles: ProjectFiles;
 }
 
@@ -44,9 +46,13 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * @param input.manifestPath The path to write the manifest file to.
  * @param input.projectRoot The absolute Storybook project root used to read source files off disk
  * and to anchor manifest keys.
+ * @param input.gitRoot The absolute git repository root, as it arrives on `ctx.git`. The gitInfo task
+ * always sets it; its absence is reported as a v2 failure.
  * @param input.configDir The absolute Storybook config directory, hashed off disk because it is
  * never a bundler input.
  * @param input.staticDirs The absolute static directories, hashed off disk for the same reason.
+ * @param input.externals The user's `--externals` globs; the git-tracked files they match are hashed
+ * off disk so the Index can bail when one changes.
  * @param input.projectFiles How to read the disk; see {@link ProjectFiles}. Required rather than
  * defaulted, so a caller cannot silently reach the real disk.
  * @param input.failureLogLevel The level to log a v2 failure at, required rather than defaulted so a
@@ -62,8 +68,10 @@ export async function traceChangedFiles(
     manifest = await buildManifest(input.stats, {
       log: input.log,
       projectRoot: input.projectRoot,
+      gitRoot: requireGitRoot(input.gitRoot),
       configDir: input.configDir,
       staticDirs: input.staticDirs,
+      externals: input.externals,
       projectFiles: input.projectFiles,
     });
   } catch (error) {
@@ -101,6 +109,25 @@ export async function traceChangedFiles(
 
   // Until we want to lean on the v2 output, we always fallback to v1.
   return { status: 'fallback' };
+}
+
+/**
+ * Narrows the repository root the gitInfo task resolved upstream. It is always set by the time
+ * TurboSnap runs; the `Context` type just cannot say so.
+ *
+ * @param gitRoot The root as it arrives on `ctx.git`.
+ *
+ * @returns The absolute repository root.
+ *
+ * @throws {Error} When the root is missing, which is a bug upstream rather than a user error.
+ */
+function requireGitRoot(gitRoot: AbsolutePath | undefined): AbsolutePath {
+  if (!gitRoot) {
+    throw new Error(
+      'git.rootPath unexpectedly undefined. Should have been set in the gitInfo task upstream.'
+    );
+  }
+  return gitRoot;
 }
 
 function failed(

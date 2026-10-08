@@ -31,12 +31,14 @@ import {
   getVisitedCommitDetails,
   hasPreviousCommit,
   NULL_BYTE,
+  trackedFiles,
 } from './git';
 
 vi.mock('./execGit');
 vi.mock('fs/promises', () => ({ mkdir: vi.fn(), readFile: vi.fn() }));
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
+const execGitCommandEntries = vi.mocked(execGit.execGitCommandEntries);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
@@ -281,7 +283,7 @@ describe('getIgnoredPaths', () => {
       2,
       ctx,
       'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
-      { all: false }
+      { all: false, logResult: false }
     );
     expect(ignored.has('/root/generated/schema.ts')).toBe(true);
     expect(ignored.has('/root/generated/deep/schema.ts')).toBe(true);
@@ -300,6 +302,21 @@ describe('getIgnoredPaths', () => {
     const ignored = await getIgnoredPaths(ctx);
 
     expect(ignored.has('/root/src/Button.tsx')).toBe(false);
+  });
+});
+
+describe('trackedFiles', () => {
+  it('streams the whole index from the repository root', async () => {
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield* ['tailwind.config.js', 'packages/ui/src/Button.tsx'];
+    });
+
+    const results = await Array.fromAsync(trackedFiles(ctx, '/root'));
+
+    expect(execGitCommandEntries).toHaveBeenCalledWith(ctx, 'git ls-files --full-name -z', {
+      cwd: '/root',
+    });
+    expect(results).toEqual(['tailwind.config.js', 'packages/ui/src/Button.tsx']);
   });
 });
 
