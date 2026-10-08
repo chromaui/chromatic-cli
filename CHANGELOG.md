@@ -1,3 +1,20 @@
+# v18.12.0 (Thu Oct 08 2026)
+
+#### 🚀 Enhancement
+
+- [TurboSnap v2] Skip files that git ignores [#1515](https://github.com/chromaui/chromatic-cli/pull/1515) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- [WFL-1014] fix: add ADO provider support and generic speedUpCI message [#1464](https://github.com/chromaui/chromatic-cli/pull/1464) ([@ax-vasquez](https://github.com/ax-vasquez))
+
+#### Authors: 2
+
+- Armando Vasquez ([@ax-vasquez](https://github.com/ax-vasquez))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.11.0 (Mon Oct 05 2026)
 
 #### 🚀 Enhancement
