@@ -13,7 +13,7 @@ export type SkipContext = Pick<ManifestInput, 'projectRoot' | 'configDir' | 'pro
 
 /**
  * Why v2 skipped hashing a file. Diagnostic only: it feeds no roll-up, so a file changing reason never
- * moves a hash. One value today; more are expected (untraced, externals).
+ * moves a hash. One value today; more are expected (such as untraced files).
  */
 export type SkipReason = 'gitignored';
 
