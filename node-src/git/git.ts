@@ -49,7 +49,8 @@ export async function getUserEmail(deps: GitDeps) {
  * and is typically followed by `.git`. The regex matches the last two parts between slashes, and
  * ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
  * Azure DevOps HTTPS remotes (`.../<project>/_git/<repo>`) have their `_git` segment dropped, so
- * they produce `<project>/<repo>` just like Azure DevOps SSH remotes do.
+ * they produce `<project>/<repo>` just like Azure DevOps SSH remotes do. Azure DevOps project and
+ * repo names may contain spaces, so their percent-encoded segments are decoded.
  *
  * @param deps Function dependencies.
  *
@@ -58,12 +59,26 @@ export async function getUserEmail(deps: GitDeps) {
 export async function getSlug(deps: GitDeps) {
   const result = await execGitCommand(deps, `git config --get remote.origin.url`);
   let downcasedResult = result?.toLowerCase() || '';
+  const isAzureRemote = /(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult);
   // Strip _git segment Azure DevOps remotes
-  if (/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) {
+  if (isAzureRemote) {
     downcasedResult = downcasedResult.replace(/\/_git\//, '/');
   }
   const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
-  return slug;
+  return isAzureRemote
+    ? slug
+        ?.split('/')
+        .map((segment) => safeDecode(segment))
+        .join('/')
+    : slug;
+}
+
+function safeDecode(segment: string) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 }
 
 // NOTE: At some point we should check that the commit has been pushed to the
