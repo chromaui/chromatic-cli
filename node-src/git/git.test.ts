@@ -134,6 +134,22 @@ describe('getSlug', () => {
     execGitCommand.mockResolvedValue('https://gitlab.com/foo/bar.baz.git');
     expect(await getSlug(ctx)).toBe('foo/bar.baz');
   });
+
+  it('handles Azure DevOps remote urls', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/project/_git/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+
+    execGitCommand.mockResolvedValue('https://org@dev.azure.com/org/project/_git/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+
+    execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/project/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+  });
+
+  it('does not alter repo names containing _git', async () => {
+    execGitCommand.mockResolvedValue('https://github.com/owner/my_git_repo.git');
+    expect(await getSlug(ctx)).toBe('owner/my_git_repo');
+  });
 });
 
 describe('hasPreviousCommit', () => {
