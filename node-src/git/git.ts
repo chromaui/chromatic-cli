@@ -57,7 +57,14 @@ export async function getUserEmail(deps: GitDeps) {
  */
 export async function getSlug(deps: GitDeps) {
   const result = await execGitCommand(deps, `git config --get remote.origin.url`);
-  const downcasedResult = (result?.toLowerCase() || '').replace(/\/_git\//, '/');
+  let downcasedResult = result?.toLowerCase() || '';
+  // Azure DevOps slugs use `<project>/<repo>` rather than `<org>/<repo>`, which matches what ADO
+  // SSH remotes already produce. ADO HTTPS remotes have the form `.../<project>/_git/<repo>`, so we
+  // strip the `_git` segment to get the `<project>/<repo>` portion. This only runs for ADO remotes,
+  // so other providers keep any `_git` path segment.
+  if (/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) {
+    downcasedResult = downcasedResult.replace(/\/_git\//, '/');
+  }
   const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
   return slug;
 }
