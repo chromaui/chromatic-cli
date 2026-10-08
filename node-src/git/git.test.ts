@@ -11,6 +11,7 @@ import * as execGit from './execGit';
 import {
   checkoutFile,
   commitExists,
+  fetchCommit,
   findFilesFromRepositoryRoot,
   getBranch,
   getChangedFiles,
@@ -170,6 +171,33 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
+  });
+});
+
+describe('fetchCommit', () => {
+  const commit = '19b6c9c5b3d34d9fc55627fcaf8a85bd5d5e5b2a';
+
+  it.each([
+    ['false', ''],
+    ['true', ' --depth=1'],
+  ])('fetches by hash (is-shallow: %s)', async (isShallow, depth) => {
+    execGitCommandOneLine.mockResolvedValue(isShallow);
+    execGitCommand.mockResolvedValue('');
+    expect(await fetchCommit(ctx, commit)).toEqual(true);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      `git fetch --no-tags${depth} origin "${commit}"`
+    );
+  });
+
+  it('returns false if the fetch fails', async () => {
+    execGitCommand.mockRejectedValueOnce(new Error('fatal: not our ref'));
+    expect(await fetchCommit(ctx, commit)).toEqual(false);
+  });
+
+  it('does not run git for a value that is not a commit hash', async () => {
+    expect(await fetchCommit(ctx, '"; rm -rf / #')).toEqual(false);
+    expect(execGitCommand).not.toHaveBeenCalled();
   });
 });
 
