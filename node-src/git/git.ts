@@ -128,7 +128,7 @@ export async function getBranch(deps: GitDeps) {
 export async function getUncommittedHash(deps: GitDeps) {
   const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
   const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
-  const listUntrackedFiles = 'git ls-files --others --exclude-standard';
+  const listUntrackedFiles = 'git ls-files --others --exclude-standard --full-name';
 
   // Use `all: false` so only stdout is captured and we can ignore stderr output that doesn't impact
   // the result.

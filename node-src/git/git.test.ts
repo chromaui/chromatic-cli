@@ -121,6 +121,16 @@ describe('getUncommittedHash', () => {
     execGitCommand.mockResolvedValue('1234567890');
     expect(await getUncommittedHash(ctx)).toEqual('1234567890');
   });
+
+  it('lists untracked files relative to the repository root', async () => {
+    execGitCommand.mockResolvedValue('1234567890');
+    await getUncommittedHash(ctx);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git ls-files --others --exclude-standard --full-name',
+      expect.anything()
+    );
+  });
 });
 
 describe('getSlug', () => {
