@@ -106,7 +106,8 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     },
     // Symlinks are not modelled, so every path is already the real one.
     realPath: (absolutePath: AbsolutePath) => absolutePath,
-    ignoredFiles: async (absolutePaths: AbsolutePath[]) =>
-      new Set(absolutePaths.filter((absolutePath) => disk.isIgnored?.(absolutePath))),
+    ignoredPaths: async () => ({
+      has: (absolutePath: AbsolutePath) => disk.isIgnored?.(absolutePath) ?? false,
+    }),
   };
 }

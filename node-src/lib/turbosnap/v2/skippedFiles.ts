@@ -18,51 +18,98 @@ export type SkipContext = Pick<ManifestInput, 'projectRoot' | 'configDir' | 'pro
 export type SkipReason = 'gitignored';
 
 /**
- * The files among the given paths that TurboSnap v2 skips hashing: the project's own files that git
- * ignores. "Ignored" is git's answer; "skipped" is our policy on top of it.
+ * Why TurboSnap v2 skips hashing the file at a path, or undefined when it hashes the file; see
+ * {@link buildSkipRule}.
+ */
+export type SkipRule = (absolutePath: AbsolutePath) => SkipReason | undefined;
+
+/**
+ * Splits paths by the rule: the ones to hash, and the ones skipped with their reason. The one place
+ * the rule is applied to a listing, so the graph and the static sweep partition alike.
+ *
+ * @param absolutePaths The paths to split.
+ * @param rule The rule to split them by; see {@link buildSkipRule}.
+ *
+ * @returns The paths to hash, in the order given, and the skipped paths with their reasons.
+ */
+export function partitionSkipped(
+  absolutePaths: Iterable<AbsolutePath>,
+  rule: SkipRule
+): { hashable: AbsolutePath[]; skipped: Map<AbsolutePath, SkipReason> } {
+  const hashable: AbsolutePath[] = [];
+  const skipped = new Map<AbsolutePath, SkipReason>();
+  for (const absolutePath of absolutePaths) {
+    const reason = rule(absolutePath);
+    if (reason) {
+      skipped.set(absolutePath, reason);
+    } else {
+      hashable.push(absolutePath);
+    }
+  }
+  return { hashable, skipped };
+}
+
+/**
+ * Builds the rule for which files TurboSnap v2 skips hashing: the project's own files that git
+ * ignores. "Ignored" is git's answer; "skipped" is our policy on top of it. Built once per manifest,
+ * since it asks git once, and then answers synchronously for every file the graph and the static
+ * sweep hold.
  *
  * We lean on git because generated files are often ignored by git and they can be non-deterministic.
  * Recapturing based on those hashing changes would be more "correct" but a much worse experience, so
  * we opted to match TurboSnap v1's behavior.
  *
- * Only the project's own files are skipped, because a dependency's file is a real change however git
- * sees it. A workspace package's gitignored `dist` is the only form of that package the graph holds:
- * the bundler resolves the `node_modules` link to it, so its source never appears. The same goes for
- * `node_modules` itself, which is in nearly every `.gitignore`, yet a dependency upgrade is a real
- * change. And a generated `preview.*` in the Storybook config directory still shapes every story, so
- * the config directory is never skipped either.
+ * Only the project's own files are skipped, because a dependency's file is a real change
+ * however git sees it. A workspace package's gitignored `dist` is the only form of that package the
+ * graph holds: the bundler resolves the `node_modules` link to it, so its source never appears. The
+ * same goes for `node_modules` itself, which is in nearly every `.gitignore`, yet a dependency upgrade
+ * is a real change; it gets its own check because a cache such as `node_modules/.vite` has no
+ * `package.json` between it and the project root.
  *
- * Every rule is judged on the file a path leads to, which is how git names files. A bundler names a
- * file by its real path while the project and config directories are named as configured, so a
- * `.storybook` that is a symlink would otherwise never match its own files.
+ * The Storybook config directory is never skipped. A generated `preview.*` there still shapes every
+ * story, and the config sweep hashes the directory's bytes regardless, so skipping a config file in
+ * the graph would change nothing while the sweep still saw the edit.
  *
- * @param absolutePaths The paths to test.
+ * The rule is judged on the file a path leads to, since that is how git names files (see
+ * {@link ProjectFiles.ignoredPaths}) while a bundler names a file by its real path and the project
+ * and config directories are named as configured.
+ *
  * @param context Where the project is, and how to ask git and the disk.
  *
- * @returns The subset of paths v2 skips, each with its {@link SkipReason}.
+ * @returns The rule, by the path as given.
  */
-export async function findSkippedFiles(
-  absolutePaths: AbsolutePath[],
+export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
+  const { projectFiles } = context;
+  const configDirectory = projectFiles.realPath(context.configDir) + path.sep;
+  const isIgnoredProjectFile = await ignoredProjectFileCheck(context);
+
+  return (absolutePath) => {
+    const realPath = projectFiles.realPath(absolutePath);
+    if (realPath.startsWith(configDirectory)) return undefined;
+    if (isIgnoredProjectFile(realPath)) return 'gitignored';
+    return undefined;
+  };
+}
+
+/**
+ * Builds the check for whether a real path is one of the project's own files that git ignores.
+ *
+ * @param context Where the project is, and how to ask git and the disk.
+ *
+ * @returns The check, by real path.
+ */
+async function ignoredProjectFileCheck(
   context: SkipContext
-): Promise<Map<AbsolutePath, SkipReason>> {
+): Promise<(realPath: AbsolutePath) => boolean> {
   const { projectFiles } = context;
   const projectRoot = projectFiles.realPath(context.projectRoot);
-  const configDirectory = projectFiles.realPath(context.configDir) + path.sep;
-
-  const realPaths = new Map(
-    absolutePaths.map((absolutePath) => [absolutePath, projectFiles.realPath(absolutePath)])
-  );
-  const candidates = [...realPaths.values()].filter(
-    (realPath) => !isNodeModulesPath(realPath) && !realPath.startsWith(configDirectory)
-  );
-  const ignored = await projectFiles.ignoredFiles(candidates);
+  const ignored = await projectFiles.ignoredPaths();
   const isProjectDirectory = memoizedProjectDirectoryCheck(projectRoot, projectFiles);
 
-  return new Map(
-    [...realPaths]
-      .filter(([, realPath]) => ignored.has(realPath) && isProjectDirectory(path.dirname(realPath)))
-      .map(([absolutePath]): [AbsolutePath, SkipReason] => [absolutePath, 'gitignored'])
-  );
+  return (realPath) =>
+    !isNodeModulesPath(realPath) &&
+    ignored.has(realPath) &&
+    isProjectDirectory(path.dirname(realPath));
 }
 
 /**

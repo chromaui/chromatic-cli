@@ -7,7 +7,7 @@ import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { findSkippedFiles, SkipReason } from './skippedFiles';
+import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import {
   EXTERNALS_KEY,
   STATIC_FILES_KEY,
@@ -20,6 +20,12 @@ export type OutOfGraphInput = Pick<
   ManifestInput,
   'log' | 'projectRoot' | 'gitRoot' | 'configDir' | 'staticDirs' | 'externals' | 'projectFiles'
 >;
+
+/** What the sweep found: the hashed files, and the static files it left unhashed instead. */
+export interface OutOfGraphSweep {
+  files: OutOfGraphFiles;
+  skippedFiles: Map<FilePath, SkipReason>;
+}
 
 /**
  * The content hash of every out-of-graph file, keyed by canonical manifest path. These are the S3-only
@@ -65,22 +71,22 @@ export class MissingStorybookConfigError extends Error {
  * imports would mean resolving and interpreting Node-side config, which is out of scope.
  *
  * Static files are hashed unbounded, with no size or count cap: a cap is a silent gap, which is the
- * failure mode this mechanism exists to remove. The project's own static files that git ignores are the
- * one exception, left out of the roll-up entirely like every skipped file (see `SKIPPED_HASH`), and
- * the config directory is hashed whether git ignores its files or not; see {@link findSkippedFiles}.
+ * failure mode this mechanism exists to remove. The static files v2 skips are the one exception; the
+ * config directory is swept whole, since the rule is never asked about it.
  *
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
+ * @param skipRule Which static files to leave unhashed; see {@link buildSkipRule}.
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept static files that were skipped instead, keyed the same way with
- * the reason; see {@link findSkippedFiles}. `storybookConfigFiles` is never empty: it always holds
- * at least the main config.
+ * the reason. `storybookConfigFiles` is never empty: it always holds at least the main config.
  *
  * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file.
  */
 export async function hashOutOfGraphFiles(
-  input: OutOfGraphInput
-): Promise<{ outOfGraphFiles: OutOfGraphFiles; skippedFiles: Map<FilePath, SkipReason> }> {
+  input: OutOfGraphInput,
+  skipRule: SkipRule
+): Promise<OutOfGraphSweep> {
   const configTree = input.projectFiles.listTree(input.configDir);
   if (!configTree.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
     throw new MissingStorybookConfigError(input.configDir);
@@ -89,11 +95,10 @@ export async function hashOutOfGraphFiles(
   const staticTree = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
   );
-  const skipped = await findSkippedFiles(staticTree, input);
-  const staticFilePaths = staticTree.filter((filePath) => !skipped.has(filePath));
+  const { hashable: staticFilePaths, skipped } = partitionSkipped(staticTree, skipRule);
 
   return {
-    outOfGraphFiles: {
+    files: {
       // A config file inside a declared static dir stays a config file, so the config section is
       // never emptied by `staticDirs` pointing at the config dir. It lands in both sections.
       // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built

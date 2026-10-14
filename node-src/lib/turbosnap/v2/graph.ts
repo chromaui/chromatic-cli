@@ -2,7 +2,7 @@ export type FilePath = string;
 export type FileHash = string;
 
 /**
- * The hash of a real file v2 deliberately did not content-hash; see `findSkippedFiles`. It can never
+ * The hash of a real file v2 deliberately did not content-hash; see `buildSkipRule`. It can never
  * collide with a real hash, because xxh64 output is 16 hex characters.
  *
  * A skipped file contributes nothing to any roll-up, not even its path: a generated file is often

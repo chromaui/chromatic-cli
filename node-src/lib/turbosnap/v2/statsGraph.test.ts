@@ -2,14 +2,19 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture } from './__fixtures__/manifestFixtures';
+import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { SKIPPED_HASH } from './graph';
+import { SkipRule } from './skippedFiles';
 import { countNodeModulesFiles, readStatsGraph } from './statsGraph';
 
 // These suites are about builder spellings: what webpack, rspack and Vite each call the same file,
 // and what the graph reader makes of it. They assert on the graph, not on a hash — that the right
 // edge exists and the right bytes were hashed. Whether an edge reaches a roll-up is graph.test.ts's
 // job, and end-to-end in manifest.hashing.test.ts.
+
+// The skip rule is tested on its own, so the reader is handed one that skips nothing unless a test
+// says otherwise.
+const skipNothing: SkipRule = () => undefined;
 
 describe('readStatsGraph concatenated modules', () => {
   // Webpack/rspack concatenate the story and its local imports into one module: the module name
@@ -35,7 +40,7 @@ describe('readStatsGraph concatenated modules', () => {
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(concatenatedStory, input);
+    const graph = await readStatsGraph(concatenatedStory, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
   });
@@ -47,7 +52,7 @@ describe('readStatsGraph concatenated modules', () => {
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(concatenatedStory, input);
+    const graph = await readStatsGraph(concatenatedStory, input, skipNothing);
 
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
       './src/Button.tsx'
@@ -86,7 +91,7 @@ describe('readStatsGraph concatenated modules', () => {
       },
     });
 
-    const graph = await readStatsGraph(contextsInModules, input);
+    const graph = await readStatsGraph(contextsInModules, input, skipNothing);
 
     // The record keys by its own name, so it stays a real file rather than becoming a story
     // importer, and the module it imports is not a story file.
@@ -113,7 +118,8 @@ describe('readStatsGraph unhashable paths', () => {
             return input.projectFiles.isFile(absolutePath);
           },
         },
-      }
+      },
+      skipNothing
     );
 
     expect(graph.hashes.size).toBe(0);
@@ -143,7 +149,8 @@ describe('readStatsGraph unhashable paths', () => {
             return input.projectFiles.isFile(absolutePath);
           },
         },
-      }
+      },
+      skipNothing
     );
 
     expect(graph.hashes.get('./node_modules/es5-ext/array/#/e-index-of.js')).toBe('E');
@@ -169,7 +176,8 @@ describe('readStatsGraph unhashable paths', () => {
           { id: 2, name: story, modules: [{ name: directory }], reasons: [] },
         ],
       },
-      input
+      input,
+      skipNothing
     );
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
@@ -185,8 +193,12 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
     });
     const { input } = createFixture({ fileHashes: { [story]: 'S' } });
 
-    const plain = await readStatsGraph(stats('./storybook-stories.js'), input);
-    const concatenated = await readStatsGraph(stats('./storybook-stories.js + 1 modules'), input);
+    const plain = await readStatsGraph(stats('./storybook-stories.js'), input, skipNothing);
+    const concatenated = await readStatsGraph(
+      stats('./storybook-stories.js + 1 modules'),
+      input,
+      skipNothing
+    );
 
     expect(concatenated).toEqual(plain);
   });
@@ -226,7 +238,7 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(rspackConcatenatedStory, input);
+    const graph = await readStatsGraph(rspackConcatenatedStory, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
@@ -246,8 +258,8 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
     };
     const { input } = createFixture({ fileHashes: { [story]: 'S', [implementation]: 'B' } });
 
-    const full = await readStatsGraph(rspackConcatenatedStory, input);
-    const shimmed = await readStatsGraph(shimmedStats, input);
+    const full = await readStatsGraph(rspackConcatenatedStory, input, skipNothing);
+    const shimmed = await readStatsGraph(shimmedStats, input, skipNothing);
 
     expect(shimmed).toEqual(full);
   });
@@ -272,7 +284,7 @@ describe('readStatsGraph missing names', () => {
       ],
     };
 
-    const graph = await readStatsGraph(stats, input);
+    const graph = await readStatsGraph(stats, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
   });
@@ -298,7 +310,7 @@ describe('readStatsGraph missing names', () => {
       ],
     };
 
-    const graph = await readStatsGraph(stats, input);
+    const graph = await readStatsGraph(stats, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
@@ -325,11 +337,33 @@ describe('readStatsGraph unhashable files', () => {
           { id: 2, name: missing, reasons: [{ moduleName: story }] },
         ],
       },
-      input
+      input,
+      skipNothing
     );
 
     expect(graph.hashes.has('./src/missing.ts')).toBe(false);
     expect(graph.files.get('./src/missing.ts')?.hash).toBe('');
+  });
+});
+
+describe('readStatsGraph hashing failures', () => {
+  it('fails the read rather than returning a graph missing a file it could not read', async () => {
+    // Unreadability is a bug, not an answer: a manifest built without those bytes would silently
+    // under-capture, so this propagates to the entry point and bails TurboSnap to v1.
+    const { input } = createFixture();
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const unreadable = new Error(`Could not hash ${story}: EACCES: permission denied`);
+
+    await expect(
+      readStatsGraph(
+        { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
+        {
+          ...input,
+          projectFiles: { ...input.projectFiles, hashAll: () => Promise.reject(unreadable) },
+        },
+        skipNothing
+      )
+    ).rejects.toThrow(story);
   });
 });
 
@@ -434,7 +468,7 @@ describe('readStatsGraph global composition roots', () => {
   ])('recognizes %s as a global composition root', async (spelling, canonical) => {
     const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
 
-    const graph = await readStatsGraph(statsImportedFrom(spelling), input);
+    const graph = await readStatsGraph(statsImportedFrom(spelling), input, skipNothing);
 
     expect([...graph.globalRoots]).toEqual([canonical]);
   });
@@ -444,10 +478,14 @@ describe('readStatsGraph global composition roots', () => {
     // under `/repo/packages/ui`. The root must therefore be stored with a `../../` prefix.
     const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
 
-    const graph = await readStatsGraph(statsImportedFrom('./storybook-config-entry.js'), {
-      ...input,
-      statsRoot: '/repo',
-    });
+    const graph = await readStatsGraph(
+      statsImportedFrom('./storybook-config-entry.js'),
+      {
+        ...input,
+        statsRoot: '/repo',
+      },
+      skipNothing
+    );
 
     expect([...graph.globalRoots]).toEqual(['../../storybook-config-entry.js']);
   });
@@ -458,7 +496,8 @@ describe('readStatsGraph global composition roots', () => {
 
     const graph = await readStatsGraph(
       { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
-      input
+      input,
+      skipNothing
     );
 
     // The stories entry loads story modules, not global annotations, so it is not a global root.
@@ -476,13 +515,12 @@ describe('readStatsGraph skipped files', () => {
     ],
   };
 
-  it('keeps a file git ignores in the graph as a node with the skipped hash, and records it', async () => {
-    const { input } = createFixture({
-      fileHashes: { [story]: 'S', [generated]: 'G' },
-      isIgnored: (candidate) => candidate === generated,
-    });
+  it('keeps a skipped file in the graph as a node with the skipped hash, and records it', async () => {
+    const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
 
-    const graph = await readStatsGraph(stats, input);
+    const graph = await readStatsGraph(stats, input, (candidate) =>
+      candidate === generated ? 'gitignored' : undefined
+    );
 
     expect(graph.hashes.get('./src/generated/schema.ts')).toBe(SKIPPED_HASH);
     expect(graph.files.get('./src/generated/schema.ts')?.hash).toBe(SKIPPED_HASH);
@@ -492,57 +530,28 @@ describe('readStatsGraph skipped files', () => {
     expect([...graph.skippedFiles]).toEqual([['./src/generated/schema.ts', 'gitignored']]);
   });
 
-  it('still detects a story file git ignores as a story file', async () => {
-    const { input } = createFixture({
-      fileHashes: { [story]: 'S', [generated]: 'G' },
-      isIgnored: (candidate) => candidate === story,
-    });
+  it('still detects a skipped story file as a story file', async () => {
+    const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
 
-    const graph = await readStatsGraph(stats, input);
+    const graph = await readStatsGraph(stats, input, (candidate) =>
+      candidate === story ? 'gitignored' : undefined
+    );
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect(graph.hashes.get('./src/Button.stories.tsx')).toBe(SKIPPED_HASH);
   });
 
-  it('hashes a Storybook config file even though git ignores it', async () => {
-    const preview = '/repo/packages/ui/.storybook/preview.ts';
+  it('never asks the rule about a path with no file on disk', async () => {
+    const asked: string[] = [];
     const { input } = createFixture({
-      fileHashes: { [story]: 'S', [preview]: 'P' },
-      isIgnored: (candidate) => candidate === preview,
+      isAbsent: (candidate) => candidate === generated || syntheticAbsent(candidate),
     });
 
-    const graph = await readStatsGraph(
-      {
-        modules: [
-          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
-          { id: 2, name: preview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
-        ],
-      },
-      input
-    );
-
-    expect(graph.hashes.get('./.storybook/preview.ts')).toBe('P');
-    expect([...graph.skippedFiles]).toEqual([]);
-  });
-
-  it('hashes a node_modules file even though git ignores it', async () => {
-    const dependency = '/repo/packages/ui/node_modules/react/index.js';
-    const { input } = createFixture({
-      fileHashes: { [story]: 'S', [dependency]: 'R' },
-      isIgnored: (candidate) => candidate === dependency,
+    await readStatsGraph(stats, input, (candidate) => {
+      asked.push(candidate);
+      return undefined;
     });
 
-    const graph = await readStatsGraph(
-      {
-        modules: [
-          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
-          { id: 2, name: dependency, reasons: [{ moduleName: story }] },
-        ],
-      },
-      input
-    );
-
-    expect(graph.hashes.get('./node_modules/react/index.js')).toBe('R');
-    expect([...graph.skippedFiles]).toEqual([]);
+    expect(asked).toEqual([story]);
   });
 });

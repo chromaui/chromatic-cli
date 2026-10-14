@@ -12,17 +12,11 @@ import {
   StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { findSkippedFiles, SkipContext, SkipReason } from './skippedFiles';
+import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
-/**
- * The part of {@link ManifestInput} reading the stats file needs: the two roots, the config directory
- * the skip rule reads, and the disk.
- */
-export type StatsContext = Pick<
-  ManifestInput,
-  'projectRoot' | 'statsRoot' | 'configDir' | 'projectFiles'
->;
+/** The part of {@link ManifestInput} reading the stats file needs: the two roots and the disk. */
+export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'projectFiles'>;
 
 /**
  * What the builder's stats file says it emitted, read into one canonical graph. Builder spellings —
@@ -39,7 +33,7 @@ export interface StatsGraph {
   files: Map<FilePath, TurboSnapFile>;
   /**
    * An entry for every on-disk file, keyed by canonical path: its content hash, or
-   * {@link SKIPPED_HASH} when v2 skipped the file (see {@link findSkippedFiles}). A missing entry
+   * {@link SKIPPED_HASH} when v2 skipped the file (see {@link buildSkipRule}). A missing entry
    * means there is no file on disk.
    */
   hashes: Map<FilePath, FileHash>;
@@ -80,14 +74,19 @@ const VITE_COMPOSITION_ROOTS = new Set([
  * @param stats The stats file to parse.
  * @param context The context the stats file was built in, which is needed to resolve module paths to
  * absolute files; see {@link StatsContext}.
+ * @param skipRule Which on-disk files to leave unhashed; see {@link buildSkipRule}.
  *
  * @returns The unpruned graph; see {@link StatsGraph}.
  */
-export async function readStatsGraph(stats: Stats, context: StatsContext): Promise<StatsGraph> {
+export async function readStatsGraph(
+  stats: Stats,
+  context: StatsContext,
+  skipRule: SkipRule
+): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
   const onDiskFiles = locateOnDiskFiles(stats, roots, projectFiles);
-  const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, context);
+  const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, skipRule, projectFiles);
 
   // Story detection sees every file on disk, skipped or not: a generated story file is still a
   // story file, so its stories keep a hash that moves with the tracked files they import.
@@ -273,19 +272,19 @@ function locateOnDiskFiles(
  * established where the skip is decided rather than by every caller.
  *
  * @param onDiskFiles The absolute path of each on-disk file, keyed by canonical path.
- * @param context The config directory, and how to ask git and read the disk; see {@link SkipContext}.
+ * @param skipRule Which files to skip; see {@link buildSkipRule}.
+ * @param projectFiles How to read the disk.
  *
  * @returns The hash of every on-disk file, and the skipped files with their reasons, both keyed by
  * canonical path.
  */
 async function hashOnDiskFiles(
   onDiskFiles: Map<FilePath, AbsolutePath>,
-  context: SkipContext
+  skipRule: SkipRule,
+  projectFiles: ProjectFiles
 ): Promise<{ hashes: Map<FilePath, FileHash>; skippedFiles: Map<FilePath, SkipReason> }> {
-  const skipped = await findSkippedFiles([...onDiskFiles.values()], context);
-  const fileHashes = await context.projectFiles.hashAll(
-    [...onDiskFiles.values()].filter((absolutePath) => !skipped.has(absolutePath))
-  );
+  const { hashable, skipped } = partitionSkipped(onDiskFiles.values(), skipRule);
+  const fileHashes = await projectFiles.hashAll(hashable);
 
   const hashes = new Map<FilePath, FileHash>();
   const skippedFiles = new Map<FilePath, SkipReason>();
@@ -294,8 +293,8 @@ async function hashOnDiskFiles(
     if (reason === undefined) {
       hashes.set(filePath, fileHashes[absolutePath]);
     } else {
-      skippedFiles.set(filePath, reason);
       hashes.set(filePath, SKIPPED_HASH);
+      skippedFiles.set(filePath, reason);
     }
   }
   return { hashes, skippedFiles };
