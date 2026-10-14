@@ -64,10 +64,7 @@ export async function getSlug(deps: GitDeps) {
   if (!/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) return genericSlug;
 
   const slug = getAzureHttpsSlug(downcasedResult) ?? genericSlug;
-  return slug
-    ?.split('/')
-    .map((segment) => safeDecode(segment))
-    .join('/');
+  return safeDecode(slug);
 }
 
 // Returns `<project>/<repo>` for Azure DevOps HTTPS remotes, or undefined for any other remote
@@ -91,11 +88,11 @@ function getAzureHttpsSlug(remoteUrl: string) {
   return `${project}/${repo}`;
 }
 
-function safeDecode(segment: string) {
+function safeDecode(value: string) {
   try {
-    return decodeURIComponent(segment);
+    return decodeURIComponent(value);
   } catch {
-    return segment;
+    return value;
   }
 }
 
