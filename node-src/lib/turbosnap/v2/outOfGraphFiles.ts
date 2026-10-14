@@ -2,11 +2,10 @@ import path from 'path';
 
 import { AbsolutePath } from '../../../types';
 import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
-import { relativeTo } from '../../getStorybookProjectRoot';
-import { isDocumentationFile, matchesFile } from '../../utilities';
+import { isDocumentationFile } from '../../utilities';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
-import { normalizeStatsPath } from './paths';
+import { gitRootGlobMatcher, normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { findSkippedFiles, SkipReason } from './skippedFiles';
 import {
@@ -121,10 +120,10 @@ export async function hashOutOfGraphFiles(
 }
 
 /**
- * Lists the git-tracked files matching the user's `--externals` globs. Globs are matched against
- * git-root-relative paths with the same matcher v1 uses on its changed files, so a glob means the
- * same thing to both generations. The index is matched as it streams in, so only the matches are
- * ever held: a monorepo's index can run to millions of entries, and a glob names a handful.
+ * Lists the git-tracked files matching the user's `--externals` globs; see
+ * {@link gitRootGlobMatcher} for how a glob is read. The index is matched as it streams in, so only
+ * the matches are ever held: a monorepo's index can run to millions of entries, and a glob names a
+ * handful.
  *
  * @param input Where the repository is and which globs to match; see {@link OutOfGraphInput}.
  *
@@ -138,10 +137,7 @@ async function listExternalFiles(
     return [];
   }
 
-  const isExternal = (absolutePath: AbsolutePath) => {
-    const gitRelativePath = relativeTo(gitRoot, absolutePath);
-    return externals.some((glob) => matchesFile(glob, gitRelativePath));
-  };
+  const isExternal = gitRootGlobMatcher(gitRoot, externals);
 
   const start = Date.now();
   let indexedPaths = 0;

@@ -2,6 +2,7 @@ import path from 'path';
 
 import { AbsolutePath, Module } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
+import { matchesFile } from '../../utilities';
 import { FilePath } from './graph';
 
 /**
@@ -190,4 +191,24 @@ export function resolveStatsPath(statsPath: FilePath, statsRoot: AbsolutePath): 
  */
 function stripNullBytes(statsPath: FilePath): FilePath {
   return statsPath.replaceAll('\0', '');
+}
+
+/**
+ * Builds the check for whether a file matches one of the user's globs, as `--externals` names them.
+ * A glob is matched against the git-root-relative posix path with the same matcher v1 uses on its
+ * changed files, so a glob means the same thing to both generations.
+ *
+ * @param gitRoot The absolute repository root the globs are relative to.
+ * @param globs The user's globs.
+ *
+ * @returns The check, by absolute path.
+ */
+export function gitRootGlobMatcher(
+  gitRoot: AbsolutePath,
+  globs: string[]
+): (absolutePath: AbsolutePath) => boolean {
+  return (absolutePath) => {
+    const gitRelativePath = relativeTo(gitRoot, absolutePath);
+    return globs.some((glob) => matchesFile(glob, gitRelativePath));
+  };
 }

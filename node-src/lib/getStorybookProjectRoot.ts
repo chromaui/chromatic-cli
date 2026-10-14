@@ -34,13 +34,13 @@ export function getStorybookProjectRoot({
 }
 
 /**
- * Rewrites an absolute directory as a posix path relative to the given root.
+ * Rewrites an absolute path, to a file or a directory, as a posix path relative to the given root.
  *
  * @param root The absolute directory the result is relative to.
- * @param directory The absolute directory to rewrite.
+ * @param absolutePath The absolute path to rewrite.
  *
  * @returns The relative posix path.
  */
-export function relativeTo(root: AbsolutePath, directory: AbsolutePath) {
-  return posix(path.relative(root, directory));
+export function relativeTo(root: AbsolutePath, absolutePath: AbsolutePath) {
+  return posix(path.relative(root, absolutePath));
 }
