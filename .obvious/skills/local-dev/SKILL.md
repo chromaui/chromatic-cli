@@ -26,8 +26,11 @@ executed successfully in the sandbox; it is the validated path, not a guess.
    (`EACCES: unlink node_modules/.bin/...`) or `prepare` (`EPERM: chmod
    dist/bin.cjs`). Fix once, before first install:
    `sudo rm -rf node_modules dist action bin coverage .cache`
-2. **Stray `bun.lock`**: an untracked bun.lock may appear (someone ran bun);
-   the repo uses Yarn 4. Safe to delete; do not commit.
+2. **Stray lockfiles from other package managers**: an untracked lockfile not
+   from Yarn (`bun.lock`, `pnpm-lock.yaml`, `package-lock.json`) may appear if
+   another tool ran in the environment. The repo itself uses Yarn 4
+   (`yarn.lock`), and `smoke-tests/` deliberately commits no lockfile. Delete
+   strays; never commit them.
 3. `yarn install --immutable` runs a few seconds warm; `prepare` triggers the
    tsdown build automatically.
 
