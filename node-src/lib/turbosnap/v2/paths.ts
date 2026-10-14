@@ -196,7 +196,9 @@ function stripNullBytes(statsPath: FilePath): FilePath {
 /**
  * Builds the check for whether a file matches one of the user's globs, as `--externals` and
  * `--untraced` name them. A glob is matched against the git-root-relative posix path with the same
- * matcher v1 uses on its changed files, so a glob means the same thing to both generations.
+ * matcher v1 uses on its changed files, so a glob means the same thing to both generations. An empty
+ * glob names nothing, so it is ignored here rather than by every caller: picomatch rejects an empty
+ * pattern, and one can arrive from an empty flag value or a configuration file entry.
  *
  * @param gitRoot The absolute repository root the globs are relative to.
  * @param globs The user's globs.
@@ -207,8 +209,9 @@ export function gitRootGlobMatcher(
   gitRoot: AbsolutePath,
   globs: string[]
 ): (absolutePath: AbsolutePath) => boolean {
+  const patterns = globs.filter(Boolean);
   return (absolutePath) => {
     const gitRelativePath = relativeTo(gitRoot, absolutePath);
-    return globs.some((glob) => matchesFile(glob, gitRelativePath));
+    return patterns.some((glob) => matchesFile(glob, gitRelativePath));
   };
 }

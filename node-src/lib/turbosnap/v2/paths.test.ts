@@ -4,6 +4,7 @@ import { Module } from '../../../types';
 import {
   canonicalFileNames,
   canonicalImporters,
+  gitRootGlobMatcher,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -309,5 +310,21 @@ describe('isSyntheticFile', () => {
 
   it('does not mistake a real path containing data: for a synthetic module', () => {
     expect(isSyntheticFile('/repo/packages/data:exports/src/font.ts')).toBe(false);
+  });
+});
+
+describe('gitRootGlobMatcher', () => {
+  it('matches a glob against the posix path relative to the repository root', () => {
+    const isMatch = gitRootGlobMatcher('/repo', ['packages/ui/src/generated/**']);
+
+    expect(isMatch('/repo/packages/ui/src/generated/schema.ts')).toBe(true);
+    expect(isMatch('/repo/packages/ui/src/Button.tsx')).toBe(false);
+  });
+
+  it('ignores an empty glob, which picomatch rejects, so an empty flag or configuration entry names nothing', () => {
+    const isMatch = gitRootGlobMatcher('/repo', ['', '**/*.css']);
+
+    expect(isMatch('/repo/packages/ui/src/theme.css')).toBe(true);
+    expect(isMatch('/repo/packages/ui/src/Button.tsx')).toBe(false);
   });
 });

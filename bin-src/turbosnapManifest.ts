@@ -115,7 +115,7 @@ export async function main(argv: string[]) {
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
         path.resolve(projectRoot, directory)
       ),
-      externals: (cli.flags.externals ?? []).filter(Boolean),
+      externals: cli.flags.externals ?? [],
       projectFiles: realProjectFiles({ log }),
     });
 

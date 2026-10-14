@@ -129,8 +129,8 @@ describe('turbosnap-manifest', () => {
     );
   });
 
-  it('keeps a brace glob whole and drops an empty --externals value', async () => {
-    await main(['--externals', '*.{css,scss}', '--externals', '']);
+  it('keeps a brace glob whole', async () => {
+    await main(['--externals', '*.{css,scss}']);
 
     expect(buildManifest).toHaveBeenCalledWith(
       expect.anything(),
