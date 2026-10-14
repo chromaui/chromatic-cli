@@ -29,14 +29,6 @@ function callout(title: string, message?: string) {
   );
 }
 
-function warn(title: string, message?: string) {
-  console.warn(
-    chalk.bold.yellow('⚠ ') +
-      chalk.bold(title) +
-      (message ? '\n  ' + chalk.dim('→ ' + message) : '')
-  );
-}
-
 function error(message: string, title?: string) {
   console.error(chalk.bold.red('✖ ') + chalk.bold(title || 'Error') + '\n  → ' + message);
 }
@@ -201,11 +193,6 @@ async function buildPlatforms(
 export async function main(argv: string[]) {
   const { requestedPlatforms, outputDir, overwrite } = parseFlags(argv);
   const { androidBuildArchitectures } = await readReactNativeConfig();
-
-  warn(
-    'Chromatic React Native Build is in alpha. Use with caution.',
-    'Please report any issues you encounter on the Chromatic CLI GitHub repository.'
-  );
 
   let config: ExpoConfig;
   try {

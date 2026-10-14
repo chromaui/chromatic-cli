@@ -1,3 +1,17 @@
+# v18.12.2 (Wed Oct 14 2026)
+
+#### 🐛 Bug Fix
+
+- [WFL-1206] Azure DevOps slug parsing [#1517](https://github.com/chromaui/chromatic-cli/pull/1517) ([@ax-vasquez](https://github.com/ax-vasquez))
+- Remove alpha warning from React Native build [#1520](https://github.com/chromaui/chromatic-cli/pull/1520) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Armando Vasquez ([@ax-vasquez](https://github.com/ax-vasquez))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v18.12.1 (Tue Oct 13 2026)
 
 #### 🐛 Bug Fix
