@@ -10,10 +10,12 @@ const source = `${projectRoot}/src/Button.tsx`;
 const installed = `${projectRoot}/node_modules/react/index.js`;
 const preview = `${configDirectory}/preview.ts`;
 
-function context(disk: InMemoryDisk): SkipContext {
+function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
   return {
     projectRoot,
     configDir: configDirectory,
+    gitRoot: '/repo',
+    untraced,
     projectFiles: inMemoryProjectFiles(disk),
   };
 }
@@ -124,5 +126,60 @@ describe('buildSkipRule', () => {
     await skipped([generated, source, installed], { ...context({}), projectFiles });
 
     expect(listings).toBe(1);
+  });
+
+  it('skips the files an --untraced glob matches, by their repository-root-relative path as v1 matches them', async () => {
+    const result = await skipped(
+      [generated, source],
+      context({}, ['packages/ui/src/generated/**'])
+    );
+
+    expect(result).toEqual([[generated, 'untraced']]);
+  });
+
+  it('skips an untraced node_modules file, since the user asked', async () => {
+    const result = await skipped([installed, source], context({}, ['**/node_modules/react/**']));
+
+    expect(result).toEqual([[installed, 'untraced']]);
+  });
+
+  it('skips an untraced file of another package, since the user asked', async () => {
+    const built = '/repo/packages/icons/dist/index.js';
+
+    const result = await skipped([built, source], context({}, ['packages/icons/**']));
+
+    expect(result).toEqual([[built, 'untraced']]);
+  });
+
+  it('never skips an untraced file in the Storybook config directory, since its sweep hashes the bytes regardless', async () => {
+    const result = await skipped([preview, source], context({}, ['**/.storybook/**']));
+
+    expect(result).toEqual([]);
+  });
+
+  it("records a file both untraced and ignored as untraced, since that is the user's own say", async () => {
+    const result = await skipped(
+      [generated],
+      context({ isIgnored: (absolutePath) => absolutePath === generated }, [
+        'packages/ui/src/generated/**',
+      ])
+    );
+
+    expect(result).toEqual([[generated, 'untraced']]);
+  });
+
+  it('matches an --untraced glob against the path as given, which is the one the user sees', async () => {
+    const linkedGenerated = generated.replace(projectRoot, '/repo/apps/web');
+    const projectFiles = {
+      ...inMemoryProjectFiles({}),
+      realPath: (absolutePath: string) => absolutePath.replace('/repo/apps/web', projectRoot),
+    };
+
+    const result = await skipped([linkedGenerated], {
+      ...context({}, ['apps/web/src/generated/**']),
+      projectFiles,
+    });
+
+    expect(result).toEqual([[linkedGenerated, 'untraced']]);
   });
 });

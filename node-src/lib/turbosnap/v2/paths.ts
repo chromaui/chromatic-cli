@@ -194,9 +194,9 @@ function stripNullBytes(statsPath: FilePath): FilePath {
 }
 
 /**
- * Builds the check for whether a file matches one of the user's globs, as `--externals` names them.
- * A glob is matched against the git-root-relative posix path with the same matcher v1 uses on its
- * changed files, so a glob means the same thing to both generations.
+ * Builds the check for whether a file matches one of the user's globs, as `--externals` and
+ * `--untraced` name them. A glob is matched against the git-root-relative posix path with the same
+ * matcher v1 uses on its changed files, so a glob means the same thing to both generations.
  *
  * @param gitRoot The absolute repository root the globs are relative to.
  * @param globs The user's globs.

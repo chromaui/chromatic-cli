@@ -13,7 +13,7 @@ import { readStatsFile } from '../node-src/tasks/readStatsFile';
  * Utility to build the TurboSnap v2 manifest from a preview-stats.json and print it to stdout.
  *
  * Command:
- *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals]
+ *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals] [-u|--untraced]
  *
  * Usage example:
  *   npx chromatic turbosnap-manifest -b packages/ui > turbosnap-manifest.json
@@ -38,7 +38,7 @@ export async function main(argv: string[]) {
   const cli = meow(
     `
     Usage
-      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals]
+      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals] [-u|--untraced]
 
     Options
       --stats-file, -s <filepath>           Path to preview-stats.json, relative to the Storybook project root. (default: 'storybook-static/preview-stats.json')
@@ -46,6 +46,7 @@ export async function main(argv: string[]) {
       --config-dir, -c <dirname>            Storybook config directory, relative to the Storybook project root. (default: '.storybook')
       --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook project root. (default: none)
       --externals <glob>                    Glob of files that disable TurboSnap when changed, relative to the repository root. Can be specified multiple times. (default: none)
+      --untraced, -u <filepath>             Skip hashing these files, as the build command's --untraced flag does. Globs are supported via picomatch and are relative to the repository root. This flag can be specified multiple times.
     `,
     {
       argv,
@@ -73,6 +74,11 @@ export async function main(argv: string[]) {
         },
         externals: {
           type: 'string',
+          isMultiple: true,
+        },
+        untraced: {
+          type: 'string',
+          alias: 'u',
           isMultiple: true,
         },
       },
@@ -104,6 +110,7 @@ export async function main(argv: string[]) {
       log,
       projectRoot,
       gitRoot,
+      untraced: cli.flags.untraced ?? [],
       configDir: path.resolve(projectRoot, cli.flags.configDir),
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
         path.resolve(projectRoot, directory)

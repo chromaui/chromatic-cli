@@ -60,6 +60,7 @@ describe('turbosnap-manifest', () => {
         log: testLogger,
         projectRoot: '/repo',
         gitRoot: '/repo',
+        untraced: [],
         configDir: '/repo/.storybook',
         staticDirs: [],
         externals: [],
@@ -144,6 +145,25 @@ describe('turbosnap-manifest', () => {
     expect(buildManifest).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ configDir: '/repo/config/storybook' })
+    );
+  });
+
+  it('passes each --untraced glob through as given, since they are relative to the repository root', async () => {
+    await main([
+      '-b',
+      'packages/ui',
+      '-u',
+      'packages/ui/src/generated/**',
+      '--untraced',
+      '**/*.css',
+    ]);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        gitRoot: '/repo',
+        untraced: ['packages/ui/src/generated/**', '**/*.css'],
+      })
     );
   });
 

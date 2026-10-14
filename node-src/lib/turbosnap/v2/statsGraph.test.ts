@@ -534,7 +534,7 @@ describe('readStatsGraph skipped files', () => {
     const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
 
     const graph = await readStatsGraph(stats, input, (candidate) =>
-      candidate === story ? 'gitignored' : undefined
+      candidate === story ? 'untraced' : undefined
     );
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);

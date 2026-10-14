@@ -71,6 +71,22 @@ describe('buildManifest leaf inclusion', () => {
     );
     expect(after.storybookHash).toBe(before.storybookHash);
   });
+
+  it('leaves the story hash alone when an untraced leaf dependency changes content', async () => {
+    const { disk, input } = createFixture();
+    const untracedInput = { ...input, untraced: ['packages/ui/src/theme.ts'] };
+    disk.fileHashes = { [story]: 'S', [leaf]: 'T1' };
+    const before = await buildManifest(stats, untracedInput);
+
+    disk.fileHashes = { [story]: 'S', [leaf]: 'T2' };
+    const after = await buildManifest(stats, untracedInput);
+
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+    expect(after.storybookHash).toBe(before.storybookHash);
+    expect([...after.skippedFiles]).toEqual([['./src/theme.ts', 'untraced']]);
+  });
 });
 
 describe('buildManifest of a story file git ignores', () => {
