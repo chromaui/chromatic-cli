@@ -72,14 +72,16 @@ export class MissingStorybookConfigError extends Error {
  *
  * Static files are hashed unbounded, with no size or count cap: a cap is a silent gap, which is the
  * failure mode this mechanism exists to remove. The files v2 skips are the one exception, in the
- * config directory as in a static directory; see {@link buildSkipRule} for which those are.
+ * config directory as in a static directory; see {@link buildSkipRule} for which those are. The main
+ * config is hashed whatever the rule says; see {@link hashMainConfigRegardless}.
  *
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  * @param skipRule Which config and static files to leave unhashed; see {@link buildSkipRule}.
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
- * way with the reason.
+ * way with the reason. `storybookConfigFiles` is never empty: it always holds at least the main
+ * config.
  *
  * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file.
  */
@@ -96,7 +98,7 @@ export async function hashOutOfGraphFiles(
   // Storybook, so it stays out of the config roll-up.
   const { hashable: configFilePaths, skipped: skippedConfigFiles } = partitionSkipped(
     configTree.filter((filePath) => !isDocumentationFile(filePath)),
-    skipRule
+    hashMainConfigRegardless(skipRule, input)
   );
   const staticTree = input.staticDirs.flatMap((directory) =>
     input.projectFiles.listTree(directory)
@@ -132,9 +134,38 @@ export async function hashOutOfGraphFiles(
 }
 
 /**
+ * The rule as the config sweep applies it: the main config is hashed whatever the rule says. It is
+ * the file that makes the directory a config directory, so the config section always has it, and an
+ * `--untraced` glob wide enough to catch it is more likely an accident than a request. The case is
+ * logged so we can see whether anyone hits it.
+ *
+ * @param skipRule The rule for every other file; see {@link buildSkipRule}.
+ * @param input Where the config directory is, and where to log.
+ *
+ * @returns The rule for the config sweep.
+ */
+function hashMainConfigRegardless(
+  skipRule: SkipRule,
+  input: Pick<OutOfGraphInput, 'log' | 'configDir'>
+): SkipRule {
+  return (absolutePath) => {
+    const reason = skipRule(absolutePath);
+    if (reason && isMainConfigFile(absolutePath, input.configDir)) {
+      input.log.debug(
+        `Hashing ${absolutePath} although it is ${reason}; the main Storybook config is never skipped`
+      );
+      return undefined;
+    }
+    return reason;
+  };
+}
+
+/**
  * Lists the git-tracked files matching the user's `--externals` globs; see
- * {@link gitRootGlobMatcher} for how a glob is read. The index is matched as it streams in, so only
- * the matches are ever held: a monorepo's index can run to millions of entries, and a glob names a
+ * {@link gitRootGlobMatcher} for how a glob is read. The skip rule does not reach here: a file both
+ * untraced and external still moves the externals roll-up, as in v1, where an external changed file
+ * bails before the trace applies `--untraced`. The index is matched as it streams in, so only the
+ * matches are ever held: a monorepo's index can run to millions of entries, and a glob names a
  * handful.
  *
  * @param input Where the repository is and which globs to match; see {@link OutOfGraphInput}.

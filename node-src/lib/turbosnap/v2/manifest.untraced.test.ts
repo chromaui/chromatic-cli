@@ -129,4 +129,30 @@ describe('buildManifest with an untraced global decorator', () => {
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
+
+  it('still moves the storybook hash when the main config changes under a glob that untraces the whole config dir', async () => {
+    const main = '/repo/packages/ui/.storybook/main.ts';
+    const { disk, input: fixtureInput } = decoratorFixture();
+    const input = { ...fixtureInput, untraced: ['**/.storybook/**'] };
+    disk.fileHashes = {
+      [story]: 'S',
+      [preview]: 'P',
+      [decorator]: 'D',
+      [utility]: 'T',
+      [main]: 'M1',
+    };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = {
+      [story]: 'S',
+      [preview]: 'P',
+      [decorator]: 'D',
+      [utility]: 'T',
+      [main]: 'M2',
+    };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storybookHash).not.toBe(before.storybookHash);
+    expect(after.skippedFiles.has('./.storybook/main.ts')).toBe(false);
+  });
 });

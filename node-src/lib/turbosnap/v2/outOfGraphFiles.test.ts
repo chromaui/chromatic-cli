@@ -253,6 +253,22 @@ describe('hashOutOfGraphFiles skipped files', () => {
     expect([...files.staticFiles.keys()]).toEqual(['./.storybook/static/logo.svg']);
     expect([...skippedFiles]).toEqual([['./.storybook/static/bundle.css', 'untraced']]);
   });
+
+  it('hashes the main config even when the rule skips it, and logs that it did', async () => {
+    const log = new TestLogger();
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { log }),
+      () => 'untraced'
+    );
+
+    expect([...files.storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+    expect([...skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
+    expect(log.debug).toHaveBeenCalledWith(expect.stringContaining('/.storybook/main.ts'));
+  });
 });
 
 describe('hashOutOfGraphFiles externals', () => {
@@ -301,6 +317,16 @@ describe('hashOutOfGraphFiles externals', () => {
     );
 
     expect([...externals.keys()]).toEqual(['./tailwind.config.js']);
+  });
+
+  it('hashes an external file the rule skips, since v1 checks externals before it applies --untraced', async () => {
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { externals: ['packages/ui/tailwind.config.js'] }),
+      (candidate) => (candidate.endsWith('tailwind.config.js') ? 'untraced' : undefined)
+    );
+
+    expect([...files.externals.keys()]).toEqual(['./tailwind.config.js']);
+    expect(skippedFiles.size).toBe(0);
   });
 });
 

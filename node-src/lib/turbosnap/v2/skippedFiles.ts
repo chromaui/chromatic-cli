@@ -66,7 +66,9 @@ export function partitionSkipped(
  * package, and inside the Storybook config directory, since the documented recipe untraces the
  * global decorators kept there. The glob is matched as v1 matches it (see
  * {@link gitRootGlobMatcher}), so the one flag means the same thing in both. A file both untraced
- * and ignored is recorded as untraced, since that is the user's own say.
+ * and ignored is recorded as untraced, since that is the user's own say. Two files are out of the
+ * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
+ * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.
  *
  * A glob is matched against the path as given, which is the path the user sees, while the git rule
  * is judged on the file a path leads to: a bundler names a file by its real path while the project
