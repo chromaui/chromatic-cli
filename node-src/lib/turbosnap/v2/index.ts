@@ -16,9 +16,10 @@ import { uploadHashes } from './uploadHashes';
 export type FailureLogLevel = 'error' | 'debug';
 
 /**
- * Everything {@link buildManifest} needs, plus where to write the manifest and how to upload it. The
- * repository root arrives as the gitInfo task left it on `ctx.git`, narrowed here rather than by
- * every caller.
+ * The input to build the manifest (see {@link ManifestInput}), plus what this entry point adds on
+ * top: the stats to build it from, where to write it, how to upload it and how loudly to report a
+ * failure. `gitRoot` is optional here because that is its type on `ctx.git`; {@link traceChangedFiles}
+ * checks it is set, so callers don't have to.
  */
 interface TraceChangedFilesInput extends Omit<ManifestInput, 'gitRoot'> {
   failureLogLevel: FailureLogLevel;
