@@ -26,6 +26,14 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  # One Release run at a time: superseded PR runs (opened + labeled bursts) cancel;
+  # pushes to main queue so real releases serialize. The npm plugin's retry logic
+  # only avoids versions already visible on npm, so concurrent runs of the same
+  # commit would collide on the identical canary version.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
