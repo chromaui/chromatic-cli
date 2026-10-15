@@ -13,7 +13,6 @@ const preview = `${configDirectory}/preview.ts`;
 function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
   return {
     projectRoot,
-    configDir: configDirectory,
     gitRoot: '/repo',
     untraced,
     projectFiles: inMemoryProjectFiles(disk),
@@ -44,10 +43,13 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[source, 'gitignored']]);
   });
 
-  it('never skips a file in the Storybook config directory, however git sees it', async () => {
-    const result = await skipped([preview, source], context({ isIgnored: () => true }));
+  it('skips a gitignored file in the Storybook config directory like any other project file', async () => {
+    const result = await skipped(
+      [preview, source],
+      context({ isIgnored: (candidate) => candidate === preview })
+    );
 
-    expect(result).toEqual([[source, 'gitignored']]);
+    expect(result).toEqual([[preview, 'gitignored']]);
   });
 
   it("never skips another package's file under the project root, since a workspace package's build output is a dependency", async () => {
@@ -86,7 +88,6 @@ describe('buildSkipRule', () => {
     const result = await skipped([linkedGenerated, linkedPreview, source], {
       ...context({}),
       projectRoot: linkedRoot,
-      configDir: `${linkedRoot}/.storybook`,
       projectFiles,
     });
 

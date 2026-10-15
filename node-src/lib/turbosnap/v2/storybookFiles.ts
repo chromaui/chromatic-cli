@@ -110,14 +110,17 @@ export function collectStorybookFiles(
   // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview
   // leak to keep apart.
   const storybookConfigHashes = new Map<StorybookFileKey, FileHash>();
+  // A skipped preview still roots the subtree: a gitignored preview keeps its edges, so the tracked
+  // files it imports roll up here rather than falling through to globals. The roll-up leaves the
+  // skipped file itself out (see `rollUpFileHashes`), and like the globals entry it is omitted when
+  // nothing hashed is left, as when the preview is untraced and so has no edges to follow.
   const previewSubtree = new Set<FilePath>();
-  let hasPreview = false;
   for (const filePath of files.keys()) {
-    if (!hasContentHash(hashes, filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
-    hasPreview = true;
+    if (!hashes.has(filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
     collectTransitiveDependencies(files, filePath, previewSubtree);
   }
-  if (hasPreview) {
+  const previewFiles = contentHashed(hashes, previewSubtree);
+  if (previewFiles.size > 0) {
     storybookConfigHashes.set(
       STORYBOOK_PREVIEW_KEY,
       rollUpFileHashes(hashes, previewSubtree, h64ToString)
@@ -157,16 +160,24 @@ export function collectStorybookFiles(
   // exactly the files that feed a hash. The walks pass through synthetic nodes (globs, externals,
   // virtual modules) and skipped files, which feed none. A file can be in more than one home.
   const attribution: FileAttribution = {
-    storyReachable: new Set(
-      [...storyReachable].filter((filePath) => hasContentHash(hashes, filePath))
-    ),
-    previewSubtree: new Set(
-      [...previewSubtree].filter((filePath) => hasContentHash(hashes, filePath))
-    ),
+    storyReachable: contentHashed(hashes, storyReachable),
+    previewSubtree: previewFiles,
     storybookGlobals: globals,
   };
 
   return { storybookConfigHashes, attribution };
+}
+
+/**
+ * Narrows a walked set to the files that feed a hash; see {@link hasContentHash}.
+ *
+ * @param hashes The hash of every on-disk file, keyed by canonical path.
+ * @param filePaths The paths a walk reached, synthetic nodes and skipped files included.
+ *
+ * @returns The content-hashed files among them.
+ */
+function contentHashed(hashes: Map<FilePath, FileHash>, filePaths: Set<FilePath>): Set<FilePath> {
+  return new Set([...filePaths].filter((filePath) => hasContentHash(hashes, filePath)));
 }
 
 /**

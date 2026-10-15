@@ -6,12 +6,12 @@ import { gitRootGlobMatcher, isNodeModulesPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 
 /**
- * The part of {@link ManifestInput} the skip rule reads: where the project, its config directory and
- * the repository are, what the user untraced, and how to ask git and the disk.
+ * The part of {@link ManifestInput} the skip rule reads: where the project and the repository are,
+ * what the user untraced, and how to ask git and the disk.
  */
 export type SkipContext = Pick<
   ManifestInput,
-  'projectRoot' | 'configDir' | 'gitRoot' | 'untraced' | 'projectFiles'
+  'projectRoot' | 'gitRoot' | 'untraced' | 'projectFiles'
 >;
 
 /**
@@ -106,14 +106,15 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * the bundler resolves the `node_modules` link to it, so its source never appears. The same goes for
  * `node_modules` itself, which is in nearly every `.gitignore`, yet a dependency upgrade is a real
  * change; it gets its own check because a cache such as `node_modules/.vite` has no `package.json`
- * between it and the project root. And a generated `preview.*` in the Storybook config directory
- * still shapes every story, so the config directory never qualifies either.
+ * between it and the project root. The Storybook config directory gets no exemption: a gitignored
+ * file there is generated like any other, and hashing it over-captures just the same. The main
+ * config is the one file hashed regardless, by the config sweep; see `hashOutOfGraphFiles`.
  *
  * The check takes a real path because that is how git names files; see
- * {@link ProjectFiles.ignoredPaths}. The project and config directories are resolved the same way,
- * so a `.storybook` that is a symlink still matches its own files.
+ * {@link ProjectFiles.ignoredPaths}. The project root is resolved the same way, so a project reached
+ * through a symlink still matches its own files.
  *
- * @param context Where the project and its config directory are, and how to ask git and the disk.
+ * @param context Where the project is, and how to ask git and the disk.
  *
  * @returns The check, by real path.
  */
@@ -122,13 +123,11 @@ async function ignoredProjectFileCheck(
 ): Promise<(realPath: AbsolutePath) => boolean> {
   const { projectFiles } = context;
   const projectRoot = projectFiles.realPath(context.projectRoot);
-  const configDirectory = projectFiles.realPath(context.configDir) + path.sep;
   const ignored = await projectFiles.ignoredPaths();
   const isProjectDirectory = memoizedProjectDirectoryCheck(projectRoot, projectFiles);
 
   return (realPath) =>
     !isNodeModulesPath(realPath) &&
-    !realPath.startsWith(configDirectory) &&
     ignored.has(realPath) &&
     isProjectDirectory(path.dirname(realPath));
 }
