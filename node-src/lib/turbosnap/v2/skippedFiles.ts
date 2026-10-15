@@ -70,9 +70,11 @@ export function partitionSkipped(
  * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
  * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.
  *
- * A glob is matched against the path as given, which is the path the user sees, while the git rule
- * is judged on the file a path leads to: a bundler names a file by its real path while the project
- * and config directories are named as configured.
+ * Every check is judged on the file a path leads to. A bundler names a file by its real path while
+ * the project and config directories are named as configured, so the out-of-graph sweep can reach
+ * a file through a symlinked directory. Git names the real file, and so does v1 when it matches
+ * `--untraced`, since its paths come from git and the bundler; a glob written for v1 therefore
+ * spells the real path, and matching anything else would hash a file the user untraced.
  *
  * @param context Where the project and repository are, what is untraced, and how to ask git and
  * the disk.
@@ -84,8 +86,9 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
   const isIgnoredProjectFile = await ignoredProjectFileCheck(context);
 
   return (absolutePath) => {
-    if (isUntraced(absolutePath)) return 'untraced';
-    if (isIgnoredProjectFile(context.projectFiles.realPath(absolutePath))) return 'gitignored';
+    const realPath = context.projectFiles.realPath(absolutePath);
+    if (isUntraced(realPath)) return 'untraced';
+    if (isIgnoredProjectFile(realPath)) return 'gitignored';
     return undefined;
   };
 }

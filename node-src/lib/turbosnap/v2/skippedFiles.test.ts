@@ -173,7 +173,22 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[generated, 'untraced']]);
   });
 
-  it('matches an --untraced glob against the path as given, which is the one the user sees', async () => {
+  it('matches an --untraced glob against the real path, as v1 does, so a glob written for the tracked path skips a file reached through a symlink', async () => {
+    const linkedGenerated = generated.replace(projectRoot, '/repo/apps/web');
+    const projectFiles = {
+      ...inMemoryProjectFiles({}),
+      realPath: (absolutePath: string) => absolutePath.replace('/repo/apps/web', projectRoot),
+    };
+
+    const result = await skipped([linkedGenerated], {
+      ...context({}, ['packages/ui/src/generated/**']),
+      projectFiles,
+    });
+
+    expect(result).toEqual([[linkedGenerated, 'untraced']]);
+  });
+
+  it('does not match an --untraced glob written for the symlink spelling, which v1 never sees', async () => {
     const linkedGenerated = generated.replace(projectRoot, '/repo/apps/web');
     const projectFiles = {
       ...inMemoryProjectFiles({}),
@@ -185,6 +200,6 @@ describe('buildSkipRule', () => {
       projectFiles,
     });
 
-    expect(result).toEqual([[linkedGenerated, 'untraced']]);
+    expect(result).toEqual([]);
   });
 });

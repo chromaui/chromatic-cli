@@ -130,6 +130,35 @@ describe('buildManifest with an untraced global decorator', () => {
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
+  it('honors the glob in a config dir reached through a symlink, since the glob names the real path as v1 would', async () => {
+    const linkedConfigDirectory = '/repo/apps/storybook/.storybook';
+    const linkedDecorator = `${linkedConfigDirectory}/decorators/withTheme.ts`;
+    const { disk, input: fixtureInput } = createFixture({
+      isAbsent: syntheticAbsent,
+      directories: {
+        [linkedConfigDirectory]: ['main.ts', 'preview.ts', 'decorators'],
+        [`${linkedConfigDirectory}/decorators`]: ['withTheme.ts'],
+      },
+    });
+    const input = {
+      ...fixtureInput,
+      configDir: linkedConfigDirectory,
+      untraced: ['packages/ui/.storybook/decorators/*.ts'],
+      projectFiles: {
+        ...fixtureInput.projectFiles,
+        realPath: (absolutePath: string) =>
+          absolutePath.replace('/repo/apps/storybook', '/repo/packages/ui'),
+      },
+    };
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [decorator]: 'D1', [linkedDecorator]: 'D1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [decorator]: 'D2', [linkedDecorator]: 'D2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storybookHash).toBe(before.storybookHash);
+  });
+
   it('still moves the storybook hash when the main config changes under a glob that untraces the whole config dir', async () => {
     const main = '/repo/packages/ui/.storybook/main.ts';
     const { disk, input: fixtureInput } = decoratorFixture();
