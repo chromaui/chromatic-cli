@@ -515,6 +515,13 @@ describe('readStatsGraph skipped files', () => {
     ],
   };
 
+  // The story reaches the given file only through the generated file, as through a barrel.
+  function throughBarrel(behind: string): Stats {
+    return {
+      modules: [...stats.modules, { id: 3, name: behind, reasons: [{ moduleName: generated }] }],
+    };
+  }
+
   it('keeps a skipped file in the graph as a node with the skipped hash, and records it', async () => {
     const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
 
@@ -528,6 +535,43 @@ describe('readStatsGraph skipped files', () => {
       './src/generated/schema.ts',
     ]);
     expect([...graph.skippedFiles]).toEqual([['./src/generated/schema.ts', 'gitignored']]);
+  });
+
+  it('severs the edges of an untraced file and reports what they led to, since v1 stops its trace there', async () => {
+    const button = '/repo/packages/ui/src/Button.tsx';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [generated]: 'G', [button]: 'B' },
+    });
+
+    const graph = await readStatsGraph(throughBarrel(button), input, (candidate) =>
+      candidate === generated ? 'untraced' : undefined
+    );
+
+    expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
+      './src/generated/schema.ts',
+    ]);
+    expect([...(graph.files.get('./src/generated/schema.ts')?.dependencies ?? [])]).toEqual([]);
+    expect(graph.hashes.get('./src/Button.tsx')).toBe('B');
+    expect([...graph.untracedSubtrees].sort()).toEqual([
+      './src/Button.tsx',
+      './src/generated/schema.ts',
+    ]);
+  });
+
+  it('keeps the edges of a gitignored file, so a tracked file behind a generated barrel still reaches the story', async () => {
+    const button = '/repo/packages/ui/src/Button.tsx';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [generated]: 'G', [button]: 'B' },
+    });
+
+    const graph = await readStatsGraph(throughBarrel(button), input, (candidate) =>
+      candidate === generated ? 'gitignored' : undefined
+    );
+
+    expect([...(graph.files.get('./src/generated/schema.ts')?.dependencies ?? [])]).toEqual([
+      './src/Button.tsx',
+    ]);
+    expect([...graph.untracedSubtrees]).toEqual([]);
   });
 
   it('still detects a skipped story file as a story file', async () => {

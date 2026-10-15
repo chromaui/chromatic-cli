@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
-import { FileHash, FilePath, TurboSnapFile } from './graph';
+import { FileHash, FilePath, SKIPPED_HASH, TurboSnapFile } from './graph';
 import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from './storybookFileKeys';
 import { collectStorybookFiles } from './storybookFiles';
 
@@ -11,6 +11,9 @@ const DEFAULT_CONFIG_DIR = './.storybook';
 // Most tests exercise the fallback for graphs without a detected composition root. Tests that need
 // a composition root pass one explicitly in the final suite.
 const NO_GLOBAL_ROOTS = new Set<FilePath>();
+
+// Most graphs have no untraced file; the one suite about the wall passes its subtrees explicitly.
+const NO_UNTRACED = new Set<FilePath>();
 
 // An identity "hash" so a roll-up is readable as the set of paths that went into it, which is what
 // makes the contents of the shared `preview` roll-up visible.
@@ -47,6 +50,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -69,6 +73,7 @@ describe('collectStorybookFiles', () => {
       new Set(),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -86,6 +91,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -104,6 +110,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -125,6 +132,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       './src',
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -152,6 +160,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       './config',
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -176,6 +185,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -194,6 +204,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -213,6 +224,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -228,6 +240,7 @@ describe('collectStorybookFiles', () => {
       new Set(),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -250,6 +263,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -276,6 +290,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -299,6 +314,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -315,6 +331,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -336,6 +353,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -347,6 +365,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -378,6 +397,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -403,6 +423,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -427,6 +448,7 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -450,6 +472,7 @@ describe('collectStorybookFiles', () => {
       new Set(),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
@@ -473,10 +496,62 @@ describe('collectStorybookFiles', () => {
       storiesIn(files),
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
+      NO_UNTRACED,
       identity
     );
 
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/react-dom/index.js']);
+  });
+});
+
+describe('collectStorybookFiles behind an untraced wall', () => {
+  // The reader severed the untraced barrel's edges, so button.tsx is in no story subtree. Without
+  // the exclusion the fallback would adopt it as a global, and an edit to it would recapture every
+  // story instead of none.
+  const story = './src/a.stories.tsx';
+  const barrel = './src/components/index.ts';
+  const button = './src/components/button.tsx';
+
+  it('leaves a file only an untraced file reaches out of globals', () => {
+    const files = makeFiles({ [story]: [barrel], [barrel]: [], [button]: [] });
+    const hashes = new Map([...makeHashes([story, button]), [barrel, SKIPPED_HASH]]);
+
+    const { storybookConfigHashes, attribution } = collectStorybookFiles(
+      files,
+      hashes,
+      new Set([story]),
+      DEFAULT_CONFIG_DIR,
+      NO_GLOBAL_ROOTS,
+      new Set([barrel, button]),
+      identity
+    );
+
+    expect([...storybookConfigHashes.keys()]).not.toContain(STORYBOOK_GLOBALS_KEY);
+    expect([...attribution.storybookGlobals]).toEqual([]);
+    expect([...attribution.storyReachable]).toEqual([story]);
+  });
+
+  it('keeps such a file in globals when a composition root still reaches it', () => {
+    const configEntry = './storybook-config-entry.js';
+    const files = makeFiles({
+      [configEntry]: [button],
+      [story]: [barrel],
+      [barrel]: [],
+      [button]: [],
+    });
+    const hashes = new Map([...makeHashes([story, button]), [barrel, SKIPPED_HASH]]);
+
+    const { attribution } = collectStorybookFiles(
+      files,
+      hashes,
+      new Set([story]),
+      DEFAULT_CONFIG_DIR,
+      new Set([configEntry]),
+      new Set([barrel, button]),
+      identity
+    );
+
+    expect([...attribution.storybookGlobals]).toEqual([button]);
   });
 });
 
@@ -510,6 +585,7 @@ describe('collectStorybookFiles with a detected global composition root', () => 
       new Set([story]),
       DEFAULT_CONFIG_DIR,
       new Set([configEntry]),
+      NO_UNTRACED,
       identity
     );
   }

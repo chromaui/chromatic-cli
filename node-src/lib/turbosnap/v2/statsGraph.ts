@@ -1,5 +1,11 @@
 import { AbsolutePath, Stats } from '../../../types';
-import { FileHash, FilePath, SKIPPED_HASH, TurboSnapFile } from './graph';
+import {
+  collectTransitiveDependencies,
+  FileHash,
+  FilePath,
+  SKIPPED_HASH,
+  TurboSnapFile,
+} from './graph';
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
@@ -39,6 +45,13 @@ export interface StatsGraph {
   hashes: Map<FilePath, FileHash>;
   /** The on-disk files v2 skipped hashing, keyed by canonical path, each with its reason. */
   skippedFiles: Map<FilePath, SkipReason>;
+  /**
+   * The untraced files and every path they imported, directly or through further imports, before
+   * their edges were severed. A file reached only this way is untraced by inheritance: it is in no
+   * story's subtree, and the globals fallback must not adopt it either, or an edit behind the wall
+   * would recapture every story instead of none; see `collectStorybookFiles`.
+   */
+  untracedSubtrees: Set<FilePath>;
   /** The canonical paths the builder's entries identify as story files. */
   storyFiles: Set<FilePath>;
   /**
@@ -110,7 +123,47 @@ export async function readStatsGraph(
     }
   }
 
-  return { files, hashes, storyFiles, globalRoots: detectGlobalRoots(files, roots), skippedFiles };
+  const untracedSubtrees = wallOffUntracedFiles(files, skippedFiles);
+
+  return {
+    files,
+    hashes,
+    storyFiles,
+    globalRoots: detectGlobalRoots(files, roots),
+    skippedFiles,
+    untracedSubtrees,
+  };
+}
+
+/**
+ * Severs the dependency edges of every untraced file, making it the wall v1 makes it: v1 stops its
+ * trace at an untraced importer, which is what the documented recipes rely on, untracing a barrel to
+ * untrace what it re-exports and untracing a global decorator to untrace the utilities it imports.
+ * The node itself stays, so an untraced story file is still a story file and an importer's edge to
+ * it is still recorded. A gitignored file keeps its edges; see {@link SkipReason}.
+ *
+ * @param files The graph, mutated in place.
+ * @param skippedFiles The skipped files with their reasons, keyed by canonical path.
+ *
+ * @returns The untraced files and everything the severed edges led to; see
+ * {@link StatsGraph.untracedSubtrees}.
+ */
+function wallOffUntracedFiles(
+  files: Map<FilePath, TurboSnapFile>,
+  skippedFiles: Map<FilePath, SkipReason>
+): Set<FilePath> {
+  const untracedFiles = [...skippedFiles]
+    .filter(([, reason]) => reason === 'untraced')
+    .map(([filePath]) => filePath);
+
+  const subtrees = new Set<FilePath>();
+  for (const filePath of untracedFiles) {
+    collectTransitiveDependencies(files, filePath, subtrees);
+  }
+  for (const filePath of untracedFiles) {
+    files.get(filePath)?.dependencies.clear();
+  }
+  return subtrees;
 }
 
 /**

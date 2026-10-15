@@ -215,27 +215,43 @@ describe('hashOutOfGraphFiles skipped files', () => {
     expect([...skippedFiles]).toEqual([['./public/bundle.css', 'gitignored']]);
   });
 
-  it('never asks the rule about a config file, since the config dir is hashed whole', async () => {
-    const asked: string[] = [];
+  it('drops a config file the rule skips from the config section and records it', async () => {
     const disk: InMemoryDisk = {
       directories: {
-        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'static'],
-        '/repo/packages/ui/.storybook/static': ['logo.svg'],
+        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'decorators'],
+        '/repo/packages/ui/.storybook/decorators': ['withTheme.ts'],
       },
     };
 
-    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) => {
-      asked.push(candidate);
-      return 'gitignored';
-    });
+    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+      candidate.includes('/decorators/') ? 'untraced' : undefined
+    );
 
-    expect(asked).toEqual(['/repo/packages/ui/.storybook/static/logo.svg']);
     expect([...files.storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
       './.storybook/preview.ts',
+    ]);
+    expect([...skippedFiles]).toEqual([['./.storybook/decorators/withTheme.ts', 'untraced']]);
+  });
+
+  it('drops a skipped file from both sections when a static dir sits inside the config dir', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['logo.svg', 'bundle.css'],
+      },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+      candidate.endsWith('bundle.css') ? 'untraced' : undefined
+    );
+
+    expect([...files.storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
       './.storybook/static/logo.svg',
     ]);
-    expect([...skippedFiles]).toEqual([['./.storybook/static/logo.svg', 'gitignored']]);
+    expect([...files.staticFiles.keys()]).toEqual(['./.storybook/static/logo.svg']);
+    expect([...skippedFiles]).toEqual([['./.storybook/static/bundle.css', 'untraced']]);
   });
 });
 

@@ -95,7 +95,7 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  // Built once, since it asks git once, and shared by the graph and the static sweep.
+  // Built once, since it asks git once, and shared by the graph and the out-of-graph sweep.
   const skipRule = await buildSkipRule(input);
   const {
     files,
@@ -103,6 +103,7 @@ export async function buildManifest(
     storyFiles,
     globalRoots,
     skippedFiles: skippedGraphFiles,
+    untracedSubtrees,
   } = await readStatsGraph(stats, input, skipRule);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
@@ -119,6 +120,7 @@ export async function buildManifest(
     storyFiles,
     normalizeStatsPath(input.configDir, input.projectRoot),
     globalRoots,
+    untracedSubtrees,
     h64ToString
   );
   input.log.debug(
@@ -134,7 +136,7 @@ export async function buildManifest(
 
   // Storybook's config directory, static assets and the user's externals are never bundler inputs, so
   // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const { files: outOfGraphFiles, skippedFiles: skippedStaticFiles } = await hashOutOfGraphFiles(
+  const { files: outOfGraphFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
     input,
     skipRule
   );
@@ -150,7 +152,7 @@ export async function buildManifest(
   input.log.debug(
     `Hashed ${outOfGraphFiles.externals.size} external files from ${input.externals.length} --externals globs`
   );
-  const skippedFiles = new Map([...skippedGraphFiles, ...skippedStaticFiles]);
+  const skippedFiles = new Map([...skippedGraphFiles, ...skippedSweptFiles]);
   input.log.debug(
     `Skipped hashing ${skippedFiles.size} files; the manifest's skippedFiles lists each with its reason`
   );

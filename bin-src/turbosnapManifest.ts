@@ -46,7 +46,7 @@ export async function main(argv: string[]) {
       --config-dir, -c <dirname>            Storybook config directory, relative to the Storybook project root. (default: '.storybook')
       --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook project root. (default: none)
       --externals <glob>                    Glob of files that disable TurboSnap when changed, relative to the repository root. Can be specified multiple times. (default: none)
-      --untraced, -u <filepath>             Skip hashing these files, as the build command's --untraced flag does. Globs are supported via picomatch and are relative to the repository root. This flag can be specified multiple times.
+      --untraced, -u <filepath>             Disregard these files and their dependencies when tracing dependent stories, as the build command's --untraced flag does. Globs are supported via picomatch and are relative to the repository root. This flag can be specified multiple times.
     `,
     {
       argv,

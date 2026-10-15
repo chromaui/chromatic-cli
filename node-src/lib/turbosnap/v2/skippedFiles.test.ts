@@ -151,10 +151,15 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[built, 'untraced']]);
   });
 
-  it('never skips an untraced file in the Storybook config directory, since its sweep hashes the bytes regardless', async () => {
-    const result = await skipped([preview, source], context({}, ['**/.storybook/**']));
+  it('skips an untraced file in the Storybook config directory, since the documented recipe untraces the global decorators there', async () => {
+    const decorator = `${configDirectory}/decorators/withTheme.ts`;
 
-    expect(result).toEqual([]);
+    const result = await skipped(
+      [decorator, preview, source],
+      context({}, ['**/.storybook/decorators/*.ts'])
+    );
+
+    expect(result).toEqual([[decorator, 'untraced']]);
   });
 
   it("records a file both untraced and ignored as untraced, since that is the user's own say", async () => {
