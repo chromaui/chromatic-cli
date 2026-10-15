@@ -1,7 +1,8 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 
 // The real adapter's whole job is knowing what the disk means, so its suites run against real
 // temporary directories: real symlinks, a real cycle, a real unreadable directory, a real git
@@ -10,7 +11,20 @@ import { afterEach } from 'vitest';
 let temporaryDirectories: string[] = [];
 let lockedDirectories: string[] = [];
 
+// Git reads the machine's global and system config, whose excludes file could flip a result or make
+// an `add` refuse a file, so both are pointed at nothing for the duration. And when a suite runs
+// inside a git hook, the hook's repository-location variables would point every git command at that
+// repository instead of a temporary one, so they are cleared too.
+beforeEach(() => {
+  vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
+  vi.stubEnv('GIT_CONFIG_SYSTEM', '/dev/null');
+  vi.stubEnv('GIT_DIR', undefined);
+  vi.stubEnv('GIT_WORK_TREE', undefined);
+  vi.stubEnv('GIT_INDEX_FILE', undefined);
+});
+
 afterEach(() => {
+  vi.unstubAllEnvs();
   // Unlock the directories before removal because it's required in order to remove them.
   for (const directory of lockedDirectories) {
     chmodSync(directory, 0o755);
@@ -59,4 +73,31 @@ export function write(root: string, relativePath: string, content = relativePath
 export function lock(absolutePath: string) {
   lockedDirectories.push(absolutePath);
   chmodSync(absolutePath, 0o000);
+}
+
+/**
+ * Creates a temporary git repository. The root is the real path, not the link path the OS hands out
+ * (on macOS the temp dir is itself a symlink), since git names paths from the real one.
+ *
+ * @returns The absolute path of the repository root.
+ */
+export function repository(): string {
+  const root = realpathSync(temporaryDirectory());
+  execFileSync('git', ['init', '--quiet'], { cwd: root });
+  return root;
+}
+
+/**
+ * Writes a file and adds it to the git index, even when an ignore pattern matches it, so a suite
+ * decides what is tracked independently of what it ignores.
+ *
+ * @param root The repository root.
+ * @param relativePath The file's path relative to `root`.
+ *
+ * @returns The absolute path written.
+ */
+export function track(root: string, relativePath: string): string {
+  const absolutePath = write(root, relativePath);
+  execFileSync('git', ['add', '--force', relativePath], { cwd: root });
+  return absolutePath;
 }

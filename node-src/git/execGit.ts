@@ -11,11 +11,19 @@ import { DEFAULT_GIT_TIMEOUT_SECONDS } from './constants';
 
 export type GitDeps = Pick<Deps, 'log'> & { options?: { gitTimeout?: number } };
 
+/**
+ * Execa options plus `logResult`, which is on by default. Turn it off for a command whose output is
+ * unbounded, such as a full file listing, so the debug log is not flooded with it.
+ */
+type ExecGitOptions = Options & { logResult?: boolean };
+
 const defaultOptions: Options = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
   all: true, // interleave stdout and stderr
   shell: true, // we'll deal with escaping ourselves (for now)
 };
+
+const NULL_BYTE = '\0';
 
 /**
  * Retrieve the git timeout in milliseconds.
@@ -35,14 +43,15 @@ function getGitTimeout(depOptions: GitDeps['options']): number {
  * @param deps.log Standard context logger.
  * @param deps.options Options object for the Git command.
  * @param command The command to execute.
- * @param options Execa options
+ * @param options Execa options, plus `logResult`; see {@link ExecGitOptions}.
+ * @param options.logResult Whether to write the command's output to the debug log.
  *
  * @returns The result of the command from the terminal.
  */
 export async function execGitCommand(
   { log, options: depOptions }: GitDeps,
   command: string,
-  options?: Options
+  { logResult = true, ...options }: ExecGitOptions = {}
 ) {
   try {
     log.debug(`execGitCommand: ${command}`);
@@ -57,26 +66,76 @@ export async function execGitCommand(
     }
 
     const result = output.toString();
-    log.debug(`execGitCommand result: '${result}'`);
+    if (logResult) {
+      log.debug(`execGitCommand result: '${result}'`);
+    }
     return result;
   } catch (error) {
-    const { message } = error;
+    throw translateGitError(log, command, error);
+  }
+}
 
-    log.debug(`execGitCommand error: ${message}`);
+/**
+ * Execute a Git command whose NUL-separated output may be too large to hold at once, such as a
+ * listing of every file in a monorepo, yielding each entry as it arrives. Only stdout is read, so a
+ * stderr warning can't masquerade as an entry, and nothing is written to the debug log.
+ *
+ * @param deps Standard context object.
+ * @param deps.log Standard context logger.
+ * @param deps.options Options object for the Git command.
+ * @param command The command to execute, which must separate its output with NUL (`-z`).
+ * @param options Execa options
+ *
+ * @yields {string} Each NUL-terminated entry of the command's stdout, without the terminator.
+ */
+export async function* execGitCommandEntries(
+  { log, options: depOptions }: GitDeps,
+  command: string,
+  options?: Options
+): AsyncGenerator<string> {
+  log.debug(`execGitCommandEntries: ${command}`);
+  const timeout = getGitTimeout(depOptions);
+  const process = runCommand(command, {
+    timeout,
+    ...defaultOptions,
+    buffer: false,
+    all: false,
+    ...options,
+  });
+  if (!process.stdout) {
+    throw new Error('Unexpected missing stdout');
+  }
 
-    if (message.includes('not a git repository')) {
-      throw new Error(gitNotInitialized({ command }));
+  // Noting the exit here also marks a rejection as handled, so a consumer that stops early and never
+  // awaits the process doesn't surface its exit as an unhandled rejection.
+  let running = true;
+  const onExit = () => {
+    running = false;
+  };
+  process.then(onExit, onExit);
+
+  try {
+    // Decoding on the stream keeps a multi-byte character whole across a chunk boundary.
+    process.stdout.setEncoding('utf8');
+    let partial = '';
+    for await (const chunk of process.stdout) {
+      const entries = (partial + chunk).split(NULL_BYTE);
+      partial = entries.pop() ?? '';
+      yield* entries;
+    }
+    if (partial) {
+      yield partial;
     }
 
-    if (message.includes('git not found')) {
-      throw new Error(gitNotInstalled({ command }));
+    // If the process errors, this will throw
+    await process;
+  } catch (error) {
+    throw translateGitError(log, command, error);
+  } finally {
+    // A consumer that stops early must not leave git running.
+    if (running) {
+      process.kill();
     }
-
-    if (message.includes('does not have any commits yet')) {
-      throw new Error(gitNoCommits({ command }));
-    }
-
-    throw error;
   }
 }
 
@@ -167,4 +226,33 @@ export async function execGitCommandCountLines(
   await process;
 
   return lineCount;
+}
+
+/**
+ * Turns a failure of a git command into the user-facing error for it, where there is one.
+ *
+ * @param log Standard context logger.
+ * @param command The command that failed.
+ * @param error The failure.
+ *
+ * @returns The error to throw.
+ */
+function translateGitError(log: GitDeps['log'], command: string, error: any): Error {
+  const { message } = error;
+
+  log.debug(`execGitCommand error: ${message}`);
+
+  if (message.includes('not a git repository')) {
+    return new Error(gitNotInitialized({ command }));
+  }
+
+  if (message.includes('git not found')) {
+    return new Error(gitNotInstalled({ command }));
+  }
+
+  if (message.includes('does not have any commits yet')) {
+    return new Error(gitNoCommits({ command }));
+  }
+
+  return error;
 }

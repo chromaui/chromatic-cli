@@ -28,6 +28,8 @@ export interface InMemoryDisk {
    * suite says where the packages are.
    */
   isAbsent?: (absolutePath: AbsolutePath) => boolean;
+  /** The absolute paths in the git index, whatever repository root is asked. Empty when unset. */
+  trackedFiles?: AbsolutePath[];
   /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
   writtenFiles?: Record<AbsolutePath, string>;
   /** Whether git ignores a path. Nothing is ignored unless a suite says so. */
@@ -95,6 +97,9 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       );
     },
     listTree,
+    trackedFiles: async function* () {
+      yield* disk.trackedFiles ?? [];
+    },
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       disk.writtenFiles ??= {};
       disk.writtenFiles[absolutePath] = contents;

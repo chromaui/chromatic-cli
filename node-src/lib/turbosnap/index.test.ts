@@ -52,7 +52,7 @@ function makeContext() {
     turboSnap: {},
     options: {},
     env: {},
-    git: { changedFiles: ['./src/Button.tsx'] },
+    git: { changedFiles: ['./src/Button.tsx'], rootPath: '/repo' },
     fileInfo: { statsPath: '/repo/packages/ui/storybook-static/preview-stats.json' },
     client: { runQuery: vi.fn() },
     announcedBuild: { id: 'head-build' },
@@ -124,7 +124,7 @@ describe('traceChangedFiles', () => {
   });
 
   it('returns skipped and only runs TurboSnap v2 when changed files are unknown', async () => {
-    const ctx = { ...makeContext(), git: { changedFiles: undefined } };
+    const ctx = { ...makeContext(), git: { changedFiles: undefined, rootPath: '/repo' } };
 
     await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
 
@@ -136,7 +136,7 @@ describe('traceChangedFiles', () => {
   // An empty list means nothing changed, so v1 must run and trace zero story files. Skipping here
   // would leave `onlyStoryFiles` unset and capture every story instead of copying them all.
   it('runs TurboSnap v1 when the changed files list is empty', async () => {
-    const ctx = { ...makeContext(), git: { changedFiles: [] } };
+    const ctx = { ...makeContext(), git: { changedFiles: [], rootPath: '/repo' } };
 
     await expect(traceChangedFiles(ctx)).resolves.toStrictEqual(v1Result);
 
@@ -173,6 +173,8 @@ describe('traceChangedFiles', () => {
 
     expect(readStatsFile).toHaveBeenCalledOnce();
     expect(readStatsFile).toHaveBeenCalledWith(ctx.fileInfo.statsPath);
+    // The adapter runs git, so it needs the options the git timeout is read from, not just the log.
+    expect(realProjectFiles).toHaveBeenCalledWith({ log: ctx.log, options: ctx.options });
     expect(traceChangedFilesV2).toHaveBeenCalledWith({
       log: ctx.log,
       failureLogLevel: 'error',
@@ -181,11 +183,23 @@ describe('traceChangedFiles', () => {
       stats,
       manifestPath: '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json',
       projectRoot: ctx.storybook.projectRoot,
+      gitRoot: '/repo',
       configDir: ctx.storybook.configDir,
       staticDirs: ctx.storybook.staticDirs,
+      externals: [],
       projectFiles,
     });
     expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx, stats, ctx.fileInfo.statsPath);
+  });
+
+  it('gives v2 the --externals globs so it can hash the files they name', async () => {
+    const ctx = { ...makeContext(), options: { externals: ['tailwind.config.js'] } };
+
+    await traceChangedFiles(ctx);
+
+    expect(traceChangedFilesV2).toHaveBeenCalledWith(
+      expect.objectContaining({ externals: ['tailwind.config.js'] })
+    );
   });
 
   it('runs v2 before v1 and returns only the v1 result', async () => {

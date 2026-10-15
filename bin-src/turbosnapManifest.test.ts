@@ -59,8 +59,10 @@ describe('turbosnap-manifest', () => {
       {
         log: testLogger,
         projectRoot: '/repo',
+        gitRoot: '/repo',
         configDir: '/repo/.storybook',
         staticDirs: [],
+        externals: [],
         projectFiles,
       }
     );
@@ -107,6 +109,31 @@ describe('turbosnap-manifest', () => {
       expect.objectContaining({
         staticDirs: ['/repo/packages/ui/public', '/repo/packages/ui/assets/images'],
       })
+    );
+  });
+
+  it('passes --externals globs through verbatim, since they are patterns matched against git-root-relative paths rather than paths to resolve', async () => {
+    await main([
+      '-b',
+      'packages/ui',
+      '--externals',
+      'tailwind.config.js',
+      '--externals',
+      '**/*.scss',
+    ]);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ externals: ['tailwind.config.js', '**/*.scss'] })
+    );
+  });
+
+  it('keeps a brace glob whole and drops an empty --externals value', async () => {
+    await main(['--externals', '*.{css,scss}', '--externals', '']);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ externals: ['*.{css,scss}'] })
     );
   });
 

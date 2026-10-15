@@ -24,6 +24,7 @@ const manifest: TurboSnapManifest = {
   outOfGraphFiles: {
     storybookConfigFiles: new Map(),
     staticFiles: new Map(),
+    externals: new Map(),
   },
   skippedFiles: new Map(),
 };

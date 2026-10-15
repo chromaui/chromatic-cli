@@ -1,50 +1,33 @@
-import { execFileSync } from 'child_process';
-import { mkdirSync, realpathSync, symlinkSync } from 'fs';
+import { mkdirSync, symlinkSync } from 'fs';
 import path from 'path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import TestLogger from '../../testLogger';
-import { temporaryDirectory, write } from './__fixtures__/temporaryDisk';
+import { repository, temporaryDirectory, track, write } from './__fixtures__/temporaryDisk';
 import { realProjectFiles } from './projectFiles';
 
 describe('realProjectFiles ignoredFiles', () => {
-  // The adapter asks the repository the CLI runs in, so each test runs in its own. Git also reads
-  // the machine's global and system config, whose excludes file could flip a result, so both are
-  // pointed at nothing for the duration. And when the suite runs inside a git hook, the hook's
-  // repository-location variables would point every git command at that repository instead of the
-  // temporary one, so they are cleared too.
+  // The adapter asks the repository the CLI runs in, so each test runs in its own.
   const originalDirectory = process.cwd();
-
-  beforeEach(() => {
-    vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
-    vi.stubEnv('GIT_CONFIG_SYSTEM', '/dev/null');
-    vi.stubEnv('GIT_DIR', undefined);
-    vi.stubEnv('GIT_WORK_TREE', undefined);
-    vi.stubEnv('GIT_INDEX_FILE', undefined);
-  });
 
   afterEach(() => {
     process.chdir(originalDirectory);
-    vi.unstubAllEnvs();
   });
 
   /**
-   * Creates a repository ignoring `generated/` and `*.log`, and enters it. The root is the real path,
-   * not the link path the OS hands out (on macOS the temp dir is itself a symlink), since the
-   * adapter matches paths exactly as git names them.
+   * Creates a repository ignoring `generated/` and `*.log`, and enters it.
    *
    * @returns The absolute path of the repository.
    */
-  function repository(): string {
-    const root = realpathSync(temporaryDirectory());
-    execFileSync('git', ['init', '-q'], { cwd: root });
+  function ignoringRepository(): string {
+    const root = repository();
     write(root, '.gitignore', 'generated/\n*.log\n');
     process.chdir(root);
     return root;
   }
 
   it('reports an untracked file git ignores, by directory or by file pattern', async () => {
-    const root = repository();
+    const root = ignoringRepository();
     const schema = write(root, 'generated/schema.ts');
     const log = write(root, 'debug.log');
     const button = write(root, 'src/Button.tsx');
@@ -59,9 +42,8 @@ describe('realProjectFiles ignoredFiles', () => {
   });
 
   it('never reports a tracked file, even one a pattern matches', async () => {
-    const root = repository();
-    const tracked = write(root, 'tracked.log');
-    execFileSync('git', ['add', '--force', 'tracked.log'], { cwd: root });
+    const root = ignoringRepository();
+    const tracked = track(root, 'tracked.log');
 
     const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredFiles([tracked]);
 
@@ -69,7 +51,7 @@ describe('realProjectFiles ignoredFiles', () => {
   });
 
   it('reports a file anywhere in the repository when run from a package directory, as a monorepo CLI is', async () => {
-    const root = repository();
+    const root = ignoringRepository();
     const schema = write(root, 'generated/schema.ts');
     const log = write(root, 'packages/ui/debug.log');
     process.chdir(path.join(root, 'packages/ui'));
@@ -80,7 +62,7 @@ describe('realProjectFiles ignoredFiles', () => {
   });
 
   it('never reports a path outside the repository', async () => {
-    repository();
+    ignoringRepository();
     const elsewhere = write(temporaryDirectory(), 'generated/schema.ts');
 
     const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredFiles([elsewhere]);
@@ -89,7 +71,7 @@ describe('realProjectFiles ignoredFiles', () => {
   });
 
   it('matches a path as git names it, so one through a symlinked directory is not reported until resolved', async () => {
-    const root = repository();
+    const root = ignoringRepository();
     const schema = write(root, 'packages/ui/generated/schema.ts');
     mkdirSync(path.join(root, 'apps'));
     symlinkSync(path.join(root, 'packages/ui'), path.join(root, 'apps/storybook'));

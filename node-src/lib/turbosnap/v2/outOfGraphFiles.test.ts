@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+/* eslint-disable max-lines */
+import { describe, expect, it, vi } from 'vitest';
 
+import TestLogger from '../../testLogger';
 import {
   hashOutOfGraphFiles,
   MissingStorybookConfigError,
@@ -18,9 +20,12 @@ const h64ToString = (value: string) => `h(${value})`;
 // mutates its disk between two sweeps reuses the same input.
 function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): OutOfGraphInput {
   return {
+    log: new TestLogger(),
     projectRoot,
+    gitRoot: '/repo',
     configDir: `${projectRoot}/.storybook`,
     staticDirs: [`${projectRoot}/.storybook/static`],
+    externals: [],
     projectFiles: inMemoryProjectFiles(disk),
     ...overrides,
   };
@@ -258,6 +263,55 @@ describe('hashOutOfGraphFiles skipped files', () => {
   });
 });
 
+describe('hashOutOfGraphFiles externals', () => {
+  // Globs are the user's `--externals`, which v1 matches against git-root-relative changed files, so
+  // the same spelling has to match here against the same universe: the git index.
+  const disk: InMemoryDisk = {
+    directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+    trackedFiles: [
+      '/repo/tailwind.config.js',
+      '/repo/packages/ui/tailwind.config.js',
+      '/repo/packages/ui/src/styles/main.scss',
+      '/repo/packages/ui/src/Button.tsx',
+    ],
+  };
+
+  it('hashes the tracked files matching a glob, keyed by canonical project-relative path', async () => {
+    const { externals } = await sweep(
+      makeInput(disk, { externals: ['**/*.scss', 'packages/ui/tailwind.config.js'] })
+    );
+
+    expect([...externals.keys()]).toEqual(['./src/styles/main.scss', './tailwind.config.js']);
+  });
+
+  it('matches globs against git-root-relative paths, so a file above the project is reachable', async () => {
+    const { externals } = await sweep(makeInput(disk, { externals: ['tailwind.config.js'] }));
+
+    expect([...externals.keys()]).toEqual(['../../tailwind.config.js']);
+  });
+
+  it('is empty when no externals are configured, without reading the git index', async () => {
+    const projectFiles = inMemoryProjectFiles(disk);
+    const trackedFiles = vi.spyOn(projectFiles, 'trackedFiles');
+
+    const { externals } = await sweep(makeInput(disk, { projectFiles }));
+
+    expect(externals.size).toBe(0);
+    expect(trackedFiles).not.toHaveBeenCalled();
+  });
+
+  it('skips an indexed path with no file on disk, such as a deleted file or a submodule root', async () => {
+    const { externals } = await sweep(
+      makeInput(
+        { ...disk, isAbsent: (candidate) => candidate.endsWith('main.scss') },
+        { externals: ['**/*.scss', 'packages/ui/tailwind.config.js'] }
+      )
+    );
+
+    expect([...externals.keys()]).toEqual(['./tailwind.config.js']);
+  });
+});
+
 describe('rollUpOutOfGraphFiles', () => {
   it('rolls each section into its own synthetic entry', async () => {
     const disk: InMemoryDisk = {
@@ -265,11 +319,72 @@ describe('rollUpOutOfGraphFiles', () => {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
         '/repo/packages/ui/.storybook/static': ['logo.svg'],
       },
+      trackedFiles: ['/repo/tailwind.config.js'],
     };
 
-    const rollUps = await rollUp(makeInput(disk));
+    const rollUps = await rollUp(makeInput(disk, { externals: ['tailwind.config.js'] }));
 
-    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles', 'staticFiles']);
+    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles', 'staticFiles', 'externals']);
+  });
+
+  it('contributes no externals entry when the globs match nothing, so a project without externals is unchanged', async () => {
+    const disk: InMemoryDisk = { directories: { '/repo/packages/ui/.storybook': ['main.ts'] } };
+
+    const rollUps = await rollUp(makeInput(disk, { externals: ['tailwind.config.js'] }));
+
+    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles']);
+  });
+
+  it('moves the externals roll-up when an external file content changes, leaving the others alone', async () => {
+    const external = '/repo/tailwind.config.js';
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      trackedFiles: [external],
+      fileHashes: { [external]: 'T1' },
+    };
+    const input = makeInput(disk, { externals: ['tailwind.config.js'] });
+    const before = await rollUp(input);
+
+    disk.fileHashes = { [external]: 'T2' };
+    const after = await rollUp(input);
+
+    expect(after.get('externals')).not.toBe(before.get('externals'));
+    expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
+  });
+
+  it('moves the externals roll-up when an external is renamed without changing its bytes', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      trackedFiles: ['/repo/tailwind.config.js'],
+      fileHashes: { '/repo/tailwind.config.js': 'T' },
+    };
+    const input = makeInput(disk, { externals: ['*.config.js'] });
+    const before = await rollUp(input);
+
+    // Same bytes under a different name is a different file to the tooling that reads it by name, so
+    // path identity is hashed here as it is for the other sections.
+    disk.trackedFiles = ['/repo/postcss.config.js'];
+    disk.fileHashes = { '/repo/postcss.config.js': 'T' };
+    const after = await rollUp(input);
+
+    expect(after.get('externals')).not.toBe(before.get('externals'));
+  });
+
+  it('moves the externals roll-up when another tracked file starts matching, leaving the others alone', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      trackedFiles: ['/repo/tailwind.config.js'],
+      fileHashes: { '/repo/tailwind.config.js': 'T' },
+    };
+    const input = makeInput(disk, { externals: ['*.config.js'] });
+    const before = await rollUp(input);
+
+    disk.trackedFiles = ['/repo/tailwind.config.js', '/repo/postcss.config.js'];
+    disk.fileHashes = { '/repo/tailwind.config.js': 'T', '/repo/postcss.config.js': 'P' };
+    const after = await rollUp(input);
+
+    expect(after.get('externals')).not.toBe(before.get('externals'));
+    expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
   });
 
   it('moves the config roll-up when a config file content changes', async () => {

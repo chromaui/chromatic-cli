@@ -104,8 +104,10 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
         stats,
         manifestPath: getManifestPath(ctx.sourceDir),
         projectRoot: ctx.storybook.projectRoot,
+        gitRoot: ctx.git.rootPath,
         configDir: ctx.storybook.configDir,
         staticDirs: ctx.storybook.staticDirs,
+        externals: ctx.options.externals ?? [],
         projectFiles: realProjectFiles({ log: ctx.log, options: ctx.options }),
       });
     });

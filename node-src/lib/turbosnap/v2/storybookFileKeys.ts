@@ -47,6 +47,14 @@ export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 export const STATIC_FILES_KEY = 'staticFiles';
 
 /**
+ * The files matching the user's `--externals` globs, rolled up. The user names these because they
+ * affect the built Storybook in a way no trace can see (a Tailwind config, a global stylesheet), so
+ * the Index bails TurboSnap when this entry moves between a build and its baseline, as v1 bails when
+ * such a file is in the git diff. See {@link hashOutOfGraphFiles}.
+ */
+export const EXTERNALS_KEY = 'externals';
+
+/**
  * Every synthetic key in `storybookConfigHashes`. A canonical file path always starts `./` or `../`,
  * so none of these bare names can collide with one; see the note at the top of this file.
  */
@@ -55,4 +63,5 @@ export type StorybookFileKey =
   | typeof STORYBOOK_GLOBALS_KEY
   | typeof STORYBOOK_VERSION_KEY
   | typeof STORYBOOK_CONFIG_KEY
-  | typeof STATIC_FILES_KEY;
+  | typeof STATIC_FILES_KEY
+  | typeof EXTERNALS_KEY;
