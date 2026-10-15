@@ -2,67 +2,135 @@ import path from 'path';
 
 import { AbsolutePath } from '../../../types';
 import { ManifestInput } from './manifestInput';
-import { isNodeModulesPath } from './paths';
+import { gitRootGlobMatcher, isNodeModulesPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 
 /**
- * The part of {@link ManifestInput} the skip rule reads: where the project and its config directory
- * are, and how to ask git and the disk.
+ * The part of {@link ManifestInput} the skip rule reads: where the project, its config directory and
+ * the repository are, what the user untraced, and how to ask git and the disk.
  */
-export type SkipContext = Pick<ManifestInput, 'projectRoot' | 'configDir' | 'projectFiles'>;
+export type SkipContext = Pick<
+  ManifestInput,
+  'projectRoot' | 'configDir' | 'gitRoot' | 'untraced' | 'projectFiles'
+>;
 
 /**
- * Why v2 skipped hashing a file. Diagnostic only: it feeds no roll-up, so a file changing reason never
- * moves a hash. One value today; more are expected (such as untraced files).
+ * Why v2 skipped hashing a file. A skipped file's own bytes feed no roll-up either way; the reasons
+ * differ in what happens to its imports. A gitignored file keeps its dependency edges, so a tracked
+ * file imported through a generated barrel still rolls up into the story. An untraced file is a wall,
+ * as in v1: its edges are severed too, so a change beneath it reaches a story only through another
+ * import path; see `readStatsGraph`.
  */
-export type SkipReason = 'gitignored';
+export type SkipReason = 'gitignored' | 'untraced';
 
 /**
- * The files among the given paths that TurboSnap v2 skips hashing: the project's own files that git
- * ignores. "Ignored" is git's answer; "skipped" is our policy on top of it.
+ * Why TurboSnap v2 skips hashing the file at a path, or undefined when it hashes the file; see
+ * {@link buildSkipRule}.
+ */
+export type SkipRule = (absolutePath: AbsolutePath) => SkipReason | undefined;
+
+/**
+ * Splits paths by the rule: the ones to hash, and the ones skipped with their reason. The one place
+ * the rule is applied to a listing, so the graph and the static sweep partition alike.
+ *
+ * @param absolutePaths The paths to split.
+ * @param rule The rule to split them by; see {@link buildSkipRule}.
+ *
+ * @returns The paths to hash, in the order given, and the skipped paths with their reasons.
+ */
+export function partitionSkipped(
+  absolutePaths: Iterable<AbsolutePath>,
+  rule: SkipRule
+): { hashable: AbsolutePath[]; skipped: Map<AbsolutePath, SkipReason> } {
+  const hashable: AbsolutePath[] = [];
+  const skipped = new Map<AbsolutePath, SkipReason>();
+  for (const absolutePath of absolutePaths) {
+    const reason = rule(absolutePath);
+    if (reason) {
+      skipped.set(absolutePath, reason);
+    } else {
+      hashable.push(absolutePath);
+    }
+  }
+  return { hashable, skipped };
+}
+
+/**
+ * Builds the rule for which files TurboSnap v2 skips hashing: the files the user untraced, and the
+ * project's own files that git ignores (see {@link ignoredProjectFileCheck}). Built once per
+ * manifest, since it asks git once, and then answers synchronously for every file the graph and the
+ * out-of-graph sweep hold.
+ *
+ * An `--untraced` glob is the user saying a file's changes should not recapture stories, so it is
+ * honored wherever the file is: inside a dependency, since v1 lets a user untrace files inside a
+ * package, and inside the Storybook config directory, since the documented recipe untraces the
+ * global decorators kept there. The glob is matched as v1 matches it (see
+ * {@link gitRootGlobMatcher}), so the one flag means the same thing in both. A file both untraced
+ * and ignored is recorded as untraced, since that is the user's own say. Two files are out of the
+ * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
+ * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.
+ *
+ * Every check is judged on the file a path leads to. A bundler names a file by its real path while
+ * the project and config directories are named as configured, so the out-of-graph sweep can reach
+ * a file through a symlinked directory. Git names the real file, and so does v1 when it matches
+ * `--untraced`, since its paths come from git and the bundler; a glob written for v1 therefore
+ * spells the real path, and matching anything else would hash a file the user untraced.
+ *
+ * @param context Where the project and repository are, what is untraced, and how to ask git and
+ * the disk.
+ *
+ * @returns The rule, by the path as given.
+ */
+export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
+  const isUntraced = gitRootGlobMatcher(context.gitRoot, context.untraced);
+  const isIgnoredProjectFile = await ignoredProjectFileCheck(context);
+
+  return (absolutePath) => {
+    const realPath = context.projectFiles.realPath(absolutePath);
+    if (isUntraced(realPath)) return 'untraced';
+    if (isIgnoredProjectFile(realPath)) return 'gitignored';
+    return undefined;
+  };
+}
+
+/**
+ * Builds the check for whether a real path is one of the project's own files that git ignores.
+ * "Ignored" is git's answer; "skipped" is our policy on top of it.
  *
  * We lean on git because generated files are often ignored by git and they can be non-deterministic.
  * Recapturing based on those hashing changes would be more "correct" but a much worse experience, so
  * we opted to match TurboSnap v1's behavior.
  *
- * Only the project's own files are skipped, because a dependency's file is a real change however git
+ * Only the project's own files qualify, because a dependency's file is a real change however git
  * sees it. A workspace package's gitignored `dist` is the only form of that package the graph holds:
  * the bundler resolves the `node_modules` link to it, so its source never appears. The same goes for
  * `node_modules` itself, which is in nearly every `.gitignore`, yet a dependency upgrade is a real
- * change. And a generated `preview.*` in the Storybook config directory still shapes every story, so
- * the config directory is never skipped either.
+ * change; it gets its own check because a cache such as `node_modules/.vite` has no `package.json`
+ * between it and the project root. And a generated `preview.*` in the Storybook config directory
+ * still shapes every story, so the config directory never qualifies either.
  *
- * Every rule is judged on the file a path leads to, which is how git names files. A bundler names a
- * file by its real path while the project and config directories are named as configured, so a
- * `.storybook` that is a symlink would otherwise never match its own files.
+ * The check takes a real path because that is how git names files; see
+ * {@link ProjectFiles.ignoredPaths}. The project and config directories are resolved the same way,
+ * so a `.storybook` that is a symlink still matches its own files.
  *
- * @param absolutePaths The paths to test.
- * @param context Where the project is, and how to ask git and the disk.
+ * @param context Where the project and its config directory are, and how to ask git and the disk.
  *
- * @returns The subset of paths v2 skips, each with its {@link SkipReason}.
+ * @returns The check, by real path.
  */
-export async function findSkippedFiles(
-  absolutePaths: AbsolutePath[],
+async function ignoredProjectFileCheck(
   context: SkipContext
-): Promise<Map<AbsolutePath, SkipReason>> {
+): Promise<(realPath: AbsolutePath) => boolean> {
   const { projectFiles } = context;
   const projectRoot = projectFiles.realPath(context.projectRoot);
   const configDirectory = projectFiles.realPath(context.configDir) + path.sep;
-
-  const realPaths = new Map(
-    absolutePaths.map((absolutePath) => [absolutePath, projectFiles.realPath(absolutePath)])
-  );
-  const candidates = [...realPaths.values()].filter(
-    (realPath) => !isNodeModulesPath(realPath) && !realPath.startsWith(configDirectory)
-  );
-  const ignored = await projectFiles.ignoredFiles(candidates);
+  const ignored = await projectFiles.ignoredPaths();
   const isProjectDirectory = memoizedProjectDirectoryCheck(projectRoot, projectFiles);
 
-  return new Map(
-    [...realPaths]
-      .filter(([, realPath]) => ignored.has(realPath) && isProjectDirectory(path.dirname(realPath)))
-      .map(([absolutePath]): [AbsolutePath, SkipReason] => [absolutePath, 'gitignored'])
-  );
+  return (realPath) =>
+    !isNodeModulesPath(realPath) &&
+    !realPath.startsWith(configDirectory) &&
+    ignored.has(realPath) &&
+    isProjectDirectory(path.dirname(realPath));
 }
 
 /**

@@ -3,11 +3,10 @@ import * as Sentry from '@sentry/node';
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
-import type { Logger } from '../../log';
 import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
+import { ManifestInput } from './manifestInput';
 import { MissingStorybookConfigError } from './outOfGraphFiles';
-import { ProjectFiles } from './projectFiles';
 import { uploadHashes } from './uploadHashes';
 
 /**
@@ -16,19 +15,19 @@ import { uploadHashes } from './uploadHashes';
  */
 export type FailureLogLevel = 'error' | 'debug';
 
-interface TraceChangedFilesInput {
-  log: Logger;
+/**
+ * The input to build the manifest (see {@link ManifestInput}), plus what this entry point adds on
+ * top: the stats to build it from, where to write it, how to upload it and how loudly to report a
+ * failure. `gitRoot` is optional here because that is its type on `ctx.git`; {@link traceChangedFiles}
+ * checks it is set, so callers don't have to.
+ */
+interface TraceChangedFilesInput extends Omit<ManifestInput, 'gitRoot'> {
   failureLogLevel: FailureLogLevel;
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
   manifestPath: string;
-  projectRoot: string;
   gitRoot: AbsolutePath | undefined;
-  configDir: AbsolutePath;
-  staticDirs: AbsolutePath[];
-  externals: string[];
-  projectFiles: ProjectFiles;
 }
 
 /**
@@ -41,20 +40,11 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * Determines which story files are affected by the changed source file hashes, bailing out of
  * TurboSnap when necessary.
  *
- * @param input The input to run TurboSnap 2.0.
+ * @param input The input to run TurboSnap 2.0; see {@link ManifestInput} for the manifest's share.
  * @param input.stats The preview stats file, read by the caller because v1 traces the same one.
  * @param input.manifestPath The path to write the manifest file to.
- * @param input.projectRoot The absolute Storybook project root used to read source files off disk
- * and to anchor manifest keys.
  * @param input.gitRoot The absolute git repository root, as it arrives on `ctx.git`. The gitInfo task
  * always sets it; its absence is reported as a v2 failure.
- * @param input.configDir The absolute Storybook config directory, hashed off disk because it is
- * never a bundler input.
- * @param input.staticDirs The absolute static directories, hashed off disk for the same reason.
- * @param input.externals The user's `--externals` globs; the git-tracked files they match are hashed
- * off disk so the Index can bail when one changes.
- * @param input.projectFiles How to read the disk; see {@link ProjectFiles}. Required rather than
- * defaulted, so a caller cannot silently reach the real disk.
  * @param input.failureLogLevel The level to log a v2 failure at, required rather than defaulted so a
  * caller cannot pick a level by accident.
  *
@@ -66,13 +56,8 @@ export async function traceChangedFiles(
   let manifest: TurboSnapManifest;
   try {
     manifest = await buildManifest(input.stats, {
-      log: input.log,
-      projectRoot: input.projectRoot,
+      ...input,
       gitRoot: requireGitRoot(input.gitRoot),
-      configDir: input.configDir,
-      staticDirs: input.staticDirs,
-      externals: input.externals,
-      projectFiles: input.projectFiles,
     });
   } catch (error) {
     // A misconfigured project is the user's to fix, not a bug to report.

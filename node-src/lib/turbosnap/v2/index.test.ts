@@ -272,6 +272,7 @@ function trace(
     manifestPath,
     projectRoot,
     gitRoot: '/repo',
+    untraced: [],
     configDir: configDirectory,
     staticDirs: [`${configDirectory}/static`],
     externals: [],

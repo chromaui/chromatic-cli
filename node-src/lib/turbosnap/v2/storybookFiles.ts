@@ -37,8 +37,9 @@ function isPreviewConfig(filePath: FilePath, configDirectory: FilePath): boolean
  * the hashes. Serialization prunes synthetic nodes from the written graph, so a reachability walk
  * over that graph cannot reconstruct these sets — it reports attributed files as unreachable.
  *
- * Every hashed file belongs to at least one set, and the sets can overlap. For example, a file belongs
- * to both `storyReachable` and `storybookGlobals` when it is imported by a story and by Storybook's
+ * Every hashed file belongs to at least one set, except one only an untraced file reaches, which
+ * the user asked to leave out of every roll-up. The sets can overlap. For example, a file belongs to
+ * both `storyReachable` and `storybookGlobals` when it is imported by a story and by Storybook's
  * global composition code. This is intentional: the story hash identifies the affected story, while
  * the globals hash records that the same change can affect every story.
  */
@@ -66,8 +67,10 @@ export interface FileAttribution {
  *
  * - Builder-generated composition roots. Their dependencies are Storybook's preview annotations,
  *   which are loaded for every story.
- * - Hashed files that belong to neither a story subtree nor the preview subtree. This fallback is
- *   needed when builder stats omit the edge from the composition root.
+ * - Hashed files that belong to neither a story subtree nor the preview subtree, and that no
+ *   untraced file reaches. This fallback is needed when builder stats omit the edge from the
+ *   composition root; a file behind an untraced wall is unreached by design, not by omission, and
+ *   adopting it would turn the user's "never recapture" into "recapture everything".
  *
  * From each root, the walk follows dependencies but stops at story files. A composition root can also
  * discover the stories, and following that branch would incorrectly classify all story code as
@@ -86,6 +89,8 @@ export interface FileAttribution {
  * (e.g. `./.storybook`).
  * @param globalRoots Builder-generated composition roots detected by the stats reader. Keeping the
  * detection outside this function lets it work with builder-neutral graph paths.
+ * @param untracedSubtrees The untraced files and everything they reached before their edges were
+ * severed; see `StatsGraph.untracedSubtrees`.
  * @param h64ToString The hash function.
  *
  * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
@@ -97,6 +102,7 @@ export function collectStorybookFiles(
   storyFiles: Set<FilePath>,
   configDirectory: FilePath,
   globalRoots: Set<FilePath>,
+  untracedSubtrees: Set<FilePath>,
   h64ToString: (input: string) => string
 ): { storybookConfigHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
   // Every preview config subtree, unioned into one `preview` roll-up rather than one entry per path,
@@ -131,7 +137,8 @@ export function collectStorybookFiles(
       (filePath) =>
         hasContentHash(hashes, filePath) &&
         !storyReachable.has(filePath) &&
-        !previewSubtree.has(filePath)
+        !previewSubtree.has(filePath) &&
+        !untracedSubtrees.has(filePath)
     )
   );
   const globals = new Set(

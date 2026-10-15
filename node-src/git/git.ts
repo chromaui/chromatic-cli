@@ -572,11 +572,8 @@ export async function getRepositoryRoot(deps: GitDeps) {
 }
 
 /**
- * The paths git ignores, answered by absolute path; see {@link getIgnoredPaths}.
- *
- * The match is exact: git names paths as it tracks them, so a path reached through a symlink never
- * lines up with the listing and is answered as not ignored. Callers resolve symlinks before asking;
- * one that doesn't errs on the side of hashing more, never less.
+ * The paths git ignores, answered by absolute path; see {@link getIgnoredPaths}. The match is exact,
+ * as git names paths, so a caller resolves symlinks before asking.
  */
 export interface IgnoredPaths {
   has(absolutePath: string): boolean;
@@ -622,13 +619,13 @@ export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
         return true;
       }
 
-      let directory = absolutePath;
-      while (directory !== path.dirname(directory)) {
-        directory = path.dirname(directory);
-
+      // Only a directory inside the repository can be in the listing, so the walk up stops there.
+      let directory = path.dirname(absolutePath);
+      while (directory.startsWith(repositoryRoot + path.sep)) {
         if (ignored.has(directory + path.sep)) {
           return true;
         }
+        directory = path.dirname(directory);
       }
 
       return false;

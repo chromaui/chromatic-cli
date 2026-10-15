@@ -14,7 +14,7 @@ import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { SkipReason } from './skippedFiles';
+import { buildSkipRule, SkipReason } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
@@ -56,7 +56,7 @@ export interface TurboSnapManifest {
   files: Map<FilePath, TurboSnapFile>;
   /**
    * The on-disk files, in the graph or swept, that v2 skipped hashing, each with its reason; see
-   * `findSkippedFiles`. A diagnostic record for the S3 manifest; it feeds no hash.
+   * `buildSkipRule`. A diagnostic record for the S3 manifest; it feeds no hash.
    */
   skippedFiles: Map<FilePath, SkipReason>;
 }
@@ -95,13 +95,16 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
+  // Built once, since it asks git once, and shared by the graph and the out-of-graph sweep.
+  const skipRule = await buildSkipRule(input);
   const {
     files,
     hashes,
     storyFiles,
     globalRoots,
     skippedFiles: skippedGraphFiles,
-  } = await readStatsGraph(stats, input);
+    untracedSubtrees,
+  } = await readStatsGraph(stats, input, skipRule);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
@@ -117,6 +120,7 @@ export async function buildManifest(
     storyFiles,
     normalizeStatsPath(input.configDir, input.projectRoot),
     globalRoots,
+    untracedSubtrees,
     h64ToString
   );
   input.log.debug(
@@ -132,7 +136,10 @@ export async function buildManifest(
 
   // Storybook's config directory, static assets and the user's externals are never bundler inputs, so
   // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const { outOfGraphFiles, skippedFiles: skippedStaticFiles } = await hashOutOfGraphFiles(input);
+  const { files: outOfGraphFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
+    input,
+    skipRule
+  );
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
@@ -145,7 +152,7 @@ export async function buildManifest(
   input.log.debug(
     `Hashed ${outOfGraphFiles.externals.size} external files from ${input.externals.length} --externals globs`
   );
-  const skippedFiles = new Map([...skippedGraphFiles, ...skippedStaticFiles]);
+  const skippedFiles = new Map([...skippedGraphFiles, ...skippedSweptFiles]);
   input.log.debug(
     `Skipped hashing ${skippedFiles.size} files; the manifest's skippedFiles lists each with its reason`
   );

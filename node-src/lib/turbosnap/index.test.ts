@@ -50,7 +50,7 @@ function makeContext() {
   return {
     log: new TestLogger(),
     turboSnap: {},
-    options: {},
+    options: { untraced: ['**/*.md'] },
     env: {},
     git: { changedFiles: ['./src/Button.tsx'], rootPath: '/repo' },
     fileInfo: { statsPath: '/repo/packages/ui/storybook-static/preview-stats.json' },
@@ -184,6 +184,7 @@ describe('traceChangedFiles', () => {
       manifestPath: '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json',
       projectRoot: ctx.storybook.projectRoot,
       gitRoot: '/repo',
+      untraced: ['**/*.md'],
       configDir: ctx.storybook.configDir,
       staticDirs: ctx.storybook.staticDirs,
       externals: [],

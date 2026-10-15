@@ -72,6 +72,25 @@ describe('serializeManifest', () => {
     expect(serialized.staticFiles).toEqual({});
   });
 
+  it('hashes a gitignored file in a static dir inside the config dir, since git ignoring a file never skips it there', async () => {
+    const { input } = createFixture({
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['bundle.css'],
+      },
+      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
+    });
+
+    const serialized = serializeManifest(await buildManifest({ modules: [] }, input));
+
+    expect(Object.keys(serialized.storybookConfigFiles)).toEqual([
+      './.storybook/main.ts',
+      './.storybook/static/bundle.css',
+    ]);
+    expect(Object.keys(serialized.staticFiles)).toEqual(['./.storybook/static/bundle.css']);
+    expect(serialized.skippedFiles).toEqual({});
+  });
+
   it('keeps a file git ignores in the graph, marked skipped, so the edges through it survive', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const barrel = '/repo/packages/ui/src/generated/index.ts';

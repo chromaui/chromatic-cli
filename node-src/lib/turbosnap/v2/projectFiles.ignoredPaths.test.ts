@@ -6,7 +6,12 @@ import TestLogger from '../../testLogger';
 import { repository, temporaryDirectory, track, write } from './__fixtures__/temporaryDisk';
 import { realProjectFiles } from './projectFiles';
 
-describe('realProjectFiles ignoredFiles', () => {
+async function ignoredAmong(absolutePaths: string[]): Promise<string[]> {
+  const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredPaths();
+  return absolutePaths.filter((absolutePath) => ignored.has(absolutePath));
+}
+
+describe('realProjectFiles ignoredPaths', () => {
   // The adapter asks the repository the CLI runs in, so each test runs in its own.
   const originalDirectory = process.cwd();
 
@@ -32,22 +37,14 @@ describe('realProjectFiles ignoredFiles', () => {
     const log = write(root, 'debug.log');
     const button = write(root, 'src/Button.tsx');
 
-    const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredFiles([
-      schema,
-      log,
-      button,
-    ]);
-
-    expect([...ignored].sort()).toEqual([log, schema].sort());
+    expect(await ignoredAmong([schema, log, button])).toEqual([schema, log]);
   });
 
   it('never reports a tracked file, even one a pattern matches', async () => {
     const root = ignoringRepository();
     const tracked = track(root, 'tracked.log');
 
-    const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredFiles([tracked]);
-
-    expect([...ignored]).toEqual([]);
+    expect(await ignoredAmong([tracked])).toEqual([]);
   });
 
   it('reports a file anywhere in the repository when run from a package directory, as a monorepo CLI is', async () => {
@@ -56,18 +53,14 @@ describe('realProjectFiles ignoredFiles', () => {
     const log = write(root, 'packages/ui/debug.log');
     process.chdir(path.join(root, 'packages/ui'));
 
-    const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredFiles([schema, log]);
-
-    expect([...ignored].sort()).toEqual([log, schema].sort());
+    expect(await ignoredAmong([schema, log])).toEqual([schema, log]);
   });
 
   it('never reports a path outside the repository', async () => {
     ignoringRepository();
     const elsewhere = write(temporaryDirectory(), 'generated/schema.ts');
 
-    const ignored = await realProjectFiles({ log: new TestLogger() }).ignoredFiles([elsewhere]);
-
-    expect([...ignored]).toEqual([]);
+    expect(await ignoredAmong([elsewhere])).toEqual([]);
   });
 
   it('matches a path as git names it, so one through a symlinked directory is not reported until resolved', async () => {
@@ -77,11 +70,11 @@ describe('realProjectFiles ignoredFiles', () => {
     symlinkSync(path.join(root, 'packages/ui'), path.join(root, 'apps/storybook'));
     const linked = path.join(root, 'apps/storybook/generated/schema.ts');
     const projectFiles = realProjectFiles({ log: new TestLogger() });
+    const ignored = await projectFiles.ignoredPaths();
 
-    expect([...(await projectFiles.ignoredFiles([linked]))]).toEqual([]);
-    expect([...(await projectFiles.ignoredFiles([projectFiles.realPath(linked)]))]).toEqual([
-      schema,
-    ]);
+    expect(ignored.has(linked)).toBe(false);
+    expect(ignored.has(projectFiles.realPath(linked))).toBe(true);
+    expect(projectFiles.realPath(linked)).toBe(schema);
   });
 
   it('rejects when git cannot answer, rather than guessing that nothing is ignored', async () => {
@@ -89,8 +82,6 @@ describe('realProjectFiles ignoredFiles', () => {
     process.chdir(root);
     const schema = write(root, 'generated/schema.ts');
 
-    await expect(
-      realProjectFiles({ log: new TestLogger() }).ignoredFiles([schema])
-    ).rejects.toThrow(/Git repository/);
+    await expect(ignoredAmong([schema])).rejects.toThrow(/Git repository/);
   });
 });

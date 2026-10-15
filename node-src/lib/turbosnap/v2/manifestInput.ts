@@ -21,6 +21,11 @@ export interface ManifestInput {
    * is where a builder usually names them from.
    */
   statsRoot?: AbsolutePath;
+  /**
+   * The `--untraced` globs, relative to `gitRoot`, naming files that wall off tracing: neither their
+   * own changes nor those of files reached only through them recapture stories. Empty when unset.
+   */
+  untraced: string[];
   /** The absolute Storybook config directory, as it arrives on `ctx.storybook`. */
   configDir: AbsolutePath;
   /** The absolute configured static directories, or single static files. Empty when unset. */

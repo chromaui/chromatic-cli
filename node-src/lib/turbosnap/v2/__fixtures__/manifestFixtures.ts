@@ -39,6 +39,7 @@ export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
       log: new TestLogger(),
       projectRoot,
       gitRoot: '/repo',
+      untraced: [],
       configDir: `${projectRoot}/.storybook`,
       staticDirs: [`${projectRoot}/.storybook/static`],
       externals: [],

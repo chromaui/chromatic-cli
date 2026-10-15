@@ -9,6 +9,7 @@ import {
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
+import { SkipRule } from './skippedFiles';
 
 const projectRoot = '/repo/packages/ui';
 const h64ToString = (value: string) => `h(${value})`;
@@ -31,9 +32,13 @@ function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): Ou
   };
 }
 
+// The skip rule is tested on its own, so the sweep is handed one that skips nothing unless a test
+// says otherwise.
+const skipNothing: SkipRule = () => undefined;
+
 async function sweep(input: OutOfGraphInput) {
-  const { outOfGraphFiles } = await hashOutOfGraphFiles(input);
-  return outOfGraphFiles;
+  const { files } = await hashOutOfGraphFiles(input, skipNothing);
+  return files;
 }
 
 async function rollUp(input: OutOfGraphInput) {
@@ -131,7 +136,7 @@ describe('hashOutOfGraphFiles', () => {
   ])('refuses to sweep when the config dir %s', async (_, directories) => {
     // Storybook requires main.*, so a directory without one is not a config directory. Refusing here
     // is what guarantees the config section is never empty.
-    await expect(hashOutOfGraphFiles(makeInput({ directories }))).rejects.toThrow(
+    await expect(hashOutOfGraphFiles(makeInput({ directories }), skipNothing)).rejects.toThrow(
       MissingStorybookConfigError
     );
   });
@@ -193,73 +198,76 @@ describe('hashOutOfGraphFiles', () => {
 });
 
 describe('hashOutOfGraphFiles skipped files', () => {
-  it('drops a static file git ignores and records it', async () => {
+  it('drops a static file the rule skips and records it', async () => {
     const disk: InMemoryDisk = {
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts'],
         '/repo/packages/ui/public': ['logo.svg', 'bundle.css'],
       },
-      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
     };
 
-    const {
-      outOfGraphFiles: { staticFiles },
-      skippedFiles,
-    } = await hashOutOfGraphFiles(makeInput(disk, { staticDirs: [`${projectRoot}/public`] }));
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { staticDirs: [`${projectRoot}/public`] }),
+      (candidate) => (candidate.endsWith('bundle.css') ? 'gitignored' : undefined)
+    );
 
-    expect([...staticFiles.keys()]).toEqual(['./public/logo.svg']);
+    expect([...files.staticFiles.keys()]).toEqual(['./public/logo.svg']);
     expect([...skippedFiles]).toEqual([['./public/bundle.css', 'gitignored']]);
   });
 
-  it('hashes config files git ignores, since a generated preview still shapes every story', async () => {
+  it('drops a config file the rule skips from the config section and records it', async () => {
     const disk: InMemoryDisk = {
-      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
-      isIgnored: (candidate) => candidate.endsWith('preview.ts'),
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'decorators'],
+        '/repo/packages/ui/.storybook/decorators': ['withTheme.ts'],
+      },
     };
 
-    const {
-      outOfGraphFiles: { storybookConfigFiles },
-      skippedFiles,
-    } = await hashOutOfGraphFiles(makeInput(disk));
+    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+      candidate.includes('/decorators/') ? 'untraced' : undefined
+    );
 
-    expect([...storybookConfigFiles.keys()]).toEqual([
+    expect([...files.storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
       './.storybook/preview.ts',
     ]);
-    expect(skippedFiles.size).toBe(0);
+    expect([...skippedFiles]).toEqual([['./.storybook/decorators/withTheme.ts', 'untraced']]);
   });
 
-  it('builds when git ignores the main config, because the config dir is hashed regardless', async () => {
-    const disk: InMemoryDisk = {
-      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
-      isIgnored: (candidate) => candidate.endsWith('main.ts'),
-    };
-
-    const { storybookConfigFiles } = await sweep(makeInput(disk));
-
-    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
-  });
-
-  it('hashes an ignored file in a static dir inside the config dir, since the config dir is never skipped', async () => {
+  it('drops a skipped file from both sections when a static dir sits inside the config dir', async () => {
     const disk: InMemoryDisk = {
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
-        '/repo/packages/ui/.storybook/static': ['bundle.css'],
+        '/repo/packages/ui/.storybook/static': ['logo.svg', 'bundle.css'],
       },
-      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
     };
 
-    const {
-      outOfGraphFiles: { storybookConfigFiles, staticFiles },
-      skippedFiles,
-    } = await hashOutOfGraphFiles(makeInput(disk));
+    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+      candidate.endsWith('bundle.css') ? 'untraced' : undefined
+    );
 
-    expect([...storybookConfigFiles.keys()]).toEqual([
+    expect([...files.storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
-      './.storybook/static/bundle.css',
+      './.storybook/static/logo.svg',
     ]);
-    expect([...staticFiles.keys()]).toEqual(['./.storybook/static/bundle.css']);
-    expect(skippedFiles.size).toBe(0);
+    expect([...files.staticFiles.keys()]).toEqual(['./.storybook/static/logo.svg']);
+    expect([...skippedFiles]).toEqual([['./.storybook/static/bundle.css', 'untraced']]);
+  });
+
+  it('hashes the main config even when the rule skips it, and logs that it did', async () => {
+    const log = new TestLogger();
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { log }),
+      () => 'untraced'
+    );
+
+    expect([...files.storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+    expect([...skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
+    expect(log.debug).toHaveBeenCalledWith(expect.stringContaining('/.storybook/main.ts'));
   });
 });
 
@@ -309,6 +317,16 @@ describe('hashOutOfGraphFiles externals', () => {
     );
 
     expect([...externals.keys()]).toEqual(['./tailwind.config.js']);
+  });
+
+  it('hashes an external file the rule skips, since v1 checks externals before it applies --untraced', async () => {
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { externals: ['packages/ui/tailwind.config.js'] }),
+      (candidate) => (candidate.endsWith('tailwind.config.js') ? 'untraced' : undefined)
+    );
+
+    expect([...files.externals.keys()]).toEqual(['./tailwind.config.js']);
+    expect(skippedFiles.size).toBe(0);
   });
 });
 
