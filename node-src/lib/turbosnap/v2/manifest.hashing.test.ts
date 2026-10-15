@@ -171,7 +171,8 @@ describe("buildManifest through a workspace package's build output", () => {
   const built = '/repo/packages/icons/dist/index.js';
 
   // The bundler resolves `@acme/icons` through its node_modules link to the package's gitignored
-  // `dist`, so that is the only form of the package the graph holds.
+  // `dist`, so that is the only form of the package the graph holds. It is skipped, as v1 skips it:
+  // git sees a build artifact, and `--externals` is the escape hatch for teams that rebuild it.
   const stats: Stats = {
     modules: [
       { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
@@ -179,7 +180,7 @@ describe("buildManifest through a workspace package's build output", () => {
     ],
   };
 
-  it('changes the story hash when the build output changes content, even though git ignores it', async () => {
+  it("leaves the story hash alone when the build output changes content, since git ignores it, and keeps the story's edge to it", async () => {
     const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === built });
     disk.fileHashes = { [story]: 'S', [built]: 'D1' };
     const before = await buildManifest(stats, input);
@@ -187,10 +188,45 @@ describe("buildManifest through a workspace package's build output", () => {
     disk.fileHashes = { [story]: 'S', [built]: 'D2' };
     const after = await buildManifest(stats, input);
 
-    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
       before.storyFileHashes.get('./src/Button.stories.tsx')
     );
-    expect([...after.skippedFiles]).toEqual([]);
+    expect([...after.skippedFiles]).toEqual([['../icons/dist/index.js', 'gitignored']]);
+    expect(
+      after.files.get('./src/Button.stories.tsx')?.dependencies.has('../icons/dist/index.js')
+    ).toBe(true);
+  });
+});
+
+describe("buildManifest through a sibling package's tracked source", () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const index = '/repo/packages/shared/src/index.ts';
+  const generated = '/repo/packages/shared/src/generated.ts';
+
+  // The story imports the sibling's tracked entry, which imports a generated file git ignores. A
+  // non-deterministic generated file must not move the story hash; a change to the tracked file
+  // behind it still must — the sibling mirror of the leaf-inclusion suites above.
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: index, reasons: [{ moduleName: story }] },
+      { id: 3, name: generated, reasons: [{ moduleName: index }] },
+    ],
+  };
+
+  it("leaves the story hash alone when the sibling's gitignored generated file changes content, and moves it when the tracked import does", async () => {
+    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === generated });
+    disk.fileHashes = { [story]: 'S', [index]: 'I1', [generated]: 'G1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [story]: 'S', [index]: 'I1', [generated]: 'G2' };
+    const generatedEdited = await buildManifest(stats, input);
+    disk.fileHashes = { [story]: 'S', [index]: 'I2', [generated]: 'G1' };
+    const indexEdited = await buildManifest(stats, input);
+
+    const key = './src/Button.stories.tsx';
+    expect(generatedEdited.storyFileHashes.get(key)).toBe(before.storyFileHashes.get(key));
+    expect(indexEdited.storyFileHashes.get(key)).not.toBe(before.storyFileHashes.get(key));
   });
 });
 
