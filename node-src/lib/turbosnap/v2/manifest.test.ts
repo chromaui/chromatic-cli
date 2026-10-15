@@ -72,7 +72,7 @@ describe('serializeManifest', () => {
     expect(serialized.staticFiles).toEqual({});
   });
 
-  it('hashes an ignored file in a static dir inside the config dir, since the config dir is never skipped', async () => {
+  it('hashes a gitignored file in a static dir inside the config dir, since git ignoring a file never skips it there', async () => {
     const { input } = createFixture({
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],

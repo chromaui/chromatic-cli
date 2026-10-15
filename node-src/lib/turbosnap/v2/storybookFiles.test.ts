@@ -505,14 +505,16 @@ describe('collectStorybookFiles', () => {
 });
 
 describe('collectStorybookFiles behind an untraced wall', () => {
-  // The reader severed the untraced barrel's edges, so button.tsx is in no story subtree. Without
-  // the exclusion the fallback would adopt it as a global, and an edit to it would recapture every
-  // story instead of none.
+  // The story imports button.tsx only through an untraced barrel. The stats reader already cut the
+  // barrel's edges, so from this function's point of view button.tsx is hashed but no story reaches
+  // it. That is normally the sign of a global whose edge the builder left out of the stats, so the
+  // fallback would adopt it, and then a change to button.tsx would recapture every story. The user
+  // untraced it to recapture none, which is why the reader also passes the files behind the wall.
   const story = './src/a.stories.tsx';
   const barrel = './src/components/index.ts';
   const button = './src/components/button.tsx';
 
-  it('leaves a file only an untraced file reaches out of globals', () => {
+  it('does not adopt a file as a global when only an untraced file reaches it', () => {
     const files = makeFiles({ [story]: [barrel], [barrel]: [], [button]: [] });
     const hashes = new Map([...makeHashes([story, button]), [barrel, SKIPPED_HASH]]);
 
@@ -531,7 +533,10 @@ describe('collectStorybookFiles behind an untraced wall', () => {
     expect([...attribution.storyReachable]).toEqual([story]);
   });
 
-  it('keeps such a file in globals when a composition root still reaches it', () => {
+  // Untracing walls off only the paths through the untraced file. A global that the composition
+  // root imports on its own is still a global, just as a story that imports a file directly still
+  // reaches it; untrace the global itself to take it out.
+  it('still adopts the file as a global when a composition root imports it directly', () => {
     const configEntry = './storybook-config-entry.js';
     const files = makeFiles({
       [configEntry]: [button],
