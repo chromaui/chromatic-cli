@@ -190,19 +190,14 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * the plain path with a builder query (`./src/Foo.vue?vue&type=script`). Folding every spelling
  * onto the one file is what lets V2 key a module and its edges the way V1 reads the id.
  *
- * The id is classified raw, before any stripping: a leading NUL is only visible there, since
- * {@link stripNullBytes} removes every NUL byte. Synthetic ids have no file behind them and come
- * back unchanged; see {@link isSyntheticFile}.
+ * Synthetic ids must already be classified away with {@link isSyntheticFile} — both consumers do,
+ * because stripping a synthetic id's NUL here would invent a phantom path on disk.
  *
  * @param statsPath The module name from the stats file.
  *
  * @returns The path of the file the id stands for.
  */
 function fileStoodForById(statsPath: FilePath): FilePath {
-  if (isSyntheticFile(statsPath)) {
-    return statsPath;
-  }
-
   // A NUL proxy for a relative path stands for that path, without the NUL or the query.
   const unproxied = statsPath.startsWith(NUL) ? statsPath.slice(NUL.length) : statsPath;
   return stripQuery(unproxied);
