@@ -249,6 +249,36 @@ describe('readStatsGraph reasons carrying a resolvedModule', () => {
   });
 });
 
+describe('readStatsGraph concatenation membership evidence', () => {
+  // Only a ` + N modules`-spelled moduleName is evidence that the module it names contains the
+  // reason's importer. Any other spelling drift — a resource query, a loader chain — is how that
+  // one import was requested, and must not invent a group root that links to the importer.
+  const { input } = createFixture({ fileHashes: { '/repo/packages/ui/src/hello.js': 'H' } });
+
+  it('takes no membership from a reason whose moduleName is a resource query', async () => {
+    const queried: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/hello.js',
+          reasons: [
+            {
+              moduleName: '/repo/packages/ui/src/icon.svg?react',
+              resolvedModule: '/repo/packages/ui/src/icon.svg',
+            },
+          ],
+        },
+      ],
+    };
+    const graph = await readStatsGraph(queried, input, skipNothing);
+
+    // The query-spelled name is not a group root, so no node for it is created, and the resolved
+    // importer keeps exactly the attribution edge.
+    expect(graph.files.has('./src/icon.svg?react')).toBe(false);
+    expect(dependenciesOf(graph, './src/icon.svg')).toEqual(['./src/hello.js']);
+  });
+});
+
 describe('readStatsGraph concatenated modules with rspack-style child names', () => {
   // rspack labels a concatenated child's `name` with the parent group name (e.g.
   // `./Button.stories.tsx + 1 modules`) rather than the child's own file. The real path is only in

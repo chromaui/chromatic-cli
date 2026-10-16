@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { Module } from '../../../types';
 import {
   canonicalFileNames,
-  canonicalImportEdges,
   canonicalImporters,
+  canonicalReasonImporter,
   gitRootGlobMatcher,
   indexModuleSources,
   isNodeModulesPath,
@@ -18,7 +18,7 @@ import {
 const projectRoot = '/repo/packages/ui';
 const roots = { projectRoot, statsRoot: projectRoot };
 // Stats without module identifiers (Vite, or hand-written webpack shapes) index no sources.
-const noSources = new Map<string, string>();
+const naming = { ...roots, moduleSources: new Map<string, string>() };
 
 function module(module: Partial<Module>): Module {
   return { id: 0, name: '', ...module };
@@ -205,53 +205,27 @@ describe('canonicalImporters', () => {
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
-    expect(canonicalImporters(input, roots, noSources)).toEqual(expected);
+    expect(canonicalImporters(input, naming)).toEqual(expected);
   });
 });
 
-describe('canonicalImportEdges', () => {
-  it('hands the normalized group root to an importer that resolves to a member of the group', () => {
+describe('canonicalReasonImporter', () => {
+  it('resolves a reason blamed on a concatenation group to the member it names', () => {
     expect(
-      canonicalImportEdges(
-        module({
-          reasons: [
-            {
-              moduleName: '/repo/packages/ui/.storybook/preview.js + 2 modules',
-              resolvedModule: '/repo/packages/ui/src/hello.js',
-            },
-          ],
-        }),
-        roots,
-        noSources
+      canonicalReasonImporter(
+        {
+          moduleName: '/repo/packages/ui/.storybook/preview.js + 2 modules',
+          resolvedModule: '/repo/packages/ui/src/hello.js',
+        },
+        naming
       )
-    ).toEqual([{ importer: './src/hello.js', groupRoot: './.storybook/preview.js' }]);
+    ).toBe('./src/hello.js');
   });
 
-  it('omits the group root when the reason resolves to the root itself', () => {
+  it('returns undefined for an entry reason, which names no importer', () => {
     expect(
-      canonicalImportEdges(
-        module({
-          reasons: [
-            {
-              moduleName: '/repo/packages/ui/src/Button.tsx',
-              resolvedModule: '/repo/packages/ui/src/Button.tsx',
-            },
-          ],
-        }),
-        roots,
-        noSources
-      )
-    ).toEqual([{ importer: './src/Button.tsx' }]);
-  });
-
-  it('omits the group root when the reason names no group (Vite)', () => {
-    expect(
-      canonicalImportEdges(
-        module({ reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }] }),
-        roots,
-        noSources
-      )
-    ).toEqual([{ importer: './src/Button.tsx' }]);
+      canonicalReasonImporter({ moduleName: null, resolvedModule: null }, naming)
+    ).toBeUndefined();
   });
 });
 
@@ -259,7 +233,7 @@ describe('indexModuleSources', () => {
   const storyId = 'csf-loader!swc-loader!/repo/packages/ui/src/Button.stories.tsx';
   const buttonId = 'swc-loader!/repo/packages/ui/src/Button.tsx';
 
-  it('indexes top-level and inner records by identifier, keeping the first source of a duplicate', () => {
+  it('indexes top-level and inner records by identifier', () => {
     const sources = indexModuleSources({
       modules: [
         module({
@@ -279,7 +253,6 @@ describe('indexModuleSources', () => {
             },
           ],
         }),
-        module({ identifier: buttonId, nameForCondition: '/repo/packages/ui/src/Other.tsx' }),
       ],
     });
 
@@ -305,43 +278,36 @@ describe('indexModuleSources', () => {
   });
 });
 
-describe('canonicalImportEdges with module identifiers', () => {
+describe('canonicalReasonImporter with module identifiers', () => {
   const group = './src/Button.stories.tsx + 2 modules';
   const buttonId =
     'builtin:swc-loader??ruleSet[1].rules[6].use[0]!/repo/packages/ui/src/Button.tsx';
-  const sources = new Map([[buttonId, '/repo/packages/ui/src/Button.tsx']]);
+  const naming = {
+    ...roots,
+    moduleSources: new Map([[buttonId, '/repo/packages/ui/src/Button.tsx']]),
+  };
 
   it('attributes the import to the member the identifier names when resolvedModule spells the group (rspack)', () => {
     expect(
-      canonicalImportEdges(
-        module({
-          reasons: [
-            { moduleName: group, resolvedModule: group, resolvedModuleIdentifier: buttonId },
-          ],
-        }),
-        roots,
-        sources
+      canonicalReasonImporter(
+        { moduleName: group, resolvedModule: group, resolvedModuleIdentifier: buttonId },
+        naming
       )
-    ).toEqual([{ importer: './src/Button.tsx', groupRoot: './src/Button.stories.tsx' }]);
+    ).toBe('./src/Button.tsx');
   });
 
   it('falls back to resolvedModule when the identifier names no indexed source (require-context)', () => {
     const context = './src/lib/ lazy namespace object';
     expect(
-      canonicalImportEdges(
-        module({
-          reasons: [
-            {
-              moduleName: context,
-              resolvedModule: context,
-              resolvedModuleIdentifier: `/repo/packages/ui/${context}`,
-            },
-          ],
-        }),
-        roots,
-        sources
+      canonicalReasonImporter(
+        {
+          moduleName: context,
+          resolvedModule: context,
+          resolvedModuleIdentifier: `/repo/packages/ui/${context}`,
+        },
+        naming
       )
-    ).toEqual([{ importer: context }]);
+    ).toBe(context);
   });
 });
 

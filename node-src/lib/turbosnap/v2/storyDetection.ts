@@ -3,10 +3,9 @@ import { FilePath } from './graph';
 import {
   canonicalImporters,
   isNodeModulesPath,
-  ModuleSources,
   normalizeStatsPath,
   rootFilePath,
-  StatsRoots,
+  StatsNaming,
 } from './paths';
 
 /**
@@ -21,11 +20,9 @@ export interface OnDiskFiles {
  * What story detection needs to resolve stats paths and tell real files apart from the
  * require-context glob.
  */
-interface StoryDetectionContext extends StatsRoots {
+interface StoryDetectionContext extends StatsNaming {
   // Which canonical paths have a real file on disk.
   onDiskFiles: OnDiskFiles;
-  // The source files of the stats module identifiers; see `indexModuleSources`.
-  moduleSources: ModuleSources;
 }
 
 // Generated entry points that import all story files. We use this to determine if a file is a story
@@ -137,7 +134,7 @@ function processModules(context: StoryDetectionContext, stats: Stats): Processed
       continue;
     }
 
-    const importers = canonicalImporters(module, context, context.moduleSources);
+    const importers = canonicalImporters(module, context);
 
     processed.push({
       rawName: module.name,

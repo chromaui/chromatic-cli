@@ -9,16 +9,18 @@ import {
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
-  canonicalImportEdges,
+  canonicalImporters,
+  canonicalReasonImporter,
   indexModuleSources,
+  isConcatenatedModuleName,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
-  ModuleSources,
   normalizeStatsPath,
   reasonImporter,
   resolveStatsPath,
   rootFilePath,
+  StatsNaming,
   StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
@@ -102,33 +104,30 @@ export async function readStatsGraph(
 ): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
-  const moduleSources = indexModuleSources(stats);
-  const onDiskFiles = locateOnDiskFiles(stats, roots, moduleSources, projectFiles);
+  const naming: StatsNaming = { ...roots, moduleSources: indexModuleSources(stats) };
+  const onDiskFiles = locateOnDiskFiles(stats, naming, projectFiles);
   const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, skipRule, projectFiles);
 
   // Story detection sees every file on disk, skipped or not: a generated story file is still a
   // story file, so its stories keep a hash that moves with the tracked files they import.
-  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles, moduleSources }, stats);
+  const storyFiles = detectStoryFiles({ ...naming, onDiskFiles }, stats);
 
-  const reasonedFiles = filesWithReasons(stats, roots);
   const files = new Map<FilePath, TurboSnapFile>();
+
+  // Every module's root takes the import edges its reasons spell. Modules with no usable name
+  // (e.g. externals) are skipped.
   for (const module of stats.modules) {
-    // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
-    // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
-    const fileNames = canonicalFileNames(module, roots);
-    if (fileNames.length === 0) continue;
-    const [sourceFilePath, ...concatenated] = fileNames;
-
-    linkConcatenatedFiles(files, sourceFilePath, concatenated, reasonedFiles, hashes);
-
-    for (const { importer, groupRoot } of canonicalImportEdges(module, roots, moduleSources)) {
-      ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
-      // A reason blaming a group while resolving to a member is also evidence the group contains
-      // that member, which the stats may list nowhere else.
-      if (groupRoot) {
-        linkConcatenatedFiles(files, groupRoot, [importer], reasonedFiles, hashes);
-      }
+    const root = rootFilePath(module, roots);
+    if (!root) continue;
+    ensureFile(files, root, hashes);
+    for (const importer of canonicalImporters(module, naming)) {
+      ensureFile(files, importer, hashes).dependencies.add(root);
     }
+  }
+
+  // Concatenation roots link the members the stats say they bundle; see {@link concatenationMembers}.
+  for (const [root, members] of concatenationMembers(stats, naming)) {
+    linkConcatenatedFiles(files, root, members, hashes);
   }
 
   const untracedSubtrees = wallOffUntracedFiles(files, skippedFiles);
@@ -219,7 +218,7 @@ function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoot
 
 /**
  * The canonical root paths of the stats modules that carry reasons of their own. A concatenated
- * member listed here gets its import edges from those reasons; see {@link linkConcatenatedFiles}.
+ * member listed here gets its import edges from those reasons; see {@link concatenationMembers}.
  *
  * @param stats The stats file to parse.
  * @param roots The roots to anchor against; see {@link StatsRoots}.
@@ -236,31 +235,69 @@ function filesWithReasons(stats: Stats, roots: StatsRoots): Set<FilePath> {
 }
 
 /**
- * Records the internal edges of a concatenated module: webpack/rspack bundle several real files into
- * one module. Each of them gets an entry of its own, so no dependency reference names a file the
- * serialized graph omits.
+ * The files each concatenation root bundles that it must link to directly: its `module.modules`, plus
+ * any member a reason resolves to while blaming the group, minus members whose own reasons already
+ * say who imports them (linking those would let the root reach them past an untraced member).
  *
- * A member with reasons of its own takes its edges from them, which name the member that imports
- * it. Linking it to the root as well would let the root reach it past an untraced member in
- * between. Only a member the stats give no reasons for falls back to being a dependency of the
- * root.
+ * @param stats The stats file to parse.
+ * @param naming The roots and module sources to canonicalize against. See {@link StatsNaming}.
+ *
+ * @returns The bundled files of each root that has any, keyed by canonical root path.
+ */
+function concatenationMembers(stats: Stats, naming: StatsNaming): Map<FilePath, Set<FilePath>> {
+  // A member whose own record carries reasons takes its edges from them, which name the member
+  // that imports it; only a member the stats give no reasons for falls back to the root's link.
+  const reasoned = filesWithReasons(stats, naming);
+
+  const members = new Map<FilePath, Set<FilePath>>();
+  const add = (root: FilePath, member: FilePath) => {
+    if (member === root || reasoned.has(member)) return;
+    const bundled = members.get(root) ?? new Set<FilePath>();
+    bundled.add(member);
+    members.set(root, bundled);
+  };
+
+  // The group's own record lists the files it bundles.
+  for (const module of stats.modules) {
+    const [root, ...bundled] = canonicalFileNames(module, naming);
+    if (!root) continue;
+    for (const member of bundled) add(root, member);
+  }
+
+  // A reason resolving to a member while blaming the group names a member the group contains,
+  // which the stats may list nowhere else. Only a ` + N modules`-spelled moduleName is evidence of
+  // that: normalizeStatsPath strips the suffix, so this is the group root's canonical path.
+  for (const module of stats.modules) {
+    for (const reason of module.reasons ?? []) {
+      const importer = canonicalReasonImporter(reason, naming);
+      if (!importer) continue;
+      if (!reason.moduleName || !isConcatenatedModuleName(reason.moduleName)) continue;
+      add(normalizeStatsPath(reason.moduleName, naming.projectRoot, naming.statsRoot), importer);
+    }
+  }
+
+  return members;
+}
+
+/**
+ * Records the internal edges of a concatenated module: webpack/rspack bundle several real files into
+ * one module. The root links to every member it is given, and each of them gets an entry of its
+ * own, so no dependency reference names a file the serialized graph omits.
  *
  * @param files The map of files to their hashes and dependencies, mutated in place.
  * @param rootPath The canonical path of the concatenation root.
- * @param concatenated The canonical paths of the other files bundled into the same module.
- * @param reasonedFiles The canonical paths of the modules with reasons; see {@link filesWithReasons}.
+ * @param members The canonical paths of the files bundled into the same module.
  * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  */
 function linkConcatenatedFiles(
   files: Map<FilePath, TurboSnapFile>,
   rootPath: FilePath,
-  concatenated: FilePath[],
-  reasonedFiles: Set<FilePath>,
+  members: Set<FilePath>,
   hashes: Map<FilePath, FileHash>
 ) {
   const rootFile = ensureFile(files, rootPath, hashes);
-  for (const member of concatenated) {
-    if (!reasonedFiles.has(member)) rootFile.dependencies.add(member);
+  for (const member of members) {
+    rootFile.dependencies.add(member);
     ensureFile(files, member, hashes);
   }
 }
@@ -317,17 +354,14 @@ function hashableAbsolutePath(
  * Finds the file on disk behind every path the stats file names, keyed by canonical path.
  *
  * @param stats The stats file to parse.
- * @param roots The roots to anchor against; see {@link StatsRoots}.
- * @param moduleSources The source files of the stats module identifiers; see
- * {@link indexModuleSources}.
+ * @param naming The roots and module sources to canonicalize against. See {@link StatsNaming}.
  * @param projectFiles How to read the disk.
  *
  * @returns The absolute on-disk path of each hashable file, keyed by its canonical path.
  */
 function locateOnDiskFiles(
   stats: Stats,
-  roots: StatsRoots,
-  moduleSources: ModuleSources,
+  naming: StatsNaming,
   projectFiles: ProjectFiles
 ): Map<FilePath, AbsolutePath> {
   // Collect every referenced module path once, expanding concatenated modules into their real
@@ -338,17 +372,17 @@ function locateOnDiskFiles(
       rawPaths.add(name);
     }
     for (const reason of module.reasons ?? []) {
-      const importer = reasonImporter(reason, moduleSources);
+      const importer = reasonImporter(reason, naming.moduleSources);
       if (importer) rawPaths.add(importer);
     }
   }
 
   const onDiskFiles = new Map<FilePath, AbsolutePath>();
   for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, roots.statsRoot, projectFiles);
+    const absolutePath = hashableAbsolutePath(rawPath, naming.statsRoot, projectFiles);
     if (absolutePath) {
       onDiskFiles.set(
-        normalizeStatsPath(rawPath, roots.projectRoot, roots.statsRoot),
+        normalizeStatsPath(rawPath, naming.projectRoot, naming.statsRoot),
         absolutePath
       );
     }
