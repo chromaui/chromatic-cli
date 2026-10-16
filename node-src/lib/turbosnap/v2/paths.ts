@@ -106,6 +106,15 @@ export function isNodeModulesPath(filePath: string): boolean {
   return NODE_MODULES_SEGMENT.test(filePath);
 }
 
+// A Rollup proxy id: a NUL byte before the id of a module a builder created to stand for a real
+// file (CommonJS interop, framework SFC blocks). Only a proxy for a relative path names a file.
+const NUL = '\0';
+const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
+
+// Webpack spells a require-context ` lazy ` or ` sync `; rspack delimits the same markers with
+// pipes. A context name is a glob expression rather than a file path, so its `?` starts no query.
+const CONTEXT_MARKER = / lazy | sync |\|lazy\||\|sync\|/;
+
 /**
  * Whether a file path names a synthetic module whose contents do not exist as a file on disk.
  *
@@ -116,7 +125,14 @@ export function isNodeModulesPath(filePath: string): boolean {
 export function isSyntheticFile(path: FilePath): boolean {
   // Note: The file path of the data: "files" start with `data:image/svg+xml` or similar rather than
   // a directory path.
-  return path.includes('virtual:') || path.startsWith('data:');
+  if (path.includes('virtual:') || path.startsWith('data:')) {
+    return true;
+  }
+
+  // A NUL proxy for a relative path folds onto that file (see {@link fileStoodForById}); any other
+  // leading NUL — a bare runtime helper like `\0commonjsHelpers.js` or an opaque rooted id like
+  // `\0/@data-uri/...` — names nothing on disk. Asked on the raw id: stripping would remove the NUL.
+  return path.startsWith(NUL) && !FOLDABLE_NUL_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
 /**
@@ -134,8 +150,9 @@ export function stripConcatenatedModuleSuffix(statsPath: FilePath): FilePath {
  * Converts a stats module path into the canonical manifest key: a POSIX path relative to the
  * Storybook project root. Relative stats paths are first resolved from `statsRoot`, because a
  * builder may name them from the repository root even though manifest keys anchor at the project.
- * Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs) have no on-disk
- * location and are returned unchanged.
+ * Proxy and query ids are folded onto the file they stand for first; see {@link fileStoodForById}.
+ * Synthetic modules (e.g. Vite's `virtual:` entries, inline `data:` URLs and bare Rollup proxies)
+ * have no on-disk location and are returned unchanged.
  *
  * @param statsPath The module name from the stats file (relative like `./src/x` or absolute).
  * @param projectRoot The absolute Storybook project root to anchor against.
@@ -168,8 +185,55 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
 }
 
 /**
+ * The file a stats id stands for. Rollup reads one real file under several ids: the plain path, a
+ * NUL-prefixed proxy for CommonJS interop and framework blocks (`\0./x.js?commonjs-module`), and
+ * the plain path with a builder query (`./src/Foo.vue?vue&type=script`). Folding every spelling
+ * onto the one file is what lets V2 key a module and its edges the way V1 reads the id.
+ *
+ * The id is classified raw, before any stripping: a leading NUL is only visible there, since
+ * {@link stripNullBytes} removes every NUL byte. Synthetic ids have no file behind them and come
+ * back unchanged; see {@link isSyntheticFile}.
+ *
+ * @param statsPath The module name from the stats file.
+ *
+ * @returns The path of the file the id stands for.
+ */
+function fileStoodForById(statsPath: FilePath): FilePath {
+  if (isSyntheticFile(statsPath)) {
+    return statsPath;
+  }
+
+  // A NUL proxy for a relative path stands for that path, without the NUL or the query.
+  const unproxied = statsPath.startsWith(NUL) ? statsPath.slice(NUL.length) : statsPath;
+  return stripQuery(unproxied);
+}
+
+/**
+ * Strips a builder's query from a stats id, leaving the file named. Vite suffixes the ids of the
+ * module blocks and CommonJS interop files it extracts; the query is the builder's, not the file's.
+ * A `?` survives when the name is not a plain file query: a loader chain reads up to `!`, so
+ * stripping would hash the loader instead of the loaded file, and a require-context name is a glob
+ * expression rather than a file.
+ *
+ * @param statsPath The module name from the stats file.
+ *
+ * @returns The file name without the query, or the name unchanged when its `?` must survive.
+ */
+function stripQuery(statsPath: FilePath): FilePath {
+  const queryStart = statsPath.indexOf('?');
+  if (queryStart === -1) {
+    return statsPath;
+  }
+  if (statsPath.includes('!') || CONTEXT_MARKER.test(statsPath)) {
+    return statsPath;
+  }
+  return statsPath.slice(0, queryStart);
+}
+
+/**
  * Resolves a stats module path to an absolute on-disk path for hashing, anchoring relative paths at
- * the Storybook project root. Escape markers are removed first; see {@link stripNullBytes}.
+ * the Storybook project root. The id is folded onto the file it stands for first; see
+ * {@link fileStoodForById}. Escape markers are removed after that; see {@link stripNullBytes}.
  *
  * @param statsPath The module name from the stats file.
  * @param statsRoot The absolute directory relative stats paths are named from.
@@ -177,7 +241,8 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * @returns The absolute path to the file on disk.
  */
 export function resolveStatsPath(statsPath: FilePath, statsRoot: AbsolutePath): AbsolutePath {
-  const stripped = stripNullBytes(stripConcatenatedModuleSuffix(statsPath));
+  const stoodFor = fileStoodForById(statsPath);
+  const stripped = stripNullBytes(stripConcatenatedModuleSuffix(stoodFor));
   return path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
 }
 

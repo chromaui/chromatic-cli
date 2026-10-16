@@ -119,6 +119,9 @@ export async function readStatsGraph(
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
     for (const importer of importers) {
+      // Folding can make the importer and the imported the same file (Foo.vue importing its own
+      // script block): a self-edge carries no information and would survive serialization.
+      if (importer === sourceFilePath) continue;
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
   }
@@ -227,6 +230,9 @@ function linkConcatenatedFiles(
 ) {
   const rootFile = ensureFile(files, rootPath, hashes);
   for (const dependency of concatenated) {
+    // A member may fold onto the root (the root names the block, a member its NUL proxy): skip the
+    // self-edge the same way the importer linking does.
+    if (dependency === rootPath) continue;
     rootFile.dependencies.add(dependency);
     ensureFile(files, dependency, hashes);
   }
