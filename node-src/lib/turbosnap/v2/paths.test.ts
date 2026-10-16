@@ -210,16 +210,47 @@ describe('canonicalImporters', () => {
 });
 
 describe('canonicalReasonImporter', () => {
-  it('resolves a reason blamed on a concatenation group to the member it names', () => {
+  // The fallback ladder: identifier → resolvedModule → moduleName, with an entry reason returning
+  // undefined. The resolvedModule rung with no identifier rides through the canonicalImporters
+  // cases above, which also pin the normalization this returns raw.
+  const group = './src/Button.stories.tsx + 2 modules';
+  const buttonId =
+    'builtin:swc-loader??ruleSet[1].rules[6].use[0]!/repo/packages/ui/src/Button.tsx';
+  const withIdentifiers = {
+    ...roots,
+    moduleSources: new Map([[buttonId, '/repo/packages/ui/src/Button.tsx']]),
+  };
+
+  it('attributes the import to the member the identifier names when resolvedModule spells the group (rspack)', () => {
+    expect(
+      canonicalReasonImporter(
+        { moduleName: group, resolvedModule: group, resolvedModuleIdentifier: buttonId },
+        withIdentifiers
+      )
+    ).toBe('./src/Button.tsx');
+  });
+
+  it('falls back to resolvedModule when the identifier names no indexed source (require-context)', () => {
+    const context = './src/lib/ lazy namespace object';
     expect(
       canonicalReasonImporter(
         {
-          moduleName: '/repo/packages/ui/.storybook/preview.js + 2 modules',
-          resolvedModule: '/repo/packages/ui/src/hello.js',
+          moduleName: context,
+          resolvedModule: context,
+          resolvedModuleIdentifier: `/repo/packages/ui/${context}`,
         },
+        withIdentifiers
+      )
+    ).toBe(context);
+  });
+
+  it('falls back to moduleName when resolvedModule is null', () => {
+    expect(
+      canonicalReasonImporter(
+        { moduleName: '/repo/packages/ui/src/Button.tsx', resolvedModule: null },
         naming
       )
-    ).toBe('./src/hello.js');
+    ).toBe('./src/Button.tsx');
   });
 
   it('returns undefined for an entry reason, which names no importer', () => {
@@ -270,44 +301,20 @@ describe('indexModuleSources', () => {
           identifier: String.raw`/repo/packages/ui/src|lazy|/^\.\/.*$/`,
           name: String.raw`./src|lazy|/^\.\/.*$/`,
         }),
-        module({ name: './src/Button.tsx', nameForCondition: '/repo/packages/ui/src/Button.tsx' }),
       ],
     });
 
     expect(sources.size).toBe(0);
   });
-});
 
-describe('canonicalReasonImporter with module identifiers', () => {
-  const group = './src/Button.stories.tsx + 2 modules';
-  const buttonId =
-    'builtin:swc-loader??ruleSet[1].rules[6].use[0]!/repo/packages/ui/src/Button.tsx';
-  const naming = {
-    ...roots,
-    moduleSources: new Map([[buttonId, '/repo/packages/ui/src/Button.tsx']]),
-  };
+  it('leaves out records with no identifier, whose reasons cannot resolve through the index', () => {
+    const sources = indexModuleSources({
+      modules: [
+        module({ name: './src/Button.tsx', nameForCondition: '/repo/packages/ui/src/Button.tsx' }),
+      ],
+    });
 
-  it('attributes the import to the member the identifier names when resolvedModule spells the group (rspack)', () => {
-    expect(
-      canonicalReasonImporter(
-        { moduleName: group, resolvedModule: group, resolvedModuleIdentifier: buttonId },
-        naming
-      )
-    ).toBe('./src/Button.tsx');
-  });
-
-  it('falls back to resolvedModule when the identifier names no indexed source (require-context)', () => {
-    const context = './src/lib/ lazy namespace object';
-    expect(
-      canonicalReasonImporter(
-        {
-          moduleName: context,
-          resolvedModule: context,
-          resolvedModuleIdentifier: `/repo/packages/ui/${context}`,
-        },
-        naming
-      )
-    ).toBe(context);
+    expect(sources.size).toBe(0);
   });
 });
 

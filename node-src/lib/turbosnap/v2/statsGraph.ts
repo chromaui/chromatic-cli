@@ -103,8 +103,7 @@ export async function readStatsGraph(
   skipRule: SkipRule
 ): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
-  const roots = { projectRoot, statsRoot };
-  const naming: StatsNaming = { ...roots, moduleSources: indexModuleSources(stats) };
+  const naming: StatsNaming = { projectRoot, statsRoot, moduleSources: indexModuleSources(stats) };
   const onDiskFiles = locateOnDiskFiles(stats, naming, projectFiles);
   const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, skipRule, projectFiles);
 
@@ -117,7 +116,7 @@ export async function readStatsGraph(
   // Every module's root takes the import edges its reasons spell. Modules with no usable name
   // (e.g. externals) are skipped.
   for (const module of stats.modules) {
-    const root = rootFilePath(module, roots);
+    const root = rootFilePath(module, naming);
     if (!root) continue;
     ensureFile(files, root, hashes);
     for (const importer of canonicalImporters(module, naming)) {
@@ -136,7 +135,7 @@ export async function readStatsGraph(
     files,
     hashes,
     storyFiles,
-    globalRoots: detectGlobalRoots(files, roots),
+    globalRoots: detectGlobalRoots(files, naming),
     skippedFiles,
     untracedSubtrees,
   };
@@ -217,27 +216,30 @@ function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoot
 }
 
 /**
- * The canonical root paths of the stats modules that carry reasons of their own. A concatenated
- * member listed here gets its import edges from those reasons; see {@link concatenationMembers}.
+ * The canonical root paths of the stats modules pass 1 drew import edges for: exactly the modules
+ * whose reasons produce at least one edge. Membership is the complement by construction, so every
+ * concatenated member is reached by an importer edge from pass 1 or by its root's link from
+ * {@link concatenationMembers} — never by both, and never by neither.
  *
  * @param stats The stats file to parse.
- * @param roots The roots to anchor against; see {@link StatsRoots}.
+ * @param naming The roots and module sources to canonicalize against. See {@link StatsNaming}.
  *
- * @returns The canonical paths of the modules with reasons.
+ * @returns The canonical paths of the modules with import edges.
  */
-function filesWithReasons(stats: Stats, roots: StatsRoots): Set<FilePath> {
-  const reasoned = new Set<FilePath>();
+function filesWithImporters(stats: Stats, naming: StatsNaming): Set<FilePath> {
+  const withImporters = new Set<FilePath>();
   for (const module of stats.modules) {
-    const filePath = module.reasons?.length ? rootFilePath(module, roots) : undefined;
-    if (filePath) reasoned.add(filePath);
+    const filePath = rootFilePath(module, naming);
+    if (filePath && canonicalImporters(module, naming).length > 0) withImporters.add(filePath);
   }
-  return reasoned;
+  return withImporters;
 }
 
 /**
  * The files each concatenation root bundles that it must link to directly: its `module.modules`, plus
- * any member a reason resolves to while blaming the group, minus members whose own reasons already
- * say who imports them (linking those would let the root reach them past an untraced member).
+ * any member a reason resolves to while blaming the group, minus the members pass 1 already reaches
+ * by importer edges — linking those would let the root reach them past an untraced member. The
+ * complement is computed by {@link filesWithImporters}, so the two passes cannot drift.
  *
  * @param stats The stats file to parse.
  * @param naming The roots and module sources to canonicalize against. See {@link StatsNaming}.
@@ -245,13 +247,13 @@ function filesWithReasons(stats: Stats, roots: StatsRoots): Set<FilePath> {
  * @returns The bundled files of each root that has any, keyed by canonical root path.
  */
 function concatenationMembers(stats: Stats, naming: StatsNaming): Map<FilePath, Set<FilePath>> {
-  // A member whose own record carries reasons takes its edges from them, which name the member
-  // that imports it; only a member the stats give no reasons for falls back to the root's link.
-  const reasoned = filesWithReasons(stats, naming);
+  // A member pass 1 reached by importer edges keeps them; only a member it left unreachable falls
+  // back to the root's link.
+  const withImporters = filesWithImporters(stats, naming);
 
   const members = new Map<FilePath, Set<FilePath>>();
   const add = (root: FilePath, member: FilePath) => {
-    if (member === root || reasoned.has(member)) return;
+    if (member === root || withImporters.has(member)) return;
     const bundled = members.get(root) ?? new Set<FilePath>();
     bundled.add(member);
     members.set(root, bundled);
@@ -269,10 +271,10 @@ function concatenationMembers(stats: Stats, naming: StatsNaming): Map<FilePath, 
   // that: normalizeStatsPath strips the suffix, so this is the group root's canonical path.
   for (const module of stats.modules) {
     for (const reason of module.reasons ?? []) {
-      const importer = canonicalReasonImporter(reason, naming);
-      if (!importer) continue;
       if (!reason.moduleName || !isConcatenatedModuleName(reason.moduleName)) continue;
-      add(normalizeStatsPath(reason.moduleName, naming.projectRoot, naming.statsRoot), importer);
+      const member = canonicalReasonImporter(reason, naming);
+      if (member)
+        add(normalizeStatsPath(reason.moduleName, naming.projectRoot, naming.statsRoot), member);
     }
   }
 

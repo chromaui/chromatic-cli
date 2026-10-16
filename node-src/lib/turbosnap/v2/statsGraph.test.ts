@@ -247,6 +247,25 @@ describe('readStatsGraph reasons carrying a resolvedModule', () => {
     expect(dependenciesOf(graph, configEntry)).not.toContain(helloKey);
     expect(dependenciesOf(graph, previewKey)).toEqual([helloKey]);
   });
+
+  it('links a member whose only record carries entry reasons — pass 1 draws no edge for it', async () => {
+    // Nothing forbids a record whose reasons are all entry reasons. The membership gate must ask
+    // pass 1's own question — did the reasons produce an edge? — or such a member counts as
+    // reasoned while canonicalImporters draws no edge for it, leaving it unreachable.
+    const entryReasoned: Stats = {
+      modules: [
+        {
+          id: configEntry,
+          name: `${configEntry} + 1 modules`,
+          modules: [{ name: configEntry }, { name: hello }],
+        },
+        { id: null, name: hello, reasons: [{ moduleName: null }] },
+      ],
+    };
+    const graph = await readStatsGraph(entryReasoned, input, skipNothing);
+
+    expect(dependenciesOf(graph, configEntry)).toContain(helloKey);
+  });
 });
 
 describe('readStatsGraph concatenation membership evidence', () => {
