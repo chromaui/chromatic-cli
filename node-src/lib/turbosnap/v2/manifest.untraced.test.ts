@@ -11,8 +11,7 @@ import { readStatsGraph } from './statsGraph';
 // global decorator. Both rely on an untraced file being a wall, as it is in v1, rather than a file
 // whose own bytes merely go unhashed. They run end-to-end through buildManifest because the claim
 // spans the graph, the globals fallback and the config sweep together.
-// The concatenation suites at the bottom pin the same walls when webpack/rspack merge the
-// untraced file into a group: resolved-module attribution keeps the severed edges severed.
+// The concatenation suites below pin the same walls under webpack/rspack module groups.
 
 const viaBarrel = '/repo/packages/ui/src/Modal.stories.tsx';
 const direct = '/repo/packages/ui/src/Button.stories.tsx';
@@ -191,16 +190,14 @@ describe('buildManifest with an untraced global decorator', () => {
   });
 });
 
-// Webpack/rspack concatenate modules and blame every member import on the merged group, spelled
-// ` + N modules` in the reason's `moduleName`. The graph now attributes the edge to the reason's
-// `resolvedModule` — the member that really contains the import — so an untraced file inside the
-// group walls off its own imports. These suites pin the three shapes, plus the no-flag controls.
+// Webpack/rspack blame every member import of a concatenation group on the group root; the graph
+// attributes the edge to the reason's `resolvedModule` — the member that contains the import — so
+// an untraced file inside the group walls off its own imports (three shapes, no-flag controls).
 
 const previewConfigDirectory = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.js'] };
 
 function untracedFixture(untraced: string[], directories?: InMemoryDisk['directories']) {
-  // Only pass `directories` through when given: an explicit undefined key would override the
-  // fixture's seeded config dir, which buildManifest refuses to work without.
+  // An explicit `undefined` key would clobber the seeded config dir; pass directories only when given.
   const { disk, input } = createFixture(
     directories ? { isAbsent: syntheticAbsent, directories } : { isAbsent: syntheticAbsent }
   );
@@ -248,8 +245,7 @@ describe('buildManifest with an untraced preview concatenated into the config en
     const skipRule = await buildSkipRule(input);
     const graph = await readStatsGraph(stats, input, skipRule);
 
-    // hello.js's only importer is the preview the user untraced: the group root holds no edge to
-    // it, and everything the severed edges led to is reported as untraced inheritance.
+    // hello.js's only importer is the untraced preview: no edge from the group root survives.
     expect([...(graph.files.get(configEntry)?.dependencies ?? [])]).not.toContain('./src/hello.js');
     expect([...graph.untracedSubtrees].sort()).toEqual([
       './.storybook/preview.js',
@@ -336,8 +332,7 @@ describe('buildManifest with an untraced preview concatenated into the config en
 });
 
 describe('buildManifest with an untraced component concatenated into its story', () => {
-  // A story concatenated with its component: the component's imports blame the merged group, and
-  // only `resolvedModule` names the component. Untracing it must wall off its imports.
+  // Only `resolvedModule` names the component; untracing it must wall off what it imports.
   const fooStory = '/repo/packages/ui/src/Foo.stories.tsx';
   const foo = '/repo/packages/ui/src/Foo.tsx';
   const dep = '/repo/packages/ui/src/dep.ts';

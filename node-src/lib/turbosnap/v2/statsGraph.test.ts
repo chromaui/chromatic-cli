@@ -205,9 +205,8 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
 });
 
 describe('readStatsGraph reasons carrying a resolvedModule', () => {
-  // Webpack/rspack blame every member import on the merged group: `moduleName` spells the group
-  // (e.g. `./x + 2 modules`) while `resolvedModule` names the member that contains the import. The
-  // edge must land on that member, so an untraced member walls off its own imports.
+  // Webpack/rspack blame every member import on the merged group; `resolvedModule` names the
+  // member that contains the import, so the edge lands there and an untraced member walls it off.
   const configEntry = './storybook-config-entry.js';
   const preview = '/repo/packages/ui/.storybook/preview.js';
   const hello = '/repo/packages/ui/src/hello.js';
