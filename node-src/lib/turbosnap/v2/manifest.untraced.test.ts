@@ -190,17 +190,24 @@ describe('buildManifest with an untraced global decorator', () => {
   });
 });
 
-// Webpack/rspack blame every member import of a concatenation group on the group root; the graph
-// attributes the edge to the reason's `resolvedModule` — the member that contains the import — so
-// an untraced file inside the group walls off its own imports (three shapes, no-flag controls).
+// Webpack/rspack blame member imports on the group root; the graph attributes the edge to the
+// reason's `resolvedModule`, so an untraced file inside the group walls off its own imports.
 
 const previewConfigDirectory = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.js'] };
+const previewUntraced = ['packages/ui/.storybook/preview.js'];
+
+// A stats module record; `id` is noise in these suites.
+const statsModule = (name: string, rest: Partial<Stats['modules'][number]> = {}) => ({
+  id: null,
+  name,
+  ...rest,
+});
 
 function untracedFixture(untraced: string[], directories?: InMemoryDisk['directories']) {
-  // An explicit `undefined` key would clobber the seeded config dir; pass directories only when given.
-  const { disk, input } = createFixture(
-    directories ? { isAbsent: syntheticAbsent, directories } : { isAbsent: syntheticAbsent }
-  );
+  const { disk, input } = createFixture({
+    isAbsent: syntheticAbsent,
+    ...(directories && { directories }),
+  });
   return { disk, input: { ...input, untraced } };
 }
 
@@ -210,55 +217,37 @@ describe('buildManifest with an untraced preview concatenated into the config en
   const hello = '/repo/packages/ui/src/hello.js';
   const hello2 = '/repo/packages/ui/src/hello2.js';
   const configEntry = './storybook-config-entry.js';
+  const previewSubtreeKeys = ['./.storybook/preview.js', './src/hello.js', './src/hello2.js'];
+  const groupReason = { moduleName: `${configEntry} + 2 modules`, resolvedModule: preview };
 
   const stats: Stats = {
     modules: [
       { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
-      {
+      statsModule(`${configEntry} + 2 modules`, {
         id: configEntry,
-        name: `${configEntry} + 2 modules`,
         modules: [{ name: configEntry }, { name: preview }, { name: './storybook-stories.js' }],
         reasons: [{ moduleName: null, resolvedModule: null }],
-      },
-      {
-        id: null,
-        name: preview,
-        reasons: [{ moduleName: configEntry, resolvedModule: configEntry }],
-      },
-      {
-        id: null,
-        name: hello,
-        reasons: [
-          { moduleName: `${configEntry} + 2 modules`, resolvedModule: preview },
-          { moduleName: preview, resolvedModule: preview },
-        ],
-      },
-      { id: null, name: hello2, reasons: [{ moduleName: hello, resolvedModule: hello }] },
+      }),
+      statsModule(preview, { reasons: [{ moduleName: configEntry, resolvedModule: configEntry }] }),
+      statsModule(hello, {
+        reasons: [groupReason, { moduleName: preview, resolvedModule: preview }],
+      }),
+      statsModule(hello2, { reasons: [{ moduleName: hello, resolvedModule: hello }] }),
     ],
   };
 
   it("records no edge from the config entry to the preview's imports, and walls them off", async () => {
-    const { input } = untracedFixture(
-      ['packages/ui/.storybook/preview.js'],
-      previewConfigDirectory
-    );
+    const { input } = untracedFixture(previewUntraced, previewConfigDirectory);
     const skipRule = await buildSkipRule(input);
     const graph = await readStatsGraph(stats, input, skipRule);
 
     // hello.js's only importer is the untraced preview: no edge from the group root survives.
     expect([...(graph.files.get(configEntry)?.dependencies ?? [])]).not.toContain('./src/hello.js');
-    expect([...graph.untracedSubtrees].sort()).toEqual([
-      './.storybook/preview.js',
-      './src/hello.js',
-      './src/hello2.js',
-    ]);
+    expect([...graph.untracedSubtrees].sort()).toEqual(previewSubtreeKeys);
   });
 
   it('moves no hash when a file behind the untraced preview import chain changes', async () => {
-    const { disk, input } = untracedFixture(
-      ['packages/ui/.storybook/preview.js'],
-      previewConfigDirectory
-    );
+    const { disk, input } = untracedFixture(previewUntraced, previewConfigDirectory);
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G1' };
     const before = await buildManifest(stats, input);
 
@@ -269,19 +258,18 @@ describe('buildManifest with an untraced preview concatenated into the config en
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H2', [hello2]: 'G2' };
     const afterHello2 = await buildManifest(stats, input);
 
-    expect(afterHello.storybookHash).toBe(before.storybookHash);
-    expect(afterHello.storybookConfigHashes).toEqual(before.storybookConfigHashes);
-    expect(afterHello.storyFileHashes).toEqual(before.storyFileHashes);
-    expect(afterHello2.storybookHash).toBe(before.storybookHash);
-    expect(afterHello2.storybookConfigHashes).toEqual(before.storybookConfigHashes);
-    expect(afterHello2.storyFileHashes).toEqual(before.storyFileHashes);
-    expect([...afterHello.skippedFiles]).toEqual([['./.storybook/preview.js', 'untraced']]);
-    expect([...afterHello.attribution.storybookGlobals]).toEqual([]);
-    expect([...afterHello.attribution.previewSubtree]).toEqual([]);
+    for (const after of [afterHello, afterHello2]) {
+      expect(after.storybookHash).toBe(before.storybookHash);
+      expect(after.storybookConfigHashes).toEqual(before.storybookConfigHashes);
+      expect(after.storyFileHashes).toEqual(before.storyFileHashes);
+      expect([...after.skippedFiles]).toEqual([['./.storybook/preview.js', 'untraced']]);
+      expect([...after.attribution.storybookGlobals]).toEqual([]);
+      expect([...after.attribution.previewSubtree]).toEqual([]);
+    }
   });
 
   it('still traces the preview subtree when nothing is untraced (control)', async () => {
-    const { disk, input } = untracedFixture([]);
+    const { disk, input } = untracedFixture([], previewConfigDirectory);
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G' };
     const before = await buildManifest(stats, input);
 
@@ -314,10 +302,7 @@ describe('buildManifest with an untraced preview concatenated into the config en
         { id: 6, name: story2, reasons: [{ moduleName: './storybook-stories.js' }] },
       ],
     };
-    const { disk, input } = untracedFixture(
-      ['packages/ui/.storybook/preview.js'],
-      previewConfigDirectory
-    );
+    const { disk, input } = untracedFixture(previewUntraced, previewConfigDirectory);
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G', [story2]: 'I' };
     const before = await buildManifest(withDirectImporter, input);
 
@@ -339,17 +324,14 @@ describe('buildManifest with an untraced component concatenated into its story',
 
   const stats: Stats = {
     modules: [
-      {
+      statsModule(fooStory, {
         id: 1,
-        name: `${fooStory} + 1 modules`,
         modules: [{ name: fooStory }, { name: foo }],
         reasons: [{ moduleName: './storybook-stories.js' }],
-      },
-      {
-        id: null,
-        name: dep,
+      }),
+      statsModule(dep, {
         reasons: [{ moduleName: `${fooStory} + 1 modules`, resolvedModule: foo }],
-      },
+      }),
     ],
   };
 
@@ -382,9 +364,9 @@ describe('buildManifest with an untraced component concatenated into its story',
 });
 
 describe('buildManifest with an untraced concatenation root', () => {
-  // The untraced file is itself the group root (`./src/wall.js + 1 modules`). Root-attributed edges
-  // already wall these off today; the resolved-module rule must keep it that way.
+  // The untraced file is itself the group root; root-attributed edges already wall these off.
   const wallStory = '/repo/packages/ui/src/Wall.stories.tsx';
+  const wallSubtreeKeys = ['./src/behind.js', './src/deep.js', './src/wall.js'];
   const wall = '/repo/packages/ui/src/wall.js';
   const behind = '/repo/packages/ui/src/behind.js';
   const deep = '/repo/packages/ui/src/deep.js';
@@ -392,17 +374,14 @@ describe('buildManifest with an untraced concatenation root', () => {
   const stats: Stats = {
     modules: [
       { id: 1, name: wallStory, reasons: [{ moduleName: './storybook-stories.js' }] },
-      {
+      statsModule(`${wall} + 1 modules`, {
         id: 2,
-        name: `${wall} + 1 modules`,
         modules: [{ name: wall }, { name: behind }],
         reasons: [{ moduleName: wallStory, resolvedModule: wallStory }],
-      },
-      {
-        id: null,
-        name: deep,
+      }),
+      statsModule(deep, {
         reasons: [{ moduleName: `${wall} + 1 modules`, resolvedModule: behind }],
-      },
+      }),
     ],
   };
 
@@ -410,11 +389,7 @@ describe('buildManifest with an untraced concatenation root', () => {
     const { disk, input } = untracedFixture(['packages/ui/src/wall.js']);
     const skipRule = await buildSkipRule(input);
     const graph = await readStatsGraph(stats, input, skipRule);
-    expect([...graph.untracedSubtrees].sort()).toEqual([
-      './src/behind.js',
-      './src/deep.js',
-      './src/wall.js',
-    ]);
+    expect([...graph.untracedSubtrees].sort()).toEqual(wallSubtreeKeys);
 
     disk.fileHashes = { [wallStory]: 'S', [wall]: 'W', [behind]: 'B1', [deep]: 'D' };
     const before = await buildManifest(stats, input);

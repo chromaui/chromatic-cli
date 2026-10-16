@@ -5,7 +5,7 @@ import { Stats } from '../../../types';
 import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { SKIPPED_HASH } from './graph';
 import { SkipRule } from './skippedFiles';
-import { countNodeModulesFiles, readStatsGraph } from './statsGraph';
+import { countNodeModulesFiles, readStatsGraph, StatsGraph } from './statsGraph';
 
 // These suites are about builder spellings: what webpack, rspack and Vite each call the same file,
 // and what the graph reader makes of it. They assert on the graph, not on a hash — that the right
@@ -204,47 +204,53 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
   });
 });
 
+// A graph node's dependencies, spread: importers may name a file the stats never key.
+const dependenciesOf = ({ files }: StatsGraph, filePath: string) => [
+  ...(files.get(filePath)?.dependencies ?? []),
+];
+
 describe('readStatsGraph reasons carrying a resolvedModule', () => {
-  // Webpack/rspack blame every member import on the merged group; `resolvedModule` names the
-  // member that contains the import, so the edge lands there and an untraced member walls it off.
+  // `resolvedModule` names the member an import really sits in; the edge lands there, walls intact.
   const configEntry = './storybook-config-entry.js';
   const preview = '/repo/packages/ui/.storybook/preview.js';
+  const previewKey = './.storybook/preview.js';
   const hello = '/repo/packages/ui/src/hello.js';
+  const helloKey = './src/hello.js';
+  const reasonFromGroup = { moduleName: `${configEntry} + 2 modules`, resolvedModule: preview };
+  const directReason = { moduleName: preview, resolvedModule: preview };
+  const { input } = createFixture({ fileHashes: { [preview]: 'P', [hello]: 'H' } });
+  const read = (reasons: Stats['modules'][number]['reasons']) =>
+    readStatsGraph({ modules: [{ id: 1, name: hello, reasons }] }, input, skipNothing);
 
   it('records the edge from the resolved member, none from the root, and dedupes duplicates', async () => {
-    const singleReason: Stats = {
+    const graph = await read([reasonFromGroup]);
+    const deduped = await read([reasonFromGroup, directReason]);
+
+    expect(dependenciesOf(graph, previewKey)).toEqual([helloKey]);
+    expect(dependenciesOf(graph, configEntry)).toEqual([previewKey]);
+    expect(dependenciesOf(deduped, previewKey)).toEqual([helloKey]);
+  });
+
+  it('keeps a member the stats list nowhere reachable from its root, without capturing hello', async () => {
+    // The rsbuild 3.3.x shape: the group's `modules` holds a require-context glob and the member
+    // has no record of its own, so only the reason itself knows preview belongs to the group.
+    const rsbuildGroup: Stats = {
       modules: [
+        { id: configEntry, name: `${configEntry} + 2 modules`, modules: [{ name: './ctx' }] },
         {
-          id: 1,
-          name: hello,
-          reasons: [{ moduleName: `${configEntry} + 2 modules`, resolvedModule: preview }],
+          id: null,
+          name: preview,
+          reasons: [{ moduleName: configEntry, resolvedModule: configEntry }],
         },
+        { id: null, name: hello, reasons: [reasonFromGroup] },
       ],
     };
-    const duplicateReasons: Stats = {
-      modules: [
-        {
-          id: 1,
-          name: hello,
-          reasons: [
-            { moduleName: `${configEntry} + 2 modules`, resolvedModule: preview },
-            { moduleName: preview, resolvedModule: preview },
-          ],
-        },
-      ],
-    };
-    const { input } = createFixture({ fileHashes: { [preview]: 'P', [hello]: 'H' } });
+    const graph = await readStatsGraph(rsbuildGroup, input, skipNothing);
 
-    const graph = await readStatsGraph(singleReason, input, skipNothing);
-    const deduped = await readStatsGraph(duplicateReasons, input, skipNothing);
-
-    expect([...(graph.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
-      './src/hello.js',
-    ]);
-    expect(graph.files.has(configEntry)).toBe(false);
-    expect([...(deduped.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
-      './src/hello.js',
-    ]);
+    // The defensive edge makes the root → member link; nothing captures hello through the root.
+    expect(dependenciesOf(graph, configEntry)).toContain(previewKey);
+    expect(dependenciesOf(graph, configEntry)).not.toContain(helloKey);
+    expect(dependenciesOf(graph, previewKey)).toEqual([helloKey]);
   });
 });
 
