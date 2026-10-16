@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { AbsolutePath, Module } from '../../../types';
+import { AbsolutePath, Module, Reason } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { matchesFile } from '../../utilities';
 import { FilePath } from './graph';
@@ -59,9 +59,23 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
 }
 
 /**
- * The canonical paths that import a stats module: its `reasons` mapped to `moduleName`, entry reasons
- * (null `moduleName`) dropped, each normalized. The single place the "canonical importers" rule lives,
- * so `readStatsGraph` and story detection cannot drift apart.
+ * The module a stats reason attributes its import to: the resolved module when present — webpack/
+ * rspack concatenation reports the merged group as `moduleName`, and the resolved module is the
+ * member that contains the import — else `moduleName` (Vite does not emit the field).
+ *
+ * @param reason The stats reason.
+ *
+ * @returns The name of the module the import belongs to, or null for an entry reason.
+ */
+export function reasonImporter(reason: Reason): string | null {
+  return reason.resolvedModule ?? reason.moduleName;
+}
+
+/**
+ * The canonical paths that import a stats module: its `reasons` mapped to {@link reasonImporter} —
+ * the resolved module when present, the `moduleName` group root otherwise — entry reasons (null
+ * importer) dropped, each normalized. The single place the "canonical importers" rule lives, so
+ * `readStatsGraph` and story detection cannot drift apart.
  *
  * @param module The stats module.
  * @param roots The roots to anchor against. See {@link StatsRoots}.
@@ -70,7 +84,7 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
  */
 export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
   return (module.reasons ?? [])
-    .map((reason) => reason.moduleName)
+    .map((reason) => reasonImporter(reason))
     .filter((name): name is FilePath => typeof name === 'string')
     .map((name) => normalizeStatsPath(name, roots.projectRoot, roots.statsRoot));
 }

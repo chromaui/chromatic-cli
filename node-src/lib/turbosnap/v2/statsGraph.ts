@@ -14,6 +14,7 @@ import {
   isSyntheticFile,
   moduleFileNames,
   normalizeStatsPath,
+  reasonImporter,
   resolveStatsPath,
   StatsRoots,
 } from './paths';
@@ -295,14 +296,15 @@ function locateOnDiskFiles(
   projectFiles: ProjectFiles
 ): Map<FilePath, AbsolutePath> {
   // Collect every referenced module path once, expanding concatenated modules into their real
-  // files and skipping importers with a null moduleName.
+  // files and skipping reasons with no importer name (entry reasons).
   const rawPaths = new Set<FilePath>();
   for (const module of stats.modules) {
     for (const name of moduleFileNames(module)) {
       rawPaths.add(name);
     }
     for (const reason of module.reasons ?? []) {
-      if (reason.moduleName) rawPaths.add(reason.moduleName);
+      const importer = reasonImporter(reason);
+      if (importer) rawPaths.add(importer);
     }
   }
 
