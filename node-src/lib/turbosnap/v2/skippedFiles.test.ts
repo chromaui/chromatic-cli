@@ -12,7 +12,6 @@ const preview = `${configDirectory}/preview.ts`;
 
 function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
   return {
-    projectRoot,
     gitRoot: '/repo',
     untraced,
     projectFiles: inMemoryProjectFiles(disk),
@@ -52,29 +51,31 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[preview, 'gitignored']]);
   });
 
-  it("never skips another package's file under the project root, since a workspace package's build output is a dependency", async () => {
-    const built = `${projectRoot}/packages/icons/dist/index.js`;
-
-    const result = await skipped(
-      [built, generated],
-      context({
-        directories: { [`${projectRoot}/packages/icons`]: ['package.json'] },
-        isIgnored: () => true,
-      })
-    );
-
-    expect(result).toEqual([[generated, 'gitignored']]);
-  });
-
-  it('never skips a file outside the project root, since it cannot be one of the project’s own', async () => {
+  it("skips a sibling package's gitignored file, since the rule is git's view of the whole repository", async () => {
     const built = '/repo/packages/icons/dist/index.js';
 
     const result = await skipped([built, generated], context({ isIgnored: () => true }));
 
-    expect(result).toEqual([[generated, 'gitignored']]);
+    expect(result).toEqual([
+      [built, 'gitignored'],
+      [generated, 'gitignored'],
+    ]);
   });
 
-  it('judges every rule by where a file really lives, since a bundler names files by real path while the project is named as configured', async () => {
+  it('skips a sibling file reached through a node_modules symlink spelling, since the rule judges the real path git names', async () => {
+    const real = '/repo/packages/theme/src/generated.ts';
+    const linked = '/repo/packages/ui/node_modules/theme/src/generated.ts';
+    const projectFiles = {
+      ...inMemoryProjectFiles({ isIgnored: (candidate) => candidate === real }),
+      realPath: (absolutePath: string) => absolutePath.replace(linked, real),
+    };
+
+    const result = await skipped([linked, installed], { ...context({}), projectFiles });
+
+    expect(result).toEqual([[linked, 'gitignored']]);
+  });
+
+  it('judges every rule by where a file really lives, since a bundler may name a file through a symlink', async () => {
     const linkedRoot = '/repo/apps/web';
     const projectFiles = {
       ...inMemoryProjectFiles({
@@ -83,11 +84,9 @@ describe('buildSkipRule', () => {
       realPath: (absolutePath: string) => absolutePath.replace(linkedRoot, projectRoot),
     };
     const linkedGenerated = generated.replace(projectRoot, linkedRoot);
-    const linkedPreview = preview.replace(projectRoot, linkedRoot);
 
-    const result = await skipped([linkedGenerated, linkedPreview, source], {
+    const result = await skipped([linkedGenerated, source], {
       ...context({}),
-      projectRoot: linkedRoot,
       projectFiles,
     });
 
