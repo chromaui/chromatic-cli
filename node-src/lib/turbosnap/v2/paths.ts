@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { AbsolutePath, Module } from '../../../types';
+import { AbsolutePath, Module, Reason, Stats } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { matchesFile } from '../../utilities';
 import { FilePath } from './graph';
@@ -59,20 +59,95 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
 }
 
 /**
- * The canonical paths that import a stats module: its `reasons` mapped to `moduleName`, entry reasons
- * (null `moduleName`) dropped, each normalized. The single place the "canonical importers" rule lives,
+ * The source file of every webpack/rspack module record, top-level and concatenated inner alike,
+ * keyed by its exact `identifier`. Built once per stats file so {@link reasonImporter} can name the
+ * member a reason's `resolvedModuleIdentifier` points at.
+ */
+export type ModuleSources = ReadonlyMap<string, FilePath>;
+
+/**
+ * Indexes the source file behind every module identifier in the stats; see {@link ModuleSources}.
+ * Identifiers are matched exactly rather than parsed: they carry loader chains, queries and
+ * require-context regexes whose syntax differs between bundlers. A record without a
+ * `nameForCondition` (a require-context, an external) has no source file and is left out, so its
+ * reasons keep the name fallback.
+ *
+ * @param stats The stats file to index.
+ *
+ * @returns The source file of each module identifier.
+ */
+export function indexModuleSources(stats: Stats): ModuleSources {
+  const sources = new Map<string, FilePath>();
+  for (const module of stats.modules) {
+    for (const record of [module, ...(module.modules ?? [])]) {
+      if (record.identifier && record.nameForCondition) {
+        sources.set(record.identifier, record.nameForCondition);
+      }
+    }
+  }
+  return sources;
+}
+
+/**
+ * The two roots that anchor a stats module path plus the module-source index reason attribution
+ * reads. Paths that only normalize take the roots alone ({@link StatsRoots}); reading a reason
+ * needs the naming too, so the index travels with the roots wherever attribution goes.
+ */
+export interface StatsNaming extends StatsRoots {
+  /** The source files of the stats module identifiers; see {@link indexModuleSources}. */
+  moduleSources: ModuleSources;
+}
+
+/**
+ * The module a stats reason attributes its import to. Webpack/rspack report the merged group as
+ * `moduleName`, so the member that contains the import is read from `resolvedModuleIdentifier`
+ * first: rspack spells the group in `resolvedModule` too, and only the identifier names the member
+ * in both bundlers. Then `resolvedModule` (webpack's member name, or a require-context the index
+ * leaves out), then `moduleName` (Vite emits neither field).
+ *
+ * @param reason The stats reason.
+ * @param sources The source files of the stats module identifiers; see {@link indexModuleSources}.
+ *
+ * @returns The name of the module the import belongs to, or null for an entry reason.
+ */
+export function reasonImporter(reason: Reason, sources: ModuleSources): string | null {
+  const resolved = reason.resolvedModuleIdentifier
+    ? sources.get(reason.resolvedModuleIdentifier)
+    : undefined;
+  return resolved ?? reason.resolvedModule ?? reason.moduleName;
+}
+
+/**
+ * The canonical path a stats reason attributes its import to: {@link reasonImporter} — the member
+ * the stats name for the origin module, else the `moduleName` it blames — normalized against the
+ * naming roots, or undefined for an entry reason. The single home of the canonical-importer rule,
  * so `readStatsGraph` and story detection cannot drift apart.
  *
+ * @param reason The stats reason.
+ * @param naming The roots and module sources to canonicalize against. See {@link StatsNaming}.
+ *
+ * @returns The canonical importer path, or undefined when the reason names no importer.
+ */
+export function canonicalReasonImporter(reason: Reason, naming: StatsNaming): FilePath | undefined {
+  const name = reasonImporter(reason, naming.moduleSources);
+  return typeof name === 'string'
+    ? normalizeStatsPath(name, naming.projectRoot, naming.statsRoot)
+    : undefined;
+}
+
+/**
+ * The canonical paths that import a stats module: its `reasons` mapped through
+ * {@link canonicalReasonImporter}, entry reasons (no importer) dropped.
+ *
  * @param module The stats module.
- * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param naming The roots and module sources to canonicalize against. See {@link StatsNaming}.
  *
  * @returns The canonical importer paths.
  */
-export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
+export function canonicalImporters(module: Module, naming: StatsNaming): FilePath[] {
   return (module.reasons ?? [])
-    .map((reason) => reason.moduleName)
-    .filter((name): name is FilePath => typeof name === 'string')
-    .map((name) => normalizeStatsPath(name, roots.projectRoot, roots.statsRoot));
+    .map((reason) => canonicalReasonImporter(reason, naming))
+    .filter((name): name is FilePath => typeof name === 'string');
 }
 
 /**
@@ -119,6 +194,10 @@ export function isSyntheticFile(path: FilePath): boolean {
   return path.includes('virtual:') || path.startsWith('data:');
 }
 
+// A webpack/rspack concatenation group's name: the root file followed by ` + N modules`. The one
+// home of that spelling, shared by stripping and evidence checking.
+const CONCATENATED_MODULE_NAME = / \+ \d+ modules?$/;
+
 /**
  * Strips a trailing ` + N modules` suffix from a concatenated module's name, leaving the root file.
  *
@@ -127,7 +206,21 @@ export function isSyntheticFile(path: FilePath): boolean {
  * @returns The name without the concatenation suffix.
  */
 export function stripConcatenatedModuleSuffix(statsPath: FilePath): FilePath {
-  return statsPath.replace(/ \+ \d+ modules?$/, '');
+  return statsPath.replace(CONCATENATED_MODULE_NAME, '');
+}
+
+/**
+ * Whether a stats module name spells a concatenation group: the root file followed by
+ * ` + N modules`. Only such a name is evidence that the module it names contains a reason's
+ * importer; any other spelling of the same module (a resource query, a loader chain) is how that
+ * one import was requested. See {@link stripConcatenatedModuleSuffix} for the shared pattern.
+ *
+ * @param name The module name from the stats file.
+ *
+ * @returns Whether the name names a concatenation group.
+ */
+export function isConcatenatedModuleName(name: string): boolean {
+  return CONCATENATED_MODULE_NAME.test(name);
 }
 
 /**

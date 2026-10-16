@@ -5,7 +5,7 @@ import {
   isNodeModulesPath,
   normalizeStatsPath,
   rootFilePath,
-  StatsRoots,
+  StatsNaming,
 } from './paths';
 
 /**
@@ -20,7 +20,7 @@ export interface OnDiskFiles {
  * What story detection needs to resolve stats paths and tell real files apart from the
  * require-context glob.
  */
-interface StoryDetectionContext extends StatsRoots {
+interface StoryDetectionContext extends StatsNaming {
   // Which canonical paths have a real file on disk.
   onDiskFiles: OnDiskFiles;
 }

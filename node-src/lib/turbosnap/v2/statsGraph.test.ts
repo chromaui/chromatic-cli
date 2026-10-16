@@ -5,7 +5,7 @@ import { Stats } from '../../../types';
 import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { SKIPPED_HASH } from './graph';
 import { SkipRule } from './skippedFiles';
-import { countNodeModulesFiles, readStatsGraph } from './statsGraph';
+import { countNodeModulesFiles, readStatsGraph, StatsGraph } from './statsGraph';
 
 // These suites are about builder spellings: what webpack, rspack and Vite each call the same file,
 // and what the graph reader makes of it. They assert on the graph, not on a hash — that the right
@@ -201,6 +201,100 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
     );
 
     expect(concatenated).toEqual(plain);
+  });
+});
+
+// A graph node's dependencies, spread: importers may name a file the stats never key.
+const dependenciesOf = ({ files }: StatsGraph, filePath: string) => [
+  ...(files.get(filePath)?.dependencies ?? []),
+];
+
+describe('readStatsGraph reasons carrying a resolvedModule', () => {
+  // `resolvedModule` names the member an import really sits in; the edge lands there, walls intact.
+  const configEntry = './storybook-config-entry.js';
+  const preview = '/repo/packages/ui/.storybook/preview.js';
+  const previewKey = './.storybook/preview.js';
+  const hello = '/repo/packages/ui/src/hello.js';
+  const helloKey = './src/hello.js';
+  const reasonFromGroup = { moduleName: `${configEntry} + 2 modules`, resolvedModule: preview };
+  const directReason = { moduleName: preview, resolvedModule: preview };
+  const { input } = createFixture({ fileHashes: { [preview]: 'P', [hello]: 'H' } });
+  const read = (reasons: Stats['modules'][number]['reasons']) =>
+    readStatsGraph({ modules: [{ id: 1, name: hello, reasons }] }, input, skipNothing);
+
+  it('records the edge from the resolved member, none from the root, and dedupes duplicates', async () => {
+    const graph = await read([reasonFromGroup]);
+    const deduped = await read([reasonFromGroup, directReason]);
+
+    expect(dependenciesOf(graph, previewKey)).toEqual([helloKey]);
+    expect(dependenciesOf(graph, configEntry)).toEqual([previewKey]);
+    expect(dependenciesOf(deduped, previewKey)).toEqual([helloKey]);
+  });
+
+  it('keeps a member the stats list nowhere reachable from its root, without capturing hello', async () => {
+    // The rsbuild 3.3.x shape: the group's `modules` holds a require-context glob and the member
+    // has no record of its own, so only the reason itself knows preview belongs to the group.
+    const rsbuildGroup: Stats = {
+      modules: [
+        { id: configEntry, name: `${configEntry} + 2 modules`, modules: [{ name: './ctx' }] },
+        { id: null, name: hello, reasons: [reasonFromGroup] },
+      ],
+    };
+    const graph = await readStatsGraph(rsbuildGroup, input, skipNothing);
+
+    // The defensive edge makes the root → member link; nothing captures hello through the root.
+    expect(dependenciesOf(graph, configEntry)).toContain(previewKey);
+    expect(dependenciesOf(graph, configEntry)).not.toContain(helloKey);
+    expect(dependenciesOf(graph, previewKey)).toEqual([helloKey]);
+  });
+
+  it('links a member whose only record carries entry reasons — pass 1 draws no edge for it', async () => {
+    // Nothing forbids a record whose reasons are all entry reasons. The membership gate must ask
+    // pass 1's own question — did the reasons produce an edge? — or such a member counts as
+    // reasoned while canonicalImporters draws no edge for it, leaving it unreachable.
+    const entryReasoned: Stats = {
+      modules: [
+        {
+          id: configEntry,
+          name: `${configEntry} + 1 modules`,
+          modules: [{ name: configEntry }, { name: hello }],
+        },
+        { id: null, name: hello, reasons: [{ moduleName: null }] },
+      ],
+    };
+    const graph = await readStatsGraph(entryReasoned, input, skipNothing);
+
+    expect(dependenciesOf(graph, configEntry)).toContain(helloKey);
+  });
+});
+
+describe('readStatsGraph concatenation membership evidence', () => {
+  // Only a ` + N modules`-spelled moduleName is evidence that the module it names contains the
+  // reason's importer. Any other spelling drift — a resource query, a loader chain — is how that
+  // one import was requested, and must not invent a group root that links to the importer.
+  const { input } = createFixture({ fileHashes: { '/repo/packages/ui/src/hello.js': 'H' } });
+
+  it('takes no membership from a reason whose moduleName is a resource query', async () => {
+    const queried: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/hello.js',
+          reasons: [
+            {
+              moduleName: '/repo/packages/ui/src/icon.svg?react',
+              resolvedModule: '/repo/packages/ui/src/icon.svg',
+            },
+          ],
+        },
+      ],
+    };
+    const graph = await readStatsGraph(queried, input, skipNothing);
+
+    // The query-spelled name is not a group root, so no node for it is created, and the resolved
+    // importer keeps exactly the attribution edge.
+    expect(graph.files.has('./src/icon.svg?react')).toBe(false);
+    expect(dependenciesOf(graph, './src/icon.svg')).toEqual(['./src/hello.js']);
   });
 });
 

@@ -4,7 +4,9 @@ import { Module } from '../../../types';
 import {
   canonicalFileNames,
   canonicalImporters,
+  canonicalReasonImporter,
   gitRootGlobMatcher,
+  indexModuleSources,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -15,6 +17,8 @@ import {
 
 const projectRoot = '/repo/packages/ui';
 const roots = { projectRoot, statsRoot: projectRoot };
+// Stats without module identifiers (Vite, or hand-written webpack shapes) index no sources.
+const naming = { ...roots, moduleSources: new Map<string, string>() };
 
 function module(module: Partial<Module>): Module {
   return { id: 0, name: '', ...module };
@@ -167,12 +171,150 @@ describe('canonicalImporters', () => {
       expected: ['./src/a.ts', '../shared/theme.ts'],
     },
     {
+      name: 'prefers a resolvedModule over the concatenated group the moduleName spells',
+      module: module({
+        reasons: [
+          {
+            moduleName: '/repo/packages/ui/.storybook/preview.js + 2 modules',
+            resolvedModule: '/repo/packages/ui/src/hello.js',
+          },
+        ],
+      }),
+      expected: ['./src/hello.js'],
+    },
+    {
+      name: 'falls back to moduleName when resolvedModule is null',
+      module: module({
+        reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx', resolvedModule: null }],
+      }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
+      name: 'drops an entry reason whose moduleName and resolvedModule are both null',
+      module: module({
+        reasons: [
+          { moduleName: null, resolvedModule: null },
+          { moduleName: '/repo/packages/ui/src/Button.tsx' },
+        ],
+      }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
       name: 'returns nothing when the module has no reasons',
       module: module({ name: './src/Button.tsx' }),
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
-    expect(canonicalImporters(input, roots)).toEqual(expected);
+    expect(canonicalImporters(input, naming)).toEqual(expected);
+  });
+});
+
+describe('canonicalReasonImporter', () => {
+  // The fallback ladder: identifier → resolvedModule → moduleName, with an entry reason returning
+  // undefined. The resolvedModule rung with no identifier rides through the canonicalImporters
+  // cases above, which also pin the normalization this returns raw.
+  const group = './src/Button.stories.tsx + 2 modules';
+  const buttonId =
+    'builtin:swc-loader??ruleSet[1].rules[6].use[0]!/repo/packages/ui/src/Button.tsx';
+  const withIdentifiers = {
+    ...roots,
+    moduleSources: new Map([[buttonId, '/repo/packages/ui/src/Button.tsx']]),
+  };
+
+  it('attributes the import to the member the identifier names when resolvedModule spells the group (rspack)', () => {
+    expect(
+      canonicalReasonImporter(
+        { moduleName: group, resolvedModule: group, resolvedModuleIdentifier: buttonId },
+        withIdentifiers
+      )
+    ).toBe('./src/Button.tsx');
+  });
+
+  it('falls back to resolvedModule when the identifier names no indexed source (require-context)', () => {
+    const context = './src/lib/ lazy namespace object';
+    expect(
+      canonicalReasonImporter(
+        {
+          moduleName: context,
+          resolvedModule: context,
+          resolvedModuleIdentifier: `/repo/packages/ui/${context}`,
+        },
+        withIdentifiers
+      )
+    ).toBe(context);
+  });
+
+  it('falls back to moduleName when resolvedModule is null', () => {
+    expect(
+      canonicalReasonImporter(
+        { moduleName: '/repo/packages/ui/src/Button.tsx', resolvedModule: null },
+        naming
+      )
+    ).toBe('./src/Button.tsx');
+  });
+
+  it('returns undefined for an entry reason, which names no importer', () => {
+    expect(
+      canonicalReasonImporter({ moduleName: null, resolvedModule: null }, naming)
+    ).toBeUndefined();
+  });
+});
+
+describe('indexModuleSources', () => {
+  const storyId = 'csf-loader!swc-loader!/repo/packages/ui/src/Button.stories.tsx';
+  const buttonId = 'swc-loader!/repo/packages/ui/src/Button.tsx';
+
+  it('indexes top-level and inner records by identifier', () => {
+    const sources = indexModuleSources({
+      modules: [
+        module({
+          identifier: `${storyId}|ce9324ac`,
+          name: './src/Button.stories.tsx + 1 modules',
+          nameForCondition: '/repo/packages/ui/src/Button.stories.tsx',
+          modules: [
+            {
+              identifier: storyId,
+              name: './src/Button.stories.tsx',
+              nameForCondition: '/repo/packages/ui/src/Button.stories.tsx',
+            },
+            {
+              identifier: buttonId,
+              name: './src/Button.stories.tsx + 1 modules',
+              nameForCondition: '/repo/packages/ui/src/Button.tsx',
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect([...sources]).toEqual([
+      [`${storyId}|ce9324ac`, '/repo/packages/ui/src/Button.stories.tsx'],
+      [storyId, '/repo/packages/ui/src/Button.stories.tsx'],
+      [buttonId, '/repo/packages/ui/src/Button.tsx'],
+    ]);
+  });
+
+  it('leaves out records with no source file, such as require-contexts', () => {
+    const sources = indexModuleSources({
+      modules: [
+        module({
+          identifier: String.raw`/repo/packages/ui/src|lazy|/^\.\/.*$/`,
+          name: String.raw`./src|lazy|/^\.\/.*$/`,
+        }),
+      ],
+    });
+
+    expect(sources.size).toBe(0);
+  });
+
+  it('leaves out records with no identifier, whose reasons cannot resolve through the index', () => {
+    const sources = indexModuleSources({
+      modules: [
+        module({ name: './src/Button.tsx', nameForCondition: '/repo/packages/ui/src/Button.tsx' }),
+      ],
+    });
+
+    expect(sources.size).toBe(0);
   });
 });
 

@@ -8,6 +8,7 @@ import { buildManifest } from './manifest';
 // global decorator. Both rely on an untraced file being a wall, as it is in v1, rather than a file
 // whose own bytes merely go unhashed. They run end-to-end through buildManifest because the claim
 // spans the graph, the globals fallback and the config sweep together.
+// `manifest.untracedConcatenation.test.ts` pins the same walls under webpack/rspack module groups.
 
 const viaBarrel = '/repo/packages/ui/src/Modal.stories.tsx';
 const direct = '/repo/packages/ui/src/Button.stories.tsx';
