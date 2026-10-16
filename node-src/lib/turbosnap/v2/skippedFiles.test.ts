@@ -84,9 +84,8 @@ describe('buildSkipRule', () => {
       realPath: (absolutePath: string) => absolutePath.replace(linkedRoot, projectRoot),
     };
     const linkedGenerated = generated.replace(projectRoot, linkedRoot);
-    const linkedPreview = preview.replace(projectRoot, linkedRoot);
 
-    const result = await skipped([linkedGenerated, linkedPreview, source], {
+    const result = await skipped([linkedGenerated, source], {
       ...context({}),
       projectFiles,
     });

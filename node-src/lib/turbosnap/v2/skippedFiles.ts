@@ -102,12 +102,13 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * never lists an ignored file, so a glob like `packages/icons/dist/**` matches nothing — the same
  * reason v1's `git diff` never sees the `dist`, which is why the flag needs no change. The hatch
  * that works is a glob on the sibling's tracked source: any change there recaptures Storybook-wide,
- * which detects changes to the built `dist` too. One exception keeps a real change visible:
- * `node_modules`, because it is
- * in nearly every `.gitignore` yet a dependency upgrade is a real change. The Storybook config
- * directory gets no exemption: a gitignored file there is generated like any other, and hashing it
- * over-captures just the same; the main config is the one file hashed regardless, by the config
- * sweep; see `hashOutOfGraphFiles`.
+ * which detects changes to the built `dist` too.
+ *
+ * Two exceptions. `node_modules` keeps a real change visible: it is in nearly every `.gitignore`,
+ * yet a dependency upgrade is a real change. The Storybook config directory gets no exemption: a
+ * gitignored file there is generated like any other, and hashing it over-captures just the same;
+ * the main config is the one file hashed regardless, by the config sweep; see
+ * `hashOutOfGraphFiles`.
  *
  * The check takes a real path because that is how git names files; see
  * {@link ProjectFiles.ignoredPaths}.
