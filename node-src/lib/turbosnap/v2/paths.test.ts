@@ -167,6 +167,35 @@ describe('canonicalImporters', () => {
       expected: ['./src/a.ts', '../shared/theme.ts'],
     },
     {
+      name: 'prefers a resolvedModule over the concatenated group the moduleName spells',
+      module: module({
+        reasons: [
+          {
+            moduleName: '/repo/packages/ui/.storybook/preview.js + 2 modules',
+            resolvedModule: '/repo/packages/ui/src/hello.js',
+          },
+        ],
+      }),
+      expected: ['./src/hello.js'],
+    },
+    {
+      name: 'falls back to moduleName when resolvedModule is null',
+      module: module({
+        reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx', resolvedModule: null }],
+      }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
+      name: 'drops an entry reason whose moduleName and resolvedModule are both null',
+      module: module({
+        reasons: [
+          { moduleName: null, resolvedModule: null },
+          { moduleName: '/repo/packages/ui/src/Button.tsx' },
+        ],
+      }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
       name: 'returns nothing when the module has no reasons',
       module: module({ name: './src/Button.tsx' }),
       expected: [],

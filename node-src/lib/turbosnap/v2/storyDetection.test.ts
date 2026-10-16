@@ -273,3 +273,34 @@ describe('detectStoryFiles of swept node_modules stories', () => {
     expect([...storyFiles]).toEqual(['./node_modules/@myorg/ui/Button.stories.js']);
   });
 });
+
+describe('detectStoryFiles through a lazy context whose entry reason carries a resolvedModule', () => {
+  // Webpack blames a lazy context's import on the concatenation group: `moduleName` spells
+  // `./storybook-config-entry.js + 1 modules` while `resolvedModule` names the stories entry the
+  // import really comes from. Both spellings are entry files, so the context must become a story
+  // importer either way — pinned, because `canonicalImporters` is shared with `readStatsGraph`.
+  it('treats a lazy context imported through a resolved stories entry as a story importer', () => {
+    const glob = './src/lib lazy namespace object';
+    const story = '/repo/packages/ui/src/lib/Button.stories.tsx';
+    const storyFiles = detect(
+      {
+        modules: [
+          {
+            id: 1,
+            name: glob,
+            reasons: [
+              {
+                moduleName: './storybook-config-entry.js + 1 modules',
+                resolvedModule: './storybook-stories.js',
+              },
+            ],
+          },
+          { id: 2, name: story, reasons: [{ moduleName: glob }] },
+        ],
+      },
+      ['./src/lib/Button.stories.tsx']
+    );
+
+    expect([...storyFiles]).toEqual(['./src/lib/Button.stories.tsx']);
+  });
+});
