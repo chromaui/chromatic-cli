@@ -205,16 +205,15 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
 });
 
 describe('readStatsGraph reasons carrying a resolvedModule', () => {
-  // Webpack/rspack concatenate modules and blame every member import on the merged group: the
-  // reason's `moduleName` spells the group (e.g. `./x + 2 modules`) while `resolvedModule` names
-  // the member that actually contains the import. The edge must land on that member, so an untraced
-  // member walls off its own imports.
+  // Webpack/rspack blame every member import on the merged group: `moduleName` spells the group
+  // (e.g. `./x + 2 modules`) while `resolvedModule` names the member that contains the import. The
+  // edge must land on that member, so an untraced member walls off its own imports.
   const configEntry = './storybook-config-entry.js';
   const preview = '/repo/packages/ui/.storybook/preview.js';
   const hello = '/repo/packages/ui/src/hello.js';
 
-  it('records the edge from the resolved member, and none from the concatenation root', async () => {
-    const stats: Stats = {
+  it('records the edge from the resolved member, none from the root, and dedupes duplicates', async () => {
+    const singleReason: Stats = {
       modules: [
         {
           id: 1,
@@ -223,18 +222,7 @@ describe('readStatsGraph reasons carrying a resolvedModule', () => {
         },
       ],
     };
-    const { input } = createFixture({ fileHashes: { [preview]: 'P', [hello]: 'H' } });
-
-    const graph = await readStatsGraph(stats, input, skipNothing);
-
-    expect([...(graph.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
-      './src/hello.js',
-    ]);
-    expect([...(graph.files.get(configEntry)?.dependencies ?? [])]).toEqual([]);
-  });
-
-  it('adds the module once to an importer two reasons resolve to, since dependencies is a set', async () => {
-    const stats: Stats = {
+    const duplicateReasons: Stats = {
       modules: [
         {
           id: 1,
@@ -248,9 +236,14 @@ describe('readStatsGraph reasons carrying a resolvedModule', () => {
     };
     const { input } = createFixture({ fileHashes: { [preview]: 'P', [hello]: 'H' } });
 
-    const graph = await readStatsGraph(stats, input, skipNothing);
+    const graph = await readStatsGraph(singleReason, input, skipNothing);
+    const deduped = await readStatsGraph(duplicateReasons, input, skipNothing);
 
     expect([...(graph.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
+      './src/hello.js',
+    ]);
+    expect([...(graph.files.get(configEntry)?.dependencies ?? [])]).toEqual([]);
+    expect([...(deduped.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
       './src/hello.js',
     ]);
   });

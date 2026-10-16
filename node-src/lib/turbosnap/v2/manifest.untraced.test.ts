@@ -189,11 +189,9 @@ describe('buildManifest with an untraced global decorator', () => {
 });
 
 // Webpack/rspack concatenate modules and blame every member import on the merged group, spelled
-// ` + N modules` in the reason's `moduleName`. The group's root is often a synthetic entry, so an
-// `--untraced` file inside the group has no edge of its own to cut — unless the graph attributes
-// the edge to the reason's `resolvedModule`, the member that really contains the import. These
-// suites pin the three concatenation shapes the fix covers, plus the no-flag controls proving the
-// wall is the flag's doing.
+// ` + N modules` in the reason's `moduleName`. The graph now attributes the edge to the reason's
+// `resolvedModule` — the member that really contains the import — so an untraced file inside the
+// group walls off its own imports. These suites pin the three shapes, plus the no-flag controls.
 
 function concatenatedPreviewFixture(untraced: string[]) {
   const { disk, input } = createFixture({
@@ -256,34 +254,27 @@ describe('buildManifest with an untraced preview concatenated into the config en
     ]);
   });
 
-  it('moves no hash when a file the untraced preview imports changes', async () => {
+  it('moves no hash when a file behind the untraced preview import chain changes', async () => {
     const { disk, input } = concatenatedPreviewFixture(['packages/ui/.storybook/preview.js']);
-    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G' };
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G1' };
     const before = await buildManifest(stats, input);
 
-    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H2', [hello2]: 'G' };
-    const after = await buildManifest(stats, input);
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H2', [hello2]: 'G1' };
+    const afterHello = await buildManifest(stats, input);
 
-    expect(after.storybookHash).toBe(before.storybookHash);
-    expect(after.storybookConfigHashes).toEqual(before.storybookConfigHashes);
-    expect(after.storyFileHashes).toEqual(before.storyFileHashes);
-    expect([...after.skippedFiles]).toEqual([['./.storybook/preview.js', 'untraced']]);
-    expect([...after.attribution.storybookGlobals]).toEqual([]);
-    expect([...after.attribution.previewSubtree]).toEqual([]);
-  });
-
-  it("moves no hash when a file only the untraced preview's import reaches changes", async () => {
     // hello2 sits one step further behind the wall: the preview imports hello, which imports it.
-    const { disk, input } = concatenatedPreviewFixture(['packages/ui/.storybook/preview.js']);
-    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H', [hello2]: 'G1' };
-    const before = await buildManifest(stats, input);
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H2', [hello2]: 'G2' };
+    const afterHello2 = await buildManifest(stats, input);
 
-    disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H', [hello2]: 'G2' };
-    const after = await buildManifest(stats, input);
-
-    expect(after.storybookHash).toBe(before.storybookHash);
-    expect(after.storybookConfigHashes).toEqual(before.storybookConfigHashes);
-    expect(after.storyFileHashes).toEqual(before.storyFileHashes);
+    expect(afterHello.storybookHash).toBe(before.storybookHash);
+    expect(afterHello.storybookConfigHashes).toEqual(before.storybookConfigHashes);
+    expect(afterHello.storyFileHashes).toEqual(before.storyFileHashes);
+    expect(afterHello2.storybookHash).toBe(before.storybookHash);
+    expect(afterHello2.storybookConfigHashes).toEqual(before.storybookConfigHashes);
+    expect(afterHello2.storyFileHashes).toEqual(before.storyFileHashes);
+    expect([...afterHello.skippedFiles]).toEqual([['./.storybook/preview.js', 'untraced']]);
+    expect([...afterHello.attribution.storybookGlobals]).toEqual([]);
+    expect([...afterHello.attribution.previewSubtree]).toEqual([]);
   });
 
   it('still traces the preview subtree when nothing is untraced (control)', async () => {
@@ -308,19 +299,15 @@ describe('buildManifest with an untraced preview concatenated into the config en
 
   it('still recaptures a story that imports the file directly, with the preview untraced (control)', async () => {
     const story2 = '/repo/packages/ui/src/Info.stories.tsx';
+    const helloReasons = stats.modules.find((module) => module.name === hello)?.reasons ?? [];
     const withDirectImporter: Stats = {
       modules: [
-        ...stats.modules.map((module) =>
-          module.name === hello
-            ? {
-                ...module,
-                reasons: [
-                  ...(module.reasons ?? []),
-                  { moduleName: story2, resolvedModule: story2 },
-                ],
-              }
-            : module
-        ),
+        ...stats.modules.filter((module) => module.name !== hello),
+        {
+          id: null,
+          name: hello,
+          reasons: [...helloReasons, { moduleName: story2, resolvedModule: story2 }],
+        },
         { id: 6, name: story2, reasons: [{ moduleName: './storybook-stories.js' }] },
       ],
     };
@@ -339,9 +326,8 @@ describe('buildManifest with an untraced preview concatenated into the config en
 });
 
 describe('buildManifest with an untraced component concatenated into its story', () => {
-  // A story concatenated with its component (`./Foo.stories.tsx + 1 modules`): the component's own
-  // imports blame the merged group, and only `resolvedModule` names the component. Untracing the
-  // component must wall off what it imports, while the story keeps its edge to the component.
+  // A story concatenated with its component: the component's imports blame the merged group, and
+  // only `resolvedModule` names the component. Untracing it must wall off its imports.
   const fooStory = '/repo/packages/ui/src/Foo.stories.tsx';
   const foo = '/repo/packages/ui/src/Foo.tsx';
   const dep = '/repo/packages/ui/src/dep.ts';
@@ -417,6 +403,14 @@ describe('buildManifest with an untraced concatenation root', () => {
 
   it('keeps walling off the whole group, whatever distance behind it', async () => {
     const { disk, input } = concatenatedFileFixture(['packages/ui/src/wall.js']);
+    const skipRule = await buildSkipRule(input);
+    const graph = await readStatsGraph(stats, input, skipRule);
+    expect([...graph.untracedSubtrees].sort()).toEqual([
+      './src/behind.js',
+      './src/deep.js',
+      './src/wall.js',
+    ]);
+
     disk.fileHashes = { [wallStory]: 'S', [wall]: 'W', [behind]: 'B1', [deep]: 'D' };
     const before = await buildManifest(stats, input);
 
@@ -432,18 +426,6 @@ describe('buildManifest with an untraced concatenation root', () => {
     expect(afterDeep.storyFileHashes).toEqual(before.storyFileHashes);
     expect([...afterBehind.skippedFiles]).toEqual([['./src/wall.js', 'untraced']]);
     expect([...afterBehind.attribution.storybookGlobals]).toEqual([]);
-  });
-
-  it('reports the group members and their imports as untraced inheritance', async () => {
-    const { input } = concatenatedFileFixture(['packages/ui/src/wall.js']);
-    const skipRule = await buildSkipRule(input);
-    const graph = await readStatsGraph(stats, input, skipRule);
-
-    expect([...graph.untracedSubtrees].sort()).toEqual([
-      './src/behind.js',
-      './src/deep.js',
-      './src/wall.js',
-    ]);
   });
 
   it('still recaptures the story through the traced group when nothing is untraced (control)', async () => {
