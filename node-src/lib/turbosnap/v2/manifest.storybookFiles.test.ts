@@ -118,18 +118,54 @@ describe('buildManifest storybookFiles', () => {
     );
   });
 
-  it('keeps the preview subtree rolled up when git ignores the preview config', async () => {
-    // A generated preview.ts still shapes every story, so it is hashed and stays the preview root.
-    const { input } = createFixture({
+  it('skips a gitignored preview config but keeps what it imports in the preview roll-up', async () => {
+    // A generated preview.ts is skipped like any other gitignored project file, but its edges
+    // survive, so the tracked helper it imports still moves the preview hash.
+    const { disk, input } = createFixture({
       fileHashes: { ...baseHashes },
       isIgnored: (candidate) => candidate === preview,
     });
+    const before = await buildManifest(makeStats(), input);
 
-    const manifest = await buildManifest(makeStats(), input);
+    disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
+    const after = await buildManifest(makeStats(), input);
 
-    expect(manifest.attribution.previewSubtree.has('./.storybook/preview.ts')).toBe(true);
-    expect(manifest.attribution.previewSubtree.has('./.storybook/theme.ts')).toBe(true);
-    expect(manifest.skippedFiles.size).toBe(0);
+    expect([...before.skippedFiles]).toEqual([['./.storybook/preview.ts', 'gitignored']]);
+    expect([...before.attribution.previewSubtree]).toEqual(['./.storybook/theme.ts']);
+    expect(before.attribution.storybookGlobals.has('./.storybook/theme.ts')).toBe(false);
+    expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
+      before.storybookConfigHashes.get(previewKey)
+    );
+  });
+
+  it('leaves the preview hash alone when the gitignored preview itself changes', async () => {
+    const { disk, input } = createFixture({
+      fileHashes: { ...baseHashes },
+      isIgnored: (candidate) => candidate === preview,
+    });
+    const before = await buildManifest(makeStats(), input);
+
+    disk.fileHashes = { ...baseHashes, [preview]: 'P2' };
+    const after = await buildManifest(makeStats(), input);
+
+    expect(after.storybookConfigHashes.get(previewKey)).toBe(
+      before.storybookConfigHashes.get(previewKey)
+    );
+    expect(after.storybookHash).toBe(before.storybookHash);
+  });
+
+  it('omits the preview entry when the untraced preview has nothing hashed beneath it', async () => {
+    // An untraced file is a wall, so its subtree is just itself and there is nothing to roll up.
+    const { input } = createFixture({ fileHashes: { ...baseHashes } });
+
+    const manifest = await buildManifest(makeStats(), {
+      ...input,
+      untraced: ['**/.storybook/preview.ts'],
+    });
+
+    expect([...manifest.skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
+    expect(manifest.storybookConfigHashes.has(previewKey)).toBe(false);
+    expect(manifest.attribution.previewSubtree.size).toBe(0);
   });
 
   it('keeps a preview-subtree file out of globals although the config entry reaches it', async () => {
