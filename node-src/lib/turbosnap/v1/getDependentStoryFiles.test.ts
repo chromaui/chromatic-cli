@@ -3,12 +3,24 @@ import chalk from 'chalk';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Context } from '../../../types';
+import { Context, Module } from '../../../types';
 import TestLogger from '../../testLogger';
 import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const statsPath = 'preview-stats.json';
+// Builds a module fixture whose id and name are equal.
+const buildModule = (id: string, ...reasons: string[]) => ({
+  id,
+  name: id,
+  reasons: reasons.map((moduleName) => ({ moduleName })),
+});
+
+// Runs a grouping case with its two colliding modules in both possible orders.
+const bothOrders = <T>(first: T, second: T, rest: T[]) => [
+  [[first, second, ...rest]],
+  [[second, first, ...rest]],
+];
 
 const log = new TestLogger();
 const getContext: any = (
@@ -1258,6 +1270,234 @@ describe('getDependentStoryFiles', () => {
       changedFiles,
       changedDependencies
     );
+    expect(result.turboSnap.bailReason).toBeUndefined();
+  });
+
+  // CAP-5106: distinct modules can normalize to one name (Vue/Svelte SFC sub-modules, CommonJS
+  // proxies, rsbuild stubs). They must merge into one group instead of overwriting each other
+  // (last write wins), which made the losers' importers unreachable and untraced globs miss
+  // NUL-prefixed proxies.
+  const csfGlobModule = buildModule(CSF_GLOB, './.storybook/generated-stories-entry.js');
+
+  const vueStyleFacet = './src/Foo.vue?vue&type=style&index=0&scoped=abc123&lang.css';
+  const vueSfc = buildModule('./src/Foo.vue', './src/Foo.stories.ts', vueStyleFacet);
+  const vueStyleModule = buildModule(vueStyleFacet, './src/Foo.vue');
+  const vueStory = buildModule('./src/Foo.stories.ts', CSF_GLOB);
+
+  it.each(bothOrders(vueSfc, vueStyleModule, [vueStory, csfGlobModule]))(
+    'merges a Vue SFC and its ?vue&type=style sub-module (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/Foo.vue']);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/Foo.stories.ts': ['src/Foo.stories.ts'] },
+      });
+    }
+  );
+
+  const svelteStyleFacet =
+    './src/Foo.stories.svelte?svelte&type=style&index=0&scoped=abc123&lang.css';
+  const svelteStory = buildModule('./src/Foo.stories.svelte', CSF_GLOB);
+  const svelteStyleModule = buildModule(svelteStyleFacet, './src/Foo.stories.svelte');
+
+  it.each(bothOrders(svelteStory, svelteStyleModule, [csfGlobModule]))(
+    'merges a Svelte CSF story and its ?svelte&type=style sub-module, reporting the plain ./ id (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [
+        'src/Foo.stories.svelte',
+      ]);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/Foo.stories.svelte': ['src/Foo.stories.svelte'] },
+      });
+    }
+  );
+
+  const proxyEsId = '\0./node_modules/react/index.js?commonjs-es-import';
+  const proxyRequestId = '\0./node_modules/react/index.js?commonjs-proxy';
+  const proxyEs = buildModule(proxyEsId, './src/foo.stories.js');
+  const proxyRequest = buildModule(proxyRequestId);
+  const reactStory = buildModule('./src/foo.stories.js', CSF_GLOB);
+
+  it.each(bothOrders(proxyEs, proxyRequest, [reactStory, csfGlobModule]))(
+    'merges two NUL proxies of one dependency with different queries (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [], ['react']);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
+      });
+    }
+  );
+
+  const hoistedProxyId = '\0./../node_modules/react/index.js?commonjs-es-import';
+  const hoistedProxy = buildModule(hoistedProxyId, './src/foo.stories.js');
+  const hoistedPlain = buildModule('./../node_modules/react/index.js');
+
+  it.each(bothOrders(hoistedProxy, hoistedPlain, [reactStory, csfGlobModule]))(
+    'merges a hoisted NUL proxy with the plain file it proxies, project root below git root (module order %#)',
+    async (modules) => {
+      const ctx = getContext({ storybookBaseDir: 'webapp' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [], ['react']);
+      expect(result.turboSnap.tracedFiles).toEqual(['node_modules/react/index.js']);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/foo.stories.js': ['webapp/src/foo.stories.js'] },
+      });
+    }
+  );
+
+  it('does not throw for an opaque NUL module and keeps unrelated traces unaffected', async () => {
+    const modules = [
+      buildModule(
+        '\0vite/preload-helper.js',
+        './storybook-stories.js',
+        './node_modules/some-lib/index.js'
+      ),
+      buildModule('./src/foo.js', './src/foo.stories.js'),
+      reactStory,
+      csfGlobModule,
+    ];
+    const ctx = getContext();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/foo.js']);
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
+    });
+    expect(result.turboSnap.bailReason).toBeUndefined();
+  });
+
+  it('does not throw for an entry module with empty reasons', async () => {
+    const modules = [
+      buildModule('./storybook-stories.js'),
+      buildModule('./src/foo.js', './src/foo.stories.js'),
+      reactStory,
+      csfGlobModule,
+    ];
+    const ctx = getContext();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/foo.js']);
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
+    });
+  });
+
+  const rsbuildStory = buildModule('./src/Button.stories.tsx', CSF_GLOB);
+  const rsbuildStoryStub = buildModule('src/Button.stories.tsx');
+
+  it.each(bothOrders(rsbuildStory, rsbuildStoryStub, [csfGlobModule]))(
+    'keeps the ./-prefixed id for an rsbuild story stub collision (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [
+        'src/Button.stories.tsx',
+      ]);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/Button.stories.tsx': ['src/Button.stories.tsx'] },
+      });
+    }
+  );
+
+  const rsbuildCss = buildModule(
+    './src/styles.module.css',
+    './src/PathDerived.stories.tsx',
+    './src/PathDerivedShared.stories.tsx'
+  );
+  const rsbuildCssStub = buildModule('src/styles.module.css');
+  const pathDerivedStory = buildModule('./src/PathDerived.stories.tsx', CSF_GLOB);
+  const pathDerivedSharedStory = buildModule('./src/PathDerivedShared.stories.tsx', CSF_GLOB);
+
+  it.each(
+    bothOrders(rsbuildCss, rsbuildCssStub, [
+      pathDerivedStory,
+      pathDerivedSharedStory,
+      csfGlobModule,
+    ])
+  )(
+    'reports both stories when an rsbuild bare stub collides with the CSS module (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [
+        'src/styles.module.css',
+      ]);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/PathDerived.stories.tsx': ['src/PathDerived.stories.tsx'],
+          './src/PathDerivedShared.stories.tsx': ['src/PathDerivedShared.stories.tsx'],
+        },
+      });
+    }
+  );
+
+  const concatenatedA: Module = {
+    id: 1,
+    name: './src/foo.js + 1 modules',
+    modules: [{ name: './src/foo.js' }, { name: './src/bar.js' }],
+    reasons: [{ moduleName: './src/foo.stories.js' }],
+  };
+  const concatenatedB: Module = {
+    id: 2,
+    name: './src/foo.js + 1 modules',
+    modules: [{ name: './src/foo.js' }, { name: './src/bar.js' }],
+    reasons: [{ moduleName: './src/baz.stories.js' }],
+  };
+
+  it.each(
+    bothOrders(concatenatedA, concatenatedB, [
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule('./src/baz.stories.js', CSF_GLOB),
+      csfGlobModule,
+    ])
+  )(
+    'merges reasons of concatenated modules sharing one name (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/foo.js']);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {
+          './src/foo.stories.js': ['src/foo.stories.js'],
+          './src/baz.stories.js': ['src/baz.stories.js'],
+        },
+      });
+    }
+  );
+
+  it('keeps webpack lazy context names containing a question mark intact', async () => {
+    const lazyContext = String.raw`./src lazy recursive ^\.\/.*\?raw$`;
+    const modules = [
+      buildModule(lazyContext, './.storybook/generated-stories-entry.js'),
+      buildModule('./src/foo.js', './src/Foo.stories.js'),
+      buildModule('./src/Foo.stories.js', lazyContext),
+    ];
+    const ctx = getContext();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/foo.js']);
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: { './src/Foo.stories.js': ['src/Foo.stories.js'] },
+    });
+    expect(result.turboSnap.globs).toEqual([String.raw`src lazy recursive ^\.\/.*\?raw$`]);
+  });
+
+  it('untraces NUL proxy ids matching an untraced glob', async () => {
+    const modules = [
+      proxyEs,
+      buildModule('./node_modules/react/index.js', './src/foo.stories.js'),
+      reactStory,
+      csfGlobModule,
+    ];
+    const ctx = getContext({ untraced: ['node_modules/**'] });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [], ['react']);
+    if (result.status !== 'traced') throw new Error('expected traced');
+    expect(result.onlyStoryFiles).toEqual({});
+    expect(result.untracedFiles).toEqual([
+      { filepath: 'node_modules/react/index.js', glob: 'node_modules/**' },
+    ]);
     expect(result.turboSnap.bailReason).toBeUndefined();
   });
 });
