@@ -4,6 +4,7 @@ import { Module } from '../../../types';
 import {
   canonicalFileNames,
   canonicalImporters,
+  foldStatsId,
   gitRootGlobMatcher,
   isNodeModulesPath,
   isSyntheticFile,
@@ -142,6 +143,11 @@ describe('canonicalFileNames', () => {
       }),
       expected: ['./src/Button.stories.tsx', './src/Button.tsx'],
     },
+    {
+      name: 'a NUL proxy module name, folded onto the real file',
+      module: module({ name: '\0./../../node_modules/react/index.js?commonjs-module' }),
+      expected: ['../../node_modules/react/index.js'],
+    },
   ])('normalizes the file names of $name', ({ module: input, expected }) => {
     expect(canonicalFileNames(input, roots)).toEqual(expected);
   });
@@ -167,6 +173,14 @@ describe('canonicalImporters', () => {
       expected: ['./src/a.ts', '../shared/theme.ts'],
     },
     {
+      name: 'folds a proxy reason moduleName onto the real file',
+      module: module({
+        name: './src/Button.stories.tsx',
+        reasons: [{ moduleName: '\0./src/Foo.vue?vue&type=script&lang.ts' }],
+      }),
+      expected: ['./src/Foo.vue'],
+    },
+    {
       name: 'returns nothing when the module has no reasons',
       module: module({ name: './src/Button.tsx' }),
       expected: [],
@@ -181,6 +195,18 @@ describe('normalizeStatsPath', () => {
     const dataUrl = 'data:font/ttf;base64,AAAAAAAAAAAAAAAAAA';
 
     expect(normalizeStatsPath(dataUrl, projectRoot)).toBe(dataUrl);
+  });
+
+  it('keeps a literal ? in a real on-disk filename, since no fold runs here', () => {
+    expect(normalizeStatsPath('/repo/packages/ui/public/what?.svg', projectRoot)).toBe(
+      './public/what?.svg'
+    );
+  });
+
+  it('keys a file with a literal ? apart from the same name without it', () => {
+    expect(normalizeStatsPath('/repo/packages/ui/public/what', projectRoot)).not.toBe(
+      normalizeStatsPath('/repo/packages/ui/public/what?.svg', projectRoot)
+    );
   });
 
   it('keeps a project-relative path as-is, with its ./ prefix', () => {
@@ -243,12 +269,12 @@ describe('normalizeStatsPath', () => {
   });
 });
 
-describe('normalizeStatsPath folding proxy and query ids', () => {
+describe('foldStatsId', () => {
   it.each([
     {
       name: 'a NUL proxy for a relative CommonJS module',
       id: '\0./../../node_modules/react/index.js?commonjs-module',
-      expected: '../../node_modules/react/index.js',
+      expected: './../../node_modules/react/index.js',
     },
     {
       name: 'a query-suffixed framework block',
@@ -261,7 +287,17 @@ describe('normalizeStatsPath folding proxy and query ids', () => {
       expected: './iframe.html',
     },
   ])('folds $name onto the file it stands for', ({ id, expected }) => {
-    expect(normalizeStatsPath(id, projectRoot)).toBe(expected);
+    expect(foldStatsId(id)).toBe(expected);
+  });
+
+  it.each([
+    ['a bare NUL module', '\0commonjsHelpers.js'],
+    ['a bare NUL module with a query', '\0vite/preload-helper.js?commonjs-module'],
+    ['an absolute opaque id', '\0/@data-uri/data:text/javascript,export default 1'],
+    ['a virtual module', 'virtual:@storybook/builder-vite/vite-app.js'],
+    ['an inline data URL', 'data:font/ttf;base64,AAAAAAAAAAAAAAAAAA'],
+  ])('leaves %s unchanged, since no file stands behind it', (_name, id) => {
+    expect(foldStatsId(id)).toBe(id);
   });
 
   it.each([
@@ -289,8 +325,24 @@ describe('normalizeStatsPath folding proxy and query ids', () => {
       'an rspack sync context name with a query',
       String.raw`./src|sync|/^\.\/.*$/|include: /(?:\.stories\.tsx)$?query`,
     ],
+    [
+      'a webpack eager context name with a query',
+      String.raw`./icons eager recursive ^\.\/.*\.(?:svg)$?query`,
+    ],
+    [
+      'a webpack weak context name with a query',
+      String.raw`./icons weak recursive ^\.\/.*\.(?:svg)$?query`,
+    ],
+    [
+      'a webpack async-weak context name with a query',
+      String.raw`./icons async-weak recursive ^\.\/.*\.(?:svg)$?query`,
+    ],
+    [
+      'a webpack lazy-once context name with a query',
+      String.raw`./icons lazy-once non-recursive ^\.\/.*\.(?:svg)$?query`,
+    ],
   ])('keeps the ? of %s', (_name, id) => {
-    expect(normalizeStatsPath(id, projectRoot)).toBe(id);
+    expect(foldStatsId(id)).toBe(id);
   });
 });
 
@@ -325,20 +377,6 @@ describe('resolveStatsPath', () => {
   it('leaves an unescaped hash alone, since webpack reads it as a fragment', () => {
     expect(resolveStatsPath('./src/Button.tsx#fragment', projectRoot)).toBe(
       '/repo/packages/ui/src/Button.tsx#fragment'
-    );
-  });
-});
-
-describe('resolveStatsPath folding proxy and query ids', () => {
-  it('folds a NUL proxy onto the file it names, without the query', () => {
-    expect(
-      resolveStatsPath('\0./../../node_modules/react/index.js?commonjs-module', projectRoot)
-    ).toBe('/repo/node_modules/react/index.js');
-  });
-
-  it('folds a query-suffixed block id onto its file', () => {
-    expect(resolveStatsPath('./src/Foo.vue?vue&type=script&lang.ts', projectRoot)).toBe(
-      '/repo/packages/ui/src/Foo.vue'
     );
   });
 

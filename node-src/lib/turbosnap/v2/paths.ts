@@ -43,8 +43,9 @@ export interface StatsRoots {
 }
 
 /**
- * The canonical paths of a stats module's source files: its {@link moduleFileNames}, each normalized,
- * root first. The single place the "canonical file names" rule lives, so every walk over
+ * The canonical paths of a stats module's source files: its {@link moduleFileNames}, each folded
+ * onto the file it stands for (see {@link foldStatsId}) and normalized, root first. The single
+ * place the "canonical file names" rule lives, so every walk over
  * `stats.modules` reads the same definition.
  *
  * @param module The stats module.
@@ -54,13 +55,14 @@ export interface StatsRoots {
  */
 export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[] {
   return moduleFileNames(module).map((name) =>
-    normalizeStatsPath(name, roots.projectRoot, roots.statsRoot)
+    normalizeStatsPath(foldStatsId(name), roots.projectRoot, roots.statsRoot)
   );
 }
 
 /**
  * The canonical paths that import a stats module: its `reasons` mapped to `moduleName`, entry reasons
- * (null `moduleName`) dropped, each normalized. The single place the "canonical importers" rule lives,
+ * (null `moduleName`) dropped, each folded onto the file it stands for (see {@link foldStatsId})
+ * and normalized. The single place the "canonical importers" rule lives,
  * so `readStatsGraph` and story detection cannot drift apart.
  *
  * @param module The stats module.
@@ -72,7 +74,7 @@ export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[
   return (module.reasons ?? [])
     .map((reason) => reason.moduleName)
     .filter((name): name is FilePath => typeof name === 'string')
-    .map((name) => normalizeStatsPath(name, roots.projectRoot, roots.statsRoot));
+    .map((name) => normalizeStatsPath(foldStatsId(name), roots.projectRoot, roots.statsRoot));
 }
 
 /**
@@ -111,9 +113,16 @@ export function isNodeModulesPath(filePath: string): boolean {
 const NUL = '\0';
 const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
 
-// Webpack spells a require-context ` lazy ` or ` sync `; rspack delimits the same markers with
-// pipes. A context name is a glob expression rather than a file path, so its `?` starts no query.
-const CONTEXT_MARKER = / lazy | sync |\|lazy\||\|sync\|/;
+// Webpack names a require.context by its mode followed by `recursive` or `non-recursive` and the
+// include glob, e.g. `./icons lazy recursive`. The modes are sync, eager, weak, async-weak, lazy
+// and lazy-once; rspack delimits the same lazy and sync markers with pipes. A context name is a
+// glob expression rather than a file path, so its `?` starts no query.
+const CONTEXT_MARKER =
+  /(?:sync|eager|weak|async-weak|lazy|lazy-once) (?:non-?)?recursive |\|lazy\||\|sync\|/;
+
+// Webpack spells contexts with ` lazy `; rspack delimits the same marker with pipes. Only the lazy
+// mode matters to story detection, so this is the lazy subset of the context spellings above.
+export const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
 
 /**
  * Whether a file path names a synthetic module whose contents do not exist as a file on disk.
@@ -150,8 +159,9 @@ export function stripConcatenatedModuleSuffix(statsPath: FilePath): FilePath {
  * Converts a stats module path into the canonical manifest key: a POSIX path relative to the
  * Storybook project root. Relative stats paths are first resolved from `statsRoot`, because a
  * builder may name them from the repository root even though manifest keys anchor at the project.
- * Proxy and query ids are folded onto the file they stand for first; see {@link fileStoodForById}.
- * Synthetic modules (e.g. Vite's `virtual:` entries, inline `data:` URLs and bare Rollup proxies)
+ * Stats ids are folded onto the file they stand for by the caller before they reach here (see
+ * {@link foldStatsId}): this function also keys real on-disk paths, where a literal `?` can be
+ * part of the filename. Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs)
  * have no on-disk location and are returned unchanged.
  *
  * @param statsPath The module name from the stats file (relative like `./src/x` or absolute).
@@ -188,16 +198,28 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * The file a stats id stands for. Rollup reads one real file under several ids: the plain path, a
  * NUL-prefixed proxy for CommonJS interop and framework blocks (`\0./x.js?commonjs-module`), and
  * the plain path with a builder query (`./src/Foo.vue?vue&type=script`). Folding every spelling
- * onto the one file is what lets V2 key a module and its edges the way V1 reads the id.
+ * onto the one file is what keeps a module and its dependency edges in the manifest under a key
+ * that names a real file. V1 does not fold (its fix is CAP-5106): it joins these ids as-is, query
+ * included, so its keys for them differ from the folded ones.
  *
- * Synthetic ids must already be classified away with {@link isSyntheticFile} — both consumers do,
- * because stripping a synthetic id's NUL here would invent a phantom path on disk.
+ * A NUL followed by anything but `./` or `../` — an absolute or otherwise opaque id such as
+ * `\0/@data-uri/data:text/javascript,...` — is synthetic and passes through unchanged: the
+ * Storybook builder-vite plugin relativizes a NUL id only when the path it strips to is a module
+ * in the graph, so a raw rooted id in the stats has no file behind it.
+ *
+ * Every stats id is folded exactly once, where it enters the graph (see {@link canonicalFileNames},
+ * {@link canonicalImporters} and the on-disk locator in statsGraph). The shared normalizers never
+ * fold: they also key real disk paths, where a `?` is part of the filename.
  *
  * @param statsPath The module name from the stats file.
  *
- * @returns The path of the file the id stands for.
+ * @returns The path of the file the id stands for, or the id unchanged when synthetic.
  */
-function fileStoodForById(statsPath: FilePath): FilePath {
+export function foldStatsId(statsPath: FilePath): FilePath {
+  if (isSyntheticFile(statsPath)) {
+    return statsPath;
+  }
+
   // A NUL proxy for a relative path stands for that path, without the NUL or the query.
   const unproxied = statsPath.startsWith(NUL) ? statsPath.slice(NUL.length) : statsPath;
   return stripQuery(unproxied);
@@ -227,8 +249,9 @@ function stripQuery(statsPath: FilePath): FilePath {
 
 /**
  * Resolves a stats module path to an absolute on-disk path for hashing, anchoring relative paths at
- * the Storybook project root. The id is folded onto the file it stands for first; see
- * {@link fileStoodForById}. Escape markers are removed after that; see {@link stripNullBytes}.
+ * the Storybook project root. Escape markers are removed first; see {@link stripNullBytes}. The id
+ * is folded onto the file it stands for by the caller before it reaches here; see
+ * {@link foldStatsId}.
  *
  * @param statsPath The module name from the stats file.
  * @param statsRoot The absolute directory relative stats paths are named from.
@@ -236,8 +259,7 @@ function stripQuery(statsPath: FilePath): FilePath {
  * @returns The absolute path to the file on disk.
  */
 export function resolveStatsPath(statsPath: FilePath, statsRoot: AbsolutePath): AbsolutePath {
-  const stoodFor = fileStoodForById(statsPath);
-  const stripped = stripNullBytes(stripConcatenatedModuleSuffix(stoodFor));
+  const stripped = stripNullBytes(stripConcatenatedModuleSuffix(statsPath));
   return path.isAbsolute(stripped) ? stripped : path.resolve(statsRoot, stripped);
 }
 

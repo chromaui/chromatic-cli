@@ -10,6 +10,7 @@ import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
   canonicalImporters,
+  foldStatsId,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -270,19 +271,19 @@ function ensureFile(
  * {@link ProjectFiles.isFile}. Skipping a name with no file loses no evidence, because such a name is
  * never a source file and so can never be edited as one.
  *
- * @param rawPath The module name from the stats file.
+ * @param id The folded stats id; see {@link foldStatsId}.
  * @param statsRoot The directory relative stats paths are named from.
  * @param projectFiles How to read the disk.
  *
  * @returns The absolute path to hash, or undefined if there is no hashable file.
  */
 function hashableAbsolutePath(
-  rawPath: FilePath,
+  id: FilePath,
   statsRoot: string,
   projectFiles: ProjectFiles
 ): string | undefined {
-  if (isSyntheticFile(rawPath)) return undefined;
-  const absolutePath = resolveStatsPath(rawPath, statsRoot);
+  if (isSyntheticFile(id)) return undefined;
+  const absolutePath = resolveStatsPath(id, statsRoot);
   return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
 }
 
@@ -314,12 +315,13 @@ function locateOnDiskFiles(
 
   const onDiskFiles = new Map<FilePath, AbsolutePath>();
   for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, roots.statsRoot, projectFiles);
+    // Fold once per id: a proxy or query spelling keys the graph node by the file it stands for.
+    // The shared normalizers never fold, because they also key real disk paths (outOfGraphFiles),
+    // where a literal `?` can be part of the filename.
+    const id = foldStatsId(rawPath);
+    const absolutePath = hashableAbsolutePath(id, roots.statsRoot, projectFiles);
     if (absolutePath) {
-      onDiskFiles.set(
-        normalizeStatsPath(rawPath, roots.projectRoot, roots.statsRoot),
-        absolutePath
-      );
+      onDiskFiles.set(normalizeStatsPath(id, roots.projectRoot, roots.statsRoot), absolutePath);
     }
   }
   return onDiskFiles;

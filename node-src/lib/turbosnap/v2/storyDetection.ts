@@ -3,6 +3,7 @@ import { FilePath } from './graph';
 import {
   canonicalImporters,
   isNodeModulesPath,
+  LAZY_CONTEXT_MARKER,
   normalizeStatsPath,
   rootFilePath,
   StatsRoots,
@@ -54,9 +55,6 @@ export const CONFIG_ENTRY_FILES = new Set([
 // Webpack/rspack name a module the bundle does not own `external "<request>"` (e.g. Storybook's
 // preview runtime globals). It has no on-disk file and imports nothing.
 const EXTERNAL_MODULE = /^external "/;
-
-// Webpack spells contexts with ` lazy `; rspack delimits the same marker with pipes.
-const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
 
 /**
  * Detects which modules in the stats are story files.
