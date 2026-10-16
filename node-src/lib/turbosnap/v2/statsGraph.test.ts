@@ -242,7 +242,7 @@ describe('readStatsGraph reasons carrying a resolvedModule', () => {
     expect([...(graph.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
       './src/hello.js',
     ]);
-    expect([...(graph.files.get(configEntry)?.dependencies ?? [])]).toEqual([]);
+    expect(graph.files.has(configEntry)).toBe(false);
     expect([...(deduped.files.get('./.storybook/preview.js')?.dependencies ?? [])]).toEqual([
       './src/hello.js',
     ]);

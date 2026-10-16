@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
+import { InMemoryDisk } from './projectFiles.fake';
 import { buildSkipRule } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
 
@@ -10,6 +11,8 @@ import { readStatsGraph } from './statsGraph';
 // global decorator. Both rely on an untraced file being a wall, as it is in v1, rather than a file
 // whose own bytes merely go unhashed. They run end-to-end through buildManifest because the claim
 // spans the graph, the globals fallback and the config sweep together.
+// The concatenation suites at the bottom pin the same walls when webpack/rspack merge the
+// untraced file into a group: resolved-module attribution keeps the severed edges severed.
 
 const viaBarrel = '/repo/packages/ui/src/Modal.stories.tsx';
 const direct = '/repo/packages/ui/src/Button.stories.tsx';
@@ -193,16 +196,14 @@ describe('buildManifest with an untraced global decorator', () => {
 // `resolvedModule` — the member that really contains the import — so an untraced file inside the
 // group walls off its own imports. These suites pin the three shapes, plus the no-flag controls.
 
-function concatenatedPreviewFixture(untraced: string[]) {
-  const { disk, input } = createFixture({
-    isAbsent: syntheticAbsent,
-    directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.js'] },
-  });
-  return { disk, input: { ...input, untraced } };
-}
+const previewConfigDirectory = { '/repo/packages/ui/.storybook': ['main.ts', 'preview.js'] };
 
-function concatenatedFileFixture(untraced: string[]) {
-  const { disk, input } = createFixture({ isAbsent: syntheticAbsent });
+function untracedFixture(untraced: string[], directories?: InMemoryDisk['directories']) {
+  // Only pass `directories` through when given: an explicit undefined key would override the
+  // fixture's seeded config dir, which buildManifest refuses to work without.
+  const { disk, input } = createFixture(
+    directories ? { isAbsent: syntheticAbsent, directories } : { isAbsent: syntheticAbsent }
+  );
   return { disk, input: { ...input, untraced } };
 }
 
@@ -240,7 +241,10 @@ describe('buildManifest with an untraced preview concatenated into the config en
   };
 
   it("records no edge from the config entry to the preview's imports, and walls them off", async () => {
-    const { input } = concatenatedPreviewFixture(['packages/ui/.storybook/preview.js']);
+    const { input } = untracedFixture(
+      ['packages/ui/.storybook/preview.js'],
+      previewConfigDirectory
+    );
     const skipRule = await buildSkipRule(input);
     const graph = await readStatsGraph(stats, input, skipRule);
 
@@ -255,7 +259,10 @@ describe('buildManifest with an untraced preview concatenated into the config en
   });
 
   it('moves no hash when a file behind the untraced preview import chain changes', async () => {
-    const { disk, input } = concatenatedPreviewFixture(['packages/ui/.storybook/preview.js']);
+    const { disk, input } = untracedFixture(
+      ['packages/ui/.storybook/preview.js'],
+      previewConfigDirectory
+    );
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G1' };
     const before = await buildManifest(stats, input);
 
@@ -278,7 +285,7 @@ describe('buildManifest with an untraced preview concatenated into the config en
   });
 
   it('still traces the preview subtree when nothing is untraced (control)', async () => {
-    const { disk, input } = concatenatedPreviewFixture([]);
+    const { disk, input } = untracedFixture([]);
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G' };
     const before = await buildManifest(stats, input);
 
@@ -311,7 +318,10 @@ describe('buildManifest with an untraced preview concatenated into the config en
         { id: 6, name: story2, reasons: [{ moduleName: './storybook-stories.js' }] },
       ],
     };
-    const { disk, input } = concatenatedPreviewFixture(['packages/ui/.storybook/preview.js']);
+    const { disk, input } = untracedFixture(
+      ['packages/ui/.storybook/preview.js'],
+      previewConfigDirectory
+    );
     disk.fileHashes = { [story]: 'S', [preview]: 'P', [hello]: 'H1', [hello2]: 'G', [story2]: 'I' };
     const before = await buildManifest(withDirectImporter, input);
 
@@ -349,7 +359,7 @@ describe('buildManifest with an untraced component concatenated into its story',
   };
 
   it('moves no hash when a file the untraced component imports changes', async () => {
-    const { disk, input } = concatenatedFileFixture(['packages/ui/src/Foo.tsx']);
+    const { disk, input } = untracedFixture(['packages/ui/src/Foo.tsx']);
     disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D1' };
     const before = await buildManifest(stats, input);
 
@@ -363,7 +373,7 @@ describe('buildManifest with an untraced component concatenated into its story',
   });
 
   it('still recaptures the story through the traced component when nothing is untraced (control)', async () => {
-    const { disk, input } = concatenatedFileFixture([]);
+    const { disk, input } = untracedFixture([]);
     disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D1' };
     const before = await buildManifest(stats, input);
 
@@ -402,7 +412,7 @@ describe('buildManifest with an untraced concatenation root', () => {
   };
 
   it('keeps walling off the whole group, whatever distance behind it', async () => {
-    const { disk, input } = concatenatedFileFixture(['packages/ui/src/wall.js']);
+    const { disk, input } = untracedFixture(['packages/ui/src/wall.js']);
     const skipRule = await buildSkipRule(input);
     const graph = await readStatsGraph(stats, input, skipRule);
     expect([...graph.untracedSubtrees].sort()).toEqual([
@@ -429,7 +439,7 @@ describe('buildManifest with an untraced concatenation root', () => {
   });
 
   it('still recaptures the story through the traced group when nothing is untraced (control)', async () => {
-    const { disk, input } = concatenatedFileFixture([]);
+    const { disk, input } = untracedFixture([]);
     disk.fileHashes = { [wallStory]: 'S', [wall]: 'W', [behind]: 'B1', [deep]: 'D1' };
     const before = await buildManifest(stats, input);
 

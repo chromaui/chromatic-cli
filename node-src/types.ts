@@ -585,9 +585,9 @@ export type TaskReporter = (update: TaskUpdate) => void;
 export interface Reason {
   // An entry module's reason carries a null moduleName, so treat it as optional.
   moduleName: string | null;
-  // The readable name of the origin module before concatenation: webpack/rspack report the merged
-  // group as `moduleName`, while this names the member that contains the import. Absent on Vite,
-  // null on entry reasons.
+  // The readable name of the origin module before concatenation: webpack, and rspack where it
+  // emits the field, report the merged group as `moduleName`, while this names the member that
+  // contains the import. Absent on Vite, null on entry reasons.
   resolvedModule?: string | null;
 }
 

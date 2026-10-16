@@ -59,9 +59,9 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
 }
 
 /**
- * The module a stats reason attributes its import to: the resolved module when present — webpack/
- * rspack concatenation reports the merged group as `moduleName`, and the resolved module is the
- * member that contains the import — else `moduleName` (Vite does not emit the field).
+ * The module a stats reason attributes its import to: the resolved module when present — webpack,
+ * and rspack where it emits the field, blame the merged group (`moduleName`) on the member that
+ * contains the import — else `moduleName` (Vite does not emit the field).
  *
  * @param reason The stats reason.
  *
