@@ -44,6 +44,15 @@ const getPackageName = (modulePath: string) => {
   return unscopedName;
 };
 
+// True for a "plain" path id: no NUL virtual prefix, no `?query`, and no `+ N modules` suffix.
+const isPlainId = (name: string) =>
+  name.codePointAt(0) !== 0 && !name.includes('?') && !name.includes(' + ');
+
+// Returns the last element of an array. Not `.at(-1)`: for a non-empty input the result is never
+// undefined, and keeping it non-optional avoids a dead branch in the representative chain below.
+// eslint-disable-next-line unicorn/prefer-at
+const last = <T>(array: T[]) => array[array.length - 1];
+
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
@@ -116,7 +125,10 @@ export async function getDependentStoryFiles(
   const normalize = (posixPath: FilePath): NormalizedName => {
     const CSF_REGEX = /\s+(sync|lazy)\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
-    const newPath = normalizePath(posixPath, rootPath, projectRoot);
+    // Strip the virtual-module (NUL) prefix first, so CommonJS proxy ids like
+    // `\0./node_modules/react/index.js?commonjs-es-import` normalize to the file they proxy
+    const name = posixPath.codePointAt(0) === 0 ? posixPath.slice(1) : posixPath;
+    const newPath = normalizePath(name, rootPath, projectRoot);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
       ? newPath.replaceAll(URL_PARAM_REGEX, '')
@@ -165,48 +177,77 @@ export async function getDependentStoryFiles(
     !storiesEntryFiles.includes(name) &&
     !isDocumentationFile(name);
 
-  stats.modules
-    .filter((module_) => isUserModule(module_))
-    // TODO: refactor this function
-    // eslint-disable-next-line complexity
-    .map((module_) => {
-      const normalizedName = normalize(module_.name);
-      modulesByName.set(normalizedName, module_);
-      namesById.set(module_.id, normalizedName);
+  // Distinct modules can normalize to one name: Vue/Svelte compile a component into several
+  // modules (the component plus its `<style>` facets), CommonJS interop rewrites imports into
+  // NUL-proxied ids, and rsbuild emits bare-path stubs next to `./`-prefixed ids. Tracing must
+  // treat them as one module, or the importers of the overwritten ones become unreachable and
+  // changed components or styles trace to no stories.
+  const membersByName = new Map<NormalizedName, Module[]>();
+  for (const module_ of stats.modules) {
+    if (!isUserModule(module_)) continue;
+    const name = normalize(module_.name);
+    const members = membersByName.get(name);
+    if (members) members.push(module_);
+    else membersByName.set(name, [module_]);
+  }
 
-      const packageName = getPackageName(module_.name);
-      if (packageName) {
-        // Track all modules from any node_modules directory by their package name, so we can mark
-        // all those files "changed" if a dependency (version) changes, while still being able to
-        // "untrace" certain files (or globs) in those packages.
-        if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
-        nodeModules.get(packageName)?.push(normalizedName);
+  // Track all modules from any node_modules directory by their package name, so we can mark
+  // all those files "changed" if a dependency (version) changes, while still being able to
+  // "untrace" certain files (or globs) in those packages.
+  const trackNodeModules = (memberName: string, name: NormalizedName) => {
+    const packageName = getPackageName(memberName);
+    if (!packageName) return;
+    const names = nodeModules.get(packageName);
+    if (names) {
+      if (!names.includes(name)) names.push(name);
+    } else {
+      nodeModules.set(packageName, [name]);
+    }
+  };
+
+  for (const [name, members] of membersByName) {
+    // Represent each group by its "plainest" member: a plain path id beats a facet id (one with
+    // a NUL prefix or `?query`), and a `./`-prefixed id beats a bare one (the backend matches
+    // `onlyStoryFiles` keys against stories' `parameters.filename` values with picomatch, where
+    // a pattern without `./` does not match a filename that has it). Ties resolve to the last
+    // member, preserving the previous last-write-wins behavior.
+    const representative =
+      last(members.filter((member) => isPlainId(member.name) && member.name.startsWith('./'))) ||
+      last(members.filter((member) => isPlainId(member.name))) ||
+      last(members.filter((member) => member.name.startsWith('./'))) ||
+      last(members);
+
+    const reasons = members
+      .flatMap((member) =>
+        (member.reasons || [])
+          .map((reason) => reason.moduleName)
+          .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
+          .map((moduleName) => normalize(moduleName))
+      )
+      .filter((reasonName) => reasonName && reasonName !== name);
+
+    for (const member of members) {
+      namesById.set(member.id, name);
+      reasonsById.set(member.id, reasons);
+
+      // Concatenated modules ("a.js + 1 modules") register their inner module names so they can
+      // be traced too.
+      for (const m of member.modules || []) {
+        modulesByName.set(normalize(m.name), representative);
       }
 
-      if (module_.modules) {
-        for (const m of module_.modules) {
-          modulesByName.set(normalize(m.name), module_);
-        }
-      }
+      trackNodeModules(member.name, name);
+    }
 
-      const normalizedReasons = module_.reasons
-        ?.map((reason) => reason.moduleName)
-        .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
-        .map((moduleName) => normalize(moduleName))
-        .filter((reasonName) => reasonName && reasonName !== normalizedName);
-      if (normalizedReasons) {
-        reasonsById.set(module_.id, normalizedReasons);
-      }
+    modulesByName.set(name, representative);
 
-      if (
-        !isStorybookFile(normalizedName) &&
-        reasonsById
-          .get(module_.id)
-          ?.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
-      ) {
-        csfGlobsByName.add(normalizedName);
-      }
-    });
+    if (
+      !isStorybookFile(name) &&
+      reasons.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
+    ) {
+      csfGlobsByName.add(name);
+    }
+  }
 
   if (csfGlobsByName.size === 0) {
     // Check for misconfigured Storybook configDir. Only applicable to v6 store because v7 store
