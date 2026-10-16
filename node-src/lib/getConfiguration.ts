@@ -29,6 +29,7 @@ const configurationSchema = z
     exitZeroOnChanges: z.union([z.string(), z.boolean()]),
     exitOnceUploaded: z.union([z.string(), z.boolean()]),
     ignoreLastBuildOnBranch: z.string(),
+    ignoreMergedPrBuilds: z.union([z.string(), z.boolean()]),
     gitTimeout: z.number().min(MINIMUM_GIT_TIMEOUT_SECONDS).optional(),
 
     buildScriptName: z.string(),
