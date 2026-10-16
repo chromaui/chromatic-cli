@@ -1,3 +1,25 @@
+# v18.13.0 (Fri Oct 16 2026)
+
+#### 🚀 Enhancement
+
+- [TurboSnap v2] Apply gitignore values from sibling packages in monorepos [#1527](https://github.com/chromaui/chromatic-cli/pull/1527) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- [TurboSnap v2] Skip gitignored files in the Storybook config directory [#1525](https://github.com/chromaui/chromatic-cli/pull/1525) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add `--untraced` support [#1522](https://github.com/chromaui/chromatic-cli/pull/1522) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add `--externals` support [#1516](https://github.com/chromaui/chromatic-cli/pull/1516) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Dedupe concurrent Release workflow runs [#1526](https://github.com/chromaui/chromatic-cli/pull/1526) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Autobuild onboarding: add .obvious agent contract (validated local dev + snapshot) [#1521](https://github.com/chromaui/chromatic-cli/pull/1521) ([@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]) [@ObviousApp](https://github.com/ObviousApp))
+
+#### Authors: 3
+
+- [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Obvious ([@ObviousApp](https://github.com/ObviousApp))
+
+---
+
 # v18.12.2 (Wed Oct 14 2026)
 
 #### 🐛 Bug Fix
