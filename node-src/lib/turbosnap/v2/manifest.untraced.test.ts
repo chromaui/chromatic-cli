@@ -324,7 +324,7 @@ describe('buildManifest with an untraced component concatenated into its story',
 
   const stats: Stats = {
     modules: [
-      statsModule(fooStory, {
+      statsModule(`${fooStory} + 1 modules`, {
         id: 1,
         modules: [{ name: fooStory }, { name: foo }],
         reasons: [{ moduleName: './storybook-stories.js' }],

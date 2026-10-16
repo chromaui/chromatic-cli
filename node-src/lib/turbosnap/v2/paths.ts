@@ -72,10 +72,48 @@ export function reasonImporter(reason: Reason): string | null {
 }
 
 /**
- * The canonical paths that import a stats module: its `reasons` mapped to {@link reasonImporter} —
- * the resolved module when present, the `moduleName` group root otherwise — entry reasons (null
- * importer) dropped, each normalized. The single place the "canonical importers" rule lives, so
- * `readStatsGraph` and story detection cannot drift apart.
+ * An import edge of a stats module, canonicalized so it names the same key wherever the builder
+ * spells it.
+ */
+export interface ImportEdge {
+  /** The canonical path the import is attributed to: the resolved member, else the group root. */
+  importer: FilePath;
+  /** The canonical group root when the reason blamed a concatenation group the importer sits in. */
+  groupRoot?: FilePath;
+}
+
+/**
+ * The canonical import edges of a stats module: one per reason, attributed to its
+ * {@link reasonImporter} — the resolved module when present, the `moduleName` group root otherwise
+ * — entry reasons (null importer) dropped, each normalized. When the attribution differs from the
+ * reason's normalized `moduleName` root, the root rides along as `groupRoot`: webpack/rspack
+ * concatenation reports the merged group as the module name, so the graph can keep the group root
+ * linked to the member it bundles even when the stats list the member nowhere else. The single
+ * place the "canonical importers" rule lives, so `readStatsGraph` and story detection cannot drift
+ * apart.
+ *
+ * @param module The stats module.
+ * @param roots The roots to anchor against. See {@link StatsRoots}.
+ *
+ * @returns The canonical import edges.
+ */
+export function canonicalImportEdges(module: Module, roots: StatsRoots): ImportEdge[] {
+  return (module.reasons ?? []).flatMap((reason) => {
+    const name = reasonImporter(reason);
+    if (typeof name !== 'string') return [];
+
+    const importer = normalizeStatsPath(name, roots.projectRoot, roots.statsRoot);
+    const groupRoot = reason.moduleName
+      ? normalizeStatsPath(reason.moduleName, roots.projectRoot, roots.statsRoot)
+      : importer;
+    return groupRoot === importer ? [{ importer }] : [{ importer, groupRoot }];
+  });
+}
+
+/**
+ * The canonical paths that import a stats module: the {@link ImportEdge.importer} of every
+ * {@link canonicalImportEdges} edge. Story detection only asks which files import a module; the
+ * group roots the edges also carry are the graph's concern.
  *
  * @param module The stats module.
  * @param roots The roots to anchor against. See {@link StatsRoots}.
@@ -83,10 +121,7 @@ export function reasonImporter(reason: Reason): string | null {
  * @returns The canonical importer paths.
  */
 export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
-  return (module.reasons ?? [])
-    .map((reason) => reasonImporter(reason))
-    .filter((name): name is FilePath => typeof name === 'string')
-    .map((name) => normalizeStatsPath(name, roots.projectRoot, roots.statsRoot));
+  return canonicalImportEdges(module, roots).map((edge) => edge.importer);
 }
 
 /**

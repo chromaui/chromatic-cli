@@ -237,11 +237,6 @@ describe('readStatsGraph reasons carrying a resolvedModule', () => {
     const rsbuildGroup: Stats = {
       modules: [
         { id: configEntry, name: `${configEntry} + 2 modules`, modules: [{ name: './ctx' }] },
-        {
-          id: null,
-          name: preview,
-          reasons: [{ moduleName: configEntry, resolvedModule: configEntry }],
-        },
         { id: null, name: hello, reasons: [reasonFromGroup] },
       ],
     };

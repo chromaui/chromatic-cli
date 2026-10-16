@@ -9,6 +9,7 @@ import {
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
+  canonicalImportEdges,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -106,8 +107,6 @@ export async function readStatsGraph(
   const storyFiles = detectStoryFiles({ ...roots, onDiskFiles }, stats);
 
   const files = new Map<FilePath, TurboSnapFile>();
-  const canonicalPath = (name: string | null) =>
-    name && normalizeStatsPath(name, roots.projectRoot, roots.statsRoot);
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
@@ -117,16 +116,12 @@ export async function readStatsGraph(
 
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
-    for (const reason of module.reasons ?? []) {
-      const importer = canonicalPath(reasonImporter(reason));
-      if (!importer) continue;
-
-      // Canonicalised so a dependency edge names the same key wherever the builder spells it. A
-      // reason blaming a group while resolving to a member also links the root to that member: the
-      // stats may list the member nowhere else, and the wall holds because the root's edge points in.
+    for (const { importer, groupRoot } of canonicalImportEdges(module, roots)) {
+      // A reason blaming a group while resolving to a member also links the root to that member:
+      // the stats may list the member nowhere else, and the wall holds because the root's edge
+      // points in — wallOffUntracedFiles clears the member's own outgoing edges, not these.
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
-      const groupRoot = canonicalPath(reason.moduleName);
-      if (groupRoot && groupRoot !== importer) {
+      if (groupRoot) {
         ensureFile(files, groupRoot, hashes).dependencies.add(importer);
       }
     }

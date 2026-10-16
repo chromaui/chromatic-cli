@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Module } from '../../../types';
 import {
   canonicalFileNames,
+  canonicalImportEdges,
   canonicalImporters,
   gitRootGlobMatcher,
   isNodeModulesPath,
@@ -202,6 +203,49 @@ describe('canonicalImporters', () => {
     },
   ])('$name', ({ module: input, expected }) => {
     expect(canonicalImporters(input, roots)).toEqual(expected);
+  });
+});
+
+describe('canonicalImportEdges', () => {
+  it('hands the normalized group root to an importer that resolves to a member of the group', () => {
+    expect(
+      canonicalImportEdges(
+        module({
+          reasons: [
+            {
+              moduleName: '/repo/packages/ui/.storybook/preview.js + 2 modules',
+              resolvedModule: '/repo/packages/ui/src/hello.js',
+            },
+          ],
+        }),
+        roots
+      )
+    ).toEqual([{ importer: './src/hello.js', groupRoot: './.storybook/preview.js' }]);
+  });
+
+  it('omits the group root when the reason resolves to the root itself', () => {
+    expect(
+      canonicalImportEdges(
+        module({
+          reasons: [
+            {
+              moduleName: '/repo/packages/ui/src/Button.tsx',
+              resolvedModule: '/repo/packages/ui/src/Button.tsx',
+            },
+          ],
+        }),
+        roots
+      )
+    ).toEqual([{ importer: './src/Button.tsx' }]);
+  });
+
+  it('omits the group root when the reason names no group (Vite)', () => {
+    expect(
+      canonicalImportEdges(
+        module({ reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }] }),
+        roots
+      )
+    ).toEqual([{ importer: './src/Button.tsx' }]);
   });
 });
 
