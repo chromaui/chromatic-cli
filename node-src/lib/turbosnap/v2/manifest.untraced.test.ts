@@ -349,6 +349,138 @@ describe('buildManifest with an untraced component concatenated into its story',
     expect([...after.skippedFiles]).toEqual([['./src/Foo.tsx', 'untraced']]);
   });
 
+  it('moves no hash when the file the untraced component imports is concatenated into the same group', async () => {
+    // The group lists every member, but each member's own reasons say which member imports it:
+    // the root must not reach `dep` around the untraced component.
+    const group = `${fooStory} + 2 modules`;
+    const sharedGroup: Stats = {
+      modules: [
+        statsModule(group, {
+          id: 1,
+          modules: [{ name: fooStory }, { name: foo }, { name: dep }],
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        }),
+        statsModule(foo, { reasons: [{ moduleName: group, resolvedModule: fooStory }] }),
+        statsModule(dep, { reasons: [{ moduleName: group, resolvedModule: foo }] }),
+      ],
+    };
+    const { disk, input } = untracedFixture(['packages/ui/src/Foo.tsx']);
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D1' };
+    const before = await buildManifest(sharedGroup, input);
+
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D2' };
+    const after = await buildManifest(sharedGroup, input);
+
+    expect(after.storyFileHashes.get('./src/Foo.stories.tsx')).toBe(
+      before.storyFileHashes.get('./src/Foo.stories.tsx')
+    );
+    expect(after.storybookHash).toBe(before.storybookHash);
+  });
+
+  it('moves no hash when a stylesheet the untraced component imports is also reported against the group', async () => {
+    // Webpack's CSS pipeline emits a second record for the stylesheet whose reason blames the group
+    // and resolves to the stylesheet itself; that must not link the root to it past the component.
+    const group = `${fooStory} + 2 modules`;
+    const styles = '/repo/packages/ui/src/foo.css';
+    const cssPipeline: Stats = {
+      modules: [
+        statsModule(group, {
+          id: 1,
+          modules: [{ name: fooStory }, { name: foo }, { name: styles }],
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        }),
+        statsModule(foo, { reasons: [{ moduleName: group, resolvedModule: fooStory }] }),
+        statsModule(styles, { reasons: [{ moduleName: foo, resolvedModule: foo }] }),
+        statsModule(`css ${styles}`, {
+          nameForCondition: styles,
+          reasons: [{ moduleName: group, resolvedModule: styles }],
+        }),
+      ],
+    };
+    const { disk, input } = untracedFixture(['packages/ui/src/Foo.tsx']);
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [styles]: 'C1' };
+    const before = await buildManifest(cssPipeline, input);
+
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [styles]: 'C2' };
+    const after = await buildManifest(cssPipeline, input);
+
+    expect(after.storyFileHashes.get('./src/Foo.stories.tsx')).toBe(
+      before.storyFileHashes.get('./src/Foo.stories.tsx')
+    );
+    expect(after.storybookHash).toBe(before.storybookHash);
+  });
+
+  it('still recaptures the story through the traced component when nothing is untraced (control)', async () => {
+    const { disk, input } = untracedFixture([]);
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storyFileHashes.get('./src/Foo.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('./src/Foo.stories.tsx')
+    );
+  });
+});
+
+describe('buildManifest with an untraced component concatenated into its story under rspack', () => {
+  // The record shapes rspack 1.7 emits: `resolvedModule` (and even the component's own `name`)
+  // spell the group, so only `resolvedModuleIdentifier` names the component.
+  const fooStory = '/repo/packages/ui/src/Foo.stories.tsx';
+  const foo = '/repo/packages/ui/src/Foo.tsx';
+  const dep = '/repo/packages/ui/src/dep.ts';
+  const group = './src/Foo.stories.tsx + 2 modules';
+  const storyId = `csf-loader!builtin:swc-loader??ruleSet[1].rules[6].use[0]!${fooStory}`;
+  const fooId = `builtin:swc-loader??ruleSet[1].rules[6].use[0]!${foo}`;
+  const depId = `builtin:swc-loader??ruleSet[1].rules[6].use[0]!${dep}`;
+
+  const stats: Stats = {
+    modules: [
+      statsModule(group, {
+        identifier: `${storyId}|ce9324acab456de5`,
+        nameForCondition: fooStory,
+        modules: [
+          { identifier: storyId, name: './src/Foo.stories.tsx', nameForCondition: fooStory },
+          { identifier: fooId, name: group, nameForCondition: foo },
+          { identifier: depId, name: './src/dep.ts', nameForCondition: dep },
+        ],
+        reasons: [{ moduleName: './storybook-stories.js' }],
+      }),
+      statsModule(group, {
+        identifier: fooId,
+        nameForCondition: foo,
+        reasons: [
+          {
+            moduleName: './src/Foo.stories.tsx',
+            resolvedModule: './src/Foo.stories.tsx',
+            resolvedModuleIdentifier: storyId,
+          },
+        ],
+      }),
+      statsModule('./src/dep.ts', {
+        identifier: depId,
+        nameForCondition: dep,
+        reasons: [{ moduleName: group, resolvedModule: group, resolvedModuleIdentifier: fooId }],
+      }),
+    ],
+  };
+
+  it('moves no hash when a file the untraced component imports changes', async () => {
+    const { disk, input } = untracedFixture(['packages/ui/src/Foo.tsx']);
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D1' };
+    const before = await buildManifest(stats, input);
+
+    disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D2' };
+    const after = await buildManifest(stats, input);
+
+    expect(after.storyFileHashes.get('./src/Foo.stories.tsx')).toBe(
+      before.storyFileHashes.get('./src/Foo.stories.tsx')
+    );
+    expect(after.storybookHash).toBe(before.storybookHash);
+    expect([...after.skippedFiles]).toEqual([['./src/Foo.tsx', 'untraced']]);
+  });
+
   it('still recaptures the story through the traced component when nothing is untraced (control)', async () => {
     const { disk, input } = untracedFixture([]);
     disk.fileHashes = { [fooStory]: 'S', [foo]: 'F', [dep]: 'D1' };

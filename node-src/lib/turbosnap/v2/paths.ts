@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { AbsolutePath, Module, Reason } from '../../../types';
+import { AbsolutePath, Module, Reason, Stats } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { matchesFile } from '../../utilities';
 import { FilePath } from './graph';
@@ -59,16 +59,52 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
 }
 
 /**
- * The module a stats reason attributes its import to: the resolved module when present — webpack,
- * and rspack where it emits the field, report the merged group as `moduleName`, while the resolved
- * module is the member that contains the import — else `moduleName` (Vite does not emit the field).
+ * The source file of every webpack/rspack module record, top-level and concatenated inner alike,
+ * keyed by its exact `identifier`. Built once per stats file so {@link reasonImporter} can name the
+ * member a reason's `resolvedModuleIdentifier` points at.
+ */
+export type ModuleSources = ReadonlyMap<string, FilePath>;
+
+/**
+ * Indexes the source file behind every module identifier in the stats; see {@link ModuleSources}.
+ * Identifiers are matched exactly rather than parsed: they carry loader chains, queries and
+ * require-context regexes whose syntax differs between bundlers. A record without a
+ * `nameForCondition` (a require-context, an external) has no source file and is left out, so its
+ * reasons keep the name fallback.
+ *
+ * @param stats The stats file to index.
+ *
+ * @returns The source file of each module identifier.
+ */
+export function indexModuleSources(stats: Stats): ModuleSources {
+  const sources = new Map<string, FilePath>();
+  for (const module of stats.modules) {
+    for (const record of [module, ...(module.modules ?? [])]) {
+      if (record.identifier && record.nameForCondition && !sources.has(record.identifier)) {
+        sources.set(record.identifier, record.nameForCondition);
+      }
+    }
+  }
+  return sources;
+}
+
+/**
+ * The module a stats reason attributes its import to. Webpack/rspack report the merged group as
+ * `moduleName`, so the member that contains the import is read from `resolvedModuleIdentifier`
+ * first: rspack spells the group in `resolvedModule` too, and only the identifier names the member
+ * in both bundlers. Then `resolvedModule` (webpack's member name, or a require-context the index
+ * leaves out), then `moduleName` (Vite emits neither field).
  *
  * @param reason The stats reason.
+ * @param sources The source files of the stats module identifiers; see {@link indexModuleSources}.
  *
  * @returns The name of the module the import belongs to, or null for an entry reason.
  */
-export function reasonImporter(reason: Reason): string | null {
-  return reason.resolvedModule ?? reason.moduleName;
+export function reasonImporter(reason: Reason, sources: ModuleSources): string | null {
+  const resolved = reason.resolvedModuleIdentifier
+    ? sources.get(reason.resolvedModuleIdentifier)
+    : undefined;
+  return resolved ?? reason.resolvedModule ?? reason.moduleName;
 }
 
 /**
@@ -84,22 +120,27 @@ export interface ImportEdge {
 
 /**
  * The canonical import edges of a stats module: one per reason, attributed to its
- * {@link reasonImporter} — the resolved module when present, the `moduleName` group root otherwise
- * — entry reasons (null importer) dropped, each normalized. When the attribution differs from the
- * reason's normalized `moduleName` root, the root rides along as `groupRoot`: webpack/rspack
- * concatenation reports the merged group as the module name, so the graph can keep the group root
- * linked to the member it bundles even when the stats list the member nowhere else. The single
- * place the "canonical importers" rule lives, so `readStatsGraph` and story detection cannot drift
- * apart.
+ * {@link reasonImporter} — the resolved member when the stats name one, the `moduleName` group root
+ * otherwise — entry reasons (null importer) dropped, each normalized. When the attribution differs
+ * from the reason's normalized `moduleName` root, the root rides along as `groupRoot`:
+ * webpack/rspack concatenation reports the merged group as the module name, so the graph can keep
+ * the group root linked to the member it bundles even when the stats list the member nowhere else.
+ * The single place the "canonical importers" rule lives, so `readStatsGraph` and story detection
+ * cannot drift apart.
  *
  * @param module The stats module.
  * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param sources The source files of the stats module identifiers; see {@link indexModuleSources}.
  *
  * @returns The canonical import edges.
  */
-export function canonicalImportEdges(module: Module, roots: StatsRoots): ImportEdge[] {
+export function canonicalImportEdges(
+  module: Module,
+  roots: StatsRoots,
+  sources: ModuleSources
+): ImportEdge[] {
   return (module.reasons ?? []).flatMap((reason) => {
-    const name = reasonImporter(reason);
+    const name = reasonImporter(reason, sources);
     if (typeof name !== 'string') return [];
 
     const importer = normalizeStatsPath(name, roots.projectRoot, roots.statsRoot);
@@ -117,11 +158,16 @@ export function canonicalImportEdges(module: Module, roots: StatsRoots): ImportE
  *
  * @param module The stats module.
  * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param sources The source files of the stats module identifiers; see {@link indexModuleSources}.
  *
  * @returns The canonical importer paths.
  */
-export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
-  return canonicalImportEdges(module, roots).map((edge) => edge.importer);
+export function canonicalImporters(
+  module: Module,
+  roots: StatsRoots,
+  sources: ModuleSources
+): FilePath[] {
+  return canonicalImportEdges(module, roots, sources).map((edge) => edge.importer);
 }
 
 /**

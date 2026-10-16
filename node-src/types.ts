@@ -585,19 +585,25 @@ export type TaskReporter = (update: TaskUpdate) => void;
 export interface Reason {
   // An entry module's reason carries a null moduleName, so treat it as optional.
   moduleName: string | null;
-  // The readable name of the origin module before concatenation: webpack, and rspack where it
-  // emits the field, report the merged group as `moduleName`, while this names the member that
-  // contains the import. Absent on Vite, null on entry reasons.
+  // The readable name of the origin module before concatenation. Webpack names the member that
+  // contains the import, but rspack spells the merged group here just as in `moduleName`. Absent
+  // on Vite, null on entry reasons.
   resolvedModule?: string | null;
+  // The `identifier` of the origin module before concatenation. Unlike `resolvedModule`, both
+  // webpack and rspack name the member that contains the import. Absent on Vite.
+  resolvedModuleIdentifier?: string | null;
 }
 
 export interface Module {
   id: string | number | null;
+  // The webpack/rspack key of the module: its resource path behind its loader chain, query and
+  // other build details. Opaque; match it exactly, never parse it.
+  identifier?: string;
   name: string;
   // The absolute path of the module's source file in the webpack/rspack stats. The `name` field is
   // the group name (e.g. `./x.stories.tsx + 1 modules`).
   nameForCondition?: string;
-  modules?: Pick<Module, 'name' | 'nameForCondition'>[];
+  modules?: Pick<Module, 'identifier' | 'name' | 'nameForCondition'>[];
   reasons?: Reason[];
 }
 

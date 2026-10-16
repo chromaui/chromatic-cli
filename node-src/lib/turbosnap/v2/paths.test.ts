@@ -6,6 +6,7 @@ import {
   canonicalImportEdges,
   canonicalImporters,
   gitRootGlobMatcher,
+  indexModuleSources,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -16,6 +17,8 @@ import {
 
 const projectRoot = '/repo/packages/ui';
 const roots = { projectRoot, statsRoot: projectRoot };
+// Stats without module identifiers (Vite, or hand-written webpack shapes) index no sources.
+const noSources = new Map<string, string>();
 
 function module(module: Partial<Module>): Module {
   return { id: 0, name: '', ...module };
@@ -202,7 +205,7 @@ describe('canonicalImporters', () => {
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
-    expect(canonicalImporters(input, roots)).toEqual(expected);
+    expect(canonicalImporters(input, roots, noSources)).toEqual(expected);
   });
 });
 
@@ -218,7 +221,8 @@ describe('canonicalImportEdges', () => {
             },
           ],
         }),
-        roots
+        roots,
+        noSources
       )
     ).toEqual([{ importer: './src/hello.js', groupRoot: './.storybook/preview.js' }]);
   });
@@ -234,7 +238,8 @@ describe('canonicalImportEdges', () => {
             },
           ],
         }),
-        roots
+        roots,
+        noSources
       )
     ).toEqual([{ importer: './src/Button.tsx' }]);
   });
@@ -243,9 +248,100 @@ describe('canonicalImportEdges', () => {
     expect(
       canonicalImportEdges(
         module({ reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }] }),
-        roots
+        roots,
+        noSources
       )
     ).toEqual([{ importer: './src/Button.tsx' }]);
+  });
+});
+
+describe('indexModuleSources', () => {
+  const storyId = 'csf-loader!swc-loader!/repo/packages/ui/src/Button.stories.tsx';
+  const buttonId = 'swc-loader!/repo/packages/ui/src/Button.tsx';
+
+  it('indexes top-level and inner records by identifier, keeping the first source of a duplicate', () => {
+    const sources = indexModuleSources({
+      modules: [
+        module({
+          identifier: `${storyId}|ce9324ac`,
+          name: './src/Button.stories.tsx + 1 modules',
+          nameForCondition: '/repo/packages/ui/src/Button.stories.tsx',
+          modules: [
+            {
+              identifier: storyId,
+              name: './src/Button.stories.tsx',
+              nameForCondition: '/repo/packages/ui/src/Button.stories.tsx',
+            },
+            {
+              identifier: buttonId,
+              name: './src/Button.stories.tsx + 1 modules',
+              nameForCondition: '/repo/packages/ui/src/Button.tsx',
+            },
+          ],
+        }),
+        module({ identifier: buttonId, nameForCondition: '/repo/packages/ui/src/Other.tsx' }),
+      ],
+    });
+
+    expect([...sources]).toEqual([
+      [`${storyId}|ce9324ac`, '/repo/packages/ui/src/Button.stories.tsx'],
+      [storyId, '/repo/packages/ui/src/Button.stories.tsx'],
+      [buttonId, '/repo/packages/ui/src/Button.tsx'],
+    ]);
+  });
+
+  it('leaves out records with no source file, such as require-contexts', () => {
+    const sources = indexModuleSources({
+      modules: [
+        module({
+          identifier: String.raw`/repo/packages/ui/src|lazy|/^\.\/.*$/`,
+          name: String.raw`./src|lazy|/^\.\/.*$/`,
+        }),
+        module({ name: './src/Button.tsx', nameForCondition: '/repo/packages/ui/src/Button.tsx' }),
+      ],
+    });
+
+    expect(sources.size).toBe(0);
+  });
+});
+
+describe('canonicalImportEdges with module identifiers', () => {
+  const group = './src/Button.stories.tsx + 2 modules';
+  const buttonId =
+    'builtin:swc-loader??ruleSet[1].rules[6].use[0]!/repo/packages/ui/src/Button.tsx';
+  const sources = new Map([[buttonId, '/repo/packages/ui/src/Button.tsx']]);
+
+  it('attributes the import to the member the identifier names when resolvedModule spells the group (rspack)', () => {
+    expect(
+      canonicalImportEdges(
+        module({
+          reasons: [
+            { moduleName: group, resolvedModule: group, resolvedModuleIdentifier: buttonId },
+          ],
+        }),
+        roots,
+        sources
+      )
+    ).toEqual([{ importer: './src/Button.tsx', groupRoot: './src/Button.stories.tsx' }]);
+  });
+
+  it('falls back to resolvedModule when the identifier names no indexed source (require-context)', () => {
+    const context = './src/lib/ lazy namespace object';
+    expect(
+      canonicalImportEdges(
+        module({
+          reasons: [
+            {
+              moduleName: context,
+              resolvedModule: context,
+              resolvedModuleIdentifier: `/repo/packages/ui/${context}`,
+            },
+          ],
+        }),
+        roots,
+        sources
+      )
+    ).toEqual([{ importer: context }]);
   });
 });
 
