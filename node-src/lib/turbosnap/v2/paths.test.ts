@@ -243,6 +243,57 @@ describe('normalizeStatsPath', () => {
   });
 });
 
+describe('normalizeStatsPath folding proxy and query ids', () => {
+  it.each([
+    {
+      name: 'a NUL proxy for a relative CommonJS module',
+      id: '\0./../../node_modules/react/index.js?commonjs-module',
+      expected: '../../node_modules/react/index.js',
+    },
+    {
+      name: 'a query-suffixed framework block',
+      id: './src/Foo.vue?vue&type=script&lang.ts',
+      expected: './src/Foo.vue',
+    },
+    {
+      name: 'a query-suffixed html proxy entry',
+      id: './iframe.html?html-proxy&inline-css&index=0.css',
+      expected: './iframe.html',
+    },
+  ])('folds $name onto the file it stands for', ({ id, expected }) => {
+    expect(normalizeStatsPath(id, projectRoot)).toBe(expected);
+  });
+
+  it.each([
+    [
+      'a webpack loader chain',
+      '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css',
+    ],
+    [
+      'an rsbuild context name with a negative lookahead',
+      String.raw`./src sync recursive ^\.\/(?!.*node_modules).*\.stories\.tsx$`,
+    ],
+    [
+      'a webpack lazy context name with a query',
+      String.raw`./src lazy recursive ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack lazy context name with a query',
+      String.raw`./src|lazy|/^\.\/.*$/|include: /(?:\.stories\.tsx)$?query`,
+    ],
+    [
+      'a webpack sync context name with a query',
+      String.raw`./src sync recursive ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack sync context name with a query',
+      String.raw`./src|sync|/^\.\/.*$/|include: /(?:\.stories\.tsx)$?query`,
+    ],
+  ])('keeps the ? of %s', (_name, id) => {
+    expect(normalizeStatsPath(id, projectRoot)).toBe(id);
+  });
+});
+
 describe('resolveStatsPath', () => {
   it('resolves a relative path against the project root', () => {
     expect(resolveStatsPath('./src/x.ts', projectRoot)).toBe('/repo/packages/ui/src/x.ts');
@@ -274,6 +325,29 @@ describe('resolveStatsPath', () => {
   it('leaves an unescaped hash alone, since webpack reads it as a fragment', () => {
     expect(resolveStatsPath('./src/Button.tsx#fragment', projectRoot)).toBe(
       '/repo/packages/ui/src/Button.tsx#fragment'
+    );
+  });
+});
+
+describe('resolveStatsPath folding proxy and query ids', () => {
+  it('folds a NUL proxy onto the file it names, without the query', () => {
+    expect(
+      resolveStatsPath('\0./../../node_modules/react/index.js?commonjs-module', projectRoot)
+    ).toBe('/repo/node_modules/react/index.js');
+  });
+
+  it('folds a query-suffixed block id onto its file', () => {
+    expect(resolveStatsPath('./src/Foo.vue?vue&type=script&lang.ts', projectRoot)).toBe(
+      '/repo/packages/ui/src/Foo.vue'
+    );
+  });
+
+  it('resolves a loader chain with its ? intact, so the loader file is never hashed instead', () => {
+    const id =
+      '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css';
+
+    expect(resolveStatsPath(id, projectRoot)).toBe(
+      '/repo/node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css'
     );
   });
 });
@@ -310,6 +384,22 @@ describe('isSyntheticFile', () => {
 
   it('does not mistake a real path containing data: for a synthetic module', () => {
     expect(isSyntheticFile('/repo/packages/data:exports/src/font.ts')).toBe(false);
+  });
+});
+
+describe('isSyntheticFile NUL proxy classification', () => {
+  it.each([
+    ['a bare NUL runtime helper', '\0commonjsHelpers.js'],
+    ['a bare NUL Vite preload helper', '\0vite/preload-helper.js'],
+    ['a bare NUL Vite modulepreload polyfill', '\0vite/modulepreload-polyfill.js'],
+    ['a bare NUL framework helper', '\0plugin-vue:export-helper'],
+    ['a NUL-prefixed opaque rooted id', '\0/@data-uri/data:text/javascript,export default 1'],
+  ])('classifies %s as synthetic', (_name, id) => {
+    expect(isSyntheticFile(id)).toBe(true);
+  });
+
+  it('does not classify a NUL proxy for a relative path as synthetic, since it folds onto a real file', () => {
+    expect(isSyntheticFile('\0./../../node_modules/react/index.js?commonjs-module')).toBe(false);
   });
 });
 
