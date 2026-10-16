@@ -172,7 +172,8 @@ describe("buildManifest through a workspace package's build output", () => {
 
   // The bundler resolves `@acme/icons` through its node_modules link to the package's gitignored
   // `dist`, so that is the only form of the package the graph holds. It is skipped, as v1 skips it:
-  // git sees a build artifact, and `--externals` is the escape hatch for teams that rebuild it.
+  // git sees a build artifact. `--externals` cannot glob that `dist` — it matches only tracked
+  // files — so the escape hatch for teams that rebuild it is a glob on the package's source.
   const stats: Stats = {
     modules: [
       { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },

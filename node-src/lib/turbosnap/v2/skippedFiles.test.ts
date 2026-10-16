@@ -51,23 +51,6 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[preview, 'gitignored']]);
   });
 
-  it("skips another package's gitignored file under the project root, since the rule is git's view of the whole repository", async () => {
-    const built = `${projectRoot}/packages/icons/dist/index.js`;
-
-    const result = await skipped(
-      [built, generated],
-      context({
-        directories: { [`${projectRoot}/packages/icons`]: ['package.json'] },
-        isIgnored: () => true,
-      })
-    );
-
-    expect(result).toEqual([
-      [built, 'gitignored'],
-      [generated, 'gitignored'],
-    ]);
-  });
-
   it("skips a sibling package's gitignored file, since the rule is git's view of the whole repository", async () => {
     const built = '/repo/packages/icons/dist/index.js';
 

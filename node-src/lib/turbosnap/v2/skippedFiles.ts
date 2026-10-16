@@ -97,8 +97,13 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * Git's answer is taken for the whole repository, as v1 sees it: a file git ignores in any workspace
  * package is skipped, not just the Storybook package's own. The accepted cost: a workspace package
  * the graph holds only through its gitignored `dist` — the bundler resolves the `node_modules` link
- * to it, so its source never appears — is no longer hashed, which is v1's behavior today; the escape
- * hatch is `--externals`. One exception keeps a real change visible: `node_modules`, because it is
+ * to it, so its source never appears — is no longer hashed, which is v1's behavior today.
+ * `--externals` does not rescue such a `dist`: `listExternalFiles` walks the git index, and git
+ * never lists an ignored file, so a glob like `packages/icons/dist/**` matches nothing — the same
+ * reason v1's `git diff` never sees the `dist`, which is why the flag needs no change. The hatch
+ * that works is a glob on the sibling's tracked source: any change there recaptures Storybook-wide,
+ * which detects changes to the built `dist` too. One exception keeps a real change visible:
+ * `node_modules`, because it is
  * in nearly every `.gitignore` yet a dependency upgrade is a real change. The Storybook config
  * directory gets no exemption: a gitignored file there is generated like any other, and hashing it
  * over-captures just the same; the main config is the one file hashed regardless, by the config
