@@ -301,24 +301,21 @@ function locateOnDiskFiles(
   roots: StatsRoots,
   projectFiles: ProjectFiles
 ): Map<FilePath, AbsolutePath> {
-  // Collect every referenced module path once, expanding concatenated modules into their real
-  // files and skipping importers with a null moduleName.
-  const rawPaths = new Set<FilePath>();
+  // Collect every referenced stats id once, folded onto the file it stands for and expanded into
+  // concatenated real files, skipping importers with a null moduleName. Folding at insertion makes
+  // the dedupe canonical: every spelling of one file stats the disk and keys the node once.
+  const fileIds = new Set<FilePath>();
   for (const module of stats.modules) {
     for (const name of moduleFileNames(module)) {
-      rawPaths.add(name);
+      fileIds.add(foldStatsId(name));
     }
     for (const reason of module.reasons ?? []) {
-      if (reason.moduleName) rawPaths.add(reason.moduleName);
+      if (reason.moduleName) fileIds.add(foldStatsId(reason.moduleName));
     }
   }
 
   const onDiskFiles = new Map<FilePath, AbsolutePath>();
-  for (const rawPath of rawPaths) {
-    // Fold once per id: a proxy or query spelling keys the graph node by the file it stands for.
-    // The shared normalizers never fold, because they also key real disk paths (outOfGraphFiles),
-    // where a literal `?` can be part of the filename.
-    const id = foldStatsId(rawPath);
+  for (const id of fileIds) {
     const absolutePath = hashableAbsolutePath(id, roots.statsRoot, projectFiles);
     if (absolutePath) {
       onDiskFiles.set(normalizeStatsPath(id, roots.projectRoot, roots.statsRoot), absolutePath);

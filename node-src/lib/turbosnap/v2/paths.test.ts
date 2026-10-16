@@ -307,11 +307,11 @@ describe('foldStatsId', () => {
     ],
     [
       'an rsbuild context name with a negative lookahead',
-      String.raw`./src sync recursive ^\.\/(?!.*node_modules).*\.stories\.tsx$`,
+      String.raw`./src sync ^\.\/(?!.*node_modules).*\.stories\.tsx$?query`,
     ],
     [
       'a webpack lazy context name with a query',
-      String.raw`./src lazy recursive ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
+      String.raw`./src lazy ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
     ],
     [
       'an rspack lazy context name with a query',
@@ -319,7 +319,7 @@ describe('foldStatsId', () => {
     ],
     [
       'a webpack sync context name with a query',
-      String.raw`./src sync recursive ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
+      String.raw`./src sync ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
     ],
     [
       'an rspack sync context name with a query',
@@ -327,19 +327,16 @@ describe('foldStatsId', () => {
     ],
     [
       'a webpack eager context name with a query',
-      String.raw`./icons eager recursive ^\.\/.*\.(?:svg)$?query`,
+      String.raw`./icons eager ^\.\/.*\.(?:svg)$?query`,
     ],
-    [
-      'a webpack weak context name with a query',
-      String.raw`./icons weak recursive ^\.\/.*\.(?:svg)$?query`,
-    ],
+    ['a webpack weak context name with a query', String.raw`./icons weak ^\.\/.*\.(?:svg)$?query`],
     [
       'a webpack async-weak context name with a query',
-      String.raw`./icons async-weak recursive ^\.\/.*\.(?:svg)$?query`,
+      String.raw`./icons async-weak ^\.\/.*\.(?:svg)$?query`,
     ],
     [
       'a webpack lazy-once context name with a query',
-      String.raw`./icons lazy-once non-recursive ^\.\/.*\.(?:svg)$?query`,
+      String.raw`./icons lazy-once nonrecursive ^\.\/.*\.(?:svg)$?query`,
     ],
   ])('keeps the ? of %s', (_name, id) => {
     expect(foldStatsId(id)).toBe(id);

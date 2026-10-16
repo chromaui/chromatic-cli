@@ -113,16 +113,24 @@ export function isNodeModulesPath(filePath: string): boolean {
 const NUL = '\0';
 const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
 
-// Webpack names a require.context by its mode followed by `recursive` or `non-recursive` and the
-// include glob, e.g. `./icons lazy recursive`. The modes are sync, eager, weak, async-weak, lazy
-// and lazy-once; rspack delimits the same lazy and sync markers with pipes. A context name is a
-// glob expression rather than a file path, so its `?` starts no query.
-const CONTEXT_MARKER =
-  /(?:sync|eager|weak|async-weak|lazy|lazy-once) (?:non-?)?recursive |\|lazy\||\|sync\|/;
+// Webpack names a require.context by its mode and the include glob, e.g. `./icons lazy ^\\.\\/.*\\.svg`.
+// Webpack 5 appends ` nonrecursive` before the glob only when recursion is off. The modes are sync,
+// eager, weak, async-weak, lazy and lazy-once; rspack delimits the same lazy and sync markers with
+// pipes. A context name is a glob expression rather than a file path, so its `?` starts no query.
+const CONTEXT_MODES = ['sync', 'eager', 'weak', 'async-weak', 'lazy', 'lazy-once'];
+// rspack delimits the same lazy and sync markers with pipes instead of spaces.
+const RSPACK_PIPE_MODES = CONTEXT_MODES.filter((mode) => mode === 'lazy' || mode === 'sync');
+// Story detection only reads lazy contexts, and only the plain lazy mode: lazy-once resolves its
+// group once up front rather than per story.
+const LAZY_MODES = CONTEXT_MODES.filter((mode) => mode === 'lazy');
 
-// Webpack spells contexts with ` lazy `; rspack delimits the same marker with pipes. Only the lazy
-// mode matters to story detection, so this is the lazy subset of the context spellings above.
-export const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
+const CONTEXT_PATTERN = `(?:${CONTEXT_MODES.join('|')}) |\\|(?:${RSPACK_PIPE_MODES.join('|')})\\|`;
+const LAZY_PATTERN = ` (?:${LAZY_MODES.join('|')}) |\\|lazy\\|`;
+
+// eslint-disable-next-line security/detect-non-literal-regexp -- the pattern only interpolates the hardcoded mode lists above
+const CONTEXT_MARKER = new RegExp(CONTEXT_PATTERN);
+// eslint-disable-next-line security/detect-non-literal-regexp -- the pattern only interpolates the hardcoded mode lists above
+export const LAZY_CONTEXT_MARKER = new RegExp(LAZY_PATTERN);
 
 /**
  * Whether a file path names a synthetic module whose contents do not exist as a file on disk.
@@ -138,7 +146,7 @@ export function isSyntheticFile(path: FilePath): boolean {
     return true;
   }
 
-  // A NUL proxy for a relative path folds onto that file (see {@link fileStoodForById}); any other
+  // A NUL proxy for a relative path folds onto that file (see {@link foldStatsId}); any other
   // leading NUL — a bare runtime helper like `\0commonjsHelpers.js` or an opaque rooted id like
   // `\0/@data-uri/...` — names nothing on disk. Asked on the raw id: stripping would remove the NUL.
   return path.startsWith(NUL) && !FOLDABLE_NUL_PREFIXES.some((prefix) => path.startsWith(prefix));
