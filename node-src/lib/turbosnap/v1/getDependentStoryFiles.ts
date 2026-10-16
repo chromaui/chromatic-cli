@@ -48,10 +48,9 @@ const getPackageName = (modulePath: string) => {
 const isPlainId = (name: string) =>
   name.codePointAt(0) !== 0 && !name.includes('?') && !name.includes(' + ');
 
-// Returns the last element of an array. Not `.at(-1)`: for a non-empty input the result is never
-// undefined, and keeping it non-optional avoids a dead branch in the representative chain below.
-// eslint-disable-next-line unicorn/prefer-at
-const last = <T>(array: T[]) => array[array.length - 1];
+// Rank: plain `./` id (3) > plain bare id (2) > `./` facet (1) > anything else (0).
+const rank = (memberName: string) =>
+  (isPlainId(memberName) ? 2 : 0) + (memberName.startsWith('./') ? 1 : 0);
 
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
@@ -211,20 +210,25 @@ export async function getDependentStoryFiles(
     // `onlyStoryFiles` keys against stories' `parameters.filename` values with picomatch, where
     // a pattern without `./` does not match a filename that has it). Ties resolve to the last
     // member, preserving the previous last-write-wins behavior.
-    const representative =
-      last(members.filter((member) => isPlainId(member.name) && member.name.startsWith('./'))) ||
-      last(members.filter((member) => isPlainId(member.name))) ||
-      last(members.filter((member) => member.name.startsWith('./'))) ||
-      last(members);
+    let representative = members[0];
+    for (const member of members) {
+      if (rank(member.name) >= rank(representative.name)) representative = member;
+    }
 
-    const reasons = members
-      .flatMap((member) =>
-        (member.reasons || [])
-          .map((reason) => reason.moduleName)
-          .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
-          .map((moduleName) => normalize(moduleName))
-      )
-      .filter((reasonName) => reasonName && reasonName !== name);
+    // Grouping amplifies duplicate reasons (an SFC and its style facet often share importers),
+    // and duplicates cost extra `untrace` calls and repeat entries in `--trace-changed` output.
+    const reasons = [
+      ...new Set(
+        members
+          .flatMap((member) =>
+            (member.reasons || [])
+              .map((reason) => reason.moduleName)
+              .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
+              .map((moduleName) => normalize(moduleName))
+          )
+          .filter((reasonName) => reasonName && reasonName !== name)
+      ),
+    ];
 
     for (const member of members) {
       namesById.set(member.id, name);
