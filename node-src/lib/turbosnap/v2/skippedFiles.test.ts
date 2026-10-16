@@ -12,7 +12,6 @@ const preview = `${configDirectory}/preview.ts`;
 
 function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
   return {
-    configDir: configDirectory,
     gitRoot: '/repo',
     untraced,
     projectFiles: inMemoryProjectFiles(disk),
@@ -43,10 +42,13 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[source, 'gitignored']]);
   });
 
-  it('never skips a file in the Storybook config directory, however git sees it', async () => {
-    const result = await skipped([preview, source], context({ isIgnored: () => true }));
+  it('skips a gitignored file in the Storybook config directory like any other project file', async () => {
+    const result = await skipped(
+      [preview, source],
+      context({ isIgnored: (candidate) => candidate === preview })
+    );
 
-    expect(result).toEqual([[source, 'gitignored']]);
+    expect(result).toEqual([[preview, 'gitignored']]);
   });
 
   it("skips another package's gitignored file under the project root, since the rule is git's view of the whole repository", async () => {
@@ -90,7 +92,7 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[linked, 'gitignored']]);
   });
 
-  it('judges every rule by where a file really lives, since a bundler names files by real path while the project is named as configured', async () => {
+  it('judges every rule by where a file really lives, since a bundler may name a file through a symlink', async () => {
     const linkedRoot = '/repo/apps/web';
     const projectFiles = {
       ...inMemoryProjectFiles({
@@ -103,7 +105,6 @@ describe('buildSkipRule', () => {
 
     const result = await skipped([linkedGenerated, linkedPreview, source], {
       ...context({}),
-      configDir: `${linkedRoot}/.storybook`,
       projectFiles,
     });
 

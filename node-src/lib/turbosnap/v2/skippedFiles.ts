@@ -1,17 +1,12 @@
-import path from 'path';
-
 import { AbsolutePath } from '../../../types';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, isNodeModulesPath } from './paths';
 
 /**
- * The part of {@link ManifestInput} the skip rule reads: where the config directory and the
- * repository are, what the user untraced, and how to ask git and the disk.
+ * The part of {@link ManifestInput} the skip rule reads: where the repository is, what the user
+ * untraced, and how to ask git and the disk.
  */
-export type SkipContext = Pick<
-  ManifestInput,
-  'configDir' | 'gitRoot' | 'untraced' | 'projectFiles'
->;
+export type SkipContext = Pick<ManifestInput, 'gitRoot' | 'untraced' | 'projectFiles'>;
 
 /**
  * Why v2 skipped hashing a file. A skipped file's own bytes feed no roll-up either way; the reasons
@@ -69,14 +64,12 @@ export function partitionSkipped(
  * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
  * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.
  *
- * Every check is judged on the file a path leads to. A bundler names a file by its real path while
- * the project and config directories are named as configured, so the out-of-graph sweep can reach
- * a file through a symlinked directory. Git names the real file, and so does v1 when it matches
- * `--untraced`, since its paths come from git and the bundler; a glob written for v1 therefore
- * spells the real path, and matching anything else would hash a file the user untraced.
+ * Every check is judged on the file a path leads to. A bundler may name a file through a symlinked
+ * `node_modules` link, but git names the real file, and so does v1 when it matches `--untraced`,
+ * since its paths come from git and the bundler; a glob written for v1 therefore spells the real
+ * path, and matching anything else would hash a file the user untraced.
  *
- * @param context Where the project and repository are, what is untraced, and how to ask git and
- * the disk.
+ * @param context Where the repository is, what is untraced, and how to ask git and the disk.
  *
  * @returns The rule, by the path as given.
  */
@@ -105,15 +98,16 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * package is skipped, not just the Storybook package's own. The accepted cost: a workspace package
  * the graph holds only through its gitignored `dist` — the bundler resolves the `node_modules` link
  * to it, so its source never appears — is no longer hashed, which is v1's behavior today; the escape
- * hatch is `--externals`. Two exceptions keep a real change visible: `node_modules`, because it is
- * in nearly every `.gitignore` yet a dependency upgrade is a real change, and the Storybook config
- * directory, because a generated `preview.*` still shapes every story.
+ * hatch is `--externals`. One exception keeps a real change visible: `node_modules`, because it is
+ * in nearly every `.gitignore` yet a dependency upgrade is a real change. The Storybook config
+ * directory gets no exemption: a gitignored file there is generated like any other, and hashing it
+ * over-captures just the same; the main config is the one file hashed regardless, by the config
+ * sweep; see `hashOutOfGraphFiles`.
  *
  * The check takes a real path because that is how git names files; see
- * {@link ProjectFiles.ignoredPaths}. The config directory is resolved the same way, so a
- * `.storybook` that is a symlink still matches its own files.
+ * {@link ProjectFiles.ignoredPaths}.
  *
- * @param context Where the config directory is, and how to ask git and the disk.
+ * @param context Where the repository is, and how to ask git and the disk.
  *
  * @returns The check, by real path.
  */
@@ -121,9 +115,7 @@ async function ignoredFileCheck(
   context: SkipContext
 ): Promise<(realPath: AbsolutePath) => boolean> {
   const { projectFiles } = context;
-  const configDirectory = projectFiles.realPath(context.configDir) + path.sep;
   const ignored = await projectFiles.ignoredPaths();
 
-  return (realPath) =>
-    !isNodeModulesPath(realPath) && !realPath.startsWith(configDirectory) && ignored.has(realPath);
+  return (realPath) => !isNodeModulesPath(realPath) && ignored.has(realPath);
 }
