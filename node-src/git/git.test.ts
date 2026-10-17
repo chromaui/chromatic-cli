@@ -653,4 +653,21 @@ describe('getVisitedCommitDetails', () => {
     execGitCommand.mockResolvedValue('');
     expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([]);
   });
+
+  it('passes SHAs via stdin instead of as arguments', async () => {
+    execGitCommand.mockResolvedValue('');
+    const commits = Array.from({ length: 50_000 }, (_, index) =>
+      index.toString(16).padStart(40, '0')
+    );
+    await getVisitedCommitDetails(ctx, commits);
+    const [, command, options] = execGitCommand.mock.calls[0];
+    expect(command).toBe('git log --no-walk=unsorted --stdin --format=%H%x00%P%x00%s%x00');
+    expect(command).not.toContain(commits[0]);
+    expect(options).toEqual({ input: commits.join('\n') });
+  });
+
+  it('returns an empty array instead of throwing when git fails', async () => {
+    execGitCommand.mockRejectedValue(new Error('Command failed with E2BIG'));
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([]);
+  });
 });
