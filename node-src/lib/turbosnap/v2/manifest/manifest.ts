@@ -2,21 +2,13 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../../types';
-import {
-  collectStorybookFiles,
-  collectTransitiveDependencies,
-  FileAttribution,
-  readStatsGraph,
-  rollUpFileHashes,
-  TurboSnapFile,
-} from '../graphFiles';
+import { FileAttribution, hashGraphFiles, TurboSnapFile } from '../graphFiles';
 import {
   hashOutOfGraphFiles,
   OutOfGraphFiles,
   resolveStorybookVersion,
   rollUpOutOfGraphFiles,
 } from '../outOfGraphFiles';
-import { normalizeStatsPath } from '../paths';
 import { ManifestInput, ProjectFiles } from '../projectFiles';
 import {
   FileHash,
@@ -88,9 +80,9 @@ interface ManifestFile {
 }
 
 /**
- * Rolls the graph a stats file describes up into a TurboSnap manifest: the per-story hashes, the
- * Storybook-wide hashes and the whole-Storybook gate. Reading the stats file is
- * {@link readStatsGraph}'s job; everything here works in canonical paths.
+ * Assembles a TurboSnap manifest from its three sources: the graph files (see {@link hashGraphFiles}),
+ * the installed Storybook version, and the out-of-graph files (see {@link hashOutOfGraphFiles}), then
+ * folds them into the whole-Storybook gate.
  *
  * @param stats The stats file to parse.
  * @param input Where the project is and what to read it with; see {@link ManifestInput}.
@@ -104,37 +96,17 @@ export async function buildManifest(
 ): Promise<TurboSnapManifest> {
   // Built once, since it asks git once, and shared by the graph and the out-of-graph sweep.
   const skipRule = await buildSkipRule(input);
-  const {
-    files,
-    hashes,
-    storyFiles,
-    globalRoots,
-    skippedFiles: skippedGraphFiles,
-    untracedSubtrees,
-  } = await readStatsGraph(stats, input, skipRule);
-  input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
-
   const { h64ToString } = await xxHashWasm();
-  const storyFileHashes = new Map<FilePath, FileHash>();
-  for (const storyFile of storyFiles) {
-    const subtree = collectTransitiveDependencies(files, storyFile);
-    storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
-  }
 
-  const { storybookConfigHashes, attribution } = collectStorybookFiles(
+  const {
+    storyFileHashes,
+    storybookConfigHashes: graphConfigHashes,
+    attribution,
     files,
-    hashes,
-    storyFiles,
-    normalizeStatsPath(input.configDir, input.projectRoot),
-    globalRoots,
-    untracedSubtrees,
-    h64ToString
-  );
-  input.log.debug(
-    `Attributed ${attribution.previewSubtree.size} files to the preview config subtree`
-  );
-  input.log.debug(
-    `Found ${attribution.storybookGlobals.size} files in Storybook globals (files that could impact rendering across the entire Storybook)`
+    skippedFiles: skippedGraphFiles,
+  } = await hashGraphFiles(stats, input, skipRule, h64ToString);
+  const storybookConfigHashes = new Map<StorybookFileKey, FileHash | StorybookVersion>(
+    graphConfigHashes
   );
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
