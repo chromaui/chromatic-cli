@@ -2,18 +2,12 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
-import {
-  collectTransitiveDependencies,
-  FileHash,
-  FilePath,
-  hashEntryIdentities,
-  rollUpFileHashes,
-  TurboSnapFile,
-} from './graph';
+import { collectTransitiveDependencies, rollUpFileHashes, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
+import { FileHash, FilePath, hashEntryIdentities } from './rollUp';
 import { buildSkipRule, SkipReason } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';

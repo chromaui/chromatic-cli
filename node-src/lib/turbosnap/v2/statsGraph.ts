@@ -1,23 +1,16 @@
 import { AbsolutePath, Stats } from '../../../types';
-import {
-  collectTransitiveDependencies,
-  FileHash,
-  FilePath,
-  SKIPPED_HASH,
-  TurboSnapFile,
-} from './graph';
+import { collectTransitiveDependencies, SKIPPED_HASH, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
+import { isSyntheticFile, normalizeStatsPath, resolveStatsPath } from './paths';
+import { ProjectFiles } from './projectFiles';
+import { FileHash, FilePath } from './rollUp';
+import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import {
   canonicalFileNames,
   canonicalImporters,
-  isSyntheticFile,
   moduleFileNames,
-  normalizeStatsPath,
-  resolveStatsPath,
   StatsRoots,
-} from './paths';
-import { ProjectFiles } from './projectFiles';
-import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
+} from './statsModuleNames';
 import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
 /** The part of {@link ManifestInput} reading the stats file needs: the two roots and the disk. */

@@ -1,12 +1,7 @@
 import { Stats } from '../../../types';
-import { FilePath } from './graph';
-import {
-  canonicalImporters,
-  isNodeModulesPath,
-  normalizeStatsPath,
-  rootFilePath,
-  StatsRoots,
-} from './paths';
+import { isNodeModulesPath, normalizeStatsPath } from './paths';
+import { FilePath } from './rollUp';
+import { canonicalImporters, rootFilePath, StatsRoots } from './statsModuleNames';
 
 /**
  * Whether a canonical path has a real file on disk. You can use things that adhere to this

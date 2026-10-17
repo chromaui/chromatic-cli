@@ -20,7 +20,7 @@ import {
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
 import { Logger } from '../../log';
-import { FileHash } from './graph';
+import { FileHash } from './rollUp';
 
 /**
  * Every read of the project TurboSnap v2 makes, disk and git index alike, behind one interface, so
