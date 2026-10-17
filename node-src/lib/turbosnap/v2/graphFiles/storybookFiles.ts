@@ -8,12 +8,8 @@ import {
   STORYBOOK_PREVIEW_KEY,
   StorybookFileKey,
 } from '../rollUps';
-import {
-  collectTransitiveDependencies,
-  hasContentHash,
-  rollUpFileHashes,
-  TurboSnapFile,
-} from './graph';
+import { collectTransitiveDependencies, fileKind, rollUpFileHashes, TurboSnapFile } from './graph';
+import { StatsGraph } from './statsGraph';
 
 /**
  * Whether a canonical manifest path is the project's `<configDir>/preview.*` config file. Canonical
@@ -79,32 +75,30 @@ export interface FileAttribution {
  * Files reached from a composition root remain global even when a story also imports them. Files in
  * the preview subtree are excluded because preview has its own Storybook-wide roll-up.
  *
- * @param files The map of files to their hashes and dependencies.
- * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
- * A missing entry means no file on disk; see `hasContentHash`.
- * @param storyFiles The canonical paths of the story files. Their subtrees are walked here, so the
- * story-reachable set always agrees with `files`. Synthetic nodes are filtered out of the
+ * @param graph The parts of the stats graph the roll-ups read; see {@link StatsGraph}.
+ * @param graph.files The map of files to their hashes and dependencies.
+ * @param graph.hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for
+ * a file v2 skipped. A missing entry means no file on disk; see {@link fileKind}.
+ * @param graph.storyFiles The canonical paths of the story files. Their subtrees are walked here, so
+ * the story-reachable set always agrees with `files`. Synthetic nodes are filtered out of the
  * attribution below.
+ * @param graph.globalRoots Builder-generated composition roots detected by the stats reader. Keeping
+ * the detection outside this function lets it work with builder-neutral graph paths.
+ * @param graph.untracedSubtrees The untraced files and everything they reached before their edges
+ * were severed; see `StatsGraph.untracedSubtrees`.
  * @param configDirectory The canonical manifest path of the project's Storybook config directory
  * (e.g. `./.storybook`).
- * @param globalRoots Builder-generated composition roots detected by the stats reader. Keeping the
- * detection outside this function lets it work with builder-neutral graph paths.
- * @param untracedSubtrees The untraced files and everything they reached before their edges were
- * severed; see `StatsGraph.untracedSubtrees`.
  * @param h64ToString The hash function.
  *
  * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
  * which of the three hashing homes each real file landed in.
  */
 export function collectStorybookFiles(
-  files: Map<FilePath, TurboSnapFile>,
-  hashes: Map<FilePath, FileHash>,
-  storyFiles: Set<FilePath>,
+  graph: Pick<StatsGraph, 'files' | 'hashes' | 'storyFiles' | 'globalRoots' | 'untracedSubtrees'>,
   configDirectory: FilePath,
-  globalRoots: Set<FilePath>,
-  untracedSubtrees: Set<FilePath>,
   h64ToString: (input: string) => string
 ): { storybookConfigHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
+  const { files, hashes, storyFiles, globalRoots, untracedSubtrees } = graph;
   // Every preview config subtree, unioned into one `preview` roll-up rather than one entry per path,
   // so the map stays a homogeneous set of category roll-ups (preview, globals, config, static). The
   // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview
@@ -116,7 +110,12 @@ export function collectStorybookFiles(
   // nothing hashed is left, as when the preview is untraced and so has no edges to follow.
   const previewSubtree = new Set<FilePath>();
   for (const filePath of files.keys()) {
-    if (!hashes.has(filePath) || !isPreviewConfig(filePath, configDirectory)) continue;
+    if (
+      fileKind(hashes.get(filePath)) === 'synthetic' ||
+      !isPreviewConfig(filePath, configDirectory)
+    ) {
+      continue;
+    }
     collectTransitiveDependencies(files, filePath, previewSubtree);
   }
   const previewFiles = contentHashed(hashes, previewSubtree);
@@ -138,7 +137,7 @@ export function collectStorybookFiles(
     storyFiles,
     [...hashes.keys()].filter(
       (filePath) =>
-        hasContentHash(hashes, filePath) &&
+        fileKind(hashes.get(filePath)) === 'hashed' &&
         !storyReachable.has(filePath) &&
         !previewSubtree.has(filePath) &&
         !untracedSubtrees.has(filePath)
@@ -146,7 +145,7 @@ export function collectStorybookFiles(
   );
   const globals = new Set(
     [...globalsClosure].filter(
-      (filePath) => hasContentHash(hashes, filePath) && !previewSubtree.has(filePath)
+      (filePath) => fileKind(hashes.get(filePath)) === 'hashed' && !previewSubtree.has(filePath)
     )
   );
   if (globals.size > 0) {
@@ -169,7 +168,7 @@ export function collectStorybookFiles(
 }
 
 /**
- * Narrows a walked set to the files that feed a hash; see {@link hasContentHash}.
+ * Narrows a walked set to the files that feed a hash: the hashed ones; see {@link fileKind}.
  *
  * @param hashes The hash of every on-disk file, keyed by canonical path.
  * @param filePaths The paths a walk reached, synthetic nodes and skipped files included.
@@ -177,7 +176,7 @@ export function collectStorybookFiles(
  * @returns The content-hashed files among them.
  */
 function contentHashed(hashes: Map<FilePath, FileHash>, filePaths: Set<FilePath>): Set<FilePath> {
-  return new Set([...filePaths].filter((filePath) => hasContentHash(hashes, filePath)));
+  return new Set([...filePaths].filter((filePath) => fileKind(hashes.get(filePath)) === 'hashed'));
 }
 
 /**
