@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture } from './__fixtures__/manifestFixtures';
-import { buildManifest } from './manifest';
+import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
+import { buildManifest, serializeManifest } from './manifest';
 import { InMemoryDisk } from './projectFiles.fake';
 
 /**
@@ -173,5 +173,116 @@ describe('manifest golden hashes with externals', () => {
       ...GOLDEN_STORYBOOK_FILES,
       externals: GOLDEN_EXTERNALS_ROLL_UP,
     });
+  });
+});
+
+// The written manifest for a second frozen fixture, one that holds every kind of graph file: hashed,
+// skipped (a gitignored barrel that keeps its edges, an untraced file that loses them) and synthetic
+// (the builder entries, a require-context glob and a `data:` URL). The goldens above pin what the
+// Index receives; this pins the debug file uploaded beside it — which nodes are pruned, which keep
+// the `<skipped>` hash, and which edges survive. A diff here changes no baseline comparison, but it is
+// still never incidental: the file is how a recapture is explained after the fact.
+const serializedStory = '/repo/packages/ui/src/Button.stories.tsx';
+const storiesContext = String.raw`./src lazy recursive ^\.\/.*\.stories\.tsx$`;
+const generatedBarrel = '/repo/packages/ui/src/generated/index.ts';
+const icon = '/repo/packages/ui/src/Icon.tsx';
+const inlineSvg = 'data:image/svg+xml,%3Csvg%3E%3C/svg%3E';
+const legacyUtility = '/repo/packages/ui/src/legacy/util.ts';
+const legacyDeep = '/repo/packages/ui/src/legacy/deep.ts';
+
+const SERIALIZED_STATS: Stats = {
+  modules: [
+    { id: 1, name: storiesContext, reasons: [{ moduleName: './storybook-stories.js' }] },
+    { id: 2, name: serializedStory, reasons: [{ moduleName: storiesContext }] },
+    { id: 3, name: generatedBarrel, reasons: [{ moduleName: serializedStory }] },
+    { id: 4, name: icon, reasons: [{ moduleName: generatedBarrel }] },
+    { id: 5, name: inlineSvg, reasons: [{ moduleName: icon }] },
+    { id: 6, name: moment, reasons: [{ moduleName: icon }] },
+    { id: 7, name: legacyUtility, reasons: [{ moduleName: serializedStory }] },
+    { id: 8, name: legacyDeep, reasons: [{ moduleName: legacyUtility }] },
+    { id: 9, name: preview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
+    { id: 10, name: previewTheme, reasons: [{ moduleName: preview }] },
+  ],
+} as unknown as Stats;
+
+const GOLDEN_SERIALIZED_MANIFEST = {
+  storybookHash: '4b3d7bd73ce83010',
+  storybookConfigHashes: {
+    preview: '5f93f3779375503c',
+    storybookConfigFiles: '79ea7345f995afab',
+    storybookVersion: '9.1.20',
+  },
+  storybookConfigFiles: {
+    './.storybook/main.ts': '3333333333333333',
+    './.storybook/preview.ts': '1111111111111111',
+    './.storybook/theme.ts': '2222222222222222',
+  },
+  staticFiles: {},
+  externals: {},
+  storyFiles: {
+    './src/Button.stories.tsx': '22b5c4a2551f6e0c',
+  },
+  attribution: {
+    previewSubtree: ['./.storybook/preview.ts', './.storybook/theme.ts'],
+    storybookGlobals: [],
+    storyReachable: [
+      './node_modules/moment/moment.js',
+      './src/Button.stories.tsx',
+      './src/Icon.tsx',
+    ],
+  },
+  files: {
+    './.storybook/preview.ts': {
+      hash: '1111111111111111',
+      dependencies: ['./.storybook/theme.ts'],
+    },
+    './.storybook/theme.ts': { hash: '2222222222222222', dependencies: [] },
+    './node_modules/moment/moment.js': { hash: 'dddddddddddddddd', dependencies: [] },
+    './src/Button.stories.tsx': {
+      hash: 'aaaaaaaaaaaaaaaa',
+      dependencies: ['./src/generated/index.ts', './src/legacy/util.ts'],
+    },
+    './src/generated/index.ts': { hash: '<skipped>', dependencies: ['./src/Icon.tsx'] },
+    './src/Icon.tsx': {
+      hash: 'cccccccccccccccc',
+      dependencies: ['./node_modules/moment/moment.js'],
+    },
+    './src/legacy/deep.ts': { hash: 'ffffffffffffffff', dependencies: [] },
+    './src/legacy/util.ts': { hash: '<skipped>', dependencies: [] },
+  },
+  skippedFiles: {
+    './src/generated/index.ts': 'gitignored',
+    './src/legacy/util.ts': 'untraced',
+  },
+};
+
+describe('manifest golden serialization', () => {
+  it('writes the same manifest for the frozen fixture', async () => {
+    const { input } = createFixture({
+      isAbsent: syntheticAbsent,
+      isIgnored: (absolutePath) => absolutePath.includes('/generated/'),
+      fileHashes: {
+        [serializedStory]: 'aaaaaaaaaaaaaaaa',
+        [generatedBarrel]: 'bbbbbbbbbbbbbbbb',
+        [icon]: 'cccccccccccccccc',
+        [moment]: 'dddddddddddddddd',
+        [legacyUtility]: 'eeeeeeeeeeeeeeee',
+        [legacyDeep]: 'ffffffffffffffff',
+        [preview]: '1111111111111111',
+        [previewTheme]: '2222222222222222',
+        '/repo/packages/ui/.storybook/main.ts': '3333333333333333',
+      },
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'theme.ts'] },
+      packageVersions: { storybook: '9.1.20' },
+    });
+    const manifest = await buildManifest(SERIALIZED_STATS, {
+      ...input,
+      untraced: ['packages/ui/src/legacy/util.ts'],
+    });
+
+    // Compared as text, so the key order the file is written in is pinned too.
+    expect(JSON.stringify(serializeManifest(manifest))).toBe(
+      JSON.stringify(GOLDEN_SERIALIZED_MANIFEST)
+    );
   });
 });
