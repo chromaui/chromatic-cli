@@ -1,5 +1,5 @@
-import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
-import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles';
+import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest/manifest';
+import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles/projectFiles';
 import { existsSync } from 'fs';
 import meow from 'meow';
 import path from 'path';

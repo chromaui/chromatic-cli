@@ -6,7 +6,7 @@ import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
-import { realProjectFiles } from './v2/projectFiles';
+import { realProjectFiles } from './v2/projectFiles/projectFiles';
 
 const { scopeSetTag, scopeSetContext } = vi.hoisted(() => ({
   scopeSetTag: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock('./v2', () => ({
 
 const projectFiles = { kind: 'real-project-files' };
 
-vi.mock('./v2/projectFiles', () => ({
+vi.mock('./v2/projectFiles/projectFiles', () => ({
   realProjectFiles: vi.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import TestLogger from '../../../testLogger';
-import { buildManifest } from '../manifest';
-import { ManifestInput } from '../manifestInput';
-import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles.fake';
+import { buildManifest } from '../manifest/manifest';
+import { ManifestInput } from '../projectFiles/manifestInput';
+import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles/projectFiles.fake';
 
 // Manifest keys anchor at the project root, so a file inside the project keys as `./src/...` and one
 // outside it keeps its `../` prefix (e.g. a sibling package as `../shared/...`).
