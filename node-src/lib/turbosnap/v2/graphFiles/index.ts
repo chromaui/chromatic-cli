@@ -3,7 +3,6 @@
  * into the per-story, preview and Storybook globals hashes.
  */
 export type { TurboSnapFile } from './graph';
-export { collectTransitiveDependencies, rollUpFileHashes } from './graph';
-export { readStatsGraph } from './statsGraph';
+export type { GraphFileHashes } from './hashGraphFiles';
+export { hashGraphFiles } from './hashGraphFiles';
 export type { FileAttribution } from './storybookFiles';
-export { collectStorybookFiles } from './storybookFiles';
