@@ -257,6 +257,50 @@ export default [
       ],
     },
   },
+  // TurboSnap v2 is one folder per concept, each used only through its index. Code outside v2 uses
+  // v2's own index. See node-src/lib/turbosnap/v2/docs/adr/0001-concept-folders.md.
+  {
+    files: ['node-src/**/*.ts', 'bin-src/**/*.ts'],
+    ignores: ['node-src/lib/turbosnap/v2/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/turbosnap/v2/*', './v2/*'],
+              message: 'Import TurboSnap v2 from its index, not from a file or folder inside it.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['node-src/lib/turbosnap/v2/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/graphFiles/*',
+                '**/manifest/*',
+                '**/outOfGraphFiles/*',
+                '**/paths/*',
+                '**/projectFiles/*',
+                '**/rollUps/*',
+                '**/skippedFiles/*',
+              ],
+              message:
+                'Import a TurboSnap v2 folder from its index, not from a file inside it. See v2/docs/adr/0001-concept-folders.md.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // exceptions for files stuck in CJS for now
   {
     files: ['**/*.cjs'],
