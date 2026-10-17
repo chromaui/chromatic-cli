@@ -47,5 +47,6 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Trim stats file](./trim-stats-file.md) covers `chromatic trim-stats-file` output placement and its misleading exit code on failure.
 - [Preflight and configuration](./preflight-and-config.md) covers the main command's offline option validation, the config file, and diagnostics and log files.
 - [Publish a build](./publish-build.md) covers the networked main command: prebuilt publish, exit once uploaded, dry run, skip, and JUnit report. It needs a token and a reachable backend.
+- [TurboSnap on a real build](./turbosnap-only-changed.md) covers `--only-changed` against a real baseline: a fully skipped build, one changed story file, the strict exit code, `--trace-changed`, the automatic metadata upload, and the same-commit rebuild fallback. It needs a token, a reachable backend, and a local-only commit.
 
-Not yet mapped: `chromatic init`, `generate-manifest`, `react-native-build`, the GitHub Action (`action.yml`), and `--only-changed` TurboSnap against a real baseline.
+Not yet mapped: `chromatic init`, `generate-manifest`, `react-native-build`, the GitHub Action (`action.yml`), and `--untraced`/`--externals` on a real TurboSnap build.
