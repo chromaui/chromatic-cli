@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { FileHash, FilePath } from '../rollUps';
 import {
   collectTransitiveDependencies,
-  hasContentHash,
+  fileKind,
   rollUpFileHashes,
   SKIPPED_HASH,
   TurboSnapFile,
@@ -75,22 +75,21 @@ describe('rollUpFileHashes', () => {
   });
 });
 
-describe('hasContentHash', () => {
-  const hashes = new Map<FilePath, FileHash>([
-    ['./a.ts', 'H1'],
-    ['./generated/schema.ts', SKIPPED_HASH],
-  ]);
-
-  it('is true for a file whose bytes were hashed', () => {
-    expect(hasContentHash(hashes, './a.ts')).toBe(true);
+describe('fileKind', () => {
+  it('is hashed for a file whose bytes were hashed', () => {
+    expect(fileKind('H1')).toBe('hashed');
   });
 
-  it('is false for a file v2 skipped', () => {
-    expect(hasContentHash(hashes, './generated/schema.ts')).toBe(false);
+  it('is skipped for a file v2 skipped', () => {
+    expect(fileKind(SKIPPED_HASH)).toBe('skipped');
   });
 
-  it('is false for a path with no file on disk', () => {
-    expect(hasContentHash(hashes, './lazy lazy recursive')).toBe(false);
+  it('is synthetic for a path with no entry in the content hashes', () => {
+    expect(fileKind(undefined)).toBe('synthetic');
+  });
+
+  it('is synthetic for a graph node seeded with an empty hash', () => {
+    expect(fileKind('')).toBe('synthetic');
   });
 });
 

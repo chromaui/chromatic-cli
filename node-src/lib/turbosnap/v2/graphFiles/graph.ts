@@ -13,17 +13,25 @@ import { FileHash, FilePath, rollUpEntryHashes } from '../rollUps';
 export const SKIPPED_HASH: FileHash = '<skipped>';
 
 /**
- * Whether a file has a content hash: it is on disk and v2 did not skip it. The test every hashing home
- * applies before admitting a file, so skipped files land nowhere.
- *
- * @param hashes The hash of every on-disk file, keyed by canonical path.
- * @param filePath The file to test.
- *
- * @returns Whether the file's bytes were hashed.
+ * The three kinds of file in the graph. A hashed file is on disk and its bytes were hashed. A skipped
+ * file is on disk but v2 left it unhashed; see {@link SKIPPED_HASH}. A synthetic file has nothing on
+ * disk: a require-context glob, an external, a virtual module or an inline `data:` URL, kept because
+ * the walks pass through it.
  */
-export function hasContentHash(hashes: Map<FilePath, FileHash>, filePath: FilePath): boolean {
-  const hash = hashes.get(filePath);
-  return hash !== undefined && hash !== SKIPPED_HASH;
+export type FileKind = 'hashed' | 'skipped' | 'synthetic';
+
+/**
+ * Which kind of file a hash stands for; see {@link FileKind}. The one place the graph's hash values
+ * are read as kinds, so every reader states which kinds it admits rather than testing the strings.
+ *
+ * @param hash The file's entry in the content hashes or in the graph: absent, or the empty string a
+ * synthetic node is seeded with, when there is no file on disk.
+ *
+ * @returns The kind of file.
+ */
+export function fileKind(hash: FileHash | undefined): FileKind {
+  if (!hash) return 'synthetic';
+  return hash === SKIPPED_HASH ? 'skipped' : 'hashed';
 }
 
 export interface TurboSnapFile {
@@ -47,8 +55,8 @@ export function rollUpFileHashes(
   h64ToString: (input: string) => string
 ): FileHash {
   const entries = [...filePaths].flatMap((filePath): [FilePath, FileHash][] => {
-    const hash = hashes.get(filePath) ?? '';
-    return hash === SKIPPED_HASH ? [] : [[filePath, hash]];
+    const hash = hashes.get(filePath);
+    return fileKind(hash) === 'skipped' ? [] : [[filePath, hash ?? '']];
   });
   return rollUpEntryHashes(entries, h64ToString);
 }

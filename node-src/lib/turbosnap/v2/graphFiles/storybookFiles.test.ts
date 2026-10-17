@@ -39,18 +39,32 @@ function storiesIn(files: Map<FilePath, TurboSnapFile>): Set<FilePath> {
   return new Set([...files.keys()].filter((filePath) => filePath.includes('.stories.')));
 }
 
+// The parts of the stats graph the roll-ups read. Most tests detect stories by name and have no
+// composition root or untraced file; the suites that need one say so.
+function graphOf(
+  files: Map<FilePath, TurboSnapFile>,
+  hashes: Map<FilePath, FileHash>,
+  {
+    storyFiles = storiesIn(files),
+    globalRoots = NO_GLOBAL_ROOTS,
+    untracedSubtrees = NO_UNTRACED,
+  }: {
+    storyFiles?: Set<FilePath>;
+    globalRoots?: Set<FilePath>;
+    untracedSubtrees?: Set<FilePath>;
+  } = {}
+) {
+  return { files, hashes, storyFiles, globalRoots, untracedSubtrees };
+}
+
 describe('collectStorybookFiles', () => {
   it('keys the preview subtree under the `preview` category', () => {
     const files = makeFiles({ './.storybook/preview.ts': [], './src/a.stories.tsx': [] });
     const hashes = makeHashes(['./.storybook/preview.ts', './src/a.stories.tsx']);
 
     const { storybookConfigHashes } = collectStorybookFiles(
-      files,
-      hashes,
-      storiesIn(files),
+      graphOf(files, hashes),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -68,12 +82,10 @@ describe('collectStorybookFiles', () => {
       './.storybook/preview.cjs',
     ];
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
-      makeFiles(Object.fromEntries(previews.map((p) => [p, []]))),
-      makeHashes(previews),
-      new Set(),
+      graphOf(makeFiles(Object.fromEntries(previews.map((p) => [p, []]))), makeHashes(previews), {
+        storyFiles: new Set(),
+      }),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -86,12 +98,8 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({ './src/preview.ts': [] });
 
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
-      files,
-      makeHashes(['./src/preview.ts']),
-      storiesIn(files),
+      graphOf(files, makeHashes(['./src/preview.ts'])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -105,12 +113,8 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({ [vendoredPreview]: [vendoredTheme], [vendoredTheme]: [] });
 
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      storiesIn(files),
+      graphOf(files, makeHashes([...files.keys()])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -127,12 +131,8 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({ './src/preview.ts': [] });
 
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
-      files,
-      makeHashes(['./src/preview.ts']),
-      storiesIn(files),
+      graphOf(files, makeHashes(['./src/preview.ts'])),
       './src',
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -154,15 +154,7 @@ describe('collectStorybookFiles', () => {
     });
     const hashes = makeHashes([...files.keys()]);
 
-    const { attribution } = collectStorybookFiles(
-      files,
-      hashes,
-      storiesIn(files),
-      './config',
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
-      identity
-    );
+    const { attribution } = collectStorybookFiles(graphOf(files, hashes), './config', identity);
 
     expect(attribution.previewSubtree.has(shared)).toBe(true);
     expect(attribution.storyReachable.has(shared)).toBe(true);
@@ -180,12 +172,8 @@ describe('collectStorybookFiles', () => {
     const hashes = makeHashes([...files.keys()]);
 
     const { storybookConfigHashes } = collectStorybookFiles(
-      files,
-      hashes,
-      storiesIn(files),
+      graphOf(files, hashes),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -199,12 +187,8 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({ './node_modules/react-dom/index.js': [] });
 
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
-      files,
-      makeHashes(['./node_modules/react-dom/index.js']),
-      storiesIn(files),
+      graphOf(files, makeHashes(['./node_modules/react-dom/index.js'])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -219,12 +203,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { storybookConfigHashes } = collectStorybookFiles(
-      files,
-      makeHashes(['./src/a.stories.tsx', './src/button.tsx']),
-      storiesIn(files),
+      graphOf(files, makeHashes(['./src/a.stories.tsx', './src/button.tsx'])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -235,12 +215,8 @@ describe('collectStorybookFiles', () => {
     // A file inside a concatenated module is hashed but recorded only under the concatenation root,
     // so seeding globals from `files` rather than `hashes` would leave it hashed nowhere.
     const { attribution } = collectStorybookFiles(
-      makeFiles({}),
-      makeHashes(['./src/inlined.ts']),
-      new Set(),
+      graphOf(makeFiles({}), makeHashes(['./src/inlined.ts']), { storyFiles: new Set() }),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -258,12 +234,8 @@ describe('collectStorybookFiles', () => {
     const hashes = makeHashes([...files.keys()]);
 
     const { attribution } = collectStorybookFiles(
-      files,
-      hashes,
-      storiesIn(files),
+      graphOf(files, hashes),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -285,12 +257,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { attribution } = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      storiesIn(files),
+      graphOf(files, makeHashes([...files.keys()])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -309,12 +277,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { attribution } = collectStorybookFiles(
-      files,
-      makeHashes(['./src/a.stories.tsx', './.storybook/preview.ts']),
-      storiesIn(files),
+      graphOf(files, makeHashes(['./src/a.stories.tsx', './.storybook/preview.ts'])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -326,12 +290,8 @@ describe('collectStorybookFiles', () => {
     const files = makeFiles({ './.storybook/preview.ts': [] });
 
     const { storybookConfigHashes } = collectStorybookFiles(
-      files,
-      new Map(),
-      storiesIn(files),
+      graphOf(files, new Map()),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -348,24 +308,16 @@ describe('collectStorybookFiles', () => {
     });
 
     const before = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      storiesIn(files),
+      graphOf(files, makeHashes([...files.keys()])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
     const changedHashes = makeHashes([...files.keys()]);
     changedHashes.set(react, 'hash-react-v2');
     const after = collectStorybookFiles(
-      files,
-      changedHashes,
-      storiesIn(files),
+      graphOf(files, changedHashes),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -392,12 +344,8 @@ describe('collectStorybookFiles', () => {
     ]);
 
     const { attribution } = collectStorybookFiles(
-      files,
-      hashes,
-      storiesIn(files),
+      graphOf(files, hashes),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -418,12 +366,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { attribution } = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      storiesIn(files),
+      graphOf(files, makeHashes([...files.keys()])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -443,12 +387,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { attribution } = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      storiesIn(files),
+      graphOf(files, makeHashes([...files.keys()])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -467,12 +407,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { attribution } = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      new Set(),
+      graphOf(files, makeHashes([...files.keys()]), { storyFiles: new Set() }),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -491,12 +427,8 @@ describe('collectStorybookFiles', () => {
     });
 
     const { attribution } = collectStorybookFiles(
-      files,
-      makeHashes([...files.keys()]),
-      storiesIn(files),
+      graphOf(files, makeHashes([...files.keys()])),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      NO_UNTRACED,
       identity
     );
 
@@ -519,12 +451,11 @@ describe('collectStorybookFiles behind an untraced wall', () => {
     const hashes = new Map([...makeHashes([story, button]), [barrel, SKIPPED_HASH]]);
 
     const { storybookConfigHashes, attribution } = collectStorybookFiles(
-      files,
-      hashes,
-      new Set([story]),
+      graphOf(files, hashes, {
+        storyFiles: new Set([story]),
+        untracedSubtrees: new Set([barrel, button]),
+      }),
       DEFAULT_CONFIG_DIR,
-      NO_GLOBAL_ROOTS,
-      new Set([barrel, button]),
       identity
     );
 
@@ -547,12 +478,12 @@ describe('collectStorybookFiles behind an untraced wall', () => {
     const hashes = new Map([...makeHashes([story, button]), [barrel, SKIPPED_HASH]]);
 
     const { attribution } = collectStorybookFiles(
-      files,
-      hashes,
-      new Set([story]),
+      graphOf(files, hashes, {
+        storyFiles: new Set([story]),
+        globalRoots: new Set([configEntry]),
+        untracedSubtrees: new Set([barrel, button]),
+      }),
       DEFAULT_CONFIG_DIR,
-      new Set([configEntry]),
-      new Set([barrel, button]),
       identity
     );
 
@@ -585,12 +516,11 @@ describe('collectStorybookFiles with a detected global composition root', () => 
   function collect() {
     const files = makeFiles(graph);
     return collectStorybookFiles(
-      files,
-      makeHashes(realFiles),
-      new Set([story]),
+      graphOf(files, makeHashes(realFiles), {
+        storyFiles: new Set([story]),
+        globalRoots: new Set([configEntry]),
+      }),
       DEFAULT_CONFIG_DIR,
-      new Set([configEntry]),
-      NO_UNTRACED,
       identity
     );
   }

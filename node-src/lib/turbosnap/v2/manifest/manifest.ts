@@ -2,7 +2,7 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../../types';
-import { FileAttribution, hashGraphFiles, TurboSnapFile } from '../graphFiles';
+import { FileAttribution, fileKind, hashGraphFiles, TurboSnapFile } from '../graphFiles';
 import {
   hashOutOfGraphFiles,
   OutOfGraphFiles,
@@ -196,7 +196,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
  * @returns The graph of real files, each with its hash and the real files it depends on.
  */
 function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['files'] {
-  const isRealFile = (filePath: FilePath) => Boolean(files.get(filePath)?.hash);
+  const isRealFile = (filePath: FilePath) => fileKind(files.get(filePath)?.hash) !== 'synthetic';
 
   const serialized: ManifestFile['files'] = {};
   for (const [filePath, file] of files) {

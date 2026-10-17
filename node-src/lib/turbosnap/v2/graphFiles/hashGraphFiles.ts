@@ -45,8 +45,8 @@ export async function hashGraphFiles(
   skipRule: SkipRule,
   h64ToString: (input: string) => string
 ): Promise<GraphFileHashes> {
-  const { files, hashes, storyFiles, globalRoots, skippedFiles, untracedSubtrees } =
-    await readStatsGraph(stats, input, skipRule);
+  const graph = await readStatsGraph(stats, input, skipRule);
+  const { files, hashes, storyFiles, skippedFiles } = graph;
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const storyFileHashes = new Map<FilePath, FileHash>();
@@ -56,12 +56,8 @@ export async function hashGraphFiles(
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
-    files,
-    hashes,
-    storyFiles,
+    graph,
     normalizeStatsPath(input.configDir, input.projectRoot),
-    globalRoots,
-    untracedSubtrees,
     h64ToString
   );
   input.log.debug(
