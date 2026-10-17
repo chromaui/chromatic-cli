@@ -4,7 +4,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 
 ## Baseline preconditions
 
-- Work from the chromatic-cli repo root with `S=.cursor/skills/verify-chromatic-cli/scripts/control-chromatic`.
+- Work from the chromatic-cli repo root with `S=.agents/skills/verify-chromatic-cli/scripts/control-chromatic`.
 - Set a fresh `RUN_ID` per run, for example `export RUN_ID=verify-$(date +%s)`, so concurrent runs do not share `$WORK` or tmux sessions.
 - Run `$S setup` once per `RUN_ID`, then `eval "$($S env)"`.
 - `$S doctor` exits 0. It must report a matching `dist/bin.cjs --version`, a fresh `dist/`, and this run's `$SB_STATS`.

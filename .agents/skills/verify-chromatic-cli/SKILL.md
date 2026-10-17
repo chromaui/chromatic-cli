@@ -12,7 +12,7 @@ Other surfaces in this repo are not covered here yet: the GitHub Action (`action
 Everything goes through one helper, `scripts/control-chromatic`, which is executable. Invoke it by path from the repo root:
 
 ```bash
-S=.cursor/skills/verify-chromatic-cli/scripts/control-chromatic
+S=.agents/skills/verify-chromatic-cli/scripts/control-chromatic
 export RUN_ID=my-change-$(date +%s)   # isolates this run's state; pick a fresh one per run
 ```
 
