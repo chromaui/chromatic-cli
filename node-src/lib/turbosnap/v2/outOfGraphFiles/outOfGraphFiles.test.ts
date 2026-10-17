@@ -2,8 +2,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../../../testLogger';
-import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles/projectFiles.fake';
-import { SkipRule } from '../skippedFiles/skippedFiles';
+import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles';
+import { SkipRule } from '../skippedFiles';
 import {
   hashOutOfGraphFiles,
   MissingStorybookConfigError,

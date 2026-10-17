@@ -1,5 +1,4 @@
-import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest/manifest';
-import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles/projectFiles';
+import { buildManifest, realProjectFiles, serializeManifest } from '@cli/turbosnap/v2';
 import { existsSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,12 +17,9 @@ vi.mock('fs', async (importOriginal) => ({
   existsSync: vi.fn(() => true),
 }));
 
-vi.mock('@cli/turbosnap/v2/manifest/manifest', () => ({
+vi.mock('@cli/turbosnap/v2', () => ({
   buildManifest: vi.fn(() => manifest),
   serializeManifest: vi.fn(() => serialized),
-}));
-
-vi.mock('@cli/turbosnap/v2/projectFiles/projectFiles', () => ({
   realProjectFiles: vi.fn(() => projectFiles),
 }));
 

@@ -1,8 +1,7 @@
 /* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
-import { FileHash, FilePath } from '../rollUps/rollUp';
-import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from '../rollUps/storybookFileKeys';
+import { FileHash, FilePath, STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from '../rollUps';
 import { SKIPPED_HASH, TurboSnapFile } from './graph';
 import { collectStorybookFiles } from './storybookFiles';
 

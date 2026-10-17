@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../../types';
 import { createFixture, syntheticAbsent } from '../__fixtures__/manifestFixtures';
-import { SkipRule } from '../skippedFiles/skippedFiles';
+import { SkipRule } from '../skippedFiles';
 import { SKIPPED_HASH } from './graph';
 import { readStatsGraph } from './statsGraph';
 

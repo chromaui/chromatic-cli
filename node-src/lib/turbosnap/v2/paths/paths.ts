@@ -3,7 +3,7 @@ import path from 'path';
 import { AbsolutePath } from '../../../../types';
 import { relativeTo } from '../../../getStorybookProjectRoot';
 import { matchesFile } from '../../../utilities';
-import { FilePath } from '../rollUps/rollUp';
+import { FilePath } from '../rollUps';
 
 // A `node_modules` segment anywhere in a path. Matched segment-wise rather than by substring so a
 // file merely named `node_modules` is not mistaken for one inside the directory. Tolerant of both

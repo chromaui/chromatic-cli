@@ -1,12 +1,13 @@
 import path from 'path';
 
 import { PREVIEW_CONFIG_PATTERN } from '../../../getStorybookMetadata';
-import { FileHash, FilePath } from '../rollUps/rollUp';
 import {
+  FileHash,
+  FilePath,
   STORYBOOK_GLOBALS_KEY,
   STORYBOOK_PREVIEW_KEY,
   StorybookFileKey,
-} from '../rollUps/storybookFileKeys';
+} from '../rollUps';
 import {
   collectTransitiveDependencies,
   hasContentHash,

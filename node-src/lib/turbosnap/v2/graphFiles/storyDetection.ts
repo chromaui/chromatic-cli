@@ -1,6 +1,6 @@
 import { Stats } from '../../../../types';
-import { isNodeModulesPath, normalizeStatsPath } from '../paths/paths';
-import { FilePath } from '../rollUps/rollUp';
+import { isNodeModulesPath, normalizeStatsPath } from '../paths';
+import { FilePath } from '../rollUps';
 import { canonicalImporters, rootFilePath, StatsRoots } from './statsModuleNames';
 
 /**

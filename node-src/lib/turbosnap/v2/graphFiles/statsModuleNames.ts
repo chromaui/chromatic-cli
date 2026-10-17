@@ -1,6 +1,6 @@
 import { AbsolutePath, Module } from '../../../../types';
-import { normalizeStatsPath, stripConcatenatedModuleSuffix } from '../paths/paths';
-import { FilePath } from '../rollUps/rollUp';
+import { normalizeStatsPath, stripConcatenatedModuleSuffix } from '../paths';
+import { FilePath } from '../rollUps';
 
 /**
  * The source file names a stats module stands for, root first. Webpack/rspack concatenate modules

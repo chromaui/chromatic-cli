@@ -1,4 +1,4 @@
-import { FileHash, FilePath, rollUpEntryHashes } from '../rollUps/rollUp';
+import { FileHash, FilePath, rollUpEntryHashes } from '../rollUps';
 
 /**
  * The hash of a real file v2 deliberately did not content-hash; see `buildSkipRule`. It can never

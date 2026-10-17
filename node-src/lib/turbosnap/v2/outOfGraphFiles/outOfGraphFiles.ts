@@ -3,17 +3,18 @@ import path from 'path';
 import { AbsolutePath } from '../../../../types';
 import { MAIN_CONFIG_PATTERN } from '../../../getStorybookMetadata';
 import { isDocumentationFile } from '../../../utilities';
-import { gitRootGlobMatcher, normalizeStatsPath } from '../paths/paths';
-import { ManifestInput } from '../projectFiles/manifestInput';
-import { ProjectFiles } from '../projectFiles/projectFiles';
-import { FileHash, FilePath, rollUpEntryHashes } from '../rollUps/rollUp';
+import { gitRootGlobMatcher, normalizeStatsPath } from '../paths';
+import { ManifestInput, ProjectFiles } from '../projectFiles';
 import {
   EXTERNALS_KEY,
+  FileHash,
+  FilePath,
+  rollUpEntryHashes,
   STATIC_FILES_KEY,
   STORYBOOK_CONFIG_KEY,
   StorybookFileKey,
-} from '../rollUps/storybookFileKeys';
-import { partitionSkipped, SkipReason, SkipRule } from '../skippedFiles/skippedFiles';
+} from '../rollUps';
+import { partitionSkipped, SkipReason, SkipRule } from '../skippedFiles';
 
 /** The part of {@link ManifestInput} the out-of-graph sweep reads: where to look, and what with. */
 export type OutOfGraphInput = Pick<

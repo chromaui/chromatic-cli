@@ -5,8 +5,7 @@ import { readStatsFile } from '../../tasks/readStatsFile';
 import TestLogger from '../testLogger';
 import { traceChangedFiles } from '.';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
-import { traceChangedFiles as traceChangedFilesV2 } from './v2';
-import { realProjectFiles } from './v2/projectFiles/projectFiles';
+import { realProjectFiles, traceChangedFiles as traceChangedFilesV2 } from './v2';
 
 const { scopeSetTag, scopeSetContext } = vi.hoisted(() => ({
   scopeSetTag: vi.fn(),
@@ -28,15 +27,14 @@ vi.mock('./v1', () => ({
   traceChangedFiles: vi.fn(),
 }));
 
-vi.mock('./v2', () => ({
+// getManifestPath stays real: the entry point only names where the manifest goes.
+vi.mock('./v2', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./v2')>()),
   traceChangedFiles: vi.fn(),
+  realProjectFiles: vi.fn(),
 }));
 
 const projectFiles = { kind: 'real-project-files' };
-
-vi.mock('./v2/projectFiles/projectFiles', () => ({
-  realProjectFiles: vi.fn(),
-}));
 
 const stats = { modules: [] };
 const v1Result = {
