@@ -4,10 +4,10 @@ The main `chromatic` command lets a user publish a Storybook to Chromatic and st
 
 ## Sub-features
 
-- `pub-prebuilt` publishes an already-built Storybook (`--storybook-build-dir`) and starts a build.
-- `pub-exit-once-uploaded` exits `0` as soon as the Storybook is published (`--exit-once-uploaded`).
-- `pub-dry-run` authenticates and announces, but skips upload, verify and snapshot (`--dry-run`).
-- `pub-skip` marks the commit as passing without testing (`--skip`).
+- `pub-prebuilt` publishes an already-built Storybook (`--storybook-build-dir`) and runs the build's tests to completion.
+- `pub-exit-once-uploaded` exits `0` once the Storybook is published, without waiting for tests (`--exit-once-uploaded`).
+- `pub-dry-run` authenticates and announces a build, but skips publish, verify and tests (`--dry-run`).
+- `pub-skip` marks the commit as passing without creating a build (`--skip`).
 - `pub-junit` writes a JUnit XML of the build results (`--junit-report`).
 
 ## How to get to it (user POV)
@@ -22,22 +22,36 @@ The main `chromatic` command lets a user publish a Storybook to Chromatic and st
 Preconditions:
 
 - `$S doctor` exits 0 and reports `INFO backend … reachable` and `INFO CHROMATIC_PROJECT_TOKEN is set`.
-- The token belongs to a disposable or test project, or `CHROMATIC_INDEX_URL=https://index.staging-chromatic.com` is exported with a staging token. Every journey except `pub-skip` creates a real build that cleanup cannot remove.
-- `$SB_DIR` holds this run's Storybook build.
+- The token comes from `CHROMATIC_PROJECT_TOKEN` in the environment, never `-t`. It belongs to a disposable or test project. Every journey except `pub-skip` creates a real build that cleanup cannot remove.
+- `$SB_DIR` holds this run's Storybook build, from `$S setup`.
 - Drive from the repo root, which is a git repo with commits. The CLI reads branch and commit from cwd.
 
-- **Prebuilt publish.** Run `$S run pub-prebuilt -- --storybook-build-dir "$SB_DIR" --exit-zero-on-changes --skip-update-check --diagnostics-file "$EVIDENCE/pub-prebuilt/d.json" --log-file "$EVIDENCE/pub-prebuilt/chromatic.log"`. Exit code `0`. stdout shows `Authenticating with Chromatic`, `Started build <N>` and `View build details at <webUrl>`. `jq '.build.number, .build.webUrl' d.json` match stdout. The build appears in the project's Builds list at that URL.
-- **Exit once uploaded.** Run `$S run pub-exit-once-uploaded -- --storybook-build-dir "$SB_DIR" --exit-once-uploaded --skip-update-check`. Exit code `0`. stdout shows `Published your Storybook` and a Storybook URL, then exits without waiting for snapshots.
-- **Dry run.** Run `$S run pub-dry-run -- --storybook-build-dir "$SB_DIR" --dry-run --skip-update-check --log-file "$EVIDENCE/pub-dry-run/chromatic.log"`. The upload, verify and snapshot steps each read `Skipped due to --dry-run`. The log still shows `Connecting to https://index.chromatic.com` (or your `CHROMATIC_INDEX_URL`).
-- **Skip.** Run `$S run pub-skip -- --skip --skip-update-check`. Exit code `0`. stdout says the build was skipped and the commit marked as passing. No upload happens.
-- **JUnit.** Run `$S run pub-junit -- --storybook-build-dir "$SB_DIR" --exit-zero-on-changes --skip-update-check --junit-report "$EVIDENCE/pub-junit/build-{buildNumber}.xml"`. A file `build-<N>.xml` exists in that dir with a `<testsuite>` per spec.
-- **Proof.** For each label keep the command, both streams, the exit code, diagnostics and log. Also keep the build URL from stdout as the external side effect.
+- **Prebuilt publish.** Run `mkdir -p "$EVIDENCE/pub-prebuilt" && $S run pub-prebuilt -- --storybook-build-dir "$SB_DIR" --exit-zero-on-changes --skip-update-check --diagnostics-file "$EVIDENCE/pub-prebuilt/d.json" --log-file "$EVIDENCE/pub-prebuilt/chromatic.log"`. Exit code `0`. stdout runs, in order:
+  - `Authenticated with Chromatic`, with the token masked as `'****************<last 4>'`
+  - `Build <N> initialized`
+  - `Build Storybook [skipped]` / `Using prebuilt Storybook at <SB_DIR>`
+  - `Publish complete`, followed by `Uploaded <n> files` on the first build or `No new files to upload` on later ones
+  - `✔ Storybook published`
+  - `ℹ View your Storybook at https://<appId>-<hash>.chromatic.com/`
+  - `Started build <N>`
+  - `Running <n> tests`
+  - `Build <N> auto-accepted` (first build) or `Build <N> completed`
+
+  It takes about 45s. Then `jq -c '{exitCodeKey, storybookUrl, n: .build.number, status: .build.status, webUrl: .build.webUrl, tests: .build.testCount}' d.json` matches stdout, with `.build.webUrl` = `https://www.chromatic.com/build?appId=<appId>&number=<N>`. That URL is the external side effect.
+- **Exit once uploaded.** Run `$S run pub-exit-once-uploaded -- --storybook-build-dir "$SB_DIR" --exit-once-uploaded --skip-update-check`. Exit code `0`. stdout shows `✔ Storybook published`, `Started build <N>`, and ends with `Test your stories` / `→ Skipped due to --exit-once-uploaded`.
+- **Dry run.** Run `mkdir -p "$EVIDENCE/pub-dry-run" && $S run pub-dry-run -- --storybook-build-dir "$SB_DIR" --dry-run --skip-update-check --log-file "$EVIDENCE/pub-dry-run/chromatic.log"`. Exit code `0`. stdout still shows `Build <N> initialized`, so a build was announced server-side. Then `Publish your built Storybook`, `Verify your Storybook` and `Test your stories` each read `→ Skipped due to --dry-run`. `grep -c "Connecting to https://index.chromatic.com" chromatic.log` is `1`.
+- **Skip.** Run `$S run pub-skip -- --skip --skip-update-check`. Exit code `0`. stdout ends with `Skipping build` / `→ Skipped build for commit <sha> due to --skip`. There is no `Build <N> initialized` line, and nothing is uploaded.
+- **JUnit.** Run `mkdir -p "$EVIDENCE/pub-junit" && $S run pub-junit -- --storybook-build-dir "$SB_DIR" --exit-zero-on-changes --skip-update-check --junit-report "$EVIDENCE/pub-junit/build-{buildNumber}.xml"`. Exit code `0`. stdout says `ℹ Wrote JUnit XML report to <EVIDENCE>/pub-junit/build-<N>.xml`. That file has one `<testsuite name="Chromatic build <N>" tests="<n>" …>` with `buildNumber`, `buildStatus`, `buildUrl` and `storybookUrl` properties, and `grep -c "<testcase"` equals that `<n>`. Visual changes appear as `<failure message="Snapshot contains visual changes and must be reviewed" type="PENDING"/>`.
+- **Proof.** For each label keep the command, both streams and the exit code. Keep diagnostics, log and JUnit where the journey writes them. Also keep the build URL from stdout or diagnostics. Never keep diagnostics from a real token after the run without scrubbing it (see Gotchas).
 
 ## Gotchas
 
-- Unverified here. Every journey in this file was written from the CLI's messages and source, but never executed. The 2026-10-17 proof environment's egress policy blocks `index.chromatic.com` and `www.chromatic.com`, and the CLI fails with `HTTPClient failed to fetch https://index.chromatic.com/graphql, got 403/Forbidden`, exit `255`. The first run with a reachable backend must confirm or correct every expected string, especially the `pub-skip` wording and the `d.json` field paths.
-- `--dry-run` still authenticates and announces a build to the backend. Only upload, verify and snapshot are skipped. It is not offline, and it is not side-effect free.
+- Diagnostics leak secrets, observed 2026-10-17 on 18.13.0. A `--diagnostics-file` written after a successful auth contains `.analytics.client.client.env.CHROMATIC_PROJECT_TOKEN` (the raw project token) and `.analytics.client.headers.Authorization` (the session bearer JWT). This happens even when the token comes only from the env var. The CLI redacts only top-level `projectToken`, `reportToken` and `userToken` keys and drops `ctx.client`, but not `ctx.analytics`. Check it with `jq -c 'paths(type=="string" and test("^chpt_|^Bearer ")) as $p | $p' d.json`. The expected result is empty, and today it is not. Treat any such `d.json` as a secret: delete it or scrub those two paths before sharing evidence. Do not run `--upload-metadata` with a real token while this stands, because it uploads the diagnostics file into the published Storybook.
+- A brand-new project is in onboarding mode, with `.isOnboarding: true` in diagnostics. stdout says `Continue setup at https://www.chromatic.com/setup?appId=…` instead of `View build details at …`. Build 1 is `auto-accepted`, and runs print `✔ Build passed. Welcome to Chromatic!`. On 2026-10-17 that message was printed even for a build whose JUnit showed `failures="1"` (`buildStatus` `PENDING`). In onboarding, assert on JUnit or `.build.status`, not on the pass message.
+- `--dry-run` still authenticates and announces a real build, which shows as `Build <N> initialized` and uses up a build number. It skips only publish, verify and tests. It is not offline, and it is not side-effect free.
 - Without `--exit-zero-on-changes`, a build with visual changes exits `1` (`BUILD_HAS_CHANGES`). That is a correct result, not a failed journey. Read `exitCodeKey` in diagnostics.
-- Without `--storybook-build-dir`, the CLI runs the `build-storybook` script. In this repo that script fails when stdin is `/dev/null` (see SKILL.md Launch). `$S run` pipes stdin, but `$S tty` is safer for that path.
-- Never put the token on the command line in reported evidence. Export `CHROMATIC_PROJECT_TOKEN`, and `command.txt` will not contain it.
+- `--skip` is keyed to the current commit. Run it last, or on a commit you will not publish again.
+- Without `--storybook-build-dir`, the CLI runs the `build-storybook` script. In this repo that script fails when stdin is `/dev/null` (see SKILL.md Launch). `$S run` pipes stdin, but that path has not been driven yet.
+- Never pass the token as `-t`. It then also lands in `command.txt` and in diagnostics `.options.originalArgv` (see `preflight-and-config`).
+- `index.staging-chromatic.com` was not reachable from the 2026-10-17 proof environment. Only production was driven.
 - `--patch-build`, `--only-changed` and `--auto-accept-changes` change baselines on the real project. Do not exercise them against a shared project.
