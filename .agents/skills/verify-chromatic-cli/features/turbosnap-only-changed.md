@@ -26,7 +26,7 @@ Preconditions:
 - The project has an accepted or pending build on an ancestor of `HEAD`. Run `pub-prebuilt` first on a fresh project.
 - `HEAD` is a different commit from that build. Otherwise TurboSnap is disabled (see `ts-rebuild`).
 - The working tree is clean, so `git status --short` prints nothing.
-- You accept that `ts-onechange` uploads diagnostics containing the token (see Gotchas).
+- You accept that `ts-onechange` uploads diagnostics containing the token to Chromatic-internal metadata (see Gotchas).
 
 - **No relevant change.** Commit only non-frontend files, such as docs under `.agents/`, after the baseline build. Run `mkdir -p "$EVIDENCE/ts-nochange" && $S run ts-nochange -- --storybook-build-dir "$SB_DIR" --only-changed --trace-changed --exit-zero-on-changes --skip-update-check --diagnostics-file "$EVIDENCE/ts-nochange/d.json" --log-file "$EVIDENCE/ts-nochange/chromatic.log"`. Exit code `0`. stdout shows:
   - `Found <n> changed files:` listing exactly those files
@@ -51,7 +51,7 @@ Preconditions:
 
 ## Gotchas
 
-- Uploaded metadata leaks secrets. With TurboSnap on and a published build, `d.json` is uploaded to `<storybookUrl>.chromatic/`, and on 18.13.0 it contains the raw project token and the session JWT (CAP-5317). This was observed on 2026-10-17. Only run `ts-onechange` with a token you will revoke, or pass `--no-upload-metadata` when you only need the TurboSnap result.
+- Uploaded metadata contains secrets. With TurboSnap on and a published build, `d.json` is uploaded to `<storybookUrl>.chromatic/`, and on 18.13.0 it contains the raw project token and the session JWT (CAP-5317). This was observed on 2026-10-17. Those files are readable only by Chromatic employees, so impact is low. Still, use a disposable token, and scrub the local `d.json` before keeping evidence.
 - Same commit means a full build. Rerunning on the commit and branch of the baseline build prints `⚠ TurboSnap disabled due to rebuild` and `found 1 parent build; TurboSnap disabled`, and captures every snapshot. Make a new commit for each TurboSnap journey. That log also prints `Traversing dependencies for undefined files` (CAP-5325).
 - Change counts include inherited pending changes. On 2026-10-17, a build capturing 1 snapshot reported `changeCount: 2`. Build 4 still had an unreviewed change, which counts again. Assert on `actualCaptureCount` and the trace, not `changeCount`.
 - `--exit-zero-on-changes` prints `✔ Build <N> passed!` for a `PENDING` build with changes (CAP-5322). The pass line is not evidence that there were no changes. Read `.build.status` and `.build.changeCount`.
