@@ -284,15 +284,9 @@ export default [
         {
           patterns: [
             {
-              group: [
-                '**/graphFiles/*',
-                '**/manifest/*',
-                '**/outOfGraphFiles/*',
-                '**/paths/*',
-                '**/projectFiles/*',
-                '**/rollUps/*',
-                '**/skippedFiles/*',
-              ],
+              // Any `./folder/…` or `../folder/…` reaches past a folder's index, so every concept
+              // folder, including one added later, is covered. Test fixtures are the one exception.
+              regex: String.raw`^\.\.?/(?!__fixtures__/)[^./][^/]*/`,
               message:
                 'Import a TurboSnap v2 folder from its index, not from a file inside it. See v2/docs/adr/0001-concept-folders.md.',
             },

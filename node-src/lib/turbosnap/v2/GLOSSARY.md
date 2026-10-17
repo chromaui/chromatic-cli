@@ -10,7 +10,7 @@ _Avoid_: preview stats, webpack stats
 
 **Stats graph**:
 The stats file read into canonical, project-relative paths: every module the builder named, and what each one imports.
-_Avoid_: module graph, dependency graph
+_Avoid_: module graph, which is the builder's own graph in its own spellings; dependency graph, which v1 uses for the package graph read from a lockfile
 
 **Graph file**:
 A file the stats file names, so a change to it can be traced to the stories that import it.
