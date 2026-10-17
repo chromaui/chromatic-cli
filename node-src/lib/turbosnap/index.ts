@@ -8,8 +8,8 @@ import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
-import { getManifestPath } from './v2/manifest';
-import { realProjectFiles } from './v2/projectFiles';
+import { getManifestPath } from './v2/manifest/manifest';
+import { realProjectFiles } from './v2/projectFiles/projectFiles';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap

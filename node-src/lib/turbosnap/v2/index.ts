@@ -4,10 +4,10 @@ import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
 import { TraceChangedFilesResult } from '../types';
-import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
-import { ManifestInput } from './manifestInput';
-import { MissingStorybookConfigError } from './outOfGraphFiles';
-import { uploadHashes } from './uploadHashes';
+import { buildManifest, TurboSnapManifest, writeManifest } from './manifest/manifest';
+import { uploadHashes } from './manifest/uploadHashes';
+import { MissingStorybookConfigError } from './outOfGraphFiles/outOfGraphFiles';
+import { ManifestInput } from './projectFiles/manifestInput';
 
 /**
  * The level a v2 failure is logged at. We do this because we don't need logs showing up if the
