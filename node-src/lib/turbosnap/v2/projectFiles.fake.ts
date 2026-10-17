@@ -1,8 +1,8 @@
 import path from 'path';
 
 import { AbsolutePath } from '../../../types';
-import { FileHash } from './graph';
 import { ProjectFiles } from './projectFiles';
+import { FileHash } from './rollUp';
 
 /**
  * A disk described as a value, for the in-memory adapter. Every field is optional, so a suite

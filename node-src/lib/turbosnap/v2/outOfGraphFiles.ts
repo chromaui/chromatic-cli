@@ -3,10 +3,10 @@ import path from 'path';
 import { AbsolutePath } from '../../../types';
 import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import { isDocumentationFile } from '../../utilities';
-import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
+import { FileHash, FilePath, rollUpEntryHashes } from './rollUp';
 import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import {
   EXTERNALS_KEY,

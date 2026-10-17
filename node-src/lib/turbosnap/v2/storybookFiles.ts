@@ -3,12 +3,11 @@ import path from 'path';
 import { PREVIEW_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import {
   collectTransitiveDependencies,
-  FileHash,
-  FilePath,
   hasContentHash,
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
+import { FileHash, FilePath } from './rollUp';
 import {
   STORYBOOK_GLOBALS_KEY,
   STORYBOOK_PREVIEW_KEY,
