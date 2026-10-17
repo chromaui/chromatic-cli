@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../../types';
 import { createFixture, syntheticAbsent } from '../__fixtures__/manifestFixtures';
-import { InMemoryDisk } from '../projectFiles/projectFiles.fake';
+import { InMemoryDisk } from '../projectFiles';
 import { buildManifest, serializeManifest } from './manifest';
 
 /**

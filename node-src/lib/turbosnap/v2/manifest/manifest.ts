@@ -3,24 +3,29 @@ import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../../types';
 import {
+  collectStorybookFiles,
   collectTransitiveDependencies,
+  FileAttribution,
+  readStatsGraph,
   rollUpFileHashes,
   TurboSnapFile,
-} from '../graphFiles/graph';
-import { readStatsGraph } from '../graphFiles/statsGraph';
-import { collectStorybookFiles, FileAttribution } from '../graphFiles/storybookFiles';
+} from '../graphFiles';
 import {
   hashOutOfGraphFiles,
   OutOfGraphFiles,
+  resolveStorybookVersion,
   rollUpOutOfGraphFiles,
-} from '../outOfGraphFiles/outOfGraphFiles';
-import { resolveStorybookVersion } from '../outOfGraphFiles/storybookVersion';
-import { normalizeStatsPath } from '../paths/paths';
-import { ManifestInput } from '../projectFiles/manifestInput';
-import { ProjectFiles } from '../projectFiles/projectFiles';
-import { FileHash, FilePath, hashEntryIdentities } from '../rollUps/rollUp';
-import { STORYBOOK_VERSION_KEY, StorybookFileKey } from '../rollUps/storybookFileKeys';
-import { buildSkipRule, SkipReason } from '../skippedFiles/skippedFiles';
+} from '../outOfGraphFiles';
+import { normalizeStatsPath } from '../paths';
+import { ManifestInput, ProjectFiles } from '../projectFiles';
+import {
+  FileHash,
+  FilePath,
+  hashEntryIdentities,
+  STORYBOOK_VERSION_KEY,
+  StorybookFileKey,
+} from '../rollUps';
+import { buildSkipRule, SkipReason } from '../skippedFiles';
 
 type StorybookVersion = string;
 

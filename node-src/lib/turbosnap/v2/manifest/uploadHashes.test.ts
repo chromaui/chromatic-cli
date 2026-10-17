@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import GraphQLClient from '../../../../io/graphqlClient';
-import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from '../rollUps/storybookFileKeys';
+import { STORYBOOK_GLOBALS_KEY, STORYBOOK_PREVIEW_KEY } from '../rollUps';
 import { TurboSnapManifest } from './manifest';
 import { uploadHashes } from './uploadHashes';
 

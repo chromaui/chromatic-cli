@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FileHash, FilePath } from '../rollUps/rollUp';
+import { FileHash, FilePath } from '../rollUps';
 import {
   collectTransitiveDependencies,
   hasContentHash,

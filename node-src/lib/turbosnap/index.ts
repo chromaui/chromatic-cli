@@ -7,9 +7,7 @@ import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
-import { traceChangedFiles as traceChangedFilesV2 } from './v2';
-import { getManifestPath } from './v2/manifest/manifest';
-import { realProjectFiles } from './v2/projectFiles/projectFiles';
+import { getManifestPath, realProjectFiles, traceChangedFiles as traceChangedFilesV2 } from './v2';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap

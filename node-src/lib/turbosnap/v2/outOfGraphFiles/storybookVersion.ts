@@ -1,4 +1,4 @@
-import { ManifestInput } from '../projectFiles/manifestInput';
+import { ManifestInput } from '../projectFiles';
 
 // The packages that own Storybook's preview runtime, most-preferred first. Both report the same
 // lockstep version when present; the order is about which one a given install can resolve.

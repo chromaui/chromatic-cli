@@ -5,8 +5,7 @@ import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
 import TestLogger from '../../testLogger';
 import { FailureLogLevel, traceChangedFiles } from './index';
-import { ProjectFiles } from './projectFiles/projectFiles';
-import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles/projectFiles.fake';
+import { InMemoryDisk, inMemoryProjectFiles, ProjectFiles } from './projectFiles';
 
 // The only boundary the module cannot describe as a value stays mocked: error reporting, whose whole
 // job is a side effect. The network is faked through the injected client rather than the api module,

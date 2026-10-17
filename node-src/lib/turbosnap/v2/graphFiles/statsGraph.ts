@@ -1,9 +1,8 @@
 import { AbsolutePath, Stats } from '../../../../types';
-import { isSyntheticFile, normalizeStatsPath, resolveStatsPath } from '../paths/paths';
-import { ManifestInput } from '../projectFiles/manifestInput';
-import { ProjectFiles } from '../projectFiles/projectFiles';
-import { FileHash, FilePath } from '../rollUps/rollUp';
-import { partitionSkipped, SkipReason, SkipRule } from '../skippedFiles/skippedFiles';
+import { isSyntheticFile, normalizeStatsPath, resolveStatsPath } from '../paths';
+import { ManifestInput, ProjectFiles } from '../projectFiles';
+import { FileHash, FilePath } from '../rollUps';
+import { partitionSkipped, SkipReason, SkipRule } from '../skippedFiles';
 import { collectTransitiveDependencies, SKIPPED_HASH, TurboSnapFile } from './graph';
 import {
   canonicalFileNames,

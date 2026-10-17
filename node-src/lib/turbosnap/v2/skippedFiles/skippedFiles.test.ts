@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles/projectFiles.fake';
+import { InMemoryDisk, inMemoryProjectFiles } from '../projectFiles';
 import { buildSkipRule, SkipContext } from './skippedFiles';
 
 const projectRoot = '/repo/packages/ui';

@@ -1,7 +1,7 @@
 import path from 'path';
 
 import { AbsolutePath } from '../../../../types';
-import { FileHash } from '../rollUps/rollUp';
+import { FileHash } from '../rollUps';
 import { ProjectFiles } from './projectFiles';
 
 /**

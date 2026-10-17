@@ -12,7 +12,7 @@ import {
   MAIN_CONFIG_PATTERN,
   PREVIEW_CONFIG_PATTERN,
 } from './getStorybookMetadata';
-import { getManifestPath } from './turbosnap/v2/manifest/manifest';
+import { getManifestPath } from './turbosnap/v2';
 import { uploadMetadata } from './upload';
 
 const fileSize = (path: string): Promise<number> =>

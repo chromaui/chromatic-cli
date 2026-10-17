@@ -1,6 +1,6 @@
 import { AbsolutePath } from '../../../../types';
-import { gitRootGlobMatcher, isNodeModulesPath } from '../paths/paths';
-import { ManifestInput } from '../projectFiles/manifestInput';
+import { gitRootGlobMatcher, isNodeModulesPath } from '../paths';
+import { ManifestInput } from '../projectFiles';
 
 /**
  * The part of {@link ManifestInput} the skip rule reads: where the repository is, what the user
