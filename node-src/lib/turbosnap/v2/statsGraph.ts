@@ -10,7 +10,6 @@ import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
   canonicalImporters,
-  isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
   normalizeStatsPath,
@@ -164,22 +163,6 @@ function wallOffUntracedFiles(
     files.get(filePath)?.dependencies.clear();
   }
   return subtrees;
-}
-
-/**
- * Counts the graph's `node_modules` file names. Read off the stats file rather than the manifest,
- * because it is a property of the builder's output rather than of what we derived from it.
- *
- * @param stats The stats file to parse.
- *
- * @returns The number of `node_modules` file names across all modules.
- */
-export function countNodeModulesFiles(stats: Stats): number {
-  let count = 0;
-  for (const module of stats.modules) {
-    count += moduleFileNames(module).filter((name) => isNodeModulesPath(name)).length;
-  }
-  return count;
 }
 
 /**
