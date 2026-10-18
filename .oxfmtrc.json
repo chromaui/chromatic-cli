@@ -12,7 +12,6 @@
     "*.md",
     "*.yml",
     "*.yaml",
-    "CHANGELOG.md",
     // Fixtures whose exact contents tests depend on.
     "node-src/__mocks__/**/*.json",
     "node-src/__mocks__/**/*.html"

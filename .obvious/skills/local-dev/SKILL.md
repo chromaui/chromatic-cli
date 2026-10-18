@@ -41,7 +41,7 @@ executed successfully in the sandbox; it is the validated path, not a guess.
 | Build | `yarn build` | exit 0 (~6s; EMPTY_IMPORT_META warnings are benign) |
 | CLI smoke | `node dist/bin.cjs --help` | exit 0, usage output |
 | Lint | `yarn lint` | exit 0 |
-| Format | `yarn fmt:check` | exit 0 (added 2026-10-18) |
+| Format | `yarn fmt:check` | exit 0 |
 | Typecheck | `yarn typescript:check` | exit 0 |
 | Tests | `yarn test` | 1534 passed / 2 skipped, 122 files |
 | Storybook build | `yarn build-storybook` | exit 0; stats at `storybook-static/preview-stats.json` |
