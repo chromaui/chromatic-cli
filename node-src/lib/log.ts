@@ -1,9 +1,10 @@
-import chalk from 'chalk';
-import debug from 'debug';
 import { createWriteStream, mkdirSync, rm, rmSync } from 'fs';
 import path from 'path';
-import stripAnsi from 'strip-ansi';
 import { format } from 'util';
+
+import chalk from 'chalk';
+import debug from 'debug';
+import stripAnsi from 'strip-ansi';
 
 import { Flags, Options } from '../types';
 import { errorSerializer } from './logSerializers';

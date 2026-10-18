@@ -1,6 +1,7 @@
-import * as Sentry from '@sentry/node';
 import { stat, writeFileSync } from 'fs';
 import path from 'path';
+
+import * as Sentry from '@sentry/node';
 import { withFile } from 'tmp-promise';
 
 import { main as trimStatsFile } from '../../bin-src/trimStatsFile';

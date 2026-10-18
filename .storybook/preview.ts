@@ -1,6 +1,5 @@
 /* eslint-env browser */
 import type { Preview } from '@storybook/html-vite';
-
 import ansiHTML from 'ansi-html';
 import chalk from 'chalk';
 
@@ -58,7 +57,7 @@ const preview: Preview = {
     layout: 'fullscreen',
   },
   decorators,
-  tags: [ 'autodocs' ] ,
+  tags: ['autodocs'],
 };
 
 export default preview;

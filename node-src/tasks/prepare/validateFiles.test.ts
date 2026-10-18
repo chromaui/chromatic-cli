@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../../lib/testLogger';

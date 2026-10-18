@@ -1,6 +1,7 @@
+import { URL } from 'url';
+
 import { HttpsProxyAgent, HttpsProxyAgentOptions } from 'https-proxy-agent';
 import noProxy from 'no-proxy';
-import { URL } from 'url';
 
 import { Context } from '../types';
 

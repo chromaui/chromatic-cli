@@ -1,6 +1,7 @@
-import reportBuilder from 'junit-report-builder';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+import reportBuilder from 'junit-report-builder';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';

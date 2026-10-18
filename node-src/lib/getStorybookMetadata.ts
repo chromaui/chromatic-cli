@@ -1,7 +1,8 @@
 import { readdir } from 'fs/promises';
+import path from 'path';
+
 import { pathExists, readJson } from 'fs-extra';
 import meow from 'meow';
-import path from 'path';
 import semver from 'semver';
 import { printConfig, readConfig } from 'storybook/internal/csf-tools';
 import { parseArgsStringToArgv } from 'string-argv';

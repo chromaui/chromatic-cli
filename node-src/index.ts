@@ -1,5 +1,4 @@
 import 'any-observable/register/zen';
-
 import * as Sentry from '@sentry/node';
 import Listr from 'listr';
 import { readPackageUp } from 'read-package-up';

@@ -1,5 +1,4 @@
 import '../node-src/errorMonitoring';
-
 import * as Sentry from '@sentry/node';
 
 import { run } from '../node-src';

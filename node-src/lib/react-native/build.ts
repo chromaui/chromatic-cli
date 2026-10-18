@@ -1,7 +1,8 @@
-import { execa } from 'execa';
 import { existsSync, mkdtempSync, renameSync, rmSync, type WriteStream } from 'fs';
 import os from 'os';
 import path from 'path';
+
+import { execa } from 'execa';
 
 import { sanitizedName } from './expoConfig';
 

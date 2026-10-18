@@ -1,8 +1,9 @@
 import fs, { statSync as unmockedStatSync } from 'fs';
 import os from 'os';
 import path from 'path';
-import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { fileURLToPath } from 'url';
+
+import { inspect as unmockedInspect } from 'snyk-nodejs-plugin';
 import { afterAll, describe, expect, it, Mock, vi } from 'vitest';
 
 import packageJson from '../../../__mocks__/dependencyChanges/plain/package.json';

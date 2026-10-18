@@ -1,8 +1,9 @@
 /* eslint-disable max-lines */
 import { exec } from 'child_process';
 import process from 'process';
-import tmp from 'tmp-promise';
 import { promisify } from 'util';
+
+import tmp from 'tmp-promise';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import generateGitRepository from './generateGitRepository';

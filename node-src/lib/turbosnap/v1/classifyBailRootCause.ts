@@ -1,5 +1,6 @@
-import * as Sentry from '@sentry/node';
 import path from 'path';
+
+import * as Sentry from '@sentry/node';
 
 import { GitDeps } from '../../../git/execGit';
 import { ChangedFileWithStatus, commitExists, getChangedFilesWithStatus } from '../../../git/git';

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'fs';
+
 import cpy from 'cpy';
 import { $ } from 'execa';
-import { readFileSync } from 'fs';
 import tmp from 'tmp-promise';
 
 const copy = (globs, ...args) => {

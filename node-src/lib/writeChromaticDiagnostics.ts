@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync } from 'fs';
-import jsonfile from 'jsonfile';
 import path from 'path';
+
+import jsonfile from 'jsonfile';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';

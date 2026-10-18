@@ -1,6 +1,7 @@
+import path from 'path';
+
 import { getDependentStoryFiles } from '@cli/turbosnap/v1';
 import meow from 'meow';
-import path from 'path';
 
 import { getRepositoryRoot } from '../node-src/git/git';
 import { createLogger } from '../node-src/lib/log';

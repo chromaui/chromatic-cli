@@ -1,5 +1,6 @@
-import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
 import { access } from 'fs';
+
+import { traceChangedFiles as traceChangedFilesDep } from '@cli/turbosnap';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../../lib/testLogger';

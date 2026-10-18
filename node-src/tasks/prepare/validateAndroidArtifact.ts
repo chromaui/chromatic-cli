@@ -1,5 +1,6 @@
-import AdmZip from 'adm-zip';
 import path from 'path';
+
+import AdmZip from 'adm-zip';
 
 import { invalidAndroidArtifact } from '../../ui/tasks/prepare';
 

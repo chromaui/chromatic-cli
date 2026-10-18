@@ -1,5 +1,6 @@
-import { Logger } from '@cli/log';
 import type { IncomingMessage } from 'http';
+
+import { Logger } from '@cli/log';
 import WebSocket from 'ws';
 import { z } from 'zod';
 

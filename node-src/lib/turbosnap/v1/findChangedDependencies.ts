@@ -1,7 +1,8 @@
 import fs from 'fs';
 import os from 'os';
-import pLimit from 'p-limit';
 import path from 'path';
+
+import pLimit from 'p-limit';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
 import { Context } from '../../../types';

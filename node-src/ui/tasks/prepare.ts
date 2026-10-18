@@ -1,4 +1,5 @@
 import path from 'path';
+
 import pluralize from 'pluralize';
 
 import { isPackageManifestFile } from '../../lib/utilities';

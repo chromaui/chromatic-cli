@@ -1,7 +1,8 @@
-import { createJiti } from 'jiti';
 import { existsSync } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { createJiti } from 'jiti';
 import type { Plugin } from 'vite';
 
 const QUERY = '?clack';
@@ -67,7 +68,8 @@ export function clackCapture(): Plugin {
       const rendered: Record<string, string> = {};
       for (const [name, value] of Object.entries(frames)) {
         if (name === 'default') continue;
-        rendered[name] = typeof value === 'function' ? (value as () => string)() : (value as string);
+        rendered[name] =
+          typeof value === 'function' ? (value as () => string)() : (value as string);
       }
 
       // A default-export object (rather than named exports) lets the browser story import it with a

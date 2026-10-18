@@ -1,5 +1,6 @@
-import archiver from 'archiver';
 import { createReadStream, createWriteStream } from 'fs';
+
+import archiver from 'archiver';
 import { file as temporaryFile } from 'tmp-promise';
 
 import { Context, FileDesc } from '../types';

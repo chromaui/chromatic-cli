@@ -1,7 +1,8 @@
-import { parseCommandString } from 'execa';
 import { createReadStream, mkdirSync, type WriteStream } from 'fs';
 import path from 'path';
 import { createInterface } from 'readline';
+
+import { parseCommandString } from 'execa';
 
 import { openLogFileStream } from '../../lib/logFile';
 import { buildAndroid, buildIos, execWithBuildEnvironment } from '../../lib/react-native/build';
@@ -10,7 +11,11 @@ import { generateManifest } from '../../lib/react-native/generateManifest';
 import { exitCodes, TaskFailure } from '../../lib/setExitCode';
 import { Context, Deps } from '../../types';
 import { reactNativeBuildFailed } from '../../ui/messages/errors/buildFailed';
-import { failedNoValidPlatforms, pendingAndroid, pendingIOS } from '../../ui/tasks/buildReactNative';
+import {
+  failedNoValidPlatforms,
+  pendingAndroid,
+  pendingIOS,
+} from '../../ui/tasks/buildReactNative';
 
 type BuildReactNativeDeps = Pick<Deps, 'options' | 'log' | 'report'>;
 
@@ -60,9 +65,7 @@ const runPlatformCommand = async (
 };
 
 const resolvePlatforms = (browsers?: string[]) => {
-  return (browsers ?? []).filter(
-    (b): b is 'ios' | 'android' => b === 'ios' || b === 'android'
-  );
+  return (browsers ?? []).filter((b): b is 'ios' | 'android' => b === 'ios' || b === 'android');
 };
 
 const buildAndroidArtifact = async (
@@ -118,7 +121,11 @@ export const buildArtifacts = async (
   }
 
   mkdirSync(path.join(input.sourceDir, '.chromatic'), { recursive: true });
-  const reactNativeBuildLogFile = path.join(input.sourceDir, '.chromatic', 'react-native-build.log');
+  const reactNativeBuildLogFile = path.join(
+    input.sourceDir,
+    '.chromatic',
+    'react-native-build.log'
+  );
 
   const logStream = await openLogFileStream(reactNativeBuildLogFile);
 

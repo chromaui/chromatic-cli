@@ -1,5 +1,6 @@
-import { contentType as getContentType } from 'mime-types';
 import path from 'path';
+
+import { contentType as getContentType } from 'mime-types';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import { uploadFiles } from '../lib/uploadFiles';

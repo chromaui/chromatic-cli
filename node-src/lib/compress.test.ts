@@ -1,4 +1,5 @@
 import { existsSync } from 'fs';
+
 import mockFs from 'mock-fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,5 +1,6 @@
-import reportBuilder, { TestSuite } from 'junit-report-builder';
 import path from 'path';
+
+import reportBuilder, { TestSuite } from 'junit-report-builder';
 
 import { createTask, transitionTo } from '../lib/tasks';
 import { Context } from '../types';

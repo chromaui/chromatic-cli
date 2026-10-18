@@ -1,4 +1,5 @@
 import { createWriteStream, rmSync } from 'fs';
+
 import { afterEach, beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
 
 import { createLogger } from './log';

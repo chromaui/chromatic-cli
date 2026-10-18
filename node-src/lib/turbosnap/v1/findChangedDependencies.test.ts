@@ -1,10 +1,11 @@
-import snykGraph from '@snyk/dep-graph';
 import {
   copyFileSync as unMockedCopyFileSync,
   mkdtempSync as unMockedMkdtempSync,
   readFileSync as unMockedReadFileSync,
   statSync as unMockedStatSync,
 } from 'fs';
+
+import snykGraph from '@snyk/dep-graph';
 import { getPnpmLockfileParser, parsePnpmWorkspaceProject } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';

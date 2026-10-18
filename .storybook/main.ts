@@ -1,5 +1,6 @@
-import { StorybookConfig } from '@storybook/html-vite';
 import { fileURLToPath } from 'node:url';
+
+import { StorybookConfig } from '@storybook/html-vite';
 
 import { clackCapture } from './clackCapture';
 
@@ -19,14 +20,16 @@ const config: StorybookConfig = {
       alias: {
         ...config.resolve?.alias,
         os: fileURLToPath(import.meta.resolve('os-browserify/browser')),
-        path: "path-browserify",
+        path: 'path-browserify',
       },
     };
     config.plugins = [...(config.plugins ?? []), clackCapture()];
     return config;
   },
   previewHead: (head) => {
-    return head + `
+    return (
+      head +
+      `
     <link href="./css/global.css" rel="stylesheet" />
 
     <script>
@@ -41,7 +44,8 @@ const config: StorybookConfig = {
       cwd: () => '/',
     };
     </script>
-    `;
+    `
+    );
   },
   typescript: {},
   staticDirs: ['../static'],

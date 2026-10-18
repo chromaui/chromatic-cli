@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { trySetComponentOwnersIfPresent } from './componentowners';

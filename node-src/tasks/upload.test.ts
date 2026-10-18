@@ -1,7 +1,9 @@
 /* eslint-disable max-lines */
+
+import { createReadStream } from 'fs';
+
 import * as Sentry from '@sentry/node';
 import { FormData } from 'formdata-node';
-import { createReadStream } from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import makeZipFile from '../lib/compress';

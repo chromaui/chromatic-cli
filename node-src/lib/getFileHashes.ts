@@ -1,6 +1,7 @@
 import { close, open, read } from 'fs';
-import pLimit from 'p-limit';
 import path from 'path';
+
+import pLimit from 'p-limit';
 import xxHashWasm, { XXHash, XXHashAPI } from 'xxhash-wasm';
 
 import getEnvironment from './getEnvironment';

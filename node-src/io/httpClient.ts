@@ -1,5 +1,6 @@
-import retry from 'async-retry';
 import dns from 'dns';
+
+import retry from 'async-retry';
 import { HttpsProxyAgentOptions } from 'https-proxy-agent';
 import fetch, { RequestInit, Response } from 'node-fetch';
 

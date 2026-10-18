@@ -1,5 +1,6 @@
-import { execa as execaDefault, parseCommandString } from 'execa';
 import { Readable } from 'stream';
+
+import { execa as execaDefault, parseCommandString } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {

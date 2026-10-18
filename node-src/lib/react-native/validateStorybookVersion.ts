@@ -1,6 +1,7 @@
-import { pathExists, readJson } from 'fs-extra';
 import { createRequire } from 'module';
 import path from 'path';
+
+import { pathExists, readJson } from 'fs-extra';
 import semver from 'semver';
 
 import { Context } from '../../types';

@@ -1,8 +1,4 @@
 {
   "deepscan.enable": true,
-  "cSpell.words": [
-    "hichroma",
-    "opensource",
-    "rebased"
-  ]
+  "cSpell.words": ["hichroma", "opensource", "rebased"]
 }

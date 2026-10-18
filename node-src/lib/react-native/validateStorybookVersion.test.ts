@@ -1,6 +1,7 @@
+import { createRequire } from 'module';
+
 import TestLogger from '@cli/testLogger';
 import { pathExists, readJson } from 'fs-extra';
-import { createRequire } from 'module';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validateStorybookReactNativeVersion } from './validateStorybookVersion';

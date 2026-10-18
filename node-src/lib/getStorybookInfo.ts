@@ -1,5 +1,6 @@
-import { pathExistsSync } from 'fs-extra';
 import path from 'path';
+
+import { pathExistsSync } from 'fs-extra';
 
 import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { AbsolutePath, Storybook } from '../types';

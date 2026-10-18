@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
+
 import JSON5 from 'json5';
 import { z, ZodError } from 'zod';
 

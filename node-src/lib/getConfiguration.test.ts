@@ -1,4 +1,5 @@
 import { existsSync, PathLike, readFileSync } from 'fs';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getConfiguration } from './getConfiguration';

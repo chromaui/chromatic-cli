@@ -1,4 +1,5 @@
 import { existsSync as existsSyncDefault } from 'fs';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { applyBuildOutput, buildProject, extractBuildInput } from './index';

@@ -1,12 +1,13 @@
 /* eslint-disable max-lines */
 import dns from 'dns';
-import { execa as execaDefault, parseCommandString } from 'execa';
 import { rmSync } from 'fs';
+import path from 'path';
+import { Readable } from 'stream';
+
+import { execa as execaDefault, parseCommandString } from 'execa';
 import jsonfile from 'jsonfile';
 import { confirm } from 'node-ask';
 import fetchDefault from 'node-fetch';
-import path from 'path';
-import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { getGitInfo, run, runAll, shouldUploadMetadata } from '.';

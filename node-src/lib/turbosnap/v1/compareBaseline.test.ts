@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { describe, expect, it } from 'vitest';
 
 import TestLogger from '../../testLogger';

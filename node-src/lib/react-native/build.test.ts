@@ -1,5 +1,6 @@
-import { execa as execaDefault } from 'execa';
 import { type WriteStream } from 'fs';
+
+import { execa as execaDefault } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildAndroid, buildIos, execWithBuildEnvironment } from './build';

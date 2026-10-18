@@ -1,6 +1,7 @@
 import * as fs from 'fs';
-import pLimit from 'p-limit';
 import path from 'path';
+
+import pLimit from 'p-limit';
 
 import { getRepositoryRoot } from '../git/git';
 import { Context, Stats } from '../types';

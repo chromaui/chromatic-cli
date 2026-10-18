@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { getFileHashes } from '../../getFileHashes';

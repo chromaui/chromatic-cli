@@ -1,5 +1,6 @@
-import TestLogger from '@cli/testLogger';
 import path from 'path';
+
+import TestLogger from '@cli/testLogger';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import getStorybookInfo from './getStorybookInfo';

@@ -1,10 +1,11 @@
-import * as Sentry from '@sentry/node';
 import { access } from 'fs';
+
+import * as Sentry from '@sentry/node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { traceChangedFiles as traceChangedFilesV1 } from '.';
 import { exitCodes } from '../../setExitCode';
 import TestLogger from '../../testLogger';
-import { traceChangedFiles as traceChangedFilesV1 } from '.';
 import { classifyTagsFromError as classifyTagsFromErrorDep } from './classifyBailRootCause';
 import {
   BaselineCheckoutFailedError,

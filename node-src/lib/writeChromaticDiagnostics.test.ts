@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync } from 'fs';
-import jsonfile from 'jsonfile';
 import path from 'path';
+
+import jsonfile from 'jsonfile';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createLogger } from './log';

@@ -1,6 +1,7 @@
+import { existsSync } from 'fs';
+
 import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
 import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles';
-import { existsSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getRepositoryRoot } from '../node-src/git/git';

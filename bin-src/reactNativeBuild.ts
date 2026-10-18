@@ -1,8 +1,9 @@
-import chalk from 'chalk';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, type WriteStream } from 'fs';
-import meow from 'meow';
 import os from 'os';
 import path from 'path';
+
+import chalk from 'chalk';
+import meow from 'meow';
 
 import { Configuration, getConfiguration } from '../node-src/lib/getConfiguration';
 import { openLogFileStream } from '../node-src/lib/logFile';

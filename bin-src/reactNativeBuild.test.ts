@@ -1,4 +1,5 @@
 import { type PathLike } from 'fs';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('execa', () => ({
@@ -38,8 +39,9 @@ vi.mock('fs', async () => {
   };
 });
 
-import { execa } from 'execa';
 import fs from 'fs';
+
+import { execa } from 'execa';
 
 import { getConfiguration } from '../node-src/lib/getConfiguration';
 import { openLogFileStream } from '../node-src/lib/logFile';

@@ -1,5 +1,6 @@
-import * as Sentry from '@sentry/node';
 import { stat } from 'fs';
+
+import * as Sentry from '@sentry/node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from './testLogger';

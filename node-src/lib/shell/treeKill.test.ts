@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from 'child_process';
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { treeKill } from './treeKill';

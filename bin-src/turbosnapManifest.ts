@@ -1,8 +1,9 @@
+import { existsSync } from 'fs';
+import path from 'path';
+
 import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
 import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles';
-import { existsSync } from 'fs';
 import meow from 'meow';
-import path from 'path';
 
 import { getRepositoryRoot } from '../node-src/git/git';
 import { getStorybookProjectRoot } from '../node-src/lib/getStorybookProjectRoot';

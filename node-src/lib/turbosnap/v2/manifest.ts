@@ -1,4 +1,5 @@
 import path from 'path';
+
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';

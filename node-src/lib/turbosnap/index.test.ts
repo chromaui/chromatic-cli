@@ -1,9 +1,9 @@
 import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { traceChangedFiles } from '.';
 import { readStatsFile } from '../../tasks/readStatsFile';
 import TestLogger from '../testLogger';
-import { traceChangedFiles } from '.';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 import { realProjectFiles } from './v2/projectFiles';

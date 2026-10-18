@@ -1,6 +1,8 @@
 /* eslint-disable max-lines, max-statements */
-import chalk from 'chalk';
+
 import path from 'path';
+
+import chalk from 'chalk';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';

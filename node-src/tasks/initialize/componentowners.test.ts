@@ -1,7 +1,8 @@
-import TestLogger from '@cli/testLogger';
 import { mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
+
+import TestLogger from '@cli/testLogger';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AnnouncedBuild } from '../../types';

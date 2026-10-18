@@ -1,6 +1,7 @@
+import path from 'path';
+
 // @ts-expect-error - mocked in tests
 import * as sbReactNative from '@storybook/react-native/node';
-import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../testLogger';

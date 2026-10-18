@@ -1,7 +1,8 @@
-import { AnalyticsEvent } from '@cli/analytics/events';
-import * as Sentry from '@sentry/node';
 import { readFileSync } from 'fs';
 import path from 'path';
+
+import { AnalyticsEvent } from '@cli/analytics/events';
+import * as Sentry from '@sentry/node';
 
 import { sanitizeStackTrace } from '../../lib/analytics/sanitization';
 import { buildBinName as e2eBuildBinName } from '../../lib/e2e';

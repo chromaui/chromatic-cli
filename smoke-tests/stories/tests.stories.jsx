@@ -1,6 +1,6 @@
+import isChromatic from 'chromatic/isChromatic';
 import React from 'react';
 
-import isChromatic from 'chromatic/isChromatic';
 import AComponent from './a';
 
 export default {

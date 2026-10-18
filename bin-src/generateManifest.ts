@@ -1,5 +1,6 @@
-import meow from 'meow';
 import path from 'path';
+
+import meow from 'meow';
 
 import { createLogger } from '../node-src/lib/log';
 import { generateManifest } from '../node-src/lib/react-native/generateManifest';

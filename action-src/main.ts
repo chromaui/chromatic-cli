@@ -1,9 +1,9 @@
 import '../node-src/errorMonitoring';
+import path from 'path';
 
 import { error, getInput, getMultilineInput, setFailed, setOutput, warning } from '@actions/core';
 import { context } from '@actions/github';
 import * as Sentry from '@sentry/node';
-import path from 'path';
 
 import { run as runNode } from '../node-src';
 
