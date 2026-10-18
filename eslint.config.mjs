@@ -258,7 +258,7 @@ export default [
     },
   },
   // TurboSnap v2 is one folder per concept, each used only through its index. Code outside v2 uses
-  // v2's own index. See node-src/lib/turbosnap/v2/docs/adr/0001-concept-folders.md.
+  // v2's own index.
   {
     files: ['node-src/**/*.ts', 'bin-src/**/*.ts'],
     ignores: ['node-src/lib/turbosnap/v2/**'],
@@ -287,8 +287,7 @@ export default [
               // Any `./folder/…` or `../folder/…` reaches past a folder's index, so every concept
               // folder, including one added later, is covered. Test fixtures are the one exception.
               regex: String.raw`^\.\.?/(?!__fixtures__/)[^./][^/]*/`,
-              message:
-                'Import a TurboSnap v2 folder from its index, not from a file inside it. See v2/docs/adr/0001-concept-folders.md.',
+              message: 'Import a TurboSnap v2 folder from its index, not from a file inside it.',
             },
           ],
         },
