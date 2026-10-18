@@ -24,6 +24,7 @@ jobs:
       # check types and linting issues
       - run: yarn typescript:check
       - run: yarn lint
+      - run: yarn fmt:check
 
       # test if dist is correctly generated from src
       - run: yarn build && git status --porcelain

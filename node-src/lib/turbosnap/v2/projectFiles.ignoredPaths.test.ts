@@ -11,6 +11,18 @@ async function ignoredAmong(absolutePaths: string[]): Promise<string[]> {
   return absolutePaths.filter((absolutePath) => ignored.has(absolutePath));
 }
 
+/**
+ * Creates a repository ignoring `generated/` and `*.log`, and enters it.
+ *
+ * @returns The absolute path of the repository.
+ */
+function ignoringRepository(): string {
+  const root = repository();
+  write(root, '.gitignore', 'generated/\n*.log\n');
+  process.chdir(root);
+  return root;
+}
+
 describe('realProjectFiles ignoredPaths', () => {
   // The adapter asks the repository the CLI runs in, so each test runs in its own.
   const originalDirectory = process.cwd();
@@ -18,18 +30,6 @@ describe('realProjectFiles ignoredPaths', () => {
   afterEach(() => {
     process.chdir(originalDirectory);
   });
-
-  /**
-   * Creates a repository ignoring `generated/` and `*.log`, and enters it.
-   *
-   * @returns The absolute path of the repository.
-   */
-  function ignoringRepository(): string {
-    const root = repository();
-    write(root, '.gitignore', 'generated/\n*.log\n');
-    process.chdir(root);
-    return root;
-  }
 
   it('reports an untracked file git ignores, by directory or by file pattern', async () => {
     const root = ignoringRepository();

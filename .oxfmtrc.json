@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "bracketSpacing": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "arrowParens": "always",
+  "sortImports": true,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "*.md",
+    "*.yml",
+    "*.yaml",
+    "CHANGELOG.md",
+    // Fixtures whose exact contents tests depend on.
+    "node-src/__mocks__/**/*.json",
+    "node-src/__mocks__/**/*.html"
+  ]
+}

@@ -28,6 +28,7 @@ export const traceSuggestions = `If you are having trouble with tracing, please 
   3. Make sure you have the correct storybook config file path.\nYou can either set the flags storybook-base-dir or storybook-config-dir to help TurboSnap find the correct storybook config file.\n
 `;
 
+// eslint-disable-next-line complexity
 export default (
   ctx: Context,
   {
@@ -41,7 +42,6 @@ export default (
     modulesByName: Record<string, Module>;
     normalize: (name: string) => string;
   }
-  /* eslint-disable-next-line complexity */
 ) => {
   const flag = ctx.log === (console as any) ? '--mode (-m)' : '--trace-changed';
   const basedir = ctx.options.storybookBaseDir || '.';

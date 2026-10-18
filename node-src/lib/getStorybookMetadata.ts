@@ -368,7 +368,6 @@ function getDependencyInfo(
   { packageJson, log }: Pick<StorybookInfoDeps, 'packageJson' | 'log'>,
   dependencyMap: Record<string, string>
 ) {
-  // eslint-disable-next-line unicorn/prevent-abbreviations
   const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
   const [pkg, version] = dep || devDep || peerDep || [];
   const dependency = viewLayers[pkg];
@@ -387,7 +386,7 @@ function getDependencyInfo(
 }
 
 async function findStorybookVersion({ env, log, options, packageJson }: StorybookInfoDeps) {
-  // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
+  // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION (e.g. '@storybook/react@4.0-alpha.8') for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
     const version = semver.valid(v); // ensures we get a specific version, not a range

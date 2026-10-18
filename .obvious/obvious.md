@@ -7,7 +7,7 @@ Chromatic Storybook addon (same repo).
 ## Stack
 - Node.js >= 22 (engines; .tool-versions pins 22.22.3). Sandbox provisioned v22.22.3 at `~/node22/bin` — add to PATH; system node is v20 and too old.
 - Yarn 4.18.0 via corepack (`packageManager` field). Run `corepack enable` once.
-- TypeScript + tsdown bundler, Storybook 10 (own harness), Vitest 4, ESLint 9.
+- TypeScript + tsdown bundler, Storybook 10 (own harness), Vitest 4, oxlint + oxfmt.
 - No external services: no database, cache, or Compose file. Dev stack is Node + Yarn only.
 
 ## Commands (from repo root)

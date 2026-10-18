@@ -57,7 +57,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(null)));
+  accessMock.mockImplementation((_path, callback) => callback(null));
 });
 
 describe('traceChangedFiles', () => {
@@ -233,9 +233,7 @@ describe('traceChangedFiles', () => {
       turboSnap: {},
       untracedFiles: [],
     });
-    accessMock.mockImplementation((_path, callback) =>
-      Promise.resolve(callback(new Error('some error')))
-    );
+    accessMock.mockImplementation((_path, callback) => callback(new Error('some error')));
 
     const ctx = {
       env: environment,

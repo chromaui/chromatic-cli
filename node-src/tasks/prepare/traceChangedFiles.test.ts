@@ -44,7 +44,7 @@ afterEach(() => {
 
 describe('traceChangedFiles', () => {
   beforeEach(() => {
-    accessMock.mockImplementation((_path, callback) => Promise.resolve(callback(null)));
+    accessMock.mockImplementation((_path, callback) => callback(null));
   });
 
   it('returns onlyStoryFiles', async () => {

@@ -2,7 +2,9 @@
 // when _everything_ rejects. This is different from Promise.race, which immediately rejects on the
 // first rejection.
 const invert = (promise: Promise<any>) =>
-  new Promise<any>((resolve, reject) => promise.then(reject, resolve));
+  new Promise<any>((resolve, reject) => {
+    promise.then(reject, resolve);
+  });
 
 export const raceFulfilled = <T>(promises: Promise<T>[]): Promise<T> =>
   invert(Promise.all(promises.map((promise) => invert(promise))).then((promises) => promises[0]));
