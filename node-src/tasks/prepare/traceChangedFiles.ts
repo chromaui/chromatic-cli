@@ -43,7 +43,10 @@ export async function traceChangedFiles(
   // never fail because of it.
   const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
 
-  if (runTurboSnapV1) {
+  // Mirror the lib's own trace condition (`traceWithV1` in lib/turbosnap) so the progress line
+  // only prints when the traversal will actually run, not on rebuilds where no changed-file
+  // list was computed.
+  if (runTurboSnapV1 && !!ctx.git.changedFiles) {
     deps.report(tracing({ git: ctx.git, options: deps.options }));
   }
 
