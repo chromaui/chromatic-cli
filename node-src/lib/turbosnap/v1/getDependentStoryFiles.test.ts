@@ -1428,6 +1428,29 @@ describe('getDependentStoryFiles', () => {
     }
   );
 
+  // rsbuild (storybook-builder-rsbuild 3.x) emits a concatenated story next to a plain copy of
+  // the story and a bare stub; the container's `+ N modules` id matches no story's filename.
+  const rsbuildStoryContainer: Module = {
+    id: './src/Button.stories.tsx + 1 modules',
+    name: './src/Button.stories.tsx + 1 modules',
+    modules: [{ name: './src/Button.stories.tsx' }, { name: './src/Button.tsx' }],
+    reasons: [{ moduleName: CSF_GLOB }],
+  };
+
+  it.each(bothOrders(rsbuildStoryContainer, rsbuildStory, [rsbuildStoryStub, csfGlobModule]))(
+    'reports the plain ./ id when an rsbuild concatenated story contains a plain story (module order %#)',
+    async (modules) => {
+      const ctx = getContext();
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [
+        'src/Button.stories.tsx',
+      ]);
+      if (result.status !== 'traced') throw new Error('expected traced');
+      expect(result.onlyStoryFiles).toEqual({
+        './src/Button.stories.tsx': ['src/Button.stories.tsx'],
+      });
+    }
+  );
+
   const rsbuildCss = buildModule(
     './src/styles.module.css',
     './src/PathDerived.stories.tsx',
